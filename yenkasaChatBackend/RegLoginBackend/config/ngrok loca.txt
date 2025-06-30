@@ -1,0 +1,6 @@
+const val BASE_URL = "https://abc123.ngrok.io"
+
+ngrok http 3000
+
+
+C:\Users\User\Downloads\ngrok-v3-stable-windows-amd64>

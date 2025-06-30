@@ -1,0 +1,7 @@
+cloud name: dwjj3zsaq
+
+api key : 548148892215273
+
+api secret : d3L_8BGtqM30JgkRHy6SabmKnc0
+
+api environment varible: CLOUDINARY_URL=cloudinary://548148892215273:d3L_8BGtqM30JgkRHy6SabmKnc0@dwjj3zsaq

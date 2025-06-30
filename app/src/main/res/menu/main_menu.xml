@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Contacts -->
+    <item
+        android:id="@+id/action_contacts"
+        android:title="Contacts"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        app:showAsAction="ifRoom" />
+
+    <!-- Chat Rooms -->
+    <item
+        android:id="@+id/action_chat_rooms"
+        android:title="Chat Rooms"
+        android:icon="@android:drawable/ic_dialog_email"
+        app:showAsAction="ifRoom" />
+
+    <!-- Account Info -->
+    <item
+        android:id="@+id/action_account"
+        android:title="Account Info"
+        android:icon="@android:drawable/ic_menu_info_details"
+        app:showAsAction="ifRoom" />
+
+    <!-- ✅ New: Verify Account -->
+    <item
+        android:id="@+id/action_verify_account"
+        android:title="Verify Account"
+        android:icon="@android:drawable/ic_menu_agenda"
+        app:showAsAction="never" />
+
+    <!-- Settings -->
+    <item
+        android:id="@+id/action_settings"
+        android:title="Settings"
+        android:icon="@android:drawable/ic_menu_preferences"
+        app:showAsAction="never" />
+
+    <!-- Logout -->
+    <item
+        android:id="@+id/action_logout"
+        android:title="Logout"
+        android:icon="@android:drawable/ic_lock_power_off"
+        app:showAsAction="never" />
+</menu>

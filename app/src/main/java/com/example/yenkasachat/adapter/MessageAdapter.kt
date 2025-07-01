@@ -3,12 +3,16 @@ package com.example.yenkasachat.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.ChatMessage
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MessageAdapter(private val senderId: String) :
     ListAdapter<ChatMessage, RecyclerView.ViewHolder>(DiffCallback()) {
@@ -39,10 +43,46 @@ class MessageAdapter(private val senderId: String) :
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageText: TextView = itemView.findViewById(R.id.textMessage)
         private val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
+        private val messageImage: ImageView = itemView.findViewById(R.id.imageMessage)
 
         fun bind(message: ChatMessage) {
-            messageText.text = message.text
-            timestampText.text = message.timestamp
+            val hasText = !message.text.isNullOrBlank()
+            val hasImage = !message.imageUrl.isNullOrBlank()
+
+            // Show/hide text
+            if (hasText) {
+                messageText.visibility = View.VISIBLE
+                messageText.text = message.text
+            } else {
+                messageText.visibility = View.GONE
+            }
+
+            // Show/hide image
+            if (hasImage) {
+                messageImage.visibility = View.VISIBLE
+                Glide.with(itemView.context)
+                    .load(message.imageUrl)
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.error_image)
+                    .into(messageImage)
+            } else {
+                messageImage.visibility = View.GONE
+            }
+
+            // Timestamp
+            timestampText.text = formatTimestamp(message.timestamp)
+        }
+
+        private fun formatTimestamp(rawTimestamp: String?): String {
+            return try {
+                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+                val date = inputFormat.parse(rawTimestamp ?: "")
+                val outputFormat = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
+                outputFormat.format(date ?: Date())
+            } catch (e: Exception) {
+                rawTimestamp ?: ""
+            }
         }
     }
 

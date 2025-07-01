@@ -5,12 +5,18 @@ const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const mongoose = require('mongoose');
 
-// ✅ Send a message
+// ✅ Send a message (text, image, audio, or location)
 router.post('/', auth, async (req, res) => {
-    const { roomId, text } = req.body;
+    const { roomId, text, imageUrl, audioUrl, location } = req.body;
 
-    if (!roomId || !text) {
-        return res.status(400).json({ error: 'roomId and text are required' });
+    if (!roomId) {
+        return res.status(400).json({ error: 'roomId is required' });
+    }
+
+    // Ensure at least one type of content is present
+    const hasContent = text || imageUrl || audioUrl || (location?.latitude && location?.longitude);
+    if (!hasContent) {
+        return res.status(400).json({ error: 'Message must contain text, image, audio, or location' });
     }
 
     try {
@@ -21,8 +27,11 @@ router.post('/', auth, async (req, res) => {
 
         const newMessage = new Message({
             roomId: new mongoose.Types.ObjectId(roomId),
-            senderId: req.user.id, // ✅ Secure from token
-            text: text.trim().substring(0, 1000),
+            senderId: req.user.id,
+            text: text?.trim().substring(0, 1000),
+            imageUrl,
+            audioUrl,
+            location,
             timestamp: new Date()
         });
 
@@ -51,5 +60,6 @@ router.get('/:roomId/messages', auth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
 });
+
 
 module.exports = router;

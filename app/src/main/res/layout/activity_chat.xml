@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -19,9 +21,11 @@
         android:layout_height="wrap_content"
         android:padding="8dp"
         android:orientation="horizontal"
+        android:baselineAligned="false"
         android:background="@android:color/white"
         android:elevation="4dp">
 
+        <!-- Message Input Field -->
         <EditText
             android:id="@+id/editTextMessage"
             android:layout_width="0dp"
@@ -29,21 +33,34 @@
             android:layout_weight="1"
             android:background="@drawable/bg_message_input"
             android:hint="Type a message"
-            android:paddingHorizontal="16dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:textColor="#000000"
             android:textSize="16sp"
             android:maxLines="4"
             android:inputType="textMultiLine|textCapSentences"
             android:gravity="center_vertical" />
 
+        <!-- Attach Image Button -->
         <ImageButton
-            android:id="@+id/buttonSend"
+            android:id="@+id/buttonAttach"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:background="@android:color/transparent"
+            android:src="@drawable/ic_attach"
+            android:contentDescription="Attach Image"
+            app:tint="#128C7E" />
+
+        <!-- Send Button -->
+        <ImageButton
+            android:id="@+id/buttonSend"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:background="@android:color/transparent"
             android:src="@drawable/ic_send"
             android:contentDescription="Send"
-            android:tint="#128C7E" />
+            app:tint="#128C7E" />
     </LinearLayout>
 </LinearLayout>

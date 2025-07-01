@@ -12,7 +12,22 @@ const messageSchema = new mongoose.Schema({
     },
     text: {
         type: String,
-        required: true
+        required: false
+    },
+    imageUrl: {
+        type: String,
+        required: false
+    },
+    audioUrl: {
+        type: String,
+        required: false
+    },
+    location: {
+        type: {
+            latitude: Number,
+            longitude: Number
+        },
+        required: false
     },
     timestamp: {
         type: Date,

@@ -44,4 +44,25 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
+// ✅ Get all contacts for the authenticated user
+router.get('/', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const contactDocs = await Contact.find({ userId });
+
+        // Convert contact documents into simplified objects
+        const contacts = contactDocs.map(contact => ({
+            id: contact._id,
+            username: contact.contactUsername
+        }));
+
+        res.json(contacts);
+    } catch (err) {
+        console.error("❌ Failed to load contacts:", err.message);
+        res.status(500).json({ error: 'Server error while loading contacts' });
+    }
+});
+
+
 module.exports = router;

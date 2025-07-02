@@ -16,7 +16,7 @@
         android:elevation="2dp"
         android:layout_marginBottom="4dp">
 
-        <!-- Image (shown if imageUrl exists) -->
+        <!-- Image -->
         <ImageView
             android:id="@+id/imageMessage"
             android:layout_width="200dp"
@@ -27,17 +27,88 @@
             android:layout_marginBottom="6dp"
             android:visibility="gone" />
 
-        <!-- Text (shown if text exists) -->
+        <!-- Audio -->
+        <ImageButton
+            android:id="@+id/buttonPlayAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_play"
+            android:background="@android:color/transparent"
+            android:contentDescription="Play Audio"
+            android:visibility="gone" />
+
+        <!-- Video -->
+        <VideoView
+            android:id="@+id/videoMessage"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:visibility="gone" />
+
+        <!-- File -->
+        <LinearLayout
+            android:id="@+id/layoutFile"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/textFileName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📄 file.pdf"
+                android:textColor="#000000"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Contact -->
+        <LinearLayout
+            android:id="@+id/layoutContact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/textContactInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👥 John Doe - +123456789"
+                android:textColor="#000000"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Location -->
+        <LinearLayout
+            android:id="@+id/layoutLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/textLocation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📍 Location"
+                android:textColor="#000000"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Text Message -->
         <TextView
             android:id="@+id/textMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sent message"
-            android:textColor="#FFFFFF"
+            android:textColor="#000000"
             android:textSize="16sp"
-            android:visibility="visible" />
+            android:visibility="gone" />
 
-        <!-- Timestamp + Status -->
+        <!-- Timestamp -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -51,7 +122,7 @@
                 android:layout_height="wrap_content"
                 android:text="12:30 PM"
                 android:textSize="10sp"
-                android:textColor="#D0F0FF"
+                android:textColor="#050505"
                 android:layout_marginEnd="8dp" />
 
             <TextView
@@ -60,9 +131,8 @@
                 android:layout_height="wrap_content"
                 android:text="sent"
                 android:textSize="10sp"
-                android:textColor="#D0F0FF"
+                android:textColor="#050505"
                 android:visibility="visible" />
-
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

@@ -19,11 +19,14 @@ interface ApiService {
     ): Call<CreateChatRoomResponse>
 
     // ✅ Send a message (text or image)
-    @POST("/api/messages")
+    @POST("/api/messages")  // <- remove the trailing slash!
     fun sendMessage(
         @Header("Authorization") token: String,
-        @Body body: Map<String, String> // ✅ Fixed: No wildcards
+        @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Call<ChatMessage>
+
+
+
 
     // ✅ Fetch messages for a specific room
     @GET("/api/messages/{roomId}/messages")

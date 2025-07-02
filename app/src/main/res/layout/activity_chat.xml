@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/chat_background"
+    android:orientation="vertical">
 
     <!-- RecyclerView for Messages -->
     <androidx.recyclerview.widget.RecyclerView
@@ -14,53 +14,120 @@
         android:layout_weight="1"
         android:padding="8dp" />
 
+    <!-- Attachment Menu (Initially Hidden) -->
+    <LinearLayout
+        android:id="@+id/attachmentMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        android:background="#EEEEEE"
+        android:padding="8dp">
+
+        <ImageButton
+            android:id="@+id/buttonAttachImage"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_image"
+            android:contentDescription="Attach Image"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachAudio"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_mic"
+            android:contentDescription="Attach Audio"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachVideo"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_video"
+            android:contentDescription="Attach Video"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachFile"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_file"
+            android:contentDescription="Attach File"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachContact"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_contact"
+            android:contentDescription="Attach Contact"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachLocation"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_location"
+            android:contentDescription="Attach Location"
+            app:tint="#128C7E" />
+    </LinearLayout>
+
     <!-- Message Input Area -->
     <LinearLayout
         android:id="@+id/messageInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:orientation="horizontal"
-        android:baselineAligned="false"
         android:background="@android:color/white"
-        android:elevation="4dp">
+        android:baselineAligned="false"
+        android:elevation="4dp"
+        android:orientation="horizontal"
+        android:padding="8dp">
 
-        <!-- Message Input Field -->
         <EditText
             android:id="@+id/editTextMessage"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_message_input"
+            android:background="#FFFFFF"
+            android:gravity="center_vertical"
             android:hint="Type a message"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLines="4"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:textColor="#000000"
-            android:textSize="16sp"
-            android:maxLines="4"
-            android:inputType="textMultiLine|textCapSentences"
-            android:gravity="center_vertical" />
+            android:textSize="16sp" />
 
-        <!-- Attach Image Button -->
         <ImageButton
-            android:id="@+id/buttonAttach"
+            android:id="@+id/buttonToggleAttachMenu"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:background="@android:color/transparent"
+            android:contentDescription="More"
             android:src="@drawable/ic_attach"
-            android:contentDescription="Attach Image"
             app:tint="#128C7E" />
 
-        <!-- Send Button -->
         <ImageButton
             android:id="@+id/buttonSend"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="4dp"
             android:background="@android:color/transparent"
-            android:src="@drawable/ic_send"
             android:contentDescription="Send"
+            android:src="@drawable/ic_send"
             app:tint="#128C7E" />
     </LinearLayout>
 </LinearLayout>

@@ -11,8 +11,12 @@ data class ChatMessage(
     val text: String? = null,
     val imageUrl: String? = null,
     val audioUrl: String? = null,
+    val videoUrl: String? = null,           // ✅ New field
+    val fileUrl: String? = null,            // ✅ New field
+    val contactInfo: String? = null,        // ✅ New field
+    val location: LocationData? = null,
     val timestamp: String? = null,
-    val location: LocationData? = null
+
 )
 
 data class LocationData(

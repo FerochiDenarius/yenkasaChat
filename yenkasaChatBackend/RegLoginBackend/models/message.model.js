@@ -22,6 +22,18 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: false
     },
+    videoUrl: {
+        type: String,
+        required: false
+    },
+    fileUrl: {
+        type: String,
+        required: false
+    },
+    contactInfo: {
+        type: String,
+        required: false
+    },
     location: {
         type: {
             latitude: Number,

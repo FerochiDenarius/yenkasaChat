@@ -1,5 +1,6 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#007AFF"/>
-    <corners android:radius="16dp"/>
+    <!-- Light green bubble (WhatsApp-like) -->
+    <solid android:color="#DCF8C6"/> <!-- very light green -->
+    <corners android:radius="12dp"/>
 </shape>

@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:padding="8dp"
-    android:background="@color/white">
+    android:background="@color/teal_200">
 
     <!-- Left: Users list -->
     <androidx.recyclerview.widget.RecyclerView

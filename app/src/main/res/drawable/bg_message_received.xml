@@ -1,5 +1,6 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#FFFFFF" />
-    <corners android:radius="16dp" />
+    <!-- Light gray bubble for received messages -->
+    <solid android:color="#F0F0F0"/> <!-- very light gray -->
+    <corners android:radius="12dp"/>
 </shape>

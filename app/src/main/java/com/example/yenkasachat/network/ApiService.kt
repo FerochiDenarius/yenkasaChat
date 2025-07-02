@@ -32,6 +32,8 @@ interface ApiService {
         @Path("roomId") roomId: String
     ): Call<List<ChatMessage>>
 
+
+
     // ✅ Get chat rooms for the logged-in user
     @GET("/api/chatrooms")
     fun getChatRooms(

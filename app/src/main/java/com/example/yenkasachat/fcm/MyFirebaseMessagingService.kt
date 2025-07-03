@@ -17,36 +17,63 @@ import com.google.firebase.messaging.RemoteMessage
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        remoteMessage.notification?.let {
-            showNotification(it.title, it.body)
-        }
+        // Extract title and body from data or notification payload
+        val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "YenkasaChat"
+        val message = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: "You have a new message"
+
+        // Optional: Get custom data like chatId
+        val chatId = remoteMessage.data["chatId"]
+
+        showNotification(title, message, chatId)
     }
 
-    private fun showNotification(title: String?, message: String?) {
-        val channelId = "yenkasachat_fcm"
+    private fun showNotification(title: String, message: String, chatId: String?) {
+        val channelId = "yenkasachat_fcm_channel"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Create channel for Android 8+
+        // Create notification channel for Android 8+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "YenkasaChat Messages", NotificationManager.IMPORTANCE_HIGH)
-            channel.description = "Notifications from YenkasaChat"
-            channel.enableLights(true)
-            channel.lightColor = Color.BLUE
-            channel.enableVibration(true)
+            val channel = NotificationChannel(
+                channelId,
+                "YenkasaChat Notifications",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "YenkasaChat message alerts"
+                enableLights(true)
+                lightColor = Color.BLUE
+                enableVibration(true)
+            }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        // Intent to launch MainActivity or ChatActivity
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            chatId?.let {
+                putExtra("chatId", it)
+            }
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_message) // use existing or custom icon
-            .setContentTitle(title ?: "New Message")
-            .setContentText(message ?: "")
+            .setSmallIcon(R.drawable.ic_message) // Ensure this icon exists
+            .setContentTitle(title)
+            .setContentText(message)
             .setAutoCancel(true)
-            .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+            .setSound(notificationSound)
             .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
 
-        notificationManager.notify(101, builder.build())
+        // Use unique ID to avoid overwriting notifications
+        val notificationId = System.currentTimeMillis().toInt()
+        notificationManager.notify(notificationId, builder.build())
     }
 }

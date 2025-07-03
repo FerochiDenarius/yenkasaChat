@@ -1,22 +1,12 @@
 package com.example.yenkasachat.ui
 
-import okhttp3.Callback as OkHttpCallback
-import android.Manifest
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import android.app.Activity
+import com.example.yenkasachat.util.NotificationHelper
+import android.os.Bundle
+import android.widget.*
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.database.Cursor
-import android.location.Location
-import android.location.LocationManager
-import android.net.Uri
-import android.os.*
 import android.provider.ContactsContract
-import android.provider.MediaStore
-import android.util.Log
-import android.widget.*
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -26,17 +16,20 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.MessageAdapter
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.network.ApiClient
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.asRequestBody
-import org.json.JSONObject
+import com.google.android.gms.location.LocationServices
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Location
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.database.Cursor
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.File
-import java.io.IOException
 
-class ChatActivity : AppCompatActivity() {
+class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
     private lateinit var messagesRecyclerView: RecyclerView
     private lateinit var messageInput: EditText
@@ -47,25 +40,22 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var token: String
     private lateinit var senderId: String
     private lateinit var roomId: String
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var handler: ChatMessageHandler
+    private var lastMessageCount = 0
 
-
-    private val handler = Handler(Looper.getMainLooper())
+    private val uiHandler = Handler(Looper.getMainLooper())
     private val refreshInterval = 5000L
 
-    private val cloudinaryUploadUrl = "https://api.cloudinary.com/v1_1/dwjj3zsaq/image/upload"
-    private val cloudinaryUploadPreset = "yenkasaChatPreset"
-
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
-        it?.let { uploadFileToCloudinary(it, "image") }
+        it?.let { handler.uploadFileToCloudinary(it, "image") }
     }
 
     private val audioPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
-        it?.let { uploadFileToCloudinary(it, "audio") }
+        it?.let { handler.uploadFileToCloudinary(it, "audio") }
     }
 
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
-        it?.let { uploadFileToCloudinary(it, "file") }
+        it?.let { handler.uploadFileToCloudinary(it, "file") }
     }
 
     private val contactPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -74,7 +64,7 @@ class ChatActivity : AppCompatActivity() {
         cursor?.use { cur ->
             val nameIndex = cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
             val name = if (nameIndex != -1 && cur.moveToFirst()) cur.getString(nameIndex) else "Unknown"
-            sendMessage(mapOf("contactInfo" to name))
+            handler.sendMessage(mapOf("contactInfo" to name))
         }
     }
 
@@ -93,8 +83,6 @@ class ChatActivity : AppCompatActivity() {
         val attachLocationButton: ImageButton = findViewById(R.id.buttonAttachLocation)
         val attachFileButton: ImageButton = findViewById(R.id.buttonAttachFile)
         val attachContactButton: ImageButton = findViewById(R.id.buttonAttachContact)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
 
         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
         token = prefs.getString("token", "") ?: ""
@@ -107,6 +95,8 @@ class ChatActivity : AppCompatActivity() {
             return
         }
 
+        handler = ChatMessageHandler(this, this, token, senderId, roomId)
+
         messageAdapter = MessageAdapter(senderId)
         messagesRecyclerView.layoutManager = LinearLayoutManager(this)
         messagesRecyclerView.adapter = messageAdapter
@@ -114,7 +104,7 @@ class ChatActivity : AppCompatActivity() {
         sendButton.setOnClickListener {
             val text = messageInput.text.toString().trim()
             if (text.isNotEmpty()) {
-                sendMessage(mapOf("text" to text))
+                handler.sendMessage(mapOf("text" to text))
                 messageInput.text.clear()
             }
         }
@@ -140,22 +130,8 @@ class ChatActivity : AppCompatActivity() {
 
         attachLocationButton.setOnClickListener {
             attachMenu.visibility = LinearLayout.GONE
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 103)
-                return@setOnClickListener
-            }
-
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                if (location != null) {
-                    sendMessage(mapOf("location" to mapOf("latitude" to location.latitude, "longitude" to location.longitude)))
-                } else {
-                    Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
-                }
-            }.addOnFailureListener {
-                Toast.makeText(this, "Location fetch failed: ${it.message}", Toast.LENGTH_SHORT).show()
-            }
+            handler.sendLocation()
         }
-
 
         attachContactButton.setOnClickListener {
             attachMenu.visibility = LinearLayout.GONE
@@ -164,17 +140,17 @@ class ChatActivity : AppCompatActivity() {
         }
 
         fetchMessages()
-        handler.postDelayed(object : Runnable {
+        uiHandler.postDelayed(object : Runnable {
             override fun run() {
                 fetchMessages()
-                handler.postDelayed(this, refreshInterval)
+                uiHandler.postDelayed(this, refreshInterval)
             }
         }, refreshInterval)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        handler.removeCallbacksAndMessages(null)
+        uiHandler.removeCallbacksAndMessages(null)
     }
 
     private fun fetchMessages() {
@@ -182,6 +158,22 @@ class ChatActivity : AppCompatActivity() {
             override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
                 val messages = response.body()
                 if (response.isSuccessful && messages != null) {
+                    // Trigger notification if there is a new message and it's not from the sender
+                    if (messages.size > lastMessageCount) {
+                        val newMessages = messages.subList(lastMessageCount, messages.size)
+                        val incomingMessages = newMessages.filter { it.senderId != senderId }
+
+                        if (incomingMessages.isNotEmpty()) {
+                            val latest = incomingMessages.last()
+                            NotificationHelper.showMessageNotification(
+                                this@ChatActivity,
+                                latest.senderId ?: "Unknown",
+                                latest.text ?: "New message"
+                            )
+                        }
+                    }
+
+                    lastMessageCount = messages.size
                     messageAdapter.submitList(messages.toList())
                     messagesRecyclerView.scrollToPosition(messages.size - 1)
                 } else {
@@ -195,79 +187,15 @@ class ChatActivity : AppCompatActivity() {
         })
     }
 
-    private fun sendMessage(payload: Map<String, Any?>) {
-        val fullPayload = payload.toMutableMap()
-        fullPayload["roomId"] = roomId
-        ApiClient.apiService.sendMessage("Bearer $token", fullPayload.toMap())
-            .enqueue(object : Callback<ChatMessage> {
-                override fun onResponse(call: Call<ChatMessage>, response: Response<ChatMessage>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val updated = messageAdapter.currentList.toMutableList()
-                        updated.add(response.body()!!)
-                        messageAdapter.submitList(updated)
-                        messagesRecyclerView.scrollToPosition(updated.size - 1)
-                    } else {
-                        Toast.makeText(this@ChatActivity, "Send failed", Toast.LENGTH_SHORT).show()
-                    }
-                }
 
-                override fun onFailure(call: Call<ChatMessage>, t: Throwable) {
-                    Toast.makeText(this@ChatActivity, "Send error: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+    override fun onMessageSent(message: ChatMessage) {
+        val updated = messageAdapter.currentList.toMutableList()
+        updated.add(message)
+        messageAdapter.submitList(updated)
+        messagesRecyclerView.scrollToPosition(updated.size - 1)
     }
 
-    private fun uploadFileToCloudinary(uri: Uri, type: String) {
-        try {
-            val inputStream = contentResolver.openInputStream(uri)
-            val tempFile = File.createTempFile("upload_", ".$type", cacheDir)
-            inputStream?.copyTo(tempFile.outputStream())
-
-            val requestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", tempFile.name, tempFile.asRequestBody("*/*".toMediaTypeOrNull()))
-                .addFormDataPart("upload_preset", cloudinaryUploadPreset)
-                .build()
-
-            val request = Request.Builder().url(cloudinaryUploadUrl).post(requestBody).build()
-
-            OkHttpClient().newCall(request).enqueue(object : OkHttpCallback {
-                override fun onFailure(call: okhttp3.Call, e: IOException) {
-                    runOnUiThread {
-                        Toast.makeText(this@ChatActivity, "$type upload failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                    val body = response.body?.string()
-                    val secureUrl = JSONObject(body ?: "").optString("secure_url", "")
-                    runOnUiThread {
-                        if (secureUrl.isNotBlank()) {
-                            val key = when (type) {
-                                "image" -> "imageUrl"
-                                "audio" -> "audioUrl"
-                                "file" -> "fileUrl"
-                                else -> "fileUrl"
-                            }
-                            sendMessage(mapOf(key to secureUrl))
-                        } else {
-                            Toast.makeText(this@ChatActivity, "Upload failed", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            })
-
-        } catch (e: Exception) {
-            Toast.makeText(this, "Upload error: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, results)
-        if (requestCode == 101 && results.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-            imagePickerLauncher.launch("image/*")
-        } else if (requestCode == 103) {
-            Toast.makeText(this, "Location permission granted. Tap again.", Toast.LENGTH_SHORT).show()
-        }
+    override fun onError(error: String) {
+        Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
     }
 }

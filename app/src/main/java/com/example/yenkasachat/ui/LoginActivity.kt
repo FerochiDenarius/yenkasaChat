@@ -23,19 +23,23 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
 
-        editIdentifier = findViewById(R.id.editLoginIdentifier)
-        editPassword = findViewById(R.id.editLoginPassword)
-        btnLogin = findViewById(R.id.btnLogin)
-        textRegisterLink = findViewById(R.id.textRegisterLink)
+        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+        val token = prefs.getString("token", null)
 
-        btnLogin.setOnClickListener { handleLogin() }
-
-        textRegisterLink.setOnClickListener {
-            startActivity(Intent(this, RegisterActivity::class.java))
+        if (!token.isNullOrEmpty()) {
+            // Token exists, skip login
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
         }
+
+        // No token, show login screen
+        setContentView(R.layout.activity_login)
+        // ... your existing login logic ...
     }
+
 
     private fun handleLogin() {
         val identifier = editIdentifier.text.toString().trim()

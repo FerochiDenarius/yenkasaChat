@@ -1,3 +1,4 @@
+// (Same package and imports as before)
 package com.example.yenkasachat.ui
 
 import android.Manifest
@@ -6,11 +7,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.location.Location
-import android.media.MediaRecorder
 import android.net.Uri
 import android.os.*
 import android.provider.ContactsContract
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
+import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -26,15 +29,13 @@ import com.google.android.gms.location.LocationServices
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
     private lateinit var messagesRecyclerView: RecyclerView
     private lateinit var messageInput: EditText
     private lateinit var sendButton: ImageButton
+    private lateinit var micButton: ImageButton
     private lateinit var attachButton: ImageButton
     private lateinit var attachMenu: LinearLayout
     private lateinit var messageAdapter: MessageAdapter
@@ -44,12 +45,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private lateinit var handler: ChatMessageHandler
     private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
     private var lastMessageCount = 0
-
     private val uiHandler = Handler(Looper.getMainLooper())
     private val refreshInterval = 5000L
-    private var isRecording = false
-    private var mediaRecorder: MediaRecorder? = null
-    private var audioFilePath: String = ""
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
         it?.let { handler.uploadFileToCloudinary(it, "image") }
@@ -69,23 +66,49 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
     }
 
+    private val audioRecLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data
+        if (result.resultCode == RESULT_OK && data != null) {
+            val audioUriString = data.getStringExtra("audio_uri")
+            audioUriString?.let { uriString ->
+                val audioUri = Uri.parse(uriString)
+                handler.checkAndUploadAudio(audioUri)
+            }
+        } else {
+            Toast.makeText(this, "Audio not returned properly", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
 
         messagesRecyclerView = findViewById(R.id.recyclerViewMessages)
         messageInput = findViewById(R.id.editTextMessage)
-        sendButton = findViewById(R.id.buttonSend)
+        sendButton = findViewById(R.id.btnSend)
+        micButton = findViewById(R.id.btnMic)
         attachButton = findViewById(R.id.buttonToggleAttachMenu)
         attachMenu = findViewById(R.id.attachmentMenu)
 
         val attachImageButton: ImageButton = findViewById(R.id.buttonAttachImage)
-        val attachAudioButton: ImageButton = findViewById(R.id.buttonAttachAudio)
         val attachLocationButton: ImageButton = findViewById(R.id.buttonAttachLocation)
         val attachFileButton: ImageButton = findViewById(R.id.buttonAttachFile)
         val attachContactButton: ImageButton = findViewById(R.id.buttonAttachContact)
 
         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+
+        messageInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val hasText = !s.isNullOrEmpty()
+                sendButton.visibility = if (hasText) View.VISIBLE else View.GONE
+                micButton.visibility = if (!hasText) View.VISIBLE else View.GONE
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
         token = prefs.getString("token", "") ?: ""
         senderId = prefs.getString("userId", "") ?: ""
         roomId = intent.getStringExtra("roomId") ?: ""
@@ -111,6 +134,11 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             }
         }
 
+        micButton.setOnClickListener {
+            val intent = Intent(this, AudioRecActivity::class.java)
+            audioRecLauncher.launch(intent)
+        }
+
         attachButton.setOnClickListener {
             attachMenu.visibility = if (attachMenu.visibility == LinearLayout.GONE) LinearLayout.VISIBLE else LinearLayout.GONE
         }
@@ -120,15 +148,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             imagePickerLauncher.launch("image/*")
         }
 
-        attachAudioButton.setOnClickListener {
-            attachMenu.visibility = LinearLayout.GONE
-            if (isRecording) {
-                stopRecordingAndSend()
-            } else {
-                startRecording()
-            }
-        }
-
         attachFileButton.setOnClickListener {
             attachMenu.visibility = LinearLayout.GONE
             filePickerLauncher.launch("*/*")
@@ -136,18 +155,10 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
 
         attachLocationButton.setOnClickListener {
             attachMenu.visibility = LinearLayout.GONE
-
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                     if (location != null) {
-                        handler.sendMessage(
-                            mapOf(
-                                "location" to mapOf(
-                                    "latitude" to location.latitude,
-                                    "longitude" to location.longitude
-                                )
-                            )
-                        )
+                        handler.sendMessage(mapOf("location" to mapOf("latitude" to location.latitude, "longitude" to location.longitude)))
                     } else {
                         Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
                     }
@@ -174,48 +185,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }, refreshInterval)
 
         requestMissingPermissions()
-    }
-
-    private fun startRecording() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestMissingPermissions()
-            Toast.makeText(this, "Microphone permission not granted", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val audioFile = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "AUDIO_$timestamp.3gp")
-        audioFilePath = audioFile.absolutePath
-
-        mediaRecorder = MediaRecorder().apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setOutputFile(audioFilePath)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-            prepare()
-            start()
-        }
-
-        isRecording = true
-        Toast.makeText(this, "Recording started... Tap again to stop", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stopRecordingAndSend() {
-        try {
-            mediaRecorder?.apply {
-                stop()
-                release()
-            }
-            mediaRecorder = null
-            isRecording = false
-
-            val fileUri = Uri.fromFile(File(audioFilePath))
-            handler.checkAndUploadAudio(fileUri)
-            Toast.makeText(this, "Recording sent", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Failed to stop recording: ${e.message}", Toast.LENGTH_SHORT).show()
-            Log.e("AudioRecording", "Error: ${e.message}")
-        }
     }
 
     private fun fetchMessages() {
@@ -254,7 +223,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     override fun onDestroy() {
         super.onDestroy()
         uiHandler.removeCallbacksAndMessages(null)
-        mediaRecorder?.release()
     }
 
     private val permissionsLauncher = registerForActivityResult(

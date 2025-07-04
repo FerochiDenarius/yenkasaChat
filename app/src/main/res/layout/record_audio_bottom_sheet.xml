@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/audioPreviewLayout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:elevation="6dp"
+    android:gravity="center_vertical">
+
+    <ImageButton
+        android:id="@+id/btnDeleteAudio"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_delete"
+        android:contentDescription="Delete Audio" />
+
+    <ImageButton
+        android:id="@+id/btnPlayPauseAudio"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_media_play"
+        android:contentDescription="Play Audio" />
+
+    <TextView
+        android:id="@+id/audioDurationText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textSize="16sp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="@android:color/black" />
+
+    <ImageButton
+        android:id="@+id/btnSendAudio"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_send"
+        android:contentDescription="Send Audio" />
+
+    <ImageButton
+        android:id="@+id/btnClosePreview"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:contentDescription="Close Preview" />
+</LinearLayout>

@@ -16,3 +16,4 @@ local.properties
 *.env
 # Firebase
 app/google-services.json
+config/firebase-service-account.json

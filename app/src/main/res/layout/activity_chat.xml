@@ -3,10 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/chat_background"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@drawable/chat_background">
 
-    <!-- RecyclerView for Messages -->
+    <!-- Messages RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewMessages"
         android:layout_width="match_parent"
@@ -14,7 +14,7 @@
         android:layout_weight="1"
         android:padding="8dp" />
 
-    <!-- Attachment Menu (Initially Hidden) -->
+    <!-- Attachment Menu -->
     <LinearLayout
         android:id="@+id/attachmentMenu"
         android:layout_width="match_parent"
@@ -30,8 +30,8 @@
             android:layout_height="48dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_image"
-            android:contentDescription="Attach Image"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="Attach Image" />
 
         <ImageButton
             android:id="@+id/buttonAttachAudio"
@@ -40,8 +40,8 @@
             android:layout_marginStart="16dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_mic"
-            android:contentDescription="Attach Audio"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="Attach Audio" />
 
         <ImageButton
             android:id="@+id/buttonAttachVideo"
@@ -50,8 +50,8 @@
             android:layout_marginStart="16dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_video"
-            android:contentDescription="Attach Video"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="Attach Video" />
 
         <ImageButton
             android:id="@+id/buttonAttachFile"
@@ -60,8 +60,8 @@
             android:layout_marginStart="16dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_file"
-            android:contentDescription="Attach File"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="Attach File" />
 
         <ImageButton
             android:id="@+id/buttonAttachContact"
@@ -70,8 +70,8 @@
             android:layout_marginStart="16dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_contact"
-            android:contentDescription="Attach Contact"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="Attach Contact" />
 
         <ImageButton
             android:id="@+id/buttonAttachLocation"
@@ -80,54 +80,72 @@
             android:layout_marginStart="16dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_location"
-            android:contentDescription="Attach Location"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="Attach Location" />
     </LinearLayout>
 
-    <!-- Message Input Area -->
-    <LinearLayout
+    <!-- Message Input Row -->
+    <RelativeLayout
         android:id="@+id/messageInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        android:baselineAligned="false"
-        android:elevation="4dp"
-        android:orientation="horizontal"
+        android:background="@color/white"
         android:padding="8dp">
 
-        <EditText
-            android:id="@+id/editTextMessage"
-            android:layout_width="0dp"
+        <!-- Mic Button (Left) -->
+        <ImageButton
+            android:id="@+id/btnMic"
+            android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_weight="1"
-            android:background="#FFFFFF"
-            android:gravity="center_vertical"
-            android:hint="Type a message"
-            android:inputType="textMultiLine|textCapSentences"
-            android:maxLines="4"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textColor="#000000"
-            android:textSize="16sp" />
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_mic"
+            android:background="@android:color/transparent"
+            android:contentDescription="Mic"
+            android:visibility="gone" />
 
+        <!-- Send Button (Right) -->
+        <ImageButton
+            android:id="@+id/btnSend"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_send"
+            android:background="@android:color/transparent"
+            app:tint="#128C7E"
+            android:contentDescription="Send" />
+
+        <!-- Attach Toggle Button (before send) -->
         <ImageButton
             android:id="@+id/buttonToggleAttachMenu"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="8dp"
+            android:layout_toStartOf="@id/btnSend"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="8dp"
             android:background="@android:color/transparent"
-            android:contentDescription="More"
             android:src="@drawable/ic_attach"
-            app:tint="#128C7E" />
+            app:tint="#128C7E"
+            android:contentDescription="More" />
 
-        <ImageButton
-            android:id="@+id/buttonSend"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="4dp"
-            android:background="@android:color/transparent"
-            android:contentDescription="Send"
-            android:src="@drawable/ic_send"
-            app:tint="#128C7E" />
-    </LinearLayout>
+        <!-- Message Input (between mic and attach) -->
+        <EditText
+            android:id="@+id/editTextMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/btnMic"
+            android:layout_toStartOf="@id/buttonToggleAttachMenu"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_centerVertical="true"
+            android:minHeight="48dp"
+            android:background="@drawable/message_input_bg"
+            android:hint="Type a message"
+            android:inputType="textMultiLine"
+            android:maxLines="5"
+            android:paddingHorizontal="16dp"
+            android:textColor="#000000"
+            android:textSize="16sp" />
+    </RelativeLayout>
 </LinearLayout>

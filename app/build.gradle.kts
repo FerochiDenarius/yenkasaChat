@@ -1,32 +1,28 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("com.google.gms.google-services") // This is correct here
+    id("com.google.gms.google-services")
     id("kotlin-kapt")
 }
 
 android {
+
     namespace = "com.example.yenkasachat"
     compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.yenkasachat"
-        minSdk = 23
+        minSdk = 21
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+
+        versionCode = 5
+        versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+    buildFeatures {
+        viewBinding = true
     }
 
     compileOptions {
@@ -62,7 +58,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
-    // Optional Coroutines
+    // Coroutines (optional)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // Testing
@@ -70,5 +66,3 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
-
-

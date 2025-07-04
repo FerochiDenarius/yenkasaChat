@@ -1,12 +1,17 @@
 package com.example.yenkasachat.ui
 
-import com.example.yenkasachat.util.NotificationHelper
-import android.os.Bundle
-import android.widget.*
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.database.Cursor
+import android.location.Location
+import android.media.MediaRecorder
+import android.net.Uri
+import android.os.*
 import android.provider.ContactsContract
-import android.view.View
+import android.util.Log
+import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -16,18 +21,14 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.MessageAdapter
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.util.NotificationHelper
 import com.google.android.gms.location.LocationServices
-import android.Manifest
-import android.content.pm.PackageManager
-import android.location.Location
-import android.net.Uri
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
-import android.database.Cursor
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
@@ -41,17 +42,17 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private lateinit var senderId: String
     private lateinit var roomId: String
     private lateinit var handler: ChatMessageHandler
+    private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
     private var lastMessageCount = 0
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private val refreshInterval = 5000L
+    private var isRecording = false
+    private var mediaRecorder: MediaRecorder? = null
+    private var audioFilePath: String = ""
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
         it?.let { handler.uploadFileToCloudinary(it, "image") }
-    }
-
-    private val audioPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
-        it?.let { handler.uploadFileToCloudinary(it, "audio") }
     }
 
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
@@ -96,6 +97,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
 
         handler = ChatMessageHandler(this, this, token, senderId, roomId)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         messageAdapter = MessageAdapter(senderId)
         messagesRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -120,7 +122,11 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
 
         attachAudioButton.setOnClickListener {
             attachMenu.visibility = LinearLayout.GONE
-            audioPickerLauncher.launch("audio/*")
+            if (isRecording) {
+                stopRecordingAndSend()
+            } else {
+                startRecording()
+            }
         }
 
         attachFileButton.setOnClickListener {
@@ -130,7 +136,27 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
 
         attachLocationButton.setOnClickListener {
             attachMenu.visibility = LinearLayout.GONE
-            handler.sendLocation()
+
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                    if (location != null) {
+                        handler.sendMessage(
+                            mapOf(
+                                "location" to mapOf(
+                                    "latitude" to location.latitude,
+                                    "longitude" to location.longitude
+                                )
+                            )
+                        )
+                    } else {
+                        Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
+                    }
+                }.addOnFailureListener {
+                    Toast.makeText(this, "Failed to get location", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                requestMissingPermissions()
+            }
         }
 
         attachContactButton.setOnClickListener {
@@ -146,11 +172,50 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                 uiHandler.postDelayed(this, refreshInterval)
             }
         }, refreshInterval)
+
+        requestMissingPermissions()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        uiHandler.removeCallbacksAndMessages(null)
+    private fun startRecording() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestMissingPermissions()
+            Toast.makeText(this, "Microphone permission not granted", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val audioFile = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "AUDIO_$timestamp.3gp")
+        audioFilePath = audioFile.absolutePath
+
+        mediaRecorder = MediaRecorder().apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+            setOutputFile(audioFilePath)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+            prepare()
+            start()
+        }
+
+        isRecording = true
+        Toast.makeText(this, "Recording started... Tap again to stop", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopRecordingAndSend() {
+        try {
+            mediaRecorder?.apply {
+                stop()
+                release()
+            }
+            mediaRecorder = null
+            isRecording = false
+
+            val fileUri = Uri.fromFile(File(audioFilePath))
+            handler.checkAndUploadAudio(fileUri)
+            Toast.makeText(this, "Recording sent", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to stop recording: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("AudioRecording", "Error: ${e.message}")
+        }
     }
 
     private fun fetchMessages() {
@@ -158,7 +223,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
                 val messages = response.body()
                 if (response.isSuccessful && messages != null) {
-                    // Trigger notification if there is a new message and it's not from the sender
                     if (messages.size > lastMessageCount) {
                         val newMessages = messages.subList(lastMessageCount, messages.size)
                         val incomingMessages = newMessages.filter { it.senderId != senderId }
@@ -187,6 +251,37 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         })
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        uiHandler.removeCallbacksAndMessages(null)
+        mediaRecorder?.release()
+    }
+
+    private val permissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (!(permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false)) {
+            Toast.makeText(this, "Location permission not granted", Toast.LENGTH_SHORT).show()
+        }
+        if (!(permissions[Manifest.permission.RECORD_AUDIO] ?: false)) {
+            Toast.makeText(this, "Audio permission not granted", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun requestMissingPermissions() {
+        val permissionsNeeded = mutableListOf<String>()
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.RECORD_AUDIO)
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            permissionsLauncher.launch(permissionsNeeded.toTypedArray())
+        }
+    }
 
     override fun onMessageSent(message: ChatMessage) {
         val updated = messageAdapter.currentList.toMutableList()

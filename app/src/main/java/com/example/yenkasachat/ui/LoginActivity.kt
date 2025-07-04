@@ -28,18 +28,28 @@ class LoginActivity : AppCompatActivity() {
         val token = prefs.getString("token", null)
 
         if (!token.isNullOrEmpty()) {
-            // Token exists, skip login
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
         }
 
-        // No token, show login screen
         setContentView(R.layout.activity_login)
-        // ... your existing login logic ...
-    }
 
+        // ✅ Corrected IDs from XML
+        editIdentifier = findViewById(R.id.editLoginIdentifier)
+        editPassword = findViewById(R.id.editLoginPassword)
+        btnLogin = findViewById(R.id.btnLogin)
+        textRegisterLink = findViewById(R.id.textRegisterLink)
+
+        btnLogin.setOnClickListener {
+            Log.d("LoginDebug", "Login button clicked")
+            handleLogin()
+        }
+
+        textRegisterLink.setOnClickListener {
+            startActivity(Intent(this, RegisterActivity::class.java))
+        }
+    }
 
     private fun handleLogin() {
         val identifier = editIdentifier.text.toString().trim()
@@ -71,34 +81,22 @@ class LoginActivity : AppCompatActivity() {
                     if (loginResponse != null) {
                         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
                         prefs.edit()
-                            .putString("userId", loginResponse.user._id) // ✅ FIXED: use _id
+                            .putString("userId", loginResponse.user._id)
                             .putString("token", loginResponse.token)
                             .putString("username", loginResponse.user.username)
                             .putString("email", loginResponse.user.email ?: "")
                             .putString("phone", loginResponse.user.phone ?: "")
                             .putString("location", loginResponse.user.location)
                             .putBoolean("verified", loginResponse.user.verified)
-                            .apply() // ✅ Better than commit() for async save
+                            .apply()
 
-                        // Debug logs
-                        Log.d("LoginSuccess", "Saved userId: ${loginResponse.user._id}")
-                        Log.d("LoginSuccess", "Saved token: ${loginResponse.token}")
-                        Log.d("LoginSuccess", "Saved username: ${loginResponse.user.username}")
-
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "Login successful",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
+                        Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()
                     } else {
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "Unexpected response from server",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@LoginActivity, "Unexpected server response", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     val errorMsg = try {
@@ -113,11 +111,7 @@ class LoginActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
                 Log.e("LoginDebug", "Network error: ${t.message}")
-                Toast.makeText(
-                    this@LoginActivity,
-                    "Network error: ${t.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }

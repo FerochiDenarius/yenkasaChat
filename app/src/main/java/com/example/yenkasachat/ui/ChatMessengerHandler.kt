@@ -3,11 +3,9 @@ package com.example.yenkasachat.ui
 import java.io.IOException
 import android.Manifest
 import android.app.Activity
-import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
-import android.os.FileUtils
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
@@ -93,6 +91,15 @@ class ChatMessageHandler(
         } catch (e: Exception) {
             callback.onError("Upload error: ${e.message}")
         }
+    }
+
+    fun checkAndUploadAudio(uri: Uri) {
+        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.RECORD_AUDIO), 104)
+            callback.onError("Microphone permission required")
+            return
+        }
+        uploadFileToCloudinary(uri, "audio")
     }
 
     fun sendLocation() {

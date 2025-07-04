@@ -17,3 +17,4 @@ local.properties
 # Firebase
 app/google-services.json
 config/firebase-service-account.json
+"yenkasaChatBackend/RegLoginBackend/config/*.json" 

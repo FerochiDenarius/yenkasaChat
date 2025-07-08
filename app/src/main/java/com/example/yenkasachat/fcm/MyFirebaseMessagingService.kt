@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.media.RingtoneManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.yenkasachat.R
 import com.example.yenkasachat.ui.MainActivity
@@ -17,14 +18,18 @@ import com.google.firebase.messaging.RemoteMessage
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // Extract title and body from data or notification payload
-        val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "YenkasaChat"
-        val message = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: "You have a new message"
+        Log.d("FCM", "Message received: $remoteMessage")
 
-        // Optional: Get custom data like chatId
-        val chatId = remoteMessage.data["chatId"]
-
-        showNotification(title, message, chatId)
+        // Force only data payload usage
+        val data = remoteMessage.data
+        if (data.isNotEmpty()) {
+            val title = data["title"] ?: "YenkasaChat"
+            val message = data["body"] ?: "You have a new message"
+            val chatId = data["chatId"]
+            showNotification(title, message, chatId)
+        } else {
+            Log.w("FCM", "Received notification without data payload - ignored")
+        }
     }
 
     private fun showNotification(title: String, message: String, chatId: String?) {
@@ -46,7 +51,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Intent to launch MainActivity or ChatActivity
+        // Intent to open app
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             chatId?.let {
@@ -64,7 +69,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_message) // Ensure this icon exists
+            .setSmallIcon(R.drawable.ic_message)
             .setContentTitle(title)
             .setContentText(message)
             .setAutoCancel(true)
@@ -72,7 +77,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
-        // Use unique ID to avoid overwriting notifications
         val notificationId = System.currentTimeMillis().toInt()
         notificationManager.notify(notificationId, builder.build())
     }

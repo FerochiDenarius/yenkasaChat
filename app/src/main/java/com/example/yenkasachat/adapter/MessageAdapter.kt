@@ -1,6 +1,6 @@
 package com.example.yenkasachat.adapter
 
-
+import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.view.LayoutInflater
@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.ChatMessage
+import com.example.yenkasachat.ui.ImagePreviewActivity
+import com.example.yenkasachat.ui.LocationPreviewActivity
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -42,6 +44,13 @@ class MessageAdapter(private val senderId: String) :
         (holder as MessageViewHolder).bind(getItem(position))
     }
 
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        if (holder is MessageViewHolder) {
+            holder.releaseMediaPlayer()
+        }
+        super.onViewRecycled(holder)
+    }
+
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         private val messageText: TextView = itemView.findViewById(R.id.textMessage)
@@ -64,15 +73,13 @@ class MessageAdapter(private val senderId: String) :
         fun bind(message: ChatMessage) {
             val context = itemView.context
 
-            // Handle Text
-            if (!message.text.isNullOrBlank()) {
-                messageText.visibility = View.VISIBLE
+            // Text
+            messageText.visibility = if (!message.text.isNullOrBlank()) {
                 messageText.text = message.text
-            } else {
-                messageText.visibility = View.GONE
-            }
+                View.VISIBLE
+            } else View.GONE
 
-            // Handle Image
+            // Image
             if (!message.imageUrl.isNullOrBlank()) {
                 messageImage.visibility = View.VISIBLE
                 Glide.with(context)
@@ -80,11 +87,17 @@ class MessageAdapter(private val senderId: String) :
                     .placeholder(R.drawable.placeholder_image)
                     .error(R.drawable.error_image)
                     .into(messageImage)
+
+                messageImage.setOnClickListener {
+                    val intent = Intent(context, ImagePreviewActivity::class.java)
+                    intent.putExtra("imageUrl", message.imageUrl)
+                    context.startActivity(intent)
+                }
             } else {
                 messageImage.visibility = View.GONE
             }
 
-            // Handle Audio
+            // Audio
             if (!message.audioUrl.isNullOrBlank()) {
                 playAudioButton.visibility = View.VISIBLE
                 playAudioButton.setOnClickListener {
@@ -94,16 +107,13 @@ class MessageAdapter(private val senderId: String) :
                             prepare()
                             start()
                             setOnCompletionListener {
-                                mediaPlayer?.release()
-                                mediaPlayer = null
+                                releaseMediaPlayer()
                                 Toast.makeText(context, "✅ Audio Finished", Toast.LENGTH_SHORT).show()
                             }
                         }
                         Toast.makeText(context, "🎵 Playing audio...", Toast.LENGTH_SHORT).show()
                     } else {
-                        mediaPlayer?.stop()
-                        mediaPlayer?.release()
-                        mediaPlayer = null
+                        releaseMediaPlayer()
                         Toast.makeText(context, "⏹️ Audio stopped", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -111,40 +121,50 @@ class MessageAdapter(private val senderId: String) :
                 playAudioButton.visibility = View.GONE
             }
 
-            // Handle Video
+            // Video
             if (!message.videoUrl.isNullOrBlank() && videoView != null) {
                 videoView.visibility = View.VISIBLE
                 videoView.setVideoURI(Uri.parse(message.videoUrl))
-                videoView.setOnPreparedListener { it.isLooping = true; it.start() }
+                videoView.setOnPreparedListener { player ->
+                    player.isLooping = true
+                }
+                videoView.setOnClickListener {
+                    if (!videoView.isPlaying) videoView.start() else videoView.pause()
+                }
             } else {
                 videoView?.visibility = View.GONE
             }
 
-            // Handle Location
-            // Handle Location
+            // Location
             if (message.location != null && layoutLocation != null && textLocation != null) {
                 layoutLocation.visibility = View.VISIBLE
                 val lat = message.location.latitude
                 val lon = message.location.longitude
                 textLocation.text = "📍 $lat, $lon"
+
+                layoutLocation.setOnClickListener {
+                    val intent = Intent(context, LocationPreviewActivity::class.java)
+                    intent.putExtra("latitude", lat)
+                    intent.putExtra("longitude", lon)
+                    context.startActivity(intent)
+                }
             } else {
                 layoutLocation?.visibility = View.GONE
             }
 
-
-            // Handle File
+            // File
             if (!message.fileUrl.isNullOrBlank() && layoutFile != null && textFileName != null) {
                 layoutFile.visibility = View.VISIBLE
                 val fileName = message.fileUrl.substringAfterLast('/')
-                textFileName.text = "\uD83D\uDCC4 $fileName"
+                textFileName.text = "📄 $fileName"
             } else {
                 layoutFile?.visibility = View.GONE
             }
 
-            // Handle Contact
+            // Contact
             if (!message.contactInfo.isNullOrBlank() && layoutContact != null && textContactInfo != null) {
                 layoutContact.visibility = View.VISIBLE
-                textContactInfo.text = "\uD83D\uDC65 ${message.contactInfo}"
+                textContactInfo.text = "👥 ${message.contactInfo}"
             } else {
                 layoutContact?.visibility = View.GONE
             }
@@ -163,6 +183,11 @@ class MessageAdapter(private val senderId: String) :
             } catch (e: Exception) {
                 rawTimestamp ?: ""
             }
+        }
+
+        fun releaseMediaPlayer() {
+            mediaPlayer?.release()
+            mediaPlayer = null
         }
     }
 

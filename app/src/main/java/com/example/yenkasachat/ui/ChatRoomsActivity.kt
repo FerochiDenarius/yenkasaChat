@@ -3,6 +3,7 @@ package com.example.yenkasachat.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -35,7 +36,7 @@ class ChatRoomsActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         btnCreateRoom = findViewById(R.id.btnCreateRoom)
-        inputUsername = findViewById(R.id.inputUsername) // Add this EditText to your layout
+        inputUsername = findViewById(R.id.inputUsername)
 
         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
         token = prefs.getString("token", "") ?: ""
@@ -69,17 +70,26 @@ class ChatRoomsActivity : AppCompatActivity() {
                     response: Response<CreateChatRoomResponse>
                 ) {
                     if (response.isSuccessful) {
-                        Toast.makeText(this@ChatRoomsActivity, "Room created!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ChatRoomsActivity, "Room created!", Toast.LENGTH_SHORT)
+                            .show()
                         inputUsername.setText("")
                         loadChatRooms()
                     } else {
                         val errorMsg = response.errorBody()?.string() ?: "Unknown error"
-                        Toast.makeText(this@ChatRoomsActivity, "Failed: $errorMsg", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@ChatRoomsActivity,
+                            "Failed: $errorMsg",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
-                    Toast.makeText(this@ChatRoomsActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ChatRoomsActivity,
+                        "Error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -87,13 +97,14 @@ class ChatRoomsActivity : AppCompatActivity() {
     private fun loadChatRooms() {
         ApiClient.apiService.getChatRooms("Bearer $token")
             .enqueue(object : Callback<List<ChatRoom>> {
-                override fun onResponse(call: Call<List<ChatRoom>>, response: Response<List<ChatRoom>>) {
+                override fun onResponse(
+                    call: Call<List<ChatRoom>>,
+                    response: Response<List<ChatRoom>>
+                ) {
                     if (response.isSuccessful && response.body() != null) {
-                        val rooms = response.body()!!.map {
-                            it.apply { currentUserId = this@ChatRoomsActivity.currentUserId }
-                        }
+                        val rooms = response.body()!!
 
-                        chatRoomAdapter = ChatRoomAdapter(rooms, currentUserId) { selectedRoom ->
+                        chatRoomAdapter = ChatRoomAdapter(currentUserId) { selectedRoom ->
                             val intent = Intent(this@ChatRoomsActivity, ChatActivity::class.java).apply {
                                 putExtra("roomId", selectedRoom._id)
                             }
@@ -101,13 +112,23 @@ class ChatRoomsActivity : AppCompatActivity() {
                         }
 
                         recyclerView.adapter = chatRoomAdapter
+                        chatRoomAdapter.submitList(rooms) // ✅ required to show data
+
                     } else {
-                        Toast.makeText(this@ChatRoomsActivity, "Failed to load rooms", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@ChatRoomsActivity,
+                            "Failed to load rooms",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
-                    Toast.makeText(this@ChatRoomsActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ChatRoomsActivity,
+                        "Error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }

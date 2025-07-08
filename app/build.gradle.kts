@@ -50,6 +50,7 @@ dependencies {
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation ("com.google.android.gms:play-services-maps:18.2.0")
 
     // Firebase Cloud Messaging
     implementation("com.google.firebase:firebase-messaging:23.4.1")

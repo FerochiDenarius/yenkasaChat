@@ -110,15 +110,23 @@
             android:visibility="gone" />
 
         <!-- Timestamp -->
-        <TextView
-            android:id="@+id/textTimestamp"
-            android:layout_width="wrap_content"
+        <!-- Timestamp Wrapper (Optional for symmetry) -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="12:30 PM"
-            android:textSize="10sp"
-            android:textColor="#050505"
+            android:orientation="horizontal"
             android:gravity="end"
-            android:layout_gravity="end"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/textTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="12:30 PM"
+                android:textSize="10sp"
+                android:textColor="#050505"
+                android:layout_marginEnd="8dp" />
+        </LinearLayout>
+
     </LinearLayout>
 </LinearLayout>

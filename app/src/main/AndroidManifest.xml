@@ -10,7 +10,6 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Required for Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -22,7 +21,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.YenkasaChat">
 
-        <!-- ✅ Default notification settings for Firebase -->
+        <!-- ✅ Google Maps API Key (Keep only ONE!) -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCQvcE4AW1KseUVC9_OZtiA4tlOo9sgdk0" />
+
+        <!-- ✅ Firebase Notification Defaults -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification" />
@@ -40,13 +44,16 @@
             </intent-filter>
         </activity>
 
-        <!-- 📱 Other Activities -->
+        <!-- 📱 Activities -->
         <activity android:name=".ui.LoginActivity" />
         <activity android:name=".ui.MainActivity" />
         <activity android:name=".ui.ChatActivity" />
+        <activity android:name=".ui.AudioRecActivity" />
         <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.ContactsActivity" />
         <activity android:name=".ui.ChatRoomsActivity" />
+        <activity android:name=".ui.LocationPreviewActivity" />
+        <activity android:name=".ui.ImagePreviewActivity" />
 
         <!-- 🔔 Firebase Messaging Service -->
         <service
@@ -57,6 +64,16 @@
             </intent-filter>
         </service>
 
-    </application>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
+
+    </application>
 </manifest>

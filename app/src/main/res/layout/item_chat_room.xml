@@ -23,6 +23,34 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <!-- Timestamp text -->
+        <TextView
+            android:id="@+id/textTimestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="12:45 PM"
+            android:textSize="12sp"
+            android:textColor="#999999"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Unread badge -->
+        <TextView
+            android:id="@+id/textUnreadBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/unread_badge_bg"
+            android:padding="4dp"
+            android:layout_alignParentEnd="true"
+            android:layout_below="@id/textTimestamp"
+            android:layout_marginTop="4dp"
+            android:visibility="gone" />
+
+
         <TextView
             android:id="@+id/textContactName"
             android:layout_width="wrap_content"

@@ -13,9 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Env
 *.env
-# Firebase
+
+# Firebase and Secrets
 app/google-services.json
 config/firebase-service-account.json
-"yenkasaChatBackend/RegLoginBackend/config/*.json" 
-yenkasaChatBackend/RegLoginBackend/config/*.json 
+yenkasaChatBackend/RegLoginBackend/config/*.json

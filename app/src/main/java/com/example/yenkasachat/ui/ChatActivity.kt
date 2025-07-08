@@ -1,4 +1,3 @@
-// (Same package and imports as before)
 package com.example.yenkasachat.ui
 
 import android.Manifest
@@ -32,7 +31,7 @@ import retrofit2.Response
 
 class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
-    private lateinit var messagesRecyclerView: RecyclerView
+    private lateinit var recyclerView: RecyclerView
     private lateinit var messageInput: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var micButton: ImageButton
@@ -44,8 +43,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private lateinit var roomId: String
     private lateinit var handler: ChatMessageHandler
     private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
-    private var lastMessageCount = 0
     private val uiHandler = Handler(Looper.getMainLooper())
+    private var lastMessageCount = 0
     private val refreshInterval = 5000L
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
@@ -66,65 +65,55 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
     }
 
-    private val audioRecLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val data = result.data
-        if (result.resultCode == RESULT_OK && data != null) {
-            val audioUriString = data.getStringExtra("audio_uri")
-            audioUriString?.let { uriString ->
-                val audioUri = Uri.parse(uriString)
-                handler.checkAndUploadAudio(audioUri)
-            }
-        } else {
-            Toast.makeText(this, "Audio not returned properly", Toast.LENGTH_SHORT).show()
-        }
+    private val audioRecLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uriString = result.data?.getStringExtra("audio_uri")
+        uriString?.let { handler.checkAndUploadAudio(Uri.parse(it)) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
 
-        messagesRecyclerView = findViewById(R.id.recyclerViewMessages)
+        initViews()
+        setupListeners()
+        retrieveSession()
+
+        if (token.isBlank() || roomId.isBlank() || senderId.isBlank()) {
+            Toast.makeText(this, "Missing auth data", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        setupChat()
+        fetchMessagesRepeatedly()
+        requestPermissions()
+    }
+
+    private fun initViews() {
+        recyclerView = findViewById(R.id.recyclerViewMessages)
         messageInput = findViewById(R.id.editTextMessage)
         sendButton = findViewById(R.id.btnSend)
         micButton = findViewById(R.id.btnMic)
         attachButton = findViewById(R.id.buttonToggleAttachMenu)
         attachMenu = findViewById(R.id.attachmentMenu)
+    }
 
-        val attachImageButton: ImageButton = findViewById(R.id.buttonAttachImage)
-        val attachLocationButton: ImageButton = findViewById(R.id.buttonAttachLocation)
-        val attachFileButton: ImageButton = findViewById(R.id.buttonAttachFile)
-        val attachContactButton: ImageButton = findViewById(R.id.buttonAttachContact)
-
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+    private fun setupListeners() {
+        val btnImage: ImageButton = findViewById(R.id.buttonAttachImage)
+        val btnLocation: ImageButton = findViewById(R.id.buttonAttachLocation)
+        val btnFile: ImageButton = findViewById(R.id.buttonAttachFile)
+        val btnContact: ImageButton = findViewById(R.id.buttonAttachContact)
 
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                val hasText = !s.isNullOrEmpty()
+                val hasText = !s.isNullOrBlank()
                 sendButton.visibility = if (hasText) View.VISIBLE else View.GONE
                 micButton.visibility = if (!hasText) View.VISIBLE else View.GONE
             }
+
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
-
-        token = prefs.getString("token", "") ?: ""
-        senderId = prefs.getString("userId", "") ?: ""
-        roomId = intent.getStringExtra("roomId") ?: ""
-
-        if (token.isBlank() || roomId.isBlank() || senderId.isBlank()) {
-            Toast.makeText(this, "Missing token, roomId or userId", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        handler = ChatMessageHandler(this, this, token, senderId, roomId)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-        messageAdapter = MessageAdapter(senderId)
-        messagesRecyclerView.layoutManager = LinearLayoutManager(this)
-        messagesRecyclerView.adapter = messageAdapter
 
         sendButton.setOnClickListener {
             val text = messageInput.text.toString().trim()
@@ -140,42 +129,71 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
 
         attachButton.setOnClickListener {
-            attachMenu.visibility = if (attachMenu.visibility == LinearLayout.GONE) LinearLayout.VISIBLE else LinearLayout.GONE
+            attachMenu.visibility = if (attachMenu.visibility == View.GONE) View.VISIBLE else View.GONE
         }
 
-        attachImageButton.setOnClickListener {
-            attachMenu.visibility = LinearLayout.GONE
+        btnImage.setOnClickListener {
+            attachMenu.visibility = View.GONE
             imagePickerLauncher.launch("image/*")
         }
 
-        attachFileButton.setOnClickListener {
-            attachMenu.visibility = LinearLayout.GONE
+        btnFile.setOnClickListener {
+            attachMenu.visibility = View.GONE
             filePickerLauncher.launch("*/*")
         }
 
-        attachLocationButton.setOnClickListener {
-            attachMenu.visibility = LinearLayout.GONE
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                    if (location != null) {
-                        handler.sendMessage(mapOf("location" to mapOf("latitude" to location.latitude, "longitude" to location.longitude)))
-                    } else {
-                        Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
-                    }
-                }.addOnFailureListener {
-                    Toast.makeText(this, "Failed to get location", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                requestMissingPermissions()
-            }
+        btnLocation.setOnClickListener {
+            attachMenu.visibility = View.GONE
+            sendCurrentLocation()
         }
 
-        attachContactButton.setOnClickListener {
-            attachMenu.visibility = LinearLayout.GONE
+        btnContact.setOnClickListener {
+            attachMenu.visibility = View.GONE
             val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
             contactPickerLauncher.launch(intent)
         }
+    }
 
+    private fun retrieveSession() {
+        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+        token = prefs.getString("token", "") ?: ""
+        senderId = prefs.getString("userId", "") ?: ""
+        roomId = intent.getStringExtra("roomId") ?: ""
+    }
+
+    private fun setupChat() {
+        handler = ChatMessageHandler(this, this, token, senderId, roomId)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        messageAdapter = MessageAdapter(senderId)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = messageAdapter
+    }
+
+    private fun sendCurrentLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                location?.let {
+                    handler.sendMessage(
+                        mapOf(
+                            "location" to mapOf(
+                                "latitude" to it.latitude,
+                                "longitude" to it.longitude
+                            )
+                        )
+                    )
+                } ?: Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
+            }.addOnFailureListener {
+                Toast.makeText(this, "Failed to get location", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            requestPermissions()
+        }
+    }
+
+    private fun fetchMessagesRepeatedly() {
         fetchMessages()
         uiHandler.postDelayed(object : Runnable {
             override fun run() {
@@ -183,46 +201,37 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                 uiHandler.postDelayed(this, refreshInterval)
             }
         }, refreshInterval)
-
-        requestMissingPermissions()
     }
 
     private fun fetchMessages() {
-        ApiClient.apiService.getMessages("Bearer $token", roomId).enqueue(object : Callback<List<ChatMessage>> {
-            override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
-                val messages = response.body()
-                if (response.isSuccessful && messages != null) {
-                    if (messages.size > lastMessageCount) {
-                        val newMessages = messages.subList(lastMessageCount, messages.size)
-                        val incomingMessages = newMessages.filter { it.senderId != senderId }
-
-                        if (incomingMessages.isNotEmpty()) {
-                            val latest = incomingMessages.last()
-                            NotificationHelper.showMessageNotification(
-                                this@ChatActivity,
-                                latest.senderId ?: "Unknown",
-                                latest.text ?: "New message"
-                            )
+        ApiClient.apiService.getMessages("Bearer $token", roomId)
+            .enqueue(object : Callback<List<ChatMessage>> {
+                override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
+                    val messages = response.body()
+                    if (response.isSuccessful && messages != null) {
+                        if (messages.size > lastMessageCount) {
+                            val newMessages = messages.subList(lastMessageCount, messages.size)
+                            val incomingMessages = newMessages.filter { it.senderId != senderId }
+                            incomingMessages.lastOrNull()?.let {
+                                NotificationHelper.showMessageNotification(
+                                    this@ChatActivity,
+                                    it.senderId ?: "Unknown",
+                                    it.text ?: "New message"
+                                )
+                            }
                         }
+                        lastMessageCount = messages.size
+                        messageAdapter.submitList(messages.toList())
+                        recyclerView.scrollToPosition(messages.size - 1)
+                    } else {
+                        Log.e("FetchMessages", "Failed: ${response.code()}")
                     }
-
-                    lastMessageCount = messages.size
-                    messageAdapter.submitList(messages.toList())
-                    messagesRecyclerView.scrollToPosition(messages.size - 1)
-                } else {
-                    Log.e("FetchMessages", "Failed: ${response.code()}")
                 }
-            }
 
-            override fun onFailure(call: Call<List<ChatMessage>>, t: Throwable) {
-                Log.e("FetchMessages", "Error: ${t.message}")
-            }
-        })
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        uiHandler.removeCallbacksAndMessages(null)
+                override fun onFailure(call: Call<List<ChatMessage>>, t: Throwable) {
+                    Log.e("FetchMessages", "Error: ${t.message}")
+                }
+            })
     }
 
     private val permissionsLauncher = registerForActivityResult(
@@ -236,26 +245,31 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
     }
 
-    private fun requestMissingPermissions() {
-        val permissionsNeeded = mutableListOf<String>()
+    private fun requestPermissions() {
+        val permissions = mutableListOf<String>()
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            permissionsNeeded.add(Manifest.permission.RECORD_AUDIO)
-        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) permissions.add(Manifest.permission.RECORD_AUDIO)
 
-        if (permissionsNeeded.isNotEmpty()) {
-            permissionsLauncher.launch(permissionsNeeded.toTypedArray())
+        if (permissions.isNotEmpty()) {
+            permissionsLauncher.launch(permissions.toTypedArray())
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        uiHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onMessageSent(message: ChatMessage) {
         val updated = messageAdapter.currentList.toMutableList()
         updated.add(message)
         messageAdapter.submitList(updated)
-        messagesRecyclerView.scrollToPosition(updated.size - 1)
+        recyclerView.scrollToPosition(updated.size - 1)
     }
 
     override fun onError(error: String) {

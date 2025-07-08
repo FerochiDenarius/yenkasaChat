@@ -88,7 +88,11 @@ class AccountInfoActivity : AppCompatActivity() {
     }
 
     private fun uploadImageToServer(imageUri: Uri) {
-        val token = getSharedPreferences("auth", MODE_PRIVATE).getString("token", null) ?: return
+        val token = getSharedPreferences("auth", MODE_PRIVATE).getString("token", null)
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "❌ No token found", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         val file = createTempFileFromUri(imageUri)
         if (file == null) {
@@ -129,7 +133,11 @@ class AccountInfoActivity : AppCompatActivity() {
     }
 
     private fun loadUserProfile() {
-        val token = getSharedPreferences("auth", MODE_PRIVATE).getString("token", null) ?: return
+        val token = getSharedPreferences("auth", MODE_PRIVATE).getString("token", null)
+        if (token.isNullOrEmpty()) {
+            Log.e("Profile", "❌ No token found in shared preferences")
+            return
+        }
 
         ApiClient.apiService.getUserProfile("Bearer $token")
             .enqueue(object : Callback<User> {
@@ -142,10 +150,12 @@ class AccountInfoActivity : AppCompatActivity() {
                                 .apply()
 
                             Glide.with(this@AccountInfoActivity)
-                                .load(url) // ✅ Use Cloudinary full URL
+                                .load(url)
                                 .placeholder(R.drawable.default_avatar)
                                 .into(imageProfile)
                         }
+                    } else {
+                        Log.e("Profile", "❌ Failed response: ${response.code()} ${response.message()}")
                     }
                 }
 

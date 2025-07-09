@@ -29,12 +29,15 @@ YenkasaChat is a modern, feature-rich Android chat application designed for seam
 *The main chat interface showing text and multimedia messages.*
 
 ![sent audio file]((https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screenshot_20250709-003724.png))
+[Account info activity screenshot showing you can verify users]( https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screenshot_20250709-003419.png)
+[screenshot of chatroom user ] (https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screenshot_20250709-003507.png)
 *Attachment menu for sending images, audio, location, and more.*
 
 ---
 
 ## 🎥 Demo Videos
 https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_20250709_003711.mp4
+https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_20250709_002406.mp4
 
 
 ---

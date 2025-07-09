@@ -1,155 +1,154 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/chatRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/chat_background">
 
-    <!-- Messages RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewMessages"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:padding="8dp" />
-
-    <!-- Mic Button (above input area like Telegram) -->
+    <!-- Main layout with messages and input -->
     <LinearLayout
-        android:id="@+id/micButtonLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="end"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="@android:color/transparent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <ImageButton
-            android:id="@+id/btnMic"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_mic"
-            android:contentDescription="Record Audio"
-            app:tint="#128C7E" />
+        <!-- Messages RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewMessages"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp" />
+
+        <!-- Message Input Area -->
+        <LinearLayout
+            android:id="@+id/messageInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:background="@color/white"
+            android:gravity="center_vertical">
+
+            <!-- Attachment Button -->
+            <ImageButton
+                android:id="@+id/buttonToggleAttachMenu"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:src="@drawable/ic_attach"
+                android:contentDescription="Attach"
+                app:tint="#128C7E" />
+
+            <!-- EditText -->
+            <EditText
+                android:id="@+id/editTextMessage"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:maxLines="5"
+                android:gravity="top|start"
+                android:scrollbars="vertical"
+                android:inputType="textMultiLine|textCapSentences"
+                android:background="@drawable/message_input_bg"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:hint="Type a message"
+                android:paddingHorizontal="16dp" />
+
+            <!-- Mic Button -->
+            <ImageButton
+                android:id="@+id/btnMic"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="@android:color/transparent"
+                android:src="@drawable/ic_mic"
+                android:contentDescription="Record Audio"
+                app:tint="#128C7E" />
+
+            <!-- Send Button -->
+            <ImageButton
+                android:id="@+id/btnSend"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="@android:color/transparent"
+                android:src="@drawable/ic_send"
+                android:contentDescription="Send Message"
+                app:tint="#128C7E"
+                android:visibility="gone" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Attachment Menu -->
+    <!-- Vertical Popup Attachment Menu -->
     <LinearLayout
         android:id="@+id/attachmentMenu"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:visibility="gone"
-        android:background="#EEEEEE"
-        android:padding="8dp">
+        android:background="@drawable/rounded_popup_bg"
+        android:padding="6dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginBottom="64dp"
+        android:layout_marginStart="8dp"
+        android:elevation="6dp">
 
+        <!-- Compact vertically stacked options -->
         <ImageButton
             android:id="@+id/buttonAttachImage"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_image"
-            app:tint="#128C7E"
-            android:contentDescription="Attach Image" />
+            android:contentDescription="Attach Image"
+            app:tint="#128C7E" />
 
         <ImageButton
             android:id="@+id/buttonAttachVideo"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="16dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_video"
-            app:tint="#128C7E"
-            android:contentDescription="Attach Video" />
+            android:contentDescription="Attach Video"
+            app:tint="#128C7E" />
 
         <ImageButton
             android:id="@+id/buttonAttachFile"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="16dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_file"
-            app:tint="#128C7E"
-            android:contentDescription="Attach File" />
+            android:contentDescription="Attach File"
+            app:tint="#128C7E" />
 
         <ImageButton
             android:id="@+id/buttonAttachContact"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="16dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_contact"
-            app:tint="#128C7E"
-            android:contentDescription="Attach Contact" />
+            android:contentDescription="Attach Contact"
+            app:tint="#128C7E" />
 
         <ImageButton
             android:id="@+id/buttonAttachLocation"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="16dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_location"
-            app:tint="#128C7E"
-            android:contentDescription="Attach Location" />
+            android:contentDescription="Attach Location"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachCamera"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_camera"
+            android:contentDescription="Attach Camera"
+            app:tint="#128C7E" />
     </LinearLayout>
-
-    <RelativeLayout
-        android:id="@+id/messageInputLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white"
-        android:padding="8dp">
-
-        <!-- SEND BUTTON -->
-        <ImageButton
-            android:id="@+id/btnSend"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_send"
-            app:tint="#128C7E"
-            android:contentDescription="Send" />
-
-        <!-- ATTACH BUTTON -->
-        <ImageButton
-            android:id="@+id/buttonToggleAttachMenu"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_toStartOf="@id/btnSend"
-            android:layout_marginEnd="8dp"
-            android:layout_centerVertical="true"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_attach"
-            app:tint="#128C7E"
-            android:contentDescription="Attach" />
-
-        <!-- EDIT TEXT -->
-        <EditText
-            android:id="@+id/editTextMessage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_toStartOf="@id/buttonToggleAttachMenu"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:minHeight="48dp"
-            android:minLines="1"
-            android:maxLines="5"
-            android:gravity="top|start"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"
-            android:inputType="textMultiLine|textCapSentences"
-            android:background="@drawable/message_input_bg"
-            android:textColor="#000000"
-            android:textSize="16sp"
-            android:hint="Type a message"
-            android:paddingHorizontal="16dp" />
-
-
-
-
-
-    </RelativeLayout>
-</LinearLayout>
+</FrameLayout>

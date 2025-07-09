@@ -11,9 +11,9 @@ import android.os.*
 import android.provider.ContactsContract
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.inputmethod.InputMethodManager
 import android.util.Log
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -104,36 +104,26 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         val btnLocation: ImageButton = findViewById(R.id.buttonAttachLocation)
         val btnFile: ImageButton = findViewById(R.id.buttonAttachFile)
         val btnContact: ImageButton = findViewById(R.id.buttonAttachContact)
+
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val hasText = !s.isNullOrBlank()
                 sendButton.visibility = if (hasText) View.VISIBLE else View.GONE
                 micButton.visibility = if (!hasText) View.VISIBLE else View.GONE
-
-                // Just control maxLines here, no resetting text
                 messageInput.maxLines = if (hasText) 5 else 1
             }
-
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
-
-
 
         sendButton.setOnClickListener {
             val text = messageInput.text.toString().trim()
             if (text.isNotEmpty()) {
                 handler.sendMessage(mapOf("text" to text))
                 messageInput.setText("")
-                messageInput.clearFocus()
-
-                // Optional: Hide keyboard after sending
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(messageInput.windowToken, 0)
             }
         }
-
 
         micButton.setOnClickListener {
             val intent = Intent(this, AudioRecActivity::class.java)
@@ -176,7 +166,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private fun setupChat() {
         handler = ChatMessageHandler(this, this, token, senderId, roomId)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         messageAdapter = MessageAdapter(senderId)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = messageAdapter

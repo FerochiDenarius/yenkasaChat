@@ -1,76 +1,129 @@
 
+---
+
 # YenkasaChat
 
-YenkasaChat is a modern, feature-rich Android chat application designed for seamless real-time messaging with multimedia support — text, images, audio, location, files, and contacts. Built with Kotlin and Retrofit for a smooth, secure chat experience.
+**YenkasaChat** is a modern Android chat application built with Kotlin. It supports real-time messaging with multimedia sharing — including photos, videos, audio, documents, location, and contacts. Designed with a clean interface and robust backend, it's ideal for both casual and professional communication.
 
 ---
 
-## 🚀 Features
+## 🌟 Features
 
-* Real-time text messaging with persistent chat history
-* Multimedia support: images, audio messages, files, and contacts
-* Location sharing with live GPS integration
-* Cloudinary integration for media uploads
-* User authentication and contact management
-* Clean, responsive UI with attachment menu and message previews
-* Audio recording with live controls (pause, play, stop)
-* Notifications and background message handling
-* Modular, maintainable Kotlin codebase
-
----
-
-## 📸 Screens recording and screeshots
-
-
-![Chat Screen]([video showing how the app works](https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_20250709_002406.mp4)g)
-*The main chat interface showing text and multimedia messages.*
-
-![sent audio file]((https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screenshot_20250709-003724.png))
-[Account info activity screenshot showing you can verify users]( https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screenshot_20250709-003419.png)
-[screenshot of chatroom user ] (https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screenshot_20250709-003507.png)
-*Attachment menu for sending images, audio, location, and more.*
+- 🔁 Real-time chat with history
+- 🖼️ Send images and videos (via Cloudinary)
+- 🎙️ Record and send audio messages
+- 📍 Share current location
+- 📂 Share documents and contact info
+- 🔔 Push notifications via Firebase FCM
+- ✅ User verification with JWT and Twilio
+- 📦 Modular architecture with Kotlin
+- 📲 Clean UI with preview support for all attachments
 
 ---
 
-## 🎥 Demo Videos
-https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_20250709_003711.mp4
-https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_20250709_002406.mp4
+## 📽 Demo Videos
 
+- [📱 Chat functionality demo](./Screen_Recording_20250709_003711.mp4)
+- [👤 User info and verification demo](./Screen_Recording_20250709_002406.mp4)
 
 ---
 
-## 📱 Installation & Setup
+## 🖼 Screenshots
 
-1. Clone this repository
+| Chat Interface | Account Info | Attachments |
+|----------------|--------------|-------------|
+| ![Chat](Screenshot_20250709-003724.png) | ![Account](Screenshot_20250709-003507.png) | ![Attachments](Screenshot_20250709-003642.png) |
 
+---
+
+## ⚙ Installation & Setup
+
+1. Clone the repository:
    ```bash
-   git clone (https://github.com/FerochiDenarius/yenkasaChat)
-   ```
-2. Open the project in Android Studio
-3. Configure your Cloudinary credentials in the app
-4. Build and run on your Android device or emulator
+   git clone https://github.com/FerochiDenarius/yenkasaChat.git
+
+2. Open it in Android Studio
+
+
+3. Add your Cloudinary credentials to gradle.properties:
+
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+
+4. Connect your emulator or Android device
+
+
+5. Build and run the project
+
+
+
 
 ---
 
-## ⚙️ Technologies Used
+🧰 Technologies Used
 
-* Kotlin
-* Retrofit (Networking)
-* Cloudinary (Media Uploads)
-* Firebase Cloud Messaging (Notifications)
-* Android Jetpack (RecyclerView, LiveData, etc.)
-* Location Services (GPS integration)
+Frontend: Kotlin (Jetpack Compose & XML)
 
----
+Backend: Node.js with MongoDB
 
-## 🙌 Contribution
+Media Uploads: Cloudinary
 
-Feel free to fork, open issues, or submit pull requests! Your feedback and contributions are welcome.
+Notifications: Firebase Cloud Messaging (FCM)
 
-## 📞 Contact
+Authentication: JWT & Twilio
 
-For questions or feedback, reach me at: \[[+233537044801\+233537504028](mailto:ofosumenyabrightkofi@gmail.com)]
+Database: MongoDB Atlas
+
+
 
 ---
 
-If you want, I can help you generate markdown snippets for embedding your screenshots/videos properly or assist with specific sections like deployment or API docs. Just let me know!
+🙌 Contributing
+
+Contributions are welcome! Feel free to fork this repo and submit a pull request.
+
+Suggestions, feature requests, and bug reports are also appreciated. You can:
+
+Fix bugs
+
+Improve UI/UX
+
+Add new features
+
+Refactor or optimize code
+
+
+
+---
+
+📞 Contact
+
+Have questions, feedback, or want to collaborate?
+
+Reach me via WhatsApp: +233 537 044 801
+
+
+---
+
+📄 License
+
+This project is licensed under the MIT License — feel free to use, modify, and distribute it.
+
+
+---
+
+---
+
+### ✅ What to Do Next:
+
+1. Copy the code above.
+2. Go to your repo: [`https://github.com/FerochiDenarius/yenkasaChat`](https://github.com/FerochiDenarius/yenkasaChat)
+3. Click on the `README.md` file.
+4. Click the pencil ✏️ (Edit) icon.
+5. Paste the new content.
+6. Scroll down, write a commit message like “Updated README layout”, and click **Commit changes**.
+
+Let me know if you want to add GitHub badges, a live demo, or links to external documentation!
+

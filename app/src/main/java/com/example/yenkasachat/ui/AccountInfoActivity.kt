@@ -33,13 +33,17 @@ class AccountInfoActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 selectedImageUri = uri
-                Glide.with(this)
-                    .load(uri)
-                    .placeholder(R.drawable.default_avatar)
-                    .into(imageProfile)
+                try {
+                    Glide.with(this)
+                        .load(uri)
+                        .placeholder(R.drawable.default_avatar)
+                        .into(imageProfile)
 
-                Toast.makeText(this, "✅ Image selected", Toast.LENGTH_SHORT).show()
-                uploadImageToServer(uri)
+                    Toast.makeText(this, "✅ Image selected", Toast.LENGTH_SHORT).show()
+                    uploadImageToServer(uri)
+                } catch (e: Exception) {
+                    Log.e("AccountInfo", "❌ Glide failed: ${e.message}", e)
+                }
             }
         }
     }
@@ -48,42 +52,50 @@ class AccountInfoActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_account_info)
 
-        val prefs = getSharedPreferences("auth", MODE_PRIVATE)
+        try {
+            val prefs = getSharedPreferences("auth", MODE_PRIVATE)
 
-        imageProfile = findViewById(R.id.imageProfile)
-        val usernameView = findViewById<TextView>(R.id.textUsername)
-        val emailView = findViewById<TextView>(R.id.textEmail)
-        val phoneView = findViewById<TextView>(R.id.textPhone)
-        val locationView = findViewById<TextView>(R.id.textLocation)
-        val verifiedView = findViewById<TextView>(R.id.textVerified)
-        val btnVerify = findViewById<Button>(R.id.btnVerifyAccount)
+            imageProfile = findViewById(R.id.imageProfile)
+            val usernameView = findViewById<TextView>(R.id.textUsername)
+            val emailView = findViewById<TextView>(R.id.textEmail)
+            val phoneView = findViewById<TextView>(R.id.textPhone)
+            val locationView = findViewById<TextView>(R.id.textLocation)
+            val verifiedView = findViewById<TextView>(R.id.textVerified)
+            val btnVerify = findViewById<Button>(R.id.btnVerifyAccount)
 
-        usernameView.text = prefs.getString("username", "N/A")
-        emailView.text = prefs.getString("email", "N/A")
-        phoneView.text = prefs.getString("phone", "N/A")
-        locationView.text = prefs.getString("location", "N/A")
-        val isVerified = prefs.getBoolean("verified", false)
-        verifiedView.text = if (isVerified) "Verified ✅" else "Not Verified ❌"
+            usernameView.text = prefs.getString("username", "N/A") ?: "N/A"
+            emailView.text = prefs.getString("email", "N/A") ?: "N/A"
+            phoneView.text = prefs.getString("phone", "N/A") ?: "N/A"
+            locationView.text = prefs.getString("location", "N/A") ?: "N/A"
 
-        // Load cached image
-        prefs.getString("profilePicUrl", null)?.let { url ->
-            Glide.with(this)
-                .load(url)
-                .placeholder(R.drawable.default_avatar)
-                .into(imageProfile)
-        }
+            val isVerified = prefs.getBoolean("verified", false)
+            verifiedView.text = if (isVerified) "Verified ✅" else "Not Verified ❌"
 
-        // Always refresh from backend
-        loadUserProfile()
+            // Load cached image if valid
+            prefs.getString("profilePicUrl", null)?.let { url ->
+                if (url.isNotBlank() && url.startsWith("http")) {
+                    Glide.with(this)
+                        .load(url)
+                        .placeholder(R.drawable.default_avatar)
+                        .into(imageProfile)
+                }
+            }
 
-        imageProfile.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK)
-            intent.type = "image/*"
-            imagePickerLauncher.launch(intent)
-        }
+            loadUserProfile()
 
-        btnVerify.setOnClickListener {
-            startActivity(Intent(this, VerificationActivity::class.java))
+            imageProfile.setOnClickListener {
+                val intent = Intent(Intent.ACTION_PICK)
+                intent.type = "image/*"
+                imagePickerLauncher.launch(intent)
+            }
+
+            btnVerify.setOnClickListener {
+                startActivity(Intent(this, VerificationActivity::class.java))
+            }
+
+        } catch (e: Exception) {
+            Log.e("AccountInfo", "❌ Crash in onCreate: ${e.message}", e)
+            Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -120,14 +132,14 @@ class AccountInfoActivity : AppCompatActivity() {
                         }
                         Toast.makeText(this@AccountInfoActivity, "✅ Profile updated", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@AccountInfoActivity, "❌ Upload failed: ${response.code()}", Toast.LENGTH_SHORT).show()
-                        Log.e("Upload", "❌ Response error: ${response.errorBody()?.string()}")
+                        Log.e("Upload", "❌ Response error: ${response.code()} ${response.message()}")
+                        Toast.makeText(this@AccountInfoActivity, "❌ Upload failed", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                    Toast.makeText(this@AccountInfoActivity, "❌ Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                    Log.e("Upload", "❌ Network failure: ${t.message}")
+                    Log.e("Upload", "❌ Network failure: ${t.message}", t)
+                    Toast.makeText(this@AccountInfoActivity, "❌ Upload error", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -145,14 +157,16 @@ class AccountInfoActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         val user = response.body()
                         user?.profileImage?.let { url ->
-                            getSharedPreferences("auth", MODE_PRIVATE).edit()
-                                .putString("profilePicUrl", url)
-                                .apply()
+                            if (url.isNotBlank() && url.startsWith("http")) {
+                                getSharedPreferences("auth", MODE_PRIVATE).edit()
+                                    .putString("profilePicUrl", url)
+                                    .apply()
 
-                            Glide.with(this@AccountInfoActivity)
-                                .load(url)
-                                .placeholder(R.drawable.default_avatar)
-                                .into(imageProfile)
+                                Glide.with(this@AccountInfoActivity)
+                                    .load(url)
+                                    .placeholder(R.drawable.default_avatar)
+                                    .into(imageProfile)
+                            }
                         }
                     } else {
                         Log.e("Profile", "❌ Failed response: ${response.code()} ${response.message()}")
@@ -160,7 +174,7 @@ class AccountInfoActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<User>, t: Throwable) {
-                    Log.e("Profile", "❌ Failed to load user: ${t.message}")
+                    Log.e("Profile", "❌ Failed to load user: ${t.message}", t)
                 }
             })
     }
@@ -178,7 +192,7 @@ class AccountInfoActivity : AppCompatActivity() {
 
             tempFile
         } catch (e: Exception) {
-            Log.e("Upload", "❌ File conversion failed: ${e.message}")
+            Log.e("Upload", "❌ File conversion failed: ${e.message}", e)
             null
         }
     }

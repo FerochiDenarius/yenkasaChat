@@ -17,7 +17,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="YenkasaChat"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/yc"
         android:supportsRtl="true"
         android:theme="@style/Theme.YenkasaChat">
 
@@ -53,6 +53,8 @@
         <activity android:name=".ui.ContactsActivity" />
         <activity android:name=".ui.ChatRoomsActivity" />
         <activity android:name=".ui.LocationPreviewActivity" />
+        <activity android:name=".ui.AccountInfoActivity" />
+
         <activity android:name=".ui.ImagePreviewActivity" />
 
         <!-- 🔔 Firebase Messaging Service -->

@@ -13,7 +13,7 @@ import com.example.yenkasachat.model.User
 
 class UserAdapter(
     private val users: List<User>,
-    private val onUserClick: (User) -> Unit
+    private val onUserClick: (User, View) -> Unit // 🔄 Accept View as well
 ) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
     inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -25,21 +25,17 @@ class UserAdapter(
             textUsername.text = user.username
             textLocation.text = user.location ?: ""
 
-            // 🔍 Debug the profile image URL
             Log.d("UserAdapter", "Loading image: ${user.profileImage}")
 
-            // ✅ Load profile image with Glide
             Glide.with(itemView.context)
                 .load(user.profileImage)
                 .placeholder(R.drawable.ic_profile_placeholder)
                 .error(R.drawable.ic_profile_placeholder)
                 .into(imageProfile)
 
-            // Optionally make it circular:
-            // .circleCrop()
-
+            // 👇 Pass the clicked view to the callback
             itemView.setOnClickListener {
-                onUserClick(user)
+                onUserClick(user, itemView)
             }
         }
     }

@@ -56,14 +56,31 @@ class ChatMessageHandler(
     fun uploadFileToCloudinary(uri: Uri, type: String) {
         try {
             val file = createTempFileFromUri(uri, type)
+
+            // Use correct resource type
+            val uploadUrl = when (type.lowercase()) {
+                "image" -> "https://api.cloudinary.com/v1_1/dwjj3zsaq/image/upload"
+                "audio", "video" -> "https://api.cloudinary.com/v1_1/dwjj3zsaq/video/upload"
+                "file" -> "https://api.cloudinary.com/v1_1/dwjj3zsaq/raw/upload"
+                else -> "https://api.cloudinary.com/v1_1/dwjj3zsaq/raw/upload"
+            }
+
+            val mediaType = when (type.lowercase()) {
+                "image" -> "image/*"
+                "audio" -> "audio/*"
+                "video" -> "video/*"
+                "file"  -> "*/*"
+                else    -> "*/*"
+            }
+
             val requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("file", file.name, file.asRequestBody("*/*".toMediaTypeOrNull()))
+                .addFormDataPart("file", file.name, file.asRequestBody(mediaType.toMediaTypeOrNull()))
                 .addFormDataPart("upload_preset", cloudinaryUploadPreset)
                 .build()
 
             val request = Request.Builder()
-                .url(cloudinaryUploadUrl)
+                .url(uploadUrl)
                 .post(requestBody)
                 .build()
 
@@ -77,6 +94,8 @@ class ChatMessageHandler(
 
                 override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                     val body = response.body?.string()
+                    Log.d("CloudinaryUpload", "Response body: $body")
+
                     val secureUrl = try {
                         JSONObject(body ?: "").optString("secure_url", "")
                     } catch (e: Exception) {
@@ -89,6 +108,7 @@ class ChatMessageHandler(
                             val messageKey = when (type.lowercase()) {
                                 "image" -> "imageUrl"
                                 "audio" -> "audioUrl"
+                                "video" -> "videoUrl"
                                 "file"  -> "fileUrl"
                                 else    -> "fileUrl"
                             }
@@ -105,6 +125,7 @@ class ChatMessageHandler(
             callback.onError("Upload error: ${e.message}")
         }
     }
+
 
     fun checkAndUploadAudio(uri: Uri) {
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)

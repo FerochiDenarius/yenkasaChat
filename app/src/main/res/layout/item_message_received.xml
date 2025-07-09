@@ -27,17 +27,6 @@
             android:layout_marginBottom="6dp"
             android:visibility="gone" />
 
-        <!-- Audio -->
-        <ImageButton
-            android:id="@+id/buttonPlayAudio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_play"
-            android:contentDescription="Play Audio"
-            android:layout_marginBottom="6dp"
-            android:background="@android:color/transparent"
-            android:visibility="gone" />
-
         <!-- Video -->
         <VideoView
             android:id="@+id/videoMessage"
@@ -45,6 +34,43 @@
             android:layout_height="200dp"
             android:layout_marginBottom="6dp"
             android:visibility="gone" />
+
+        <!-- Audio Player UI -->
+        <LinearLayout
+            android:id="@+id/audioContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/audio_background"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/btnPlayAudio"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_play"
+                android:contentDescription="Play audio" />
+
+            <SeekBar
+                android:id="@+id/audioSeekBar"
+                android:layout_width="150dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" />
+
+            <TextView
+                android:id="@+id/audioDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00"
+                android:textSize="12sp"
+                android:layout_marginStart="8dp"
+                android:textColor="#000000" />
+        </LinearLayout>
 
         <!-- File -->
         <LinearLayout
@@ -107,10 +133,12 @@
             android:layout_height="wrap_content"
             android:textColor="#000000"
             android:textSize="16sp"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:maxWidth="250dp"
+            android:minWidth="50dp"
+            android:layout_marginTop="4dp" />
 
         <!-- Timestamp -->
-        <!-- Timestamp Wrapper (Optional for symmetry) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

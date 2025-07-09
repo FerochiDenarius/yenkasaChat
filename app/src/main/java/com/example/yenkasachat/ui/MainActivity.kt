@@ -60,9 +60,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupUI() {
         recyclerViewUsers = findViewById(R.id.recyclerViewUsers)
         recyclerViewUsers.layoutManager = LinearLayoutManager(this)
-        userAdapter = UserAdapter(users) { selectedUser ->
-            showUserOptions(selectedUser)
+        userAdapter = UserAdapter(users) { selectedUser, anchorView ->
+            showUserOptions(selectedUser, anchorView)
         }
+
         recyclerViewUsers.adapter = userAdapter
 
         findViewById<Button>(R.id.btnContacts).setOnClickListener {
@@ -105,8 +106,8 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun showUserOptions(user: User) {
-        val popup = PopupMenu(this, recyclerViewUsers)
+    private fun showUserOptions(user: User, anchorView: View) {
+        val popup = PopupMenu(this, anchorView)
         popup.menuInflater.inflate(R.menu.menu_user_options, popup.menu)
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -127,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         }
         popup.show()
     }
+
 
     private fun createChatRoomWithUser(username: String) {
         val body = mapOf("username" to username)

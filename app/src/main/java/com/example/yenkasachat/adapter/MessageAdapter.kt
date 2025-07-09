@@ -3,6 +3,7 @@ package com.example.yenkasachat.adapter
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,46 +32,67 @@ class MessageAdapter(private val senderId: String) :
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val layout = if (viewType == TYPE_SENT)
-            R.layout.item_message_sent
-        else
-            R.layout.item_message_received
-
-        val view = LayoutInflater.from(parent.context).inflate(layout, parent, false)
-        return MessageViewHolder(view)
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == TYPE_SENT) {
+            val view = inflater.inflate(R.layout.item_message_sent, parent, false)
+            SentMessageViewHolder(view)
+        } else {
+            val view = inflater.inflate(R.layout.item_message_received, parent, false)
+            ReceivedMessageViewHolder(view)
+        }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        (holder as MessageViewHolder).bind(getItem(position))
+        val message = getItem(position)
+        if (holder is SentMessageViewHolder) {
+            holder.bind(message)
+        } else if (holder is ReceivedMessageViewHolder) {
+            holder.bind(message)
+        }
     }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
-        if (holder is MessageViewHolder) {
+        if (holder is SentMessageViewHolder) {
+            holder.releaseMediaPlayer()
+        } else if (holder is ReceivedMessageViewHolder) {
             holder.releaseMediaPlayer()
         }
         super.onViewRecycled(holder)
     }
 
-    class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    abstract class BaseMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        protected val messageText: TextView = itemView.findViewById(R.id.textMessage)
+        protected val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
+        protected val messageImage: ImageView = itemView.findViewById(R.id.imageMessage)
+        protected val videoView: VideoView? = itemView.findViewById(R.id.videoMessage)
 
-        private val messageText: TextView = itemView.findViewById(R.id.textMessage)
-        private val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
-        private val messageImage: ImageView = itemView.findViewById(R.id.imageMessage)
-        private val playAudioButton: ImageButton = itemView.findViewById(R.id.buttonPlayAudio)
-        private val videoView: VideoView? = itemView.findViewById(R.id.videoMessage)
+        protected val audioContainer: LinearLayout? = itemView.findViewById(R.id.audioContainer)
+        protected val btnPlayAudio: ImageButton? = itemView.findViewById(R.id.btnPlayAudio)
+        protected val audioSeekBar: SeekBar? = itemView.findViewById(R.id.audioSeekBar)
+        protected val audioDuration: TextView? = itemView.findViewById(R.id.audioDuration)
 
-        private val layoutLocation: LinearLayout? = itemView.findViewById(R.id.layoutLocation)
-        private val textLocation: TextView? = itemView.findViewById(R.id.textLocation)
+        protected val layoutLocation: LinearLayout? = itemView.findViewById(R.id.layoutLocation)
+        protected val textLocation: TextView? = itemView.findViewById(R.id.textLocation)
 
-        private val layoutFile: LinearLayout? = itemView.findViewById(R.id.layoutFile)
-        private val textFileName: TextView? = itemView.findViewById(R.id.textFileName)
+        protected val layoutFile: LinearLayout? = itemView.findViewById(R.id.layoutFile)
+        protected val textFileName: TextView? = itemView.findViewById(R.id.textFileName)
 
-        private val layoutContact: LinearLayout? = itemView.findViewById(R.id.layoutContact)
-        private val textContactInfo: TextView? = itemView.findViewById(R.id.textContactInfo)
+        protected val layoutContact: LinearLayout? = itemView.findViewById(R.id.layoutContact)
+        protected val textContactInfo: TextView? = itemView.findViewById(R.id.textContactInfo)
 
-        private var mediaPlayer: MediaPlayer? = null
+        protected var mediaPlayer: MediaPlayer? = null
+        protected var handler: Handler? = null
+        protected val updateSeekBar = object : Runnable {
+            override fun run() {
+                mediaPlayer?.let {
+                    audioSeekBar?.progress = it.currentPosition
+                    audioDuration?.text = formatTime(it.currentPosition)
+                    handler?.postDelayed(this, 500)
+                }
+            }
+        }
 
-        fun bind(message: ChatMessage) {
+        open fun bind(message: ChatMessage) {
             val context = itemView.context
 
             // Text
@@ -98,27 +120,42 @@ class MessageAdapter(private val senderId: String) :
             }
 
             // Audio
-            if (!message.audioUrl.isNullOrBlank()) {
-                playAudioButton.visibility = View.VISIBLE
-                playAudioButton.setOnClickListener {
+            if (!message.audioUrl.isNullOrBlank() && audioContainer != null && btnPlayAudio != null && audioSeekBar != null && audioDuration != null) {
+                audioContainer.visibility = View.VISIBLE
+                btnPlayAudio.setOnClickListener {
                     if (mediaPlayer == null) {
                         mediaPlayer = MediaPlayer().apply {
                             setDataSource(message.audioUrl)
                             prepare()
                             start()
+                            audioSeekBar.max = duration
+                            btnPlayAudio.setImageResource(R.drawable.ic_pause)
                             setOnCompletionListener {
                                 releaseMediaPlayer()
-                                Toast.makeText(context, "✅ Audio Finished", Toast.LENGTH_SHORT).show()
                             }
                         }
-                        Toast.makeText(context, "🎵 Playing audio...", Toast.LENGTH_SHORT).show()
+                        handler = Handler()
+                        handler?.post(updateSeekBar)
+                    } else if (mediaPlayer?.isPlaying == true) {
+                        mediaPlayer?.pause()
+                        btnPlayAudio.setImageResource(R.drawable.ic_play)
                     } else {
-                        releaseMediaPlayer()
-                        Toast.makeText(context, "⏹️ Audio stopped", Toast.LENGTH_SHORT).show()
+                        mediaPlayer?.start()
+                        btnPlayAudio.setImageResource(R.drawable.ic_pause)
                     }
                 }
+
+                audioSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (fromUser) {
+                            mediaPlayer?.seekTo(progress)
+                        }
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                })
             } else {
-                playAudioButton.visibility = View.GONE
+                audioContainer?.visibility = View.GONE
             }
 
             // Video
@@ -173,7 +210,7 @@ class MessageAdapter(private val senderId: String) :
             timestampText.text = formatTimestamp(message.timestamp)
         }
 
-        private fun formatTimestamp(rawTimestamp: String?): String {
+        protected fun formatTimestamp(rawTimestamp: String?): String {
             return try {
                 val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
                 inputFormat.timeZone = TimeZone.getTimeZone("UTC")
@@ -185,11 +222,24 @@ class MessageAdapter(private val senderId: String) :
             }
         }
 
+        protected fun formatTime(milliseconds: Int): String {
+            val minutes = (milliseconds / 1000) / 60
+            val seconds = (milliseconds / 1000) % 60
+            return String.format("%02d:%02d", minutes, seconds)
+        }
+
         fun releaseMediaPlayer() {
+            handler?.removeCallbacks(updateSeekBar)
             mediaPlayer?.release()
             mediaPlayer = null
+            btnPlayAudio?.setImageResource(R.drawable.ic_play)
+            audioSeekBar?.progress = 0
+            audioDuration?.text = "00:00"
         }
     }
+
+    class SentMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
+    class ReceivedMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
 
     class DiffCallback : DiffUtil.ItemCallback<ChatMessage>() {
         override fun areItemsTheSame(oldItem: ChatMessage, newItem: ChatMessage): Boolean {

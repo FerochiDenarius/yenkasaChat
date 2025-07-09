@@ -1,6 +1,3 @@
-Absolutely, Denarius! Here’s a solid, professional, yet approachable README template for your **YenkasaChat** app GitHub repo. It includes sections for screenshots and videos so you can showcase your work well.
-
----
 
 # YenkasaChat
 
@@ -47,7 +44,7 @@ https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_202507
 1. Clone this repository
 
    ```bash
-   git clone https://github.com/yourusername/yenkasachat.git
+   git clone (https://github.com/FerochiDenarius/yenkasaChat)
    ```
 2. Open the project in Android Studio
 3. Configure your Cloudinary credentials in the app
@@ -70,17 +67,9 @@ https://github.com/FerochiDenarius/yenkasaChat/blob/main/Screen_Recording_202507
 
 Feel free to fork, open issues, or submit pull requests! Your feedback and contributions are welcome.
 
----
-
-
-
----
-
 ## 📞 Contact
 
 For questions or feedback, reach me at: \[[+233537044801\+233537504028](mailto:ofosumenyabrightkofi@gmail.com)]
-
----
 
 ---
 

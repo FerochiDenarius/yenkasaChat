@@ -47,7 +47,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private lateinit var handler: ChatMessageHandler
     private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
     private val uiHandler = Handler(Looper.getMainLooper())
-    private var lastMessageCount = 0
+    private var lastMessageTimestamp: Long = 0L
     private val refreshInterval = 5000L
     private lateinit var tempCameraUri: Uri
 
@@ -119,17 +119,29 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
 
         btnCamera.setOnClickListener {
             attachMenu.visibility = View.GONE
+
             val photoFile = File.createTempFile("camera_photo", ".jpg", cacheDir).apply {
                 createNewFile()
                 deleteOnExit()
             }
+
             tempCameraUri = FileProvider.getUriForFile(
                 this,
                 "$packageName.provider",
                 photoFile
             )
+
+            // ✅ Grant URI permission
+            grantUriPermission(
+                "com.android.camera", // This works for default camera apps; optional
+                tempCameraUri,
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+
+            Log.d("CameraDebug", "Launching camera with URI: $tempCameraUri")
             cameraLauncher.launch(tempCameraUri)
         }
+
 
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -235,18 +247,15 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                 override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
                     val messages = response.body()
                     if (response.isSuccessful && messages != null) {
-                        if (messages.size > lastMessageCount) {
-                            val newMessages = messages.subList(lastMessageCount, messages.size)
-                            val incomingMessages = newMessages.filter { it.senderId != senderId }
-                            incomingMessages.lastOrNull()?.let {
-                                NotificationHelper.showMessageNotification(
-                                    this@ChatActivity,
-                                    it.senderId ?: "Unknown",
-                                    it.text ?: "New message"
-                                )
-                            }
+                        val newMessages = messages.filter { (it.timestamp?.toLongOrNull() ?: 0L) > lastMessageTimestamp }
+                        newMessages.lastOrNull()?.let {
+                            NotificationHelper.showMessageNotification(
+                                this@ChatActivity,
+                                it.senderId ?: "Unknown",
+                                it.text ?: "New message"
+                            )
+                            lastMessageTimestamp = it.timestamp?.toLongOrNull() ?: lastMessageTimestamp
                         }
-                        lastMessageCount = messages.size
                         messageAdapter.submitList(messages.toList())
                         recyclerView.scrollToPosition(messages.size - 1)
                     } else {
@@ -281,10 +290,15 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             != PackageManager.PERMISSION_GRANTED
         ) permissions.add(Manifest.permission.RECORD_AUDIO)
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) permissions.add(Manifest.permission.CAMERA)
+
         if (permissions.isNotEmpty()) {
             permissionsLauncher.launch(permissions.toTypedArray())
         }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()

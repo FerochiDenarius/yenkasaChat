@@ -59,26 +59,28 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-const Message = require('../models/message.model'); // Make sure this model is imported
-
-// ✅ Enhanced: Get all chat rooms with latest message
+// ✅ Get all chat rooms with latest message info
 router.get('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
 
   try {
     const rooms = await ChatRoom.find({
       participants: new mongoose.Types.ObjectId(userId)
-    }).populate('participants', 'username profileImage').lean(); // `lean()` returns plain JS objects
+    })
+      .populate('participants', 'username profileImage')
+      .lean();
 
     const enrichedRooms = await Promise.all(rooms.map(async room => {
-      const lastMsg = await Message.findOne({ chatRoomId: room._id })
-        .sort({ createdAt: -1 }) // latest first
+      const lastMsg = await Message.findOne({ roomId: room._id })
+        .sort({ createdAt: -1 })
         .limit(1)
         .lean();
 
       return {
         ...room,
-        lastMessage: lastMsg?.content || null
+        lastMessage: lastMsg?.text || null,
+        lastMessageTimestamp: lastMsg?.timestamp || null,
+        unreadCount: 0 // You can later compute this based on userId
       };
     }));
 

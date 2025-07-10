@@ -18,6 +18,7 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
@@ -29,6 +30,7 @@ import com.google.android.gms.location.LocationServices
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.File
 
 class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
@@ -47,6 +49,15 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private val uiHandler = Handler(Looper.getMainLooper())
     private var lastMessageCount = 0
     private val refreshInterval = 5000L
+    private lateinit var tempCameraUri: Uri
+
+    private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            handler.uploadFileToCloudinary(tempCameraUri, "image")
+        } else {
+            Toast.makeText(this, "Camera capture failed", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
         it?.let { handler.uploadFileToCloudinary(it, "image") }
@@ -101,9 +112,24 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
 
     private fun setupListeners() {
         val btnImage: ImageButton = findViewById(R.id.buttonAttachImage)
+        val btnCamera: ImageButton = findViewById(R.id.buttonAttachCamera)
         val btnLocation: ImageButton = findViewById(R.id.buttonAttachLocation)
         val btnFile: ImageButton = findViewById(R.id.buttonAttachFile)
         val btnContact: ImageButton = findViewById(R.id.buttonAttachContact)
+
+        btnCamera.setOnClickListener {
+            attachMenu.visibility = View.GONE
+            val photoFile = File.createTempFile("camera_photo", ".jpg", cacheDir).apply {
+                createNewFile()
+                deleteOnExit()
+            }
+            tempCameraUri = FileProvider.getUriForFile(
+                this,
+                "$packageName.provider",
+                photoFile
+            )
+            cameraLauncher.launch(tempCameraUri)
+        }
 
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -112,7 +138,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                 micButton.visibility = if (!hasText) View.VISIBLE else View.GONE
                 messageInput.maxLines = if (hasText) 5 else 1
             }
-
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })

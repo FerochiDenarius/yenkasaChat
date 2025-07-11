@@ -19,7 +19,8 @@ object NotificationHelper {
     private const val CHANNEL_ID = "yenkasachat_messages"
     private const val CHANNEL_NAME = "Chat Messages"
 
-    fun showMessageNotification(context: Context, senderName: String, message: String) {
+    fun showMessageNotification(context: Context, senderName: String, message: String, chatId: String? = null)
+    {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
             Log.w("NotificationHelper", "🔕 Notifications are disabled by user/system")
             return

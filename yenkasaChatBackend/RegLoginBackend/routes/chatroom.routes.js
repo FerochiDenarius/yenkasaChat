@@ -62,7 +62,6 @@ router.post('/', authMiddleware, async (req, res) => {
 // ✅ Message preview helper
 function getLastMessagePreview(message) {
   if (!message) return null;
-
   if (message.text) return message.text;
   if (message.imageUrl) return '[Image]';
   if (message.audioUrl) return '[Audio]';
@@ -70,11 +69,10 @@ function getLastMessagePreview(message) {
   if (message.fileUrl) return '[File]';
   if (message.location) return '[Location]';
   if (message.contactName) return `[Contact] ${message.contactName}`;
-
   return '[Message]';
 }
 
-// ✅ Get all chat rooms with latest message info
+// ✅ Get all chat rooms with last message
 router.get('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
 
@@ -93,8 +91,8 @@ router.get('/', authMiddleware, async (req, res) => {
 
       return {
         ...room,
-        lastMessage: getLastMessagePreview(lastMsg),
-        lastMessageTimestamp: lastMsg?.timestamp || null,
+        lastMessage: getLastMessagePreview(lastMsg) || "No messages yet",
+        lastMessageTimestamp: lastMsg?.createdAt || null,
         unreadCount: 0
       };
     }));

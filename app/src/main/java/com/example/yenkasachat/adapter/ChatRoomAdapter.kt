@@ -25,6 +25,17 @@ class ChatRoomAdapter(
 
     override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
         val chatRoom = getItem(position)
+        val previewText = when {
+            chatRoom.lastMessage?.contains("[Image]", ignoreCase = true) == true -> "📷 Photo"
+            chatRoom.lastMessage?.contains("[Audio]", ignoreCase = true) == true -> "🎤 Audio"
+            chatRoom.lastMessage?.contains("[Video]", ignoreCase = true) == true -> "🎬 Video"
+            chatRoom.lastMessage?.contains("[File]", ignoreCase = true) == true -> "📄 File"
+            chatRoom.lastMessage?.contains("[Location]", ignoreCase = true) == true -> "📍 Location"
+            chatRoom.lastMessage?.contains("[Contact]", ignoreCase = true) == true -> "👤 Contact"
+            else -> chatRoom.lastMessage
+        }
+        holder.lastMessage.text = previewText
+
 
         val contactUser = chatRoom.participants.firstOrNull {
             it._id != currentUserId

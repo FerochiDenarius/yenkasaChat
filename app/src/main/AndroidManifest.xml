@@ -16,7 +16,7 @@
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/yc"
         android:label="YenkasaChat"
         android:roundIcon="@mipmap/yc"
         android:supportsRtl="true"

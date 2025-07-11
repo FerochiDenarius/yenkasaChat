@@ -13,15 +13,21 @@ data class ChatRoom(
     val lastMessage: String? = null,
 
     @SerializedName("lastMessageTimestamp")
-    val lastMessageTimestamp: Long? = null, // in millis or seconds from backend
+    val lastMessageTimestamp: String? = null, // ✅ changed from Long to String
 
     @SerializedName("unreadCount")
     val unreadCount: Int = 0
 ) {
     val lastMessageTimeFormatted: String
         get() = lastMessageTimestamp?.let {
-            val timeMillis = if (it < 1000000000000L) it * 1000 else it // detect if in seconds
-            val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
-            sdf.format(Date(timeMillis))
+            try {
+                val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                isoFormat.timeZone = TimeZone.getTimeZone("UTC")
+                val date = isoFormat.parse(it)
+                val outputFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                outputFormat.format(date ?: return "")
+            } catch (e: Exception) {
+                ""
+            }
         } ?: ""
 }

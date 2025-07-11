@@ -16,3 +16,20 @@ module.exports = (req, res, next) => {
         res.status(401).json({ error: 'Invalid or expired token' });
     }
 };
+router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {
+  const { userId } = req.params;
+
+  if (userId !== req.user.id) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { fcmToken } = req.body;
+
+  try {
+    await User.findByIdAndUpdate(userId, { fcmToken });
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('❌ Error saving FCM token:', err);
+    res.status(500).json({ error: 'Failed to save FCM token' });
+  }
+});

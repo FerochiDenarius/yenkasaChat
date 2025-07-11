@@ -10,6 +10,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.network.ApiClient
+import com.google.firebase.messaging.FirebaseMessaging
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -35,7 +36,6 @@ class LoginActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_login)
 
-        // ✅ Corrected IDs from XML
         editIdentifier = findViewById(R.id.editLoginIdentifier)
         editPassword = findViewById(R.id.editLoginPassword)
         btnLogin = findViewById(R.id.btnLogin)
@@ -92,6 +92,30 @@ class LoginActivity : AppCompatActivity() {
 
                         Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
+
+                        // ✅ Fetch and upload FCM token
+                        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val fcmToken = task.result
+                                Log.d("FCM", "✅ FCM Token: $fcmToken")
+
+                                // ✅ Upload to backend
+                                ApiClient.authService.updateFcmToken(
+                                    loginResponse.user._id,
+                                    mapOf("fcmToken" to fcmToken)
+                                ).enqueue(object : Callback<Void> {
+                                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                        Log.d("FCM", "📤 FCM token uploaded: ${response.code()}")
+                                    }
+
+                                    override fun onFailure(call: Call<Void>, t: Throwable) {
+                                        Log.e("FCM", "❌ Failed to upload FCM token: ${t.message}")
+                                    }
+                                })
+                            } else {
+                                Log.w("FCM", "❌ Could not fetch FCM token", task.exception)
+                            }
+                        }
 
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()

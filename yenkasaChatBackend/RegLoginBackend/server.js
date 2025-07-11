@@ -54,6 +54,9 @@ try {
   app.use('/api/chatrooms', chatroomRoutes);
   app.use('/api/verify', verifyRoutes);
   app.use('/api/users', userRoutes);
+app.use('/api/notifications', require('./routes/notifications.route'));
+ 
+
 
   console.log("✅ All route modules loaded and registered");
 } catch (err) {

@@ -6,6 +6,9 @@ import com.example.yenkasachat.model.RegisterRequest
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.PATCH
+import retrofit2.http.Path
+
 
 interface AuthService {
 
@@ -32,6 +35,13 @@ interface AuthService {
     fun requestPhoneVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
+
+    @PATCH("users/{userId}/fcm-token")
+    fun updateFcmToken(
+        @Path("userId") userId: String,
+        @Body body: Map<String, String>
+    ): Call<Void>
+
 
     // ✅ Confirm verification code
     @POST("/api/verify/confirm")

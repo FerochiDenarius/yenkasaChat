@@ -25,6 +25,7 @@ class ChatRoomAdapter(
 
     override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
         val chatRoom = getItem(position)
+
         val previewText = when {
             chatRoom.lastMessage?.contains("[Image]", ignoreCase = true) == true -> "📷 Photo"
             chatRoom.lastMessage?.contains("[Audio]", ignoreCase = true) == true -> "🎤 Audio"
@@ -32,10 +33,10 @@ class ChatRoomAdapter(
             chatRoom.lastMessage?.contains("[File]", ignoreCase = true) == true -> "📄 File"
             chatRoom.lastMessage?.contains("[Location]", ignoreCase = true) == true -> "📍 Location"
             chatRoom.lastMessage?.contains("[Contact]", ignoreCase = true) == true -> "👤 Contact"
-            else -> chatRoom.lastMessage
+            chatRoom.lastMessage?.isNotBlank() == true -> chatRoom.lastMessage
+            else -> "No messages yet"
         }
         holder.lastMessage.text = previewText
-
 
         val contactUser = chatRoom.participants.firstOrNull {
             it._id != currentUserId
@@ -50,12 +51,10 @@ class ChatRoomAdapter(
             .error(R.drawable.ic_profile_placeholder)
             .into(holder.profileImage)
 
-        holder.lastMessage.text = chatRoom.lastMessage ?: "No messages yet"
+        // ✅ Timestamp now correctly parsed from ISO8601
+        holder.timestamp.text = chatRoom.lastMessageTimeFormatted
 
-        // Optional: Display timestamp if available
-        holder.timestamp.text = chatRoom.lastMessageTimeFormatted ?: ""
-
-        // Optional: Show unread badge
+        // ✅ Show unread count
         if (chatRoom.unreadCount > 0) {
             holder.unreadBadge.visibility = View.VISIBLE
             holder.unreadBadge.text = chatRoom.unreadCount.toString()
@@ -67,6 +66,7 @@ class ChatRoomAdapter(
             onChatRoomClick(chatRoom)
         }
     }
+
 
     class ChatRoomViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val contactName: TextView = itemView.findViewById(R.id.textContactName)

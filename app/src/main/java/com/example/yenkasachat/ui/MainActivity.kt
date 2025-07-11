@@ -95,13 +95,18 @@ class MainActivity : AppCompatActivity() {
                         userAdapter.notifyDataSetChanged()
                     } else {
                         Log.e("MainActivity", "Failed to load users: ${response.code()}")
-                        Toast.makeText(this@MainActivity, "Failed to load users", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Failed to load users",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<List<User>>, t: Throwable) {
                     Log.e("MainActivity", "Network failure", t)
-                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT)
+                        .show()
                 }
             })
     }
@@ -115,14 +120,17 @@ class MainActivity : AppCompatActivity() {
                     createChatRoomWithUser(user.username)
                     true
                 }
+
                 R.id.action_add_contact -> {
                     addUserToContacts(user.username)
                     true
                 }
+
                 R.id.action_continue_chat -> {
                     openExistingChatRoom(user._id)
                     true
                 }
+
                 else -> false
             }
         }
@@ -144,12 +152,17 @@ class MainActivity : AppCompatActivity() {
                             putExtra("roomId", roomId)
                         })
                     } else {
-                        Toast.makeText(this@MainActivity, "Chat room creation failed", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Chat room creation failed",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT)
+                        .show()
                 }
             })
     }
@@ -158,12 +171,14 @@ class MainActivity : AppCompatActivity() {
         ApiClient.apiService.addContact("Bearer $token", mapOf("username" to username))
             .enqueue(object : Callback<Contact> {
                 override fun onResponse(call: Call<Contact>, response: Response<Contact>) {
-                    val msg = if (response.isSuccessful) "Contact added!" else "Failed to add contact"
+                    val msg =
+                        if (response.isSuccessful) "Contact added!" else "Failed to add contact"
                     Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onFailure(call: Call<Contact>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT)
+                        .show()
                 }
             })
     }
@@ -171,23 +186,49 @@ class MainActivity : AppCompatActivity() {
     private fun openExistingChatRoom(recipientId: String) {
         ApiClient.apiService.getChatRooms("Bearer $token")
             .enqueue(object : Callback<List<ChatRoom>> {
-                override fun onResponse(call: Call<List<ChatRoom>>, response: Response<List<ChatRoom>>) {
+                override fun onResponse(
+                    call: Call<List<ChatRoom>>,
+                    response: Response<List<ChatRoom>>
+                ) {
                     if (response.isSuccessful && response.body() != null) {
-                        val chatRoom = response.body()!!.find { it.participants.any { p -> p._id == recipientId } }
-                        if (chatRoom != null) {
-                            startActivity(Intent(this@MainActivity, ChatActivity::class.java).apply {
-                                putExtra("roomId", chatRoom._id)
-                            })
+                        val allRooms = response.body()!!
+                        Log.d("MainActivity", "Fetched ${allRooms.size} chat rooms")
+
+                        val chatRoom = allRooms.find { room ->
+                            room.participants.any { participant -> participant._id == recipientId }
+                        }
+
+                        if (chatRoom != null && !chatRoom._id.isNullOrEmpty()) {
+                            Log.d("MainActivity", "Opening chat room: ${chatRoom._id}")
+                            startActivity(
+                                Intent(
+                                    this@MainActivity,
+                                    ChatActivity::class.java
+                                ).apply {
+                                    putExtra("roomId", chatRoom._id)
+                                })
                         } else {
-                            Toast.makeText(this@MainActivity, "No previous chat found", Toast.LENGTH_SHORT).show()
+                            Log.w("MainActivity", "No chat room found for user $recipientId")
+                            Toast.makeText(
+                                this@MainActivity,
+                                "No previous chat found",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     } else {
-                        Toast.makeText(this@MainActivity, "Failed to fetch chat rooms", Toast.LENGTH_SHORT).show()
+                        Log.e("MainActivity", "Failed to fetch chat rooms: ${response.code()}")
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Failed to fetch chat rooms",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("MainActivity", "Network error: ${t.message}", t)
+                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT)
+                        .show()
                 }
             })
     }

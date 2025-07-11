@@ -92,5 +92,18 @@ router.post('/fix-contacts', async (req, res) => {
   }
 });
 
+router.patch('/:userId/fcm-token', async (req, res) => {
+
+  const { userId } = req.params;
+  const { fcmToken } = req.body;
+
+  try {
+    await User.findByIdAndUpdate(userId, { fcmToken });
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('❌ Error saving FCM token:', err);
+    res.status(500).json({ error: 'Failed to save FCM token' });
+  }
+});
 
 module.exports = router;

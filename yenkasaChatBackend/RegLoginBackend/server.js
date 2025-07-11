@@ -5,11 +5,11 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const admin = require('firebase-admin');
+const fs = require('fs'); // ✅ required for secret file check
 
 const app = express();
 
 // ✅ Firebase Admin SDK Setup
-const fs = require('fs');
 const secretFilePath = '/etc/secrets/firebase-service-account.json'; // Render secret file path
 
 try {
@@ -34,7 +34,6 @@ try {
 } catch (error) {
   console.error("❌ Firebase Admin failed to initialize:", error.message);
   process.exit(1);
-}
 }
 
 // ✅ Middleware

@@ -15,7 +15,7 @@ const secretFilePath = '/etc/secrets/firebase-service-account.json'; // Render s
 try {
   if (fs.existsSync(secretFilePath)) {
     // ✅ Use Render secret file
-    const serviceAccount = require(secretFilePath);
+const serviceAccount = JSON.parse(fs.readFileSync(secretFilePath, 'utf8'));
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });

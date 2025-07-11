@@ -10,7 +10,7 @@ const fs = require('fs'); // ✅ required for secret file check
 const app = express();
 
 // ✅ Firebase Admin SDK Setup
-const secretFilePath = '/etc/secrets/firebase-service-account.json'; // Render secret file path
+const secretFilePath = '/etc/secrets/yenkasachat-480-firebase-adminsdk-fbsvc-1e9de95d1f.json'; // Render secret file path
 
 try {
   if (fs.existsSync(secretFilePath)) {

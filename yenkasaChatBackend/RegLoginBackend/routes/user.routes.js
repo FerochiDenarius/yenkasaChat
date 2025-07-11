@@ -66,4 +66,31 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
 });
 
+// Fix user emails and phoneNumbers (lowercase, trimmed)
+router.post('/fix-contacts', async (req, res) => {
+  try {
+    const result = await User.updateMany(
+      {},
+      [
+        {
+          $set: {
+            email: { $toLower: { $trim: { input: "$email" } } },
+            phoneNumber: { $trim: { input: "$phoneNumber" } }
+          }
+        }
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Fixed emails and phone numbers formatting',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.error('❌ Failed to fix user contacts:', err.message);
+    res.status(500).json({ error: 'Server error fixing users' });
+  }
+});
+
+
 module.exports = router;

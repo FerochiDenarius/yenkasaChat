@@ -5,7 +5,7 @@ const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const mongoose = require('mongoose');
 
-// ✅ Send a message (text, image, audio, video, file, contact, or location)
+// ✅ Send a message
 router.post('/', auth, async (req, res) => {
   const {
     roomId,
@@ -23,12 +23,7 @@ router.post('/', auth, async (req, res) => {
   }
 
   const hasContent =
-    text ||
-    imageUrl ||
-    audioUrl ||
-    videoUrl ||
-    fileUrl ||
-    contactInfo ||
+    text || imageUrl || audioUrl || videoUrl || fileUrl || contactInfo ||
     (location?.latitude && location?.longitude);
 
   if (!hasContent) {
@@ -53,7 +48,6 @@ router.post('/', auth, async (req, res) => {
       fileUrl,
       contactInfo,
       location,
-      timestamp: new Date(), // ✅ sets custom timestamp explicitly
     });
 
     console.log('💾 Saving message:', newMessage);
@@ -73,7 +67,7 @@ router.get('/:roomId/messages', auth, async (req, res) => {
   try {
     const messages = await Message.find({
       roomId: new mongoose.Types.ObjectId(roomId)
-    }).sort({ createdAt: 1 }); // ⬅️ use auto timestamp for correct order
+    }).sort({ createdAt: 1 }); // ✅ Now works correctly with timestamps
 
     res.json(messages);
   } catch (err) {
@@ -81,5 +75,31 @@ router.get('/:roomId/messages', auth, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 });
+
+// Temporary route to fix missing createdAt/updatedAt using timestamp
+router.post('/fix-timestamps', async (req, res) => {
+  try {
+    const result = await Message.updateMany(
+      { createdAt: { $exists: false } },
+      [
+        {
+          $set: {
+            createdAt: "$timestamp",
+            updatedAt: "$timestamp"
+          }
+        }
+      ]
+    );
+    res.json({
+      message: "✅ Fixed messages with missing createdAt/updatedAt",
+      matched: result.matchedCount,
+      modified: result.modifiedCount
+    });
+  } catch (err) {
+    console.error("❌ Timestamp fix failed:", err.message);
+    res.status(500).json({ error: "Failed to fix timestamps" });
+  }
+});
+
 
 module.exports = router;

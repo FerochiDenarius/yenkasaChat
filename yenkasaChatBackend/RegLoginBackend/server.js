@@ -1,46 +1,3 @@
-// ✅ Load environment variables FIRST
-require('dotenv').config();
-
-const path = require('path');
-const express = require('express');
-const mongoose = require('mongoose');
-const admin = require('firebase-admin');
-
-const app = express();
-
-// ✅ Firebase Admin SDK Setup (before DB and server startup)
-try {
-  if (process.env.FIREBASE_CONFIG) {
-    // Production (e.g. Render)
-    const serviceAccountJson = process.env.FIREBASE_CONFIG;
-
-    const parsedConfig = typeof serviceAccountJson === 'string'
-      ? JSON.parse(serviceAccountJson)
-      : serviceAccountJson;
-
-    admin.initializeApp({
-      credential: admin.credential.cert(parsedConfig)
-    });
-
-    console.log("✅ Firebase Admin initialized using environment variable (Render)");
-  } else {
-    // Local development using real filename
-    const serviceAccount = require('./config/yenkasachat-480-firebase-adminsdk-fbsvc-ec4aa33dc5.json');
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-
-    console.log("✅ Firebase Admin initialized using local service account file");
-  }
-} catch (error) {
-  console.error("❌ Firebase Admin failed to initialize:", error.message);
-  process.exit(1);
-}
-
-// ✅ Middleware
-app.use(express.json());
-
 // ✅ Import and register routes
 try {
   const authRoutes = require('./routes/auth');
@@ -63,7 +20,7 @@ try {
 }
 
 // 🔒 Dev-only test endpoints
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV !== 'production') {
   app.get('/cloudinary-test', (req, res) => {
     res.json({
       name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -92,6 +49,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => {
   console.log('✅ MongoDB connected');
+
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

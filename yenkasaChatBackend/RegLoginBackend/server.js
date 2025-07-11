@@ -12,16 +12,26 @@ const app = express();
 try {
   if (process.env.FIREBASE_CONFIG) {
     // Production (e.g. Render)
+    const serviceAccountJson = process.env.FIREBASE_CONFIG;
+
+    // Some platforms (like Render) pass this as a raw string, ensure it's parsed safely
+    const parsedConfig = typeof serviceAccountJson === 'string'
+      ? JSON.parse(serviceAccountJson)
+      : serviceAccountJson;
+
     admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_CONFIG))
+      credential: admin.credential.cert(parsedConfig)
     });
+
     console.log("✅ Firebase Admin initialized using environment variable (Render)");
   } else {
     // Local development
     const serviceAccount = require('./config/firebase-service-account.json');
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
+
     console.log("✅ Firebase Admin initialized using local service account");
   }
 } catch (error) {
@@ -56,7 +66,6 @@ try {
 // 🔒 Secure: Only expose test/debug endpoints in development
 if (process.env.NODE_ENV === 'development') {
 
-  // ✅ Cloudinary test endpoint (for development only)
   app.get('/cloudinary-test', (req, res) => {
     res.json({
       name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -65,7 +74,6 @@ if (process.env.NODE_ENV === 'development') {
     });
   });
 
-  // ✅ Firebase test endpoint (for development only)
   app.get('/firebase-test', async (req, res) => {
     try {
       const token = await admin.app().options.credential.getAccessToken();

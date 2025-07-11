@@ -114,16 +114,4 @@ This project is licensed under the MIT License — feel free to use, modify, and
 
 ---
 
----
-
-### ✅ What to Do Next:
-
-1. Copy the code above.
-2. Go to your repo: [`https://github.com/FerochiDenarius/yenkasaChat`](https://github.com/FerochiDenarius/yenkasaChat)
-3. Click on the `README.md` file.
-4. Click the pencil ✏️ (Edit) icon.
-5. Paste the new content.
-6. Scroll down, write a commit message like “Updated README layout”, and click **Commit changes**.
-
-Let me know if you want to add GitHub badges, a live demo, or links to external documentation!
-
+-

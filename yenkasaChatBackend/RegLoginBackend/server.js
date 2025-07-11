@@ -14,7 +14,6 @@ try {
     // Production (e.g. Render)
     const serviceAccountJson = process.env.FIREBASE_CONFIG;
 
-    // Some platforms (like Render) pass this as a raw string, ensure it's parsed safely
     const parsedConfig = typeof serviceAccountJson === 'string'
       ? JSON.parse(serviceAccountJson)
       : serviceAccountJson;
@@ -25,18 +24,18 @@ try {
 
     console.log("✅ Firebase Admin initialized using environment variable (Render)");
   } else {
-    // Local development
-    const serviceAccount = require('./config/firebase-service-account.json');
+    // Local development using real filename
+    const serviceAccount = require('./config/yenkasachat-480-firebase-adminsdk-fbsvc-ec4aa33dc5.json');
 
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
 
-    console.log("✅ Firebase Admin initialized using local service account");
+    console.log("✅ Firebase Admin initialized using local service account file");
   }
 } catch (error) {
   console.error("❌ Firebase Admin failed to initialize:", error.message);
-  process.exit(1); // ⛔ Stop the server if Firebase fails
+  process.exit(1);
 }
 
 // ✅ Middleware
@@ -63,9 +62,8 @@ try {
   console.error('❌ Failed to load one or more route modules:', err.message);
 }
 
-// 🔒 Secure: Only expose test/debug endpoints in development
+// 🔒 Dev-only test endpoints
 if (process.env.NODE_ENV === 'development') {
-
   app.get('/cloudinary-test', (req, res) => {
     res.json({
       name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -83,24 +81,23 @@ if (process.env.NODE_ENV === 'development') {
       res.status(500).json({ error: "Firebase not working", details: err.message });
     }
   });
-
 } else {
   console.log('🔐 Test routes (/firebase-test, /cloudinary-test) are disabled in production');
 }
 
-// ✅ MongoDB connection and server startup
+// ✅ MongoDB + server startup
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-  .then(() => {
-    console.log('✅ MongoDB connected');
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
+.then(() => {
+  console.log('✅ MongoDB connected');
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
   });
+})
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err.message);
+  process.exit(1);
+});

@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const mongoose = require('mongoose');
+const admin = require('firebase-admin');
+
 const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
-const mongoose = require('mongoose');
+const User = require('../models/user.model'); // ✅ Needed for sender + receiver lookup
 
 // ✅ Send a message
 router.post('/', auth, async (req, res) => {
@@ -53,6 +56,45 @@ router.post('/', auth, async (req, res) => {
     console.log('💾 Saving message:', newMessage);
     await newMessage.save();
 
+    // ✅ Send FCM notification to other user
+    const sender = await User.findById(req.user.id);
+    const receiverId = chatRoom.participants.find(p => p.toString() !== req.user.id);
+    const receiver = await User.findById(receiverId);
+
+    if (receiver?.fcmToken) {
+      const messageType = imageUrl ? 'image'
+        : audioUrl ? 'audio'
+        : videoUrl ? 'video'
+        : fileUrl ? 'file'
+        : contactInfo ? 'contact'
+        : location ? 'location'
+        : 'text';
+
+      const fcmPayload = {
+        token: receiver.fcmToken,
+        notification: {
+          title: sender.username || 'YenkasaChat',
+          body: text || `📎 New ${messageType} message`,
+        },
+        data: {
+          chatId: roomId,
+          senderId: sender._id.toString(),
+          senderName: sender.username,
+          text: text || '',
+          type: messageType
+        }
+      };
+
+      try {
+        const response = await admin.messaging().send(fcmPayload);
+        console.log('📤 FCM sent:', response);
+      } catch (err) {
+        console.error('❌ Failed to send FCM:', err.message);
+      }
+    } else {
+      console.warn('⚠️ No FCM token for recipient');
+    }
+
     res.status(201).json(newMessage);
   } catch (err) {
     console.error('❌ Error saving message:', err);
@@ -67,7 +109,7 @@ router.get('/:roomId/messages', auth, async (req, res) => {
   try {
     const messages = await Message.find({
       roomId: new mongoose.Types.ObjectId(roomId)
-    }).sort({ createdAt: 1 }); // ✅ Now works correctly with timestamps
+    }).sort({ createdAt: 1 });
 
     res.json(messages);
   } catch (err) {
@@ -76,7 +118,7 @@ router.get('/:roomId/messages', auth, async (req, res) => {
   }
 });
 
-// Temporary route to fix missing createdAt/updatedAt using timestamp
+// ✅ Fix missing timestamps
 router.post('/fix-timestamps', async (req, res) => {
   try {
     const result = await Message.updateMany(
@@ -100,6 +142,5 @@ router.post('/fix-timestamps', async (req, res) => {
     res.status(500).json({ error: "Failed to fix timestamps" });
   }
 });
-
 
 module.exports = router;

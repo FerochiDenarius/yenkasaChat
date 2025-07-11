@@ -9,31 +9,32 @@ const admin = require('firebase-admin');
 const app = express();
 
 // ✅ Firebase Admin SDK Setup
+const fs = require('fs');
+const secretFilePath = '/etc/secrets/firebase-service-account.json'; // Render secret file path
+
 try {
-  if (process.env.FIREBASE_CONFIG) {
-    // ✅ Production (Render): Parse JSON string and fix \n issues in private_key
-    const parsedConfig = JSON.parse(
-      process.env.FIREBASE_CONFIG.replace(/\\n/g, '\n')
-    );
-
-    admin.initializeApp({
-      credential: admin.credential.cert(parsedConfig),
-    });
-
-    console.log("✅ Firebase Admin initialized using FIREBASE_CONFIG (Render)");
-  } else {
-    // ✅ Local Development: Load local service account file
-    const serviceAccount = require('./config/yenkasachat-480-firebase-adminsdk-fbsvc-ec4aa33dc5.json');
-
+  if (fs.existsSync(secretFilePath)) {
+    // ✅ Use Render secret file
+    const serviceAccount = require(secretFilePath);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
-
-    console.log("✅ Firebase Admin initialized using local service account file");
+    console.log("✅ Firebase Admin initialized using secret file (Render)");
+  } else if (process.env.FIREBASE_CONFIG) {
+    // 🔁 Fallback: FIREBASE_CONFIG variable
+    const parsedConfig = JSON.parse(process.env.FIREBASE_CONFIG.replace(/\\n/g, '\n'));
+    admin.initializeApp({
+      credential: admin.credential.cert(parsedConfig),
+    });
+    console.log("✅ Firebase Admin initialized using FIREBASE_CONFIG (Render fallback)");
+  } else {
+    // ⛔ No config available
+    throw new Error("No Firebase configuration found");
   }
 } catch (error) {
   console.error("❌ Firebase Admin failed to initialize:", error.message);
   process.exit(1);
+}
 }
 
 // ✅ Middleware

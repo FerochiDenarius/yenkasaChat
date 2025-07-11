@@ -13,13 +13,13 @@ const upload = multer({ storage });
  * @access  Private
  */
 router.get('/', authMiddleware, async (req, res) => {
-    try {
-        const users = await User.find().select('-password').lean();
-        res.status(200).json(users);
-    } catch (err) {
-        console.error('❌ Failed to fetch users:', err.message);
-        res.status(500).json({ error: 'Failed to retrieve users' });
-    }
+  try {
+    const users = await User.find().select('-password').lean();
+    res.status(200).json(users);
+  } catch (err) {
+    console.error('❌ Failed to fetch users:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve users' });
+  }
 });
 
 /**
@@ -28,25 +28,25 @@ router.get('/', authMiddleware, async (req, res) => {
  * @access  Private
  */
 router.post('/profile-picture', authMiddleware, upload.single('profileImage'), async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ error: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-        if (!req.file || !req.file.path) {
-            return res.status(400).json({ error: 'No image uploaded or upload failed' });
-        }
-
-        user.profileImage = req.file.path;
-        await user.save();
-
-        res.status(200).json({
-            message: '✅ Profile image uploaded successfully',
-            imageUrl: user.profileImage,
-        });
-    } catch (err) {
-        console.error('❌ Image upload error:', err.stack || err.message);
-        res.status(500).json({ error: 'Server error while uploading profile picture' });
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ error: 'No image uploaded or upload failed' });
     }
+
+    user.profileImage = req.file.path;
+    await user.save();
+
+    res.status(200).json({
+      message: '✅ Profile image uploaded successfully',
+      imageUrl: user.profileImage,
+    });
+  } catch (err) {
+    console.error('❌ Image upload error:', err.stack || err.message);
+    res.status(500).json({ error: 'Server error while uploading profile picture' });
+  }
 });
 
 /**
@@ -55,15 +55,15 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
  * @access  Private
  */
 router.get('/me', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) return res.status(404).json({ error: 'User not found' });
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-        res.status(200).json(user);
-    } catch (err) {
-        console.error('❌ Failed to fetch profile:', err.stack || err.message);
-        res.status(500).json({ error: 'Failed to retrieve user profile' });
-    }
+    res.status(200).json(user);
+  } catch (err) {
+    console.error('❌ Failed to fetch profile:', err.stack || err.message);
+    res.status(500).json({ error: 'Failed to retrieve user profile' });
+  }
 });
 
 // Fix user emails and phoneNumbers (lowercase, trimmed)
@@ -92,9 +92,18 @@ router.post('/fix-contacts', async (req, res) => {
   }
 });
 
-router.patch('/:userId/fcm-token', async (req, res) => {
-
+/**
+ * @route   PATCH /api/users/:userId/fcm-token
+ * @desc    Update user's FCM token
+ * @access  Private (must be owner)
+ */
+router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {
   const { userId } = req.params;
+
+  if (userId !== req.user.id) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
   const { fcmToken } = req.body;
 
   try {

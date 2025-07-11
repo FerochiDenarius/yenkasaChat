@@ -1,32 +1,32 @@
 // ✅ Load environment variables FIRST
 require('dotenv').config();
 
-const path = require('path');
 const express = require('express');
+const path = require('path');
 const mongoose = require('mongoose');
 const admin = require('firebase-admin');
 
 const app = express();
 
-// ✅ Firebase Admin SDK Setup (before DB and server startup)
+// ✅ Firebase Admin SDK Setup
 try {
   if (process.env.FIREBASE_CONFIG) {
-    // Render or other production environments
+    // ✅ Production (Render): Parse JSON string and fix \n issues in private_key
     const parsedConfig = JSON.parse(
       process.env.FIREBASE_CONFIG.replace(/\\n/g, '\n')
     );
 
     admin.initializeApp({
-      credential: admin.credential.cert(parsedConfig)
+      credential: admin.credential.cert(parsedConfig),
     });
 
-    console.log("✅ Firebase Admin initialized using environment variable (Render)");
+    console.log("✅ Firebase Admin initialized using FIREBASE_CONFIG (Render)");
   } else {
-    // Local development fallback
+    // ✅ Local Development: Load local service account file
     const serviceAccount = require('./config/yenkasachat-480-firebase-adminsdk-fbsvc-ec4aa33dc5.json');
 
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert(serviceAccount),
     });
 
     console.log("✅ Firebase Admin initialized using local service account file");
@@ -39,7 +39,7 @@ try {
 // ✅ Middleware
 app.use(express.json());
 
-// ✅ Import and register routes
+// ✅ Import and register route modules
 try {
   const authRoutes = require('./routes/auth');
   const contactRoutes = require('./routes/contacts.routes');
@@ -60,13 +60,13 @@ try {
   console.error('❌ Failed to load one or more route modules:', err.message);
 }
 
-// 🔒 Dev-only test endpoints
+// ✅ Dev-only test/debug routes
 if (process.env.NODE_ENV === 'development') {
   app.get('/cloudinary-test', (req, res) => {
     res.json({
       name: process.env.CLOUDINARY_CLOUD_NAME,
       key: process.env.CLOUDINARY_API_KEY,
-      secret: process.env.CLOUDINARY_API_SECRET ? '✅ present' : '❌ missing'
+      secret: process.env.CLOUDINARY_API_SECRET ? '✅ present' : '❌ missing',
     });
   });
 
@@ -75,12 +75,10 @@ if (process.env.NODE_ENV === 'development') {
       const token = await admin.app().options.credential.getAccessToken();
       res.json({ status: "✅ Firebase working", token });
     } catch (err) {
-      console.error("❌ Firebase test failed", err);
       res.status(500).json({ error: "Firebase not working", details: err.message });
     }
   });
 
-  // Optional: Firebase config debug
   app.get('/debug/firebase-env', (req, res) => {
     try {
       const parsed = JSON.parse(process.env.FIREBASE_CONFIG.replace(/\\n/g, '\n'));
@@ -90,13 +88,13 @@ if (process.env.NODE_ENV === 'development') {
     }
   });
 } else {
-  console.log('🔐 Test routes (/firebase-test, /cloudinary-test) are disabled in production');
+  console.log('🔐 Test routes disabled in production');
 }
 
-// ✅ MongoDB + server startup
+// ✅ MongoDB Connection + Server Start
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 })
 .then(() => {
   console.log('✅ MongoDB connected');
@@ -105,7 +103,7 @@ mongoose.connect(process.env.MONGODB_URI, {
     console.log(`🚀 Server running on port ${PORT}`);
   });
 })
-.catch(err => {
+.catch((err) => {
   console.error('❌ MongoDB connection error:', err.message);
   process.exit(1);
 });

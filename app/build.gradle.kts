@@ -3,10 +3,21 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("com.google.gms.google-services")
     id("kotlin-kapt")
+    id("com.onesignal.androidsdk.onesignal-gradle-plugin") // ✅ OneSignal plugin
+}
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.0.0")
+        classpath("gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.14.0, 0.99.99]")
+    }
 }
 
 android {
-
     namespace = "com.example.yenkasachat"
     compileSdk = 35
 
@@ -43,6 +54,9 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
 
+    // ✅ OneSignal SDK
+    implementation("com.onesignal:OneSignal:[5.0.0, 5.99.99]")
+
     // Networking (Retrofit + Gson + OkHttp)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -50,16 +64,16 @@ dependencies {
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
-    implementation ("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
-    // Firebase Cloud Messaging
+    // Firebase Cloud Messaging (optional, still required by OneSignal under the hood)
     implementation("com.google.firebase:firebase-messaging:23.4.1")
 
     // Image loading (Glide)
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
-    // Coroutines (optional)
+    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // Testing

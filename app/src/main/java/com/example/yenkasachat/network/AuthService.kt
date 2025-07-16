@@ -9,42 +9,41 @@ import retrofit2.http.POST
 import retrofit2.http.PATCH
 import retrofit2.http.Path
 
-
 interface AuthService {
 
-    // ✅ Register a new user
-    @POST("/api/auth/register")
+    // ✅ POST /api/auth/register
+    @POST("auth/register")
     fun registerUser(
         @Body request: RegisterRequest
     ): Call<LoginResponse>
 
-    // ✅ Login using identifier and password
-    @POST("/api/auth/login")
+    // ✅ POST /api/auth/login
+    @POST("auth/login")
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    // ✅ Request email verification
-    @POST("/api/verify/request")
+    // ✅ POST /api/auth/verify/request
+    @POST("auth/verify/request")
     fun requestEmailVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
-    // ✅ Request phone verification
-    @POST("/api/verify/request-phone")
+    // ✅ POST /api/auth/verify/request-phone
+    @POST("auth/verify/request-phone")
     fun requestPhoneVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
+    // ✅ PATCH /api/users/{userId}/fcm-token (this is correct as-is)
     @PATCH("users/{userId}/fcm-token")
     fun updateFcmToken(
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<Void>
 
-
-    // ✅ Confirm verification code
-    @POST("/api/verify/confirm")
+    // ✅ POST /api/auth/verify/confirm
+    @POST("auth/verify/confirm")
     fun confirmVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>

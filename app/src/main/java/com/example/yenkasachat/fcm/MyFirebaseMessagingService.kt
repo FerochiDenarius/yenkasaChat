@@ -8,18 +8,18 @@ import com.example.yenkasachat.util.NotificationHelper
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        Log.d("FCM", "Message received: $remoteMessage")
+        Log.d("FCM", "📨 Firebase Message received: $remoteMessage")
 
-        val data = remoteMessage.data
-        if (data.isEmpty()) {
-            Log.w("FCM", "⚠️ Received empty data payload, skipping.")
+        // You will only reach here if FCM sends a direct message (not through OneSignal)
+        if (remoteMessage.data.isEmpty()) {
+            Log.w("FCM", "⚠️ Empty payload — likely not from your backend.")
             return
         }
 
-        val senderName = data["title"] ?: "YenkasaChat"
-        val text = data["text"] ?: ""
-        val type = data["type"] ?: "text"
-        val chatId = data["chatId"]
+        val senderName = remoteMessage.data["title"] ?: "YenkasaChat"
+        val text = remoteMessage.data["text"] ?: ""
+        val type = remoteMessage.data["type"] ?: "text"
+        val chatId = remoteMessage.data["chatId"]
 
         val previewMessage = when (type.lowercase()) {
             "image" -> "📷 Photo"
@@ -31,12 +31,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             else -> text.take(120)
         }
 
-        // ✅ Send notification using centralized helper
         NotificationHelper.showMessageNotification(
             context = this,
             senderName = senderName,
             message = previewMessage,
             chatId = chatId
         )
+    }
+
+    override fun onNewToken(token: String) {
+        Log.d("FCM", "🆕 New Firebase token: $token")
+        // Optional: Upload token to your backend if needed
     }
 }

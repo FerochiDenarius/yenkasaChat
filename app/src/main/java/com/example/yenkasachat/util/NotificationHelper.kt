@@ -7,20 +7,24 @@ import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.yenkasachat.R
+import com.example.yenkasachat.ui.ChatActivity
 import com.example.yenkasachat.ui.MainActivity
-import android.util.Log
-import androidx.core.content.ContextCompat
 
 object NotificationHelper {
 
     private const val CHANNEL_ID = "yenkasachat_messages"
     private const val CHANNEL_NAME = "Chat Messages"
 
-    fun showMessageNotification(context: Context, senderName: String, message: String, chatId: String? = null)
-    {
+    fun showMessageNotification(
+        context: Context,
+        senderName: String,
+        message: String,
+        chatId: String? = null
+    ) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
             Log.w("NotificationHelper", "🔕 Notifications are disabled by user/system")
             return
@@ -35,8 +39,16 @@ object NotificationHelper {
             null
         }
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        // ✅ Tap intent: go to ChatActivity if chatId is given, else MainActivity
+        val intent = if (!chatId.isNullOrEmpty()) {
+            Intent(context, ChatActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("roomId", chatId)
+            }
+        } else {
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
         }
 
         val pendingIntent = PendingIntent.getActivity(
@@ -47,7 +59,7 @@ object NotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_message)
+            .setSmallIcon(R.drawable.ic_message) // Ensure this icon exists and is a white vector
             .setContentTitle("New message from $senderName")
             .setContentText(message.take(120))
             .setAutoCancel(true)
@@ -57,7 +69,7 @@ object NotificationHelper {
             .setContentIntent(pendingIntent)
 
         if (notificationSound != null) {
-            builder.setSound(notificationSound) // Fallback for pre-O
+            builder.setSound(notificationSound)
         }
 
         NotificationManagerCompat.from(context)
@@ -79,16 +91,18 @@ object NotificationHelper {
                 .build()
 
             val channel = NotificationChannel(
-                CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifications for new chat messages"
                 enableLights(true)
                 lightColor = Color.BLUE
                 enableVibration(true)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 if (soundUri != null) {
                     setSound(soundUri, audioAttributes)
                 }
-                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
 
             val manager = context.getSystemService(NotificationManager::class.java)

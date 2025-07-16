@@ -9,10 +9,12 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven("https://plugins.gradle.org/m2/") // ✅ Required for OneSignal plugin
     }
-    // 👇 Correctly placed plugins block (not nested)
+
     plugins {
         id("com.google.gms.google-services") version "4.4.1" apply false
+        id("com.onesignal.androidsdk.onesignal-gradle-plugin") version "0.14.0" apply false // ✅ OneSignal plugin
     }
 }
 

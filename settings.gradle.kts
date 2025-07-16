@@ -14,7 +14,7 @@ pluginManagement {
 
     plugins {
         id("com.google.gms.google-services") version "4.4.1" apply false
-        id("com.onesignal.androidsdk.onesignal-gradle-plugin") version "0.14.0" apply false // ✅ OneSignal plugin
+        id("com.onesignal.androidsdk.onesignal-gradle-plugin") version "0.14.0" apply false
     }
 }
 

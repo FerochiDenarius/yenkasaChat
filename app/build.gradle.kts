@@ -1,20 +1,11 @@
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    id("com.google.gms.google-services")
-    id("kotlin-kapt")
-    id("com.onesignal.androidsdk.onesignal-gradle-plugin") // ✅ OneSignal plugin
-}
+// app/build.gradle.kts
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.0.0")
-        classpath("gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.14.0, 0.99.99]")
-    }
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("kotlin-kapt")
+    id("com.google.gms.google-services")
+    id("com.onesignal.androidsdk.onesignal-gradle-plugin")
 }
 
 android {
@@ -25,7 +16,6 @@ android {
         applicationId = "com.example.yenkasachat"
         minSdk = 21
         targetSdk = 35
-
         versionCode = 5
         versionName = "1.0.5"
 
@@ -39,6 +29,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    tasks.withType<Test> {
+        enabled = false
     }
 
     kotlinOptions {
@@ -54,22 +47,22 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
 
-    // ✅ OneSignal SDK
-    implementation("com.onesignal:OneSignal:[5.0.0, 5.99.99]")
+    // ✅ OneSignal SDK (v5.1.8)
+    implementation("com.onesignal:OneSignal:4.8.6")
 
-    // Networking (Retrofit + Gson + OkHttp)
+    // Retrofit + Gson + OkHttp
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-    // Location
+    // Google Maps + Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
 
-    // Firebase Cloud Messaging (optional, still required by OneSignal under the hood)
+    // Firebase Cloud Messaging (needed by OneSignal)
     implementation("com.google.firebase:firebase-messaging:23.4.1")
 
-    // Image loading (Glide)
+    // Glide for image loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 

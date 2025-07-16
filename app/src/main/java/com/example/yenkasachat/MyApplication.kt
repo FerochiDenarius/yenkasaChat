@@ -1,31 +1,33 @@
 package com.example.yenkasachat
 
 import android.app.Application
-import com.google.firebase.FirebaseApp
+import android.util.Log
 import com.onesignal.OneSignal
+import com.onesignal.OSNotificationOpenedResult
 
 class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
 
-        // ✅ Initialize Firebase
-        FirebaseApp.initializeApp(this)
-
-        // ✅ OneSignal App ID (replace this with your actual OneSignal app ID)
-        val ONESIGNAL_APP_ID = "your-onesignal-app-id"
-
         // ✅ Initialize OneSignal
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE)
         OneSignal.initWithContext(this)
-        OneSignal.setAppId(ONESIGNAL_APP_ID)
+        OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
 
-        // ✅ Optional: Handle notification tap behavior
-        OneSignal.setNotificationOpenedHandler { result ->
-            val additionalData = result.notification.additionalData
-            val messageBody = result.notification.body
-            // You can log or act based on the data
-            // For example: route to ChatActivity with extras
+        // ✅ Handle notification open action
+        OneSignal.setNotificationOpenedHandler { result: OSNotificationOpenedResult ->
+            val notification = result.notification
+            Log.d("OneSignal", "Opened: ${notification.body}, data: ${notification.additionalData}")
         }
+
+        // ✅ Optionally log the player ID (for testing)
+        val deviceState = OneSignal.getDeviceState()
+        val playerId = deviceState?.userId
+        Log.d("OneSignal", "Player ID: $playerId")
+
+
+        // ✅ Save global context if needed
+        // AppContext.context = applicationContext
     }
 }

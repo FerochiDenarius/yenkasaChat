@@ -4,37 +4,13 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
-const admin = require('firebase-admin');
 const fs = require('fs'); // ✅ required for secret file check
 
 const app = express();
 
-// ✅ Firebase Admin SDK Setup
-const secretFilePath = '/etc/secrets/yenkasachat-480-firebase-adminsdk-fbsvc-1e9de95d1f.json'; // Render secret file path
-
-try {
-  if (fs.existsSync(secretFilePath)) {
-    // ✅ Use Render secret file
-const serviceAccount = JSON.parse(fs.readFileSync(secretFilePath, 'utf8'));
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("✅ Firebase Admin initialized using secret file (Render)");
-  } else if (process.env.FIREBASE_CONFIG) {
-    // 🔁 Fallback: FIREBASE_CONFIG variable
-    const parsedConfig = JSON.parse(process.env.FIREBASE_CONFIG.replace(/\\n/g, '\n'));
-    admin.initializeApp({
-      credential: admin.credential.cert(parsedConfig),
-    });
-    console.log("✅ Firebase Admin initialized using FIREBASE_CONFIG (Render fallback)");
-  } else {
-    // ⛔ No config available
-    throw new Error("No Firebase configuration found");
-  }
-} catch (error) {
-  console.error("❌ Firebase Admin failed to initialize:", error.message);
-  process.exit(1);
-}
+// ✅ OneSignal route for saving player IDs
+const oneSignalRoutes = require('./routes/onesignal');
+app.use('/api/onesignal', oneSignalRoutes);
 
 // ✅ Middleware
 app.use(express.json());
@@ -54,9 +30,7 @@ try {
   app.use('/api/chatrooms', chatroomRoutes);
   app.use('/api/verify', verifyRoutes);
   app.use('/api/users', userRoutes);
-app.use('/api/notifications', require('./routes/notifications.route'));
- 
-
+  app.use('/api/notifications', require('./routes/notifications.route'));
 
   console.log("✅ All route modules loaded and registered");
 } catch (err) {
@@ -71,24 +45,6 @@ if (process.env.NODE_ENV === 'development') {
       key: process.env.CLOUDINARY_API_KEY,
       secret: process.env.CLOUDINARY_API_SECRET ? '✅ present' : '❌ missing',
     });
-  });
-
-  app.get('/firebase-test', async (req, res) => {
-    try {
-      const token = await admin.app().options.credential.getAccessToken();
-      res.json({ status: "✅ Firebase working", token });
-    } catch (err) {
-      res.status(500).json({ error: "Firebase not working", details: err.message });
-    }
-  });
-
-  app.get('/debug/firebase-env', (req, res) => {
-    try {
-      const parsed = JSON.parse(process.env.FIREBASE_CONFIG.replace(/\\n/g, '\n'));
-      res.json({ ok: true, parsed });
-    } catch (err) {
-      res.status(500).json({ error: 'Firebase config invalid', message: err.message });
-    }
   });
 } else {
   console.log('🔐 Test routes disabled in production');
@@ -109,6 +65,4 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((err) => {
   console.error('❌ MongoDB connection error:', err.message);
   process.exit(1);
-
-
 });

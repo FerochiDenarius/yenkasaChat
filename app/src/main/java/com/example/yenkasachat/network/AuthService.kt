@@ -35,9 +35,16 @@ interface AuthService {
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
-    // ✅ PATCH /api/users/{userId}/fcm-token (this is correct as-is)
+    // ✅ PATCH /api/users/{userId}/fcm-token
     @PATCH("users/{userId}/fcm-token")
     fun updateFcmToken(
+        @Path("userId") userId: String,
+        @Body body: Map<String, String>
+    ): Call<Void>
+
+    // ✅ PATCH /api/auth/player-id/{userId}
+    @PATCH("auth/player-id/{userId}")
+    fun updatePlayerId(
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<Void>

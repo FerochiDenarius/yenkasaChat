@@ -10,7 +10,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.network.ApiClient
-import com.google.firebase.messaging.FirebaseMessaging
+import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -93,28 +93,25 @@ class LoginActivity : AppCompatActivity() {
                         Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        // ✅ Fetch and upload FCM token
-                        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                val fcmToken = task.result
-                                Log.d("FCM", "✅ FCM Token: $fcmToken")
+                        // ✅ Upload OneSignal Player ID
+                        val playerId = OneSignal.getDeviceState()?.userId
 
-                                // ✅ Upload to backend
-                                ApiClient.authService.updateFcmToken(
-                                    loginResponse.user._id,
-                                    mapOf("fcmToken" to fcmToken)
-                                ).enqueue(object : Callback<Void> {
-                                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                                        Log.d("FCM", "📤 FCM token uploaded: ${response.code()}")
-                                    }
+                        if (!playerId.isNullOrEmpty()) {
+                            Log.d("OneSignal", "✅ Player ID: $playerId")
+                            ApiClient.authService.updatePlayerId(
+                                loginResponse.user._id,
+                                mapOf("playerId" to playerId)
+                            ).enqueue(object : Callback<Void> {
+                                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                    Log.d("OneSignal", "📤 Player ID uploaded: ${response.code()}")
+                                }
 
-                                    override fun onFailure(call: Call<Void>, t: Throwable) {
-                                        Log.e("FCM", "❌ Failed to upload FCM token: ${t.message}")
-                                    }
-                                })
-                            } else {
-                                Log.w("FCM", "❌ Could not fetch FCM token", task.exception)
-                            }
+                                override fun onFailure(call: Call<Void>, t: Throwable) {
+                                    Log.e("OneSignal", "❌ Failed to upload Player ID: ${t.message}")
+                                }
+                            })
+                        } else {
+                            Log.w("OneSignal", "⚠️ Player ID is null or empty. Check OneSignal initialization.")
                         }
 
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))

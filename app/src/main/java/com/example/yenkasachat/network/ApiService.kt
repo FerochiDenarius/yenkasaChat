@@ -15,18 +15,15 @@ interface ApiService {
     @POST("/api/chatrooms")
     fun createChatRoom(
         @Header("Authorization") token: String,
-        @Body body: Map<String, String> // Must contain: "username"
+        @Body body: Map<String, String>
     ): Call<CreateChatRoomResponse>
 
     // ✅ Send a message (text or image)
-    @POST("/api/messages")  // <- remove the trailing slash!
+    @POST("/api/messages")
     fun sendMessage(
         @Header("Authorization") token: String,
         @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Call<ChatMessage>
-
-
-
 
     // ✅ Fetch messages for a specific room
     @GET("/api/messages/{roomId}/messages")
@@ -34,8 +31,6 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("roomId") roomId: String
     ): Call<List<ChatMessage>>
-
-
 
     // ✅ Get chat rooms for the logged-in user
     @GET("/api/chatrooms")
@@ -100,4 +95,19 @@ interface ApiService {
     fun getUserProfile(
         @Header("Authorization") token: String
     ): Call<User>
+
+    // ✅ Update OneSignal Player ID
+    @PATCH("/api/users/onesignal-id")
+    fun updateOneSignalId(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>
+    ): Call<Void>
+
+
+    @PATCH("users/{id}/player-id")
+    fun updatePlayerId(
+        @Path("id") userId: String,
+        @Body body: Map<String, String>
+    ): Call<Void>
+
 }

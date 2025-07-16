@@ -1,8 +1,8 @@
 const express = require('express');
-const bcrypt = require('bcryptjs'); // ✅ You missed this
-const jwt = require('jsonwebtoken'); // ✅ Needed for login
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
-const User = require('../models/user.model'); // ✅ You missed this too
+const User = require('../models/user.model');
 
 // ✅ REGISTER ROUTE
 router.post('/register', async (req, res) => {
@@ -86,6 +86,28 @@ router.post('/login', async (req, res) => {
 
     } catch (err) {
         console.error("❌ Login error:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ✅ PATCH /api/users/:userId/player-id
+router.patch('/users/:userId/player-id', async (req, res) => {
+    const { userId } = req.params;
+    const { playerId } = req.body;
+
+    if (!playerId) {
+        return res.status(400).json({ message: "Missing playerId in request body" });
+    }
+
+    try {
+        const user = await User.findByIdAndUpdate(userId, { playerId }, { new: true });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({ message: "Player ID updated successfully" });
+    } catch (err) {
+        console.error("❌ Error updating player ID:", err.message);
         res.status(500).json({ error: err.message });
     }
 });

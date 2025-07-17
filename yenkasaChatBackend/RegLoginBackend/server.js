@@ -4,25 +4,26 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
-const fs = require('fs'); // ✅ required for secret file check
+const fs = require('fs');
 
 const app = express();
-
-// ✅ OneSignal route for saving player IDs
-const oneSignalRoutes = require('./routes/onesignal');
-app.use('/api/onesignal', oneSignalRoutes);
 
 // ✅ Middleware
 app.use(express.json());
 
-// ✅ Import and register route modules
+// ✅ Routes - OneSignal route for storing player IDs
+const oneSignalRoutes = require('./routes/onesignal');
+app.use('/api/onesignal', oneSignalRoutes);
+
+// ✅ Import and register all route modules
 try {
-  const authRoutes = require('./routes/auth');
+  const authRoutes = require('./routes/auth'); // Includes update-player-id route
   const contactRoutes = require('./routes/contacts.routes');
   const messageRoutes = require('./routes/messages.routes');
   const chatroomRoutes = require('./routes/chatroom.routes');
   const verifyRoutes = require('./routes/verify');
   const userRoutes = require('./routes/user.routes');
+  const notificationRoutes = require('./routes/notifications.route');
 
   app.use('/api/auth', authRoutes);
   app.use('/api/contacts', contactRoutes);
@@ -30,7 +31,7 @@ try {
   app.use('/api/chatrooms', chatroomRoutes);
   app.use('/api/verify', verifyRoutes);
   app.use('/api/users', userRoutes);
-  app.use('/api/notifications', require('./routes/notifications.route'));
+  app.use('/api/notifications', notificationRoutes);
 
   console.log("✅ All route modules loaded and registered");
 } catch (err) {
@@ -50,13 +51,14 @@ if (process.env.NODE_ENV === 'development') {
   console.log('🔐 Test routes disabled in production');
 }
 
-// ✅ MongoDB Connection + Server Start
+// ✅ MongoDB connection and server start
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => {
   console.log('✅ MongoDB connected');
+
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

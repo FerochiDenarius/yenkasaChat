@@ -66,7 +66,11 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-// Fix user emails and phoneNumbers (lowercase, trimmed)
+/**
+ * @route   POST /api/users/fix-contacts
+ * @desc    Fix user emails and phoneNumbers (lowercase, trimmed)
+ * @access  Admin / Internal
+ */
 router.post('/fix-contacts', async (req, res) => {
   try {
     const result = await User.updateMany(
@@ -93,9 +97,36 @@ router.post('/fix-contacts', async (req, res) => {
 });
 
 /**
+ * @route   PATCH /api/users/:userId/player-id
+ * @desc    Update OneSignal Player ID
+ * @access  Private
+ */
+router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
+  const { userId } = req.params;
+
+  if (userId !== req.user.id) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { playerId } = req.body;
+
+  if (!playerId || typeof playerId !== 'string') {
+    return res.status(400).json({ error: 'Invalid player ID' });
+  }
+
+  try {
+    await User.findByIdAndUpdate(userId, { playerId });
+    res.status(200).json({ message: '✅ Player ID updated successfully' });
+  } catch (err) {
+    console.error('❌ Error saving Player ID:', err);
+    res.status(500).json({ error: 'Failed to save Player ID' });
+  }
+});
+
+/**
  * @route   PATCH /api/users/:userId/fcm-token
- * @desc    Update user's FCM token
- * @access  Private (must be owner)
+ * @desc    Update user's FCM token (legacy if needed)
+ * @access  Private
  */
 router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {
   const { userId } = req.params;

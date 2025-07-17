@@ -7,8 +7,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
     // ✅ Replace this with your current ngrok HTTPS URL
-
     private const val BASE_URL = "https://yenkasachat.onrender.com/api/"
+
     // ✅ Logging interceptor for debugging network requests/responses
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -29,4 +29,7 @@ object ApiClient {
     // ✅ Services
     val apiService: ApiService = retrofit.create(ApiService::class.java)
     val authService: AuthService = retrofit.create(AuthService::class.java)
+
+    // ✅ Expose Retrofit instance for custom calls
+    val retrofitInstance: Retrofit = retrofit
 }

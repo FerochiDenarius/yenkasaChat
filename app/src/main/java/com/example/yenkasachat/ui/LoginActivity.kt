@@ -79,6 +79,7 @@ class LoginActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
                     if (loginResponse != null) {
+                        // ✅ Save user info and token
                         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
                         prefs.edit()
                             .putString("userId", loginResponse.user._id)
@@ -86,7 +87,7 @@ class LoginActivity : AppCompatActivity() {
                             .putString("username", loginResponse.user.username)
                             .putString("email", loginResponse.user.email ?: "")
                             .putString("phone", loginResponse.user.phone ?: "")
-                            .putString("location", loginResponse.user.location)
+                            .putString("location", loginResponse.user.location ?: "")
                             .putBoolean("verified", loginResponse.user.verified)
                             .apply()
 
@@ -95,7 +96,6 @@ class LoginActivity : AppCompatActivity() {
 
                         // ✅ Upload OneSignal Player ID
                         val playerId = OneSignal.getDeviceState()?.userId
-
                         if (!playerId.isNullOrEmpty()) {
                             Log.d("OneSignal", "✅ Player ID: $playerId")
                             ApiClient.authService.updatePlayerId(
@@ -114,6 +114,7 @@ class LoginActivity : AppCompatActivity() {
                             Log.w("OneSignal", "⚠️ Player ID is null or empty. Check OneSignal initialization.")
                         }
 
+                        // ✅ Go to main screen
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()
                     } else {

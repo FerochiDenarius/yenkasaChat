@@ -42,16 +42,16 @@ interface AuthService {
         @Body body: Map<String, String>
     ): Call<Void>
 
-    // ✅ PATCH /api/auth/player-id/{userId}
-    @PATCH("auth/player-id/{userId}")
-    fun updatePlayerId(
-        @Path("userId") userId: String,
-        @Body body: Map<String, String>
-    ): Call<Void>
-
     // ✅ POST /api/auth/verify/confirm
     @POST("auth/verify/confirm")
     fun confirmVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
+
+    // ✅ PATCH /api/users/{userId}/player-id (NEWLY ADDED)
+    @PATCH("users/{userId}/player-id")
+    fun updatePlayerId(
+        @Path("userId") userId: String,
+        @Body body: Map<String, String>
+    ): Call<Void>
 }

@@ -1,4 +1,4 @@
-package com.example.yenkasachat.utils
+package com.example.yenkasachat.util
 
 import android.content.Context
 import android.util.Log
@@ -47,7 +47,8 @@ object OneSignalHelper {
 
             Log.d(TAG, "📨 Sending OneSignal playerId: $playerId to backend")
 
-            val requestBody = mapOf("oneSignalId" to playerId)
+            val requestBody = mapOf("playerId" to playerId) // ✅ This matches backend
+
             ApiClient.apiService.updateOneSignalId("Bearer $token", requestBody)
                 .enqueue(object : Callback<Void> {
                     override fun onResponse(call: Call<Void>, response: Response<Void>) {

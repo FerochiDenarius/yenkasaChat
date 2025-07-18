@@ -41,6 +41,11 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
 
+        // ✅ Initialize OneSignal here (best placed in Application class ideally)
+        OneSignal.initWithContext(this)
+        OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
+        Log.d("OneSignal", "🔄 Initialized OneSignal in LoginActivity")
+
         btnLogin.setOnClickListener {
             Log.d("LoginDebug", "Login button clicked")
             handleLogin()
@@ -94,25 +99,8 @@ class LoginActivity : AppCompatActivity() {
                         Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        // ✅ Upload OneSignal Player ID
-                        val playerId = OneSignal.getDeviceState()?.userId
-                        if (!playerId.isNullOrEmpty()) {
-                            Log.d("OneSignal", "✅ Player ID: $playerId")
-                            ApiClient.authService.updatePlayerId(
-                                loginResponse.user._id,
-                                mapOf("playerId" to playerId)
-                            ).enqueue(object : Callback<Void> {
-                                override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                                    Log.d("OneSignal", "📤 Player ID uploaded: ${response.code()}")
-                                }
-
-                                override fun onFailure(call: Call<Void>, t: Throwable) {
-                                    Log.e("OneSignal", "❌ Failed to upload Player ID: ${t.message}")
-                                }
-                            })
-                        } else {
-                            Log.w("OneSignal", "⚠️ Player ID is null or empty. Check OneSignal initialization.")
-                        }
+                        // ✅ Fetch Player ID safely (delayed if not ready)
+                        fetchAndUploadPlayerId(loginResponse.user._id)
 
                         // ✅ Go to main screen
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
@@ -136,5 +124,33 @@ class LoginActivity : AppCompatActivity() {
                 Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    // ✅ Reliable OneSignal Player ID fetching
+    private fun fetchAndUploadPlayerId(userId: String) {
+        val deviceState = OneSignal.getDeviceState()
+        val playerId = deviceState?.userId
+
+        if (!playerId.isNullOrEmpty()) {
+            Log.d("OneSignal", "✅ Player ID: $playerId")
+            ApiClient.authService.updatePlayerId(
+                userId,
+                mapOf("playerId" to playerId)
+            ).enqueue(object : Callback<Void> {
+                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                    Log.d("OneSignal", "📤 Player ID uploaded: ${response.code()}")
+                }
+
+                override fun onFailure(call: Call<Void>, t: Throwable) {
+                    Log.e("OneSignal", "❌ Failed to upload Player ID: ${t.message}")
+                }
+            })
+        } else {
+            Log.w("OneSignal", "⚠️ Player ID not ready yet, retrying in 2 seconds...")
+            // Retry after 2s
+            editPassword.postDelayed({
+                fetchAndUploadPlayerId(userId)
+            }, 2000)
+        }
     }
 }

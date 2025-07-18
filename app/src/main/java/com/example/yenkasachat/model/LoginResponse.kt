@@ -14,5 +14,6 @@ data class AuthUser(
     val phone: String?,
     val username: String,
     val location: String,
-    val verified: Boolean
+    val verified: Boolean,
+    val playerId: String? // ✅ New field added
 )

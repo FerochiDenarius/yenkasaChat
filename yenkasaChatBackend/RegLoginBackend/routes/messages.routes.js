@@ -10,7 +10,8 @@ const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
 
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
-const ONESIGNAL_API_KEY = process.env.yenkasachatOneSignalKey;
+const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
+
 
 // ✅ Send a message
 router.post('/', auth, async (req, res) => {

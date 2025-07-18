@@ -2,7 +2,7 @@ package com.example.yenkasachat
 
 import android.app.Application
 import android.util.Log
-import com.example.yenkasachat.utils.OneSignalHelper
+import com.example.yenkasachat.util.OneSignalHelper
 import com.onesignal.OSNotificationOpenedResult
 import com.onesignal.OneSignal
 

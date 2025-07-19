@@ -9,7 +9,7 @@ router.post('/register', async (req, res) => {
     console.log("👉 Incoming register request");
     console.log("Request body:", req.body);
 
-    const { email, phone, username, location, password } = req.body;
+   const { email, phoneNumber, username, location, password } = req.body;
 
     if (!username || !location || !password || (!email && !phone)) {
         return res.status(400).json({

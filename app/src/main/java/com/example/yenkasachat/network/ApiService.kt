@@ -96,18 +96,10 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<User>
 
-    // ✅ Update OneSignal Player ID
-    @PATCH("/api/users/onesignal-id")
-    fun updateOneSignalId(
-        @Header("Authorization") token: String,
-        @Body body: Map<String, String>
-    ): Call<Void>
-
-
-    @PATCH("users/{id}/player-id")
+    // ✅ Correct: Update OneSignal Player ID
+    @PATCH("/api/auth/update-player-id/{userId}")
     fun updatePlayerId(
-        @Path("id") userId: String,
+        @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<Void>
-
 }

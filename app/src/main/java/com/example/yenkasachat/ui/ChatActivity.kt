@@ -24,8 +24,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.MessageAdapter
 import com.example.yenkasachat.model.ChatMessage
+import com.example.yenkasachat.model.PushNotificationRequest
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.NotificationHelper
+import com.example.yenkasachat.util.OneSignalNotificationSender
 import com.google.android.gms.location.LocationServices
 import retrofit2.Call
 import retrofit2.Callback
@@ -46,6 +48,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private lateinit var roomId: String
     private lateinit var handler: ChatMessageHandler
     private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
+    private lateinit var recipientPlayerId: String
     private val uiHandler = Handler(Looper.getMainLooper())
     private var lastMessageTimestamp: Long = 0L
     private val refreshInterval = 5000L
@@ -96,6 +99,11 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             return
         }
 
+        recipientPlayerId = intent.getStringExtra("recipientPlayerId") ?: ""
+        if (recipientPlayerId.isBlank()) {
+            Log.w("ChatActivity", "⚠️ recipientPlayerId not passed in intent")
+        }
+
         setupChat()
         fetchMessagesRepeatedly()
         requestPermissions()
@@ -131,17 +139,14 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                 photoFile
             )
 
-            // ✅ Grant URI permission
             grantUriPermission(
-                "com.android.camera", // This works for default camera apps; optional
+                "com.android.camera",
                 tempCameraUri,
                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
 
-            Log.d("CameraDebug", "Launching camera with URI: $tempCameraUri")
             cameraLauncher.launch(tempCameraUri)
         }
-
 
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -158,6 +163,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             val text = messageInput.text.toString().trim()
             if (text.isNotEmpty()) {
                 handler.sendMessage(mapOf("text" to text))
+                sendPushNotification(recipientPlayerId, text)
                 messageInput.setText("")
             }
         }
@@ -192,6 +198,17 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             contactPickerLauncher.launch(intent)
         }
     }
+
+    private fun sendPushNotification(playerId: String, message: String) {
+        if (playerId.isBlank()) return
+
+        OneSignalNotificationSender.sendNotification(
+            receiverPlayerId = playerId,
+            title = "New Message",
+            message = message
+        )
+    }
+
 
     private fun retrieveSession() {
         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
@@ -298,7 +315,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             permissionsLauncher.launch(permissions.toTypedArray())
         }
     }
-
 
     override fun onDestroy() {
         super.onDestroy()

@@ -22,7 +22,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.YenkasaChat">
 
-        <!-- ✅ Google Maps API Key (Keep only ONE!) -->
+        <!-- ✅ Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCQvcE4AW1KseUVC9_OZtiA4tlOo9sgdk0" />
@@ -34,6 +34,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/purple_500" />
+
+        <!-- ✅ OneSignal App ID -->
+        <meta-data
+            android:name="onesignal_app_id"
+            android:value="165df9e6-a0ea-4a37-a40a-110af7e28ad2" />
 
         <!-- ✅ Main Launcher Activity -->
         <activity
@@ -55,7 +60,6 @@
         <activity android:name=".ui.ChatRoomsActivity" />
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />
-
         <activity android:name=".ui.ImagePreviewActivity" />
 
         <!-- 🔔 Firebase Messaging Service -->
@@ -67,6 +71,7 @@
             </intent-filter>
         </service>
 
+        <!-- 📂 File Provider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -76,7 +81,5 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
-
     </application>
 </manifest>

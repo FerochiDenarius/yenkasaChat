@@ -8,6 +8,10 @@ require('dotenv').config();
 const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
+const { sendMessage } = require('../controller/chatMessageHandler');
+
+router.post('/messages', sendMessage);
+
 
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
 const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;

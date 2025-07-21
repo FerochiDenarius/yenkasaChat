@@ -9,11 +9,11 @@ router.post('/register', async (req, res) => {
     console.log("👉 Incoming register request");
     console.log("Request body:", req.body);
 
-   const { email, phoneNumber, username, location, password } = req.body;
+    const { email, phoneNumber, username, location, password } = req.body;
 
-    if (!username || !location || !password || (!email && !phone)) {
+    if (!username || !location || !password || (!email && !phoneNumber)) {
         return res.status(400).json({
-            message: 'Missing required fields: username, location, password, and either email or phone.'
+            message: 'Missing required fields: username, location, password, and either email or phoneNumber.'
         });
     }
 
@@ -22,7 +22,7 @@ router.post('/register', async (req, res) => {
 
         const user = new User({
             email: email || null,
-            phone: phone || null,
+            phoneNumber: phoneNumber || null,
             username,
             location,
             password: hashedPassword
@@ -34,7 +34,7 @@ router.post('/register', async (req, res) => {
             user: {
                 _id: user._id,
                 email: user.email,
-                phone: user.phone,
+                phoneNumber: user.phoneNumber,
                 username: user.username,
                 location: user.location,
                 verified: user.verified
@@ -58,7 +58,11 @@ router.post('/login', async (req, res) => {
 
     try {
         const user = await User.findOne({
-            $or: [{ email: identifier }, { phone: identifier }, { username: identifier }]
+            $or: [
+                { email: identifier },
+                { phoneNumber: identifier },
+                { username: identifier }
+            ]
         });
 
         if (!user) {
@@ -76,7 +80,7 @@ router.post('/login', async (req, res) => {
             user: {
                 _id: user._id,
                 email: user.email,
-                phone: user.phone,
+                phoneNumber: user.phoneNumber,
                 username: user.username,
                 location: user.location,
                 verified: user.verified
@@ -90,8 +94,8 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// ✅ PATCH /api/users/:userId/player-id
-router.patch('/users/:userId/player-id', async (req, res) => {
+// ✅ FINAL MATCHED ROUTE: PATCH /api/auth/update-player-id/:userId
+router.patch('/update-player-id/:userId', async (req, res) => {
     const { userId } = req.params;
     const { playerId } = req.body;
 
@@ -100,12 +104,19 @@ router.patch('/users/:userId/player-id', async (req, res) => {
     }
 
     try {
-        const user = await User.findByIdAndUpdate(userId, { playerId }, { new: true });
+        console.log(`📥 Updating playerId for user ${userId}: ${playerId}`);
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { playerId },
+            { new: true }
+        );
+
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        res.status(200).json({ message: "Player ID updated successfully" });
+        res.status(200).json({ message: "✅ Player ID updated successfully" });
     } catch (err) {
         console.error("❌ Error updating player ID:", err.message);
         res.status(500).json({ error: err.message });

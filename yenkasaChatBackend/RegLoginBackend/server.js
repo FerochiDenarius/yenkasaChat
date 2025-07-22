@@ -17,7 +17,7 @@ app.use('/api/onesignal', oneSignalRoutes);
 
 // ✅ Import and register all route modules
 try {
-  const authRoutes = require('./routes/auth'); // Includes update-player-id route
+  const authRoutes = require('./routes/auth');
   const contactRoutes = require('./routes/contacts.routes');
   const messageRoutes = require('./routes/messages.routes');
   const chatroomRoutes = require('./routes/chatroom.routes');
@@ -26,6 +26,8 @@ try {
   const notificationRoutes = require('./routes/notifications.route');
 
   app.use('/api/auth', authRoutes);
+  console.log('✅ Mounted /api/auth');
+
   app.use('/api/contacts', contactRoutes);
   app.use('/api/messages', messageRoutes);
   app.use('/api/chatrooms', chatroomRoutes);
@@ -46,6 +48,10 @@ if (process.env.NODE_ENV === 'development') {
       key: process.env.CLOUDINARY_API_KEY,
       secret: process.env.CLOUDINARY_API_SECRET ? '✅ present' : '❌ missing',
     });
+  });
+
+  app.get('/api/auth/ping', (req, res) => {
+    res.json({ message: '✅ Auth route is working!' });
   });
 } else {
   console.log('🔐 Test routes disabled in production');

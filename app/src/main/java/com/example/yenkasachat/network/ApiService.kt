@@ -4,12 +4,20 @@ import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.ChatRoom
 import com.example.yenkasachat.model.Contact
 import com.example.yenkasachat.model.CreateChatRoomResponse
+import com.example.yenkasachat.model.LoginRequest
+import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.model.User
 import okhttp3.MultipartBody
 import retrofit2.Call
 import retrofit2.http.*
 
 interface ApiService {
+
+    // ✅ POST /api/auth/login
+    @POST("/api/auth/login")
+    fun login(
+        @Body request: LoginRequest
+    ): Call<LoginResponse>
 
     // ✅ Create a chat room using a recipient username
     @POST("/api/chatrooms")
@@ -103,3 +111,5 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Call<Void>
 }
+// Note: Ensure that the endpoint for updating the Player ID matches your backend implementation.
+// The endpoint here is an example and should be adjusted based on your actual API design.

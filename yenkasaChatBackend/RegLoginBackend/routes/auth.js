@@ -1,136 +1,117 @@
-// routes/message.route.js
+// routes/auth.js
 const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const mongoose = require('mongoose');
-require('dotenv').config();
+const User = require('../models/User');
 
-const Message = require('../models/message.model');
-const ChatRoom = require('../models/chatroom.model');
-const User = require('../models/user.model');
-const { sendMessage } = require('../controller/chatMessageHandler');
-const { sendPushNotification } = require('../utils/onesignal');
+// ✅ Helper to sanitize input and trim long strings
+const sanitize = (val) =>
+  typeof val === 'string' ? val.trim().substring(0, 255) : val;
 
-router.post('/messages', sendMessage);
-
-// ✅ Send a message
-router.post('/', auth, async (req, res) => {
-  const {
-    roomId,
-    text,
-    imageUrl,
-    audioUrl,
-    videoUrl,
-    fileUrl,
-    contactInfo,
-    location
-  } = req.body;
-
-  if (!roomId) {
-    return res.status(400).json({ error: 'roomId is required' });
-  }
-
-  const hasContent = text || imageUrl || audioUrl || videoUrl || fileUrl || contactInfo ||
-    (location?.latitude && location?.longitude);
-
-  if (!hasContent) {
-    return res.status(400).json({ error: 'Message must contain text, image, audio, video, file, contact, or location' });
-  }
+// ✅ Register Route
+router.post('/register', async (req, res) => {
+  let { email, phoneNumber, username, location, password } = req.body;
 
   try {
-    const chatRoom = await ChatRoom.findById(roomId);
-    if (!chatRoom) return res.status(404).json({ error: 'Chat room not found' });
+    email = email ? sanitize(email.toLowerCase()) : null;
+    phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
+    username = sanitize(username);
+    location = sanitize(location);
+    password = sanitize(password);
 
-    const newMessage = new Message({
-      roomId: new mongoose.Types.ObjectId(roomId),
-      senderId: req.user.id,
-      text: text?.trim().substring(0, 1000),
-      imageUrl,
-      audioUrl,
-      videoUrl,
-      fileUrl,
-      contactInfo,
-      location,
-    });
-
-    await newMessage.save();
-
-    const sender = await User.findById(req.user.id);
-    const receiverId = chatRoom.participants.find(p => p.toString() !== req.user.id);
-    const receiver = await User.findById(receiverId);
-
-    if (receiver?.playerId) {
-      const messageType = imageUrl ? 'image'
-        : audioUrl ? 'audio'
-        : videoUrl ? 'video'
-        : fileUrl ? 'file'
-        : contactInfo ? 'contact'
-        : location ? 'location'
-        : 'text';
-
-      await sendPushNotification({
-        playerId: receiver.playerId,
-        title: sender.username || 'YenkasaChat',
-        body: text || `📎 New ${messageType} message`,
-        data: {
-          roomId,
-          senderId: sender._id.toString(),
-          type: messageType
-        }
-      });
-    } else {
-      console.warn('⚠️ No playerId for recipient');
+    if (!username || !location || !password || (!email && !phoneNumber)) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    res.status(201).json(newMessage);
-  } catch (err) {
-    console.error('❌ Error saving message:', err);
-    res.status(500).json({ error: 'Server error saving message' });
-  }
-});
-
-// ✅ Get all messages in a chat room
-router.get('/:roomId/messages', auth, async (req, res) => {
-  const { roomId } = req.params;
-
-  try {
-    const messages = await Message.find({
-      roomId: new mongoose.Types.ObjectId(roomId)
-    }).sort({ createdAt: 1 });
-
-    res.json(messages);
-  } catch (err) {
-    console.error('❌ Error fetching messages:', err);
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
-});
-
-// ✅ Fix missing timestamps
-router.post('/fix-timestamps', async (req, res) => {
-  try {
-    const result = await Message.updateMany(
-      { createdAt: { $exists: false } },
-      [{
-        $set: {
-          createdAt: "$timestamp",
-          updatedAt: "$timestamp"
-        }
-      }]
-    );
-    res.json({
-      message: "✅ Fixed messages with missing createdAt/updatedAt",
-      matched: result.matchedCount,
-      modified: result.modifiedCount
+    const existingUser = await User.findOne({
+      $or: [
+        ...(email ? [{ email }] : []),
+        ...(phoneNumber ? [{ phoneNumber }] : []),
+        { username }
+      ]
     });
+
+    if (existingUser) {
+      return res.status(409).json({ message: 'User already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const userObj = {
+      username,
+      location,
+      password: hashedPassword,
+      ...(email ? { email } : {}),
+      ...(phoneNumber ? { phoneNumber } : {})
+    };
+
+    const user = new User(userObj);
+    await user.save();
+
+    res.status(201).json({
+      id: user._id,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      username: user.username,
+      location: user.location,
+      verified: user.verified
+    });
+
   } catch (err) {
-    console.error("❌ Timestamp fix failed:", err.message);
-    res.status(500).json({ error: "Failed to fix timestamps" });
+    console.error('❌ Register error:', err.message);
+    if (err.code === 11000) {
+      return res.status(409).json({ message: 'Duplicate entry detected' });
+    }
+    res.status(500).json({ error: 'Server error during registration' });
   }
 });
 
-// 🔥 Deprecated FCM route
-router.post('/test-notification', (req, res) => {
-  res.status(410).json({ message: 'This endpoint is deprecated. Use OneSignal for notifications.' });
+// ✅ Login Route
+router.post('/login', async (req, res) => {
+  const { identifier, password } = req.body;
+
+  try {
+    if (!identifier || !password) {
+      return res.status(400).json({ message: 'Missing credentials' });
+    }
+
+    const user = await User.findOne({
+      $or: [
+        { phoneNumber: identifier },
+        { username: identifier },
+        { email: identifier.toLowerCase() }
+      ]
+    });
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET missing in environment");
+      return res.status(500).json({ message: 'Server config error' });
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        username: user.username,
+        location: user.location,
+        verified: user.verified
+      },
+      token
+    });
+
+  } catch (err) {
+    console.error('❌ Login error:', err.message);
+    res.status(500).json({ error: 'Server error during login' });
+  }
 });
 
 module.exports = router;

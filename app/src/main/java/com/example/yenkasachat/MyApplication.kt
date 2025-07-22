@@ -18,7 +18,7 @@ class MyApplication : Application() {
         // ✅ Initialize OneSignal via helper
         OneSignalHelper.initialize(this) {
             // 🔄 After OneSignal is ready, update player ID to backend
-            OneSignalHelper.getPlayerIdAndUpdateToBackend(this)
+
         }
 
         // ✅ Handle when a notification is tapped

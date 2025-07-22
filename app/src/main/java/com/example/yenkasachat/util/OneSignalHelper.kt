@@ -3,7 +3,7 @@ package com.example.yenkasachat.util
 import android.content.Context
 import android.util.Log
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.utils.SharedPrefs
+import com.example.yenkasachat.util.SharedPrefs
 import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
@@ -49,7 +49,15 @@ object OneSignalHelper {
 
             val requestBody = mapOf("playerId" to playerId) // ✅ This matches backend
 
-            ApiClient.apiService.updateOneSignalId("Bearer $token", requestBody)
+            val userId = SharedPrefs.getUserId(context)
+            if (userId.isNullOrEmpty()) {
+                Log.e(TAG, "❌ User ID is missing, cannot update playerId")
+                return
+            }
+
+            ApiClient.authService.updatePlayerId(userId, requestBody)
+
+
                 .enqueue(object : Callback<Void> {
                     override fun onResponse(call: Call<Void>, response: Response<Void>) {
                         if (response.isSuccessful) {

@@ -14,6 +14,7 @@ import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.yenkasachat.util.SharedPrefs
 
 class LoginActivity : AppCompatActivity() {
 
@@ -25,9 +26,7 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-        val token = prefs.getString("token", null)
-
+        val token = SharedPrefs.getToken(this@LoginActivity)
         if (!token.isNullOrEmpty()) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
@@ -41,13 +40,10 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
 
-        // ✅ Initialize OneSignal here (best placed in Application class ideally)
         OneSignal.initWithContext(this)
         OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
-        Log.d("OneSignal", "🔄 Initialized OneSignal in LoginActivity")
 
         btnLogin.setOnClickListener {
-            Log.d("LoginDebug", "Login button clicked")
             handleLogin()
         }
 
@@ -77,32 +73,20 @@ class LoginActivity : AppCompatActivity() {
         }
 
         val request = LoginRequest(identifier, password)
-        Log.d("LoginDebug", "Attempting login with: $identifier")
 
         ApiClient.authService.login(request).enqueue(object : Callback<LoginResponse> {
             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
                     if (loginResponse != null) {
-                        // ✅ Save user info and token
-                        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-                        prefs.edit()
-                            .putString("userId", loginResponse.user._id)
-                            .putString("token", loginResponse.token)
-                            .putString("username", loginResponse.user.username)
-                            .putString("email", loginResponse.user.email ?: "")
-                            .putString("phone", loginResponse.user.phone ?: "")
-                            .putString("location", loginResponse.user.location ?: "")
-                            .putBoolean("verified", loginResponse.user.verified)
-                            .apply()
+                        SharedPrefs.saveToken(this@LoginActivity, loginResponse.token)
+                        SharedPrefs.saveUserId(this@LoginActivity, loginResponse.user._id)
 
                         Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        // ✅ Fetch Player ID safely (delayed if not ready)
                         fetchAndUploadPlayerId(loginResponse.user._id)
 
-                        // ✅ Go to main screen
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()
                     } else {
@@ -114,25 +98,21 @@ class LoginActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         "Unknown error"
                     }
-                    Log.e("LoginDebug", "Login failed: ${response.code()} $errorMsg")
                     Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
-                Log.e("LoginDebug", "Network error: ${t.message}")
                 Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
-    // ✅ Reliable OneSignal Player ID fetching
     private fun fetchAndUploadPlayerId(userId: String) {
         val deviceState = OneSignal.getDeviceState()
         val playerId = deviceState?.userId
 
         if (!playerId.isNullOrEmpty()) {
-            Log.d("OneSignal", "✅ Player ID: $playerId")
             ApiClient.authService.updatePlayerId(
                 userId,
                 mapOf("playerId" to playerId)
@@ -146,8 +126,6 @@ class LoginActivity : AppCompatActivity() {
                 }
             })
         } else {
-            Log.w("OneSignal", "⚠️ Player ID not ready yet, retrying in 2 seconds...")
-            // Retry after 2s
             editPassword.postDelayed({
                 fetchAndUploadPlayerId(userId)
             }, 2000)

@@ -1,3 +1,4 @@
+// middleware/auth.js
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
@@ -7,10 +8,13 @@ module.exports = (req, res, next) => {
       return res.status(401).json({ error: 'Authorization header missing' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = authHeader.split(' ')[1]; // Handles case-insensitive "Bearer"
+    if (!token) {
+      return res.status(401).json({ error: 'Token is missing' });
+    }
 
-    req.user = decoded; // so you can access req.user.id in your routes
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid or expired token' });

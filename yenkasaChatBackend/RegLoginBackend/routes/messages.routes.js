@@ -1,3 +1,4 @@
+// routes/message.route.js
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
@@ -12,10 +13,8 @@ const { sendMessage } = require('../controller/chatMessageHandler');
 
 router.post('/messages', sendMessage);
 
-
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
 const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
-
 
 // ✅ Send a message
 router.post('/', auth, async (req, res) => {

@@ -1,0 +1,399 @@
+Index: app/src/main/java/com/example/yenkasachat/util/SharedPrefs.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.yenkasachat.utils\n\nimport android.content.Context\nimport android.content.SharedPreferences\n\nobject SharedPrefs {\n\n    private const val PREFS_NAME = \"yenkasa_chat_prefs\"\n    private const val KEY_TOKEN = \"auth_token\"\n\n    private fun prefs(context: Context): SharedPreferences =\n        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)\n\n    fun saveToken(context: Context, token: String) {\n        prefs(context).edit().putString(KEY_TOKEN, token).apply()\n    }\n\n    fun getToken(context: Context): String? =\n        prefs(context).getString(KEY_TOKEN, null)\n\n    fun clearToken(context: Context) {\n        prefs(context).edit().remove(KEY_TOKEN).apply()\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/yenkasachat/util/SharedPrefs.kt b/app/src/main/java/com/example/yenkasachat/util/SharedPrefs.kt
+--- a/app/src/main/java/com/example/yenkasachat/util/SharedPrefs.kt	(revision 4427e11fdb3beb42baab29b266a2a3cdfcfae069)
++++ b/app/src/main/java/com/example/yenkasachat/util/SharedPrefs.kt	(date 1753125251720)
+@@ -1,4 +1,4 @@
+-package com.example.yenkasachat.utils
++package com.example.yenkasachat.util
+ 
+ import android.content.Context
+ import android.content.SharedPreferences
+@@ -7,6 +7,7 @@
+ 
+     private const val PREFS_NAME = "yenkasa_chat_prefs"
+     private const val KEY_TOKEN = "auth_token"
++    private const val KEY_USER_ID = "user_id"
+ 
+     private fun prefs(context: Context): SharedPreferences =
+         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+@@ -21,4 +22,15 @@
+     fun clearToken(context: Context) {
+         prefs(context).edit().remove(KEY_TOKEN).apply()
+     }
++
++    fun saveUserId(context: Context, userId: String) {
++        prefs(context).edit().putString(KEY_USER_ID, userId).apply()
++    }
++
++    fun getUserId(context: Context): String? =
++        prefs(context).getString(KEY_USER_ID, null)
++
++    fun clearUserId(context: Context) {
++        prefs(context).edit().remove(KEY_USER_ID).apply()
++    }
+ }
+Index: app/src/main/java/com/example/yenkasachat/MyApplication.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.yenkasachat\n\nimport android.app.Application\nimport android.util.Log\nimport com.example.yenkasachat.util.OneSignalHelper\nimport com.onesignal.OSNotificationOpenedResult\nimport com.onesignal.OneSignal\n\nclass MyApplication : Application() {\n\n    override fun onCreate() {\n        super.onCreate()\n\n        // ✅ Setup OneSignal logs for debugging\n        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE)\n\n        // ✅ Initialize OneSignal via helper\n        OneSignalHelper.initialize(this) {\n            // \uD83D\uDD04 After OneSignal is ready, update player ID to backend\n            OneSignalHelper.getPlayerIdAndUpdateToBackend(this)\n        }\n\n        // ✅ Handle when a notification is tapped\n        OneSignal.setNotificationOpenedHandler { result: OSNotificationOpenedResult ->\n            val notification = result.notification\n            Log.d(\"OneSignal\", \"\uD83D\uDD14 Opened: ${notification.body}, data: ${notification.additionalData}\")\n        }\n\n        // ✅ Optionally log the player ID at startup\n        val playerId = OneSignal.getDeviceState()?.userId\n        Log.d(\"OneSignal\", \"\uD83C\uDFAF Player ID at startup: $playerId\")\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/yenkasachat/MyApplication.kt b/app/src/main/java/com/example/yenkasachat/MyApplication.kt
+--- a/app/src/main/java/com/example/yenkasachat/MyApplication.kt	(revision 4427e11fdb3beb42baab29b266a2a3cdfcfae069)
++++ b/app/src/main/java/com/example/yenkasachat/MyApplication.kt	(date 1753180425634)
+@@ -17,7 +17,7 @@
+         // ✅ Initialize OneSignal via helper
+         OneSignalHelper.initialize(this) {
+             // 🔄 After OneSignal is ready, update player ID to backend
+-            OneSignalHelper.getPlayerIdAndUpdateToBackend(this)
++
+         }
+ 
+         // ✅ Handle when a notification is tapped
+Index: app/src/main/java/com/example/yenkasachat/ui/LoginActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.yenkasachat.ui\n\nimport android.content.Context\nimport android.content.Intent\nimport android.os.Bundle\nimport android.util.Log\nimport android.widget.*\nimport androidx.appcompat.app.AppCompatActivity\nimport com.example.yenkasachat.R\nimport com.example.yenkasachat.model.LoginRequest\nimport com.example.yenkasachat.model.LoginResponse\nimport com.example.yenkasachat.network.ApiClient\nimport com.onesignal.OneSignal\nimport retrofit2.Call\nimport retrofit2.Callback\nimport retrofit2.Response\n\nclass LoginActivity : AppCompatActivity() {\n\n    private lateinit var editIdentifier: EditText\n    private lateinit var editPassword: EditText\n    private lateinit var btnLogin: Button\n    private lateinit var textRegisterLink: TextView\n\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n\n        val prefs = getSharedPreferences(\"auth\", Context.MODE_PRIVATE)\n        val token = prefs.getString(\"token\", null)\n\n        if (!token.isNullOrEmpty()) {\n            startActivity(Intent(this, MainActivity::class.java))\n            finish()\n            return\n        }\n\n        setContentView(R.layout.activity_login)\n\n        editIdentifier = findViewById(R.id.editLoginIdentifier)\n        editPassword = findViewById(R.id.editLoginPassword)\n        btnLogin = findViewById(R.id.btnLogin)\n        textRegisterLink = findViewById(R.id.textRegisterLink)\n\n        // ✅ Initialize OneSignal here (best placed in Application class ideally)\n        OneSignal.initWithContext(this)\n        OneSignal.setAppId(\"165df9e6-a0ea-4a37-a40a-110af7e28ad2\")\n        Log.d(\"OneSignal\", \"\uD83D\uDD04 Initialized OneSignal in LoginActivity\")\n\n        btnLogin.setOnClickListener {\n            Log.d(\"LoginDebug\", \"Login button clicked\")\n            handleLogin()\n        }\n\n        textRegisterLink.setOnClickListener {\n            startActivity(Intent(this, RegisterActivity::class.java))\n        }\n    }\n\n    private fun handleLogin() {\n        val identifier = editIdentifier.text.toString().trim()\n        val password = editPassword.text.toString()\n\n        if (identifier.isEmpty()) {\n            editIdentifier.error = \"Phone, email or username is required\"\n            return\n        }\n\n        if (password.isEmpty()) {\n            editPassword.error = \"Password is required\"\n            return\n        }\n\n        if (identifier.contains(\"@\") &&\n            !android.util.Patterns.EMAIL_ADDRESS.matcher(identifier).matches()) {\n            editIdentifier.error = \"Invalid email format\"\n            return\n        }\n\n        val request = LoginRequest(identifier, password)\n        Log.d(\"LoginDebug\", \"Attempting login with: $identifier\")\n\n        ApiClient.authService.login(request).enqueue(object : Callback<LoginResponse> {\n            override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {\n                if (response.isSuccessful) {\n                    val loginResponse = response.body()\n                    if (loginResponse != null) {\n                        // ✅ Save user info and token\n                        val prefs = getSharedPreferences(\"auth\", Context.MODE_PRIVATE)\n                        prefs.edit()\n                            .putString(\"userId\", loginResponse.user._id)\n                            .putString(\"token\", loginResponse.token)\n                            .putString(\"username\", loginResponse.user.username)\n                            .putString(\"email\", loginResponse.user.email ?: \"\")\n                            .putString(\"phone\", loginResponse.user.phone ?: \"\")\n                            .putString(\"location\", loginResponse.user.location ?: \"\")\n                            .putBoolean(\"verified\", loginResponse.user.verified)\n                            .apply()\n\n                        Log.d(\"LoginSuccess\", \"Login OK: ${loginResponse.user.username}\")\n                        Toast.makeText(this@LoginActivity, \"Login successful\", Toast.LENGTH_SHORT).show()\n\n                        // ✅ Fetch Player ID safely (delayed if not ready)\n                        fetchAndUploadPlayerId(loginResponse.user._id)\n\n                        // ✅ Go to main screen\n                        startActivity(Intent(this@LoginActivity, MainActivity::class.java))\n                        finish()\n                    } else {\n                        Toast.makeText(this@LoginActivity, \"Unexpected server response\", Toast.LENGTH_SHORT).show()\n                    }\n                } else {\n                    val errorMsg = try {\n                        response.errorBody()?.string() ?: \"Unknown error\"\n                    } catch (e: Exception) {\n                        \"Unknown error\"\n                    }\n                    Log.e(\"LoginDebug\", \"Login failed: ${response.code()} $errorMsg\")\n                    Toast.makeText(this@LoginActivity, \"Invalid credentials\", Toast.LENGTH_SHORT).show()\n                }\n            }\n\n            override fun onFailure(call: Call<LoginResponse>, t: Throwable) {\n                Log.e(\"LoginDebug\", \"Network error: ${t.message}\")\n                Toast.makeText(this@LoginActivity, \"Network error: ${t.message}\", Toast.LENGTH_SHORT).show()\n            }\n        })\n    }\n\n    // ✅ Reliable OneSignal Player ID fetching\n    private fun fetchAndUploadPlayerId(userId: String) {\n        val deviceState = OneSignal.getDeviceState()\n        val playerId = deviceState?.userId\n\n        if (!playerId.isNullOrEmpty()) {\n            Log.d(\"OneSignal\", \"✅ Player ID: $playerId\")\n            ApiClient.authService.updatePlayerId(\n                userId,\n                mapOf(\"playerId\" to playerId)\n            ).enqueue(object : Callback<Void> {\n                override fun onResponse(call: Call<Void>, response: Response<Void>) {\n                    Log.d(\"OneSignal\", \"\uD83D\uDCE4 Player ID uploaded: ${response.code()}\")\n                }\n\n                override fun onFailure(call: Call<Void>, t: Throwable) {\n                    Log.e(\"OneSignal\", \"❌ Failed to upload Player ID: ${t.message}\")\n                }\n            })\n        } else {\n            Log.w(\"OneSignal\", \"⚠\uFE0F Player ID not ready yet, retrying in 2 seconds...\")\n            // Retry after 2s\n            editPassword.postDelayed({\n                fetchAndUploadPlayerId(userId)\n            }, 2000)\n        }\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/yenkasachat/ui/LoginActivity.kt b/app/src/main/java/com/example/yenkasachat/ui/LoginActivity.kt
+--- a/app/src/main/java/com/example/yenkasachat/ui/LoginActivity.kt	(revision 4427e11fdb3beb42baab29b266a2a3cdfcfae069)
++++ b/app/src/main/java/com/example/yenkasachat/ui/LoginActivity.kt	(date 1753182176575)
+@@ -14,6 +14,7 @@
+ import retrofit2.Call
+ import retrofit2.Callback
+ import retrofit2.Response
++import com.example.yenkasachat.util.SharedPrefs
+ 
+ class LoginActivity : AppCompatActivity() {
+ 
+@@ -25,9 +26,7 @@
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+ 
+-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+-        val token = prefs.getString("token", null)
+-
++        val token = SharedPrefs.getToken(this@LoginActivity)
+         if (!token.isNullOrEmpty()) {
+             startActivity(Intent(this, MainActivity::class.java))
+             finish()
+@@ -41,13 +40,10 @@
+         btnLogin = findViewById(R.id.btnLogin)
+         textRegisterLink = findViewById(R.id.textRegisterLink)
+ 
+-        // ✅ Initialize OneSignal here (best placed in Application class ideally)
+         OneSignal.initWithContext(this)
+         OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
+-        Log.d("OneSignal", "🔄 Initialized OneSignal in LoginActivity")
+ 
+         btnLogin.setOnClickListener {
+-            Log.d("LoginDebug", "Login button clicked")
+             handleLogin()
+         }
+ 
+@@ -77,32 +73,20 @@
+         }
+ 
+         val request = LoginRequest(identifier, password)
+-        Log.d("LoginDebug", "Attempting login with: $identifier")
+ 
+         ApiClient.authService.login(request).enqueue(object : Callback<LoginResponse> {
+             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
+                 if (response.isSuccessful) {
+                     val loginResponse = response.body()
+                     if (loginResponse != null) {
+-                        // ✅ Save user info and token
+-                        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+-                        prefs.edit()
+-                            .putString("userId", loginResponse.user._id)
+-                            .putString("token", loginResponse.token)
+-                            .putString("username", loginResponse.user.username)
+-                            .putString("email", loginResponse.user.email ?: "")
+-                            .putString("phone", loginResponse.user.phone ?: "")
+-                            .putString("location", loginResponse.user.location ?: "")
+-                            .putBoolean("verified", loginResponse.user.verified)
+-                            .apply()
++                        SharedPrefs.saveToken(this@LoginActivity, loginResponse.token)
++                        SharedPrefs.saveUserId(this@LoginActivity, loginResponse.user._id)
+ 
+                         Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
+                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
+ 
+-                        // ✅ Fetch Player ID safely (delayed if not ready)
+                         fetchAndUploadPlayerId(loginResponse.user._id)
+ 
+-                        // ✅ Go to main screen
+                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                         finish()
+                     } else {
+@@ -114,25 +98,21 @@
+                     } catch (e: Exception) {
+                         "Unknown error"
+                     }
+-                    Log.e("LoginDebug", "Login failed: ${response.code()} $errorMsg")
+                     Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
+                 }
+             }
+ 
+             override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+-                Log.e("LoginDebug", "Network error: ${t.message}")
+                 Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+             }
+         })
+     }
+ 
+-    // ✅ Reliable OneSignal Player ID fetching
+     private fun fetchAndUploadPlayerId(userId: String) {
+         val deviceState = OneSignal.getDeviceState()
+         val playerId = deviceState?.userId
+ 
+         if (!playerId.isNullOrEmpty()) {
+-            Log.d("OneSignal", "✅ Player ID: $playerId")
+             ApiClient.authService.updatePlayerId(
+                 userId,
+                 mapOf("playerId" to playerId)
+@@ -146,8 +126,6 @@
+                 }
+             })
+         } else {
+-            Log.w("OneSignal", "⚠️ Player ID not ready yet, retrying in 2 seconds...")
+-            // Retry after 2s
+             editPassword.postDelayed({
+                 fetchAndUploadPlayerId(userId)
+             }, 2000)
+Index: app/src/main/java/com/example/yenkasachat/util/OneSignalHelper.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.yenkasachat.util\n\nimport android.content.Context\nimport android.util.Log\nimport com.example.yenkasachat.network.ApiClient\nimport com.example.yenkasachat.utils.SharedPrefs\nimport com.onesignal.OneSignal\nimport retrofit2.Call\nimport retrofit2.Callback\nimport retrofit2.Response\n\nobject OneSignalHelper {\n\n    private const val ONESIGNAL_APP_ID = \"165df9e6-a0ea-4a37-a40a-110af7e28ad2\"\n    private const val TAG = \"OneSignalHelper\"\n\n    fun initialize(context: Context, onReady: () -> Unit = {}) {\n        OneSignal.initWithContext(context)\n        OneSignal.setAppId(ONESIGNAL_APP_ID)\n        Log.d(TAG, \"✅ OneSignal initialized\")\n\n        // Wait and check for player ID after initialization\n        val playerId = OneSignal.getDeviceState()?.userId\n        if (!playerId.isNullOrEmpty()) {\n            Log.d(TAG, \"✅ OneSignal is ready with ID: $playerId\")\n            onReady()\n        } else {\n            Log.w(TAG, \"⚠\uFE0F OneSignal user ID not available yet\")\n        }\n    }\n\n    fun getPlayerIdAndUpdateToBackend(context: Context) {\n        try {\n            val deviceState = OneSignal.getDeviceState()\n            val playerId = deviceState?.userId\n            val token = SharedPrefs.getToken(context)\n\n            if (playerId.isNullOrEmpty()) {\n                Log.e(TAG, \"❌ Player ID is null or empty\")\n                return\n            }\n\n            if (token.isNullOrEmpty()) {\n                Log.e(TAG, \"❌ Token is null or empty\")\n                return\n            }\n\n            Log.d(TAG, \"\uD83D\uDCE8 Sending OneSignal playerId: $playerId to backend\")\n\n            val requestBody = mapOf(\"playerId\" to playerId) // ✅ This matches backend\n\n            ApiClient.apiService.updateOneSignalId(\"Bearer $token\", requestBody)\n                .enqueue(object : Callback<Void> {\n                    override fun onResponse(call: Call<Void>, response: Response<Void>) {\n                        if (response.isSuccessful) {\n                            Log.d(TAG, \"✅ OneSignal ID updated on backend\")\n                        } else {\n                            Log.e(TAG, \"❌ Failed to update OneSignal ID: ${response.code()}\")\n                        }\n                    }\n\n                    override fun onFailure(call: Call<Void>, t: Throwable) {\n                        Log.e(TAG, \"❌ Error updating OneSignal ID\", t)\n                    }\n                })\n        } catch (e: Exception) {\n            Log.e(TAG, \"❌ Exception while retrieving OneSignal user ID\", e)\n        }\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/yenkasachat/util/OneSignalHelper.kt b/app/src/main/java/com/example/yenkasachat/util/OneSignalHelper.kt
+--- a/app/src/main/java/com/example/yenkasachat/util/OneSignalHelper.kt	(revision 4427e11fdb3beb42baab29b266a2a3cdfcfae069)
++++ b/app/src/main/java/com/example/yenkasachat/util/OneSignalHelper.kt	(date 1753125445219)
+@@ -3,7 +3,7 @@
+ import android.content.Context
+ import android.util.Log
+ import com.example.yenkasachat.network.ApiClient
+-import com.example.yenkasachat.utils.SharedPrefs
++import com.example.yenkasachat.util.SharedPrefs
+ import com.onesignal.OneSignal
+ import retrofit2.Call
+ import retrofit2.Callback
+@@ -49,7 +49,15 @@
+ 
+             val requestBody = mapOf("playerId" to playerId) // ✅ This matches backend
+ 
+-            ApiClient.apiService.updateOneSignalId("Bearer $token", requestBody)
++            val userId = SharedPrefs.getUserId(context)
++            if (userId.isNullOrEmpty()) {
++                Log.e(TAG, "❌ User ID is missing, cannot update playerId")
++                return
++            }
++
++            ApiClient.authService.updatePlayerId(userId, requestBody)
++
++
+                 .enqueue(object : Callback<Void> {
+                     override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                         if (response.isSuccessful) {
+Index: .idea/codeStyles/Project.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/codeStyles/Project.xml b/.idea/codeStyles/Project.xml
+new file mode 100644
+--- /dev/null	(date 1753055341800)
++++ b/.idea/codeStyles/Project.xml	(date 1753055341800)
+@@ -0,0 +1,123 @@
++<component name="ProjectCodeStyleConfiguration">
++  <code_scheme name="Project" version="173">
++    <JetCodeStyleSettings>
++      <option name="CODE_STYLE_DEFAULTS" value="KOTLIN_OFFICIAL" />
++    </JetCodeStyleSettings>
++    <codeStyleSettings language="XML">
++      <option name="FORCE_REARRANGE_MODE" value="1" />
++      <indentOptions>
++        <option name="CONTINUATION_INDENT_SIZE" value="4" />
++      </indentOptions>
++      <arrangement>
++        <rules>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>xmlns:android</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>^$</XML_NAMESPACE>
++                </AND>
++              </match>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>xmlns:.*</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>^$</XML_NAMESPACE>
++                </AND>
++              </match>
++              <order>BY_NAME</order>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>.*:id</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>http://schemas.android.com/apk/res/android</XML_NAMESPACE>
++                </AND>
++              </match>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>.*:name</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>http://schemas.android.com/apk/res/android</XML_NAMESPACE>
++                </AND>
++              </match>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>name</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>^$</XML_NAMESPACE>
++                </AND>
++              </match>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>style</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>^$</XML_NAMESPACE>
++                </AND>
++              </match>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>.*</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>^$</XML_NAMESPACE>
++                </AND>
++              </match>
++              <order>BY_NAME</order>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>.*</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>http://schemas.android.com/apk/res/android</XML_NAMESPACE>
++                </AND>
++              </match>
++              <order>ANDROID_ATTRIBUTE_ORDER</order>
++            </rule>
++          </section>
++          <section>
++            <rule>
++              <match>
++                <AND>
++                  <NAME>.*</NAME>
++                  <XML_ATTRIBUTE />
++                  <XML_NAMESPACE>.*</XML_NAMESPACE>
++                </AND>
++              </match>
++              <order>BY_NAME</order>
++            </rule>
++          </section>
++        </rules>
++      </arrangement>
++    </codeStyleSettings>
++    <codeStyleSettings language="kotlin">
++      <option name="CODE_STYLE_DEFAULTS" value="KOTLIN_OFFICIAL" />
++    </codeStyleSettings>
++  </code_scheme>
++</component>
+\ No newline at end of file
+Index: .idea/codeStyles/codeStyleConfig.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/codeStyles/codeStyleConfig.xml b/.idea/codeStyles/codeStyleConfig.xml
+new file mode 100644
+--- /dev/null	(date 1753055341815)
++++ b/.idea/codeStyles/codeStyleConfig.xml	(date 1753055341815)
+@@ -0,0 +1,5 @@
++<component name="ProjectCodeStyleConfiguration">
++  <state>
++    <option name="USE_PER_PROJECT_SETTINGS" value="true" />
++  </state>
++</component>
+\ No newline at end of file
+Index: .idea/gradle.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project version=\"4\">\n  <component name=\"GradleMigrationSettings\" migrationVersion=\"1\" />\n  <component name=\"GradleSettings\">\n    <option name=\"linkedExternalProjectsSettings\">\n      <GradleProjectSettings>\n        <option name=\"testRunner\" value=\"CHOOSE_PER_TEST\" />\n        <option name=\"externalProjectPath\" value=\"$PROJECT_DIR$\" />\n        <option name=\"gradleJvm\" value=\"#GRADLE_LOCAL_JAVA_HOME\" />\n        <option name=\"modules\">\n          <set>\n            <option value=\"$PROJECT_DIR$\" />\n            <option value=\"$PROJECT_DIR$/app\" />\n          </set>\n        </option>\n      </GradleProjectSettings>\n    </option>\n  </component>\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/gradle.xml b/.idea/gradle.xml
+--- a/.idea/gradle.xml	(revision 4427e11fdb3beb42baab29b266a2a3cdfcfae069)
++++ b/.idea/gradle.xml	(date 1753055341834)
+@@ -15,5 +15,6 @@
+         </option>
+       </GradleProjectSettings>
+     </option>
++    <option name="parallelModelFetch" value="true" />
+   </component>
+ </project>
+\ No newline at end of file
+Index: .idea/deploymentTargetSelector.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project version=\"4\">\n  <component name=\"deploymentTargetSelector\">\n    <selectionStates>\n      <SelectionState runConfigName=\"app\">\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\n        <DropdownSelection timestamp=\"2025-07-18T01:16:28.012643Z\">\n          <Target type=\"DEFAULT_BOOT\">\n            <handle>\n              <DeviceId pluginId=\"LocalEmulator\" identifier=\"path=/Users/macbook/.android/avd/Pixel_9.avd\" />\n            </handle>\n          </Target>\n        </DropdownSelection>\n        <DialogSelection />\n      </SelectionState>\n    </selectionStates>\n  </component>\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/deploymentTargetSelector.xml b/.idea/deploymentTargetSelector.xml
+--- a/.idea/deploymentTargetSelector.xml	(revision 4427e11fdb3beb42baab29b266a2a3cdfcfae069)
++++ b/.idea/deploymentTargetSelector.xml	(date 1753180426366)
+@@ -4,10 +4,10 @@
+     <selectionStates>
+       <SelectionState runConfigName="app">
+         <option name="selectionMode" value="DROPDOWN" />
+-        <DropdownSelection timestamp="2025-07-18T01:16:28.012643Z">
++        <DropdownSelection timestamp="2025-07-22T10:28:30.885533Z">
+           <Target type="DEFAULT_BOOT">
+             <handle>
+-              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/macbook/.android/avd/Pixel_9.avd" />
++              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/kofibright/.android/avd/Pixel_7.avd" />
+             </handle>
+           </Target>
+         </DropdownSelection>

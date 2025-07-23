@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/user.model');
 
-
 // ✅ Sanitize helper
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
@@ -107,17 +106,15 @@ router.post('/login', async (req, res) => {
       token
     });
 
-  }
-   catch (err) {
+  } catch (err) {
     console.error('❌ Login error:', err.message);
     res.status(500).json({ message: 'Server error during login' });
   }
-
-  // ✅ Debug route
-router.get('/ping', (req, res) => {
-  res.json({ message: '✅ Auth route is working!' });
 });
 
+// ✅ Debug route - make sure this is outside of other handlers
+router.get('/ping', (req, res) => {
+  res.json({ message: '✅ Auth route is working!' });
 });
 
 module.exports = router;

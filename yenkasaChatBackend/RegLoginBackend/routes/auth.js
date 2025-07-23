@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
-    username = sanitize(username);
+    username = sanitize(username.toLowerCase()); // ✅ force lowercase
     location = sanitize(location);
     password = sanitize(password);
 
@@ -79,11 +79,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Missing credentials' });
     }
 
+    const identifierLower = identifier.toLowerCase();
+
     const user = await User.findOne({
       $or: [
-        { email: identifier.toLowerCase() },
+        { email: identifierLower },
         { phoneNumber: identifier },
-        { username: identifier }
+        { username: identifierLower }
       ]
     });
 

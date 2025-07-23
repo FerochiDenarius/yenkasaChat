@@ -27,7 +27,6 @@ import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.PushNotificationRequest
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.NotificationHelper
-import com.example.yenkasachat.util.OneSignalNotificationSender
 import com.google.android.gms.location.LocationServices
 import retrofit2.Call
 import retrofit2.Callback

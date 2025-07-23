@@ -4,13 +4,13 @@ import android.util.Log
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.yenkasachat.network.ApiService
 
 object PlayerIdService {
 
     fun updatePlayerId(userId: String, playerId: String) {
         val body = mapOf("playerId" to playerId)
 
-        // ✅ Use the correct reference
         val call = ApiClient.authService.updatePlayerId(userId, body)
 
         call.enqueue(object : Callback<Void> {
@@ -28,3 +28,4 @@ object PlayerIdService {
         })
     }
 }
+

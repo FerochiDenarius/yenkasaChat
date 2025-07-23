@@ -4,34 +4,32 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/User');
 
-// ✅ Sanitize helper
+// ✅ Helper to sanitize input and trim long strings
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
 
-// ✅ Require JWT_SECRET on startup
-if (!process.env.JWT_SECRET) {
-  throw new Error('❌ JWT_SECRET is not defined in your environment variables.');
-}
-
-// ✅ REGISTER
+// ✅ Register Route
 router.post('/register', async (req, res) => {
-  let { email, phoneNumber, username, location, password } = req.body;
+  let { email, phone, username, location, password } = req.body;
 
   try {
+    // ✅ Sanitize
     email = email ? sanitize(email.toLowerCase()) : null;
-    phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
+    phone = phone ? sanitize(phone) : null;
     username = sanitize(username);
     location = sanitize(location);
     password = sanitize(password);
 
-    if (!username || !location || !password || (!email && !phoneNumber)) {
+    // ✅ Required field checks
+    if (!username || !location || !password || (!email && !phone)) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    // ✅ Check for existing user
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
-        ...(phoneNumber ? [{ phoneNumber }] : []),
+        ...(phone ? [{ phone }] : []),
         { username }
       ]
     });
@@ -40,25 +38,28 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'User already exists' });
     }
 
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new User({
+    // ✅ Dynamically build user object
+    const userObj = {
       username,
       location,
       password: hashedPassword,
-      ...(email && { email }),
-      ...(phoneNumber && { phoneNumber })
-    });
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {})
+    };
 
-    await newUser.save();
+    const user = new User(userObj);
+    await user.save();
 
     res.status(201).json({
-      id: newUser._id,
-      email: newUser.email,
-      phoneNumber: newUser.phoneNumber,
-      username: newUser.username,
-      location: newUser.location,
-      verified: newUser.verified
+      id: user._id,
+      email: user.email,
+      phone: user.phone,
+      username: user.username,
+      location: user.location,
+      verified: user.verified
     });
 
   } catch (err) {
@@ -66,11 +67,11 @@ router.post('/register', async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({ message: 'Duplicate entry detected' });
     }
-    res.status(500).json({ message: 'Server error during registration' });
+    res.status(500).json({ error: 'Server error during registration' });
   }
 });
 
-// ✅ LOGIN
+// ✅ Login Route
 router.post('/login', async (req, res) => {
   const { identifier, password } = req.body;
 
@@ -81,9 +82,9 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({
       $or: [
-        { email: identifier.toLowerCase() },
-        { phoneNumber: identifier },
-        { username: identifier }
+        { phone: identifier },
+        { username: identifier },
+        { email: identifier.toLowerCase() }
       ]
     });
 
@@ -92,13 +93,18 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET missing in environment");
+      return res.status(500).json({ message: 'Server config error' });
+    }
+
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       user: {
         id: user._id,
         email: user.email,
-        phoneNumber: user.phoneNumber,
+        phone: user.phone,
         username: user.username,
         location: user.location,
         verified: user.verified
@@ -108,7 +114,7 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error('❌ Login error:', err.message);
-    res.status(500).json({ message: 'Server error during login' });
+    res.status(500).json({ error: 'Server error during login' });
   }
 });
 

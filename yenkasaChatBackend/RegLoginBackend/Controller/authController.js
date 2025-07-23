@@ -1,14 +1,14 @@
-// PATCH /api/auth/update-player-id/:userId
+// PATCH /api/auth/update-player-id/:id
 const updatePlayerId = async (req, res) => {
   try {
     const { playerId } = req.body;
-    const { userId } = req.params;
+    const { id } = req.params; // Changed from userId to id
 
     if (!playerId) {
       return res.status(400).json({ error: "Player ID is required" });
     }
 
-    const user = await User.findByIdAndUpdate(userId, { playerId }, { new: true });
+    const user = await User.findByIdAndUpdate(id, { playerId }, { new: true }); // Updated variable
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });

@@ -10,7 +10,6 @@ import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.LocationData
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.ApiService
-import com.example.yenkasachat.util.OneSignalNotificationSender
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response

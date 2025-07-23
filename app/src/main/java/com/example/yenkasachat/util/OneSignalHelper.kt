@@ -3,31 +3,14 @@ package com.example.yenkasachat.util
 import android.content.Context
 import android.util.Log
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.util.SharedPrefs
-import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.onesignal.OneSignal
+import okhttp3.ResponseBody
 
 object OneSignalHelper {
-
-    private const val ONESIGNAL_APP_ID = "165df9e6-a0ea-4a37-a40a-110af7e28ad2"
     private const val TAG = "OneSignalHelper"
-
-    fun initialize(context: Context, onReady: () -> Unit = {}) {
-        OneSignal.initWithContext(context)
-        OneSignal.setAppId(ONESIGNAL_APP_ID)
-        Log.d(TAG, "✅ OneSignal initialized")
-
-        // Wait and check for player ID after initialization
-        val playerId = OneSignal.getDeviceState()?.userId
-        if (!playerId.isNullOrEmpty()) {
-            Log.d(TAG, "✅ OneSignal is ready with ID: $playerId")
-            onReady()
-        } else {
-            Log.w(TAG, "⚠️ OneSignal user ID not available yet")
-        }
-    }
 
     fun getPlayerIdAndUpdateToBackend(context: Context) {
         try {
@@ -45,34 +28,31 @@ object OneSignalHelper {
                 return
             }
 
-            Log.d(TAG, "📨 Sending OneSignal playerId: $playerId to backend")
-
-            val requestBody = mapOf("playerId" to playerId) // ✅ This matches backend
-
             val userId = SharedPrefs.getUserId(context)
             if (userId.isNullOrEmpty()) {
                 Log.e(TAG, "❌ User ID is missing, cannot update playerId")
                 return
             }
 
-            ApiClient.authService.updatePlayerId(userId, requestBody)
+            Log.d(TAG, "📨 Sending OneSignal playerId: $playerId to backend for userId: $userId")
 
+            val requestBody = mapOf("playerId" to playerId)
 
-                .enqueue(object : Callback<Void> {
-                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                        if (response.isSuccessful) {
-                            Log.d(TAG, "✅ OneSignal ID updated on backend")
-                        } else {
-                            Log.e(TAG, "❌ Failed to update OneSignal ID: ${response.code()}")
-                        }
+            ApiClient.apiService.updatePlayerId(userId, requestBody).enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "✅ Player ID updated successfully on backend")
+                    } else {
+                        Log.e(TAG, "❌ Failed to update player ID: ${response.code()} - ${response.errorBody()?.string()}")
                     }
+                }
 
-                    override fun onFailure(call: Call<Void>, t: Throwable) {
-                        Log.e(TAG, "❌ Error updating OneSignal ID", t)
-                    }
-                })
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    Log.e(TAG, "❌ Network error while updating player ID: ${t.message}")
+                }
+            })
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Exception while retrieving OneSignal user ID", e)
+            Log.e(TAG, "❌ Exception while updating player ID: ${e.message}")
         }
     }
 }

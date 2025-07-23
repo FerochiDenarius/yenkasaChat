@@ -10,11 +10,12 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.util.SharedPrefs
+import com.example.yenkasachat.util.OneSignalHelper
 import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import com.example.yenkasachat.util.SharedPrefs
 
 class LoginActivity : AppCompatActivity() {
 
@@ -26,7 +27,8 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val token = SharedPrefs.getToken(this@LoginActivity)
+        // Auto-login if token already exists
+        val token = SharedPrefs.getToken(this)
         if (!token.isNullOrEmpty()) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
@@ -40,6 +42,7 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
 
+        // Initialize OneSignal
         OneSignal.initWithContext(this)
         OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
 
@@ -67,7 +70,8 @@ class LoginActivity : AppCompatActivity() {
         }
 
         if (identifier.contains("@") &&
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(identifier).matches()) {
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(identifier).matches()
+        ) {
             editIdentifier.error = "Invalid email format"
             return
         }
@@ -79,13 +83,15 @@ class LoginActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
                     if (loginResponse != null) {
+                        // Save user session data
                         SharedPrefs.saveToken(this@LoginActivity, loginResponse.token)
                         SharedPrefs.saveUserId(this@LoginActivity, loginResponse.user._id)
 
                         Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        fetchAndUploadPlayerId(loginResponse.user._id)
+                        // Update OneSignal Player ID with backend
+                        OneSignalHelper.getPlayerIdAndUpdateToBackend(this@LoginActivity)
 
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()
@@ -93,11 +99,6 @@ class LoginActivity : AppCompatActivity() {
                         Toast.makeText(this@LoginActivity, "Unexpected server response", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    val errorMsg = try {
-                        response.errorBody()?.string() ?: "Unknown error"
-                    } catch (e: Exception) {
-                        "Unknown error"
-                    }
                     Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -106,29 +107,5 @@ class LoginActivity : AppCompatActivity() {
                 Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
-    }
-
-    private fun fetchAndUploadPlayerId(userId: String) {
-        val deviceState = OneSignal.getDeviceState()
-        val playerId = deviceState?.userId
-
-        if (!playerId.isNullOrEmpty()) {
-            ApiClient.authService.updatePlayerId(
-                userId,
-                mapOf("playerId" to playerId)
-            ).enqueue(object : Callback<Void> {
-                override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                    Log.d("OneSignal", "📤 Player ID uploaded: ${response.code()}")
-                }
-
-                override fun onFailure(call: Call<Void>, t: Throwable) {
-                    Log.e("OneSignal", "❌ Failed to upload Player ID: ${t.message}")
-                }
-            })
-        } else {
-            editPassword.postDelayed({
-                fetchAndUploadPlayerId(userId)
-            }, 2000)
-        }
     }
 }

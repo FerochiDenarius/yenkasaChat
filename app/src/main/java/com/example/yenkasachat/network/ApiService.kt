@@ -10,6 +10,8 @@ import com.example.yenkasachat.model.User
 import okhttp3.MultipartBody
 import retrofit2.Call
 import retrofit2.http.*
+import okhttp3.ResponseBody
+
 
 interface ApiService {
 
@@ -105,11 +107,14 @@ interface ApiService {
     ): Call<User>
 
     // ✅ Correct: Update OneSignal Player ID
-    @PATCH("/api/auth/update-player-id/{userId}")
+    @PUT("/api/users/{userId}/player-id")
     fun updatePlayerId(
         @Path("userId") userId: String,
         @Body body: Map<String, String>
-    ): Call<Void>
+    ): Call<ResponseBody>
+
+
+
 }
 // Note: Ensure that the endpoint for updating the Player ID matches your backend implementation.
 // The endpoint here is an example and should be adjusted based on your actual API design.

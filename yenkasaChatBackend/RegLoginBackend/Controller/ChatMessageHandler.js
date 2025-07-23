@@ -1,23 +1,26 @@
-const ChatRoom = require("../models/chatRoom.model");
+// ✅ Import models (ensure the paths are correct relative to this file)
+const ChatRoom = require("../models/chatroom.model"); // Note lowercase "r" if your file is named that way
 const Message = require("../models/message.model");
 const User = require("../models/user.model");
+
+// ✅ Cloudinary & file handling
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 const axios = require("axios");
 
-// ✅ Cloudinary config
+// ✅ Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Multer config (buffer storage)
+// ✅ Multer config (buffered memory storage)
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-// ✅ Send push notification via OneSignal
+// ✅ Push Notification via OneSignal
 const sendNotification = async (playerId, title, body) => {
   const notificationData = {
     app_id: process.env.ONESIGNAL_APP_ID,
@@ -37,7 +40,6 @@ const sendNotification = async (playerId, title, body) => {
         },
       }
     );
-
     console.log("✅ Push notification sent:", response.data);
   } catch (error) {
     console.error("❌ Error sending notification:", error.response?.data || error.message);
@@ -50,34 +52,34 @@ const sendMessage = async (req, res) => {
     const { senderId, receiverId, messageType, text } = req.body;
     let mediaUrl = "";
 
+    // ✅ Upload media if file is attached
     if (req.file) {
-      const streamUpload = (req) => {
+      const streamUpload = () => {
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream((error, result) => {
             if (result) resolve(result);
             else reject(error);
           });
-
           streamifier.createReadStream(req.file.buffer).pipe(stream);
         });
       };
 
-      const result = await streamUpload(req);
+      const result = await streamUpload();
       mediaUrl = result.secure_url;
     }
 
-    const messageData = {
+    // ✅ Save message
+    const message = new Message({
       senderId,
       receiverId,
       messageType,
       text,
       mediaUrl,
-    };
+    });
 
-    const message = new Message(messageData);
     await message.save();
 
-    // ✅ Update chat room's last message
+    // ✅ Update or create chat room
     let chatRoom = await ChatRoom.findOne({
       participants: { $all: [senderId, receiverId] },
     });
@@ -93,7 +95,7 @@ const sendMessage = async (req, res) => {
 
     await chatRoom.save();
 
-    // ✅ Send push notification to recipient
+    // ✅ Send OneSignal push
     const receiver = await User.findById(receiverId);
     const sender = await User.findById(senderId);
 

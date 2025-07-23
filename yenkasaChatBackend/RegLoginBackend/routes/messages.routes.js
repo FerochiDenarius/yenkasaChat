@@ -9,7 +9,7 @@ require('dotenv').config();
 const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
-const { sendMessage } = require('../controller/ChatMessageHandler');
+const { sendMessage } = require('../Controller/ChatMessageHandler');
 
 router.post('/messages', sendMessage);
 

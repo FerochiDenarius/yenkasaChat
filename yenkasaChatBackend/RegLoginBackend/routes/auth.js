@@ -107,10 +107,17 @@ router.post('/login', async (req, res) => {
       token
     });
 
-  } catch (err) {
+  }
+   catch (err) {
     console.error('❌ Login error:', err.message);
     res.status(500).json({ message: 'Server error during login' });
   }
+
+  // ✅ Debug route
+router.get('/ping', (req, res) => {
+  res.json({ message: '✅ Auth route is working!' });
+});
+
 });
 
 module.exports = router;

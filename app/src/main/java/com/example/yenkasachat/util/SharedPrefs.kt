@@ -23,9 +23,13 @@ object SharedPrefs {
         prefs(context).edit().remove(KEY_TOKEN).apply()
     }
 
-    fun saveUserId(context: Context, userId: String) {
-        prefs(context).edit().putString(KEY_USER_ID, userId).apply()
+    fun saveUserId(context: Context, userId: String?) {
+        userId?.let {
+            val prefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("userId", it).apply()
+        }
     }
+
 
     fun getUserId(context: Context): String? =
         prefs(context).getString(KEY_USER_ID, null)

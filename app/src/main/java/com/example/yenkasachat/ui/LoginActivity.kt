@@ -42,14 +42,11 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
 
-        // Initialize OneSignal
+        // ✅ Initialize OneSignal
         OneSignal.initWithContext(this)
         OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
 
-        btnLogin.setOnClickListener {
-            handleLogin()
-        }
-
+        btnLogin.setOnClickListener { handleLogin() }
         textRegisterLink.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
@@ -82,28 +79,33 @@ class LoginActivity : AppCompatActivity() {
             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
-                    if (loginResponse != null) {
-                        // Save user session data
-                        SharedPrefs.saveToken(this@LoginActivity, loginResponse.token)
-                        SharedPrefs.saveUserId(this@LoginActivity, loginResponse.user._id)
+                    val user = loginResponse?.user
 
-                        Log.d("LoginSuccess", "Login OK: ${loginResponse.user.username}")
+                    if (loginResponse != null && user != null && !user._id.isNullOrEmpty()) {
+                        // ✅ Save session
+                        SharedPrefs.saveToken(this@LoginActivity, loginResponse.token)
+                        SharedPrefs.saveUserId(this@LoginActivity, user._id)
+
+                        Log.i("LoginActivity", "✅ Login successful for: ${user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        // Update OneSignal Player ID with backend
+                        // ✅ Update Player ID
                         OneSignalHelper.getPlayerIdAndUpdateToBackend(this@LoginActivity)
 
                         startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                         finish()
                     } else {
-                        Toast.makeText(this@LoginActivity, "Unexpected server response", Toast.LENGTH_SHORT).show()
+                        Log.w("LoginActivity", "⚠️ Login response missing user data")
+                        Toast.makeText(this@LoginActivity, "Login failed: Incomplete user info", Toast.LENGTH_SHORT).show()
                     }
                 } else {
+                    Log.e("LoginActivity", "❌ Invalid credentials. Code: ${response.code()}")
                     Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+                Log.e("LoginActivity", "❌ Network error: ${t.message}", t)
                 Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })

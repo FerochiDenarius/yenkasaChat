@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
-    username = sanitize(username.toLowerCase()); // ✅ force lowercase
+    username = sanitize(username.toLowerCase());
     location = sanitize(location);
     password = sanitize(password);
 
@@ -53,7 +53,7 @@ router.post('/register', async (req, res) => {
     await newUser.save();
 
     res.status(201).json({
-      id: newUser._id,
+      _id: newUser._id, // ✅ Changed from id → _id
       email: newUser.email,
       phoneNumber: newUser.phoneNumber,
       username: newUser.username,
@@ -98,7 +98,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       user: {
-        id: user._id,
+        _id: user._id, // ✅ Changed from id → _id
         email: user.email,
         phoneNumber: user.phoneNumber,
         username: user.username,
@@ -114,7 +114,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ✅ Debug route - make sure this is outside of other handlers
+// ✅ Debug route
 router.get('/ping', (req, res) => {
   res.json({ message: '✅ Auth route is working!' });
 });

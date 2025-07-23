@@ -40,27 +40,23 @@ try {
   console.error('❌ Failed to load one or more route modules:', err.message);
 }
 
-// ✅ Dev-only test/debug routes
-if (process.env.NODE_ENV === 'development') {
-  app.get('/cloudinary-test', (req, res) => {
-    res.json({
-      name: process.env.CLOUDINARY_CLOUD_NAME,
-      key: process.env.CLOUDINARY_API_KEY,
-      secret: process.env.CLOUDINARY_API_SECRET ? '✅ present' : '❌ missing',
-    });
-  });
+// ✅ Always-on test/debug route (moved out of NODE_ENV check)
+app.get('/api/auth/ping', (req, res) => {
+  res.json({ message: '✅ Auth route is working!' });
+});
 
-  app.get('/api/auth/ping', (req, res) => {
-    res.json({ message: '✅ Auth route is working!' });
+// ✅ Catch-all route to debug broken or missing endpoints
+app.all('*', (req, res) => {
+  res.status(404).json({
+    message: `❌ Route not found: ${req.method} ${req.originalUrl}`,
+    hint: 'Check your route path and HTTP method.'
   });
-} else {
-  console.log('🔐 Test routes disabled in production');
-}
+});
 
 // ✅ MongoDB connection and server start
 mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useNewUrlParser: true,         // ✅ still supported by Mongoose (harmless)
+  useUnifiedTopology: true       // ✅ same here
 })
 .then(() => {
   console.log('✅ MongoDB connected');

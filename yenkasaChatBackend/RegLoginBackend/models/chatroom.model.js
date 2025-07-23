@@ -7,4 +7,5 @@ const chatRoomSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('ChatRoom', chatRoomSchema);
+// ✅ Prevent model overwrite error in dev or hot reload
+module.exports = mongoose.models.ChatRoom || mongoose.model('ChatRoom', chatRoomSchema);

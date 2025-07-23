@@ -77,8 +77,10 @@ router.get('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
 
   try {
+    const userObjectId = new mongoose.Types.ObjectId(userId); // ✅ Safely convert once
+
     const rooms = await ChatRoom.find({
-      participants: new mongoose.Types.ObjectId(userId)
+      participants: userObjectId // ✅ Correct query for array of ObjectIds
     })
       .populate('participants', 'username profileImage')
       .lean();

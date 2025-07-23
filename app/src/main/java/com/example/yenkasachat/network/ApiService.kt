@@ -16,7 +16,7 @@ import okhttp3.ResponseBody
 interface ApiService {
 
     // ✅ POST /api/auth/login
-    @POST("api/login") // ✅ Correct path (no /api/)
+    @POST("auth/login") // ✅ Correct path (no /api/)
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
@@ -37,7 +37,7 @@ interface ApiService {
     ): Call<ChatMessage>
 
     // ✅ Fetch messages for a specific room
-    @GET("/api/messages/{roomId}/messages")
+    @GET("/api/messages/{roomId}")
     fun getMessages(
         @Header("Authorization") token: String,
         @Path("roomId") roomId: String

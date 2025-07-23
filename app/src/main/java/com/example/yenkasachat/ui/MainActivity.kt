@@ -1,7 +1,6 @@
 package com.example.yenkasachat.ui
 
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -15,6 +14,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.UserAdapter
 import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.util.SharedPrefs
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -32,9 +32,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val prefs: SharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
-        token = prefs.getString("token", null)
-        userId = prefs.getString("userId", null)
+        token = SharedPrefs.getToken(this)
+        userId = SharedPrefs.getUserId(this)
 
         Log.d("MainActivity", "Token: $token")
         Log.d("MainActivity", "UserID: $userId")
@@ -50,7 +49,8 @@ class MainActivity : AppCompatActivity() {
         fetchAllUsers()
 
         findViewById<Button>(R.id.btnLogout).setOnClickListener {
-            prefs.edit().clear().apply()
+            SharedPrefs.clearToken(this)
+            SharedPrefs.clearUserId(this)
             Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
@@ -136,7 +136,6 @@ class MainActivity : AppCompatActivity() {
         }
         popup.show()
     }
-
 
     private fun createChatRoomWithUser(username: String) {
         val body = mapOf("username" to username)

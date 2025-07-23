@@ -5,7 +5,7 @@ const auth = require('../middleware/auth');
 const User = require('../models/user.model');
 const { sendPushNotification } = require('../utils/onesignal');
 
-// ✅ Token-based update after login
+// ✅ Route 1: Token-based playerId update (requires valid JWT)
 router.post('/update', auth, async (req, res) => {
   const { playerId } = req.body;
 
@@ -15,7 +15,7 @@ router.post('/update', auth, async (req, res) => {
 
   try {
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id || req.user.id,  // ensure we handle MongoDB _id
       { playerId },
       { new: true }
     );
@@ -29,7 +29,7 @@ router.post('/update', auth, async (req, res) => {
   }
 });
 
-// ✅ Final route: Match frontend @PUT /api/users/:userId/player-id
+// ✅ Route 2: PUT method to update playerId with explicit userId param
 router.put('/api/users/:userId/player-id', auth, async (req, res) => {
   const { userId } = req.params;
   const { playerId } = req.body;
@@ -38,7 +38,8 @@ router.put('/api/users/:userId/player-id', auth, async (req, res) => {
     return res.status(400).json({ error: 'playerId is required' });
   }
 
-  if (req.user.id !== userId) {
+  // Prevent unauthorized users from updating others' playerId
+  if ((req.user._id || req.user.id).toString() !== userId.toString()) {
     return res.status(403).json({ error: 'Unauthorized to update this user' });
   }
 
@@ -58,7 +59,7 @@ router.put('/api/users/:userId/player-id', auth, async (req, res) => {
   }
 });
 
-// ✅ Send OneSignal push notification manually (e.g. for test)
+// ✅ Route 3: Manually trigger push notification
 router.post('/send-notification', auth, async (req, res) => {
   const { playerId, title, body, data } = req.body;
 

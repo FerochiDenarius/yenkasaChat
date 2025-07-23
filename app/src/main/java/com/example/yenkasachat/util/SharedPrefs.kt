@@ -1,19 +1,20 @@
 package com.example.yenkasachat.util
 
 import android.content.Context
-import android.content.SharedPreferences
 
 object SharedPrefs {
 
     private const val PREFS_NAME = "yenkasa_chat_prefs"
-    private const val KEY_TOKEN = "auth_token"
-    private const val KEY_USER_ID = "user_id"
+    private const val KEY_TOKEN = "token"
+    private const val KEY_USER_ID = "userId"
 
-    private fun prefs(context: Context): SharedPreferences =
+    private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun saveToken(context: Context, token: String) {
-        prefs(context).edit().putString(KEY_TOKEN, token).apply()
+    fun saveToken(context: Context, token: String?) {
+        token?.let {
+            prefs(context).edit().putString(KEY_TOKEN, it).apply()
+        }
     }
 
     fun getToken(context: Context): String? =
@@ -25,11 +26,9 @@ object SharedPrefs {
 
     fun saveUserId(context: Context, userId: String?) {
         userId?.let {
-            val prefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
-            prefs.edit().putString("userId", it).apply()
+            prefs(context).edit().putString(KEY_USER_ID, it).apply()
         }
     }
-
 
     fun getUserId(context: Context): String? =
         prefs(context).getString(KEY_USER_ID, null)

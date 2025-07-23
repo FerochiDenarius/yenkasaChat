@@ -1,15 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- ✅ Base app theme -->
-    <style name="Base.Theme.YenkasaChat" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Customize colors if needed -->
+    <style name="Base.Theme.YenkasaChat" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Colors -->
         <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/purple_200</item>
+
         <item name="colorSecondary">@color/teal_200</item>
         <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimary</item>
+
+        <!-- Fix potential button crash -->
+        <!-- Do NOT include textButtonStyle here unless you're defining it yourself -->
     </style>
 
-    <!-- ✅ Final app theme to apply in AndroidManifest -->
     <style name="Theme.YenkasaChat" parent="Base.Theme.YenkasaChat" />
 </resources>

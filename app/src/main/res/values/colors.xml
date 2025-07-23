@@ -8,4 +8,10 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="notification_color">#FF4081</color>
+
+    <!-- 🛠️ Add these -->
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryVariant">#3700B3</color>
+    <color name="colorSecondary">#03DAC6</color>
+    <color name="colorSecondaryVariant">#018786</color>
 </resources>

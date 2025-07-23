@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.yenkasachat">
 
@@ -21,7 +22,6 @@
         android:roundIcon="@mipmap/yc"
         android:supportsRtl="true"
         android:theme="@style/Theme.YenkasaChat"
-        android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config">
 
         <!-- ✅ Google Maps API Key -->
@@ -29,51 +29,51 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCQvcE4AW1KseUVC9_OZtiA4tlOo9sgdk0" />
 
-        <!-- ✅ Firebase Notification Defaults -->
+        <!-- ✅ Firebase Default Notification -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
-            android:resource="@color/purple_500" />
+            android:resource="@color/notification_color" />
 
         <!-- ✅ OneSignal App ID -->
         <meta-data
             android:name="onesignal_app_id"
             android:value="165df9e6-a0ea-4a37-a40a-110af7e28ad2" />
 
-        <!-- ✅ Main Launcher Activity -->
+        <!-- ✅ Launcher Activity -->
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
-        <!-- 📱 Activities -->
+        <!-- ✅ Activities -->
         <activity android:name=".ui.LoginActivity" />
+        <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.MainActivity" />
         <activity android:name=".ui.ChatActivity" />
         <activity android:name=".ui.AudioRecActivity" />
-        <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.ContactsActivity" />
         <activity android:name=".ui.ChatRoomsActivity" />
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />
         <activity android:name=".ui.ImagePreviewActivity" />
 
-        <!-- 🔔 Firebase Messaging Service -->
+        <!-- ✅ Firebase Messaging -->
         <service
             android:name=".fcm.MyFirebaseMessagingService"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
             </intent-filter>
         </service>
 
-        <!-- 📂 File Provider -->
+        <!-- ✅ File Provider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -83,6 +83,5 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
     </application>
 </manifest>

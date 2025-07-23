@@ -7,7 +7,6 @@ import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
 import com.example.yenkasachat.model.ChatMessage
-import com.example.yenkasachat.model.LocationData
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.ApiService
 import retrofit2.Call
@@ -28,7 +27,6 @@ class ChatMessageHandler(
     }
 
     private val apiService: ApiService = ApiClient.apiService
-
 
     fun sendMessage(data: Map<String, Any?>) {
         val messageMap = mutableMapOf<String, Any?>()
@@ -100,28 +98,7 @@ class ChatMessageHandler(
                 if (response.isSuccessful && response.body() != null) {
                     val sentMessage = response.body()!!
                     callback.onMessageSent(sentMessage)
-
-                    val playerId = "TODO" // Replace if your message has recipient.playerId
-                    val senderName = "Someone" // Replace with real sender name if needed
-
-                    val messageText = when {
-                        !sentMessage.text.isNullOrBlank() -> sentMessage.text
-                        !sentMessage.imageUrl.isNullOrBlank() ||
-                                !sentMessage.audioUrl.isNullOrBlank() ||
-                                !sentMessage.videoUrl.isNullOrBlank() ||
-                                !sentMessage.fileUrl.isNullOrBlank() -> "📎 Media"
-                        sentMessage.location != null -> "📍 Location"
-                        else -> "You have a new message"
-                    }
-
-                    if (playerId != "TODO") {
-                        OneSignalNotificationSender.sendNotification(
-                            receiverPlayerId = playerId,
-                            title = "New message from $senderName",
-                            message = messageText
-                        )
-                    }
-
+                    // ✅ Notification is now handled by backend (OneSignal)
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                     Log.e("ChatMessageHandler", "Send failed: $errorMsg")

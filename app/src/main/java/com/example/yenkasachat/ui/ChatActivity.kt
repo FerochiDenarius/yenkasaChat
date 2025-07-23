@@ -162,10 +162,10 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             val text = messageInput.text.toString().trim()
             if (text.isNotEmpty()) {
                 handler.sendMessage(mapOf("text" to text))
-                sendPushNotification(recipientPlayerId, text)
                 messageInput.setText("")
             }
         }
+
 
         micButton.setOnClickListener {
             val intent = Intent(this, AudioRecActivity::class.java)
@@ -198,15 +198,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
     }
 
-    private fun sendPushNotification(playerId: String, message: String) {
-        if (playerId.isBlank()) return
-
-        OneSignalNotificationSender.sendNotification(
-            receiverPlayerId = playerId,
-            title = "New Message",
-            message = message
-        )
-    }
 
 
     private fun retrieveSession() {

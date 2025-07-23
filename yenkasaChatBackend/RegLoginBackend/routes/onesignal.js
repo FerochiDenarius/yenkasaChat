@@ -29,8 +29,8 @@ router.post('/update', auth, async (req, res) => {
   }
 });
 
-// ✅ Player ID update with userId param
-router.patch('/update-player-id/:userId', auth, async (req, res) => {
+// ✅ Final route: Match frontend @PUT /api/users/:userId/player-id
+router.put('/api/users/:userId/player-id', auth, async (req, res) => {
   const { userId } = req.params;
   const { playerId } = req.body;
 
@@ -51,7 +51,7 @@ router.patch('/update-player-id/:userId', auth, async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    res.json({ success: true, message: '✅ Player ID updated successfully' });
+    res.json({ success: true, message: '✅ Player ID updated successfully', user });
   } catch (err) {
     console.error('❌ Error updating playerId:', err.message);
     res.status(500).json({ error: 'Server error' });

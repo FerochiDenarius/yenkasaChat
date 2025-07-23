@@ -16,10 +16,11 @@ import okhttp3.ResponseBody
 interface ApiService {
 
     // ✅ POST /api/auth/login
-    @POST("/api/auth/login")
+    @POST("api/login") // ✅ Correct path (no /api/)
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
+
 
     // ✅ Create a chat room using a recipient username
     @POST("/api/chatrooms")

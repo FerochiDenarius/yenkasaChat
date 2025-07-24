@@ -3,7 +3,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
-const Message = require('../models/message.model');
 const authMiddleware = require('../middleware/auth');
 
 // ✅ Create or reuse a chat room
@@ -59,47 +58,16 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Message preview helper
-function getLastMessagePreview(message) {
-  if (!message) return null;
-  if (message.text) return message.text;
-  if (message.imageUrl) return '[Image]';
-  if (message.audioUrl) return '[Audio]';
-  if (message.videoUrl) return '[Video]';
-  if (message.fileUrl) return '[File]';
-  if (message.location) return '[Location]';
-  if (message.contactName) return `[Contact] ${message.contactName}`;
-  return '[Message]';
-}
-
-// ✅ Get all chat rooms with last message
+// ✅ Get all chat rooms for logged-in user
 router.get('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const userObjectId = new mongoose.Types.ObjectId(userId); // ✅ Safely convert once
-
     const rooms = await ChatRoom.find({
-      participants: userObjectId // ✅ Correct query for array of ObjectIds
-    })
-      .populate('participants', 'username profileImage')
-      .lean();
+      participants: new mongoose.Types.ObjectId(userId) // ✅ fixed with `new`
+    }).populate('participants', 'username profileImage');
 
-    const enrichedRooms = await Promise.all(rooms.map(async room => {
-      const lastMsg = await Message.findOne({ roomId: room._id })
-        .sort({ createdAt: -1 })
-        .limit(1)
-        .lean();
-
-      return {
-        ...room,
-        lastMessage: getLastMessagePreview(lastMsg) || "No messages yet",
-        lastMessageTimestamp: lastMsg?.createdAt || null,
-        unreadCount: 0
-      };
-    }));
-
-    res.json(enrichedRooms);
+    res.json(rooms);
   } catch (err) {
     console.error('❌ Failed to fetch chat rooms:', err.message);
     res.status(500).json({ error: 'Failed to get chat rooms' });

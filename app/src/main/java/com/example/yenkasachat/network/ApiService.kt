@@ -6,6 +6,7 @@ import com.example.yenkasachat.model.Contact
 import com.example.yenkasachat.model.CreateChatRoomResponse
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
+import com.example.yenkasachat.model.ChatRoomResponse
 import com.example.yenkasachat.model.User
 import okhttp3.MultipartBody
 import retrofit2.Call
@@ -44,10 +45,11 @@ interface ApiService {
     ): Call<List<ChatMessage>>
 
     // ✅ Get chat rooms for the logged-in user
-    @GET("/api/chatrooms")
-    fun getChatRooms(
+    @GET("/getchatrooms")
+    fun getChatrooms(
         @Header("Authorization") token: String
-    ): Call<List<ChatRoom>>
+    ): Call<List<ChatRoomResponse>>
+
 
     // ✅ Get all users
     @GET("/api/users")

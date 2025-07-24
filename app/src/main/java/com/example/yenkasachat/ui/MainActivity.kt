@@ -15,6 +15,8 @@ import com.example.yenkasachat.adapter.UserAdapter
 import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.SharedPrefs
+import com.example.yenkasachat.ui.GetChatrooms
+import com.example.yenkasachat.model.ChatRoom
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -182,53 +184,37 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
+    // ... (your existing code up to the end of `openExistingChatRoom()`)
+
     private fun openExistingChatRoom(recipientId: String) {
-        ApiClient.apiService.getChatRooms("Bearer $token")
-            .enqueue(object : Callback<List<ChatRoom>> {
-                override fun onResponse(
-                    call: Call<List<ChatRoom>>,
-                    response: Response<List<ChatRoom>>
-                ) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val allRooms = response.body()!!
-                        Log.d("MainActivity", "Fetched ${allRooms.size} chat rooms")
-
-                        val chatRoom = allRooms.find { room ->
-                            room.participants.any { participant -> participant._id == recipientId }
-                        }
-
-                        if (chatRoom != null && !chatRoom._id.isNullOrEmpty()) {
-                            Log.d("MainActivity", "Opening chat room: ${chatRoom._id}")
-                            startActivity(
-                                Intent(
-                                    this@MainActivity,
-                                    ChatActivity::class.java
-                                ).apply {
-                                    putExtra("roomId", chatRoom._id)
-                                })
-                        } else {
-                            Log.w("MainActivity", "No chat room found for user $recipientId")
-                            Toast.makeText(
-                                this@MainActivity,
-                                "No previous chat found",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    } else {
-                        Log.e("MainActivity", "Failed to fetch chat rooms: ${response.code()}")
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Failed to fetch chat rooms",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+        GetChatrooms.fetchChatrooms(this) { chatRooms ->
+            if (chatRooms != null) {
+                val chatRoom = chatRooms.find { room ->
+                    room.participant.id == recipientId
                 }
 
-                override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
-                    Log.e("MainActivity", "Network error: ${t.message}", t)
-                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT)
-                        .show()
+                if (chatRoom != null && chatRoom.roomId.isNotEmpty()) {
+                    Log.d("MainActivity", "Opening chat room: ${chatRoom.roomId}")
+                    startActivity(
+                        Intent(this@MainActivity, ChatActivity::class.java).apply {
+                            putExtra("roomId", chatRoom.roomId)
+                        }
+                    )
+                } else {
+                    Log.w("MainActivity", "No chat room found for user $recipientId")
+                    Toast.makeText(
+                        this@MainActivity,
+                        "No previous chat found",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
-            })
+            } else {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Failed to fetch chat rooms",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 }

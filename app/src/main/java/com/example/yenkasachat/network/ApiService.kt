@@ -7,6 +7,7 @@ import com.example.yenkasachat.model.CreateChatRoomResponse
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.PushNotificationRequest
 import okhttp3.MultipartBody
 import retrofit2.Call
 import retrofit2.http.*
@@ -35,6 +36,13 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Call<ChatMessage>
+
+    @POST("/api/notify")
+    fun sendPushNotification(
+        @Header("Authorization") token: String,
+        @Body request: PushNotificationRequest
+    ): Call<Void>
+
 
     // ✅ Fetch messages for a specific room
     @GET("/api/messages/{roomId}")
@@ -114,7 +122,17 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Call<ResponseBody>
 
+    @POST("auth/forgot-password")
+    @FormUrlEncoded
+    suspend fun forgotPassword(
+        @Field("email") email: String
+    ): retrofit2.Response<Void> // Or a custom response if your backend returns a message
 
+    @GET("chatrooms")
+    fun getChatRooms(): Call<List<ChatRoom>>
+
+    @GET("chatrooms/user/{userId}")
+    fun getUserChatRooms(@Path("userId") userId: String): Call<List<ChatRoom>>
 
 }
 // Note: Ensure that the endpoint for updating the Player ID matches your backend implementation.

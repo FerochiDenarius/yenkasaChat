@@ -37,4 +37,15 @@
         android:layout_marginTop="16dp"
         android:text="Don't have an account? Register"
         android:textColor="@color/purple_700" />
+
+    <TextView
+        android:id="@+id/textForgotPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forgot Password?"
+        android:textColor="@color/blue"
+        android:layout_marginTop="8dp"
+        android:layout_gravity="center_horizontal"
+        android:textStyle="bold"/>
+
 </LinearLayout>

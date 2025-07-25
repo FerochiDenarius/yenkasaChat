@@ -4,11 +4,16 @@ import android.app.Application
 import com.onesignal.OneSignal
 import com.cloudinary.android.MediaManager
 import com.example.yenkasachat.util.OneSignalHelper
+import com.google.firebase.FirebaseApp
+import com.example.yenkasachat.network.ApiClient
 
 class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // ✅ Initialize Firebase
+        FirebaseApp.initializeApp(this)
 
         // ✅ Initialize OneSignal
         OneSignal.initWithContext(this)
@@ -24,4 +29,12 @@ class MyApplication : Application() {
         // ✅ Send playerId to backend
         OneSignalHelper.getPlayerIdAndUpdateToBackend(this)
     }
+
+    class MyApplication : Application() {
+        override fun onCreate() {
+            super.onCreate()
+            ApiClient.init(this) // ✅ ensures interceptor is aware of the token
+        }
+    }
+
 }

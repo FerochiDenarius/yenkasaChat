@@ -1,5 +1,7 @@
 package com.example.yenkasachat.ui
 
+
+import com.example.yenkasachat.util.SharedPrefs
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -10,9 +12,9 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.util.SharedPrefs
 import com.example.yenkasachat.util.OneSignalHelper
 import com.onesignal.OneSignal
+import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -26,6 +28,8 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
 
         // Auto-login if token already exists
         val token = SharedPrefs.getToken(this)
@@ -41,14 +45,20 @@ class LoginActivity : AppCompatActivity() {
         editPassword = findViewById(R.id.editLoginPassword)
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
+        val textForgotPassword: TextView = findViewById(R.id.textForgotPassword) // ✅
 
-        // ✅ Initialize OneSignal
+        // ✅ OneSignal init
         OneSignal.initWithContext(this)
         OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
 
         btnLogin.setOnClickListener { handleLogin() }
+
         textRegisterLink.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
+        }
+
+        textForgotPassword.setOnClickListener {
+            startActivity(Intent(this, ForgotPasswordActivity::class.java))
         }
     }
 
@@ -79,7 +89,23 @@ class LoginActivity : AppCompatActivity() {
             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
+
+                    TokenManager.saveToken(this@LoginActivity, loginResponse?.token ?: "")
+                    ApiClient.init(this@LoginActivity)
+
                     val user = loginResponse?.user
+                    if (response.isSuccessful) {
+                        val token = response.body()?.token
+                        TokenManager.saveToken(this@LoginActivity, token ?: "")
+                        ApiClient.init(this@LoginActivity) // ✅ MUST be after saving token
+
+                        // Then navigate
+                        val intent = Intent(this@LoginActivity, MainActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        // handle login error
+                    }
 
                     if (loginResponse != null && user != null && !user._id.isNullOrEmpty()) {
                         // ✅ Save session

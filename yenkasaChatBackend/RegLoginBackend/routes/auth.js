@@ -108,8 +108,10 @@ router.post('/login', async (req, res) => {
       expiresIn: REFRESH_EXPIRES_IN
     });
 
-    // Store refreshToken in memory (or DB)
-    refreshTokens.set(user._id.toString(), refreshToken);
+    // Store refreshToken in DB)
+ user.refreshToken = refreshToken;
+await user.save();
+
 
     res.json({
       user: {
@@ -138,11 +140,12 @@ router.post('/token/refresh', async (req, res) => {
 
   try {
     const payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-    const storedToken = refreshTokens.get(payload.userId);
+    
+    const user = await User.findById(payload.userId);
+if (!user || user.refreshToken !== refreshToken) {
+  return res.status(403).json({ message: 'Invalid refresh token' });
+}
 
-    if (storedToken !== refreshToken) {
-      return res.status(403).json({ message: 'Invalid refresh token' });
-    }
 
     const newAccessToken = jwt.sign({ userId: payload.userId }, process.env.JWT_SECRET, {
       expiresIn: ACCESS_EXPIRES_IN

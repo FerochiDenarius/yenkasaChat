@@ -128,11 +128,11 @@ interface ApiService {
         @Field("email") email: String
     ): retrofit2.Response<Void> // Or a custom response if your backend returns a message
 
-    @GET("chatrooms")
-    fun getChatRooms(): Call<List<ChatRoom>>
 
     @GET("chatrooms/user/{userId}")
     fun getUserChatRooms(@Path("userId") userId: String): Call<List<ChatRoom>>
+    @POST("chatroom/{receiverId}")
+    fun getOrCreateChatRoom(@Path("receiverId") receiverId: String): Call<CreateChatRoomResponse>
 
 }
 // Note: Ensure that the endpoint for updating the Player ID matches your backend implementation.

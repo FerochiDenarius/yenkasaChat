@@ -8,10 +8,15 @@ const User = require('../models/user.model');
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
 
-// ✅ Require JWT_SECRET on startup
-if (!process.env.JWT_SECRET) {
-  throw new Error('❌ JWT_SECRET is not defined in your environment variables.');
+if (!process.env.JWT_SECRET || !process.env.REFRESH_SECRET) {
+  throw new Error('❌ JWT_SECRET or REFRESH_SECRET is not set in environment.');
 }
+
+const ACCESS_EXPIRES_IN = '15m';
+const REFRESH_EXPIRES_IN = '7d';
+
+// In-memory store (for production, use DB or Redis)
+const refreshTokens = new Map();
 
 // ✅ REGISTER
 router.post('/register', async (req, res) => {
@@ -53,7 +58,7 @@ router.post('/register', async (req, res) => {
     await newUser.save();
 
     res.status(201).json({
-      _id: newUser._id, // ✅ Changed from id → _id
+      _id: newUser._id,
       email: newUser.email,
       phoneNumber: newUser.phoneNumber,
       username: newUser.username,
@@ -70,7 +75,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ✅ LOGIN
+// ✅ LOGIN with Access + Refresh Token
 router.post('/login', async (req, res) => {
   const { identifier, password } = req.body;
 
@@ -94,23 +99,59 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    // Create tokens
+    const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: ACCESS_EXPIRES_IN
+    });
+
+    const refreshToken = jwt.sign({ userId: user._id }, process.env.REFRESH_SECRET, {
+      expiresIn: REFRESH_EXPIRES_IN
+    });
+
+    // Store refreshToken in memory (or DB)
+    refreshTokens.set(user._id.toString(), refreshToken);
 
     res.json({
       user: {
-        _id: user._id, // ✅ Changed from id → _id
+        _id: user._id,
         email: user.email,
         phoneNumber: user.phoneNumber,
         username: user.username,
         location: user.location,
         verified: user.verified
       },
-      token
+      accessToken,
+      refreshToken
     });
 
   } catch (err) {
     console.error('❌ Login error:', err.message);
     res.status(500).json({ message: 'Server error during login' });
+  }
+});
+
+// ✅ Refresh Token Endpoint
+router.post('/token/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+
+  try {
+    const payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+    const storedToken = refreshTokens.get(payload.userId);
+
+    if (storedToken !== refreshToken) {
+      return res.status(403).json({ message: 'Invalid refresh token' });
+    }
+
+    const newAccessToken = jwt.sign({ userId: payload.userId }, process.env.JWT_SECRET, {
+      expiresIn: ACCESS_EXPIRES_IN
+    });
+
+    res.json({ accessToken: newAccessToken });
+  } catch (err) {
+    console.error('❌ Token refresh error:', err.message);
+    res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 });
 

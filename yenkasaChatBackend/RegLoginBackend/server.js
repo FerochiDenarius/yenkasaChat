@@ -24,6 +24,8 @@ try {
   const verifyRoutes = require('./routes/verify');
   const userRoutes = require('./routes/user.routes');
   const notificationRoutes = require('./routes/notifications.route');
+ const refreshTokenRoute = require('./routes/refresh-token')
+
 
   app.use('/api/auth', authRoutes);
   console.log('✅ Mounted /api/auth');
@@ -34,6 +36,9 @@ try {
   app.use('/api/verify', verifyRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/getchatrooms', require('./routes/getchatrooms'));
+  app.use('/api/refresh-token', refreshTokenRoute)
+
 
   console.log("✅ All route modules loaded and registered");
 } catch (err) {

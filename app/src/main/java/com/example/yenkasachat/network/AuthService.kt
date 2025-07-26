@@ -3,6 +3,9 @@ package com.example.yenkasachat.network
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.model.RegisterRequest
+import com.example.yenkasachat.model.RefreshTokenRequest
+import com.example.yenkasachat.model.TokenResponse
+import retrofit2.Response
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -55,4 +58,9 @@ interface AuthService {
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<Void>
+
+    @POST("auth/refresh-token")
+    fun refreshToken(@Body request: RefreshTokenRequest): retrofit2.Call<TokenResponse>
+
+
 }

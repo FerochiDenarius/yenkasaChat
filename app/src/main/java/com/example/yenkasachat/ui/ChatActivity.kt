@@ -280,7 +280,21 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             return
         }
 
-        ApiClient.apiService.getMessages(roomId)
+// Inside ChatActivity.kt, in the fetchMessages() function
+
+// Ensure 'roomId' (the class member variable) has been correctly initialized
+// by the time this function is called.
+// You do this in retrieveSessionAndValidate()
+
+        if (roomId.isBlank()) { // Good practice to check this before making the call
+            Log.e("FetchMessages", "Room ID is blank, cannot fetch messages.")
+            // Optionally show a toast or handle this error more gracefully
+            // Toast.makeText(this, "Room ID is missing, cannot fetch messages.", Toast.LENGTH_SHORT).show()
+            return // Don't proceed if roomId is blank
+        }
+
+// Pass the class member 'roomId' to the getMessages function
+        ApiClient.apiService.getMessages(roomId = this.roomId) // Pass the roomId
             .enqueue(object : Callback<List<ChatMessage>> {
                 override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
                     if (response.isSuccessful) {
@@ -289,7 +303,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                             val newMessages = messages.filter { (it.timestamp?.toLongOrNull() ?: 0L) > lastMessageTimestamp }
                             if (newMessages.isNotEmpty()) {
                                 newMessages.lastOrNull()?.let { lastNewMsg ->
-                                    if (lastNewMsg.senderId != senderId) {
+                                    if (lastNewMsg.senderId != senderId) { // Ensure senderId is also correctly initialized
                                         NotificationHelper.showMessageNotification(
                                             this@ChatActivity,
                                             lastNewMsg.senderId ?: "Someone",
@@ -313,9 +327,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                                     lastMessageTimestamp = it.timestamp?.toLongOrNull() ?: lastMessageTimestamp
                                 }
                             } else if (messageAdapter.currentList.size != messages.size && messages.isNotEmpty()) {
-                                // Fallback for general update if sizes mismatch and new messages are present
                                 messageAdapter.submitList(messages.toList())
-                                // Optionally scroll if new items are at the end
+                                // Optionally scroll
                                 // recyclerView.smoothScrollToPosition(messages.size - 1)
                             }
                         } else {
@@ -324,6 +337,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("FetchMessages", "Failed to fetch messages: $errorMsg (Code: ${response.code()})")
+                        // Propagate error to UI if needed
+                        // Toast.makeText(this@ChatActivity, "Failed to fetch: $errorMsg", Toast.LENGTH_LONG).show()
                     }
                 }
 

@@ -83,9 +83,8 @@ interface ApiService {
 
     @GET("messages/{roomId}")
     fun getMessages(
-        @Header("Authorization") token: String,
         @Path("roomId") roomId: String
-    ): Call<List<ChatMessage>>
+    ): Call<List<ChatMessage>> // Now only expects roomId
 
     // --- Contacts ---
     @POST("contacts")

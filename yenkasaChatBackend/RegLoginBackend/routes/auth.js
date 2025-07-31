@@ -8,15 +8,18 @@ const User = require('../models/user.model');
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
 
-if (!process.env.JWT_SECRET || !process.env.REFRESH_SECRET) {
-  throw new Error('❌ JWT_SECRET or REFRESH_SECRET is not set in environment.');
+// MODIFIED: Check for REFRESH_TOKEN_SECRET to match .env file key
+if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+  // You can adjust the error message if you want, but the original intent is clear.
+  throw new Error('❌ JWT_SECRET or REFRESH_TOKEN_SECRET is not set in environment.');
 }
 
 const ACCESS_EXPIRES_IN = '15m';
 const REFRESH_EXPIRES_IN = '7d';
 
-// In-memory store (for production, use DB or Redis)
-const refreshTokens = new Map();
+// Note: The 'refreshTokens = new Map()' was in your original code but not used for storing tokens
+// in the provided login/refresh logic (tokens are stored in user.refreshToken).
+// If you intend to use an in-memory map for other purposes, you can keep it.
 
 // ✅ REGISTER
 router.post('/register', async (req, res) => {
@@ -63,13 +66,13 @@ router.post('/register', async (req, res) => {
       phoneNumber: newUser.phoneNumber,
       username: newUser.username,
       location: newUser.location,
-      verified: newUser.verified
+      verified: newUser.verified // Assuming 'verified' is a field in your User model
     });
 
   } catch (err) {
     console.error('❌ Register error:', err.message);
-    if (err.code === 11000) {
-      return res.status(409).json({ message: 'Duplicate entry detected' });
+    if (err.code === 11000) { // MongoDB duplicate key error
+      return res.status(409).json({ message: 'Duplicate entry detected (e.g., email or username already exists)' });
     }
     res.status(500).json({ message: 'Server error during registration' });
   }
@@ -89,29 +92,33 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({
       $or: [
         { email: identifierLower },
-        { phoneNumber: identifier },
+        { phoneNumber: identifier }, // Assuming phone number is not lowercased for search
         { username: identifierLower }
       ]
     });
 
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     // Create tokens
     const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: ACCESS_EXPIRES_IN
     });
 
-    const refreshToken = jwt.sign({ userId: user._id }, process.env.REFRESH_SECRET, {
+    // MODIFIED: Use REFRESH_TOKEN_SECRET for signing to match .env file key
+    const refreshToken = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: REFRESH_EXPIRES_IN
     });
 
-    // Store refreshToken in DB)
- user.refreshToken = refreshToken;
-await user.save();
-
+    // Store refreshToken in DB (ensure your User model has a 'refreshToken' field)
+    user.refreshToken = refreshToken;
+    await user.save();
 
     res.json({
       user: {
@@ -120,7 +127,7 @@ await user.save();
         phoneNumber: user.phoneNumber,
         username: user.username,
         location: user.location,
-        verified: user.verified
+        verified: user.verified // Assuming 'verified' is a field in your User model
       },
       accessToken,
       refreshToken
@@ -136,25 +143,39 @@ await user.save();
 router.post('/token/refresh', async (req, res) => {
   const { refreshToken } = req.body;
 
-  if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token required' });
+  }
 
   try {
-    const payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+    // MODIFIED: Use REFRESH_TOKEN_SECRET for verification to match .env file key
+    const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     
     const user = await User.findById(payload.userId);
-if (!user || user.refreshToken !== refreshToken) {
-  return res.status(403).json({ message: 'Invalid refresh token' });
-}
 
+    // Verify the token belongs to the user and matches the one stored
+    if (!user || user.refreshToken !== refreshToken) {
+      // This is important to prevent reuse of old/leaked refresh tokens
+      // You might want to invalidate all tokens for this user if a compromised token is detected.
+      return res.status(403).json({ message: 'Invalid refresh token (token mismatch or user not found)' });
+    }
 
     const newAccessToken = jwt.sign({ userId: payload.userId }, process.env.JWT_SECRET, {
       expiresIn: ACCESS_EXPIRES_IN
     });
 
     res.json({ accessToken: newAccessToken });
+
   } catch (err) {
     console.error('❌ Token refresh error:', err.message);
-    res.status(401).json({ message: 'Invalid or expired refresh token' });
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Refresh token expired' });
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid refresh token (malformed or signature issue)' });
+    }
+    // For other unexpected errors during token refresh
+    res.status(500).json({ message: 'Server error during token refresh' });
   }
 });
 

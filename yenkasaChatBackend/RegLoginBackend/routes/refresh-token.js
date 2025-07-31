@@ -1,30 +1,50 @@
+const jwt = require('jsonwebtoken');
+const router = require('express').Router();
+const User = require('../models/User');
+
 router.post('/refresh-token', async (req, res) => {
   const { refreshToken } = req.body;
-  if (!refreshToken) return res.status(401).json({ message: 'Refresh token required' });
+
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token is required' });
+  }
 
   try {
-    // Decode token
+    // Verify incoming refresh token
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const userId = decoded.id || decoded.userId;
 
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(userId);
     if (!user || user.refreshToken !== refreshToken) {
       return res.status(403).json({ message: 'Invalid refresh token' });
     }
 
-    // Generate new tokens
-    const accessToken = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
-    const newRefreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+    // Issue new tokens
+    const newAccessToken = jwt.sign(
+      { id: user._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: '15m' }
+    );
 
-    // Store new refresh token
+    const newRefreshToken = jwt.sign(
+      { id: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Store new refresh token in DB
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    res.status(200).json({
-      accessToken,
+    return res.status(200).json({
+      accessToken: newAccessToken,
       refreshToken: newRefreshToken
     });
+
   } catch (err) {
-    console.error('Token refresh error:', err);
-    res.status(403).json({ message: 'Invalid or expired refresh token' });
+    console.error('❌ Refresh token error:', err.message);
+    return res.status(403).json({ message: 'Invalid or expired refresh token' });
   }
 });
+
+module.exports = router;

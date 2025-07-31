@@ -1,16 +1,22 @@
 package com.example.yenkasachat
 
 import android.app.Application
+import android.util.Log // Optional: for logging
 import com.onesignal.OneSignal
 import com.cloudinary.android.MediaManager
 import com.example.yenkasachat.util.OneSignalHelper
 import com.google.firebase.FirebaseApp
-import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.network.ApiClient // Make sure this import is correct
 
 class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // ✅ Initialize ApiClient FIRST if other initializations depend on it,
+        // or just ensure it's done early.
+        ApiClient.init(this) // <--- ADD THIS LINE
+        Log.d("MyApplication", "ApiClient initialized") // Optional: for confirmation
 
         // ✅ Initialize Firebase
         FirebaseApp.initializeApp(this)
@@ -23,18 +29,11 @@ class MyApplication : Application() {
         val config: HashMap<String, String> = HashMap()
         config["cloud_name"] = "ddrsrydfh"
         config["api_key"] = "276843932118844"
-        config["api_secret"] = "7K_WupMd31E5NPNYPfOaAdF_pqs"
+        config["api_secret"] = "7K_WupMd31E5NPNYPfOaAdF_pqs" // Ensure this secret is stored securely if this is a production app
         MediaManager.init(this, config)
 
         // ✅ Send playerId to backend
+        // This might use ApiClient, so ensure ApiClient.init() is called before this.
         OneSignalHelper.getPlayerIdAndUpdateToBackend(this)
     }
-
-    class MyApplication : Application() {
-        override fun onCreate() {
-            super.onCreate()
-            ApiClient.init(this) // ✅ ensures interceptor is aware of the token
-        }
-    }
-
 }

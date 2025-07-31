@@ -9,131 +9,113 @@ import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.model.PushNotificationRequest
 import okhttp3.MultipartBody
-import retrofit2.Call
-import retrofit2.http.*
 import okhttp3.ResponseBody
-
+import retrofit2.Call
+import retrofit2.Response // Ensure this is imported for suspend functions
+import retrofit2.http.*
 
 interface ApiService {
 
-    // ✅ POST /api/auth/login
-    @POST("auth/login") // ✅ Correct path (no /api/)
+    // --- Authentication ---
+    @POST("/api/auth/login") // This path includes "/api/"
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
+    @POST("/api/auth/forgot-password") // This path includes "/api/"
+    @FormUrlEncoded
+    suspend fun forgotPassword(
+        @Field("email") email: String
+    ): Response<Void>
 
-    // ✅ Create a chat room using a recipient username
-    @POST("/api/chatrooms")
-    fun createChatRoom(
-        @Header("Authorization") token: String,
-        @Body body: Map<String, String>
-    ): Call<CreateChatRoomResponse>
+    // --- Users ---
+    @GET("/api/users") // This path includes "/api/"
+    fun getAllUsers(): Call<List<User>>
 
-    // ✅ Send a message (text or image)
-    @POST("/api/messages")
-    fun sendMessage(
-        @Header("Authorization") token: String,
-        @Body body: Map<String, @JvmSuppressWildcards Any?>
-    ): Call<ChatMessage>
-
-    @POST("/api/notify")
-    fun sendPushNotification(
-        @Header("Authorization") token: String,
-        @Body request: PushNotificationRequest
-    ): Call<Void>
-
-
-    // ✅ Fetch messages for a specific room
-    @GET("/api/messages/{roomId}")
-    fun getMessages(
-        @Header("Authorization") token: String,
-        @Path("roomId") roomId: String
-    ): Call<List<ChatMessage>>
-
-    // ✅ Get chat rooms for the logged-in user
-    @GET("/api/chatrooms")
-    fun getChatRooms(
-        @Header("Authorization") token: String
-    ): Call<List<ChatRoom>>
-
-    // ✅ Get all users
-    @GET("/api/users")
-    fun getAllUsers(
-        @Header("Authorization") token: String
-    ): Call<List<User>>
-
-    // ✅ Add a new contact using username
-    @POST("/api/contacts")
-    fun addContact(
-        @Header("Authorization") token: String,
-        @Body body: Map<String, String>
-    ): Call<Contact>
-
-    // ✅ Email verification request
-    @POST("/api/verify/request")
-    fun requestEmailVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
-
-    // ✅ Phone verification request
-    @POST("/api/verify/request-phone")
-    fun requestPhoneVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
-
-    // ✅ Confirm verification
-    @POST("/api/verify/confirm")
-    fun confirmVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
-
-    // ✅ Get user’s saved contacts
-    @GET("/api/contacts")
-    fun getContacts(
-        @Header("Authorization") token: String
-    ): Call<List<Contact>>
-
-    // ✅ Delete a contact by ID
-    @DELETE("/api/contacts/{contactId}")
-    fun deleteContact(
-        @Header("Authorization") token: String,
-        @Path("contactId") contactId: String
-    ): Call<Void>
-
-    // ✅ Upload profile picture
     @Multipart
-    @POST("/api/users/profile-picture")
+    @POST("/api/users/profile-picture") // This path includes "/api/"
     fun uploadProfilePicture(
-        @Header("Authorization") token: String,
         @Part image: MultipartBody.Part
     ): Call<Map<String, Any>>
 
-    // ✅ Get user profile
-    @GET("/api/users/me")
-    fun getUserProfile(
-        @Header("Authorization") token: String
-    ): Call<User>
+    @GET("/api/users/me") // This path includes "/api/"
+    fun getUserProfile(): Call<User>
 
-    // ✅ Correct: Update OneSignal Player ID
-    @PUT("/api/users/{userId}/player-id")
+    @PATCH("/api/users/{userId}/player-id") // This path includes "/api/"
     fun updatePlayerId(
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<ResponseBody>
 
-    @POST("auth/forgot-password")
-    @FormUrlEncoded
-    suspend fun forgotPassword(
-        @Field("email") email: String
-    ): retrofit2.Response<Void> // Or a custom response if your backend returns a message
+    @PATCH("/api/users/{userId}/fcm-token") // This path includes "/api/"
+    fun updateFcmToken(
+        @Path("userId") userId: String,
+        @Body body: Map<String, String>
+    ): Call<Void>
 
+    // --- Chat Rooms ---
+    @POST("/api/chatrooms") // This path includes "/api/"
+    fun createChatRoom(
+        @Body body: Map<String, String>
+    ): Call<CreateChatRoomResponse>
 
-    @GET("chatrooms/user/{userId}")
-    fun getUserChatRooms(@Path("userId") userId: String): Call<List<ChatRoom>>
-    @POST("chatroom/{receiverId}")
-    fun getOrCreateChatRoom(@Path("receiverId") receiverId: String): Call<CreateChatRoomResponse>
+    @GET("/api/chatrooms") // This path includes "/api/"
+    fun getChatRooms(): Call<List<ChatRoom>>
 
+    @GET("/api/chatrooms/user/{userId}") // This path includes "/api/"
+    fun getUserChatRooms(
+        @Path("userId") userId: String
+    ): Call<List<ChatRoom>>
+
+    @POST("/api/chatroom/{receiverId}") // This path includes "/api/"
+    fun getOrCreateChatRoom(
+        @Path("receiverId") receiverId: String
+    ): Call<CreateChatRoomResponse>
+
+    // --- Messages ---
+    @POST("/api/messages") // This path includes "/api/"
+    fun sendMessage(
+        @Body body: Map<String, @JvmSuppressWildcards Any?>
+    ): Call<ChatMessage>
+
+    @GET("/api/messages/{roomId}") // This path includes "/api/"
+    fun getMessages(
+        @Path("roomId") roomId: String
+    ): Call<List<ChatMessage>>
+
+    // --- Contacts ---
+    @POST("/api/contacts") // This path includes "/api/"
+    fun addContact(
+        @Body body: Map<String, String>
+    ): Call<Contact>
+
+    @GET("/api/contacts") // This path includes "/api/"
+    fun getContacts(): Call<List<Contact>>
+
+    @DELETE("/api/contacts/{contactId}") // This path includes "/api/"
+    fun deleteContact(
+        @Path("contactId") contactId: String
+    ): Call<Void>
+
+    // --- Push Notifications ---
+    @POST("/api/notify") // This path includes "/api/"
+    fun sendPushNotification(
+        @Body request: PushNotificationRequest
+    ): Call<Void>
+
+    // --- Verification --- (These seem to be correctly under /api/verify/ as well)
+    @POST("/api/verify/request") // This path includes "/api/"
+    fun requestEmailVerification(
+        @Body body: Map<String, String>
+    ): Call<Map<String, Any>>
+
+    @POST("/api/verify/request-phone") // This path includes "/api/"
+    fun requestPhoneVerification(
+        @Body body: Map<String, String>
+    ): Call<Map<String, Any>>
+
+    @POST("/api/verify/confirm") // This path includes "/api/"
+    fun confirmVerification(
+        @Body body: Map<String, String>
+    ): Call<Map<String, Any>>
 }
-// Note: Ensure that the endpoint for updating the Player ID matches your backend implementation.
-// The endpoint here is an example and should be adjusted based on your actual API design.

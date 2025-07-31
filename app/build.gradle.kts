@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    // ✅ ADD THE COMPOSE COMPILER PLUGIN HERE
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" // Or the version compatible with your Kotlin version
     id("kotlin-kapt")
     id("com.google.gms.google-services")
     id("com.onesignal.androidsdk.onesignal-gradle-plugin")
@@ -18,10 +20,14 @@ android {
         versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildFeatures {
         viewBinding = true
+        compose = true // This still enables compose at the AGP level
     }
 
     compileOptions {
@@ -33,18 +39,26 @@ android {
         jvmTarget = "11"
     }
 
-    // Optional: Disable unit tests if not used
-    tasks.withType<Test> {
-        enabled = false
+    // ❌ REMOVE THIS ENTIRE BLOCK
+    // composeOptions {
+    //     kotlinCompilerExtensionVersion = "..."
+    // }
+
+    packagingOptions {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
 dependencies {
+    // Your existing dependencies remain the same, including the Compose BOM and libraries
+
     // ✅ AndroidX Core + UI
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
 
     // ✅ OneSignal SDK (v4.8.6 stable)
@@ -72,8 +86,22 @@ dependencies {
     // ✅ Coroutines for background tasks
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // --- ✅ JETPACK COMPOSE DEPENDENCIES ---
+    val composeBom = platform("androidx.compose:compose-bom:2023.10.01") // Use latest stable
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+
     // ✅ Testing libraries
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

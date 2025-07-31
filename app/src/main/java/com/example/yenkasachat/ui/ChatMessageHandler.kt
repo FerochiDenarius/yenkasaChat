@@ -92,24 +92,25 @@ class ChatMessageHandler(
     }
 
     private fun postMessage(messageMap: Map<String, Any?>) {
-        val call = apiService.sendMessage(token, messageMap)
+        // Token is no longer passed here; interceptor handles it
+        val call = apiService.sendMessage(messageMap)
         call.enqueue(object : Callback<ChatMessage> {
             override fun onResponse(call: Call<ChatMessage>, response: Response<ChatMessage>) {
                 if (response.isSuccessful && response.body() != null) {
                     val sentMessage = response.body()!!
                     callback.onMessageSent(sentMessage)
-                    // ✅ Notification is now handled by backend (OneSignal)
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Unknown error"
-                    Log.e("ChatMessageHandler", "Send failed: $errorMsg")
-                    callback.onError("Message send failed")
+                    Log.e("ChatMessageHandler", "Send failed: $errorMsg (Code: ${response.code()})")
+                    // It's good practice to also include the response code in the callback if possible,
+                    // or parse a more specific error from the body if your API provides structured errors.
+                    callback.onError("Message send failed: $errorMsg")
                 }
             }
 
             override fun onFailure(call: Call<ChatMessage>, t: Throwable) {
-                Log.e("ChatMessageHandler", "Send error: ${t.message}")
+                Log.e("ChatMessageHandler", "Send error: ${t.message}", t) // Log the throwable too
                 callback.onError("Send error: ${t.message}")
             }
         })
-    }
-}
+    }}

@@ -8,6 +8,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import com.onesignal.OneSignal
 import okhttp3.ResponseBody
+import com.example.yenkasachat.util.TokenManager
 
 object OneSignalHelper {
     private const val TAG = "OneSignalHelper"
@@ -16,7 +17,7 @@ object OneSignalHelper {
         try {
             val deviceState = OneSignal.getDeviceState()
             val playerId = deviceState?.userId
-            val token = SharedPrefs.getToken(context)
+            val token = TokenManager.getToken(context)
 
             if (playerId.isNullOrEmpty()) {
                 Log.e(TAG, "❌ Player ID is null or empty")
@@ -28,7 +29,7 @@ object OneSignalHelper {
                 return
             }
 
-            val userId = SharedPrefs.getUserId(context)
+            val userId = TokenManager.getUserId(context)
             if (userId.isNullOrEmpty()) {
                 Log.e(TAG, "❌ User ID is missing, cannot update playerId")
                 return

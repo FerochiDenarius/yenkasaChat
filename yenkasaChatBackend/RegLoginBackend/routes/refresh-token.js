@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const router = require('express').Router();
-const User = require('../models/User');
+const User = require('../models/user.model'); 
+
 
 router.post('/refresh-token', async (req, res) => {
   const { refreshToken } = req.body;

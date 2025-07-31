@@ -12,22 +12,22 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.ChatRoomAdapter
 import com.example.yenkasachat.model.ChatRoom
+// Assuming CreateChatRoomRequest is now used by your ApiService
+import com.example.yenkasachat.model.CreateChatRoomRequest
 import com.example.yenkasachat.model.CreateChatRoomResponse
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.util.SharedPrefs // Using SharedPrefs as in your original
-// import com.example.yenkasachat.util.TokenManager // Or use TokenManager if you've centralized to it
+import com.example.yenkasachat.util.SharedPrefs
+// Removed: import kotlin.io.path.name // This import was likely added due to the incorrect 'name' access
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.IOException // For reading error body
+import java.io.IOException
 
 class ChatRoomsActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var chatRoomAdapter: ChatRoomAdapter
-    // 'token' class property can be removed if only used for the initial check and interceptor handles API calls
-    // private lateinit var token: String
-    private lateinit var currentUserId: String // Still needed for the ChatRoomAdapter
+    private lateinit var currentUserId: String
     private lateinit var btnCreateRoom: Button
     private lateinit var inputUsername: EditText
 
@@ -41,38 +41,25 @@ class ChatRoomsActivity : AppCompatActivity() {
         btnCreateRoom = findViewById(R.id.btnCreateRoom)
         inputUsername = findViewById(R.id.inputUsername)
 
-        // Retrieve token and userId for initial authentication check
         val retrievedToken = SharedPrefs.getToken(this)
-        currentUserId = SharedPrefs.getUserId(this) ?: "" // Assign to class property as it's used by adapter
-
-        // If you were using TokenManager:
-        // val retrievedToken = TokenManager.getToken(this)
-        // currentUserId = TokenManager.getUserId(this) ?: ""
+        currentUserId = SharedPrefs.getUserId(this) ?: ""
 
         if (retrievedToken.isNullOrEmpty() || currentUserId.isEmpty()) {
             Toast.makeText(this, "User not logged in. Please log in again.", Toast.LENGTH_LONG).show()
-            // Optionally, navigate to LoginActivity
-            // startActivity(Intent(this, LoginActivity::class.java).apply {
-            //     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            // })
             finish()
             return
         }
-        // this.token = retrievedToken // Can be removed if not directly used later in API calls
 
-        // Initialize adapter with currentUserId.
-        // The list will be submitted after loading.
         chatRoomAdapter = ChatRoomAdapter(currentUserId) { selectedRoom ->
             val intent = Intent(this@ChatRoomsActivity, ChatActivity::class.java).apply {
-                putExtra("roomId", selectedRoom._id)
-                // Optionally pass room name or participant details if needed by ChatActivity
-                // val otherParticipant = selectedRoom.participants.find { it._id != currentUserId }
-                // putExtra("chatPartnerName", otherParticipant?.username ?: "Chat")
+                putExtra("roomId", selectedRoom._id) // This assumes your ChatRoom has an _id field
+
+                val chatName = determineChatDisplayNameForActivity(selectedRoom, currentUserId)
+                putExtra("chatPartnerName", chatName)
             }
             startActivity(intent)
         }
         recyclerView.adapter = chatRoomAdapter
-
 
         loadChatRooms()
 
@@ -86,29 +73,54 @@ class ChatRoomsActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Determines a display name for the chat to be passed to ChatActivity.
+     * This logic relies on the properties available in your existing ChatRoom model.
+     */
+    private fun determineChatDisplayNameForActivity(chatRoom: ChatRoom, currentUserId: String): String {
+        // Assuming chatRoom.participants is List<Participant>?
+        // and Participant has _id: String and username: String?
+        val otherParticipants = chatRoom.participants?.filter { it._id != currentUserId }
+
+        return when {
+            otherParticipants == null -> "Chat" // Participants list was null
+            otherParticipants.isEmpty() -> "Chat with Yourself" // Or some other default
+            otherParticipants.size == 1 -> otherParticipants.first().username ?: "Chat" // 1-on-1
+            else -> {
+                // For group chats (more than one other participant)
+                // We construct the name from participant usernames as chatRoom.name does not exist.
+                otherParticipants.take(2).joinToString(", ") { it.username ?: "User" } +
+                        if (otherParticipants.size > 2) "..." else ""
+            }
+        }
+    }
+
+
     private fun createChatRoom(username: String) {
         Log.d("ChatRoomsActivity", "Attempting to create chat room with username: $username")
-        // Toast.makeText(this, "Creating chat room with: $username...", Toast.LENGTH_SHORT).show() // Optional progress toast
 
-        val requestBody = mapOf("username" to username)
+        // Assuming your ApiService.createChatRoom now expects CreateChatRoomRequest
+        // If it still expects a Map: val requestBody = mapOf("username" to username)
+        val request = CreateChatRoomRequest(username = username)
 
-        // Token is no longer passed here; interceptor handles it.
-        ApiClient.apiService.createChatRoom(requestBody)
+        ApiClient.apiService.createChatRoom(request)
             .enqueue(object : Callback<CreateChatRoomResponse> {
                 override fun onResponse(
                     call: Call<CreateChatRoomResponse>,
                     response: Response<CreateChatRoomResponse>
                 ) {
-                    if (response.isSuccessful && response.body() != null && response.body()!!.success) { // Check success flag
-                        Log.d("ChatRoomsActivity", "Room created successfully! Room ID: ${response.body()!!.roomId}")
+                    val responseBody = response.body()
+                    if (response.isSuccessful && responseBody != null && responseBody.success) {
+                        Log.d("ChatRoomsActivity", "Room created successfully! Room ID: ${responseBody.roomId}")
                         Toast.makeText(this@ChatRoomsActivity, "Chat room created!", Toast.LENGTH_SHORT).show()
-                        inputUsername.setText("") // Clear input field
-                        loadChatRooms() // Refresh the list of chat rooms
+                        inputUsername.setText("")
+                        loadChatRooms() // Refresh the list
                     } else {
                         val errorMsg = parseError(response)
-                        val successFlag = response.body()?.success // For debugging
-                        Log.e("ChatRoomsActivity", "Failed to create room: $errorMsg (Code: ${response.code()}, Success: $successFlag)")
-                        Toast.makeText(this@ChatRoomsActivity, "Failed to create room: $errorMsg", Toast.LENGTH_LONG).show()
+                        val successFlag = responseBody?.success
+                        val actualMessage = responseBody?.message ?: errorMsg
+                        Log.e("ChatRoomsActivity", "Failed to create room: $actualMessage (Code: ${response.code()}, Success: $successFlag)")
+                        Toast.makeText(this@ChatRoomsActivity, "Failed to create room: $actualMessage", Toast.LENGTH_LONG).show()
                     }
                 }
 
@@ -120,9 +132,7 @@ class ChatRoomsActivity : AppCompatActivity() {
     }
 
     private fun loadChatRooms() {
-        Log.d("ChatRoomsActivity", "Attempting to load chat rooms...") // Token detail removed from log
-
-        // Token is no longer passed here; interceptor handles it.
+        Log.d("ChatRoomsActivity", "Attempting to load chat rooms...")
         ApiClient.apiService.getChatRooms()
             .enqueue(object : Callback<List<ChatRoom>> {
                 override fun onResponse(
@@ -130,17 +140,10 @@ class ChatRoomsActivity : AppCompatActivity() {
                     response: Response<List<ChatRoom>>
                 ) {
                     Log.d("ChatRoomsActivity", "Chat rooms response received: Code ${response.code()}")
-
                     if (response.isSuccessful && response.body() != null) {
                         val rooms = response.body()!!
                         Log.d("ChatRoomsActivity", "Chat rooms loaded: ${rooms.size}")
-                        // rooms.forEach { room -> // Detailed logging can be verbose for many rooms
-                        //     Log.d("ChatRoomsActivity", "Room ID: ${room._id}, LastMessage: ${room.lastMessage?.content}")
-                        // }
-
-                        // Adapter is initialized in onCreate, just submit list here
                         chatRoomAdapter.submitList(rooms)
-
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ChatRoomsActivity", "Failed to load rooms. Code: ${response.code()}, Error: $errorMsg")
@@ -155,10 +158,15 @@ class ChatRoomsActivity : AppCompatActivity() {
             })
     }
 
-    // Helper function to parse error messages (can be moved to a utility class)
     private fun parseError(response: Response<*>): String {
         return try {
-            response.errorBody()?.string() ?: "Unknown error (empty error body)"
+            response.errorBody()?.string()?.let { errorJson ->
+                if (errorJson.contains("\"message\"")) {
+                    try {
+                        errorJson.split("\"message\":\"")[1].split("\"")[0]
+                    } catch (e: Exception) { errorJson }
+                } else { errorJson }
+            } ?: "Error: ${response.code()} ${response.message()} (No specific error body)"
         } catch (e: IOException) {
             "Error reading error response: ${e.message}"
         }

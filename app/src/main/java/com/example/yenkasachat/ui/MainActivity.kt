@@ -12,75 +12,52 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.UserAdapter
-import com.example.yenkasachat.model.*
+import com.example.yenkasachat.model.* // Ensure all your models are imported
 import com.example.yenkasachat.network.ApiClient
-// ApiService is now likely obtained directly from ApiClient.apiService
-// import com.example.yenkasachat.network.ApiService
 import com.example.yenkasachat.util.TokenManager
+import com.google.gson.Gson // For serializing objects to JSON for logging
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.IOException // For reading error body
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerViewUsers: RecyclerView
     private lateinit var userAdapter: UserAdapter
     private val users = mutableListOf<User>()
-
-    // userId is still needed for filtering users and finding chat rooms.
-    // The 'token' class property is no longer strictly needed if all API calls
-    // use the interceptor. However, keeping it from TokenManager for the initial check
-    // is fine, or you can make it a local variable in onCreate.
     private lateinit var userId: String
-    // private lateinit var token: String // Can be removed if not used elsewhere after onCreate
-
-    // apiService is directly accessible from ApiClient singleton
-    // private lateinit var apiService: ApiService
+    private val gson = Gson() // For serializing successful response body to JSON for logging
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Log.d("MainActivity", "🚀 MainActivity onCreate starting.")
 
         val retrievedToken = TokenManager.getToken(this)
         val retrievedUserId = TokenManager.getUserId(this)
 
-        Log.d("MainActivity", "Retrieved Token: $retrievedToken") // Still good for debugging
-        Log.d("MainActivity", "Retrieved UserID: $retrievedUserId")
+        Log.d("MainActivity", "Retrieved Token: $retrievedToken")
+        Log.d("MainActivity", "Retrieved UserID in onCreate: $retrievedUserId")
 
         if (retrievedToken.isNullOrBlank() || retrievedUserId.isNullOrBlank()) {
             Log.w("MainActivity", "Token or UserID is null/blank. Redirecting to LoginActivity.")
             Toast.makeText(this, "Authentication required. Please log in again.", Toast.LENGTH_LONG).show()
-            val intent = Intent(this, LoginActivity::class.java).apply {
+            startActivity(Intent(this, LoginActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
+            })
             finish()
             return
         }
-
-        // Assign userId as it's used in filtering logic.
-        // The token variable is less critical at class level if interceptor handles all auth.
         this.userId = retrievedUserId
-        // this.token = retrievedToken // Can be removed if not directly used later
-
         setContentView(R.layout.activity_main)
-
-        // Initialize ApiClient if it has an init method.
-        // ApiService instance is obtained from ApiClient.apiService
-        // If ApiClient.init is for context-wide setup (like SharedPreferences for TokenManager within ApiClient), call it.
-        // ApiClient.init(applicationContext) // Call this if your ApiClient needs app context for setup
-
         setupUI()
         fetchAllUsers()
 
         findViewById<Button>(R.id.btnLogout).setOnClickListener {
             TokenManager.clearAll(this)
             Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
-            val intent = Intent(this, LoginActivity::class.java).apply {
+            startActivity(Intent(this, LoginActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
+            })
             finish()
         }
     }
@@ -88,8 +65,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupUI() {
         recyclerViewUsers = findViewById(R.id.recyclerViewUsers)
         recyclerViewUsers.layoutManager = LinearLayoutManager(this)
-        // userId (class property) is available here if UserAdapter needs it directly,
-        // though it's often better if adapter logic is self-contained or data passed explicitly.
         userAdapter = UserAdapter(users) { selectedUser, anchorView ->
             showUserOptions(selectedUser, anchorView)
         }
@@ -105,43 +80,36 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, AccountInfoActivity::class.java))
         }
         findViewById<Button>(R.id.btnVerify).setOnClickListener {
-            // Consider navigating to VerificationActivity or implementing the feature
             Toast.makeText(this, "Verification feature coming soon!", Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btnSettings).setOnClickListener {
-            // Consider navigating to SettingsActivity or implementing the feature
             Toast.makeText(this, "Settings feature coming soon!", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun fetchAllUsers() {
-        // Token is no longer passed here; interceptor handles it.
-        // apiService is now ApiClient.apiService
-        ApiClient.apiService.getAllUsers()
-            .enqueue(object : Callback<List<User>> {
-                override fun onResponse(call: Call<List<User>>, response: Response<List<User>>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        // Use class property 'userId' which is guaranteed non-null here after onCreate check
-                        val filteredUsers = response.body()!!.filter { it._id != userId }
-                        users.clear()
-                        users.addAll(filteredUsers)
-                        userAdapter.notifyDataSetChanged()
-                        if (users.isEmpty()) {
-                            Log.d("MainActivity", "No other users found to display.")
-                            // Optionally show a message like "No other users available"
-                        }
-                    } else {
-                        val errorMsg = parseError(response)
-                        Log.e("MainActivity", "Failed to load users: $errorMsg (Code: ${response.code()})")
-                        Toast.makeText(this@MainActivity, "Failed to load users: $errorMsg", Toast.LENGTH_LONG).show()
+        ApiClient.apiService.getAllUsers().enqueue(object : Callback<List<User>> {
+            override fun onResponse(call: Call<List<User>>, response: Response<List<User>>) {
+                if (response.isSuccessful && response.body() != null) {
+                    val filteredUsers = response.body()!!.filter { it._id != userId }
+                    users.clear()
+                    users.addAll(filteredUsers)
+                    userAdapter.notifyDataSetChanged()
+                    if (users.isEmpty()) {
+                        Log.d("MainActivity", "No other users found to display.")
                     }
+                } else {
+                    val errorMsg = parseError(response)
+                    Log.e("MainActivity", "Failed to load users: $errorMsg (Code: ${response.code()})")
+                    Toast.makeText(this@MainActivity, "Failed to load users: $errorMsg", Toast.LENGTH_LONG).show()
                 }
+            }
 
-                override fun onFailure(call: Call<List<User>>, t: Throwable) {
-                    Log.e("MainActivity", "Network failure while fetching users: ${t.message}", t)
-                    Toast.makeText(this@MainActivity, "Error fetching users: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+            override fun onFailure(call: Call<List<User>>, t: Throwable) {
+                Log.e("MainActivity", "Network failure while fetching users: ${t.message}", t)
+                Toast.makeText(this@MainActivity, "Error fetching users: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun showUserOptions(user: User, anchorView: View) {
@@ -150,15 +118,18 @@ class MainActivity : AppCompatActivity() {
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_create_chat -> {
-                    createChatRoomWithUser(user.username)
+                    // Make sure user.username is not null before passing
+                    user.username?.let { createChatRoomWithUser(it) }
+                        ?: Toast.makeText(this, "Username not available for this user.", Toast.LENGTH_SHORT).show()
                     true
                 }
                 R.id.action_add_contact -> {
-                    addUserToContacts(user.username)
+                    user.username?.let { addUserToContacts(it) }
+                        ?: Toast.makeText(this, "Username not available for this user.", Toast.LENGTH_SHORT).show()
                     true
                 }
                 R.id.action_continue_chat -> {
-                    openExistingChatRoom(user._id) // Pass user._id which is recipientId
+                    openExistingChatRoom(user._id) // user._id is the recipientId
                     true
                 }
                 else -> false
@@ -168,44 +139,58 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createChatRoomWithUser(username: String) {
-        val body = mapOf("username" to username)
-        // Token is no longer passed here; interceptor handles it.
-        // apiService is now ApiClient.apiService
-        ApiClient.apiService.createChatRoom(body)
+        Log.d("CREATE_CHAT", "Attempting to create/get chat with username: $username")
+        // Your ApiService createChatRoom probably expects CreateChatRoomRequest
+        // If it expects a map: val body = mapOf("username" to username)
+        // If it expects a data class:
+        val requestBody = CreateChatRoomRequest(username = username)
+
+        ApiClient.apiService.createChatRoom(requestBody) // Use requestBody if it's a data class
             .enqueue(object : Callback<CreateChatRoomResponse> {
                 override fun onResponse(call: Call<CreateChatRoomResponse>, response: Response<CreateChatRoomResponse>) {
-                    if (response.isSuccessful && response.body() != null && response.body()!!.success) { // Check success flag if your API returns it
-                        val roomId = response.body()!!.roomId
-                        startActivity(Intent(this@MainActivity, ChatActivity::class.java).apply {
-                            putExtra("roomId", roomId)
-                            putExtra("chatPartnerName", username) // Good to pass for ChatActivity UI
-                        })
+                    val responseBody = response.body()
+                    if (response.isSuccessful && responseBody != null) {
+                        if (responseBody.success) {
+                            val roomId = responseBody.roomId
+                            // CORRECTED: chatPartnerName is not in CreateChatRoomResponse. Use the 'username' parameter.
+                            val partnerName = username
+                            Log.i("CREATE_CHAT", "Successfully created/found room. RoomID: $roomId, Partner: $partnerName")
+                            startActivity(Intent(this@MainActivity, ChatActivity::class.java).apply {
+                                putExtra("roomId", roomId)
+                                putExtra("chatPartnerName", partnerName) // Pass the determined partner name
+                            })
+                        } else {
+                            // Backend indicated failure, but the API call itself was successful (e.g., 200 OK but { success: false })
+                            val message = responseBody.message ?: "Chat room operation failed."
+                            Log.e("CREATE_CHAT", "Chat room creation indicated failure by server: $message (Code: ${response.code()})")
+                            Toast.makeText(this@MainActivity, "Chat room creation failed: $message", Toast.LENGTH_LONG).show()
+                        }
                     } else {
-                        val errorMsg = parseError(response)
-                        val successFlag = response.body()?.success // For debugging
-                        Log.e("MainActivity", "Chat room creation failed: $errorMsg (Code: ${response.code()}, Success: $successFlag)")
-                        Toast.makeText(this@MainActivity, "Chat room creation failed: $errorMsg", Toast.LENGTH_LONG).show()
+                        // API call failed (e.g., 4xx, 5xx error) or body was null
+                        val errorDetail = parseError(response)
+                        val successFlag = responseBody?.success // May be null if responseBody is null
+                        Log.e("CREATE_CHAT", "Chat room creation/retrieval API call failed: $errorDetail (Code: ${response.code()}, Success Flag: $successFlag)")
+                        Toast.makeText(this@MainActivity, "Chat room creation/retrieval failed: $errorDetail", Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
-                    Log.e("MainActivity", "Error creating chat room: ${t.message}", t)
-                    Toast.makeText(this@MainActivity, "Error creating chat room: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("CREATE_CHAT", "Network error creating/getting chat room: ${t.message}", t)
+                    Toast.makeText(this@MainActivity, "Error creating/getting chat room: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
     private fun addUserToContacts(username: String) {
-        // Token is no longer passed here; interceptor handles it.
-        // apiService is now ApiClient.apiService
+        // Assuming your addContact endpoint expects a map like: mapOf("username" to username)
+        // If it expects a data class, create one.
         ApiClient.apiService.addContact(mapOf("username" to username))
-            .enqueue(object : Callback<Contact> {
+            .enqueue(object : Callback<Contact> { // Assuming Contact is your response model for adding a contact
                 override fun onResponse(call: Call<Contact>, response: Response<Contact>) {
                     val msg: String
                     if (response.isSuccessful && response.body() != null) {
-                        msg = "Contact '${response.body()!!.username}' added!"
+                        msg = "Contact '${response.body()!!.username}' added!" // Ensure Contact model has 'username'
                         Log.d("MainActivity", "Contact added successfully: ${response.body()?.username}")
-                        // Optionally, you might want to refresh a contact list or give more specific feedback
                     } else {
                         val errorDetail = parseError(response)
                         msg = "Failed to add contact: $errorDetail"
@@ -215,59 +200,105 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<Contact>, t: Throwable) {
-                    Log.e("MainActivity", "Error adding contact: ${t.message}", t)
+                    Log.e("MainActivity", "Network error adding contact: ${t.message}", t)
                     Toast.makeText(this@MainActivity, "Error adding contact: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
     private fun openExistingChatRoom(recipientId: String) {
-        // Token is no longer passed here; interceptor handles it.
-        // apiService is now ApiClient.apiService
-        ApiClient.apiService.getChatRooms() // Assuming this fetches all rooms for the current user (token implies user)
-            .enqueue(object : Callback<List<ChatRoom>> {
-                override fun onResponse(call: Call<List<ChatRoom>>, response: Response<List<ChatRoom>>) {
-                    if (response.isSuccessful) {
-                        val allRooms = response.body() ?: emptyList()
-                        // Use class property 'userId' which is guaranteed non-null here
-                        val chatRoom = allRooms.find { room ->
-                            // Ensure participants list is not null and current user is not the only participant
-                            room.participants != null &&
-                                    room.participants.any { participant -> participant._id == recipientId } &&
-                                    room.participants.any { participant -> participant._id == userId } &&
-                                    room.participants.size > 1 // Ensures it's a chat with someone else
-                        }
+        Log.d("OPEN_CHAT_ROOM", "Attempting to open existing chat room with recipientId: $recipientId")
+        ApiClient.apiService.getChatRooms().enqueue(object : Callback<List<ChatRoom>> {
+            override fun onResponse(call: Call<List<ChatRoom>>, response: Response<List<ChatRoom>>) {
+                if (response.isSuccessful && response.body() != null) {
+                    // Log the deserialized successful response body as JSON
+                    val rawJsonResponse = gson.toJson(response.body())
+                    Log.d("OPEN_CHAT_ROOM", "Raw JSON Response (from successful body of getChatRooms): $rawJsonResponse")
 
-                        if (chatRoom != null) {
-                            startActivity(Intent(this@MainActivity, ChatActivity::class.java).apply {
-                                putExtra("roomId", chatRoom._id)
-                                // Find recipient's name to pass to ChatActivity if desired
-                                val recipient = chatRoom.participants?.find { it._id == recipientId }
-                                putExtra("chatPartnerName", recipient?.username ?: "Chat")
-                            })
-                        } else {
-                            Log.d("MainActivity", "No existing direct chat room found with user ID: $recipientId")
-                            Toast.makeText(this@MainActivity, "No previous direct chat found with this user.", Toast.LENGTH_SHORT).show()
-                            // Optionally, you could call createChatRoomWithUser here if no existing room is found
-                        }
-                    } else {
-                        val errorMsg = parseError(response)
-                        Log.e("MainActivity", "Failed to fetch chat rooms: $errorMsg (Code: ${response.code()})")
-                        Toast.makeText(this@MainActivity, "Failed to fetch chat rooms: $errorMsg", Toast.LENGTH_LONG).show()
+                    val allRooms = response.body()!!
+                    Log.d("OPEN_CHAT_ROOM", "Number of rooms deserialized: ${allRooms.size}")
+
+                    allRooms.forEachIndexed { index, room ->
+                        val participantDetails = room.participants
+                            ?.joinToString { p -> "User(id=${p._id}, name=${p.username ?: "N/A"})" }
+                            ?: "No participants"
+                        // Ensure your ChatRoom.kt has 'createdAt' (as String?)
+                        Log.d("OPEN_CHAT_ROOM", "Deserialized Room $index: ID=${room._id}, Participants=[$participantDetails], CreatedAt=${room.createdAtFormatted}") // Using formatted getter
                     }
-                }
 
-                override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
-                    Log.e("MainActivity", "Error fetching chat rooms: ${t.message}", t)
-                    Toast.makeText(this@MainActivity, "Error connecting to server: ${t.message}", Toast.LENGTH_SHORT).show()
+                    val currentLoggedInUserId = this@MainActivity.userId
+                    Log.d("OPEN_CHAT_ROOM", "Filtering with currentLoggedInUserId: $currentLoggedInUserId, targetRecipientId: $recipientId")
+
+                    val chatRoom = allRooms.find { room ->
+                        val roomParticipantsString = room.participants?.joinToString { it._id } ?: ""
+                        val hasTargetRecipient = room.participants?.any { participant -> participant._id == recipientId } ?: false
+                        val hasCurrentUser = room.participants?.any { participant -> participant._id == currentLoggedInUserId } ?: false
+                        // For a 1-on-1 chat, size should ideally be 2.
+                        // If you allow group chats initiated this way, >= 2 is fine.
+                        // Let's assume strict 1-on-1 for this find.
+                        val meetsSizeRequirement = (room.participants?.size ?: 0) == 2
+
+
+                        val foundLog = "Room ID: ${room._id}, All Participant IDs: [$roomParticipantsString]. " +
+                                "Comparing with targetRecipientID: $recipientId (Match? $hasTargetRecipient), " +
+                                "currentUser ID: $currentLoggedInUserId (Match? $hasCurrentUser), " +
+                                "Participant Count: ${room.participants?.size} (Meets Size for 1-on-1? $meetsSizeRequirement)"
+                        Log.d("OPEN_CHAT_ROOM_FILTER", foundLog)
+
+                        room.participants != null &&
+                                hasTargetRecipient &&
+                                hasCurrentUser &&
+                                meetsSizeRequirement // Strict check for 2 participants for a 1-on-1 chat
+                    }
+
+                    if (chatRoom != null) {
+                        Log.i("OPEN_CHAT_ROOM", "Found existing 1-on-1 chat room: ${chatRoom._id} with recipientId: $recipientId")
+                        startActivity(Intent(this@MainActivity, ChatActivity::class.java).apply {
+                            putExtra("roomId", chatRoom._id)
+                            val recipientUser = chatRoom.participants?.find { it._id == recipientId }
+                            putExtra("chatPartnerName", recipientUser?.username ?: "Chat")
+                        })
+                    } else {
+                        Log.w("OPEN_CHAT_ROOM", "No existing 1-on-1 chat room found with user ID: $recipientId. Attempting to create new.")
+                        // Toast.makeText(this@MainActivity, "No previous direct chat found. Starting new one.", Toast.LENGTH_SHORT).show() // Optional Toast
+                        val targetUser = users.find { it._id == recipientId }
+                        targetUser?.username?.let {
+                            Log.d("OPEN_CHAT_ROOM", "No existing room, attempting to create new one with username: ${it}")
+                            createChatRoomWithUser(it)
+                        } ?: run {
+                            Log.w("OPEN_CHAT_ROOM", "No existing room, and could not find username for recipientId: $recipientId to create new one.")
+                            Toast.makeText(this@MainActivity, "Could not start chat: User details not found.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    // Log raw error body if request was not successful
+                    // Ensure parseError handles the case where errorBody might have already been read if you log it directly first.
+                    val errorDetail = parseError(response) // parseError will try to read errorBody.string()
+                    Log.e("OPEN_CHAT_ROOM", "Failed to fetch chat rooms: $errorDetail (Code: ${response.code()})")
+                    // If you want to log the raw error string separately:
+                    // val errorBodyString = response.errorBody()?.string() // CAUTION: Consumes the stream
+                    // Log.e("OPEN_CHAT_ROOM", "Raw Error Response: $errorBodyString")
+                    Toast.makeText(this@MainActivity, "Failed to fetch chat rooms: $errorDetail", Toast.LENGTH_LONG).show()
                 }
-            })
+            }
+
+            override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
+                Log.e("OPEN_CHAT_ROOM", "Network failure while fetching chat rooms: ${t.message}", t)
+                Toast.makeText(this@MainActivity, "Error connecting to server: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
-    // Helper function to parse error messages (can be moved to a utility class)
     private fun parseError(response: Response<*>): String {
         return try {
-            response.errorBody()?.string() ?: "Unknown error (empty error body)"
+            // Attempt to read the error body. This can only be done once per response.
+            response.errorBody()?.string()?.let { errorJson ->
+                // Basic error message extraction.
+                // If your backend sends a structured error like { "message": "details" },
+                // you could try to parse 'message' from errorJson using Gson here.
+                // For now, returning the whole error string or a part of it.
+                if (errorJson.length > 200) "${errorJson.substring(0, 200)}..." else errorJson // Prevent overly long toasts
+            } ?: "Error: ${response.code()} ${response.message()} (No specific error body)"
         } catch (e: IOException) {
             "Error reading error response: ${e.message}"
         }

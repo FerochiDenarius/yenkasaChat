@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.ChatRoom
+// import com.example.yenkasachat.model.Participant // Not strictly needed if ChatRoom uses it correctly
 
 class ChatRoomAdapter(
     private val currentUserId: String,
@@ -38,20 +39,26 @@ class ChatRoomAdapter(
         }
         holder.lastMessage.text = previewText
 
-        val contactUser = chatRoom.participants.firstOrNull {
-            it._id != currentUserId
+        // ******** CORRECTED SECTION ********
+        // Use safe call (?.) on chatRoom.participants as it can be null
+        val contactUser = chatRoom.participants?.firstOrNull { participant ->
+            participant._id != currentUserId // Assuming Participant has an _id field
         }
 
-        holder.contactName.text = contactUser?.username ?: "Unknown"
+        // Determine contact name. If it's a group or participants list is null/empty,
+        // you might want a different logic, e.g., show "Group Chat" or use chatRoom.name if it exists.
+        // For now, it defaults to "Unknown" if no specific contactUser is found or participants is null.
+        holder.contactName.text = contactUser?.username ?: determineChatName(chatRoom)
 
-        val profileUrl = contactUser?.profileImage ?: ""
+        val profileUrl = contactUser?.profileImage ?: "" // Defaults to empty if no specific contact or no image
         Glide.with(holder.itemView.context)
             .load(profileUrl)
-            .placeholder(R.drawable.ic_profile_placeholder)
-            .error(R.drawable.ic_profile_placeholder)
+            .placeholder(R.drawable.ic_profile_placeholder) // Ensure this drawable exists
+            .error(R.drawable.ic_profile_placeholder)       // Ensure this drawable exists
             .into(holder.profileImage)
+        // ******** END OF CORRECTED SECTION ********
 
-        // ✅ Timestamp now correctly parsed from ISO8601
+        // ✅ Timestamp now correctly parsed from ISO8601 (Assuming this getter exists and is correct)
         holder.timestamp.text = chatRoom.lastMessageTimeFormatted
 
         // ✅ Show unread count
@@ -64,6 +71,28 @@ class ChatRoomAdapter(
 
         holder.itemView.setOnClickListener {
             onChatRoomClick(chatRoom)
+        }
+    }
+
+    /**
+     * Helper function to determine a display name for the chat.
+     * This can be expanded based on your app's logic for group chats vs. 1-on-1.
+     */
+    private fun determineChatName(chatRoom: ChatRoom): String {
+        // If there's a specific chatRoom.name field from your backend, you could use it here for groups.
+        // e.g., if (chatRoom.name.isNotBlank()) return chatRoom.name
+
+        val otherParticipants = chatRoom.participants?.filter { it._id != currentUserId }
+
+        return when {
+            otherParticipants == null -> "Unknown Chat" // Participants list was null
+            otherParticipants.isEmpty() -> "Chat with yourself" // Only current user or no other users found
+            otherParticipants.size == 1 -> otherParticipants.first().username ?: "Unknown User" // 1-on-1
+            else -> {
+                // Group chat: list first few names or a generic "Group Chat"
+                otherParticipants.take(2).joinToString(", ") { it.username ?: "User" } +
+                        if (otherParticipants.size > 2) "..." else ""
+            }
         }
     }
 
@@ -82,6 +111,8 @@ class ChatRoomAdapter(
         }
 
         override fun areContentsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
+            // Consider if participants list changes should trigger content change.
+            // Default '==' for data class will check all properties including the participants list.
             return oldItem == newItem
         }
     }

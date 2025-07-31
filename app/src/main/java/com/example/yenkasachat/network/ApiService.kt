@@ -3,11 +3,12 @@ package com.example.yenkasachat.network
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.ChatRoom
 import com.example.yenkasachat.model.Contact
+import com.example.yenkasachat.model.CreateChatRoomRequest
 import com.example.yenkasachat.model.CreateChatRoomResponse
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
-import com.example.yenkasachat.model.User
 import com.example.yenkasachat.model.PushNotificationRequest
+import com.example.yenkasachat.model.User
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -17,104 +18,106 @@ import retrofit2.http.*
 interface ApiService {
 
     // --- Authentication ---
-    @POST("/api/auth/login") // This path includes "/api/"
+    // Example: BASE_URL (https://.../api/) + "auth/login" = https://.../api/auth/login
+    @POST("auth/login")
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    @POST("/api/auth/forgot-password") // This path includes "/api/"
+    @POST("auth/forgot-password")
     @FormUrlEncoded
     suspend fun forgotPassword(
         @Field("email") email: String
     ): Response<Void>
 
     // --- Users ---
-    @GET("/api/users") // This path includes "/api/"
+    @GET("users")
     fun getAllUsers(): Call<List<User>>
 
     @Multipart
-    @POST("/api/users/profile-picture") // This path includes "/api/"
+    @POST("users/profile-picture")
     fun uploadProfilePicture(
         @Part image: MultipartBody.Part
     ): Call<Map<String, Any>>
 
-    @GET("/api/users/me") // This path includes "/api/"
+    @GET("users/me")
     fun getUserProfile(): Call<User>
 
-    @PATCH("/api/users/{userId}/player-id") // This path includes "/api/"
+    @PATCH("users/{userId}/player-id")
     fun updatePlayerId(
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<ResponseBody>
 
-    @PATCH("/api/users/{userId}/fcm-token") // This path includes "/api/"
+    @PATCH("users/{userId}/fcm-token")
     fun updateFcmToken(
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<Void>
 
     // --- Chat Rooms ---
-    @POST("/api/chatrooms") // This path includes "/api/"
-    fun createChatRoom(
-        @Body body: Map<String, String>
-    ): Call<CreateChatRoomResponse>
+    @POST("chatrooms")
+    fun createChatRoom(@Body request: CreateChatRoomRequest): Call<CreateChatRoomResponse>
 
-    @GET("/api/chatrooms") // This path includes "/api/"
+    @GET("chatrooms")
     fun getChatRooms(): Call<List<ChatRoom>>
 
-    @GET("/api/chatrooms/user/{userId}") // This path includes "/api/"
+    @GET("chatrooms/user/{userId}")
     fun getUserChatRooms(
         @Path("userId") userId: String
     ): Call<List<ChatRoom>>
 
-    @POST("/api/chatroom/{receiverId}") // This path includes "/api/"
+    // Note: If this endpoint is truly /api/chatroom/{receiverId} and not /api/chatrooms/...
+    // then this specific one might be an exception or your backend routes are structured differently here.
+    // Assuming it follows the pattern of being relative to /api/
+    @POST("chatroom/{receiverId}")
     fun getOrCreateChatRoom(
         @Path("receiverId") receiverId: String
     ): Call<CreateChatRoomResponse>
 
     // --- Messages ---
-    @POST("/api/messages") // This path includes "/api/"
+    @POST("messages")
     fun sendMessage(
         @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Call<ChatMessage>
 
-    @GET("/api/messages/{roomId}") // This path includes "/api/"
+    @GET("{roomId}/messages")
     fun getMessages(
         @Path("roomId") roomId: String
     ): Call<List<ChatMessage>>
 
     // --- Contacts ---
-    @POST("/api/contacts") // This path includes "/api/"
+    @POST("contacts")
     fun addContact(
         @Body body: Map<String, String>
     ): Call<Contact>
 
-    @GET("/api/contacts") // This path includes "/api/"
+    @GET("contacts")
     fun getContacts(): Call<List<Contact>>
 
-    @DELETE("/api/contacts/{contactId}") // This path includes "/api/"
+    @DELETE("contacts/{contactId}")
     fun deleteContact(
         @Path("contactId") contactId: String
     ): Call<Void>
 
     // --- Push Notifications ---
-    @POST("/api/notify") // This path includes "/api/"
+    @POST("notify")
     fun sendPushNotification(
         @Body request: PushNotificationRequest
     ): Call<Void>
 
-    // --- Verification --- (These seem to be correctly under /api/verify/ as well)
-    @POST("/api/verify/request") // This path includes "/api/"
+    // --- Verification ---
+    @POST("verify/request")
     fun requestEmailVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
-    @POST("/api/verify/request-phone") // This path includes "/api/"
+    @POST("verify/request-phone")
     fun requestPhoneVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
-    @POST("/api/verify/confirm") // This path includes "/api/"
+    @POST("verify/confirm")
     fun confirmVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>

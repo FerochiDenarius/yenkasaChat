@@ -1,32 +1,38 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,   // 🔽 Always lowercase
-    trim: true         // ✂️ Remove spaces
-  },
-  phoneNumber: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true          // ✂️ Remove spaces
-  },
+const userSchema = new Schema({
   username: {
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
+    lowercase: true,
+    index: true
   },
-  location: {
+  phoneNumber: {
     type: String,
-    default: ''
+    unique: true,
+    trim: true,
+    sparse: true
+  },
+  email: {
+    type: String,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    sparse: true,
+    match: [/.+\@.+\..+/, 'Please fill a valid email address']
   },
   password: {
     type: String,
     required: true
+    // Consider adding 'select: false' for security if not selecting explicitly elsewhere
+    // select: false
+  },
+  location: {
+    type: String,
+    default: ''
   },
   verified: {
     type: Boolean,
@@ -34,6 +40,8 @@ const userSchema = new mongoose.Schema({
   },
   verificationCode: {
     type: String
+    // Consider adding 'select: false'
+    // select: false
   },
   codeExpiresAt: {
     type: Date
@@ -42,13 +50,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-
-  // ✅ OneSignal Player ID (used for push notifications)
   playerId: {
     type: String,
     default: null
+  },
+  refreshToken: {
+    type: String
+    // Consider adding 'select: false'
+    // select: false
   }
-
 }, { timestamps: true });
 
-module.exports = mongoose.model('User', userSchema);
+
+
+const User = mongoose.model('User', userSchema);
+module.exports = User;

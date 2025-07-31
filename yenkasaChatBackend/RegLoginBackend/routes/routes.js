@@ -2,7 +2,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
-const User = require('../models/User');
+const User = require('../models/user.model'); // ✅ Correct
+
 
 // ✅ Helper to sanitize input and trim long strings
 const sanitize = (val) =>

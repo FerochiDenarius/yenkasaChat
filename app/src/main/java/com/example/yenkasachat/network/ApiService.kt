@@ -81,7 +81,7 @@ interface ApiService {
         @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Call<ChatMessage>
 
-    @GET("{roomId}/messages")
+    @GET("messages/{roomId}")
     fun getMessages(
         @Path("roomId") roomId: String
     ): Call<List<ChatMessage>>

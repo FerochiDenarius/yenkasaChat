@@ -70,26 +70,17 @@ router.post('/', auth, async (req, res) => {
 
 // ✅ Get all messages in a chat room
 // This route will now correspond to GET /api/messages/:roomId
-router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/messages' to '/:roomId'
+router.get('/:roomId/messages', auth, async (req, res) => {
     const { roomId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(roomId)) {
-        return res.status(400).json({ error: 'Invalid roomId format' });
-    }
 
     try {
         const messages = await Message.find({
             roomId: new mongoose.Types.ObjectId(roomId)
-        }).sort({ timestamp: 1 }); // Sorts by timestamp in ASCENDING order (oldest first)
-
-        // Consider adding a check if no messages are found, though an empty array is valid JSON
-        // if (messages.length === 0) {
-        //     console.log(`💬 No messages found for roomId: ${roomId}`);
-        // }
+        }).sort({ timestamp: 1 });
 
         res.json(messages);
     } catch (err) {
-        console.error(`❌ Error fetching messages for roomId ${roomId}:`, err);
+        console.error('❌ Error fetching messages:', err);
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
 });

@@ -53,6 +53,8 @@ android {
 
 dependencies {
     // Your existing dependencies remain the same, including the Compose BOM and libraries
+    
+        implementation("androidx.security:security-crypto:1.1.0-alpha06") // Or the latest stable version
 
     // ✅ AndroidX Core + UI
     implementation("androidx.core:core-ktx:1.12.0")

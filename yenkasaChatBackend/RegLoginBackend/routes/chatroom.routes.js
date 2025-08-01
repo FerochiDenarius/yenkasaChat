@@ -1,4 +1,3 @@
-// routes/chat.routes.js  (This would be your primary chat routes file)
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -24,7 +23,7 @@ router.post('/', authMiddleware, async (req, res) => {
   try {
     console.log(`Querying User collection for username: "${recipientUsername}"`);
     // Consider case-insensitive: new RegExp(`^${recipientUsername}$`, 'i')
-    const otherUser = await User.findOne({ username: recipientUsername });
+    const otherUser = await User.findOne({ username: new RegExp(`^${recipientUsername}$`, 'i') });
 
     if (!otherUser) {
       console.error(`Recipient NOT FOUND in DB with username: "${recipientUsername}"`);

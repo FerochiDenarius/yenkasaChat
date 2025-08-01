@@ -24,7 +24,8 @@ try {
   const verifyRoutes = require('./routes/verify');
   const userRoutes = require('./routes/user.routes');
   const notificationRoutes = require('./routes/notifications.route');
- const refreshTokenRoute = require('./routes/refresh-token')
+ const refreshTokenRoute = require('./routes/refresh-token');
+ const forgotPasswordRoutes = require('./routes/forgotPassword.routes');
 
 
   app.use('/api/auth', authRoutes);
@@ -37,7 +38,9 @@ try {
   app.use('/api/users', userRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/getchatrooms', require('./routes/getchatrooms'));
-  app.use('/api/refresh-token', refreshTokenRoute)
+  app.use('/api/refresh-token', refreshTokenRoute);
+app.use('/api/forgot-password', forgotPasswordRoutes);
+
 
 
   console.log("✅ All route modules loaded and registered");

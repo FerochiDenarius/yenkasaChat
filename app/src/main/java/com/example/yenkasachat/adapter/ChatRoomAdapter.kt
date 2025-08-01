@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.ChatRoom
-// import com.example.yenkasachat.model.Participant // Not strictly needed if ChatRoom uses it correctly
+
 
 class ChatRoomAdapter(
     private val currentUserId: String,
@@ -27,34 +27,32 @@ class ChatRoomAdapter(
     override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
         val chatRoom = getItem(position)
 
+        val message = chatRoom.lastMessage
         val previewText = when {
-            chatRoom.lastMessage?.contains("[Image]", ignoreCase = true) == true -> "📷 Photo"
-            chatRoom.lastMessage?.contains("[Audio]", ignoreCase = true) == true -> "🎤 Audio"
-            chatRoom.lastMessage?.contains("[Video]", ignoreCase = true) == true -> "🎬 Video"
-            chatRoom.lastMessage?.contains("[File]", ignoreCase = true) == true -> "📄 File"
-            chatRoom.lastMessage?.contains("[Location]", ignoreCase = true) == true -> "📍 Location"
-            chatRoom.lastMessage?.contains("[Contact]", ignoreCase = true) == true -> "👤 Contact"
-            chatRoom.lastMessage?.isNotBlank() == true -> chatRoom.lastMessage
-            else -> "No messages yet"
+            message == null -> "No messages yet"
+            message.imageUrl != null -> "📷 Photo"
+            message.audioUrl != null -> "🎤 Audio"
+            message.videoUrl != null -> "🎬 Video"
+            message.fileUrl != null -> "📄 File"
+            message.location != null -> "📍 Location"
+            message.contactInfo != null -> "👤 Contact"
+            else -> message.text?.takeIf { it.isNotBlank() } ?: "Unsupported message type"
         }
+
         holder.lastMessage.text = previewText
 
-        // ******** CORRECTED SECTION ********
-        // Use safe call (?.) on chatRoom.participants as it can be null
+
         val contactUser = chatRoom.participants?.firstOrNull { participant ->
-            participant._id != currentUserId // Assuming Participant has an _id field
+            participant._id != currentUserId
         }
 
-        // Determine contact name. If it's a group or participants list is null/empty,
-        // you might want a different logic, e.g., show "Group Chat" or use chatRoom.name if it exists.
-        // For now, it defaults to "Unknown" if no specific contactUser is found or participants is null.
         holder.contactName.text = contactUser?.username ?: determineChatName(chatRoom)
 
-        val profileUrl = contactUser?.profileImage ?: "" // Defaults to empty if no specific contact or no image
+        val profileUrl = contactUser?.profileImage ?: ""
         Glide.with(holder.itemView.context)
             .load(profileUrl)
-            .placeholder(R.drawable.ic_profile_placeholder) // Ensure this drawable exists
-            .error(R.drawable.ic_profile_placeholder)       // Ensure this drawable exists
+            .placeholder(R.drawable.ic_profile_placeholder)
+            .error(R.drawable.ic_profile_placeholder)
             .into(holder.profileImage)
         // ******** END OF CORRECTED SECTION ********
 
@@ -79,8 +77,7 @@ class ChatRoomAdapter(
      * This can be expanded based on your app's logic for group chats vs. 1-on-1.
      */
     private fun determineChatName(chatRoom: ChatRoom): String {
-        // If there's a specific chatRoom.name field from your backend, you could use it here for groups.
-        // e.g., if (chatRoom.name.isNotBlank()) return chatRoom.name
+
 
         val otherParticipants = chatRoom.participants?.filter { it._id != currentUserId }
 
@@ -111,8 +108,7 @@ class ChatRoomAdapter(
         }
 
         override fun areContentsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
-            // Consider if participants list changes should trigger content change.
-            // Default '==' for data class will check all properties including the participants list.
+
             return oldItem == newItem
         }
     }

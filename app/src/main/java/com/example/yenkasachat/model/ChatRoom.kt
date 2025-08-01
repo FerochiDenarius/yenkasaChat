@@ -14,7 +14,7 @@ data class ChatRoom(
     @SerializedName("participants")
     val participants: List<Participant>?, // Assuming Participant model exists
     @SerializedName("lastMessage")
-    val lastMessage: String?, // Or your Message object type
+    val lastMessage: ChatMessage?, // Or your Message object type
     @SerializedName("lastMessageTime")
     private val lastMessageTime: String?, // Or Date, ensure this is handled
     @SerializedName("unreadCount")

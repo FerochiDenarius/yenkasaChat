@@ -24,7 +24,7 @@ interface ApiService {
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    @POST("api/forgot-password/forgot-password")
+    @POST("forgot-password")
     suspend fun forgotPassword(
         @Body request: ForgotPasswordRequest
     ): Response<Void>

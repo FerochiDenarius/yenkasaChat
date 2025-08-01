@@ -6,35 +6,33 @@ const User = require('../models/user.model');
 const Message = require('../models/message.model');
 const authMiddleware = require('../middleware/auth');
 
+// --- CREATE OR REUSE A CHAT ROOM ---
 router.post('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
-  const { username: rawRecipientUsername } = req.body; // 1. Get the raw username
+  const { username: rawRecipientUsername } = req.body;
 
   console.log('--- Attempting to create/retrieve chat room ---');
   console.log(`Authenticated User ID (sender): ${userId}`);
   console.log(`Received recipient username (raw) from request body: "${rawRecipientUsername}"`);
 
-  if (!rawRecipientUsername) { // 2. Check the raw username
+  if (!rawRecipientUsername) {
     console.log('Recipient username not provided in request body.');
     return res.status(400).json({ success: false, message: 'Recipient username is required.' });
   }
 
-  const recipientUsername = rawRecipientUsername.trim(); // 3. TRIM THE USERNAME
+  const recipientUsername = rawRecipientUsername.trim();
 
-  // 4. Check if the trimmed username is empty (e.g., if the input was just spaces)
   if (recipientUsername === "") {
     console.log('Recipient username became empty after trimming.');
     return res.status(400).json({ success: false, message: 'Recipient username is invalid.' });
   }
 
-  console.log(`Querying User collection for username (trimmed, case-insensitive): "${recipientUsername}"`); // Log the trimmed version
+  console.log(`Querying User collection for username (trimmed, case-insensitive): "${recipientUsername}"`);
 
   try {
-    // 5. Use the TRIMMED username in the RegExp
     const otherUser = await User.findOne({ username: new RegExp(`^${recipientUsername}$`, 'i') });
 
     if (!otherUser) {
-      // Log the trimmed version here as well, as that's what was queried
       console.error(`Recipient NOT FOUND in DB with username: "${recipientUsername}" (using trimmed, case-insensitive query)`);
       return res.status(404).json({ success: false, message: 'Recipient not found' });
     }
@@ -45,7 +43,6 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: 'You cannot create a room with yourself' });
     }
 
-    console.log(`Checking for existing room between ${userId} and ${otherUser._id}`);
     const existingRoom = await ChatRoom.findOne({
       participants: { $all: [new mongoose.Types.ObjectId(userId), otherUser._id] },
     });
@@ -59,7 +56,7 @@ router.post('/', authMiddleware, async (req, res) => {
         participant: {
             id: otherUser._id,
             username: otherUser.username,
-            avatar: otherUser.avatar || otherUser.profileImage || null // Added fallback to profileImage
+            avatar: otherUser.avatar || otherUser.profileImage || null
         }
       });
     }
@@ -78,7 +75,7 @@ router.post('/', authMiddleware, async (req, res) => {
       participant: {
         id: otherUser._id,
         username: otherUser.username,
-        avatar: otherUser.avatar || otherUser.profileImage || null // Added fallback to profileImage
+        avatar: otherUser.avatar || otherUser.profileImage || null
       }
     });
 
@@ -89,6 +86,80 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ... (GET route remains the same, but also consider profileImage for avatar there too)
+
+// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---
+router.get('/', authMiddleware, async (req, res) => {
+  const userId = req.user.id;
+  console.log(`Fetching enriched chat rooms for user ID: ${userId}`);
+
+  try {
+    const chatRooms = await ChatRoom.find({ participants: new mongoose.Types.ObjectId(userId) })
+      .populate('participants', 'username avatar profileImage _id') // Added profileImage
+      .lean();
+
+    if (!chatRooms || chatRooms.length === 0) {
+        console.log(`No chat rooms found for user ${userId}`);
+        return res.json([]);
+    }
+
+    const enrichedRooms = await Promise.all(chatRooms.map(async (room) => {
+      const otherParticipant = room.participants.find(p => p && p._id && p._id.toString() !== userId);
+
+      if (!otherParticipant) {
+        console.warn(`Could not find other participant for room ${room._id} for user ${userId}. Participants:`, room.participants);
+        return {
+          roomId: room._id,
+          participant: null,
+          lastMessage: null,
+          lastMessageType: null,
+          lastMessageAt: null,
+          error: "Could not identify other participant"
+        };
+      }
+
+      const lastMessage = await Message.findOne({ roomId: room._id })
+        .sort({ createdAt: -1 })
+        .select('text imageUrl audioUrl videoUrl fileUrl contactInfo location createdAt')
+        .lean();
+
+      const lastMessageType =
+        lastMessage?.imageUrl ? 'image' :
+        lastMessage?.audioUrl ? 'audio' :
+        lastMessage?.videoUrl ? 'video' :
+        lastMessage?.fileUrl ? 'file' :
+        lastMessage?.contactInfo ? 'contact' :
+        lastMessage?.location ? 'location' :
+        lastMessage?.text ? 'text' :
+        null;
+
+      return {
+        roomId: room._id,
+        participant: {
+          id: otherParticipant._id,
+          username: otherParticipant.username,
+          avatar: otherParticipant.avatar || otherParticipant.profileImage || null, // Added profileImage
+        },
+        lastMessage: lastMessage ? {
+            text: lastMessage.text,
+            imageUrl: lastMessage.imageUrl,
+            audioUrl: lastMessage.audioUrl,
+            videoUrl: lastMessage.videoUrl,
+            fileUrl: lastMessage.fileUrl,
+            contactInfo: lastMessage.contactInfo,
+            location: lastMessage.location,
+            createdAt: lastMessage.createdAt
+        } : null,
+        lastMessageType,
+        lastMessageAt: lastMessage?.createdAt || room.createdAt
+      };
+    }));
+
+    res.json(enrichedRooms);
+  } catch (err) {
+    console.error('❌ Error fetching chat rooms:', err.message);
+    console.error(err.stack);
+    res.status(500).json({ success: false, message: 'Failed to fetch chat rooms' });
+  }
+});
 
 module.exports = router;

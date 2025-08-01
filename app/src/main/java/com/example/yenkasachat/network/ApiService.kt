@@ -67,9 +67,6 @@ interface ApiService {
         @Path("userId") userId: String
     ): Call<List<ChatRoom>>
 
-    // Note: If this endpoint is truly /api/chatroom/{receiverId} and not /api/chatrooms/...
-    // then this specific one might be an exception or your backend routes are structured differently here.
-    // Assuming it follows the pattern of being relative to /api/
     @POST("chatroom/{receiverId}")
     fun getOrCreateChatRoom(
         @Path("receiverId") receiverId: String

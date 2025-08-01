@@ -25,13 +25,14 @@ router.post('/', auth, async (req, res) => {
         return res.status(400).json({ error: 'roomId is required in the body for sending a message' });
     }
      const hasContent =
-        text ||
-        imageUrl ||
-        audioUrl ||
-        videoUrl ||
-        fileUrl ||
-        contactInfo ||
-        (location?.latitude && location?.longitude);
+    (text && text.trim()) ||
+    (imageUrl && imageUrl.trim()) ||
+    (audioUrl && audioUrl.trim()) ||
+    (videoUrl && videoUrl.trim()) ||
+    (fileUrl && fileUrl.trim()) ||
+    contactInfo ||
+    (location?.latitude && location?.longitude);
+
 
     if (!hasContent) {
         return res.status(400).json({

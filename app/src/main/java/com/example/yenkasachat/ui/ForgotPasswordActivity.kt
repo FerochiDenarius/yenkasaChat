@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import com.example.yenkasachat.model.ForgotPasswordRequest
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -63,7 +64,10 @@ class ForgotPasswordActivity : AppCompatActivity() {
         // Use lifecycleScope to launch a coroutine
         lifecycleScope.launch {
             try {
-                val response = apiService.forgotPassword(email)
+                // Create the request body object
+                val requestBody = ForgotPasswordRequest(email = email) // <-- CHANGE THIS
+                // Call the API with the request body
+                val response = apiService.forgotPassword(requestBody) // <-- AND THIS
 
                 if (response.isSuccessful) {
                     // Backend successfully processed the request (e.g., sent the email)

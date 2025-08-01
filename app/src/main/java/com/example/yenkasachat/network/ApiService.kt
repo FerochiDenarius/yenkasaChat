@@ -9,6 +9,7 @@ import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.model.PushNotificationRequest
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.ForgotPasswordRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -17,17 +18,15 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // --- Authentication ---
-    // Example: BASE_URL (https://.../api/) + "auth/login" = https://.../api/auth/login
+
     @POST("auth/login")
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    @POST("auth/forgot-password")
-    @FormUrlEncoded
+    @POST("api/forgot-password/forgot-password")
     suspend fun forgotPassword(
-        @Field("email") email: String
+        @Body request: ForgotPasswordRequest
     ): Response<Void>
 
     // --- Users ---

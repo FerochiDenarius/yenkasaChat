@@ -37,9 +37,9 @@ try {
   app.use('/api/verify', verifyRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/notifications', notificationRoutes);
-  app.use('/getchatrooms', require('./routes/getchatrooms'));
   app.use('/api/refresh-token', refreshTokenRoute);
-app.use('/api/forgot-password', forgotPasswordRoutes);
+app.use('/api/forgot-password', require('./routes/forgotPassword'));
+
 
 
 

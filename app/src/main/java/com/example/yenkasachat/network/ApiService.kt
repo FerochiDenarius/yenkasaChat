@@ -29,7 +29,7 @@ interface ApiService {
     suspend fun forgotPassword(
         @Body request: ForgotPasswordRequest
     ): Response<Void>
-    
+
     // --- Users ---
     @GET("users")
     fun getAllUsers(): Call<List<User>>

@@ -24,11 +24,12 @@ interface ApiService {
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    @POST("forgot-password")
+    // In ApiService.kt
+    @POST("forgot-password") // ✅ DO NOT repeat /api/
     suspend fun forgotPassword(
         @Body request: ForgotPasswordRequest
     ): Response<Void>
-
+    
     // --- Users ---
     @GET("users")
     fun getAllUsers(): Call<List<User>>

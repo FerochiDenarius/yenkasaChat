@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/user.model');
-const { sendPasswordResetEmail } = require('../controllers/forgotPassword.controller');
+const { sendPasswordResetEmail } = require('../controller/forgotPassword.controller');
 
 
 

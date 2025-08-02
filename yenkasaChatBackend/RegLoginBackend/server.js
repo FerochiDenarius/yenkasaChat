@@ -11,9 +11,9 @@ const mongoose = require('mongoose');
 const app = express();
 app.use(express.json()); // Good, keep this high up
 
-// --- MOUNT OTHER ROUTES FIRST (auth, contacts, etc.) ---
+
 try {
-    const oneSignalRoutes = require('./routes/onesignal'); // Assuming this should be here
+    const oneSignalRoutes = require('./routes/onesignal');  
     app.use('/api/onesignal', oneSignalRoutes);
     console.log('✅ Mounted /api/onesignal');
 

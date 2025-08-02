@@ -11,8 +11,7 @@ if (!forgotPasswordController || typeof forgotPasswordController.sendPasswordRes
 } else {
   console.log(`--- [ROUTES FILE DEBUG ${new Date().toISOString()}] --- sendPasswordResetEmail controller function loaded successfully. ---`);
   
-  // To handle POST requests directly to the path where this router is mounted.
-  // If mounted at '/api/forgot-password', this handles POST '/api/forgot-password'
+  
   router.post('/', forgotPasswordController.sendPasswordResetEmail); 
   //           ^^^ THIS IS THE KEY: it means the root of where this router is mounted.
 
@@ -22,8 +21,7 @@ if (!forgotPasswordController || typeof forgotPasswordController.sendPasswordRes
 // Optional: Catch-all within this router to see if any request even reaches this router
 router.use((req, res, next) => {
     console.log(`--- [ROUTER INSTANCE DEBUG ${new Date().toISOString()}] --- Request reached forgotPasswordRoutes router instance. Method: ${req.method}, Path within router: ${req.path}, Original URL: ${req.originalUrl} ---`);
-    // If you see this but still get 404 on the specific POST, it means the router.post('/') didn't match.
-    // If you DON'T see this, it means server.js isn't even passing requests for /api/forgot-password to this router.
+  
     next();
 });
 

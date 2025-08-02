@@ -54,41 +54,9 @@ try {
     console.error(err.stack); // Log stack for more detail
     // Depending on severity, you might want to process.exit(1) if a critical route fails
 }
-// --- END MOUNTING OTHER ROUTES ---
 
 
-// --- TEMPORARY EXTREME DEBUG HANDLER FOR /api/forgot-password ---
-// This handler is placed here so it has a chance to catch /api/forgot-password
-// BEFORE the original (now commented out) dedicated route for it.
-app.all('/api/forgot-password', (req, res, next) => {
-    console.log(`--- [EXTREME DEBUG ${new Date().toISOString()}] --- Request received at /api/forgot-password ---`);
-    console.log(`--- [EXTREME DEBUG] Method: ${req.method}`);
-    console.log(`--- [EXTREME DEBUG] Path: ${req.path}`);
-    console.log(`--- [EXTREME DEBUG] Headers: ${JSON.stringify(req.headers, null, 2)}`);
-    console.log(`--- [EXTREME DEBUG] Body: ${JSON.stringify(req.body, null, 2)}`);
 
-    if (req.method === 'POST') {
-        console.log(`--- [EXTREME DEBUG] This IS a POST request. Sending custom success response. ---`);
-        res.status(200).json({
-            message: "EXTREME DEBUG: POST request to /api/forgot-password successfully caught directly in server.js!",
-            timestamp: new Date().toISOString(),
-            receivedBody: req.body
-        });
-    } else {
-        console.log(`--- [EXTREME DEBUG] This is NOT a POST request (it's ${req.method}). Sending method not allowed. ---`);
-        res.status(405).json({
-            message: `EXTREME DEBUG: Method ${req.method} not allowed for /api/forgot-password. Only POST is handled by this debug handler.`,
-            timestamp: new Date().toISOString()
-        });
-    }
-    // DO NOT call next() here, we are handling the response.
-});
-console.log(`--- [SERVER STARTUP DEBUG ${new Date().toISOString()}] --- Registered EXTREME DEBUG handler for ALL methods at /api/forgot-password ---`);
-// --- END TEMPORARY EXTREME DEBUG HANDLER ---
-
-
-// --- ORIGINAL DEDICATED FORGOT PASSWORD ROUTE (COMMENTED OUT FOR DEBUGGING) ---
-/*
 try {
     const forgotPasswordDedicatedRoutes = require('./routes/forgotPassword.routes.js'); 
     app.use('/api/forgot-password', forgotPasswordDedicatedRoutes);
@@ -97,8 +65,7 @@ try {
     console.error(`--- [SERVER STARTUP DEBUG ${new Date().toISOString()}] --- CRITICAL ERROR mounting forgotPasswordDedicatedRoutes: ${routeError.message} ---`);
     console.error(routeError.stack);
 }
-*/
-// --- END ORIGINAL DEDICATED FORGOT PASSWORD ROUTE ---
+
 
 
 console.log("✅ All route module loading attempts and debug handler setup completed.");

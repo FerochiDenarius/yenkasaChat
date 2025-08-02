@@ -4,7 +4,7 @@ const router = express.Router();
 // Log when this file is loaded/parsed by Node
 console.log(`--- [ROUTES FILE DEBUG ${new Date().toISOString()}] --- Loading forgotPassword.routes.js ---`);
 
-const forgotPasswordController = require('../controller/forgotPassword.controller');
+const forgotPasswordController = require('../Controller/forgotPassword.controller');
 
 if (!forgotPasswordController || typeof forgotPasswordController.sendPasswordResetEmail !== 'function') {
   console.error(`--- [ROUTES FILE DEBUG ${new Date().toISOString()}] --- CRITICAL ERROR: sendPasswordResetEmail function not found or controller not loaded! ---`);

@@ -37,6 +37,7 @@ try {
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/refresh-token', refreshTokenRoute);
 
+console.log("✅ All route module loading attempts completed."); 
 
 try {
     const forgotPasswordRoutes = require('./routes/forgotPassword.routes.js'); 

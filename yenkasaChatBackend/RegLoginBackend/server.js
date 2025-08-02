@@ -7,11 +7,9 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 
 const app = express();
-
-// ✅ Middleware
 app.use(express.json());
 
-// ✅ Routes - OneSignal route for storing player IDs
+
 const oneSignalRoutes = require('./routes/onesignal');
 app.use('/api/onesignal', oneSignalRoutes);
 
@@ -25,7 +23,7 @@ try {
   const userRoutes = require('./routes/user.routes');
   const notificationRoutes = require('./routes/notifications.route');
  const refreshTokenRoute = require('./routes/refresh-token');
- const forgotPasswordRoutes = require('./routes/forgotPassword.routes');
+ 
 
 
   app.use('/api/auth', authRoutes);
@@ -38,9 +36,17 @@ try {
   app.use('/api/users', userRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/refresh-token', refreshTokenRoute);
-app.use('/api/forgot-password', require('./routes/forgotPassword'));
 
 
+try {
+    const forgotPasswordRoutes = require('./routes/forgotPassword.routes.js'); 
+    app.use('/api/forgot-password', forgotPasswordRoutes);
+   
+    console.log(`--- [SERVER STARTUP DEBUG ${new Date().toISOString()}] --- Successfully mounted forgotPasswordRoutes at /api/forgot-password ---`);
+} catch (routeError) {
+    console.error(`--- [SERVER STARTUP DEBUG ${new Date().toISOString()}] --- CRITICAL ERROR mounting forgotPasswordRoutes: ${routeError.message} ---`);
+    console.error(routeError.stack);
+}
 
 
   console.log("✅ All route modules loaded and registered");

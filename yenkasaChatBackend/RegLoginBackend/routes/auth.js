@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/user.model');
+const { sendPasswordResetEmail } = require('../controllers/forgotPassword.controller');
+
+
 
 // ✅ Sanitize helper
 const sanitize = (val) =>
@@ -87,8 +90,7 @@ router.post('/login', async (req, res) => {
     const identifierLower = identifier.toLowerCase();
     console.log(`Login attempt for identifier: ${identifier} (searching as: ${identifierLower} or ${identifier} for phone)`);
 
-    // Ensure your User model actually has a field named 'refreshToken'
-    // And if it's select:false, you need .select('+refreshToken') here
+  
     const user = await User.findOne({
       $or: [
         { email: identifierLower },
@@ -133,7 +135,7 @@ router.post('/login', async (req, res) => {
     }
 
 
-    //  ***** MODIFIED RESPONSE PAYLOAD TO MATCH YOUR "UNCHANGEABLE" ANDROID LoginResponse *****
+    
     const responsePayload = {
       user: {
         _id: user._id,                 // Android AuthUser expects "_id"
@@ -160,6 +162,8 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error during login' });
   }
 });
+
+router.post('/forgot-password', sendPasswordResetEmail);
 
 // ✅ Refresh Token Endpoint
 router.post('/token/refresh', async (req, res) => {

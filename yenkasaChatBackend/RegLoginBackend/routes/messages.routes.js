@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth'); // Ensure this path is correct
-const Message = require('../models/message.model'); // Ensure this path is correct
-const ChatRoom = require('../models/chatroom.model'); // Ensure this path is correct, though not used in GET messages
+const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
+const Message = require('../models/message.model');
+const ChatRoom = require('../models/chatroom.model');
+const sendPushNotification = require('../utils/sendPushNotification'); // Ensure this exists
 
-// ✅ Send a message (text, image, audio, video, file, contact, or location)
-// This route will correspond to POST /api/messages/
+// =========================
+// 🔸 POST: Send a message
+// =========================
 router.post('/', auth, async (req, res) => {
     const {
         roomId,
@@ -19,20 +21,18 @@ router.post('/', auth, async (req, res) => {
         location
     } = req.body;
 
-    // ... (rest of your POST logic remains the same)
-    // Ensure roomId is provided in the body for sending a message
     if (!roomId) {
         return res.status(400).json({ error: 'roomId is required in the body for sending a message' });
     }
-     const hasContent =
-    (text && text.trim()) ||
-    (imageUrl && imageUrl.trim()) ||
-    (audioUrl && audioUrl.trim()) ||
-    (videoUrl && videoUrl.trim()) ||
-    (fileUrl && fileUrl.trim()) ||
-    contactInfo ||
-    (location?.latitude && location?.longitude);
 
+    const hasContent =
+        (text && text.trim()) ||
+        (imageUrl && imageUrl.trim()) ||
+        (audioUrl && audioUrl.trim()) ||
+        (videoUrl && videoUrl.trim()) ||
+        (fileUrl && fileUrl.trim()) ||
+        contactInfo ||
+        (location?.latitude && location?.longitude);
 
     if (!hasContent) {
         return res.status(400).json({
@@ -48,7 +48,7 @@ router.post('/', auth, async (req, res) => {
 
         const newMessage = new Message({
             roomId: new mongoose.Types.ObjectId(roomId),
-            senderId: req.user.id, // Assuming req.user.id comes from your 'auth' middleware
+            senderId: req.user.id,
             text: text?.trim().substring(0, 1000),
             imageUrl,
             audioUrl,
@@ -62,6 +62,48 @@ router.post('/', auth, async (req, res) => {
         console.log('💾 Saving message:', newMessage);
         await newMessage.save();
 
+        // ================================
+        // 🔔 Notify other chat members
+        // ================================
+        const sender = req.user;
+        const recipients = chatRoom.members.filter(
+            member => member._id.toString() !== sender.id.toString() && member.playerId
+        );
+
+        if (recipients.length > 0) {
+            const playerIds = recipients.map(member => member.playerId);
+            const notificationTitle = `New message in ${chatRoom.name || 'your chat'}`;
+
+            let notificationBody = text
+                ? `${sender.username || 'Someone'}: ${text.length > 50 ? text.substring(0, 47) + '...' : text}`
+                : `${sender.username || 'Someone'} sent an attachment`;
+
+            if (imageUrl) notificationBody = `${sender.username || 'Someone'} sent an image.`;
+            else if (audioUrl) notificationBody = `${sender.username || 'Someone'} sent an audio message.`;
+            else if (videoUrl) notificationBody = `${sender.username || 'Someone'} sent a video.`;
+            else if (fileUrl) notificationBody = `${sender.username || 'Someone'} sent a file.`;
+
+            const notificationData = {
+                roomId: roomId.toString(),
+                messageId: newMessage._id.toString(),
+            };
+
+            try {
+                const result = await sendPushNotification({
+                    playerId: playerIds,
+                    title: notificationTitle,
+                    body: notificationBody,
+                    data: notificationData,
+                });
+
+                console.log(`[MessageRoute] Notification sent for message ${newMessage._id}.`, result.id || result);
+            } catch (err) {
+                console.error(`[MessageRoute] Error sending notification for message ${newMessage._id}:`, err.message);
+            }
+        } else {
+            console.log(`[MessageRoute] No recipients with player IDs found for message ${newMessage._id}.`);
+        }
+
         res.status(201).json(newMessage);
     } catch (err) {
         console.error('❌ Error saving message:', err);
@@ -69,9 +111,10 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-// ✅ Get all messages in a chat room
-// This route will now correspond to GET /api/messages/:roomId
-router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/messages' to '/:roomId'
+// =============================
+// 🔸 GET: All messages in room
+// =============================
+router.get('/:roomId', auth, async (req, res) => {
     const { roomId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
@@ -81,12 +124,7 @@ router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/mes
     try {
         const messages = await Message.find({
             roomId: new mongoose.Types.ObjectId(roomId)
-        }).sort({ timestamp: 1 }); // Sorts by timestamp in ASCENDING order (oldest first)
-
-        // Consider adding a check if no messages are found, though an empty array is valid JSON
-        // if (messages.length === 0) {
-        //     console.log(`💬 No messages found for roomId: ${roomId}`);
-        // }
+        }).sort({ timestamp: 1 });
 
         res.json(messages);
     } catch (err) {

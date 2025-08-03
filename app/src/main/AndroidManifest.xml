@@ -65,6 +65,7 @@
         <activity android:name=".ui.AccountInfoActivity" />
         <activity android:name=".ui.ImagePreviewActivity" />
 
+
         <!-- ✅ Firebase Messaging -->
         <service
             android:name=".fcm.MyFirebaseMessagingService"

@@ -1,5 +1,5 @@
 // utils/onesignal.js
-const OneSignal = require('onesignal-node');
+const axios = require('axios');
 
 // Ensure these are set in your .env and loaded correctly by your app
 // (e.g., if using dotenv, require('dotenv').config() in your main server.js)

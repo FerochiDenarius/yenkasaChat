@@ -1,104 +1,95 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require('../middleware/auth'); // Ensure this path is correct
+const Message = require('../models/message.model'); // Ensure this path is correct
+const ChatRoom = require('../models/chatroom.model'); // Ensure this path is correct, though not used in GET messages
 const mongoose = require('mongoose');
-const Message = require('../models/message.model');
-const ChatRoom = require('../models/chatroom.model');
-const { sendPushNotification } = require('../utils/onesignal');
 
-// =========================
-// 🔸 POST: Send a message
-// =========================
+// ✅ Send a message (text, image, audio, video, file, contact, or location)
+// This route will correspond to POST /api/messages/
 router.post('/', auth, async (req, res) => {
-    const { roomId, text, imageUrl, audioUrl, videoUrl, fileUrl, contactInfo, location } = req.body;
+    const {
+        roomId,
+        text,
+        imageUrl,
+        audioUrl,
+        videoUrl,
+        fileUrl,
+        contactInfo,
+        location
+    } = req.body;
 
-    if (!roomId || !mongoose.Types.ObjectId.isValid(roomId)) {
-        return res.status(400).json({ error: 'Invalid or missing roomId' });
+    // ... (rest of your POST logic remains the same)
+    // Ensure roomId is provided in the body for sending a message
+    if (!roomId) {
+        return res.status(400).json({ error: 'roomId is required in the body for sending a message' });
     }
-
-    if (!req.user?.id) {
-        return res.status(401).json({ error: 'Unauthorized: Missing user info' });
-    }
-
-    const hasContent =
-        !!(text?.trim() || imageUrl?.trim() || audioUrl?.trim() || videoUrl?.trim() || fileUrl?.trim() ||
-        contactInfo || (location?.latitude && location?.longitude));
+     const hasContent =
+        text ||
+        imageUrl ||
+        audioUrl ||
+        videoUrl ||
+        fileUrl ||
+        contactInfo ||
+        (location?.latitude && location?.longitude);
 
     if (!hasContent) {
-        return res.status(400).json({ error: 'Message must contain some form of content' });
+        return res.status(400).json({
+            error: 'Message must contain text, image, audio, video, file, contact, or location'
+        });
     }
 
     try {
-        const chatRoom = await ChatRoom.findById(roomId).populate('members.user', 'username playerId');
-        if (!chatRoom) return res.status(404).json({ error: 'Chat room not found' });
-
-        const isMember = chatRoom.members.some(member => member.user?._id?.toString() === req.user.id);
-        if (!isMember) return res.status(403).json({ error: 'Not a member of this room' });
+        const chatRoom = await ChatRoom.findById(roomId);
+        if (!chatRoom) {
+            return res.status(404).json({ error: 'Chat room not found' });
+        }
 
         const newMessage = new Message({
-            roomId,
-            senderId: req.user.id,
-            text: text?.trim().slice(0, 1000),
-            imageUrl, audioUrl, videoUrl, fileUrl, contactInfo, location,
+            roomId: new mongoose.Types.ObjectId(roomId),
+            senderId: req.user.id, // Assuming req.user.id comes from your 'auth' middleware
+            text: text?.trim().substring(0, 1000),
+            imageUrl,
+            audioUrl,
+            videoUrl,
+            fileUrl,
+            contactInfo,
+            location,
             timestamp: new Date()
         });
 
+        console.log('💾 Saving message:', newMessage);
         await newMessage.save();
-
-        chatRoom.lastMessage = newMessage.text || 'Media message';
-        chatRoom.lastMessageTimestamp = newMessage.timestamp;
-        await chatRoom.save();
-
-        const sender = chatRoom.members.find(m => m.user._id.toString() === req.user.id)?.user;
-        const senderName = sender?.username || 'Someone';
-
-        const recipients = chatRoom.members.filter(m => m.user._id.toString() !== req.user.id && m.user.playerId);
-        if (recipients.length > 0) {
-            const playerIds = recipients.map(m => m.user.playerId);
-            const body = newMessage.text ? `${senderName}: ${newMessage.text.slice(0, 50)}` : `${senderName} sent a message`;
-            const typeMsg = newMessage.imageUrl ? 'sent an image' : newMessage.audioUrl ? 'sent an audio' :
-                newMessage.videoUrl ? 'sent a video' : newMessage.fileUrl ? 'sent a file' :
-                newMessage.contactInfo ? 'shared a contact' : newMessage.location ? 'shared a location' : body;
-
-            await sendPushNotification({
-                playerId: playerIds,
-                title: chatRoom.name || 'New message',
-                body: typeMsg,
-                data: { roomId, messageId: newMessage._id, senderId: req.user.id }
-            });
-        }
 
         res.status(201).json(newMessage);
     } catch (err) {
-        console.error('Error sending message:', err);
-        res.status(500).json({ error: 'Failed to send message' });
+        console.error('❌ Error saving message:', err);
+        res.status(500).json({ error: 'Server error saving message' });
     }
 });
 
-// =============================
-// 🔸 GET: All messages in room
-// =============================
-router.get('/:roomId', auth, async (req, res) => {
+// ✅ Get all messages in a chat room
+// This route will now correspond to GET /api/messages/:roomId
+router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/messages' to '/:roomId'
     const { roomId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
-        return res.status(400).json({ error: 'Invalid roomId' });
-    }
-    if (!req.user?.id) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return res.status(400).json({ error: 'Invalid roomId format' });
     }
 
     try {
-        const chatRoom = await ChatRoom.findOne({ _id: roomId, 'members.user': req.user.id });
-        if (!chatRoom) return res.status(403).json({ error: 'Access denied' });
+        const messages = await Message.find({
+            roomId: new mongoose.Types.ObjectId(roomId)
+        }).sort({ timestamp: 1 }); // Sorts by timestamp in ASCENDING order (oldest first)
 
-        const messages = await Message.find({ roomId })
-            .populate('senderId', 'username _id')
-            .sort({ timestamp: 1 });
+        // Consider adding a check if no messages are found, though an empty array is valid JSON
+        // if (messages.length === 0) {
+        //     console.log(`💬 No messages found for roomId: ${roomId}`);
+        // }
 
         res.json(messages);
     } catch (err) {
-        console.error('Error fetching messages:', err);
+        console.error(`❌ Error fetching messages for roomId ${roomId}:`, err);
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
 });

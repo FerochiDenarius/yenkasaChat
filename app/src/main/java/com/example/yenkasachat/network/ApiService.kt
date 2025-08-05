@@ -29,8 +29,14 @@ interface ApiService {
     suspend fun forgotPassword(
         @Body request: ForgotPasswordRequest
     ): Response<Void>
+// backend/server.js or backend/routes/auth.js
 
-    // --- Users ---
+    @POST("auth/reset-password/{token}")
+    suspend fun resetPassword(
+        @Path("token") token: String,
+        @Body body: Map<String, String> // send as { password: "newpassword" }
+    ): Response<Void>
+
     @GET("users")
     fun getAllUsers(): Call<List<User>>
 

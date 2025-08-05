@@ -66,6 +66,7 @@
         <activity android:name=".ui.ImagePreviewActivity" />
 
 
+
         <!-- ✅ Firebase Messaging -->
         <service
             android:name=".fcm.MyFirebaseMessagingService"
@@ -74,6 +75,22 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT"/>
             </intent-filter>
         </service>
+        <activity
+            android:name=".ui.ResetPasswordActivity"
+            android:exported="true">
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="yenkasa.xyz"
+                    android:pathPrefix="/reset-password" />
+            </intent-filter>
+        </activity>
+
+
 
         <!-- ✅ File Provider -->
         <provider

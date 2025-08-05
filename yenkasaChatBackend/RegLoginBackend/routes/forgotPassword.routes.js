@@ -17,6 +17,9 @@ if (!forgotPasswordController || typeof forgotPasswordController.sendPasswordRes
 
   console.log(`--- [ROUTES FILE DEBUG ${new Date().toISOString()}] --- Registered POST handler for '/' (relative to mount point) in forgotPassword.routes.js ---`);
 }
+router.get('/test', (req, res) => {
+  res.send('Forgot Password Route is alive.');
+});
 
 // Optional: Catch-all within this router to see if any request even reaches this router
 router.use((req, res, next) => {

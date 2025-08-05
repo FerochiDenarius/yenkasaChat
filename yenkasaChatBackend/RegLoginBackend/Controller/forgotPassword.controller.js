@@ -2,6 +2,15 @@
     const crypto = require('crypto'); // For generating a reset token
     const User = require('../models/user.model'); 
    
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,        // e.g., smtp.sendgrid.net or smtp.gmail.com
+    port: process.env.SMTP_PORT || 465, // 587 for TLS, 465 for SSL
+    secure: true,                      // true for 465, false for other ports
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
     const sendPasswordResetEmail = async (req, res) => {
         console.log(`--- [CONTROLLER DEBUG ${new Date().toISOString()}] --- forgotPassword ---`);

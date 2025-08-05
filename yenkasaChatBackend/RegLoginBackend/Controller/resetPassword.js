@@ -1,10 +1,29 @@
-// routes/auth/resetPassword.js
-const express = require('express');
+// Controller/resetPassword.js
 const bcrypt = require('bcrypt');
-const router = express.Router();
-const User = require('../../models/user.model');
+const User = require('../models/user.model');
 
-router.post('/', async (req, res) => {
+const verifyResetToken = async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ message: 'Token required' });
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    res.status(200).json({ message: 'Token is valid' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error verifying token' });
+  }
+};
+
+const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
@@ -21,9 +40,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired token' });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-
+    user.password = await bcrypt.hash(newPassword, 10);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
@@ -33,6 +50,9 @@ router.post('/', async (req, res) => {
     console.error(err);
     res.status(500).json({ message: 'Error resetting password' });
   }
-});
+};
 
-module.exports = router;
+module.exports = {
+  verifyResetToken,
+  resetPassword
+};

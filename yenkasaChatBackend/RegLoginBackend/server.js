@@ -6,10 +6,8 @@ const app = express();
 
 app.use(express.json());
 
-// Serve reset-password static HTML
+// Serve reset password HTML
 app.use('/reset-password', express.static(path.join(__dirname, 'public/reset-password')));
-
-// Catch-all static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Deep link redirection to app
@@ -18,12 +16,12 @@ app.get('/reset-password/:token', (req, res) => {
   res.redirect(`yenkasachat://reset-password/${token}`);
 });
 
-// Mount API routes
+// Mount API routes (double check these file paths)
 try {
-    app.use('/api/reset-password', require('./routes/auth/resetPassword'));
-    app.use('/api/forgot-password', require('./routes/forgotPassword.routes.js'));
+    app.use('/api/reset-password', require('./routes/resetPassword')); // ✅ adjusted
+    app.use('/api/forgot-password', require('./routes/forgotPassword.routes')); // ✅ ensure correct name
     app.use('/api/onesignal', require('./routes/onesignal'));
-    app.use('/api/auth', require('./routes/auth'));
+    app.use('/api/auth', require('./routes/auth')); // ✅ this must exist in ./routes/auth.js
     app.use('/api/contacts', require('./routes/contacts.routes'));
     app.use('/api/messages', require('./routes/messages.routes'));
     app.use('/api/chatrooms', require('./routes/chatroom.routes'));
@@ -38,7 +36,7 @@ try {
     console.error(err.stack);
 }
 
-// Dev-only test routes
+// Test routes for development
 if (process.env.NODE_ENV === 'development') {
     app.get('/cloudinary-test', (req, res) => {
         res.json({
@@ -51,11 +49,9 @@ if (process.env.NODE_ENV === 'development') {
     app.get('/api/auth/ping', (req, res) => {
         res.json({ message: '✅ Auth route is working!' });
     });
-} else {
-    console.log('🔐 Test routes disabled in production');
 }
 
-// MongoDB connection and start server
+// Connect MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,

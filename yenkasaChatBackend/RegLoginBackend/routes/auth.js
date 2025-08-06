@@ -1,22 +1,34 @@
+// At the VERY TOP of routes/auth.js
+console.log("✅✅✅ routes/auth.js - File loaded by server.js ✅✅✅");
+
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+console.log("routes/auth.js - express required");
 const router = express.Router();
-const User = require('../models/user.model');
+console.log("routes/auth.js - router created");
+const bcrypt = require('bcryptjs'); // Or bcrypt
+console.log("routes/auth.js - bcrypt required");
+const jwt = require('jsonwebtoken');
+console.log("routes/auth.js - jwt required");
+const User = require('../models/user.model'); // Ensure this path is correct
+console.log("routes/auth.js - User model required, path: ../models/user.model");
 
 // ✅ Sanitize helper
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
 
 if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
-  throw new Error('❌ JWT_SECRET or REFRESH_TOKEN_SECRET is not set in environment.');
+  console.error("❌❌❌ routes/auth.js - Missing JWT_SECRET or REFRESH_TOKEN_SECRET! ❌❌❌");
+  throw new Error('JWT_SECRET or REFRESH_TOKEN_SECRET is not set in environment.');
 }
+console.log("routes/auth.js - JWT secrets check passed");
 
 const ACCESS_EXPIRES_IN = '15m';
 const REFRESH_EXPIRES_IN = '7d';
 
 // ✅ REGISTER
+console.log("routes/auth.js - Defining POST /register route");
 router.post('/register', async (req, res) => {
+  console.log("✅✅✅ /api/auth/register - ROUTE HANDLER REACHED ✅✅✅");
   let { email, phoneNumber, username, location, password } = req.body;
 
   try {
@@ -53,9 +65,8 @@ router.post('/register', async (req, res) => {
     });
 
     await newUser.save();
+    console.log("routes/auth.js - /register: New user saved successfully.");
 
-    // The /register response. Ensure Android side matches this if it consumes it.
-    // This part is NOT what's causing the login token error, but good to be aware of its structure.
     res.status(201).json({
       _id: newUser._id,
       email: newUser.email,
@@ -75,8 +86,12 @@ router.post('/register', async (req, res) => {
 });
 
 // ✅ LOGIN with Access + Refresh Token
+console.log("routes/auth.js - Defining POST /login route");
 router.post('/login', async (req, res) => {
+  console.log("✅✅✅ /api/auth/login - ROUTE HANDLER REACHED ✅✅✅");
   const { identifier, password } = req.body;
+  console.log(`routes/auth.js - /login: Received identifier: ${identifier}, password: ${password ? '******' : '[MISSING]'}`);
+
 
   try {
     if (!identifier || !password) {
@@ -87,20 +102,19 @@ router.post('/login', async (req, res) => {
     const identifierLower = identifier.toLowerCase();
     console.log(`Login attempt for identifier: ${identifier} (searching as: ${identifierLower} or ${identifier} for phone)`);
 
-    // Ensure your User model actually has a field named 'refreshToken'
-    // And if it's select:false, you need .select('+refreshToken') here
     const user = await User.findOne({
       $or: [
         { email: identifierLower },
-        { phoneNumber: identifier },
+        { phoneNumber: identifier }, // Assuming phone number is not lowercased for search
         { username: identifierLower },
       ],
-    }).select('+refreshToken'); // Assuming refreshToken might be select:false in your User model
+    }).select('+refreshToken');
 
     if (!user) {
       console.log(`Login failed: User not found for identifier: ${identifier}`);
       return res.status(404).json({ message: 'User not found' });
     }
+    console.log(`routes/auth.js - /login: User found: ${user.username}`);
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -110,82 +124,79 @@ router.post('/login', async (req, res) => {
 
     console.log(`Login successful for user: ${user.username}`);
 
-    // Create tokens
-    const accessTokenValue = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { // Renamed to accessTokenValue for clarity before remapping
+    const accessTokenValue = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: ACCESS_EXPIRES_IN,
     });
-    const refreshTokenValue = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, { // Renamed for clarity
+    const refreshTokenValue = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: REFRESH_EXPIRES_IN,
     });
+    console.log(`routes/auth.js - /login: Tokens created for user ${user.username}`);
 
-    // Store refreshToken in DB
-    if (user.refreshToken !== undefined) { // Check if the field exists on the model
+
+    if (user.refreshToken !== undefined) {
         user.refreshToken = refreshTokenValue;
         try {
             await user.save();
             console.log(`Refresh token saved for user: ${user.username}`);
         } catch (saveError) {
             console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
-            // Consider if this error should prevent login or just be logged
         }
     } else {
         console.warn(`User model for ${user.username} does not seem to have a refreshToken field. Refresh token not saved to DB.`);
     }
 
-
-    //  ***** MODIFIED RESPONSE PAYLOAD TO MATCH YOUR "UNCHANGEABLE" ANDROID LoginResponse *****
     const responsePayload = {
       user: {
-        _id: user._id,                 // Android AuthUser expects "_id"
+        _id: user._id,
         email: user.email,
-        phone: user.phoneNumber,       // MODIFIED: Send phone number under the key "phone" for Android's AuthUser
+        phone: user.phoneNumber,
         username: user.username,
         location: user.location,
         verified: user.verified,
-        playerId: user.playerId || null // ADDED: Send playerId if it exists (or null), for Android's AuthUser
+        playerId: user.playerId || null
       },
-      token: accessTokenValue,         // MODIFIED: Send access token under the key "token" for Android's LoginResponse
-      // refreshToken: refreshTokenValue // OMITTED from response body, as "unchangeable" Android LoginResponse doesn't expect it here.
-                                       // It IS saved in the DB for the /token/refresh endpoint.
+      token: accessTokenValue,
     };
-    // CRITICAL LOG: Deploy with this and check Render logs after a login attempt.
     console.log('✅ Sending MODIFIED login success response payload TO MATCH ANDROID:', JSON.stringify(responsePayload, null, 2));
-    //  ****************************************************************************************
 
     res.json(responsePayload);
 
   } catch (err) {
     console.error('❌ Login error (main catch block):', err.message);
-    console.error(err.stack); // Log full stack
+    console.error(err.stack);
     res.status(500).json({ message: 'Server error during login' });
   }
 });
 
 // ✅ Refresh Token Endpoint
+console.log("routes/auth.js - Defining POST /token/refresh route");
 router.post('/token/refresh', async (req, res) => {
+  console.log("✅✅✅ /api/auth/token/refresh - ROUTE HANDLER REACHED ✅✅✅");
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
+    console.log("routes/auth.js - /token/refresh: Refresh token missing from request.");
     return res.status(400).json({ message: 'Refresh token required' });
   }
 
   try {
     const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    console.log(`routes/auth.js - /token/refresh: Refresh token payload verified for userId: ${payload.userId}`);
     
-    // Ensure User model has refreshToken field and it might be select:false
     const user = await User.findById(payload.userId).select('+refreshToken');
 
     if (!user || user.refreshToken !== refreshToken) {
       console.warn(`Refresh token mismatch or user not found for refresh. User ID: ${payload.userId}. Token provided: ${refreshToken}. Token in DB: ${user ? user.refreshToken : 'N/A'}`);
       return res.status(403).json({ message: 'Invalid refresh token (token mismatch or user not found)' });
     }
+    console.log(`routes/auth.js - /token/refresh: User found and refresh token matches DB for userId: ${user._id}`);
 
     const newAccessToken = jwt.sign({ userId: payload.userId }, process.env.JWT_SECRET, {
       expiresIn: ACCESS_EXPIRES_IN,
     });
+    console.log(`routes/auth.js - /token/refresh: New access token generated for userId: ${user._id}`);
 
-    // This response is fine, but ensure Android side expects "accessToken" for this specific call
-    res.json({ accessToken: newAccessToken }); 
+    res.json({ accessToken: newAccessToken });
 
   } catch (err) {
     console.error('❌ Token refresh error:', err.message);
@@ -200,8 +211,11 @@ router.post('/token/refresh', async (req, res) => {
 });
 
 // ✅ Debug route
+console.log("routes/auth.js - Defining GET /ping route");
 router.get('/ping', (req, res) => {
+  console.log("✅✅✅ /api/auth/ping - ROUTE HANDLER REACHED ✅✅✅");
   res.json({ message: '✅ Auth route is working!' });
 });
 
+console.log("routes/auth.js - module.exports = router");
 module.exports = router;

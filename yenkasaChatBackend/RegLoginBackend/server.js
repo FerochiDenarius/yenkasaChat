@@ -12,32 +12,33 @@ app.use(express.json());
 console.log("server.js: express.json middleware configured.");
 
 
-// ***** START EXPLICIT ROUTE FOR ASSETLINKS.JSON (FOR DEBUGGING) *****
-app.get('/.well-known/assetlinks.json', (req, res) => {
-    const filePath = path.join(__dirname, 'public', '.well-known', 'assetlinks.json');
-    console.log(`DEBUG: Explicit route for /.well-known/assetlinks.json hit.`);
-    console.log(`DEBUG: Attempting to serve file from: ${filePath}`);
+   // ***** START EXPLICIT ROUTE FOR ASSETLINKS.JSON (MORE DIRECT READ) *****
+   app.get('/.well-known/assetlinks.json', (req, res) => {
+       const filePath = path.join(__dirname, 'public', '.well-known', 'assetlinks.json');
+       console.log(`DEBUG (Direct Read): Explicit route for /.well-known/assetlinks.json hit.`);
+       console.log(`DEBUG (Direct Read): Attempting to read file from: ${filePath}`);
 
-    if (fs.existsSync(filePath)) {
-        console.log(`DEBUG: File found at ${filePath}. Sending file...`);
-        res.sendFile(filePath, (err) => {
-            if (err) {
-                console.error(`DEBUG: Error sending file ${filePath}:`, err);
-                if (!res.headersSent) {
-                    res.status(500).send('Error serving the assetlinks.json file.');
-                }
-            } else {
-                console.log(`DEBUG: Successfully sent ${filePath}`);
-            }
-        });
-    } else {
-        console.error(`DEBUG: File NOT found at ${filePath}. Sending 404.`);
-        if (!res.headersSent) {
-            res.status(404).send('assetlinks.json not found on server at the expected path (from explicit route).');
-        }
-    }
-});
-// ***** END EXPLICIT ROUTE FOR ASSETLINKS.JSON (FOR DEBUGGING) *****
+       fs.readFile(filePath, 'utf8', (err, data) => {
+           if (err) {
+               console.error(`DEBUG (Direct Read): Error reading file ${filePath}:`, err); // Log the actual fs.readFile error
+               if (!res.headersSent) {
+                   // Send a more specific error based on fs.readFile error if possible
+                   if (err.code === 'ENOENT') {
+                       res.status(404).send('assetlinks.json not found (ENOENT from fs.readFile).');
+                   } else if (err.code === 'EACCES') {
+                       res.status(403).send('Permission denied reading assetlinks.json (EACCES from fs.readFile).');
+                   } else {
+                       res.status(500).send('Error reading assetlinks.json file from server.');
+                   }
+               }
+           } else {
+               console.log(`DEBUG (Direct Read): Successfully read file ${filePath}. Sending content.`);
+               res.setHeader('Content-Type', 'application/json'); // Important for assetlinks.json
+               res.status(200).send(data);
+           }
+       });
+   });
+   // ***** END EXPLICIT ROUTE FOR ASSETLINKS.JSON (MORE DIRECT READ) *****
 
 
 // Serve static files for reset password HTML and other public assets

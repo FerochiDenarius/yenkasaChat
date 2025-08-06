@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.example.yenkasachat",
+    "sha256_cert_fingerprints": ["DB:9F:83:74:27:5E:8D:08:CA:1C:44:DA:EE:9F:74:61:03:72:00:42:1D:D9:1D:49:B2:06:51:12:C0:36:FC:72"]
+  }
+}]

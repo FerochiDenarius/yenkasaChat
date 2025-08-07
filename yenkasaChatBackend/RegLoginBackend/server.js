@@ -20,9 +20,8 @@ console.log("server.js: express.json middleware configured.");
 
        fs.readFile(filePath, 'utf8', (err, data) => {
            if (err) {
-               console.error(`DEBUG (Direct Read): Error reading file ${filePath}:`, err); // Log the actual fs.readFile error
+               console.error(`DEBUG (Direct Read): Error reading file ${filePath}:`, err);
                if (!res.headersSent) {
-                   // Send a more specific error based on fs.readFile error if possible
                    if (err.code === 'ENOENT') {
                        res.status(404).send('assetlinks.json not found (ENOENT from fs.readFile).');
                    } else if (err.code === 'EACCES') {
@@ -33,7 +32,7 @@ console.log("server.js: express.json middleware configured.");
                }
            } else {
                console.log(`DEBUG (Direct Read): Successfully read file ${filePath}. Sending content.`);
-               res.setHeader('Content-Type', 'application/json'); // Important for assetlinks.json
+               res.setHeader('Content-Type', 'application/json');
                res.status(200).send(data);
            }
        });
@@ -41,22 +40,49 @@ console.log("server.js: express.json middleware configured.");
    // ***** END EXPLICIT ROUTE FOR ASSETLINKS.JSON (MORE DIRECT READ) *****
 
 
-// Serve static files for reset password HTML and other public assets
-// The explicit route above will handle /.well-known/assetlinks.json first.
-// These lines will handle other static files.
-app.use('/reset-password', express.static(path.join(__dirname, 'public/reset-password')));
-app.use(express.static(path.join(__dirname, 'public'))); // This should still serve other files in public/
+// --- START DIAGNOSTIC LOGGING AND ENHANCED STATIC SERVING FOR /reset-password ---
+app.use('/reset-password', (req, res, next) => {
+    console.log(`SERVER_LOG: Request received for /reset-password path: ${req.originalUrl}`);
+    console.log(`SERVER_LOG: Attempting to serve static content from public/reset-password for ${req.path}`);
+    next(); 
+});
+
+app.use('/reset-password', express.static(path.join(__dirname, 'public/reset-password'), {
+    fallthrough: true, 
+    index: "index.html" 
+}));
+// --- END DIAGNOSTIC LOGGING AND ENHANCED STATIC SERVING FOR /reset-password ---
+
+
+// General static serving (this comes AFTER the more specific /reset-password handling)
+app.use(express.static(path.join(__dirname, 'public'))); 
 console.log("server.js: Static file serving configured for /public and /public/reset-password.");
 
 
-// Deep link redirection to app (Consider if this is still needed with App Links)
-// If App Links are working, the OS should handle opening the app directly.
-// This yenkasachat:// custom scheme redirect might be a fallback or for older systems.
+// Deep link redirection to app - THIS IS COMMENTED OUT FOR DEBUGGING
+/*
 app.get('/reset-password/:token', (req, res) => {
   const { token } = req.params;
   console.log(`server.js: HTTP GET /reset-password/${token} - Redirecting to custom scheme yenkasachat://reset-password/${token}`);
   res.redirect(`yenkasachat://reset-password/${token}`);
 });
+*/
+
+// --- START DIAGNOSTIC FALLBACK ROUTE FOR /reset-password ---
+app.get('/reset-password', (req, res) => {
+    console.log(`SERVER_LOG: DIAGNOSTIC FALLBACK for /reset-password hit. Static serving of index.html likely failed for ${req.originalUrl}`);
+    const indexPath = path.join(__dirname, 'public/reset-password', 'index.html');
+    fs.access(indexPath, fs.constants.F_OK, (err) => {
+        if (err) {
+            console.error(`SERVER_LOG: DIAGNOSTIC - index.html does NOT exist or is not accessible at ${indexPath}. Error details:`, err);
+            res.status(404).send(`Reset password page (index.html) not found by diagnostic check. Expected at: ${indexPath}. File system error: ${err.code || 'Unknown error'}`);
+        } else {
+            console.log(`SERVER_LOG: DIAGNOSTIC - index.html DOES exist at ${indexPath}, but express.static did not serve it. This is unexpected.`);
+            res.status(500).send(`Server error: Reset password page (index.html) exists at ${indexPath} but was not served by the primary static handler. Check other logs.`);
+        }
+    });
+});
+// --- END DIAGNOSTIC FALLBACK ROUTE FOR /reset-password ---
 
 
 // Mount API routes

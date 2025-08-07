@@ -1,8 +1,9 @@
 [{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.example.yenkasachat",
-    "sha256_cert_fingerprints": ["DB:9F:83:74:27:5E:8D:08:CA:1C:44:DA:EE:9F:74:61:03:72:00:42:1D:D9:1D:49:B2:06:51:12:C0:36:FC:72"]
-  }
-}]
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.example.yenkasachat",
+        "sha256_cert_fingerprints": ["B8:72:B2:50:76:BD:B0:78:A0:D7:DB:45:F7:82:C0:45:85:B5:48:39:B1:5D:24:90:CD:A8:C6:FF:EC:1A:01:A5"]
+      }
+    }]
+    

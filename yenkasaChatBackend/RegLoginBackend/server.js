@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
+const fs = require('fs'); // Added for checking file existence
 const app = express();
 
 console.log("server.js: Starting application setup...");
@@ -10,19 +11,79 @@ console.log("server.js: Starting application setup...");
 app.use(express.json());
 console.log("server.js: express.json middleware configured.");
 
-// Serve static files for reset password HTML and other public assets
-// It's generally good to define static routes before dynamic API routes if there's no overlap
-// or if specific static paths need to take precedence.
-app.use('/reset-password', express.static(path.join(__dirname, 'public/reset-password')));
-app.use(express.static(path.join(__dirname, 'public')));
+
+   // ***** START EXPLICIT ROUTE FOR ASSETLINKS.JSON (MORE DIRECT READ) *****
+   app.get('/.well-known/assetlinks.json', (req, res) => {
+       const filePath = path.join(__dirname, 'public', '.well-known', 'assetlinks.json');
+       console.log(`DEBUG (Direct Read): Explicit route for /.well-known/assetlinks.json hit.`);
+       console.log(`DEBUG (Direct Read): Attempting to read file from: ${filePath}`);
+
+       fs.readFile(filePath, 'utf8', (err, data) => {
+           if (err) {
+               console.error(`DEBUG (Direct Read): Error reading file ${filePath}:`, err);
+               if (!res.headersSent) {
+                   if (err.code === 'ENOENT') {
+                       res.status(404).send('assetlinks.json not found (ENOENT from fs.readFile).');
+                   } else if (err.code === 'EACCES') {
+                       res.status(403).send('Permission denied reading assetlinks.json (EACCES from fs.readFile).');
+                   } else {
+                       res.status(500).send('Error reading assetlinks.json file from server.');
+                   }
+               }
+           } else {
+               console.log(`DEBUG (Direct Read): Successfully read file ${filePath}. Sending content.`);
+               res.setHeader('Content-Type', 'application/json');
+               res.status(200).send(data);
+           }
+       });
+   });
+   // ***** END EXPLICIT ROUTE FOR ASSETLINKS.JSON (MORE DIRECT READ) *****
+
+
+// --- START DIAGNOSTIC LOGGING AND ENHANCED STATIC SERVING FOR /reset-password ---
+app.use('/reset-password', (req, res, next) => {
+    console.log(`SERVER_LOG: Request received for /reset-password path: ${req.originalUrl}`);
+    console.log(`SERVER_LOG: Attempting to serve static content from public/reset-password for ${req.path}`);
+    next(); 
+});
+
+app.use('/reset-password', express.static(path.join(__dirname, 'public/reset-password'), {
+    fallthrough: true, 
+    index: "index.html" 
+}));
+// --- END DIAGNOSTIC LOGGING AND ENHANCED STATIC SERVING FOR /reset-password ---
+
+
+// General static serving (this comes AFTER the more specific /reset-password handling)
+app.use(express.static(path.join(__dirname, 'public'))); 
 console.log("server.js: Static file serving configured for /public and /public/reset-password.");
 
-// Deep link redirection to app
+
+// Deep link redirection to app - THIS IS COMMENTED OUT FOR DEBUGGING
+/*
 app.get('/reset-password/:token', (req, res) => {
   const { token } = req.params;
-  console.log(`server.js: Redirecting for reset password token: ${token}`);
+  console.log(`server.js: HTTP GET /reset-password/${token} - Redirecting to custom scheme yenkasachat://reset-password/${token}`);
   res.redirect(`yenkasachat://reset-password/${token}`);
 });
+*/
+
+// --- START DIAGNOSTIC FALLBACK ROUTE FOR /reset-password ---
+app.get('/reset-password', (req, res) => {
+    console.log(`SERVER_LOG: DIAGNOSTIC FALLBACK for /reset-password hit. Static serving of index.html likely failed for ${req.originalUrl}`);
+    const indexPath = path.join(__dirname, 'public/reset-password', 'index.html');
+    fs.access(indexPath, fs.constants.F_OK, (err) => {
+        if (err) {
+            console.error(`SERVER_LOG: DIAGNOSTIC - index.html does NOT exist or is not accessible at ${indexPath}. Error details:`, err);
+            res.status(404).send(`Reset password page (index.html) not found by diagnostic check. Expected at: ${indexPath}. File system error: ${err.code || 'Unknown error'}`);
+        } else {
+            console.log(`SERVER_LOG: DIAGNOSTIC - index.html DOES exist at ${indexPath}, but express.static did not serve it. This is unexpected.`);
+            res.status(500).send(`Server error: Reset password page (index.html) exists at ${indexPath} but was not served by the primary static handler. Check other logs.`);
+        }
+    });
+});
+// --- END DIAGNOSTIC FALLBACK ROUTE FOR /reset-password ---
+
 
 // Mount API routes
 console.log("server.js: Attempting to mount all API routes...");
@@ -81,10 +142,9 @@ try {
         console.error("Require stack for module loading error:", err.requireStack);
     }
     console.error("Full error stack for module loading:", err.stack);
-    // Depending on the severity, you might want to process.exit(1) here if a critical route fails
 }
 
-// Test routes for development (these will only be active if NODE_ENV is 'development')
+// Test routes for development
 if (process.env.NODE_ENV === 'development') {
     console.log("server.js: Development mode detected. Configuring test routes.");
     app.get('/cloudinary-test', (req, res) => {
@@ -96,11 +156,7 @@ if (process.env.NODE_ENV === 'development') {
         });
     });
 
-    // Note: The /api/auth/ping is defined within routes/auth.js, so this duplicate here isn't strictly necessary
-    // if routes/auth.js is loaded correctly. However, it can serve as an independent check.
-    // If you keep it, ensure it doesn't conflict or cause confusion.
-    // For now, I'll keep it as it was in your original file for minimal changes to this specific block.
-    app.get('/api/auth/ping-server-level', (req, res) => { // Renamed slightly to avoid confusion with the one in auth.js
+    app.get('/api/auth/ping-server-level', (req, res) => {
         console.log("server.js: /api/auth/ping-server-level route hit.");
         res.json({ message: '✅ Server-level auth ping route is working!' });
     });
@@ -112,10 +168,8 @@ if (process.env.NODE_ENV === 'development') {
 // Connect MongoDB
 console.log("server.js: Attempting to connect to MongoDB...");
 mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true, // These options are generally good, though some are default in newer Mongoose
+    useNewUrlParser: true,
     useUnifiedTopology: true,
-    // consider adding connectTimeoutMS: 10000, // 10 seconds
-    // serverSelectionTimeoutMS: 10000 // if you have issues with initial connection
 })
 .then(() => {
     console.log('✅✅✅ server.js: MongoDB connected successfully.');
@@ -126,6 +180,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .catch((err) => {
     console.error('❌❌❌ server.js: MongoDB connection error:', err.message);
-    console.error("Full MongoDB connection error stack:", err.stack); // Log the full stack for more details
-    process.exit(1); // Exit if DB connection fails, as app is likely unusable
+    console.error("Full MongoDB connection error stack:", err.stack);
+    process.exit(1);
 });

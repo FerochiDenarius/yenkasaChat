@@ -22,7 +22,7 @@ if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
 }
 console.log("routes/auth.js - JWT secrets check passed");
 
-const ACCESS_EXPIRES_IN = '15m';
+const ACCESS_EXPIRES_IN = '1h';
 const REFRESH_EXPIRES_IN = '7d';
 
 // ✅ REGISTER

@@ -65,9 +65,17 @@ object TokenManager {
         }
     }
 
+
     fun getToken(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(TOKEN_KEY, null)
+            val token = getEncryptedPrefs(context).getString(TOKEN_KEY, null)
+            // TEMPORARY DEBUG LOGGING:
+            if (token != null) {
+                Log.d(TAG, "Retrieved access token. Length: ${token.length}, Ends with: ${token.takeLast(6)}")
+            } else {
+                Log.d(TAG, "Retrieved access token: null")
+            }
+            token
         } catch (e: Exception) {
             Log.e(TAG, "Error getting access token from EncryptedSharedPreferences", e)
             null
@@ -100,14 +108,18 @@ object TokenManager {
     fun getRefreshToken(context: Context): String? {
         return try {
             val token = getEncryptedPrefs(context).getString(REFRESH_KEY, null)
-            // Log.d(TAG, "Retrieved refresh token (encrypted): ${if (token != null) "exists" else "null"}") // Don't log the token itself
+            // TEMPORARY DEBUG LOGGING (or uncomment and adapt your existing one):
+            if (token != null) {
+                Log.d(TAG, "Retrieved refresh token. Length: ${token.length}, Ends with: ${token.takeLast(6)}")
+            } else {
+                Log.d(TAG, "Retrieved refresh token: null")
+            }
             token
         } catch (e: Exception) {
             Log.e(TAG, "Error getting refresh token from EncryptedSharedPreferences", e)
             null
         }
     }
-
     fun clearRefreshToken(context: Context) { // Added specific clear for refresh token
         try {
             getEncryptedPrefs(context).edit().remove(REFRESH_KEY).apply()

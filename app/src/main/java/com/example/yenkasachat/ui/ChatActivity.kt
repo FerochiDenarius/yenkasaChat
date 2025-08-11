@@ -27,8 +27,7 @@ import com.example.yenkasachat.model.ChatMessage // Ensure this is importing you
 // import com.example.yenkasachat.model.PushNotificationRequest // Not used directly in this snippet
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.NotificationHelper
-import com.example.yenkasachat.util.SharedPrefs
-// import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.util.TokenManager
 import com.google.android.gms.location.LocationServices
 import retrofit2.Call
 import retrofit2.Callback
@@ -209,8 +208,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     }
 
     private fun retrieveSessionAndValidate(): Boolean {
-        token = SharedPrefs.getToken(this) ?: ""
-        senderId = SharedPrefs.getUserId(this) ?: ""
+        token = TokenManager.getToken(this) ?: ""
+        senderId = TokenManager.getUserId(this) ?: ""
         roomId = intent.getStringExtra("roomId") ?: ""
 
         if (token.isBlank() || roomId.isBlank() || senderId.isBlank()) {

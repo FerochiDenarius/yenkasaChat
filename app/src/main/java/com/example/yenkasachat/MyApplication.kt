@@ -27,9 +27,9 @@ class MyApplication : Application() {
 
         // ✅ Initialize Cloudinary
         val config: HashMap<String, String> = HashMap()
-        config["cloud_name"] = "ddrsrydfh"
-        config["api_key"] = "276843932118844"
-        config["api_secret"] = "7K_WupMd31E5NPNYPfOaAdF_pqs" // Ensure this secret is stored securely if this is a production app
+        config["cloud_name"] = "dwjj3zsaq"
+        config["api_key"] = "548148892215273"
+        config["api_secret"] = "d3L_8BGtqM30JgkRHy6SabmKnc0" // Ensure this secret is stored securely if this is a production app
         MediaManager.init(this, config)
 
         // ✅ Send playerId to backend

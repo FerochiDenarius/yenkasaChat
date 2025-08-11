@@ -16,7 +16,7 @@ import com.example.yenkasachat.model.ChatRoom
 import com.example.yenkasachat.model.CreateChatRoomRequest
 import com.example.yenkasachat.model.CreateChatRoomResponse
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.util.SharedPrefs
+import com.example.yenkasachat.util.TokenManager
 // Removed: import kotlin.io.path.name // This import was likely added due to the incorrect 'name' access
 import retrofit2.Call
 import retrofit2.Callback
@@ -41,8 +41,8 @@ class ChatRoomsActivity : AppCompatActivity() {
         btnCreateRoom = findViewById(R.id.btnCreateRoom)
         inputUsername = findViewById(R.id.inputUsername)
 
-        val retrievedToken = SharedPrefs.getToken(this)
-        currentUserId = SharedPrefs.getUserId(this) ?: ""
+        val retrievedToken = TokenManager.getToken(this)
+        currentUserId = TokenManager.getUserId(this) ?: ""
 
         if (retrievedToken.isNullOrEmpty() || currentUserId.isEmpty()) {
             Toast.makeText(this, "User not logged in. Please log in again.", Toast.LENGTH_LONG).show()

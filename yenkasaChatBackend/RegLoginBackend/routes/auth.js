@@ -1,4 +1,4 @@
-// At the VERY TOP of routes/auth.js
+// ✅ Debug startup log
 console.log("✅✅✅ routes/auth.js - File loaded by server.js ✅✅✅");
 
 const express = require('express');
@@ -16,6 +16,7 @@ console.log("routes/auth.js - User model required, path: ../models/user.model");
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
 
+// ✅ Environment secrets check
 if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
   console.error("❌❌❌ routes/auth.js - Missing JWT_SECRET or REFRESH_TOKEN_SECRET! ❌❌❌");
   throw new Error('JWT_SECRET or REFRESH_TOKEN_SECRET is not set in environment.');
@@ -34,9 +35,9 @@ router.post('/register', async (req, res) => {
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
-    username = sanitize(username.toLowerCase());
-    location = sanitize(location);
-    password = sanitize(password);
+    username = username ? sanitize(username.toLowerCase()) : null;
+    location = location ? sanitize(location) : null;
+    password = password ? sanitize(password) : null;
 
     if (!username || !location || !password || (!email && !phoneNumber)) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -92,7 +93,6 @@ router.post('/login', async (req, res) => {
   const { identifier, password } = req.body;
   console.log(`routes/auth.js - /login: Received identifier: ${identifier}, password: ${password ? '******' : '[MISSING]'}`);
 
-
   try {
     if (!identifier || !password) {
       console.log('Login attempt failed: Missing identifier or password.');
@@ -105,7 +105,7 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({
       $or: [
         { email: identifierLower },
-        { phoneNumber: identifier }, // Assuming phone number is not lowercased for search
+        { phoneNumber: identifier },
         { username: identifierLower },
       ],
     }).select('+refreshToken');
@@ -132,32 +132,32 @@ router.post('/login', async (req, res) => {
     });
     console.log(`routes/auth.js - /login: Tokens created for user ${user.username}`);
 
-
-    if (user.refreshToken !== undefined) {
-        user.refreshToken = refreshTokenValue;
-        try {
-            await user.save();
-            console.log(`Refresh token saved for user: ${user.username}`);
-        } catch (saveError) {
-            console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
-        }
-    } else {
-        console.warn(`User model for ${user.username} does not seem to have a refreshToken field. Refresh token not saved to DB.`);
+    // Always save refresh token to DB
+    try {
+      user.refreshToken = refreshTokenValue;
+      await user.save();
+      console.log(`Refresh token saved for user: ${user.username}`);
+    } catch (saveError) {
+      console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
     }
 
+    // Backwards + forwards compatibility
     const responsePayload = {
       user: {
         _id: user._id,
         email: user.email,
-        phone: user.phoneNumber,
+        phoneNumber: user.phoneNumber,
+        phone: user.phoneNumber, // Keep both keys for safety
         username: user.username,
         location: user.location,
         verified: user.verified,
         playerId: user.playerId || null
       },
-      token: accessTokenValue,
+      token: accessTokenValue,       // Legacy key
+      accessToken: accessTokenValue, // New key
+      refreshToken: refreshTokenValue
     };
-    console.log('✅ Sending MODIFIED login success response payload TO MATCH ANDROID:', JSON.stringify(responsePayload, null, 2));
+    console.log('✅ Sending login success response payload:', JSON.stringify(responsePayload, null, 2));
 
     res.json(responsePayload);
 
@@ -182,7 +182,7 @@ router.post('/token/refresh', async (req, res) => {
   try {
     const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     console.log(`routes/auth.js - /token/refresh: Refresh token payload verified for userId: ${payload.userId}`);
-    
+
     const user = await User.findById(payload.userId).select('+refreshToken');
 
     if (!user || user.refreshToken !== refreshToken) {
@@ -196,7 +196,8 @@ router.post('/token/refresh', async (req, res) => {
     });
     console.log(`routes/auth.js - /token/refresh: New access token generated for userId: ${user._id}`);
 
-    res.json({ accessToken: newAccessToken });
+    // Return both keys for compatibility
+    res.json({ token: newAccessToken, accessToken: newAccessToken });
 
   } catch (err) {
     console.error('❌ Token refresh error:', err.message);
@@ -215,6 +216,12 @@ console.log("routes/auth.js - Defining GET /ping route");
 router.get('/ping', (req, res) => {
   console.log("✅✅✅ /api/auth/ping - ROUTE HANDLER REACHED ✅✅✅");
   res.json({ message: '✅ Auth route is working!' });
+});
+
+// ✅ Temporary debug: header inspection
+router.post('/debug-headers', (req, res) => {
+  console.log("DEBUG /debug-headers - headers:", req.headers);
+  res.json({ headers: req.headers });
 });
 
 console.log("routes/auth.js - module.exports = router");

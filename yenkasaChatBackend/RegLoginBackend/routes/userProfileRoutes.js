@@ -2,17 +2,18 @@
 
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User'); // Assuming your User model is in 'models/User.js'
+// MODIFIED: Corrected the path to require 'user.model.js' from the 'models' folder
+const User = require('../models/user.model'); 
 const authMiddleware = require('../middleware/authMiddleware'); // Your authentication middleware
 
 // --- Simple Logger Function (Optional but can be expanded) ---
 // You could use a more sophisticated logger like Winston or Morgan,
 // but for this example, a simple console logger with levels will do.
 const logger = {
-    info: (message, ...args) => console.log(`[INFO] ${new Date().toISOString()} - ${message}`, ...args),
-    warn: (message, ...args) => console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...args),
-    error: (message, ...args) => console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, ...args),
-    debug: (message, ...args) => console.debug(`[DEBUG] ${new Date().toISOString()} - ${message}`, ...args) // For more verbose logs if needed
+    info: (message, ...args) => console.log(`[UserProfileRoute][INFO] ${new Date().toISOString()} - ${message}`, ...args),
+    warn: (message, ...args) => console.warn(`[UserProfileRoute][WARN] ${new Date().toISOString()} - ${message}`, ...args),
+    error: (message, ...args) => console.error(`[UserProfileRoute][ERROR] ${new Date().toISOString()} - ${message}`, ...args),
+    debug: (message, ...args) => console.debug(`[UserProfileRoute][DEBUG] ${new Date().toISOString()} - ${message}`, ...args) // For more verbose logs if needed
 };
 // --- End Logger Function ---
 
@@ -28,94 +29,113 @@ router.put('/player-id', authMiddleware, async (req, res) => {
     const authenticatedUserId = req.user ? req.user.id : null; // Get from auth middleware
 
     // Generate a unique request ID for tracing (optional but good for complex systems)
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const requestId = `req_profile_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    logger.info(`[${requestId}] Received request to update Player ID. Authenticated User ID (from token): ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] Request Body:`, JSON.stringify(req.body)); // Log the raw body for debugging if needed
+    logger.info(`[${requestId}] PUT /api/profile/player-id - Received request. Authenticated User ID (from token): ${authenticatedUserId}`);
+    logger.debug(`[${requestId}] PUT /api/profile/player-id - Request Body:`, JSON.stringify(req.body));
 
     // --- Validation ---
     if (!authenticatedUserId) {
         // This should technically be caught by authMiddleware.
-        logger.error(`[${requestId}] CRITICAL: User ID not found in req.user after authMiddleware. This indicates an issue with authMiddleware.`);
+        logger.error(`[${requestId}] PUT /api/profile/player-id - CRITICAL: User ID not found in req.user after authMiddleware. This indicates an issue with authMiddleware.`);
         return res.status(401).json({ msg: 'User authentication failed or User ID missing.' });
     }
 
     if (!playerId || typeof playerId !== 'string' || playerId.trim() === '') {
-        logger.warn(`[${requestId}] Validation failed: Player ID is missing, not a string, or empty. Provided Player ID: '${playerId}'. User ID: ${authenticatedUserId}`);
+        logger.warn(`[${requestId}] PUT /api/profile/player-id - Validation failed: Player ID is missing, not a string, or empty. Provided Player ID: '${playerId}'. User ID: ${authenticatedUserId}`);
         return res.status(400).json({ msg: 'Valid Player ID (non-empty string) is required in the request body.' });
     }
     // --- End Validation ---
 
-    logger.info(`[${requestId}] Attempting to update Player ID to '${playerId}' for User ID: ${authenticatedUserId}`);
+    logger.info(`[${requestId}] PUT /api/profile/player-id - Attempting to update Player ID to '${playerId}' for User ID: ${authenticatedUserId}`);
 
     try {
         const userToUpdate = await User.findById(authenticatedUserId);
 
         if (!userToUpdate) {
-            logger.warn(`[${requestId}] User not found in database with ID: ${authenticatedUserId} during Player ID update. Token might be valid for a deleted user.`);
+            logger.warn(`[${requestId}] PUT /api/profile/player-id - User not found in database with ID: ${authenticatedUserId} during Player ID update. Token might be valid for a deleted user.`);
             return res.status(404).json({ msg: 'User associated with token not found.' });
         }
         
-        // Log current Player ID before update for comparison
-        logger.debug(`[${requestId}] User '${authenticatedUserId}' current Player ID: '${userToUpdate.playerId}'. New Player ID: '${playerId}'.`);
+        logger.debug(`[${requestId}] PUT /api/profile/player-id - User '${authenticatedUserId}' current Player ID: '${userToUpdate.playerId}'. New Player ID: '${playerId}'.`);
 
         // Update the user's playerId and updatedAt timestamp
-        userToUpdate.playerId = playerId;
-        userToUpdate.updatedAt = new Date();
+        userToUpdate.playerId = playerId.trim(); // Trim the playerId before saving
+        userToUpdate.updatedAt = new Date(); // Mongoose 'timestamps: true' in schema usually handles this, but explicit update is fine.
         
-        const updatedUser = await userToUpdate.save(); // .save() is often preferred for triggering Mongoose middleware/validation
+        const updatedUser = await userToUpdate.save(); 
 
-        // Alternative using findByIdAndUpdate (your original approach, also valid):
-        /*
-        const updatedUser = await User.findByIdAndUpdate(
-            authenticatedUserId,
-            {
-                $set: {
-                    playerId: playerId,
-                    updatedAt: new Date()
-                }
-            },
-            { new: true, runValidators: true } // {new: true} returns the modified document, runValidators ensures schema validations run
-        );
-
-        if (!updatedUser) { // This check is still valid with findByIdAndUpdate
-            logger.warn(`[${requestId}] User not found in database with ID: ${authenticatedUserId} during Player ID update (findByIdAndUpdate). Token might be valid for a deleted user.`);
-            return res.status(404).json({ msg: 'User not found for update.' });
-        }
-        */
-
-        logger.info(`[${requestId}] ✅ Successfully updated Player ID to '${updatedUser.playerId}' for User ID: ${updatedUser._id} (Username: ${updatedUser.username})`);
+        logger.info(`[${requestId}] PUT /api/profile/player-id - ✅ Successfully updated Player ID to '${updatedUser.playerId}' for User ID: ${updatedUser._id} (Username: ${updatedUser.username})`);
         
         res.json({
             msg: 'Player ID updated successfully.',
-            user: { // Send back relevant parts of the user
+            user: { 
                 id: updatedUser._id,
                 username: updatedUser.username,
-                email: updatedUser.email, // If you want to send email
+                // email: updatedUser.email, // Only send if necessary for the response
                 playerId: updatedUser.playerId,
                 updatedAt: updatedUser.updatedAt
             }
         });
 
     } catch (err) {
-        logger.error(`[${requestId}] ❌ Error updating Player ID for User ID: ${authenticatedUserId}. Player ID was: '${playerId}'. Error: ${err.message}`, { stack: err.stack });
+        logger.error(`[${requestId}] PUT /api/profile/player-id - ❌ Error updating Player ID for User ID: ${authenticatedUserId}. Player ID was: '${playerId}'. Error: ${err.message}`, { stack: err.stack });
         
-        // Specific Mongoose Validation Error
         if (err.name === 'ValidationError') {
-            logger.warn(`[${requestId}] Mongoose validation error during Player ID update:`, err.errors);
+            logger.warn(`[${requestId}] PUT /api/profile/player-id - Mongoose validation error:`, err.errors);
             return res.status(400).json({ msg: 'Validation error updating Player ID.', errors: err.errors });
         }
         
-        // Specific Mongoose Cast Error (e.g., invalid ObjectId format if that were a possibility here)
         if (err.name === 'CastError') {
-             logger.warn(`[${requestId}] Mongoose cast error: ${err.path} to ${err.kind} failed for value ${err.value}`);
+             logger.warn(`[${requestId}] PUT /api/profile/player-id - Mongoose cast error: ${err.path} to ${err.kind} failed for value ${err.value}`);
             return res.status(400).json({ msg: `Invalid data format for ${err.path}.` });
         }
 
         res.status(500).json({ msg: 'Server error while updating Player ID.' });
     } finally {
-        logger.info(`[${requestId}] Finished processing request to update Player ID for User ID: ${authenticatedUserId}.`);
+        logger.info(`[${requestId}] PUT /api/profile/player-id - Finished processing request for User ID: ${authenticatedUserId}.`);
     }
 });
+
+
+// You can add other profile-related routes here, for example:
+/**
+ * @route   GET /api/profile
+ * @desc    Get current user's profile
+ * @access  Private
+ */
+router.get('/', authMiddleware, async (req, res) => {
+    const authenticatedUserId = req.user ? req.user.id : null;
+    const requestId = `req_profile_get_${Date.now()}`;
+    logger.info(`[${requestId}] GET /api/profile - Received request. Authenticated User ID: ${authenticatedUserId}`);
+
+    if (!authenticatedUserId) {
+        logger.error(`[${requestId}] GET /api/profile - CRITICAL: User ID not found in req.user after authMiddleware.`);
+        return res.status(401).json({ msg: 'User authentication failed or User ID missing.' });
+    }
+
+    try {
+        // Exclude sensitive fields like password.
+        // Also, if your User model has fields like 'friends', 'blockedUsers', you might want to populate them.
+        const userProfile = await User.findById(authenticatedUserId).select('-password -verificationCode -resetPasswordToken -resetPasswordExpires'); 
+
+        if (!userProfile) {
+            logger.warn(`[${requestId}] GET /api/profile - User not found in database with ID: ${authenticatedUserId}.`);
+            return res.status(404).json({ msg: 'User profile not found.' });
+        }
+
+        logger.info(`[${requestId}] GET /api/profile - ✅ Successfully fetched profile for User ID: ${userProfile._id}`);
+        res.json(userProfile);
+
+    } catch (err) {
+        logger.error(`[${requestId}] GET /api/profile - ❌ Error fetching profile for User ID: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack });
+        res.status(500).json({ msg: 'Server error while fetching user profile.' });
+    } finally {
+        logger.info(`[${requestId}] GET /api/profile - Finished processing request for User ID: ${authenticatedUserId}.`);
+    }
+});
+
+
+// Add more profile routes as needed (e.g., update profile details, profile picture, etc.)
 
 module.exports = router;

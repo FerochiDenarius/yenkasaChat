@@ -1,4 +1,6 @@
+// ✅ Load environment variables FIRST
 require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -28,8 +30,7 @@ function safeMount(routePath, filePath) {
         console.error("Full error stack for module loading:", err.stack);
     }
 }
-    const userProfileRoutes = require('./routes/userProfileRoutes');
-        app.use('/api/profile', userProfileRoutes); // Mount the routes
+
 // ---------------------------------
 // 2. Mount API routes FIRST
 // ---------------------------------
@@ -52,13 +53,14 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
 
+// ✅ New Profile Routes
+safeMount('/api/profile', './routes/userProfileRoutes');
+
 console.log("✅ Finished attempting to mount all API routes.");
 
 // ---------------------------------
 // 3. Special static asset routes
 // ---------------------------------
-
-// Direct route for /.well-known/assetlinks.json
 app.get('/.well-known/assetlinks.json', (req, res) => {
     const filePath = path.join(__dirname, 'public', '.well-known', 'assetlinks.json');
     console.log(`DEBUG: Request for assetlinks.json at ${filePath}`);
@@ -94,7 +96,6 @@ app.use(
     })
 );
 
-// Diagnostic fallback if static fails
 app.get('/reset-password', (req, res) => {
     const indexPath = path.join(__dirname, 'public/reset-password', 'index.html');
     fs.access(indexPath, fs.constants.F_OK, (err) => {
@@ -120,7 +121,6 @@ console.log("server.js: Static file serving configured for /public.");
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
 
 // ---------------------------------
 // 7. Dev test routes

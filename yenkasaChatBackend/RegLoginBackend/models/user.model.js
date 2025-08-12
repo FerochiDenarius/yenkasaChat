@@ -14,14 +14,14 @@ const userSchema = new Schema({
     type: String,
     unique: true,
     trim: true,
-    sparse: true // Allows multiple documents to have a null value for this unique field
+    sparse: true
   },
   email: {
     type: String,
     unique: true,
     lowercase: true,
     trim: true,
-    sparse: true, // Allows multiple documents to have a null value for this unique field
+    sparse: true,
     match: [/.+\@.+\..+/, 'Please fill a valid email address']
   },
   password: {
@@ -30,8 +30,8 @@ const userSchema = new Schema({
     // Consider adding 'select: false' for security if not selecting explicitly elsewhere
     // select: false
   },
-  location: { // Consider if a more structured location object is needed (e.g., GeoJSON)
-    type: String, // Or Object with lat/lng
+  location: {
+    type: String,
     default: ''
   },
   verified: {
@@ -48,26 +48,19 @@ const userSchema = new Schema({
   },
   profileImage: {
     type: String,
-    default: '' // Or a default placeholder image URL
+    default: ''
   },
-  oneSignalPlayerId: { // ✅ CORRECTED FIELD NAME
+  playerId: {
     type: String,
-    default: null // Explicitly setting default to null is good
+    default: null
   },
   refreshToken: {
     type: String
     // Consider adding 'select: false'
     // select: false
   }
-  // You might also want fields like:
-  // lastLogin: Date,
-  // isActive: { type: Boolean, default: true }
-}, { timestamps: true }); // timestamps adds createdAt and updatedAt
+}, { timestamps: true });
 
-
-// Indexing for common query fields can improve performance
-userSchema.index({ email: 1 });
-userSchema.index({ phoneNumber: 1 });
 
 
 const User = mongoose.model('User', userSchema);

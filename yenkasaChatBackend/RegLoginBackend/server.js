@@ -14,36 +14,44 @@ app.use(express.json());
 console.log("server.js: express.json middleware configured.");
 
 // ---------------------------------
+// Safe route mounting helper
+// ---------------------------------
+function safeMount(routePath, filePath) {
+    try {
+        app.use(routePath, require(filePath));
+        console.log(`✅ Mounted ${filePath} at ${routePath}`);
+    } catch (err) {
+        console.error(`❌ Failed to mount ${filePath} at ${routePath}: ${err.message}`);
+        if (err.requireStack) {
+            console.error("Require stack for module loading error:", err.requireStack);
+        }
+        console.error("Full error stack for module loading:", err.stack);
+    }
+}
+
+// ---------------------------------
 // 2. Mount API routes FIRST
 // ---------------------------------
 console.log("server.js: Mounting API routes...");
 
-try {
-    // Authentication & User
-    app.use('/api/auth', require('./routes/auth'));
-    app.use('/api/reset-password', require('./routes/resetPassword'));
-    app.use('/api/forgot-password', require('./routes/forgotPassword.routes'));
-    app.use('/api/verify', require('./routes/verify'));
-    app.use('/api/users', require('./routes/user.routes'));
-    app.use('/api/refresh-token', require('./routes/refresh-token'));
+// Authentication & User
+safeMount('/api/auth', './routes/auth');
+safeMount('/api/reset-password', './routes/resetPassword');
+safeMount('/api/forgot-password', './routes/forgotPassword.routes');
+safeMount('/api/verify', './routes/verify');
+safeMount('/api/users', './routes/user.routes');
+safeMount('/api/refresh-token', './routes/refresh-token');
 
-    // Core Features
-    app.use('/api/contacts', require('./routes/contacts.routes'));
-    app.use('/api/messages', require('./routes/messages.routes'));
-    app.use('/api/chatrooms', require('./routes/chatroom.routes'));
+// Core Features
+safeMount('/api/contacts', './routes/contacts.routes');
+safeMount('/api/messages', './routes/messages.routes');
+safeMount('/api/chatrooms', './routes/chatroom.routes');
 
-    // Notifications / External
-    app.use('/api/onesignal', require('./routes/onesignal'));
-    app.use('/api/notifications', require('./routes/notifications.route'));
+// Notifications / External
+safeMount('/api/onesignal', './routes/onesignal');
+safeMount('/api/notifications', './routes/notifications.route');
 
-    console.log("✅ All API routes mounted successfully.");
-} catch (err) {
-    console.error(`❌ Failed to load one or more route modules: ${err.message}`);
-    if (err.requireStack) {
-        console.error("Require stack for module loading error:", err.requireStack);
-    }
-    console.error("Full error stack for module loading:", err.stack);
-}
+console.log("✅ Finished attempting to mount all API routes.");
 
 // ---------------------------------
 // 3. Special static asset routes
@@ -108,9 +116,10 @@ console.log("server.js: Static file serving configured for /public.");
 // ---------------------------------
 // 6. SPA fallback (last route)
 // ---------------------------------
-app.get('*', (req, res) => {
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 
 // ---------------------------------
 // 7. Dev test routes

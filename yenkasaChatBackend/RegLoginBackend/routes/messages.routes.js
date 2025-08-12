@@ -9,7 +9,8 @@ const User = require('../models/user.model'); // Ensure this User model has 'pla
 
 // --- Environment Variable Checks (Crucial for OneSignal) ---
 const ONE_SIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
-const ONE_SIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+// MODIFIED: Changed to match your .env variable name for the REST API Key
+const YENKASACHAT_ONE_SIGNAL_KEY = process.env.yenkasachatOneSignalKey; 
 const ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID; // Optional, but recommended
 
 console.log('[MessagesRoute] Initializing...');
@@ -18,21 +19,24 @@ if (!ONE_SIGNAL_APP_ID) {
 } else {
     console.log('[MessagesRoute] ONESIGNAL_APP_ID loaded.');
 }
-if (!ONE_SIGNAL_REST_API_KEY) {
-    console.error('[MessagesRoute] CRITICAL ERROR: ONESIGNAL_REST_API_KEY environment variable is not set.');
+
+// MODIFIED: Updated the check and log to use the new variable name
+if (!YENKASACHAT_ONE_SIGNAL_KEY) {
+    console.error('[MessagesRoute] CRITICAL ERROR: yenkasachatOneSignalKey environment variable is not set. This is your OneSignal REST API Key.');
 } else {
-    console.log('[MessagesRoute] ONESIGNAL_REST_API_KEY loaded (status).');
+    console.log('[MessagesRoute] yenkasachatOneSignalKey loaded (status).');
 }
+
 if (ONE_SIGNAL_ANDROID_CHANNEL_ID) {
     console.log('[MessagesRoute] ONESIGNAL_ANDROID_CHANNEL_ID loaded:', ONE_SIGNAL_ANDROID_CHANNEL_ID);
 } else {
-    console.warn('[MessagesRoute] ONESIGNAL_ANDROID_CHANNEL_ID environment variable is not set. OneSignal will use a default channel.');
+    console.warn('[MessagesRoute] ONESIGNAL_ANDROID_CHANNEL_ID environment variable is not set. OneSignal will use a default channel if not specified in API calls.');
 }
 // --- End Environment Variable Checks ---
 
 // POST a new message to a chat room
 router.post('/', auth, async (req, res) => {
-    console.log('[MessagesRoute] POST / - Received new message request from user:', req.user.id);
+    console.log('[MessagesRoute] POST / - Received new message request from user:', req.user.id, '(Username:', req.user.username || 'N/A', ')');
     const {
         roomId,
         text,
@@ -66,7 +70,7 @@ router.post('/', auth, async (req, res) => {
         console.log(`[MessagesRoute] POST / - Chat room "${chatRoom.name || chatRoom._id}" found. Participants: ${chatRoom.participants.length}`);
 
         const senderAppUserId = req.user.id.toString(); // Ensure it's a string for comparison
-        const senderUsername = req.user.username || 'A user'; // Get sender's username from auth middleware if available
+        const senderUsername = req.user.username || 'A user'; // Get sender's username from auth middleware
 
         const newMessage = new Message({
             roomId: new mongoose.Types.ObjectId(roomId),
@@ -83,9 +87,16 @@ router.post('/', auth, async (req, res) => {
 
         console.log('[MessagesRoute] POST / - 💾 Saving new message to DB...');
         await newMessage.save();
-        console.log(`[MessagesRoute] POST / - ✅ Message saved with ID: ${newMessage._id} by sender: ${senderAppUserId}`);
+        console.log(`[MessagesRoute] POST / - ✅ Message saved with ID: ${newMessage._id} by sender: ${senderAppUserId} (${senderUsername})`);
 
         // --- Push Notification Logic ---
+        // Ensure critical OneSignal variables are present before proceeding
+        if (!ONE_SIGNAL_APP_ID || !YENKASACHAT_ONE_SIGNAL_KEY) {
+            console.error('[MessagesRoute] POST / - Critical OneSignal configuration (APP_ID or REST_API_KEY) is missing. Cannot send push notification.');
+            // Message is saved, so return 201, but log the issue.
+            // Client might not get a real-time update if this happens.
+            return res.status(201).json(newMessage); 
+        }
         console.log('[MessagesRoute] POST / - Starting push notification logic...');
 
         const participantAppUserIds = chatRoom.participants.map(p => p.toString());
@@ -99,54 +110,62 @@ router.post('/', auth, async (req, res) => {
             return res.status(201).json(newMessage);
         }
 
-        // Fetch recipient User documents to get their Player IDs
         console.log(`[MessagesRoute] POST / - Fetching ${recipientAppUserIds.length} recipient user objects from DB...`);
         const recipientsWithPlayerIds = await User.find(
             { _id: { $in: recipientAppUserIds } },
             'username playerId' // Only select username and playerId fields
-        );
+        ).lean(); // Use .lean() for faster, plain JS objects if you don't need Mongoose model instances
+        
         console.log(`[MessagesRoute] POST / - Found ${recipientsWithPlayerIds.length} recipient user objects with Player ID info.`);
 
         const validPlayerIdsForNotification = [];
         recipientsWithPlayerIds.forEach(recipient => {
             if (recipient.playerId && recipient.playerId.trim() !== '') {
                 validPlayerIdsForNotification.push(recipient.playerId.trim());
-                console.log(`[MessagesRoute] POST / - User ${recipient.username} (App ID: ${recipient._id}) has valid Player ID: ${recipient.playerId.trim()}`);
+                console.log(`[MessagesRoute] POST / - User ${recipient.username || recipient._id} (App ID: ${recipient._id}) has valid Player ID: ${recipient.playerId.trim()}`);
             } else {
-                console.log(`[MessagesRoute] POST / - User ${recipient.username} (App ID: ${recipient._id}) does NOT have a valid Player ID. Will not be notified.`);
+                console.log(`[MessagesRoute] POST / - User ${recipient.username || recipient._id} (App ID: ${recipient._id}) does NOT have a valid Player ID. Will not be notified.`);
             }
         });
 
         if (validPlayerIdsForNotification.length === 0) {
             console.log('[MessagesRoute] POST / - No valid Player IDs found among recipients. Skipping OneSignal call.');
-            return res.status(201).json(newMessage); // Message saved, but no one to notify via push
+            return res.status(201).json(newMessage);
         }
 
         console.log(`[MessagesRoute] POST / - 🎯 Player IDs targeted for notification: [${validPlayerIdsForNotification.join(', ')}]`);
 
-        // Construct notification message
-        let notificationContent = text ? (text.length > 50 ? text.substring(0, 47) + "..." : text) : 'Sent you a message';
-        if (imageUrl) notificationContent = `${senderUsername} sent an image.`;
-        else if (audioUrl) notificationContent = `${senderUsername} sent an audio message.`;
-        else if (videoUrl) notificationContent = `${senderUsername} sent a video.`;
-        else if (fileUrl) notificationContent = `${senderUsername} sent a file.`;
-        else if (contactInfo) notificationContent = `${senderUsername} shared a contact.`;
-        else if (location) notificationContent = `${senderUsername} shared a location.`;
+        let notificationTitle = `New message in ${chatRoom.name || 'your chat'}`;
+        if (chatRoom.isGroupChat === false && chatRoom.participants.length === 2) { // Assuming you have an isGroupChat flag or similar logic
+            notificationTitle = `New message from ${senderUsername}`;
+        }
+        
+        let notificationBody = `${senderUsername}: ${text ? (text.length > 50 ? text.substring(0, 47) + "..." : text) : 'Sent you a message'}`;
+        if (imageUrl) notificationBody = `${senderUsername} sent an image.`;
+        else if (audioUrl) notificationBody = `${senderUsername} sent an audio message.`;
+        else if (videoUrl) notificationBody = `${senderUsername} sent a video.`;
+        else if (fileUrl) notificationBody = `${senderUsername} sent a file.`;
+        else if (contactInfo) notificationBody = `${senderUsername} shared a contact.`;
+        else if (location) notificationBody = `${senderUsername} shared a location.`;
+        else if (!text) notificationBody = `${senderUsername} sent you a new message.`; // Fallback if text is null but other media isn't primary
 
 
         const notificationPayload = {
             app_id: ONE_SIGNAL_APP_ID,
             include_player_ids: validPlayerIdsForNotification,
-            headings: { en: `New message in ${chatRoom.name || 'your chat'}` }, // Or: `New message from ${senderUsername}`
-            contents: { en: notificationContent },
-            data: { // Data your app can use when the notification is opened
+            headings: { en: notificationTitle },
+            contents: { en: notificationBody },
+            data: {
                 roomId: roomId.toString(),
                 senderId: senderAppUserId,
                 messageId: newMessage._id.toString(),
-                type: 'new_chat_message' // Custom type for your app to identify the notification
+                type: 'new_chat_message', // Custom type for your app to identify the notification
+                chatRoomName: chatRoom.name || null,
+                isGroupChat: chatRoom.isGroupChat === true // Assuming you have an isGroupChat flag
             },
             // small_icon: 'ic_stat_onesignal_default', // Default OneSignal icon, or your custom one
             // large_icon: 'your_large_icon_url', // Optional
+            // consider adding buttons or other interactive elements
         };
 
         if (ONE_SIGNAL_ANDROID_CHANNEL_ID) {
@@ -159,32 +178,34 @@ router.post('/', auth, async (req, res) => {
         try {
             const oneSignalResponse = await axios.post('https://onesignal.com/api/v1/notifications', notificationPayload, {
                 headers: {
-                    'Authorization': `Basic ${ONE_SIGNAL_REST_API_KEY}`,
+                    'Authorization': `Basic ${YENKASACHAT_ONE_SIGNAL_KEY}`, // Using the modified variable
                     'Content-Type': 'application/json'
                 }
             });
             console.log(`[MessagesRoute] POST / - 📨 Notification sent successfully to OneSignal for ${validPlayerIdsForNotification.length} Player IDs. OneSignal Response Status: ${oneSignalResponse.status}`);
             if (oneSignalResponse.data) {
-                console.log('[MessagesRoute] POST / - OneSignal Response Data (recipients, id):', { id: oneSignalResponse.data.id, recipients: oneSignalResponse.data.recipients });
+                console.log('[MessagesRoute] POST / - OneSignal Response Data (id, recipients, errors):', { 
+                    id: oneSignalResponse.data.id, 
+                    recipients: oneSignalResponse.data.recipients,
+                    errors: oneSignalResponse.data.errors || null 
+                });
             }
         } catch (notificationError) {
             let errorDetails = 'Unknown error during OneSignal request.';
             if (notificationError.response) {
-                // Axios error with a response from the server
                 errorDetails = `Status: ${notificationError.response.status}, Headers: ${JSON.stringify(notificationError.response.headers, null, 2)}, Data: ${JSON.stringify(notificationError.response.data, null, 2)}`;
             } else if (notificationError.request) {
-                // Axios error where the request was made but no response was received
                 errorDetails = 'No response received from OneSignal. Request details: ' + notificationError.request;
             } else {
-                // Something else happened in setting up the request
                 errorDetails = notificationError.message;
             }
             console.error(`[MessagesRoute] POST / - ⚠️ Failed to send OneSignal notification:`, errorDetails);
-            // Decide if you want to still return 201 or a different status if notification fails but message saved
+            // Message is saved, but notification failed. Still return 201.
+            // Consider adding more robust error handling or a retry mechanism for notifications if critical.
         }
         // --- End Push Notification Logic ---
 
-        res.status(201).json(newMessage); // Message was successfully saved
+        res.status(201).json(newMessage);
 
     } catch (err) {
         console.error('[MessagesRoute] POST / - ❌❌❌ SERVER ERROR during message processing:', err.message, err.stack);
@@ -196,7 +217,8 @@ router.post('/', auth, async (req, res) => {
 // GET messages for a specific chat room
 router.get('/:roomId', auth, async (req, res) => {
     const { roomId } = req.params;
-    console.log(`[MessagesRoute] GET /${roomId} - Request for messages from user: ${req.user.id}`);
+    const userId = req.user.id; // from auth middleware
+    console.log(`[MessagesRoute] GET /${roomId} - Request for messages from user: ${userId}`);
 
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
         console.warn(`[MessagesRoute] GET /${roomId} - Invalid roomId format.`);
@@ -204,19 +226,23 @@ router.get('/:roomId', auth, async (req, res) => {
     }
 
     try {
-        console.log(`[MessagesRoute] GET /${roomId} - Fetching messages from DB for room.`);
         // Optional: Check if user is part of the room before fetching messages
-        // const chatRoom = await ChatRoom.findOne({ _id: roomId, participants: req.user.id });
-        // if (!chatRoom) {
-        //     console.warn(`[MessagesRoute] GET /${roomId} - User ${req.user.id} not authorized or room doesn't exist.`);
-        //     return res.status(403).json({ error: 'Not authorized or room not found' });
-        // }
+        const chatRoom = await ChatRoom.findOne({ _id: new mongoose.Types.ObjectId(roomId), participants: userId });
+        if (!chatRoom) {
+             console.warn(`[MessagesRoute] GET /${roomId} - User ${userId} not authorized for this room or room doesn't exist.`);
+             return res.status(403).json({ error: 'Not authorized or room not found' });
+        }
+        console.log(`[MessagesRoute] GET /${roomId} - User ${userId} authorized. Fetching messages from DB for room.`);
 
         const messages = await Message.find({
                 roomId: new mongoose.Types.ObjectId(roomId)
             })
             .sort({ timestamp: 1 }) // Sort by oldest first
-            .populate('senderId', 'username profileImageUrl'); // Populate sender details (username, profile image if you have one)
+            .populate({
+                path: 'senderId',
+                select: 'username profileImageUrl _id' // Populate sender details
+            })
+            .lean(); // Use .lean() for better performance as we are just sending data
 
         console.log(`[MessagesRoute] GET /${roomId} - Found ${messages.length} messages.`);
         res.json(messages);

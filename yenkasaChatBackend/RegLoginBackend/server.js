@@ -28,7 +28,8 @@ function safeMount(routePath, filePath) {
         console.error("Full error stack for module loading:", err.stack);
     }
 }
-
+    const userProfileRoutes = require('./routes/userProfileRoutes');
+        app.use('/api/profile', userProfileRoutes); // Mount the routes
 // ---------------------------------
 // 2. Mount API routes FIRST
 // ---------------------------------

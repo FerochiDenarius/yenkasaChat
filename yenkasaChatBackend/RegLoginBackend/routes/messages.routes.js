@@ -5,7 +5,7 @@ const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const mongoose = require('mongoose');
 const axios = require('axios');
-const User = require('../models/user.model');
+const User = require('../models/user.model'); // Ensure this User model has 'playerId'
 
 // Log environment variables (for debugging only, remove/comment out in production)
 console.log('[MessagesRoute] ONESIGNAL_APP_ID:', process.env.ONESIGNAL_APP_ID);
@@ -56,9 +56,12 @@ router.post('/', auth, async (req, res) => {
         }
         console.log(`[MessagesRoute] POST / - Chat room found: ${chatRoom.name || chatRoom._id}`);
 
+        // Assuming req.user from auth middleware contains the sender's full user object or at least username
+        const senderUsername = req.user.username || 'Someone'; 
+
         const newMessage = new Message({
             roomId: new mongoose.Types.ObjectId(roomId),
-            senderId: req.user.id,
+            senderId: req.user.id, // MongoDB _id of the sender
             text: text?.trim().substring(0, 1000),
             imageUrl,
             audioUrl,
@@ -89,14 +92,16 @@ router.post('/', auth, async (req, res) => {
 
         for (const recipient of recipients) {
             console.log(`[MessagesRoute] POST / - Processing recipient: ${recipient.username} (App User ID: ${recipient._id})`);
-            // Ensure your User model uses 'oneSignalPlayerId'. If it's just 'playerId', change this.
-            if (recipient.oneSignalPlayerId && recipient.oneSignalPlayerId.length > 0) { // Added check for non-empty string
-                console.log(`[MessagesRoute] POST / - User ${recipient.username} has OneSignal Player ID: ${recipient.oneSignalPlayerId}. Preparing notification.`);
+            
+            // ✅ CHANGED: Check for 'playerId' instead of 'oneSignalPlayerId'
+            if (recipient.playerId && recipient.playerId.length > 0) { 
+                console.log(`[MessagesRoute] POST / - User ${recipient.username} has Player ID: ${recipient.playerId}. Preparing notification.`);
 
                 const payload = {
                     app_id: process.env.ONESIGNAL_APP_ID,
-                    include_player_ids: [recipient.oneSignalPlayerId],
-                    headings: { en: `New message from ${req.user.username || 'Someone'}` }, // Consider adding sender's name if available in req.user
+                    // ✅ CHANGED: Use 'playerId' here
+                    include_player_ids: [recipient.playerId], 
+                    headings: { en: `New message from ${senderUsername}` }, 
                     contents: { en: text || 'You received a new message' },
                     data: {
                         roomId,
@@ -110,24 +115,28 @@ router.post('/', auth, async (req, res) => {
                 console.log(`[MessagesRoute] POST / - Notification payload for ${recipient.username}: ${JSON.stringify(payload)}`);
 
                 try {
-                    console.log(`[MessagesRoute] POST / - 🚀 Attempting to send notification to OneSignal for Player ID: ${recipient.oneSignalPlayerId}`);
+                    // ✅ CHANGED: Logging uses 'playerId'
+                    console.log(`[MessagesRoute] POST / - 🚀 Attempting to send notification to OneSignal for Player ID: ${recipient.playerId}`);
                     const oneSignalResponse = await axios.post('https://onesignal.com/api/v1/notifications', payload, {
                         headers: {
                             Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
                             'Content-Type': 'application/json'
                         }
                     });
-                    console.log(`[MessagesRoute] POST / - 📨 Notification sent successfully to ${recipient.username} (Player ID: ${recipient.oneSignalPlayerId}). OneSignal Response Status: ${oneSignalResponse.status}`);
+                    // ✅ CHANGED: Logging uses 'playerId'
+                    console.log(`[MessagesRoute] POST / - 📨 Notification sent successfully to ${recipient.username} (Player ID: ${recipient.playerId}). OneSignal Response Status: ${oneSignalResponse.status}`);
                     // console.log('[MessagesRoute] POST / - OneSignal Response Data:', oneSignalResponse.data); // Can be verbose
                 } catch (notificationErr) {
                     let errorDetails = notificationErr.message;
                     if (notificationErr.response) {
                         errorDetails = `Status: ${notificationErr.response.status}, Data: ${JSON.stringify(notificationErr.response.data)}`;
                     }
-                    console.warn(`[MessagesRoute] POST / - ⚠️ Failed to send OneSignal notification to ${recipient.username} (Player ID: ${recipient.oneSignalPlayerId}):`, errorDetails);
+                     // ✅ CHANGED: Logging uses 'playerId'
+                    console.warn(`[MessagesRoute] POST / - ⚠️ Failed to send OneSignal notification to ${recipient.username} (Player ID: ${recipient.playerId}):`, errorDetails);
                 }
             } else {
-                console.log(`[MessagesRoute] POST / - User ${recipient.username} (App User ID: ${recipient._id}) does NOT have a valid OneSignal Player ID. Skipping notification.`);
+                 // ✅ CHANGED: Logging is now about 'Player ID'
+                console.log(`[MessagesRoute] POST / - User ${recipient.username} (App User ID: ${recipient._id}) does NOT have a valid Player ID. Skipping notification.`);
             }
         }
         res.status(201).json(newMessage);
@@ -139,7 +148,7 @@ router.post('/', auth, async (req, res) => {
 
 
 // ... (your GET route can remain the same or add similar logging if needed) ...
-router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/messages' to '/:roomId'
+router.get('/:roomId', auth, async (req, res) => { 
     console.log(`[MessagesRoute] GET /${req.params.roomId} - Received request for messages`);
     const { roomId } = req.params;
 
@@ -163,3 +172,4 @@ router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/mes
 });
 
 module.exports = router;
+

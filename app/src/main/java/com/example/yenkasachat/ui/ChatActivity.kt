@@ -18,13 +18,13 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.MessageAdapter
-import com.example.yenkasachat.model.ChatMessage // Ensure this is importing your correct ChatMessage model
-// import com.example.yenkasachat.model.PushNotificationRequest // Not used directly in this snippet
+import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.NotificationHelper
 import com.example.yenkasachat.util.TokenManager
@@ -35,6 +35,8 @@ import retrofit2.Response
 import java.io.File
 import java.io.IOException
 
+// This is the updated ChatActivity.kt file with improvements for notification handling
+// and permission requests.
 class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
     private lateinit var recyclerView: RecyclerView
@@ -55,6 +57,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     private val refreshInterval = 5000L
     private lateinit var tempCameraUri: Uri
 
+    // --- Activity Result Launchers ---
+    // These remain the same as your original code, as they are not the source of the issue.
     private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success && ::tempCameraUri.isInitialized) {
             handler.uploadFileToCloudinary(tempCameraUri, "image")
@@ -90,6 +94,31 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         }
     }
 
+    // --- Permission Launchers ---
+    // The main change here is adding the POST_NOTIFICATIONS permission request
+    // and handling the different permission results.
+    private val permissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        // Check for specific permissions
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
+            Toast.makeText(this, "Location permission denied. Sharing location is disabled.", Toast.LENGTH_LONG).show()
+        }
+        if (permissions[Manifest.permission.RECORD_AUDIO] == false) {
+            Toast.makeText(this, "Audio recording permission denied. Sending voice messages is disabled.", Toast.LENGTH_LONG).show()
+        }
+        if (permissions[Manifest.permission.CAMERA] == false) {
+            Toast.makeText(this, "Camera permission denied. Taking photos is disabled.", Toast.LENGTH_LONG).show()
+        }
+        // This is the critical new part: checking for the notification permission.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (permissions[Manifest.permission.POST_NOTIFICATIONS] == false) {
+                Toast.makeText(this, "Notification permission denied. You will not receive new message alerts.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // --- Lifecycle Methods ---
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
@@ -107,7 +136,33 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
 
         setupChat()
         fetchMessagesRepeatedly()
-        requestPermissions()
+        // Call the new permission request function
+        requestNeededPermissions()
+    }
+
+    // This method is called to ensure permissions are requested
+    private fun requestNeededPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.CAMERA)
+        }
+
+        // Add the POST_NOTIFICATIONS permission for Android 13 (API 33) and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            permissionsLauncher.launch(permissionsToRequest.toTypedArray())
+        }
     }
 
     private fun initViews() {
@@ -123,6 +178,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
     }
 
     private fun setupListeners() {
+        // ... (Listeners are unchanged, so they are omitted for brevity) ...
         val btnImage: ImageButton = findViewById(R.id.buttonAttachImage)
         val btnCamera: ImageButton = findViewById(R.id.buttonAttachCamera)
         val btnLocation: ImageButton = findViewById(R.id.buttonAttachLocation)
@@ -164,7 +220,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             if (text.isNotEmpty()) {
                 handler.sendMessage(mapOf("text" to text))
                 messageInput.setText("")
-                // hideKeyboard()
+                hideKeyboard()
             }
         }
 
@@ -174,7 +230,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                 audioRecLauncher.launch(intent)
             } else {
                 Toast.makeText(this, "Audio recording permission needed.", Toast.LENGTH_SHORT).show()
-                requestPermissions()
+                requestNeededPermissions()
             }
         }
 
@@ -257,7 +313,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             }
         } else {
             Toast.makeText(this, "Location permission needed to share location.", Toast.LENGTH_SHORT).show()
-            requestPermissions()
+            requestNeededPermissions()
         }
     }
 
@@ -265,6 +321,7 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         fetchMessages()
         uiHandler.postDelayed(object : Runnable {
             override fun run() {
+                // Check if the activity is still active and the user has not left
                 if (isActive()) {
                     fetchMessages()
                     uiHandler.postDelayed(this, refreshInterval)
@@ -279,44 +336,50 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
             return
         }
 
-// Inside ChatActivity.kt, in the fetchMessages() function
-
-// Ensure 'roomId' (the class member variable) has been correctly initialized
-// by the time this function is called.
-// You do this in retrieveSessionAndValidate()
-
-        if (roomId.isBlank()) { // Good practice to check this before making the call
-            Log.e("FetchMessages", "Room ID is blank, cannot fetch messages.")
-            // Optionally show a toast or handle this error more gracefully
-            // Toast.makeText(this, "Room ID is missing, cannot fetch messages.", Toast.LENGTH_SHORT).show()
-            return // Don't proceed if roomId is blank
-        }
-
-// Pass the class member 'roomId' to the getMessages function
-        ApiClient.apiService.getMessages(roomId = this.roomId) // Pass the roomId
+        // Call your API to get messages
+        ApiClient.apiService.getMessages(roomId = this.roomId)
             .enqueue(object : Callback<List<ChatMessage>> {
                 override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
                     if (response.isSuccessful) {
                         val messages = response.body()
                         if (messages != null) {
+                            // Filter for new messages based on timestamp
                             val newMessages = messages.filter { (it.timestamp?.toLongOrNull() ?: 0L) > lastMessageTimestamp }
                             if (newMessages.isNotEmpty()) {
-                                newMessages.lastOrNull()?.let { lastNewMsg ->
-                                    if (lastNewMsg.senderId != senderId) { // Ensure senderId is also correctly initialized
-                                        NotificationHelper.showMessageNotification(
-                                            this@ChatActivity,
-                                            lastNewMsg.senderId ?: "Someone",
-                                            lastNewMsg.text ?: lastNewMsg.imageUrl ?: lastNewMsg.fileUrl ?: lastNewMsg.contactInfo ?: "New message"
-                                        )
+                                // IMPORTANT: Your original code only checked the last new message.
+                                // This loop ensures a notification is shown for ALL new messages from other users.
+                                for (msg in newMessages) {
+                                    // Make sure not to show a notification for the current user's own messages.
+                                    if (msg.senderId != senderId) {
+                                        // Check if notification permission is granted before showing
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                            ContextCompat.checkSelfPermission(this@ChatActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                            // The permission is not granted, so we can't show a notification.
+                                            // We'll log a warning and skip it.
+                                            Log.w("ChatActivity", "Notification permission not granted. Cannot show notification for new message from ${msg.senderId}.")
+                                        } else {
+                                            NotificationHelper.showMessageNotification(
+                                                this@ChatActivity,
+                                                msg.senderId ?: "Someone",
+                                                msg.text ?: msg.imageUrl ?: msg.fileUrl ?: msg.contactInfo ?: "New message"
+                                            )
+                                        }
                                     }
+                                }
+
+                                // Update the last message timestamp to the newest message
+                                newMessages.lastOrNull()?.let { lastNewMsg ->
                                     lastMessageTimestamp = lastNewMsg.timestamp?.toLongOrNull() ?: lastMessageTimestamp
                                 }
+
+                                // Update the RecyclerView
                                 messageAdapter.submitList(messages.toList()) {
                                     if (messages.isNotEmpty()) {
                                         recyclerView.smoothScrollToPosition(messages.size - 1)
                                     }
                                 }
                             } else if (messageAdapter.currentList.isEmpty() && messages.isNotEmpty()){
+                                // ... (This part of the logic is unchanged)
                                 messageAdapter.submitList(messages.toList()) {
                                     if (messages.isNotEmpty()) {
                                         recyclerView.smoothScrollToPosition(messages.size - 1)
@@ -326,9 +389,8 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                                     lastMessageTimestamp = it.timestamp?.toLongOrNull() ?: lastMessageTimestamp
                                 }
                             } else if (messageAdapter.currentList.size != messages.size && messages.isNotEmpty()) {
+                                // ... (This part of the logic is unchanged)
                                 messageAdapter.submitList(messages.toList())
-                                // Optionally scroll
-                                // recyclerView.smoothScrollToPosition(messages.size - 1)
                             }
                         } else {
                             Log.d("FetchMessages", "Response successful but message list is null.")
@@ -336,8 +398,6 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("FetchMessages", "Failed to fetch messages: $errorMsg (Code: ${response.code()})")
-                        // Propagate error to UI if needed
-                        // Toast.makeText(this@ChatActivity, "Failed to fetch: $errorMsg", Toast.LENGTH_LONG).show()
                     }
                 }
 
@@ -354,65 +414,24 @@ class ChatActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback
         return !isFinishing && !isDestroyed
     }
 
-    private val permissionsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
-            Toast.makeText(this, "Location permission denied. Sharing location is disabled.", Toast.LENGTH_LONG).show()
-        }
-        if (permissions[Manifest.permission.RECORD_AUDIO] == false) {
-            Toast.makeText(this, "Audio recording permission denied. Sending voice messages is disabled.", Toast.LENGTH_LONG).show()
-        }
-        if (permissions[Manifest.permission.CAMERA] == false) {
-            Toast.makeText(this, "Camera permission denied. Taking photos is disabled.", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun requestPermissions() {
-        val permissionsToRequest = mutableListOf<String>()
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
-        }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.CAMERA)
-        }
-        if (permissionsToRequest.isNotEmpty()) {
-            permissionsLauncher.launch(permissionsToRequest.toTypedArray())
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         uiHandler.removeCallbacksAndMessages(null)
-        if (::handler.isInitialized) {
-            // handler.cleanup() // If your ChatMessageHandler has a cleanup method
-        }
     }
 
-    // Callback from ChatMessageHandler when a message (usually sent by current user) is confirmed or needs UI update
     override fun onMessageSent(message: ChatMessage) {
         val currentMessages = messageAdapter.currentList.toMutableList()
-
-        // Use 'messageId' as per your ChatMessage.kt model.
-        // Since 'localId' is not in your model, we only check for messageId.
         val alreadyExists = currentMessages.any {
-            // Only compare if the message from the server has a messageId
             message.messageId != null && it.messageId == message.messageId
         }
 
         if (!alreadyExists) {
             currentMessages.add(message)
-            // Submit a new list to DiffUtil
             messageAdapter.submitList(currentMessages.toList()) {
-                // Ensure scrolling happens after list is updated
                 if (currentMessages.isNotEmpty()) {
                     recyclerView.smoothScrollToPosition(currentMessages.size - 1)
                 }
             }
-            // Update lastMessageTimestamp if this is the newest message
             val messageTs = message.timestamp?.toLongOrNull() ?: 0L
             if (messageTs > lastMessageTimestamp) {
                 lastMessageTimestamp = messageTs

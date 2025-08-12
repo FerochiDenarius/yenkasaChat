@@ -1,15 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth'); // Ensure this path is correct
-const Message = require('../models/message.model'); // Ensure this path is correct
-const ChatRoom = require('../models/chatroom.model'); // Ensure this path is correct, though not used in GET messages
+const auth = require('../middleware/auth');
+const Message = require('../models/message.model');
+const ChatRoom = require('../models/chatroom.model');
 const mongoose = require('mongoose');
 const axios = require('axios');
-const User = require('../models/user.model'); 
+const User = require('../models/user.model');
 
-// ✅ Send a message (text, image, audio, video, file, contact, or location)
-// This route will correspond to POST /api/messages/
+// Log environment variables (for debugging only, remove/comment out in production)
+console.log('[MessagesRoute] ONESIGNAL_APP_ID:', process.env.ONESIGNAL_APP_ID);
+const apiKeyLoaded = process.env.ONESIGNAL_REST_API_KEY ? "Loaded" : "NOT LOADED";
+console.log('[MessagesRoute] ONESIGNAL_REST_API_KEY:', apiKeyLoaded);
+
 router.post('/', auth, async (req, res) => {
+    console.log('[MessagesRoute] POST / - Received new message request');
     const {
         roomId,
         text,
@@ -21,12 +25,13 @@ router.post('/', auth, async (req, res) => {
         location
     } = req.body;
 
-    // ... (rest of your POST logic remains the same)
-    // Ensure roomId is provided in the body for sending a message
     if (!roomId) {
+        console.warn('[MessagesRoute] POST / - roomId is missing');
         return res.status(400).json({ error: 'roomId is required in the body for sending a message' });
     }
-     const hasContent =
+    console.log(`[MessagesRoute] POST / - roomId: ${roomId}`);
+
+    const hasContent =
         text ||
         imageUrl ||
         audioUrl ||
@@ -36,20 +41,24 @@ router.post('/', auth, async (req, res) => {
         (location?.latitude && location?.longitude);
 
     if (!hasContent) {
+        console.warn('[MessagesRoute] POST / - Message has no content');
         return res.status(400).json({
             error: 'Message must contain text, image, audio, video, file, contact, or location'
         });
     }
 
     try {
+        console.log(`[MessagesRoute] POST / - Attempting to find chat room with ID: ${roomId}`);
         const chatRoom = await ChatRoom.findById(roomId);
         if (!chatRoom) {
+            console.warn(`[MessagesRoute] POST / - Chat room not found with ID: ${roomId}`);
             return res.status(404).json({ error: 'Chat room not found' });
         }
+        console.log(`[MessagesRoute] POST / - Chat room found: ${chatRoom.name || chatRoom._id}`);
 
         const newMessage = new Message({
             roomId: new mongoose.Types.ObjectId(roomId),
-            senderId: req.user.id, // Assuming req.user.id comes from your 'auth' middleware
+            senderId: req.user.id,
             text: text?.trim().substring(0, 1000),
             imageUrl,
             audioUrl,
@@ -60,80 +69,95 @@ router.post('/', auth, async (req, res) => {
             timestamp: new Date()
         });
 
-        console.log('💾 Saving message:', newMessage);
-      
+        console.log('[MessagesRoute] POST / - 💾 Preparing to save message:', JSON.stringify(newMessage));
+        await newMessage.save();
+        console.log(`[MessagesRoute] POST / - ✅ Message saved with ID: ${newMessage._id}`);
 
-// ✅ Save the message
-await newMessage.save();
+        const participants = chatRoom.participants.map(p => p.toString());
+        const recipientUserIds = participants.filter(id => id !== req.user.id);
 
-// 🔔 Notify other participants (excluding sender)
-const participants = chatRoom.participants.map(p => p.toString());
-const recipientIds = participants.filter(id => id !== req.user.id);
-const recipients = await User.find({ _id: { $in: recipientIds } });
+        console.log(`[MessagesRoute] POST / - 🔔 Sender App User ID: ${req.user.id}`);
+        console.log(`[MessagesRoute] POST / - 📬 Identified recipient App User IDs: ${JSON.stringify(recipientUserIds)}`);
 
-console.log('🔔 Sender ID:', req.user.id);
-console.log('📬 Notifying recipients:', recipientIds);
-
-for (const recipient of recipients) {
-    if (recipient.oneSignalPlayerId) {
-        const payload = {
-            app_id: process.env.ONESIGNAL_APP_ID,
-            include_player_ids: [recipient.oneSignalPlayerId],
-            headings: { en: `New message` },
-            contents: { en: text || 'You received a new message' },
-            data: {
-                roomId,
-                senderId: req.user.id,
-                type: 'message',
-            },
-            // Optional:
-            // android_channel_id: process.env.ONESIGNAL_ANDROID_CHANNEL_ID,
-        };
-
-        try {
-            await axios.post('https://onesignal.com/api/v1/notifications', payload, {
-                headers: {
-                    Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            console.log(`📨 Notification sent to ${recipient.username}`);
-        } catch (notificationErr) {
-            console.warn(`⚠️ Failed to notify ${recipient.username} (${recipient._id}):`, notificationErr.message);
+        if (recipientUserIds.length === 0) {
+            console.log('[MessagesRoute] POST / - No other recipients in the chat room to notify.');
+            return res.status(201).json(newMessage); // Message saved, but no one else to notify
         }
-    }
-}
 
+        const recipients = await User.find({ _id: { $in: recipientUserIds } });
+        console.log(`[MessagesRoute] POST / - 🧑‍🤝‍🧑 Fetched ${recipients.length} recipient user objects from DB.`);
 
+        for (const recipient of recipients) {
+            console.log(`[MessagesRoute] POST / - Processing recipient: ${recipient.username} (App User ID: ${recipient._id})`);
+            // Ensure your User model uses 'oneSignalPlayerId'. If it's just 'playerId', change this.
+            if (recipient.oneSignalPlayerId && recipient.oneSignalPlayerId.length > 0) { // Added check for non-empty string
+                console.log(`[MessagesRoute] POST / - User ${recipient.username} has OneSignal Player ID: ${recipient.oneSignalPlayerId}. Preparing notification.`);
+
+                const payload = {
+                    app_id: process.env.ONESIGNAL_APP_ID,
+                    include_player_ids: [recipient.oneSignalPlayerId],
+                    headings: { en: `New message from ${req.user.username || 'Someone'}` }, // Consider adding sender's name if available in req.user
+                    contents: { en: text || 'You received a new message' },
+                    data: {
+                        roomId,
+                        senderId: req.user.id,
+                        type: 'message',
+                        // Add any other data your app needs when it receives the notification
+                    },
+                    // Optional:
+                    // android_channel_id: process.env.ONESIGNAL_ANDROID_CHANNEL_ID, // Ensure this env var exists if you use it
+                };
+                console.log(`[MessagesRoute] POST / - Notification payload for ${recipient.username}: ${JSON.stringify(payload)}`);
+
+                try {
+                    console.log(`[MessagesRoute] POST / - 🚀 Attempting to send notification to OneSignal for Player ID: ${recipient.oneSignalPlayerId}`);
+                    const oneSignalResponse = await axios.post('https://onesignal.com/api/v1/notifications', payload, {
+                        headers: {
+                            Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    console.log(`[MessagesRoute] POST / - 📨 Notification sent successfully to ${recipient.username} (Player ID: ${recipient.oneSignalPlayerId}). OneSignal Response Status: ${oneSignalResponse.status}`);
+                    // console.log('[MessagesRoute] POST / - OneSignal Response Data:', oneSignalResponse.data); // Can be verbose
+                } catch (notificationErr) {
+                    let errorDetails = notificationErr.message;
+                    if (notificationErr.response) {
+                        errorDetails = `Status: ${notificationErr.response.status}, Data: ${JSON.stringify(notificationErr.response.data)}`;
+                    }
+                    console.warn(`[MessagesRoute] POST / - ⚠️ Failed to send OneSignal notification to ${recipient.username} (Player ID: ${recipient.oneSignalPlayerId}):`, errorDetails);
+                }
+            } else {
+                console.log(`[MessagesRoute] POST / - User ${recipient.username} (App User ID: ${recipient._id}) does NOT have a valid OneSignal Player ID. Skipping notification.`);
+            }
+        }
         res.status(201).json(newMessage);
     } catch (err) {
-        console.error('❌ Error saving message:', err);
+        console.error('[MessagesRoute] POST / - ❌❌❌ Major error during message processing:', err.message, err.stack);
         res.status(500).json({ error: 'Server error saving message' });
     }
 });
 
-// ✅ Get all messages in a chat room
-// This route will now correspond to GET /api/messages/:roomId
+
+// ... (your GET route can remain the same or add similar logging if needed) ...
 router.get('/:roomId', auth, async (req, res) => { // CHANGED FROM '/:roomId/messages' to '/:roomId'
+    console.log(`[MessagesRoute] GET /${req.params.roomId} - Received request for messages`);
     const { roomId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
+        console.warn(`[MessagesRoute] GET /${roomId} - Invalid roomId format`);
         return res.status(400).json({ error: 'Invalid roomId format' });
     }
 
     try {
+        console.log(`[MessagesRoute] GET /${roomId} - Fetching messages from DB`);
         const messages = await Message.find({
             roomId: new mongoose.Types.ObjectId(roomId)
-        }).sort({ timestamp: 1 }); // Sorts by timestamp in ASCENDING order (oldest first)
+        }).sort({ timestamp: 1 });
 
-        // Consider adding a check if no messages are found, though an empty array is valid JSON
-        // if (messages.length === 0) {
-        //     console.log(`💬 No messages found for roomId: ${roomId}`);
-        // }
-
+        console.log(`[MessagesRoute] GET /${roomId} - Found ${messages.length} messages.`);
         res.json(messages);
     } catch (err) {
-        console.error(`❌ Error fetching messages for roomId ${roomId}:`, err);
+        console.error(`[MessagesRoute] GET /${roomId} - ❌ Error fetching messages:`, err.message, err.stack);
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
 });

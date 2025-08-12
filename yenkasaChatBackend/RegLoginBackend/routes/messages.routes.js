@@ -12,7 +12,8 @@ const auth = require('../middleware/auth'); // Assuming your auth middleware pop
 const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model'); // Ensure this User model has 'playerId' (String) and 'username' (String)
-const UnreadMessageCount = require('../models/unreadMessageCount.model'); // For unread counts
+const UnreadMessageCount = require('../models/unreadMessageCount.model');
+const unreadCountService = require('../services/unreadCount.service'); // For unread counts
 
 // --- Environment Variable Checks (Crucial for OneSignal) ---
 const ONE_SIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
@@ -101,27 +102,22 @@ router.post('/', auth, async (req, res) => {
         console.log(`[MessagesRoute] POST / - Potential recipients (App User IDs): [${recipientAppUserIds.join(', ')}] for room ${newMessage.roomId}`);
 
 
-        // --- START: INCREMENT UNREAD MESSAGE COUNTS (for recipients) ---
+      // --- START: INCREMENT UNREAD MESSAGE COUNTS (using service) ---
         if (recipientAppUserIds.length > 0) {
-            console.log(`[MessagesRoute] POST / - Updating unread counts for ${recipientAppUserIds.length} recipients in room ${newMessage.roomId}...`);
+            console.log(`[MessagesRoute] POST / - Updating unread counts for ${recipientAppUserIds.length} recipients in room ${newMessage.roomId} using service...`);
             for (const recipientId of recipientAppUserIds) {
-                try {
-                    await UnreadMessageCount.findOneAndUpdate(
-                        { userId: new mongoose.Types.ObjectId(recipientId), roomId: newMessage.roomId }, // Ensure IDs are ObjectIds
-                        { $inc: { count: 1 } }, // timestamps:true in schema handles updatedAt
-                        { upsert: true, new: true } // Create if not exists, return updated doc
-                    );
-                    console.log(`[MessagesRoute] POST / - Incremented unread count for user ${recipientId} in room ${newMessage.roomId}`);
-                } catch (unreadError) {
-                    console.error(`[MessagesRoute] POST / - Error updating unread count for user ${recipientId} in room ${newMessage.roomId}:`, unreadError.message);
+                const unreadResult = await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);
+                if (unreadResult.success) {
+                    console.log(`[MessagesRoute] POST / - Service incremented unread count for user ${recipientId} in room ${newMessage.roomId}. New count: ${unreadResult.data.count}`);
+                } else {
+                    console.error(`[MessagesRoute] POST / - Service error updating unread count for user ${recipientId} in room ${newMessage.roomId}: ${unreadResult.error}`);
                 }
             }
         } else {
             console.log(`[MessagesRoute] POST / - No other recipients in this chat room to update unread counts for (room ${newMessage.roomId}).`);
         }
         // --- END: INCREMENT UNREAD MESSAGE COUNTS ---
-
-
+ 
         // --- START: Push Notification Logic ---
         if (!ONE_SIGNAL_APP_ID || !YENKASACHAT_ONE_SIGNAL_KEY) {
             console.error('[MessagesRoute] POST / - Critical OneSignal configuration (APP_ID or REST_API_KEY) is missing. Cannot send push notification.');

@@ -1,21 +1,22 @@
 package com.example.yenkasachat.ui
 
-
-
+// Keep your existing imports
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.*
+import androidx.activity.viewModels // Import for by viewModels()
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.semantics.text
+import androidx.lifecycle.Observer // Import for LiveData Observer
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.util.OneSignalHelper
-import com.onesignal.OneSignal
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.util.OneSignalHelper // <--- Add this if not present
+import com.example.yenkasachat.viewmodel.UserViewModel // Import UserViewModel
+import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -27,13 +28,15 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var btnLogin: Button
     private lateinit var textRegisterLink: TextView
 
-    // In LoginActivity.kt
+    // Instantiate UserViewModel using the 'by viewModels()' delegate
+    private val userViewModel: UserViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // Auto-login if BOTH token AND userId already exist
         val existingToken = TokenManager.getToken(this)
-        val existingUserId = TokenManager.getUserId(this) // Crucial: Check for UserId too!
+        val existingUserId = TokenManager.getUserId(this)
 
         Log.d(
             "LoginActivity",
@@ -42,16 +45,12 @@ class LoginActivity : AppCompatActivity() {
 
         if (!existingToken.isNullOrEmpty() && !existingUserId.isNullOrEmpty()) {
             Log.d("LoginActivity", "Token and UserID exist. Attempting auto-login to MainActivity.")
-            val intent = Intent(this, MainActivity::class.java).apply {
-                // Optional: Add flags if you want MainActivity to be a new root
-                // flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
+            val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
-            finish() // Finish LoginActivity as we are navigating away
-            return   // Important: stop further execution of this onCreate
+            finish()
+            return
         }
 
-        // If token or userId is missing, proceed to show login screen
         Log.d("LoginActivity", "Token or UserID missing. Displaying login screen.")
         setContentView(R.layout.activity_login)
 
@@ -60,10 +59,6 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
         val textForgotPassword: TextView = findViewById(R.id.textForgotPassword)
-
-        // OneSignal init
-        OneSignal.initWithContext(this)
-        OneSignal.setAppId("165df9e6-a0ea-4a37-a40a-110af7e28ad2")
 
         btnLogin.setOnClickListener { handleLogin() }
 
@@ -74,99 +69,103 @@ class LoginActivity : AppCompatActivity() {
         textForgotPassword.setOnClickListener {
             startActivity(Intent(this, ForgotPasswordActivity::class.java))
         }
+
+        userViewModel.playerIdUpdateResult.observe(this, Observer { success ->
+            if (success) {
+                Log.i("LoginActivity", "Player ID update successful (observed from ViewModel).")
+            } else {
+                Log.w("LoginActivity", "Player ID update failed (observed from ViewModel). Check UserViewModel logs.")
+            }
+        })
     }
 
-    // In LoginActivity.kt
     private fun handleLogin() {
         val identifier = editIdentifier.text.toString().trim()
         val password = editPassword.text.toString()
 
-        // ... (your input validations for identifier and password remain the same) ...
-        if (identifier.isEmpty()) { /* ... */ return
+        if (identifier.isEmpty()) {
+            editIdentifier.error = "Identifier cannot be empty"
+            return
         }
-        if (password.isEmpty()) { /* ... */ return
+        if (password.isEmpty()) {
+            editPassword.error = "Password cannot be empty"
+            return
         }
-        if (identifier.contains("@") && !android.util.Patterns.EMAIL_ADDRESS.matcher(identifier)
-                .matches()
-        ) { /* ... */ return
+        if (identifier.contains("@") && !android.util.Patterns.EMAIL_ADDRESS.matcher(identifier).matches()) {
+            editIdentifier.error = "Invalid email format"
+            return
         }
 
         val request = LoginRequest(identifier, password)
-        ApiClient.init(this@LoginActivity) // Consider if this needs to be called every time
+
         ApiClient.authService.login(request).enqueue(object : Callback<LoginResponse> {
             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                 if (response.isSuccessful) {
                     val loginResponse = response.body()
                     val user = loginResponse?.user
                     val token = loginResponse?.token
+                    val refreshToken = loginResponse?.refreshToken
 
-                    // Consolidated check for all necessary data
                     if (loginResponse != null && user != null && !user._id.isNullOrEmpty() && !token.isNullOrEmpty()) {
 
+                        // 1. Save Token using TokenManager
                         TokenManager.saveToken(this@LoginActivity, token)
-                        TokenManager.saveUserId(this@LoginActivity, user._id) // Save User ID ONCE
+                        if (refreshToken != null) {
+                            TokenManager.saveRefreshToken(this@LoginActivity, refreshToken)
+                        }
 
-                        Log.d(
-                            "LoginActivity",
-                            "🔐 Token saved: ${TokenManager.getToken(this@LoginActivity)}"
-                        )
-                        Log.d(
-                            "LoginActivity",
-                            "🪪 UserID saved: ${TokenManager.getUserId(this@LoginActivity)}"
-                        )
+                        // 2. Save MongoDB User ID
+                        userViewModel.saveLoggedInMongoDbUserIdToTokenManager(user._id)
 
-                        ApiClient.init(this@LoginActivity) // Re-init with new token if necessary
+                        Log.d("LoginActivity","🔐 Token saved via TokenManager.")
+                        Log.d("LoginActivity","🪪 UserID saved via UserViewModel (using TokenManager): ${user._id}")
 
                         Log.i("LoginActivity", "✅ Login successful for: ${user.username}")
-                        Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT)
-                            .show()
+                        Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        OneSignalHelper.getPlayerIdAndUpdateToBackend(this@LoginActivity)
+                        // --- 👇 ADDED SECTION ---
+                        Log.d("LoginActivity", "Attempting to set OneSignal External User ID. AppUserID: ${user._id}")
+                        if (user._id.isNotEmpty()) {
+                            com.example.yenkasachat.util.OneSignalHelper.setOneSignalExternalUserId(
+                                applicationContext,
+                                user._id
+                            )
+                        } else {
+                            Log.e("LoginActivity", "App Specific User ID is null or empty after login. Cannot set OneSignal External User ID.")
+                        }
+                        // --- 👆 END OF ADDED SECTION ---
 
-                        // Navigate to MainActivity and clear task
+                        // 3. Get OneSignal Player ID and update it via UserViewModel
+                        val oneSignalPlayerId = OneSignal.getDeviceState()?.userId
+                        if (oneSignalPlayerId != null && oneSignalPlayerId.isNotBlank()) {
+                            Log.i("LoginActivity", "OneSignal Player ID found: $oneSignalPlayerId. Attempting to update via ViewModel.")
+                            userViewModel.updateUserPlayerId(oneSignalPlayerId)
+                        } else {
+                            Log.w("LoginActivity", "OneSignal Player ID not available at login. Will attempt update later if needed.")
+                        }
+
                         val intent = Intent(this@LoginActivity, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         }
                         startActivity(intent)
-                        finish() // Finish LoginActivity
+                        finish()
                     } else {
-                        // Handle cases where response is successful but data is incomplete
                         var errorMessage = "Login failed: "
-                        if (token.isNullOrEmpty()) {
-                            errorMessage += "Missing token from server. "
-                            Log.e(
-                                "LoginActivity",
-                                "❌ Received empty/null token from login response despite successful HTTP status."
-                            )
-                        }
-                        if (user == null || user._id.isNullOrEmpty()) {
-                            errorMessage += "Incomplete user info from server."
-                            Log.w(
-                                "LoginActivity",
-                                "⚠️ Login response missing user data or user ID despite successful HTTP status."
-                            )
-                        }
-                        Toast.makeText(this@LoginActivity, errorMessage.trim(), Toast.LENGTH_LONG)
-                            .show()
+                        if (token.isNullOrEmpty()) errorMessage += "Missing token. "
+                        if (user == null || user._id.isNullOrEmpty()) errorMessage += "Incomplete user info."
+                        Log.e("LoginActivity","❌ Login successful HTTP, but incomplete data: $errorMessage")
+                        Toast.makeText(this@LoginActivity, errorMessage.trim(), Toast.LENGTH_LONG).show()
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                    Log.e(
-                        "LoginActivity",
-                        "❌ Login request failed. Code: ${response.code()}, Message: ${response.message()}, ErrorBody: $errorBody"
-                    )
-                    Toast.makeText(
-                        this@LoginActivity,
-                        "Login failed: ${response.message()} (${response.code()})",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Log.e("LoginActivity","❌ Login request failed. Code: ${response.code()}, Message: ${response.message()}, ErrorBody: $errorBody")
+                    Toast.makeText(this@LoginActivity, "Login failed: ${response.message()} (${response.code()})", Toast.LENGTH_LONG).show()
                 }
             }
 
             override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
                 Log.e("LoginActivity", "❌ Network error or other failure: ${t.message}", t)
-                Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_LONG)
-                    .show()
+                Toast.makeText(this@LoginActivity, "Network error: ${t.message}", Toast.LENGTH_LONG).show()
             }
         })
     }

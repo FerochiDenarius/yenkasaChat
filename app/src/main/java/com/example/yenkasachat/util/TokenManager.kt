@@ -3,15 +3,15 @@ package com.example.yenkasachat.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import androidx.security.crypto.EncryptedSharedPreferences // For encrypted preferences
-import androidx.security.crypto.MasterKey             // For EncryptedSharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 
 object TokenManager {
 
     // === Preference Keys ===
-    private const val PREF_NAME = "secure_auth_prefs" // Changed for EncryptedSharedPreferences
+    private const val PREF_NAME = "secure_auth_prefs"
     private const val TOKEN_KEY = "auth_token"
-    private const val REFRESH_KEY = "refresh_token" // This will now be encrypted
+    private const val REFRESH_KEY = "refresh_token"
     private const val USER_ID_KEY = "userId"
     private const val PROFILE_PIC_KEY = "profile_pic_url"
     private const val USERNAME_KEY = "username"
@@ -19,6 +19,9 @@ object TokenManager {
     private const val PHONE_KEY = "phone"
     private const val LOCATION_KEY = "location"
     private const val VERIFIED_KEY = "is_verified"
+    // 👇 NEW KEY FOR ONESIGNAL PLAYER ID
+    private const val ONE_SIGNAL_PLAYER_ID_KEY = "one_signal_player_id"
+
 
     // Logging Tag
     private const val TAG = "TokenManager"
@@ -39,39 +42,31 @@ object TokenManager {
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing EncryptedSharedPreferences. Falling back to regular SharedPreferences for this session.", e)
-            // Fallback for safety, though ideally, you'd handle this more gracefully
-            // or decide if the app can function without secure prefs.
-            // For critical auth data, crashing might be safer than insecure storage if encryption fails.
-            // However, this fallback makes it more resilient to MasterKey issues on certain devices.
-            return context.getSharedPreferences("${PREF_NAME}_unencrypted_fallback", Context.MODE_PRIVATE)
+            // Consider using a different fallback name to avoid potential collisions
+            // if the user somehow fixes the encryption issue later.
+            return context.getSharedPreferences("${PREF_NAME}_unencrypted_fallback_token_manager", Context.MODE_PRIVATE)
         }
     }
 
     // === Auth Token (Access Token) ===
-    // Access tokens are short-lived, so encryption is beneficial but less critical than refresh tokens.
-    // Storing it encrypted for consistency.
     fun saveToken(context: Context, token: String?) {
         if (token.isNullOrBlank()) {
-            Log.w(TAG, "⚠️ Tried to save a null or empty access token.")
-            // Optionally clear it if it's intentionally being set to null/empty
-            // getEncryptedPrefs(context).edit().remove(TOKEN_KEY).apply()
+            Log.w(TAG, "⚠️ Tried to save a null or empty access token. Skipping save.")
             return
         }
         try {
             getEncryptedPrefs(context).edit().putString(TOKEN_KEY, token).apply()
-            Log.d(TAG, "🔐 Access token saved successfully.")
+            Log.i(TAG, "🔐 Access token saved successfully.") // Changed to INFO for successful save
         } catch (e: Exception) {
             Log.e(TAG, "Error saving access token to EncryptedSharedPreferences", e)
         }
     }
 
-
     fun getToken(context: Context): String? {
         return try {
             val token = getEncryptedPrefs(context).getString(TOKEN_KEY, null)
-            // TEMPORARY DEBUG LOGGING:
             if (token != null) {
-                Log.d(TAG, "Retrieved access token. Length: ${token.length}, Ends with: ${token.takeLast(6)}")
+                Log.d(TAG, "Retrieved access token (exists)") // Keep sensitive details out of default logs
             } else {
                 Log.d(TAG, "Retrieved access token: null")
             }
@@ -85,21 +80,21 @@ object TokenManager {
     fun clearToken(context: Context) {
         try {
             getEncryptedPrefs(context).edit().remove(TOKEN_KEY).apply()
-            Log.d(TAG, "Access token cleared.")
+            Log.i(TAG, "Access token cleared.") // Changed to INFO
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing access token from EncryptedSharedPreferences", e)
         }
     }
 
-    // === Refresh Token (More sensitive, benefits most from encryption) ===
+    // === Refresh Token ===
     fun saveRefreshToken(context: Context, refreshToken: String?) {
         if (refreshToken.isNullOrBlank()) {
-            Log.w(TAG, "⚠️ Tried to save a null or empty refresh token.")
+            Log.w(TAG, "⚠️ Tried to save a null or empty refresh token. Skipping save.")
             return
         }
         try {
             getEncryptedPrefs(context).edit().putString(REFRESH_KEY, refreshToken).apply()
-            Log.d(TAG, "🔑 Refresh token saved successfully (encrypted).")
+            Log.i(TAG, "🔑 Refresh token saved successfully.") // Changed to INFO
         } catch (e: Exception) {
             Log.e(TAG, "Error saving refresh token to EncryptedSharedPreferences", e)
         }
@@ -108,9 +103,8 @@ object TokenManager {
     fun getRefreshToken(context: Context): String? {
         return try {
             val token = getEncryptedPrefs(context).getString(REFRESH_KEY, null)
-            // TEMPORARY DEBUG LOGGING (or uncomment and adapt your existing one):
             if (token != null) {
-                Log.d(TAG, "Retrieved refresh token. Length: ${token.length}, Ends with: ${token.takeLast(6)}")
+                Log.d(TAG, "Retrieved refresh token (exists)")
             } else {
                 Log.d(TAG, "Retrieved refresh token: null")
             }
@@ -120,10 +114,11 @@ object TokenManager {
             null
         }
     }
-    fun clearRefreshToken(context: Context) { // Added specific clear for refresh token
+
+    fun clearRefreshToken(context: Context) {
         try {
             getEncryptedPrefs(context).edit().remove(REFRESH_KEY).apply()
-            Log.d(TAG, "Refresh token cleared.")
+            Log.i(TAG, "Refresh token cleared.") // Changed to INFO
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing refresh token from EncryptedSharedPreferences", e)
         }
@@ -132,11 +127,12 @@ object TokenManager {
     // === User ID ===
     fun saveUserId(context: Context, userId: String?) {
         if (userId.isNullOrBlank()) {
-            Log.w(TAG, "⚠️ Tried to save a null or empty User ID.")
+            Log.w(TAG, "⚠️ Tried to save a null or empty User ID. Skipping save.")
             return
         }
         try {
             getEncryptedPrefs(context).edit().putString(USER_ID_KEY, userId).apply()
+            Log.i(TAG, "User ID saved: $userId") // Changed to INFO
         } catch (e: Exception) {
             Log.e(TAG, "Error saving User ID to EncryptedSharedPreferences", e)
         }
@@ -144,7 +140,9 @@ object TokenManager {
 
     fun getUserId(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(USER_ID_KEY, null)
+            val userId = getEncryptedPrefs(context).getString(USER_ID_KEY, null)
+            Log.d(TAG, "Retrieved User ID: $userId")
+            userId
         } catch (e: Exception) {
             Log.e(TAG, "Error getting User ID from EncryptedSharedPreferences", e)
             null
@@ -154,27 +152,30 @@ object TokenManager {
     fun clearUserId(context: Context) {
         try {
             getEncryptedPrefs(context).edit().remove(USER_ID_KEY).apply()
+            Log.i(TAG, "User ID cleared.") // Changed to INFO
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing User ID from EncryptedSharedPreferences", e)
         }
     }
 
-
-    // === Profile Picture URL === (Typically not sensitive, but stored in same pref file)
+    // === Profile Picture URL ===
     fun saveProfilePicUrl(context: Context, url: String?) {
-        // Allow null to clear it
+        // Allow saving null/empty to clear the URL if needed
         try {
             getEncryptedPrefs(context).edit().putString(PROFILE_PIC_KEY, url).apply()
+            Log.i(TAG, "Profile Pic URL saved: $url") // Changed to INFO
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving Profile Pic URL to EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error saving Profile Pic URL", e)
         }
     }
 
     fun getProfilePicUrl(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(PROFILE_PIC_KEY, null)
+            val url = getEncryptedPrefs(context).getString(PROFILE_PIC_KEY, null)
+            Log.d(TAG, "Retrieved Profile Pic URL: $url")
+            url
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting Profile Pic URL from EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error getting Profile Pic URL", e)
             null
         }
     }
@@ -182,21 +183,24 @@ object TokenManager {
     // === Username ===
     fun saveUsername(context: Context, username: String?) {
         if (username.isNullOrBlank()) {
-            Log.w(TAG, "⚠️ Tried to save a null or empty username.")
+            Log.w(TAG, "⚠️ Tried to save a null or empty username. Skipping save.")
             return
         }
         try {
             getEncryptedPrefs(context).edit().putString(USERNAME_KEY, username).apply()
+            Log.i(TAG, "Username saved: $username") // Changed to INFO
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving username to EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error saving username", e)
         }
     }
 
     fun getUsername(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(USERNAME_KEY, null)
+            val username = getEncryptedPrefs(context).getString(USERNAME_KEY, null)
+            Log.d(TAG, "Retrieved Username: $username")
+            username
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting username from EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error getting username", e)
             null
         }
     }
@@ -204,57 +208,68 @@ object TokenManager {
     // === Email ===
     fun saveEmail(context: Context, email: String?) {
         if (email.isNullOrBlank()) {
-            Log.w(TAG, "⚠️ Tried to save a null or empty email.")
+            Log.w(TAG, "⚠️ Tried to save a null or empty email. Skipping save.")
             return
         }
         try {
             getEncryptedPrefs(context).edit().putString(EMAIL_KEY, email).apply()
+            Log.i(TAG, "Email saved: $email") // Changed to INFO
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving email to EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error saving email", e)
         }
     }
 
     fun getEmail(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(EMAIL_KEY, null)
+            val email = getEncryptedPrefs(context).getString(EMAIL_KEY, null)
+            Log.d(TAG, "Retrieved Email: $email")
+            email
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting email from EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error getting email", e)
             null
         }
     }
 
     // === Phone ===
     fun savePhone(context: Context, phone: String?) {
+        // Allow saving null/empty to clear
         try {
-            getEncryptedPrefs(context).edit().putString(PHONE_KEY, phone).apply() // Allow null to clear
+            getEncryptedPrefs(context).edit().putString(PHONE_KEY, phone).apply()
+            Log.i(TAG, "Phone saved: $phone") // Changed to INFO
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving phone to EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error saving phone", e)
         }
     }
 
     fun getPhone(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(PHONE_KEY, null)
+            val phone = getEncryptedPrefs(context).getString(PHONE_KEY, null)
+            Log.d(TAG, "Retrieved Phone: $phone")
+            phone
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting phone from EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error getting phone", e)
             null
         }
     }
 
     // === Location ===
     fun saveLocation(context: Context, location: String?) {
+        // Allow saving null/empty to clear
         try {
-            getEncryptedPrefs(context).edit().putString(LOCATION_KEY, location).apply() // Allow null to clear
+            getEncryptedPrefs(context).edit().putString(LOCATION_KEY, location).apply()
+            Log.i(TAG, "Location saved: $location") // Changed to INFO
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving location to EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error saving location", e)
         }
     }
 
     fun getLocation(context: Context): String? {
         return try {
-            getEncryptedPrefs(context).getString(LOCATION_KEY, null)
+            val location = getEncryptedPrefs(context).getString(LOCATION_KEY, null)
+            Log.d(TAG, "Retrieved Location: $location")
+            location
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting location from EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error getting location", e)
             null
         }
     }
@@ -263,27 +278,93 @@ object TokenManager {
     fun setVerified(context: Context, isVerified: Boolean) {
         try {
             getEncryptedPrefs(context).edit().putBoolean(VERIFIED_KEY, isVerified).apply()
+            Log.i(TAG, "Verified status set to: $isVerified") // Changed to INFO
         } catch (e: Exception) {
-            Log.e(TAG, "Error setting verified status in EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error setting verified status", e)
         }
     }
 
     fun isVerified(context: Context): Boolean {
         return try {
-            getEncryptedPrefs(context).getBoolean(VERIFIED_KEY, false)
+            val verified = getEncryptedPrefs(context).getBoolean(VERIFIED_KEY, false)
+            Log.d(TAG, "Retrieved Verified status: $verified")
+            verified
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting verified status from EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error getting verified status", e)
             false // Default to false on error
+        }
+    }
+
+    // === 👇 ONESIGNAL PLAYER ID METHODS (LOGGING ALREADY GOOD) ===
+
+    /**
+     * Saves the OneSignal Player ID to EncryptedSharedPreferences.
+     */
+    fun saveOneSignalPlayerId(context: Context, playerId: String?) {
+        if (playerId.isNullOrBlank()) {
+            Log.w(TAG, "⚠️ Tried to save a null or empty OneSignal Player ID. Clearing if one exists.")
+            clearOneSignalPlayerId(context) // Clear any existing one
+            return
+        }
+        try {
+            getEncryptedPrefs(context).edit().putString(ONE_SIGNAL_PLAYER_ID_KEY, playerId).apply()
+            Log.i(TAG, "🔒 OneSignal Player ID saved successfully: $playerId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving OneSignal Player ID to EncryptedSharedPreferences", e)
+        }
+    }
+
+    /**
+     * Retrieves the OneSignal Player ID from EncryptedSharedPreferences.
+     */
+    fun getOneSignalPlayerId(context: Context): String? {
+        return try {
+            val playerId = getEncryptedPrefs(context).getString(ONE_SIGNAL_PLAYER_ID_KEY, null)
+            // Log the actual Player ID if it exists for easier debugging
+            Log.d(TAG, "Retrieved OneSignal Player ID: $playerId")
+            playerId
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting OneSignal Player ID from EncryptedSharedPreferences", e)
+            null
+        }
+    }
+
+    /**
+     * Clears the OneSignal Player ID from EncryptedSharedPreferences.
+     */
+    fun clearOneSignalPlayerId(context: Context) {
+        try {
+            // Check if it exists before trying to remove, to make the log more accurate
+            val existingPlayerId = getEncryptedPrefs(context).getString(ONE_SIGNAL_PLAYER_ID_KEY, null)
+            if (existingPlayerId != null) {
+                getEncryptedPrefs(context).edit().remove(ONE_SIGNAL_PLAYER_ID_KEY).apply()
+                Log.i(TAG, "OneSignal Player ID '$existingPlayerId' cleared.")
+            } else {
+                Log.d(TAG, "Attempted to clear OneSignal Player ID, but none was found.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing OneSignal Player ID from EncryptedSharedPreferences", e)
         }
     }
 
     // === Clear All ===
     fun clearAll(context: Context) {
         try {
-            getEncryptedPrefs(context).edit().clear().apply()
+            getEncryptedPrefs(context).edit()
+                .remove(TOKEN_KEY)
+                .remove(REFRESH_KEY)
+                .remove(USER_ID_KEY)
+                .remove(PROFILE_PIC_KEY)
+                .remove(USERNAME_KEY)
+                .remove(EMAIL_KEY)
+                .remove(PHONE_KEY)
+                .remove(LOCATION_KEY)
+                .remove(VERIFIED_KEY)
+                .remove(ONE_SIGNAL_PLAYER_ID_KEY) // ✅ Also clear Player ID
+                .apply()
             Log.i(TAG, "All data cleared from EncryptedSharedPreferences.")
         } catch (e: Exception) {
-            Log.e(TAG, "Error clearing EncryptedSharedPreferences", e)
+            Log.e(TAG, "Error clearing all data from EncryptedSharedPreferences", e)
         }
     }
 }

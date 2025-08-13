@@ -11,5 +11,7 @@ data class User(
     val location: String,
     val verified: Boolean,
     val token: String? = null,
-    val profileImage: String?
+    val profileImage: String?,
+    var unreadCount: Int = 0 // Add this line
+
 )

@@ -11,15 +11,15 @@ data class ChatMessage(
     val text: String? = null,
     val imageUrl: String? = null,
     val audioUrl: String? = null,
-    val videoUrl: String? = null,           // ✅ New field
-    val fileUrl: String? = null,            // ✅ New field
-    val contactInfo: String? = null,        // ✅ New field
+    val videoUrl: String? = null,
+    val fileUrl: String? = null,
+    val contactInfo: String? = null,
     val location: LocationData? = null,
     val timestamp: String? = null,
-
 )
 
 data class LocationData(
     val latitude: Double,
     val longitude: Double
 )
+

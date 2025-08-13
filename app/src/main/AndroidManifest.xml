@@ -71,7 +71,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="yenkasa.xyz"
+                    android:host="www.yenkasa.xyz"
                     android:pathPrefix="/reset-password" />
             </intent-filter>
         </activity>

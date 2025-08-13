@@ -7,6 +7,10 @@ import com.example.yenkasachat.model.CreateChatRoomRequest
 import com.example.yenkasachat.model.CreateChatRoomResponse
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
+import com.example.yenkasachat.model.UnreadCountRequest
+import com.example.yenkasachat.model.UnreadCountResponse
+import com.example.yenkasachat.model.RoomUnreadCountResponse
+import com.example.yenkasachat.model.AllUnreadCountsResponse
 import com.example.yenkasachat.model.PushNotificationRequest
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.model.ForgotPasswordRequest
@@ -16,20 +20,57 @@ import retrofit2.Call
 import retrofit2.Response // Ensure this is imported for suspend functions
 import retrofit2.http.*
 
-interface ApiService {
+// --- Data classes for Unread Count feature ---
 
+data class UnreadCountRequest(
+    val userId: String,
+    val roomId: String
+)
+
+data class UnreadCountData(
+    val userId: String,
+    val roomId: String,
+    val count: Int,
+    val updatedAt: String? = null, // Or use a Date type with a TypeAdapter if needed
+    val lastReadTimestamp: String? = null // Or use a Date type
+)
+
+data class UnreadCountResponse( // Generic response for increment/reset
+    val success: Boolean,
+    val data: UnreadCountData?,
+    val error: String?
+)
+
+data class RoomUnreadCountResponse(
+    val success: Boolean,
+    val count: Int,
+    val error: String?
+)
+
+data class RoomCount( // For the list of rooms with unread messages
+    val roomId: String,
+    val count: Int
+)
+
+data class AllUnreadCountsResponse(
+    val success: Boolean,
+    val data: List<RoomCount>?,
+    val totalUnread: Int?,
+    val error: String?
+)
+
+
+interface ApiService {
 
     @POST("auth/login")
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    // In ApiService.kt
-    @POST("forgot-password") // ✅ DO NOT repeat /api/
+    @POST("forgot-password")
     suspend fun forgotPassword(
         @Body request: ForgotPasswordRequest
     ): Response<Void>
-// backend/server.js or backend/routes/auth.js
 
     @POST("auth/reset-password/{token}")
     suspend fun resetPassword(
@@ -87,7 +128,7 @@ interface ApiService {
     @GET("messages/{roomId}")
     fun getMessages(
         @Path("roomId") roomId: String
-    ): Call<List<ChatMessage>> // Now only expects roomId
+    ): Call<List<ChatMessage>>
 
     // --- Contacts ---
     @POST("contacts")
@@ -124,4 +165,26 @@ interface ApiService {
     fun confirmVerification(
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
+
+    // --- Unread Message Counts ---
+    // Make sure your backend routes match these paths (e.g., "/unread/increment")
+    // If your base URL in Retrofit already includes "/api", then remove it from here.
+
+
+    @POST("unread/increment")
+    suspend fun incrementUnreadCount(@Body request: UnreadCountRequest): Response<UnreadCountResponse>
+
+    @POST("unread/reset")
+    suspend fun resetUnreadCount(@Body request: UnreadCountRequest): Response<UnreadCountResponse>
+
+    @GET("unread/room")
+    suspend fun getUnreadCountForRoom(
+        @Query("userId") userId: String,
+        @Query("roomId") roomId: String
+    ): Response<RoomUnreadCountResponse>
+
+    @GET("unread/all")
+    suspend fun getAllUnreadCountsForUser(
+        @Query("userId") userId: String
+    ): Response<AllUnreadCountsResponse>
 }

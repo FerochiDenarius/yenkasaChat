@@ -47,6 +47,27 @@ object TokenManager {
             return context.getSharedPreferences("${PREF_NAME}_unencrypted_fallback_token_manager", Context.MODE_PRIVATE)
         }
     }
+    fun saveUserDetails(
+        context: Context,
+        userId: String?,
+        username: String?,
+        email: String?,
+        phone: String?,
+        isVerified: Boolean, // Note: your User model might have Boolean? for isVerified
+        profileImageUrl: String?,
+        location: String? // Assuming location is also part of your User model
+    ) {
+        Log.d(TAG, "Attempting to save user details...")
+        saveUserId(context, userId)
+        saveUsername(context, username)
+        saveEmail(context, email)
+        savePhone(context, phone)
+        setVerified(context, isVerified) // Uses your existing setVerified method
+        saveProfilePicUrl(context, profileImageUrl)
+        saveLocation(context, location)
+        Log.i(TAG, "User details batch save operation completed.")
+    }
+    // === END OF NEW FUNCTION ===
 
     // === Auth Token (Access Token) ===
     fun saveToken(context: Context, token: String?) {

@@ -41,6 +41,7 @@ safeMount('/api/auth', './routes/auth');
 safeMount('/api/reset-password', './routes/resetPassword');
 safeMount('/api/forgot-password', './routes/forgotPassword.routes');
 safeMount('/api/verify', './routes/verify');
+safeMount('/api/account', './routes/account.routes'); 
 safeMount('/api/users', './routes/user.routes');
 safeMount('/api/refresh-token', './routes/refresh-token');
 

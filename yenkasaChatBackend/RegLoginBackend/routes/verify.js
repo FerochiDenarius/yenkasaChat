@@ -7,7 +7,7 @@ const twilio = require('twilio');
 
 // Initialize Twilio Client
 // Using process.env.TWILIO_ACCOUNT_SID and process.env.TWILIO_AUTH as per your code
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH);
+const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
 
 // 🔒 Middleware: Verify JWT Token
 const authenticate = (req, res, next) => {

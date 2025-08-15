@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_reply_message"
+        android:title="Reply" />
+
+    <item
+        android:id="@+id/action_copy_text"
+        android:title="Copy Text" />
+
+    <item
+        android:id="@+id/action_edit_message"
+        android:title="Edit" />
+
+    <item
+        android:id="@+id/action_forward_message"
+        android:title="Forward" />
+
+    <item
+        android:id="@+id/action_pin_message"
+        android:title="Pin" />
+
+    <item
+        android:id="@+id/action_react_tick"
+        android:title="React: Tick" /> <!-- Made title more descriptive without icon -->
+
+    <item
+        android:id="@+id/action_react_cross"
+        android:title="React: Cross" /> <!-- Made title more descriptive without icon -->
+
+    <item
+        android:id="@+id/action_react_with_image"
+        android:title="React with Image/Sticker" />
+
+    <item
+        android:id="@+id/action_mark_message"
+        android:title="Mark Read/Unread" /> <!-- Title might still be dynamic -->
+
+    <item
+        android:id="@+id/action_delete_message"
+        android:title="Delete" />
+
+    <item
+        android:id="@+id/action_message_info"
+        android:title="Info" />
+</menu>

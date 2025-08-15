@@ -12,6 +12,7 @@ import androidx.lifecycle.Observer // Import for LiveData Observer
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
+import com.google.android.material.textfield.TextInputEditText
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.util.OneSignalHelper // <--- Add this if not present
@@ -24,7 +25,7 @@ import retrofit2.Response
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var editIdentifier: EditText
-    private lateinit var editPassword: EditText
+    private lateinit var editPassword: TextInputEditText
     private lateinit var btnLogin: Button
     private lateinit var textRegisterLink: TextView
 

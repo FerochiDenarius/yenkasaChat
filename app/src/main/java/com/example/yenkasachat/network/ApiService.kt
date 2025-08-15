@@ -182,6 +182,12 @@ interface ApiService {
         @Query("userId") userId: String,
         @Query("roomId") roomId: String
     ): Response<RoomUnreadCountResponse>
+    // NEW: API call to delete a message
+    @DELETE("messages/{messageId}")
+    suspend fun deleteMessage(
+        @Path("messageId") messageId: String,
+        @Header("Authorization") authToken: String // Assuming Bearer token authentication
+    ): Response<Unit> // Response<Unit> is typical for DELETE if no body is returned
 
     @GET("unread/all")
     suspend fun getAllUnreadCountsForUser(

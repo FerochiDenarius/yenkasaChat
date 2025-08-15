@@ -12,6 +12,7 @@ import com.example.yenkasachat.network.ApiClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.google.android.material.textfield.TextInputEditText
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -21,8 +22,8 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var editPhone: EditText
     private lateinit var editUsername: EditText
     private lateinit var editLocation: EditText
-    private lateinit var editPassword: EditText
-    private lateinit var editConfirmPassword: EditText
+    private lateinit var editPassword: TextInputEditText
+    private lateinit var editConfirmPassword: TextInputEditText
     private lateinit var btnRegister: Button
     private lateinit var textLoginLink: TextView
 

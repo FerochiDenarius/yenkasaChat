@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/chatRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,13 +13,103 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- Receiver Info Header -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/receiverHeaderLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorPrimary"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="6dp"
+            android:elevation="4dp">
+
+            <!-- Back Button -->
+            <ImageView
+                android:id="@+id/imageViewBackButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@android:color/white"
+                android:contentDescription="Back"
+                android:padding="12dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- Receiver Profile Picture -->
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/imageViewReceiverPicture"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_default_profile"
+                android:contentDescription="Receiver profile picture"
+                app:layout_constraintStart_toEndOf="@id/imageViewBackButton"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- Receiver Name -->
+            <TextView
+                android:id="@+id/textViewReceiverName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"
+                tools:text="Receiver Name"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
+                app:layout_constraintEnd_toStartOf="@+id/imageViewMoreOptions"
+                app:layout_constraintTop_toTopOf="@id/imageViewReceiverPicture" />
+
+            <!-- Status Indicator Dot -->
+            <ImageView
+                android:id="@+id/imageViewStatusIndicator"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginTop="2dp"
+                android:src="@drawable/status_indicator_offline"
+                android:contentDescription="Online status indicator"
+                app:layout_constraintStart_toStartOf="@id/textViewReceiverName"
+                app:layout_constraintTop_toBottomOf="@id/textViewReceiverName" />
+
+            <!-- Online/Offline Text -->
+            <TextView
+                android:id="@+id/textViewOnlineStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                tools:text="Offline"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                app:layout_constraintStart_toEndOf="@id/imageViewStatusIndicator"
+                app:layout_constraintEnd_toEndOf="@id/textViewReceiverName"
+                app:layout_constraintTop_toTopOf="@id/imageViewStatusIndicator"
+                app:layout_constraintBottom_toBottomOf="@id/imageViewStatusIndicator" />
+
+            <!-- More Options Button -->
+            <ImageView
+                android:id="@+id/imageViewMoreOptions"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_more_vert"
+                app:tint="@android:color/white"
+                android:contentDescription="More options"
+                android:padding="12dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
         <!-- Messages RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerViewMessages"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:padding="8dp" />
+            android:padding="4dp" />
 
         <!-- Message Input Area -->
         <LinearLayout
@@ -26,46 +117,52 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="8dp"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="12dp"
             android:background="@color/white"
             android:gravity="center_vertical">
 
-            <!-- Attachment Button -->
+            <!-- Toggle Attachment Menu Button -->
             <ImageButton
                 android:id="@+id/buttonToggleAttachMenu"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:background="@android:color/transparent"
                 android:src="@drawable/ic_attach"
                 android:contentDescription="Attach"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
                 app:tint="#128C7E" />
 
-            <!-- EditText -->
+            <!-- Message EditText -->
             <EditText
                 android:id="@+id/editTextMessage"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:maxLines="5"
-                android:gravity="top|start"
-                android:scrollbars="vertical"
+                android:layout_weight="1"
+                android:hint="Type a message"
                 android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="5"
+                android:minHeight="48dp"
                 android:background="@drawable/message_input_bg"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
                 android:textColor="#000000"
                 android:textSize="16sp"
-                android:hint="Type a message"
-                android:paddingHorizontal="16dp" />
+                android:gravity="top|start"
+                android:scrollbars="vertical" />
 
-            <!-- Mic Button -->
+            <!-- Microphone Button -->
             <ImageButton
                 android:id="@+id/btnMic"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_marginStart="4dp"
-                android:background="@android:color/transparent"
                 android:src="@drawable/ic_mic"
                 android:contentDescription="Record Audio"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
+                android:layout_marginStart="4dp"
                 app:tint="#128C7E" />
 
             <!-- Send Button -->
@@ -73,12 +170,15 @@
                 android:id="@+id/btnSend"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_marginStart="4dp"
-                android:background="@android:color/transparent"
                 android:src="@drawable/ic_send"
                 android:contentDescription="Send Message"
-                app:tint="#128C7E"
-                android:visibility="gone" />
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
+                android:layout_marginStart="4dp"
+                app:tint="#128C7E" />
+
         </LinearLayout>
     </LinearLayout>
 
@@ -89,6 +189,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:visibility="gone"
+        tools:visibility="visible"
         android:background="@drawable/rounded_popup_bg"
         android:padding="6dp"
         android:layout_gravity="bottom|start"
@@ -96,13 +197,12 @@
         android:layout_marginStart="8dp"
         android:elevation="6dp">
 
-        <!-- Compact vertically stacked options -->
         <ImageButton
             android:id="@+id/buttonAttachImage"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@android:color/transparent"
             android:src="@drawable/ic_image"
+            android:background="@android:color/transparent"
             android:contentDescription="Attach Image"
             app:tint="#128C7E" />
 
@@ -110,17 +210,35 @@
             android:id="@+id/buttonAttachVideo"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@android:color/transparent"
             android:src="@drawable/ic_video"
+            android:background="@android:color/transparent"
             android:contentDescription="Attach Video"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachCamera"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_camera"
+            android:background="@android:color/transparent"
+            android:contentDescription="Attach Camera"
+            app:tint="#128C7E" />
+
+        <ImageButton
+            android:id="@+id/buttonAttachLocation"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_location"
+            android:background="@android:color/transparent"
+            android:contentDescription="Attach Location"
             app:tint="#128C7E" />
 
         <ImageButton
             android:id="@+id/buttonAttachFile"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@android:color/transparent"
             android:src="@drawable/ic_file"
+            android:background="@android:color/transparent"
             android:contentDescription="Attach File"
             app:tint="#128C7E" />
 
@@ -128,27 +246,9 @@
             android:id="@+id/buttonAttachContact"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@android:color/transparent"
             android:src="@drawable/ic_contact"
+            android:background="@android:color/transparent"
             android:contentDescription="Attach Contact"
-            app:tint="#128C7E" />
-
-        <ImageButton
-            android:id="@+id/buttonAttachLocation"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_location"
-            android:contentDescription="Attach Location"
-            app:tint="#128C7E" />
-
-        <ImageButton
-            android:id="@+id/buttonAttachCamera"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_camera"
-            android:contentDescription="Attach Camera"
             app:tint="#128C7E" />
     </LinearLayout>
 </FrameLayout>

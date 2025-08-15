@@ -65,6 +65,7 @@ dependencies {
 
     // ✅ OneSignal SDK (v4.8.6 stable)
     implementation("com.onesignal:OneSignal:4.8.6")
+    implementation("de.hdodenhof:circleimageview:3.1.0")
 
     // ✅ Retrofit + Gson + OkHttp
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

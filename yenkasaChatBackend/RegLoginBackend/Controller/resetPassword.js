@@ -24,7 +24,10 @@ const verifyResetToken = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const { token, newPassword } = req.body;
+  // Get token from URL parameters
+  const { token } = req.params; 
+  // Get newPassword from the request body
+  const { newPassword } = req.body;
 
   if (!token || !newPassword) {
     return res.status(400).json({ message: 'Token and new password required' });
@@ -51,7 +54,6 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: 'Error resetting password' });
   }
 };
-
 module.exports = {
   verifyResetToken,
   resetPassword

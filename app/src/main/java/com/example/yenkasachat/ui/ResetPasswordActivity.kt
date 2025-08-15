@@ -119,37 +119,40 @@ class ResetPasswordActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         resetButton.isEnabled = false
 
-        lifecycleScope.launch { // Use lifecycleScope for automatic cancellation
+        lifecycleScope.launch {
             try {
-                // IMPORTANT: Confirm how your backend expects the token and password.
-                // Option 1: Token in URL path (Retrofit @Path), password in body.
-                //   val response = ApiClient.apiService.resetPassword(token, mapOf("password" to password))
+                // Only send the password in the body
+                val requestBody = mapOf(
+                    "newPassword" to password // match backend key
+                )
 
-                // Option 2: Token and password both in body.
-                val requestBody = mapOf("token" to token, "password" to password)
-                // Ensure your ApiService.resetPassword takes this Map or a data class
-                // And that your backend route /api/reset-password (POST) expects token in the body
-                // For this example, I'll assume token is passed in the URL path as per your original code.
-                val response = ApiClient.apiService.resetPassword(token, mapOf("password" to password))
-
+                // Pass token in the URL path, not in the body
+                val response = ApiClient.apiService.resetPassword(token, requestBody)
 
                 if (response.isSuccessful) {
                     Log.i(TAG, "Password reset API call successful.")
-                    Toast.makeText(this@ResetPasswordActivity, "Password updated successfully!", Toast.LENGTH_LONG).show()
-                    // TODO: Navigate to login screen or main app area
-                    // Example:
-                    // val loginIntent = Intent(this@ResetPasswordActivity, LoginActivity::class.java)
-                    // loginIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    // startActivity(loginIntent)
+                    Toast.makeText(
+                        this@ResetPasswordActivity,
+                        "Password updated successfully!",
+                        Toast.LENGTH_LONG
+                    ).show()
                     finish()
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
                     Log.e(TAG, "Password reset API call failed. Code: ${response.code()}, Error: $errorBody")
-                    Toast.makeText(this@ResetPasswordActivity, "Failed to reset password: $errorBody", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ResetPasswordActivity,
+                        "Failed to reset password: $errorBody",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception during password reset API call", e)
-                Toast.makeText(this@ResetPasswordActivity, "An error occurred: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this@ResetPasswordActivity,
+                    "An error occurred: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             } finally {
                 progressBar.visibility = View.GONE
                 resetButton.isEnabled = true

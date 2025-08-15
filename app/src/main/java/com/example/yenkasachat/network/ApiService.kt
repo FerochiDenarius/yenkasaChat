@@ -72,11 +72,12 @@ interface ApiService {
         @Body request: ForgotPasswordRequest
     ): Response<Void>
 
-    @POST("auth/reset-password/{token}")
+    @POST("auth/reset-password/confirm/{token}")
     suspend fun resetPassword(
         @Path("token") token: String,
-        @Body body: Map<String, String> // send as { password: "newpassword" }
+        @Body body: Map<String, String>
     ): Response<Void>
+
 
     @GET("users")
     fun getAllUsers(): Call<List<User>>

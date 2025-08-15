@@ -11,6 +11,8 @@ const jwt = require('jsonwebtoken');
 console.log("routes/auth.js - jwt required");
 const User = require('../models/user.model'); // Ensure this path is correct
 console.log("routes/auth.js - User model required, path: ../models/user.model");
+const { verifyResetToken, resetPassword } = require('../Controller/resetPassword');
+
 
 // ✅ Sanitize helper
 const sanitize = (val) =>
@@ -86,6 +88,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
+
 // ✅ LOGIN with Access + Refresh Token
 console.log("routes/auth.js - Defining POST /login route");
 router.post('/login', async (req, res) => {
@@ -140,6 +143,8 @@ router.post('/login', async (req, res) => {
     } catch (saveError) {
       console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
     }
+
+
 
     // Backwards + forwards compatibility
     const responsePayload = {

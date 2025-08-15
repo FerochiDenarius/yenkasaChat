@@ -82,29 +82,30 @@ app.get('/.well-known/assetlinks.json', (req, res) => {
 });
 
 // ---------------------------------
-// 4. Password reset static serving
+// 4. Password reset static serving (UPDATED)
 // ---------------------------------
-app.use('/reset-password', (req, res, next) => {
-    console.log(`SERVER_LOG: Request received for /reset-password: ${req.originalUrl}`);
+// Changed from '/reset-password' to '/password-reset' to avoid conflict
+app.use('/password-reset', (req, res, next) => {
+    console.log(`SERVER_LOG: Request received for /password-reset: ${req.originalUrl}`);
     next();
 });
 
 app.use(
-    '/reset-password',
+    '/password-reset',
     express.static(path.join(__dirname, 'public/reset-password'), {
         fallthrough: true,
         index: "index.html"
     })
 );
 
-app.get('/reset-password', (req, res) => {
+app.get('/password-reset', (req, res) => {
     const indexPath = path.join(__dirname, 'public/reset-password', 'index.html');
     fs.access(indexPath, fs.constants.F_OK, (err) => {
         if (err) {
-            console.error(`index.html not found for /reset-password:`, err);
+            console.error(`index.html not found for /password-reset:`, err);
             res.status(404).send(`Reset password page not found at ${indexPath}`);
         } else {
-            console.error(`index.html exists but wasn't served for /reset-password`);
+            console.error(`index.html exists but wasn't served for /password-reset`);
             res.status(500).send(`Reset password page exists but wasn't served by express.static`);
         }
     });

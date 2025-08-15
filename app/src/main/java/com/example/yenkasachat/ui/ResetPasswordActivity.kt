@@ -116,6 +116,13 @@ class ResetPasswordActivity : AppCompatActivity() {
 
     private fun performApiPasswordReset(password: String, token: String) {
         Log.d(TAG, "Attempting to reset password with token: $token")
+
+        // --- START: ADDED LOGGING ---
+        val finalUrl = ApiClient.BASE_URL + "reset-password/confirm/$token"
+        Log.d(TAG, "Final API URL being called: $finalUrl")
+        Log.d(TAG, "Request body being sent: {\"newPassword\":\"$password\"}")
+        // --- END: ADDED LOGGING ---
+
         progressBar.visibility = View.VISIBLE
         resetButton.isEnabled = false
 
@@ -159,7 +166,6 @@ class ResetPasswordActivity : AppCompatActivity() {
             }
         }
     }
-
     // Optional: Save and restore token on configuration changes if needed, though App Links
     // usually re-deliver the intent.
     // override fun onSaveInstanceState(outState: Bundle) {

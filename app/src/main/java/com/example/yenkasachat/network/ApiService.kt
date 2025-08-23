@@ -62,7 +62,7 @@ data class AllUnreadCountsResponse(
 
 interface ApiService {
 
-    @POST("auth/login")
+    @POST("login")
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>

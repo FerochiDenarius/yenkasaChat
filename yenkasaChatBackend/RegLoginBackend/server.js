@@ -21,7 +21,7 @@ console.log("server.js: Mounting API routes...");
 try {
     // Authentication & User
     app.use('/api/auth', require('./routes/auth'));
-    app.use('/api/reset-password', require('./routes/resetPassword'));
+    app.use('/api/reset-password', require('./routes/changepwd.routes'));
     app.use('/api/forgot-password', require('./routes/forgotPassword.routes'));
     app.use('/api/verify', require('./routes/verify'));
     app.use('/api/users', require('./routes/user.routes'));

@@ -16,7 +16,7 @@ local.properties
 
 # Env
 *.env
-
+*deploy.sh
 # Firebase and Secrets
 app/google-services.json
 config/firebase-service-account.json

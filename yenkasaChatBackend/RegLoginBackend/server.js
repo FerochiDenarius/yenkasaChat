@@ -5,18 +5,34 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const fs = require('fs');
+const helmet = require('helmet');
+const compression = require('compression');
+const cors = require('cors');
+const morgan = require('morgan');
 
 const app = express();
 console.log("server.js: Starting application setup...");
 
 // ---------------------------------
-// 1. Parse JSON body middleware
+// 1. Global Middlewares
 // ---------------------------------
-app.use(express.json());
-console.log("server.js: express.json middleware configured.");
+app.use(helmet());
+app.use(compression());
+app.use(cors({
+    origin: process.env.CLIENT_URL || "*", // ✅ restrict in prod
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+}));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+if (process.env.NODE_ENV !== "test") {
+    app.use(morgan("combined")); // ✅ logs to Azure Log Stream
+}
+console.log("server.js: Core middlewares configured.");
 
 // ---------------------------------
-// Safe route mounting helper
+// 2. Safe route mounting
 // ---------------------------------
 function safeMount(routePath, filePath) {
     try {
@@ -24,22 +40,14 @@ function safeMount(routePath, filePath) {
         console.log(`✅ Mounted ${filePath} at ${routePath}`);
     } catch (err) {
         console.error(`❌ Failed to mount ${filePath} at ${routePath}: ${err.message}`);
-        if (err.requireStack) {
-            console.error("Require stack for module loading error:", err.requireStack);
-        }
-        console.error("Full error stack for module loading:", err.stack);
     }
 }
 
-// ---------------------------------
-// 2. Mount API routes FIRST
-// ---------------------------------
 console.log("server.js: Mounting API routes...");
 
 // Authentication & User
 safeMount('/api/auth', './routes/auth');
-// safeMount('/api/reset-password', './routes/resetPassword'); // Commented out the old mount
-safeMount('/api/reset-password', './routes/changepwd.routes.js'); // ✅ New mount for renamed file
+safeMount('/api/reset-password', './routes/changepwd.routes.js');
 safeMount('/api/forgot-password', './routes/forgotPassword.routes');
 safeMount('/api/verify', './routes/verify');
 safeMount('/api/account', './routes/account.routes'); 
@@ -55,95 +63,63 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
 
-// ✅ New Profile Routes
+// Profile
 safeMount('/api/profile', './routes/userProfileRoutes');
 
-console.log("✅ Finished attempting to mount all API routes.");
+console.log("✅ Finished mounting API routes.");
 
 // ---------------------------------
-// 3. Special static asset routes
+// 3. Health check (important for Azure)
+// ---------------------------------
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", uptime: process.uptime(), env: process.env.NODE_ENV });
+});
+
+// ---------------------------------
+// 4. Special static routes
 // ---------------------------------
 app.get('/.well-known/assetlinks.json', (req, res) => {
     const filePath = path.join(__dirname, 'public', '.well-known', 'assetlinks.json');
-    console.log(`DEBUG: Request for assetlinks.json at ${filePath}`);
-
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
-            console.error(`Error reading assetlinks.json:`, err);
-            if (err.code === 'ENOENT') {
-                return res.status(404).send('assetlinks.json not found');
-            } else if (err.code === 'EACCES') {
-                return res.status(403).send('Permission denied reading assetlinks.json');
-            }
-            return res.status(500).send('Error reading assetlinks.json');
+            return res.status(err.code === 'ENOENT' ? 404 : 500).send(err.message);
         }
         res.setHeader('Content-Type', 'application/json');
         res.status(200).send(data);
     });
 });
 
-// ---------------------------------
-// 4. Password reset static serving
-// ---------------------------------
-app.use('/reset-password', (req, res, next) => {
-    console.log(`SERVER_LOG: Request received for /reset-password: ${req.originalUrl}`);
-    next();
-});
-
-app.use(
-    '/reset-password',
-    express.static(path.join(__dirname, 'public/reset-password'), {
-        fallthrough: true,
-        index: "index.html"
-    })
-);
-
+// Password reset static page
+app.use('/reset-password', express.static(path.join(__dirname, 'public/reset-password')));
 app.get('/reset-password', (req, res) => {
-    const indexPath = path.join(__dirname, 'public/reset-password', 'index.html');
-    fs.access(indexPath, fs.constants.F_OK, (err) => {
-        if (err) {
-            console.error(`index.html not found for /reset-password:`, err);
-            res.status(404).send(`Reset password page not found at ${indexPath}`);
-        } else {
-            console.error(`index.html exists but wasn't served for /reset-password`);
-            res.status(500).send(`Reset password page exists but wasn't served by express.static`);
-        }
-    });
+    res.sendFile(path.join(__dirname, 'public/reset-password', 'index.html'));
 });
 
 // ---------------------------------
-// 5. General static files AFTER APIs
+// 5. Static files + SPA fallback
 // ---------------------------------
 app.use(express.static(path.join(__dirname, 'public')));
 console.log("server.js: Static file serving configured for /public.");
 
 // ---------------------------------
-// 6. SPA fallback (last route)
+// 6. Error handling (API last)
 // ---------------------------------
-app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.use((req, res, next) => {
+    if (req.originalUrl.startsWith("/api/")) {
+        return res.status(404).json({ error: "API route not found" });
+    }
+    next();
+});
+
+app.use((err, req, res, next) => {
+    console.error("🔥 Server error:", err);
+    res.status(500).json({ error: "Internal server error" });
 });
 
 // ---------------------------------
-// 7. Dev test routes
+// 7. DB + Server start
 // ---------------------------------
-if (process.env.NODE_ENV === 'development') {
-    app.get('/cloudinary-test', (req, res) => {
-        res.json({
-            name: process.env.CLOUDINARY_CLOUD_NAME,
-            key: process.env.CLOUDINARY_API_KEY,
-            secret: process.env.CLOUDINARY_API_SECRET ? '✅ present' : '❌ missing',
-        });
-    });
-    app.get('/api/auth/ping-server-level', (req, res) => {
-        res.json({ message: '✅ Server-level auth ping route is working!' });
-    });
-}
-
-// ---------------------------------
-// 8. MongoDB Connection + Server start
-// ---------------------------------
-console.log("server.js: Attempting to connect to MongoDB...");
+console.log("server.js: Connecting to MongoDB...");
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -152,11 +128,10 @@ mongoose.connect(process.env.MONGODB_URI, {
     console.log('✅ MongoDB connected successfully.');
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });
 })
 .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
-    console.error("Full MongoDB connection error stack:", err.stack);
     process.exit(1);
 });

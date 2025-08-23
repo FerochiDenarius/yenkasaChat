@@ -11,7 +11,7 @@ const jwt = require('jsonwebtoken');
 console.log("routes/auth.js - jwt required");
 const User = require('../models/user.model'); // Ensure this path is correct
 console.log("routes/auth.js - User model required, path: ../models/user.model");
-const { verifyResetToken, resetPassword } = require('../Controller/resetPassword');
+const { verifyResetToken, resetPassword } = require('../Controller/changepwd.controller'); // Adjust path as needed
 
 
 // ✅ Sanitize helper

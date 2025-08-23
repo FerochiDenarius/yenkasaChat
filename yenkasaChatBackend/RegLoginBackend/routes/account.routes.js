@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user.model'); // Adjust path as needed: ../models/user.model
-const authenticate = require('../middleware/authenticate'); // Adjust path as needed: ../middleware/authenticate
+const authenticate = require('../middleware/auth'); // Adjust path as needed: ../middleware/authenticate
 
 // === FETCH ACCOUNT INFORMATION ===
 // GET /api/account/info - Fetches details for the Account Info page for the authenticated user

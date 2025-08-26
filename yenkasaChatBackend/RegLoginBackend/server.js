@@ -27,7 +27,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 if (process.env.NODE_ENV !== "test") {
-    app.use(morgan("combined")); // ✅ logs to Azure Log Stream
+    app.use(morgan("combined")); // ✅ request logging
 }
 console.log("server.js: Core middlewares configured.");
 
@@ -69,10 +69,14 @@ safeMount('/api/profile', './routes/userProfileRoutes');
 console.log("✅ Finished mounting API routes.");
 
 // ---------------------------------
-// 3. Health check (important for Azure)
+// 3. Health check (important for DO)
 // ---------------------------------
 app.get("/health", (req, res) => {
-    res.status(200).json({ status: "ok", uptime: process.uptime(), env: process.env.NODE_ENV });
+    res.status(200).json({ 
+        status: "ok", 
+        uptime: process.uptime(), 
+        env: process.env.NODE_ENV 
+    });
 });
 
 // ---------------------------------
@@ -126,8 +130,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => {
     console.log('✅ MongoDB connected successfully.');
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
+
+    // ✅ DigitalOcean sets PORT automatically (usually 8080)
+    const PORT = process.env.PORT || 8080;
+
+    app.listen(PORT, "0.0.0.0", () => {
         console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });
 })

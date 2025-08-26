@@ -24,13 +24,13 @@ router.post('/refresh-token', async (req, res) => {
     const newAccessToken = jwt.sign(
       { id: user._id },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: '90d' }
     );
 
     const newRefreshToken = jwt.sign(
       { id: user._id },
       process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '90d' }
     );
 
     // Store new refresh token in DB

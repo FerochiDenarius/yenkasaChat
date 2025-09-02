@@ -1,81 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center_horizontal"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@android:color/background_light">
 
-    <!-- Title -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:text="Account Info"
-        android:textSize="20sp"
-        android:textStyle="bold" />
-
-
-    <ImageView
-        android:id="@+id/imageProfile"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:layout_gravity="center"
-        android:src="@drawable/default_avatar"
-        android:scaleType="centerCrop"
-        android:layout_marginBottom="16dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:contentDescription="Profile picture" />
-
-
-
-    <!-- Info Fields -->
-    <TextView
-        android:id="@+id/textUsername"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="Username: " />
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/textEmail"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="Email: " />
+        <!-- Profile Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
-    <TextView
-        android:id="@+id/textPhone"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="Phone: " />
+            <ImageView
+                android:id="@+id/imageProfile"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="Profile picture"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginBottom="12dp"
+                android:layout_gravity="center"/>
 
-    <TextView
-        android:id="@+id/textLocation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="Location: " />
+            <TextView
+                android:id="@+id/textUsername"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Username"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp"/>
+        </LinearLayout>
 
-    <!-- Verified Status -->
-    <TextView
-        android:id="@+id/textVerified"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        android:text="Verification Status: Unknown"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray"/>
 
-    <!-- Button to verify -->
-    <Button
-        android:id="@+id/btnVerifyAccount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Verify Account" />
+        <!-- Info Fields -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-</LinearLayout>
+            <TextView
+                android:id="@+id/textEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:text="Email"
+                android:textSize="16sp"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/darker_gray"/>
+
+            <TextView
+                android:id="@+id/textPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:text="Phone"
+                android:textSize="16sp"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/darker_gray"/>
+
+            <TextView
+                android:id="@+id/textLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:text="Location"
+                android:textSize="16sp"/>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:background="@android:color/darker_gray"
+            android:alpha="0.2"/>
+
+        <!-- Verification Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/textVerified"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verification Status: Unknown"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btnVerifyAccount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Verify Account"
+                android:backgroundTint="@color/teal_700"
+                android:textColor="@android:color/white"/>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

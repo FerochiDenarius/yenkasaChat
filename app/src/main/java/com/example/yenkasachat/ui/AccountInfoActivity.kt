@@ -221,9 +221,11 @@ class AccountInfoActivity : AppCompatActivity() {
 
                             currentUser.profileImage?.let { url ->
                                 if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) {
-                                    Glide.with(this@AccountInfoActivity).load(url)
+                                    Glide.with(this@AccountInfoActivity)
+                                        .load(url)
                                         .placeholder(R.drawable.default_avatar)
                                         .error(R.drawable.default_avatar)
+                                        .circleCrop() // 🔥 makes it circular
                                         .into(imageProfile)
                                 }
                             }

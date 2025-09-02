@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/background_light">
@@ -27,73 +28,172 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:layout_marginBottom="12dp"
-                android:layout_gravity="center"/>
+                android:layout_gravity="center"
+                android:src="@drawable/default_avatar" /> <!-- Added default src for preview -->
 
-            <TextView
-                android:id="@+id/textUsername"
-                android:layout_width="wrap_content"
+            <!-- Username Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Username"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:layout_marginBottom="8dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <!-- Changed TextView to EditText -->
+                <EditText
+                    android:id="@+id/textUsername"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Username"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:background="?attr/editTextBackground"
+                    android:padding="8dp"/>
+                <!-- Removed ImageView btnEditUsername -->
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@android:color/darker_gray"/>
+            android:background="@android:color/darker_gray"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"/>
 
-        <!-- Info Fields -->
+        <!-- Email Row (Kept as TextView, typically not directly editable this way) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Email: "
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingEnd="8dp"/>
 
             <TextView
                 android:id="@+id/textEmail"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Email"
-                android:textSize="16sp"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@android:color/darker_gray"/>
-
-            <TextView
-                android:id="@+id/textPhone"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Phone"
-                android:textSize="16sp"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@android:color/darker_gray"/>
-
-            <TextView
-                android:id="@+id/textLocation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Location"
-                android:textSize="16sp"/>
+                android:layout_weight="1"
+                android:text="user@example.com"
+                android:textSize="16sp" />
+            <!-- ImageView btnEditEmail is kept for now, but its function would need to be rethought
+                 if email editing is handled differently (e.g., separate screen, verification) -->
+            <ImageView
+                android:id="@+id/btnEditEmail"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_edit"
+                android:contentDescription="Edit Email"
+                app:tint="@android:color/darker_gray"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone" /> <!-- Hidden for now, as direct edit isn't typical -->
         </LinearLayout>
 
-        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"/>
+
+        <!-- Phone Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Phone: "
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingEnd="8dp"/>
+
+            <!-- Changed TextView to EditText -->
+            <EditText
+                android:id="@+id/textPhone"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Phone"
+                android:inputType="phone"
+                android:textSize="16sp"
+                android:background="?attr/editTextBackground"
+                android:padding="8dp"/>
+            <!-- Removed ImageView btnEditPhone -->
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"/>
+
+        <!-- Location Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Location: "
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingEnd="8dp"/>
+
+            <!-- Changed TextView to EditText -->
+            <EditText
+                android:id="@+id/textLocation"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Location"
+                android:inputType="textCapWords"
+                android:textSize="16sp"
+                android:background="?attr/editTextBackground"
+                android:padding="8dp"/>
+            <!-- Removed ImageView btnEditLocation -->
+        </LinearLayout>
+
+        <!-- Spacer Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="8dp"
             android:background="@android:color/darker_gray"
-            android:alpha="0.2"/>
+            android:alpha="0.2"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
 
-        <!-- Verification Section -->
+        <!-- Verification Section (unchanged IDs) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -106,15 +206,16 @@
                 android:layout_height="wrap_content"
                 android:text="Verification Status: Unknown"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp" />
 
             <Button
                 android:id="@+id/btnVerifyAccount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Verify Account"
-                android:backgroundTint="@color/teal_700"
-                android:textColor="@android:color/white"/>
+                android:backgroundTint="?attr/colorPrimary"
+                app:cornerRadius="8dp"
+                android:textColor="@android:color/white" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

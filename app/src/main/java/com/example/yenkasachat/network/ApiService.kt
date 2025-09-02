@@ -13,6 +13,8 @@ import com.example.yenkasachat.model.RoomUnreadCountResponse
 import com.example.yenkasachat.model.AllUnreadCountsResponse
 import com.example.yenkasachat.model.PushNotificationRequest
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.ProfileResponse
+import com.example.yenkasachat.model.UpdateProfileRequest
 import com.example.yenkasachat.model.ForgotPasswordRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
@@ -26,6 +28,8 @@ data class UnreadCountRequest(
     val userId: String,
     val roomId: String
 )
+
+
 
 data class UnreadCountData(
     val userId: String,
@@ -51,6 +55,7 @@ data class RoomCount( // For the list of rooms with unread messages
     val roomId: String,
     val count: Int
 )
+// Request model for updating profile
 
 data class AllUnreadCountsResponse(
     val success: Boolean,
@@ -195,4 +200,13 @@ interface ApiService {
     suspend fun getAllUnreadCountsForUser(
         @Query("userId") userId: String
     ): Response<AllUnreadCountsResponse>
+
+    // ✅ Fetch profile
+    @GET("profile")
+    suspend fun getProfile(): ProfileResponse
+
+    // ✅ Update profile
+    @PUT("profile/update")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
+
 }

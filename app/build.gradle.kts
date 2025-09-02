@@ -81,6 +81,9 @@ dependencies {
 
     // ✅ Firebase Cloud Messaging (needed by OneSignal under the hood)
     implementation("com.google.firebase:firebase-messaging:23.4.1")
+    // google services for google login
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
 
     // ✅ Glide for image loading
     implementation("com.github.bumptech.glide:glide:4.16.0")

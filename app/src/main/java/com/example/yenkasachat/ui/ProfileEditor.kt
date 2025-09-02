@@ -6,28 +6,35 @@ import android.text.TextWatcher
 import android.util.Log
 import android.widget.EditText
 import android.widget.Toast
+import androidx.lifecycle.LifecycleCoroutineScope
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.model.UpdateProfileRequest
+import kotlinx.coroutines.*
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-
-class ProfileEditor(private val context: Context) {
-
-    private val TAG = "ProfileEditor" // Tag for easier filtering in Logcat
+class ProfileEditor(
+    private val context: Context,
+    private val lifecycleScope: LifecycleCoroutineScope
+) {
+    private val TAG = "ProfileEditor"
+    private var saveJob: Job? = null
 
     fun attachAutoSave(editText: EditText, field: String) {
         Log.d(TAG, "Attaching auto-save to EditText for field: $field")
+
         editText.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val value = s?.toString()?.trim()
                 Log.d(TAG, "afterTextChanged for field '$field': value = '$value'")
-                if (!value.isNullOrEmpty()) {
-                    saveToBackend(field, value)
-                } else {
-                    Log.d(TAG, "Value is null or empty for field '$field', not saving.")
+
+                saveJob?.cancel()
+                saveJob = lifecycleScope.launch {
+                    delay(600) // debounce to avoid spamming server
+                    if (!value.isNullOrEmpty()) {
+                        saveToBackend(field, value)
+                    } else {
+                        Log.d(TAG, "Value is null/empty for field '$field', not saving.")
+                    }
                 }
             }
 
@@ -37,69 +44,77 @@ class ProfileEditor(private val context: Context) {
     }
 
     private fun saveToBackend(field: String, value: String) {
-        Log.i(TAG, "saveToBackend called for field: '$field', value: '$value'") // Changed to Log.i for more visibility
+        Log.i(TAG, "saveToBackend called for field: '$field', value: '$value'")
 
         val requestBody = when (field.lowercase()) {
             "username" -> UpdateProfileRequest(username = value)
+            "email" -> UpdateProfileRequest(email = value)
             "phone" -> UpdateProfileRequest(phone = value)
             "location" -> UpdateProfileRequest(location = value)
             else -> {
-                Log.w(TAG, "Attempting to save unknown field: $field. Creating empty request.")
-                UpdateProfileRequest()
+                Log.w(TAG, "Unknown field: $field. No request sent.")
+                return
             }
         }
-        Log.d(TAG, "Constructed requestBody: $requestBody")
 
-
-        if (requestBody.username == null && requestBody.phone == null && requestBody.location == null &&
-            (field.lowercase() !in listOf("username", "phone", "location"))) {
-            Log.w(TAG, "No specific field matched for update, NOT sending request for field: $field")
-            return // IMPORTANT: If this condition is met, no request is sent.
-        }
-
-        Log.d(TAG, "Proceeding to launch network request for field: '$field'")
-
-        CoroutineScope(Dispatchers.IO).launch {
-            Log.d(TAG, "[IO Thread] Attempting API call for field: '$field'")
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = ApiClient.apiService.updateProfile(requestBody)
-                Log.d(TAG, "[IO Thread] API call finished for field '$field'. Response code: ${response.code()}")
+                Log.d(TAG, "API response for '$field': code=${response.code()}")
 
-                launch(Dispatchers.Main) {
-                    Log.d(TAG, "[Main Thread] Handling response for field '$field'")
+                withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
-                        Log.i(TAG, "[Main Thread] Field '$field' updated successfully. Server Response: ${response.body()}")
-                        val responseBodyContent = response.body()?.toString() ?: "No body" // Or parse specific fields from response
-                        Log.d(TAG, "Response body content: $responseBodyContent")
+                        Log.i(TAG, "Field '$field' updated successfully.")
+                        updateTokenManager(field, value)
 
-
-                        when (field.lowercase()) {
-                            "username" -> {
-                                Log.d(TAG, "Saving username to TokenManager: $value")
-                                TokenManager.saveUsername(context, value)
-                            }
-                            "phone" -> {
-                                Log.d(TAG, "Saving phone to TokenManager: $value")
-                                TokenManager.savePhone(context, value)
-                            }
-                            "location" -> {
-                                Log.d(TAG, "Saving location to TokenManager: $value")
-                                TokenManager.saveLocation(context, value)
-                            }
+                        // Notify activity if it wants to react to updates
+                        if (context is ProfileUpdateListener) {
+                            context.onProfileUpdated(field, value)
                         }
-                        Toast.makeText(context, "✅ $field updated ($value)", Toast.LENGTH_SHORT).show()
+
+                        Toast.makeText(
+                            context,
+                            "✅ $field updated ($value)",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                        Log.e(TAG, "[Main Thread] Failed to update $field. Code: ${response.code()}, Error: $errorBody")
-                        Toast.makeText(context, "❌ Failed to update $field: ${response.code()} $errorBody", Toast.LENGTH_LONG).show()
+                        Log.e(TAG, "Failed to update $field. ${response.code()} - $errorBody")
+
+                        val userMessage = when (response.code()) {
+                            400 -> "Invalid data. Please check your input."
+                            401 -> "Session expired. Please log in again."
+                            500 -> "Server error. Try again later."
+                            else -> "Unexpected error: ${response.code()}"
+                        }
+                        Toast.makeText(context, "❌ $userMessage", Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "[IO Thread] Network error while updating $field: ${e.message}", e)
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "❌ Network error for $field: ${e.message}", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Network error updating $field: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "❌ Network error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
+    }
+
+    private fun updateTokenManager(field: String, value: String) {
+        when (field.lowercase()) {
+            "username" -> TokenManager.saveUsername(context, value)
+            "email" -> TokenManager.saveEmail(context, value)
+            "phone" -> TokenManager.savePhone(context, value)
+            "location" -> TokenManager.saveLocation(context, value)
+        }
+        Log.d(TAG, "TokenManager updated for $field: $value")
+    }
+
+    // Interface for activities/fragments to listen to updates
+    interface ProfileUpdateListener {
+        fun onProfileUpdated(field: String, value: String)
     }
 }

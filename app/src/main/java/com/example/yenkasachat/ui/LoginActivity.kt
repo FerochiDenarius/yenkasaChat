@@ -21,6 +21,14 @@ import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.common.SignInButton
+import com.google.firebase.auth.GoogleAuthProvider
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -28,7 +36,9 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var editPassword: TextInputEditText
     private lateinit var btnLogin: Button
     private lateinit var textRegisterLink: TextView
-
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private lateinit var auth: FirebaseAuth
+    private val RC_SIGN_IN = 1001
     // Instantiate UserViewModel using the 'by viewModels()' delegate
     private val userViewModel: UserViewModel by viewModels()
 
@@ -55,6 +65,7 @@ class LoginActivity : AppCompatActivity() {
         Log.d("LoginActivity", "Token or UserID missing. Displaying login screen.")
         setContentView(R.layout.activity_login)
 
+        // 🔹 Normal login setup
         editIdentifier = findViewById(R.id.editLoginIdentifier)
         editPassword = findViewById(R.id.editLoginPassword)
         btnLogin = findViewById(R.id.btnLogin)
@@ -71,6 +82,22 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, ForgotPasswordActivity::class.java))
         }
 
+        // 🔹 Google Sign-In setup
+        auth = FirebaseAuth.getInstance()
+
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id)) // from google-services.json
+            .requestEmail()
+            .build()
+
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+        val googleSignInButton: SignInButton = findViewById(R.id.btnGoogleSignIn)
+        googleSignInButton.setOnClickListener {
+            signInWithGoogle()
+        }
+
+        // 🔹 Player ID update observer
         userViewModel.playerIdUpdateResult.observe(this, Observer { success ->
             if (success) {
                 Log.i("LoginActivity", "Player ID update successful (observed from ViewModel).")
@@ -78,6 +105,10 @@ class LoginActivity : AppCompatActivity() {
                 Log.w("LoginActivity", "Player ID update failed (observed from ViewModel). Check UserViewModel logs.")
             }
         })
+    }
+    private fun signInWithGoogle() {
+        val signInIntent = googleSignInClient.signInIntent
+        startActivityForResult(signInIntent, RC_SIGN_IN)
     }
 
     private fun handleLogin() {

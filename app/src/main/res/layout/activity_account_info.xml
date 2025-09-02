@@ -29,30 +29,22 @@
                 android:focusable="true"
                 android:layout_marginBottom="12dp"
                 android:layout_gravity="center"
-                android:src="@drawable/default_avatar" /> <!-- Added default src for preview -->
+                android:src="@drawable/default_avatar" />
 
-            <!-- Username Row -->
-            <LinearLayout
+            <!-- Username -->
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp">
+                android:layout_height="wrap_content">
 
-                <!-- Changed TextView to EditText -->
-                <EditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/textUsername"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:hint="Username"
                     android:textStyle="bold"
                     android:textSize="18sp"
-                    android:background="?attr/editTextBackground"
-                    android:padding="8dp"/>
-                <!-- Removed ImageView btnEditUsername -->
-            </LinearLayout>
+                    android:padding="8dp" />
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
         <!-- Divider -->
@@ -63,16 +55,13 @@
             android:layout_marginBottom="8dp"
             android:layout_marginTop="8dp"/>
 
-        <!-- Email Row (Kept as TextView, typically not directly editable this way) -->
+        <!-- Email -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="8dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -82,28 +71,22 @@
                 android:textStyle="bold"
                 android:paddingEnd="8dp"/>
 
-            <TextView
-                android:id="@+id/textEmail"
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="user@example.com"
-                android:textSize="16sp" />
-            <!-- ImageView btnEditEmail is kept for now, but its function would need to be rethought
-                 if email editing is handled differently (e.g., separate screen, verification) -->
-            <ImageView
-                android:id="@+id/btnEditEmail"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit"
-                android:contentDescription="Edit Email"
-                app:tint="@android:color/darker_gray"
-                android:padding="4dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:visibility="gone" /> <!-- Hidden for now, as direct edit isn't typical -->
+                android:layout_weight="1">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/textEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Email"
+                    android:inputType="textEmailAddress"
+                    android:textSize="16sp"/>
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
+        <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -111,16 +94,13 @@
             android:layout_marginBottom="8dp"
             android:layout_marginTop="8dp"/>
 
-        <!-- Phone Row -->
+        <!-- Phone -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="8dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -130,20 +110,22 @@
                 android:textStyle="bold"
                 android:paddingEnd="8dp"/>
 
-            <!-- Changed TextView to EditText -->
-            <EditText
-                android:id="@+id/textPhone"
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Phone"
-                android:inputType="phone"
-                android:textSize="16sp"
-                android:background="?attr/editTextBackground"
-                android:padding="8dp"/>
-            <!-- Removed ImageView btnEditPhone -->
+                android:layout_weight="1">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/textPhone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Phone"
+                    android:inputType="phone"
+                    android:textSize="16sp"/>
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
+        <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -151,16 +133,13 @@
             android:layout_marginBottom="8dp"
             android:layout_marginTop="8dp"/>
 
-        <!-- Location Row -->
+        <!-- Location -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="8dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -170,18 +149,19 @@
                 android:textStyle="bold"
                 android:paddingEnd="8dp"/>
 
-            <!-- Changed TextView to EditText -->
-            <EditText
-                android:id="@+id/textLocation"
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Location"
-                android:inputType="textCapWords"
-                android:textSize="16sp"
-                android:background="?attr/editTextBackground"
-                android:padding="8dp"/>
-            <!-- Removed ImageView btnEditLocation -->
+                android:layout_weight="1">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/textLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Location"
+                    android:inputType="textCapWords"
+                    android:textSize="16sp"/>
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
         <!-- Spacer Divider -->
@@ -193,7 +173,7 @@
             android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Verification Section (unchanged IDs) -->
+        <!-- Verification Section -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -200,7 +200,24 @@ object TokenManager {
             null
         }
     }
+    // In your util/TokenManager.kt
+    object TokenManager {
+        // ... other constants and methods ...
+        private const val KEY_EMAIL = "user_email"
 
+        fun saveEmail(context: Context, email: String) {
+            // Your SharedPreferences logic to save the email
+            // Example: getEncryptedSharedPreferences(context).edit().putString(KEY_EMAIL, email).apply()
+            Log.d("TokenManager", "Email saved: $email")
+        }
+
+        fun getEmail(context: Context): String? {
+            // Your SharedPreferences logic to retrieve the email
+            // Example: return getEncryptedSharedPreferences(context).getString(KEY_EMAIL, null)
+            return "user@example.com" // Placeholder
+        }
+        // ...
+    }
     // === Username ===
     fun saveUsername(context: Context, username: String?) {
         if (username.isNullOrBlank()) {

@@ -206,7 +206,7 @@ interface ApiService {
     suspend fun getProfile(): ProfileResponse
 
     // ✅ Update profile
-    @PUT("profile/update")
+    @PUT("profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
 }

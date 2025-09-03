@@ -10,8 +10,12 @@ const compression = require('compression');
 const cors = require('cors');
 const morgan = require('morgan');
 
+
 const app = express();
 console.log("server.js: Starting application setup...");
+
+
+
 
 // ---------------------------------
 // 1. Global Middlewares
@@ -62,9 +66,10 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 // Notifications / External
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
+safeMount('/api/profile', './routes/profileRoutes');
 
 // Profile
-safeMount('/api/profile', './routes/userProfileRoutes');
+//safeMount('/api/profile', './routes/userProfileRoutes');
 
 console.log("✅ Finished mounting API routes.");
 
@@ -130,6 +135,9 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => {
     console.log('✅ MongoDB connected successfully.');
+
+
+
 
     // ✅ DigitalOcean sets PORT automatically (usually 8080)
     const PORT = process.env.PORT || 8080;

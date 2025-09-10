@@ -66,7 +66,7 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 // Notifications / External
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
-safeMount('/api/profile', './routes/profileRoutes');
+safeMount('/api/profile', './routes/profile');
 
 // Profile
 //safeMount('/api/profile', './routes/userProfileRoutes');

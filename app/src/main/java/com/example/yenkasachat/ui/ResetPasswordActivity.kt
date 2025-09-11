@@ -14,9 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import com.example.yenkasachat.R
 import com.example.yenkasachat.network.ApiClient // Assuming this is your Retrofit client
 import kotlinx.coroutines.launch
-import com.example.yenkasachat.model.ResetPasswordRequest
-import okhttp3.ResponseBody
-import retrofit2.Response
 
 class ResetPasswordActivity : AppCompatActivity() {
     private lateinit var newPasswordField: EditText
@@ -117,24 +114,27 @@ class ResetPasswordActivity : AppCompatActivity() {
         return true
     }
 
-
-
     private fun performApiPasswordReset(password: String, token: String) {
         Log.d(TAG, "Attempting to reset password with token: $token")
 
+        // --- START: ADDED LOGGING ---
         val finalUrl = ApiClient.BASE_URL + "reset-password/confirm/$token"
         Log.d(TAG, "Final API URL being called: $finalUrl")
         Log.d(TAG, "Request body being sent: {\"newPassword\":\"$password\"}")
+        // --- END: ADDED LOGGING ---
 
         progressBar.visibility = View.VISIBLE
         resetButton.isEnabled = false
 
         lifecycleScope.launch {
             try {
-                // ✅ Use data class instead of map
-                val request = ResetPasswordRequest(newPassword = password)
+                // Only send the password in the body
+                val requestBody = mapOf(
+                    "newPassword" to password // match backend key
+                )
 
-                val response: Response<ResponseBody> = ApiClient.apiService.resetPassword(token, request)
+                // Pass token in the URL path, not in the body
+                val response = ApiClient.apiService.resetPassword(token, requestBody)
 
                 if (response.isSuccessful) {
                     Log.i(TAG, "Password reset API call successful.")

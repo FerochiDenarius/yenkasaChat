@@ -1,3 +1,4 @@
+require('dotenv').config();
 const nodemailer = require('nodemailer');
 const crypto = require('crypto'); // For generating a reset token
 const User = require('../models/user.model');

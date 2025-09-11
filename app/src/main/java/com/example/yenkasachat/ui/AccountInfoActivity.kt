@@ -140,9 +140,9 @@ class AccountInfoActivity : AppCompatActivity() {
                     Log.w(TAG, "Verification attempted but email is null or empty.")
                     return@setOnClickListener
                 }
-                val intent = Intent(this, VerificationActivity::class.java)
+                val intent = Intent(this,EmailVerificationActivity::class.java)
                 intent.putExtra("USER_EMAIL", userEmail)
-                Log.d(TAG, "Starting VerificationActivity for email: $userEmail")
+                Log.d(TAG, "Starting EmailVerificationActivity for email: $userEmail")
                 verificationResultLauncher.launch(intent)
             } else {
                 Toast.makeText(this, "Your account is already verified.", Toast.LENGTH_SHORT).show()

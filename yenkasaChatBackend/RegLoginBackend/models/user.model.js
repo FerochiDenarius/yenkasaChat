@@ -1,5 +1,3 @@
-// File: models/User.js
-
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -38,30 +36,35 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
-  verificationCode: {
-    type: String
-  },
-  codeExpiresAt: {
-    type: Date
-  },
+
+  // 🔑 Legacy generic fields (can be removed later)
+  verificationCode: { type: String },
+  codeExpiresAt: { type: Date },
+
+  // 📧 Email verification
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationCode: { type: String },
+  emailCodeExpiresAt: { type: Date },
+
+  // 📱 Phone verification
+  phoneVerified: { type: Boolean, default: false },
+  phoneVerificationCode: { type: String },
+  phoneCodeExpiresAt: { type: Date },
+
   profileImage: {
     type: String,
     default: '' 
   },
-  playerId: { // ✅ CORRECTED TO playerId AS AGREED
+  playerId: { 
     type: String,
     default: null 
   },
-  refreshToken: {
-    type: String
-  }
-  
-}, { timestamps: true }); 
+  refreshToken: { type: String }
 
+}, { timestamps: true }); 
 
 userSchema.index({ email: 1 });
 userSchema.index({ phoneNumber: 1 });
-
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

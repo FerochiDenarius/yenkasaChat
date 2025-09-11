@@ -16,11 +16,15 @@ import com.example.yenkasachat.model.User
 import com.example.yenkasachat.model.ProfileResponse
 import com.example.yenkasachat.model.UpdateProfileRequest
 import com.example.yenkasachat.model.ForgotPasswordRequest
+import com.example.yenkasachat.model.VerificationResponse
+import com.example.yenkasachat.model.EmailRequest
+import com.example.yenkasachat.model.ConfirmRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response // Ensure this is imported for suspend functions
 import retrofit2.http.*
+
 
 // --- Data classes for Unread Count feature ---
 
@@ -157,25 +161,12 @@ interface ApiService {
         @Body request: PushNotificationRequest
     ): Call<Void>
 
-    // --- Verification ---
-    @POST("verify/request")
-    fun requestEmailVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
+    @POST("verify/request-email-code")
+    suspend fun requestEmailVerification(@Body emailRequest: EmailRequest): Response<VerificationResponse>
 
-    @POST("verify/request-phone")
-    fun requestPhoneVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
+    @POST("verify/confirm-email-code")
+    suspend fun confirmEmailVerification(@Body confirmRequest: ConfirmRequest): Response<VerificationResponse>
 
-    @POST("verify/confirm")
-    fun confirmVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
-
-    // --- Unread Message Counts ---
-    // Make sure your backend routes match these paths (e.g., "/unread/increment")
-    // If your base URL in Retrofit already includes "/api", then remove it from here.
 
 
     @POST("unread/increment")

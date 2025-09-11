@@ -56,7 +56,7 @@
         <activity android:name=".ui.ChatRoomsActivity" />
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />
-        <activity android:name=".ui.VerificationActivity" />
+        <activity android:name=".ui.EmailVerificationActivity" />
         <activity android:name=".ui.ImagePreviewActivity" />
 
 

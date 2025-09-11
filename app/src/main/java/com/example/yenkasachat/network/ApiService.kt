@@ -20,6 +20,7 @@ import com.example.yenkasachat.model.VerificationResponse
 import com.example.yenkasachat.model.EmailRequest
 import com.example.yenkasachat.model.ConfirmRequest
 import com.example.yenkasachat.model.PhoneRequest
+import com.example.yenkasachat.model.ResetPasswordRequest
 import com.example.yenkasachat.model.ConfirmPhoneRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
@@ -88,8 +89,10 @@ interface ApiService {
     @POST("reset-password/confirm/{token}")
     suspend fun resetPassword(
         @Path("token") token: String,
-        @Body body: Map<String, String>
-    ): Response<Void>
+        @Body request: ResetPasswordRequest
+    ): Response<ResponseBody>
+
+
 
     @GET("users")
     fun getAllUsers(): Call<List<User>>

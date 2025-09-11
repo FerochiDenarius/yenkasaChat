@@ -52,7 +52,6 @@ console.log("server.js: Mounting API routes...");
 // Authentication & User
 safeMount('/api/auth', './routes/auth');
 safeMount('/api/reset-password', './routes/changepwd.routes.js');
-safeMount('/api/forgot-password', './routes/forgotPassword.routes');
 safeMount('/api/verify', './routes/verify');
 safeMount('/api/account', './routes/account.routes'); 
 safeMount('/api/users', './routes/user.routes');

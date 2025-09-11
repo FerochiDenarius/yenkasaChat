@@ -12,13 +12,12 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-// import androidx.lifecycle.lifecycleScope // Not explicitly used for coroutines here, ProfileEditor handles its own scope
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.User // Assuming User is your model for profile loading
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
-// import kotlinx.coroutines.launch // Not explicitly used for coroutines here
+import com.example.yenkasachat.model.UpdateProfileRequest
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -28,6 +27,9 @@ import retrofit2.Response
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
 
 class AccountInfoActivity : AppCompatActivity() {
 
@@ -36,8 +38,15 @@ class AccountInfoActivity : AppCompatActivity() {
     private lateinit var emailView: EditText
     private lateinit var phoneView: EditText
     private lateinit var locationView: EditText
-    private lateinit var textVerifiedStatus: TextView
-    private lateinit var btnVerifyAccount: Button
+
+    // Inside AccountInfoActivity.kt
+
+    private lateinit var btnVerifyEmail: Button
+    private lateinit var btnVerifyPhone: Button
+    private lateinit var textEmailStatus: TextView
+    private lateinit var textPhoneStatus: TextView
+    private lateinit var btnEditSave: Button
+
 
     private lateinit var profileEditor: ProfileEditor // Declare ProfileEditor instance
 
@@ -79,85 +88,114 @@ class AccountInfoActivity : AppCompatActivity() {
 
         Log.d(TAG, "onCreate started")
 
-// Initialize ProfileEditor
-        profileEditor = ProfileEditor(this,lifecycleScope)
+        // Initialize ProfileEditor (optional if you keep auto-save for some fields)
+        profileEditor = ProfileEditor(this, lifecycleScope)
         Log.d(TAG, "ProfileEditor initialized")
 
-        imageProfile = findViewById<ImageView>(R.id.imageProfile)
-        usernameView = findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.textUsername)
-        emailView = findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.textEmail)
-        phoneView = findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.textPhone)
-        locationView = findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.textLocation)
-        textVerifiedStatus = findViewById<TextView>(R.id.textVerified)
-        btnVerifyAccount = findViewById<Button>(R.id.btnVerifyAccount)
+        // --- Bind Views ---
+        imageProfile = findViewById(R.id.imageProfile)
+        usernameView = findViewById(R.id.textUsername)
+        emailView = findViewById(R.id.textEmail)
+        phoneView = findViewById(R.id.textPhone)
+        locationView = findViewById(R.id.textLocation)
 
-        Log.d(TAG, "Views initialized")
+        btnEditSave = findViewById(R.id.btnEditSave)           // Edit / Save
+        textEmailStatus = findViewById(R.id.textEmailVerified)
+        textPhoneStatus = findViewById(R.id.textPhoneVerified)
+        btnVerifyEmail = findViewById(R.id.btnVerifyEmail)
+        btnVerifyPhone = findViewById(R.id.btnVerifyPhone)
 
-// Load initial user info from TokenManager and set it using setText()
+        // Initially disable fields
+        setFieldsEnabled(false)
+        var isEditing = false
+
+        // --- Load initial profile from TokenManager ---
         usernameView.setText(TokenManager.getUsername(this) ?: "")
         emailView.setText(TokenManager.getEmail(this) ?: "")
         phoneView.setText(TokenManager.getPhone(this) ?: "")
         locationView.setText(TokenManager.getLocation(this) ?: "")
-        Log.d(TAG, "Initial text set from TokenManager")
 
-// Attach auto-save functionality from ProfileEditor
-        profileEditor.attachAutoSave(usernameView, "username")
-        profileEditor.attachAutoSave(emailView, "email")
-        profileEditor.attachAutoSave(phoneView, "phone")
-        profileEditor.attachAutoSave(locationView, "location")
-        Log.d(TAG, "ProfileEditor auto-save attached to EditTexts")
-
-        updateVerificationStatusDisplay()
-
+        // --- Load profile picture ---
         TokenManager.getProfilePicUrl(this)?.let { url ->
-            if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) {
-                Glide.with(this).load(url)
-                    .placeholder(R.drawable.default_avatar)
-                    .error(R.drawable.default_avatar)
-                    .circleCrop()
-                    .into(imageProfile)
-            } else {
-                Glide.with(this).load(R.drawable.default_avatar).circleCrop().into(imageProfile)
-            }
-        } ?: run {
-            Glide.with(this).load(R.drawable.default_avatar).circleCrop().into(imageProfile)
+            val imgUrl = if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) url else null
+            Glide.with(this)
+                .load(imgUrl ?: R.drawable.default_avatar)
+                .placeholder(R.drawable.default_avatar)
+                .error(R.drawable.default_avatar)
+                .circleCrop()
+                .into(imageProfile)
         }
 
-        loadUserProfile()
+        // --- Edit / Save toggle ---
+        btnEditSave.setOnClickListener {
+            isEditing = !isEditing
+            setFieldsEnabled(isEditing)
+            btnEditSave.text = if (isEditing) "Save" else "Edit"
 
+            if (!isEditing) {
+                // Save profile when user clicks Save
+                saveUserProfile()
+            }
+        }
+
+        // --- Email verification ---
+        btnVerifyEmail.setOnClickListener {
+            val email = TokenManager.getEmail(this)
+            if (email.isNullOrEmpty()) {
+                Toast.makeText(this, "Email not available.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val intent = Intent(this, EmailVerificationActivity::class.java)
+            intent.putExtra("USER_EMAIL", email)
+            verificationResultLauncher.launch(intent)
+        }
+
+        // --- Phone verification ---
+        btnVerifyPhone.setOnClickListener {
+            val phone = TokenManager.getPhone(this)
+            if (phone.isNullOrEmpty()) {
+                Toast.makeText(this, "Phone number not available.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val intent = Intent(this, PhoneVerificationActivity::class.java)
+            intent.putExtra("USER_PHONE", phone)
+            verificationResultLauncher.launch(intent)
+        }
+
+        // --- Profile image selection ---
         imageProfile.setOnClickListener {
-            Log.d(TAG, "imageProfile clicked")
             val intent = Intent(Intent.ACTION_PICK).apply { type = "image/*" }
             imagePickerLauncher.launch(intent)
         }
 
-        btnVerifyAccount.setOnClickListener {
-            Log.d(TAG, "btnVerifyAccount clicked. IsVerified: ${TokenManager.isVerified(this)}")
-            if (!TokenManager.isVerified(this)) {
-                val userEmail = TokenManager.getEmail(this)
-                if (userEmail.isNullOrEmpty()) {
-                    Toast.makeText(this, "Email not available to start verification.", Toast.LENGTH_LONG).show()
-                    Log.w(TAG, "Verification attempted but email is null or empty.")
-                    return@setOnClickListener
-                }
-                val intent = Intent(this,EmailVerificationActivity::class.java)
-                intent.putExtra("USER_EMAIL", userEmail)
-                Log.d(TAG, "Starting EmailVerificationActivity for email: $userEmail")
-                verificationResultLauncher.launch(intent)
-            } else {
-                Toast.makeText(this, "Your account is already verified.", Toast.LENGTH_SHORT).show()
-            }
-        }
+        // --- Update verification display ---
+        updateVerificationStatusDisplay()
+
+        // --- Load latest profile from server ---
+        loadUserProfile()
+
         Log.d(TAG, "onCreate finished")
     }
 
-    private fun updateVerificationStatusDisplay() {
-        val isVerified = TokenManager.isVerified(this)
-        Log.d(TAG, "Updating verification status display. IsVerified: $isVerified")
-        textVerifiedStatus.text = if (isVerified) "Verified ✅" else "Not Verified ❌"
-        btnVerifyAccount.text = if (isVerified) "Account Verified" else "Verify Email / Resend Link"
-        btnVerifyAccount.isEnabled = !isVerified
+    // Enable or disable profile fields
+    private fun setFieldsEnabled(enabled: Boolean) {
+        usernameView.isEnabled = enabled
+        emailView.isEnabled = enabled
+        phoneView.isEnabled = enabled
+        locationView.isEnabled = enabled
     }
+
+    private fun updateVerificationStatusDisplay() {
+        val isEmailVerified = TokenManager.isEmailVerified(this)
+        val isPhoneVerified = TokenManager.isPhoneVerified(this)
+
+        textEmailStatus.text = if (isEmailVerified) "Email Verified ✅" else "Email Not Verified ❌"
+        textPhoneStatus.text = if (isPhoneVerified) "Phone Verified ✅" else "Phone Not Verified ❌"
+
+        btnVerifyEmail.isEnabled = !isEmailVerified
+        btnVerifyPhone.isEnabled = !isPhoneVerified
+    }
+
 
     override fun onResume() {
         super.onResume()
@@ -271,6 +309,47 @@ class AccountInfoActivity : AppCompatActivity() {
                     Toast.makeText(this@AccountInfoActivity, "Network error loading profile.", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+    private fun saveUserProfile() {
+        val updatedUsername = usernameView.text.toString().trim()
+        val updatedEmail = emailView.text.toString().trim()
+        val updatedPhone = phoneView.text.toString().trim()
+        val updatedLocation = locationView.text.toString().trim()
+
+        // Wrap suspend call in coroutine
+        lifecycleScope.launch {
+            try {
+                val request = UpdateProfileRequest(
+                    username = updatedUsername,
+                    email = updatedEmail,
+                    phone = updatedPhone,
+                    location = updatedLocation
+                )
+
+                val response = ApiClient.apiService.updateProfile(request)
+
+                if (response.isSuccessful) {
+                    Toast.makeText(this@AccountInfoActivity, "Profile saved ✅", Toast.LENGTH_SHORT).show()
+                    // Update TokenManager
+                    TokenManager.saveUserDetails(
+                        this@AccountInfoActivity,
+                        TokenManager.getUserId(this@AccountInfoActivity),
+                        updatedUsername,
+                        updatedEmail,
+                        updatedPhone,
+                        TokenManager.isVerified(this@AccountInfoActivity),
+                        TokenManager.getProfilePicUrl(this@AccountInfoActivity),
+                        updatedLocation
+                    )
+                } else {
+                    Toast.makeText(this@AccountInfoActivity, "Save failed ❌", Toast.LENGTH_SHORT).show()
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(this@AccountInfoActivity, "Network error ❌", Toast.LENGTH_SHORT).show()
+                Log.e("AccountInfo", "Error updating profile: ${e.message}", e)
+            }
+        }
     }
 
     private fun createTempFileFromUri(uri: Uri): File? {

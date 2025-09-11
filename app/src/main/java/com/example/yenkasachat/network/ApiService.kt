@@ -19,6 +19,8 @@ import com.example.yenkasachat.model.ForgotPasswordRequest
 import com.example.yenkasachat.model.VerificationResponse
 import com.example.yenkasachat.model.EmailRequest
 import com.example.yenkasachat.model.ConfirmRequest
+import com.example.yenkasachat.model.PhoneRequest
+import com.example.yenkasachat.model.ConfirmPhoneRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -168,6 +170,11 @@ interface ApiService {
     suspend fun confirmEmailVerification(@Body confirmRequest: ConfirmRequest): Response<VerificationResponse>
 
 
+    @POST("verify/request-phone-code")
+    suspend fun requestPhoneVerification(@Body request: PhoneRequest): Response<VerificationResponse>
+
+    @POST("verify/confirm-phone-code")
+    suspend fun confirmPhoneVerification(@Body request: ConfirmPhoneRequest): Response<VerificationResponse>
 
     @POST("unread/increment")
     suspend fun incrementUnreadCount(@Body request: UnreadCountRequest): Response<UnreadCountResponse>

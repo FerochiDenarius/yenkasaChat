@@ -242,6 +242,22 @@ object TokenManager {
             null
         }
     }
+    private fun getBoolean(context: Context, key: String, default: Boolean): Boolean {
+        return try {
+            getEncryptedPrefs(context).getBoolean(key, default)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading boolean key '$key': ${e.message}")
+            default
+        }
+    }
+
+    fun isEmailVerified(context: Context): Boolean {
+        return getBoolean(context, "emailVerified", false)
+    }
+
+    fun isPhoneVerified(context: Context): Boolean {
+        return getBoolean(context, "phoneVerified", false)
+    }
 
     // === Email ===
     fun saveEmail(context: Context, email: String?) {

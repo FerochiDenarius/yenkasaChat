@@ -57,6 +57,7 @@
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />
         <activity android:name=".ui.EmailVerificationActivity" />
+        <activity android:name=".ui.PhoneVerificationActivity" />
         <activity android:name=".ui.ImagePreviewActivity" />
 
 

@@ -21,6 +21,7 @@ import com.example.yenkasachat.model.EmailRequest
 import com.example.yenkasachat.model.ConfirmRequest
 import com.example.yenkasachat.model.PhoneRequest
 import com.example.yenkasachat.model.ConfirmPhoneRequest
+import com.example.yenkasachat.model.ResetPasswordRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -77,19 +78,26 @@ interface ApiService {
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
-
-    @POST("forgot-password")
-    suspend fun forgotPassword(
+    // 1️⃣ Request password reset email
+    @POST("reset-password/request")
+    suspend fun requestPasswordReset(
         @Body request: ForgotPasswordRequest
     ): Response<Void>
 
-// In your ApiService.kt file
+    // 2️⃣ Verify reset token
+    @POST("reset-password/verify")
+    suspend fun verifyResetToken(
+        @Body body: Map<String, String> // { "token": "xyz123" }
+    ): Response<Void>
 
+    // 3️⃣ Reset password with token
     @POST("reset-password/confirm/{token}")
     suspend fun resetPassword(
         @Path("token") token: String,
-        @Body body: Map<String, String>
-    ): Response<Void>
+        @Body request: ResetPasswordRequest
+    ): Response<ResponseBody>
+
+
 
     @GET("users")
     fun getAllUsers(): Call<List<User>>

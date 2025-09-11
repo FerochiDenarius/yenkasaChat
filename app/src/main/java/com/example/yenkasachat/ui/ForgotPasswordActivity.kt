@@ -67,7 +67,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
                 // Create the request body object
                 val requestBody = ForgotPasswordRequest(email = email) // <-- CHANGE THIS
                 // Call the API with the request body
-                val response = apiService.forgotPassword(requestBody) // <-- AND THIS
+                val response = apiService.requestPasswordReset(requestBody) // ✅ NEW
 
                 if (response.isSuccessful) {
                     // Backend successfully processed the request (e.g., sent the email)

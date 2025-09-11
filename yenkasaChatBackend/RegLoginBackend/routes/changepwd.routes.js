@@ -1,22 +1,27 @@
 const express = require('express');
 const router = express.Router();
 
-// ✅ Corrected path for the controller
 const {
+  requestPasswordReset,
   verifyResetToken,
   resetPassword
 } = require('../Controller/changepwd.controller'); 
 
-// This route will be mounted under /api/reset-password as per your server.js
-// So the actual paths will be:
+// This router is mounted at /api/reset-password in server.js
+// So your full routes will be:
+// POST /api/reset-password/request
 // POST /api/reset-password/verify
 // POST /api/reset-password/confirm/:token
 
-// POST /verify (effectively /api/reset-password/verify)
+// ✅ Send password reset email
+router.post('/request', requestPasswordReset);
+console.log("routes/changepwd.routes.js - Defined POST /request for requestPasswordReset");
+
+// ✅ Verify reset token
 router.post('/verify', verifyResetToken);
 console.log("routes/changepwd.routes.js - Defined POST /verify for verifyResetToken"); 
 
-// ✅ POST /confirm/:token (effectively /api/reset-password/confirm/:token)
+// ✅ Reset password
 router.post('/confirm/:token', resetPassword);
 console.log("routes/changepwd.routes.js - Defined POST /confirm/:token for resetPassword"); 
 

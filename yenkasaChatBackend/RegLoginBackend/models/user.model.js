@@ -37,7 +37,7 @@ const userSchema = new Schema({
     default: false
   },
 
-  // 🔑 Legacy generic fields (can be removed later)
+  // 🔑 Legacy generic fields
   verificationCode: { type: String },
   codeExpiresAt: { type: Date },
 
@@ -55,11 +55,17 @@ const userSchema = new Schema({
     type: String,
     default: '' 
   },
+
   playerId: { 
     type: String,
     default: null 
   },
-  refreshToken: { type: String }
+
+  refreshToken: { type: String },
+
+  // 🔒 Password reset fields (required for forgot/reset password flow)
+  passwordResetToken: { type: String },
+  passwordResetExpires: { type: Date }
 
 }, { timestamps: true }); 
 

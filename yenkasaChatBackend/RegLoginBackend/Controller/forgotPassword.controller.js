@@ -37,7 +37,11 @@ const sendPasswordResetEmail = async (req, res) => {
             return res.status(200).json({ message: "If an account with that email exists and is verified, a password reset link has been sent." });
         }
 
-      
+        // Optional: Check if the user's email is verified if you have such a system
+        // if (!user.isVerified) {
+        //     console.log(`--- [CONTROLLER WARN] Attempt to reset password for unverified email: ${lowerCaseEmail} ---`);
+        //     return res.status(200).json({ message: "Please verify your email address first. If an account with that email exists and is verified, a password reset link has been sent." });
+        // }
 
         console.log(`--- [CONTROLLER INFO] User found: ${user.username || user._id}. Generating reset token... ---`);
         
@@ -51,10 +55,8 @@ const sendPasswordResetEmail = async (req, res) => {
 
         // 2. Create Reset URL for the email (uses the PLAIN token)
         // Ensure process.env.FRONTEND_URL is set to https://www.yenkasa.xyz
-       // 2. Create Reset URL for the email (deep link for the app)
-const resetUrl = `yenkasa://reset-password?token=${resetToken}`;
-console.log(`--- [CONTROLLER INFO] Generated Reset Deep Link: ${resetUrl} ---`);
-
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        console.log(`--- [CONTROLLER INFO] Generated Reset URL: ${resetUrl} ---`);
 
 
         // 3. Configure Email Options

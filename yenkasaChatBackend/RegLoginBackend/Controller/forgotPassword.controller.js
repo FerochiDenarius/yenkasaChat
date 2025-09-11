@@ -61,12 +61,12 @@ const sendPasswordResetEmail = async (req, res) => {
         }
 
         // Optional: Implement email verification check if your system supports it
-        // if (!user.isEmailVerified) {
-        //     console.log(`${controllerTag} User "${user.username || user._id}" email not verified. Sending generic response.`);
-        //     return res.status(200).json({
-        //         message: 'If an account with that email exists and is verified, a password reset link has been sent.',
-        //     });
-        // }
+        if (!user.isEmailVerified) {
+             console.log(`${controllerTag} User "${user.username || user._id}" email not verified. Sending generic response.`);
+           return res.status(200).json({
+                message: 'If an account with that email exists and is verified, a password reset link has been sent.',
+            });
+        }
 
         console.log(`${controllerTag} User "${user.username || user._id}" found. Generating reset token...`);
 

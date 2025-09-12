@@ -88,7 +88,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // ✅ LOGIN with Access + Refresh Token
 console.log("routes/auth.js - Defining POST /login route");
 router.post('/login', async (req, res) => {
@@ -102,22 +101,36 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Missing credentials' });
     }
 
-    const identifierLower = identifier.toLowerCase();
-    console.log(`Login attempt for identifier: ${identifier} (searching as: ${identifierLower} or ${identifier} for phone)`);
+    // Trim the identifier to remove accidental leading/trailing spaces
+    const trimmedIdentifier = identifier.trim();
+
+    // For email matching, continue to use lowercase as emails are stored lowercase
+    const identifierForEmailQuery = trimmedIdentifier.toLowerCase();
+
+    console.log(`Login attempt for identifier: "${trimmedIdentifier}"`);
+    console.log(` -> Searching for email as: "${identifierForEmailQuery}" (case-insensitive due to stored lowercase)`);
+    console.log(` -> Searching for username as: "${trimmedIdentifier}" (case-insensitive via regex)`);
+    console.log(` -> Searching for phone as: "${trimmedIdentifier}" (exact match)`);
+
 
     const user = await User.findOne({
       $or: [
-        { email: identifierLower },
-        { phoneNumber: identifier },
-        { username: identifierLower },
+        // Match email (already stored as lowercase, so direct lowercase comparison is effectively case-insensitive)
+        { email: identifierForEmailQuery }, 
+        
+        // Match phone number (assuming it's stored as is and input matches that format)
+        { phoneNumber: trimmedIdentifier }, 
+        
+        // Match username case-insensitively using a regular expression
+        { username: new RegExp(`^${trimmedIdentifier}$`, 'i') } 
       ],
-    }).select('+refreshToken');
+    }).select('+refreshToken'); // Also select password if it's not selected by default, needed for bcrypt.compare
 
     if (!user) {
-      console.log(`Login failed: User not found for identifier: ${identifier}`);
-      return res.status(404).json({ message: 'User not found' });
+      console.log(`Login failed: User not found for identifier: "${trimmedIdentifier}"`);
+      return res.status(404).json({ message: 'User not found' }); // Or use a generic "Invalid credentials"
     }
-    console.log(`routes/auth.js - /login: User found: ${user.username}`);
+    console.log(`routes/auth.js - /login: User found: ${user.username} (ID: ${user._id})`);
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -128,10 +141,10 @@ router.post('/login', async (req, res) => {
     console.log(`Login successful for user: ${user.username}`);
 
     const accessTokenValue = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: ACCESS_EXPIRES_IN,
+      expiresIn: ACCESS_EXPIRES_IN, // Make sure ACCESS_EXPIRES_IN is defined
     });
     const refreshTokenValue = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, {
-      expiresIn: REFRESH_EXPIRES_IN,
+      expiresIn: REFRESH_EXPIRES_IN, // Make sure REFRESH_EXPIRES_IN is defined
     });
     console.log(`routes/auth.js - /login: Tokens created for user ${user.username}`);
 
@@ -142,8 +155,36 @@ router.post('/login', async (req, res) => {
       console.log(`Refresh token saved for user: ${user.username}`);
     } catch (saveError) {
       console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
+      // Decide if this should prevent login; usually not critical path for login itself.
     }
+    
+    // --- Your existing response payload logic ---
+    const responsePayload = {
+      user: {
+        _id: user._id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        phone: user.phoneNumber,
+        username: user.username,
+        location: user.location,
+        verified: user.verified,
+        playerId: user.playerId || null
+      },
+      token: accessTokenValue,       
+      accessToken: accessTokenValue, 
+      refreshToken: refreshTokenValue
+    };
+    console.log('✅ Sending login success response payload:', JSON.stringify(responsePayload, null, 2));
 
+    res.json(responsePayload);
+    // --- End of your existing response payload logic ---
+
+  } catch (err) {
+    console.error('❌ Login error (main catch block):', err.message);
+    console.error(err.stack); // Log the full stack for better debugging
+    res.status(500).json({ message: 'Server error during login' });
+  }
+});
 
 
     // Backwards + forwards compatibility

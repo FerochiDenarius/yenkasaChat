@@ -11,8 +11,7 @@ const jwt = require('jsonwebtoken');
 console.log("routes/auth.js - jwt required");
 const User = require('../models/user.model'); // Ensure this path is correct
 console.log("routes/auth.js - User model required, path: ../models/user.model");
-const { verifyResetToken, resetPassword } = require('../Controller/changepwd.controller'); // Adjust path as needed
-
+// const { verifyResetToken, resetPassword } = require('../Controller/changepwd.controller'); // You might not need these here if they are on their own routes
 
 // ✅ Sanitize helper
 const sanitize = (val) =>
@@ -25,19 +24,21 @@ if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
 }
 console.log("routes/auth.js - JWT secrets check passed");
 
-const ACCESS_EXPIRES_IN = '1h';
-const REFRESH_EXPIRES_IN = '7d';
+const ACCESS_EXPIRES_IN = '1h'; // Ensure these are defined
+const REFRESH_EXPIRES_IN = '7d'; // Ensure these are defined
 
 // ✅ REGISTER
 console.log("routes/auth.js - Defining POST /register route");
 router.post('/register', async (req, res) => {
+  // ... your existing /register route code ...
+  // (No changes were made here in the previous suggestion for case-insensitive login)
   console.log("✅✅✅ /api/auth/register - ROUTE HANDLER REACHED ✅✅✅");
   let { email, phoneNumber, username, location, password } = req.body;
 
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
-    username = username ? sanitize(username.toLowerCase()) : null;
+    username = username ? sanitize(username.toLowerCase()) : null; // Stays lowercase for registration consistency
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
@@ -49,7 +50,7 @@ router.post('/register', async (req, res) => {
       $or: [
         ...(email ? [{ email }] : []),
         ...(phoneNumber ? [{ phoneNumber }] : []),
-        { username },
+        { username }, // Matches stored lowercase username
       ],
     });
 
@@ -88,7 +89,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ✅ LOGIN with Access + Refresh Token
+
+// ✅ LOGIN with Access + Refresh Token (<<<<< THIS IS THE MODIFIED SECTION)
 console.log("routes/auth.js - Defining POST /login route");
 router.post('/login', async (req, res) => {
   console.log("✅✅✅ /api/auth/login - ROUTE HANDLER REACHED ✅✅✅");
@@ -101,10 +103,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Missing credentials' });
     }
 
-    // Trim the identifier to remove accidental leading/trailing spaces
     const trimmedIdentifier = identifier.trim();
-
-    // For email matching, continue to use lowercase as emails are stored lowercase
     const identifierForEmailQuery = trimmedIdentifier.toLowerCase();
 
     console.log(`Login attempt for identifier: "${trimmedIdentifier}"`);
@@ -112,23 +111,17 @@ router.post('/login', async (req, res) => {
     console.log(` -> Searching for username as: "${trimmedIdentifier}" (case-insensitive via regex)`);
     console.log(` -> Searching for phone as: "${trimmedIdentifier}" (exact match)`);
 
-
     const user = await User.findOne({
       $or: [
-        // Match email (already stored as lowercase, so direct lowercase comparison is effectively case-insensitive)
         { email: identifierForEmailQuery }, 
-        
-        // Match phone number (assuming it's stored as is and input matches that format)
         { phoneNumber: trimmedIdentifier }, 
-        
-        // Match username case-insensitively using a regular expression
         { username: new RegExp(`^${trimmedIdentifier}$`, 'i') } 
       ],
-    }).select('+refreshToken'); // Also select password if it's not selected by default, needed for bcrypt.compare
+    }).select('+refreshToken'); // Ensure password is also selected if not by default
 
     if (!user) {
       console.log(`Login failed: User not found for identifier: "${trimmedIdentifier}"`);
-      return res.status(404).json({ message: 'User not found' }); // Or use a generic "Invalid credentials"
+      return res.status(404).json({ message: 'User not found' });
     }
     console.log(`routes/auth.js - /login: User found: ${user.username} (ID: ${user._id})`);
 
@@ -141,24 +134,21 @@ router.post('/login', async (req, res) => {
     console.log(`Login successful for user: ${user.username}`);
 
     const accessTokenValue = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: ACCESS_EXPIRES_IN, // Make sure ACCESS_EXPIRES_IN is defined
+      expiresIn: ACCESS_EXPIRES_IN,
     });
     const refreshTokenValue = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, {
-      expiresIn: REFRESH_EXPIRES_IN, // Make sure REFRESH_EXPIRES_IN is defined
+      expiresIn: REFRESH_EXPIRES_IN,
     });
     console.log(`routes/auth.js - /login: Tokens created for user ${user.username}`);
 
-    // Always save refresh token to DB
     try {
       user.refreshToken = refreshTokenValue;
       await user.save();
       console.log(`Refresh token saved for user: ${user.username}`);
     } catch (saveError) {
       console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
-      // Decide if this should prevent login; usually not critical path for login itself.
     }
-    
-    // --- Your existing response payload logic ---
+
     const responsePayload = {
       user: {
         _id: user._id,
@@ -175,36 +165,6 @@ router.post('/login', async (req, res) => {
       refreshToken: refreshTokenValue
     };
     console.log('✅ Sending login success response payload:', JSON.stringify(responsePayload, null, 2));
-
-    res.json(responsePayload);
-    // --- End of your existing response payload logic ---
-
-  } catch (err) {
-    console.error('❌ Login error (main catch block):', err.message);
-    console.error(err.stack); // Log the full stack for better debugging
-    res.status(500).json({ message: 'Server error during login' });
-  }
-});
-
-
-    // Backwards + forwards compatibility
-    const responsePayload = {
-      user: {
-        _id: user._id,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        phone: user.phoneNumber, // Keep both keys for safety
-        username: user.username,
-        location: user.location,
-        verified: user.verified,
-        playerId: user.playerId || null
-      },
-      token: accessTokenValue,       // Legacy key
-      accessToken: accessTokenValue, // New key
-      refreshToken: refreshTokenValue
-    };
-    console.log('✅ Sending login success response payload:', JSON.stringify(responsePayload, null, 2));
-
     res.json(responsePayload);
 
   } catch (err) {
@@ -213,10 +173,13 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error during login' });
   }
 });
+// (END OF MODIFIED /login SECTION >>>>>)
+
 
 // ✅ Refresh Token Endpoint
 console.log("routes/auth.js - Defining POST /token/refresh route");
 router.post('/token/refresh', async (req, res) => {
+  // ... your existing /token/refresh route code ...
   console.log("✅✅✅ /api/auth/token/refresh - ROUTE HANDLER REACHED ✅✅✅");
   const { refreshToken } = req.body;
 
@@ -242,7 +205,6 @@ router.post('/token/refresh', async (req, res) => {
     });
     console.log(`routes/auth.js - /token/refresh: New access token generated for userId: ${user._id}`);
 
-    // Return both keys for compatibility
     res.json({ token: newAccessToken, accessToken: newAccessToken });
 
   } catch (err) {
@@ -271,4 +233,4 @@ router.post('/debug-headers', (req, res) => {
 });
 
 console.log("routes/auth.js - module.exports = router");
-module.exports = router;
+module.exports = router; // <<<<< MAKE SURE THIS LINE IS PRESENT AND AT THE END

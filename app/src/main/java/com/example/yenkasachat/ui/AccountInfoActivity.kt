@@ -268,7 +268,7 @@ class AccountInfoActivity : AppCompatActivity() {
                                 currentUser.email,
                                 currentUser.phone,
                                 currentUser.verified,
-                                currentUser.profileImage,
+                                 currentUser.profileImage,
                                 currentUser.location
                             )
 

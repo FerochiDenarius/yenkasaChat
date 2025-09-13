@@ -177,39 +177,55 @@ router.post('/login', async (req, res) => {
 
 
 // ✅ Refresh Token Endpoint
-console.log("routes/auth.js - Defining POST /token/refresh route");
-router.post('/token/refresh', async (req, res) => {
-  // ... your existing /token/refresh route code ...
-  console.log("✅✅✅ /api/auth/token/refresh - ROUTE HANDLER REACHED ✅✅✅");
+console.log("routes/auth.js - Defining POST /refresh-token route"); // Update log message
+router.post('/refresh-token', async (req, res) => { // <<<< CHANGE THIS LINE
+  console.log("✅✅✅ /api/auth/refresh-token - ROUTE HANDLER REACHED ✅✅✅"); // Update log message
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    console.log("routes/auth.js - /token/refresh: Refresh token missing from request.");
+    console.log("routes/auth.js - /refresh-token: Refresh token missing from request.");
     return res.status(400).json({ message: 'Refresh token required' });
   }
 
   try {
     const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-    console.log(`routes/auth.js - /token/refresh: Refresh token payload verified for userId: ${payload.userId}`);
+    console.log(`routes/auth.js - /refresh-token: Refresh token payload verified for userId: ${payload.userId}`);
 
-    const user = await User.findById(payload.userId).select('+refreshToken');
+    // It's good practice to ensure the token from the DB still matches
+    // This helps invalidate tokens if a user's refresh token is compromised or reissued.
+    const user = await User.findById(payload.userId).select('+refreshToken'); // Make sure refreshToken is selected
 
-    if (!user || user.refreshToken !== refreshToken) {
-      console.warn(`Refresh token mismatch or user not found for refresh. User ID: ${payload.userId}. Token provided: ${refreshToken}. Token in DB: ${user ? user.refreshToken : 'N/A'}`);
-      return res.status(403).json({ message: 'Invalid refresh token (token mismatch or user not found)' });
+    if (!user) {
+        console.warn(`Refresh token attempt for non-existent user ID: ${payload.userId}.`);
+        return res.status(403).json({ message: 'Invalid refresh token (user not found)' });
     }
-    console.log(`routes/auth.js - /token/refresh: User found and refresh token matches DB for userId: ${user._id}`);
+    
+    // Compare the received refreshToken with the one stored in the database
+    if (user.refreshToken !== refreshToken) {
+        console.warn(`Refresh token mismatch for user ${user._id}. Token in DB might have been updated or revoked.`);
+        // Optionally, you might want to clear the user.refreshToken here for security if it's a very old/compromised token.
+        // await User.updateOne({ _id: user._id }, { $unset: { refreshToken: "" } });
+        return res.status(403).json({ message: 'Invalid refresh token (token mismatch - potentially revoked or reissued)' });
+    }
+    console.log(`routes/auth.js - /refresh-token: User found and refresh token matches DB for userId: ${user._id}`);
+
 
     const newAccessToken = jwt.sign({ userId: payload.userId }, process.env.JWT_SECRET, {
       expiresIn: ACCESS_EXPIRES_IN,
     });
-    console.log(`routes/auth.js - /token/refresh: New access token generated for userId: ${user._id}`);
+    console.log(`routes/auth.js - /refresh-token: New access token generated for userId: ${user._id}`);
 
+    // It's common to also send back the new access token under the key "accessToken"
+    // and potentially a new refresh token if you implement refresh token rotation.
+    // For now, just sending "token" and "accessToken" for compatibility with your client.
     res.json({ token: newAccessToken, accessToken: newAccessToken });
 
   } catch (err) {
     console.error('❌ Token refresh error:', err.message);
     if (err.name === 'TokenExpiredError') {
+      // If the refresh token itself is expired, the user MUST log in again.
+      // You might want to clear the refresh token from the DB here too.
+      // await User.updateOne({ _id: jwt.decode(refreshToken)?.userId }, { $unset: { refreshToken: "" } });
       return res.status(401).json({ message: 'Refresh token expired' });
     }
     if (err.name === 'JsonWebTokenError') {

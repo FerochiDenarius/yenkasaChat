@@ -254,6 +254,8 @@ class AccountInfoActivity : AppCompatActivity() {
             // Consider if you want to prevent the call or show a login prompt
         }
 
+// In AccountInfoActivity.kt
+
         ApiClient.apiService.getUserProfile()
             .enqueue(object : Callback<User> {
                 override fun onResponse(call: Call<User>, response: Response<User>) {
@@ -261,26 +263,53 @@ class AccountInfoActivity : AppCompatActivity() {
                         val user = response.body()
                         Log.i(TAG, "User profile loaded successfully: ${user?.username}")
                         user?.let { currentUser ->
+
+                            // --- Determine specific verification statuses based on the general currentUser.verified ---
+                            val isEmailVerifiedByServerLogic: Boolean =
+                                if (!currentUser.email.isNullOrBlank()) {
+                                    currentUser.verified // If email exists, its status is the general verified status
+                                } else {
+                                    false // No email, so can't be email-verified
+                                }
+
+                            val isPhoneVerifiedByServerLogic: Boolean =
+                                if (!currentUser.phone.isNullOrBlank()) {
+                                    currentUser.verified // If phone exists, its status is the general verified status
+                                } else {
+                                    false // No phone, so can't be phone-verified
+                                }
+
+                            // If your logic is that currentUser.verified means ONLY email is verified:
+                            // val isEmailVerifiedByServerLogic = currentUser.verified
+                            // val isPhoneVerifiedByServerLogic = TokenManager.isPhoneVerified(this@AccountInfoActivity) // Keep existing or false
+
+
+                            Log.d(TAG, "Mapping server 'verified: ${currentUser.verified}' to: " +
+                                    "EmailVerified: $isEmailVerifiedByServerLogic, " +
+                                    "PhoneVerified: $isPhoneVerifiedByServerLogic")
+
                             TokenManager.saveUserDetails(
-                                this@AccountInfoActivity,
-                                currentUser._id,
-                                currentUser.username,
-                                currentUser.email,
-                                currentUser.phone,
-                                currentUser.verified,
-                                 currentUser.profileImage,
-                                currentUser.location
+                                context = this@AccountInfoActivity,
+                                userId = currentUser._id,
+                                username = currentUser.username,
+                                email = currentUser.email,
+                                phone = currentUser.phone,
+                                isEmailActuallyVerified = isEmailVerifiedByServerLogic,   // Pass derived email status
+                                isPhoneActuallyVerified = isPhoneVerifiedByServerLogic,   // Pass derived phone status
+                                profileImageUrl = currentUser.profileImage,
+                                location = currentUser.location
                             )
 
-                            // Update UI elements directly using setText for EditTexts
+                            // Update UI elements
                             usernameView.setText(currentUser.username ?: "")
                             emailView.setText(currentUser.email ?: "")
                             phoneView.setText(currentUser.phone ?: "")
                             locationView.setText(currentUser.location ?: "")
                             Log.d(TAG, "EditText fields updated from network response.")
 
-                            updateVerificationStatusDisplay() // Refresh status based on fresh data
+                            updateVerificationStatusDisplay() // Refresh status based on fresh data from TokenManager
 
+                            // ... (Glide image loading logic remains the same) ...
                             currentUser.profileImage?.let { url ->
                                 if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) {
                                     Glide.with(this@AccountInfoActivity)
@@ -299,8 +328,6 @@ class AccountInfoActivity : AppCompatActivity() {
                     } else {
                         val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                         Log.e(TAG, "❌ Failed to load profile: ${response.code()} - ${response.message()}. Error: $errorMsg")
-                        // Optionally, show a toast to the user about failing to load profile
-                        // Toast.makeText(this@AccountInfoActivity, "Failed to load profile details.", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -309,6 +336,7 @@ class AccountInfoActivity : AppCompatActivity() {
                     Toast.makeText(this@AccountInfoActivity, "Network error loading profile.", Toast.LENGTH_SHORT).show()
                 }
             })
+
     }
     private fun saveUserProfile() {
         val updatedUsername = usernameView.text.toString().trim()
@@ -330,18 +358,26 @@ class AccountInfoActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     Toast.makeText(this@AccountInfoActivity, "Profile saved ✅", Toast.LENGTH_SHORT).show()
-                    // Update TokenManager
+
+                    // --- 👇 CORRECTED TokenManager.saveUserDetails CALL 👇 ---
                     TokenManager.saveUserDetails(
-                        this@AccountInfoActivity,
-                        TokenManager.getUserId(this@AccountInfoActivity),
-                        updatedUsername,
-                        updatedEmail,
-                        updatedPhone,
-                        TokenManager.isVerified(this@AccountInfoActivity),
-                        TokenManager.getProfilePicUrl(this@AccountInfoActivity),
-                        updatedLocation
+                        context = this@AccountInfoActivity,
+                        userId = TokenManager.getUserId(this@AccountInfoActivity), // Get existing user ID
+                        username = updatedUsername,
+                        email = updatedEmail,
+                        phone = updatedPhone,
+                        // Get the current specific verification statuses from TokenManager
+                        isEmailActuallyVerified = TokenManager.isEmailVerified(this@AccountInfoActivity),
+                        isPhoneActuallyVerified = TokenManager.isPhoneVerified(this@AccountInfoActivity),
+                        // Get the current profile picture URL from TokenManager
+                        // (assuming it's not part of the UpdateProfileRequest here,
+                        // or if it is, you might get it from the response if the server confirms it)
+                        profileImageUrl = TokenManager.getProfilePicUrl(this@AccountInfoActivity),
+                        location = updatedLocation
                     )
-                } else {
+                    // --- END OF CORRECTION ---
+
+                }else {
                     Toast.makeText(this@AccountInfoActivity, "Save failed ❌", Toast.LENGTH_SHORT).show()
                 }
 

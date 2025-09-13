@@ -18,10 +18,13 @@ object TokenManager {
     private const val EMAIL_KEY = "email"
     private const val PHONE_KEY = "phone"
     private const val LOCATION_KEY = "location"
-    private const val VERIFIED_KEY = "is_verified"
+
     // 👇 NEW KEY FOR ONESIGNAL PLAYER ID
     private const val ONE_SIGNAL_PLAYER_ID_KEY = "one_signal_player_id"
-
+    // --- 👇 KEYS FOR SPECIFIC VERIFICATION STATUS (These should already be here from my last TokenManager update) ---
+    private const val EMAIL_VERIFIED_KEY = "email_is_verified"
+    private const val PHONE_VERIFIED_KEY = "phone_is_verified"
+    // --- END OF SPECIFIC VERIFICATION KEYS ---
 
     // Logging Tag
     private const val TAG = "TokenManager"
@@ -53,7 +56,8 @@ object TokenManager {
         username: String?,
         email: String?,
         phone: String?,
-        isVerified: Boolean, // Note: your User model might have Boolean? for isVerified
+        isEmailActuallyVerified: Boolean, // Note: your User model might have Boolean? for isVerified
+        isPhoneActuallyVerified: Boolean,
         profileImageUrl: String?,
         location: String? // Assuming location is also part of your User model
     ) {
@@ -62,7 +66,7 @@ object TokenManager {
         saveUsername(context, username)
         saveEmail(context, email)
         savePhone(context, phone)
-        setVerified(context, isVerified) // Uses your existing setVerified method
+        //setEmailVerifiedStatus(context, isVerified) // Uses your existing setVerified method
         saveProfilePicUrl(context, profileImageUrl)
         saveLocation(context, location)
         Log.i(TAG, "User details batch save operation completed.")
@@ -329,25 +333,8 @@ object TokenManager {
     }
 
     // === Verified Status ===
-    fun setVerified(context: Context, isVerified: Boolean) {
-        try {
-            getEncryptedPrefs(context).edit().putBoolean(VERIFIED_KEY, isVerified).apply()
-            Log.i(TAG, "Verified status set to: $isVerified") // Changed to INFO
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting verified status", e)
-        }
-    }
 
-    fun isVerified(context: Context): Boolean {
-        return try {
-            val verified = getEncryptedPrefs(context).getBoolean(VERIFIED_KEY, false)
-            Log.d(TAG, "Retrieved Verified status: $verified")
-            verified
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting verified status", e)
-            false // Default to false on error
-        }
-    }
+
 
     // === 👇 ONESIGNAL PLAYER ID METHODS (LOGGING ALREADY GOOD) ===
 
@@ -400,7 +387,25 @@ object TokenManager {
             Log.e(TAG, "Error clearing OneSignal Player ID from EncryptedSharedPreferences", e)
         }
     }
+    fun setEmailVerifiedStatus(context: Context, isVerified: Boolean) {
+        try {
+            getEncryptedPrefs(context).edit().putBoolean(EMAIL_VERIFIED_KEY, isVerified).apply()
+            Log.i(TAG, "Email verified status in TokenManager set to: $isVerified")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting email verified status: ${e.message}", e)
+        }
+    }
+    // === END OF setEmailVerifiedStatus DEFINITION ===
 
+    // === 👇 DECLARE AND DEFINE setPhoneVerifiedStatus HERE ===
+    fun setPhoneVerifiedStatus(context: Context, isVerified: Boolean) {
+        try {
+            getEncryptedPrefs(context).edit().putBoolean(PHONE_VERIFIED_KEY, isVerified).apply()
+            Log.i(TAG, "Phone verified status in TokenManager set to: $isVerified")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting phone verified status: ${e.message}", e)
+        }
+    }
     // === Clear All ===
     fun clearAll(context: Context) {
         try {
@@ -413,7 +418,8 @@ object TokenManager {
                 .remove(EMAIL_KEY)
                 .remove(PHONE_KEY)
                 .remove(LOCATION_KEY)
-                .remove(VERIFIED_KEY)
+                .remove(EMAIL_VERIFIED_KEY)
+                .remove(PHONE_VERIFIED_KEY)
                 .remove(ONE_SIGNAL_PLAYER_ID_KEY) // ✅ Also clear Player ID
                 .apply()
             Log.i(TAG, "All data cleared from EncryptedSharedPreferences.")

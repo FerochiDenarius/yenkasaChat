@@ -165,15 +165,17 @@ router.post('/fix-contacts', async (req, res) => {
 });
 
 // PATCH /api/users/:userId/player-id
-// **IMPORTANT**: This duplicates functionality likely present in other route files.
-// Choose ONE place for this logic. Assuming this is the chosen one for this logging exercise.
+// (This route is responsible for updating a user's OneSignal Player ID)
 router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
     const { userId: paramUserId } = req.params;
-    const { playerId: bodyPlayerId } = req.body; // This is the OneSignal Player ID value from Android
+    // Ensure bodyPlayerId is trimmed right away if it exists, or handle if it's not a string
+    const bodyPlayerId = typeof req.body.playerId === 'string' ? req.body.playerId.trim() : null;
 
-    const requestId = `req_user_playerid_${Date.now()}`;
+    const requestId = `req_user_playerid_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
 
+    // Distinct log to confirm this handler is hit
+    console.log(`[UserRoutes][${requestId}] !!!!!!!!!!! EXECUTING PATCH /:userId/player-id FROM USER.ROUTES.JS !!!!!!!!!!!`);
     logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Request received by Auth User: ${authenticatedUserId}`);
     logger.debug(`[${requestId}] PATCH /${paramUserId}/player-id - Request Params:`, req.params);
     logger.debug(`[${requestId}] PATCH /${paramUserId}/player-id - Request Body (payload):`, JSON.stringify(req.body));
@@ -189,17 +191,20 @@ router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
         return res.status(403).json({ error: 'Forbidden: You can only update your own player ID.' });
     }
 
-    if (!bodyPlayerId || typeof bodyPlayerId !== 'string' || bodyPlayerId.trim() === '') {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - VALIDATION FAILED: Invalid or missing 'playerId' in request body. Provided: "${bodyPlayerId}" by Auth User: ${authenticatedUserId}`);
+    // Validation for bodyPlayerId (now using the trimmed version)
+    if (!bodyPlayerId || bodyPlayerId === '') { // Check if null (due to not being string or empty after trim)
+        logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - VALIDATION FAILED: Invalid or missing 'playerId' in request body. Provided in req.body: "${req.body.playerId}" by Auth User: ${authenticatedUserId}`);
         return res.status(400).json({ error: 'Invalid or missing player ID. It must be a non-empty string.' });
     }
 
-    logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Attempting to update DB for User: ${paramUserId} with oneSignalPlayerId: '${bodyPlayerId}'`);
+    // CORRECTED LOG: Use 'playerId' and the trimmed value
+    logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Attempting to update DB for User: ${paramUserId} with playerId: '${bodyPlayerId}'`);
 
     try {
         const updatedUser = await User.findByIdAndUpdate(
-            paramUserId, // User ID from URL parameter (already validated against authenticated user)
-            { $set: { oneSignalPlayerId: bodyPlayerId, updatedAt: new Date() } }, // ** CRITICAL: Ensure 'oneSignalPlayerId' is the correct field in your User model **
+            paramUserId,
+            // CORRECTED: Use 'playerId' and the trimmed value in $set
+            { $set: { playerId: bodyPlayerId, updatedAt: new Date() } },
             { new: true, runValidators: true } // Return updated doc, run schema validations
         );
 
@@ -208,14 +213,19 @@ router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - ✅ Player ID ('oneSignalPlayerId') updated successfully for User: ${updatedUser._id} to '${updatedUser.oneSignalPlayerId}'`);
+        // CORRECTED LOG: Use 'playerId' and access it from updatedUser.playerId
+        logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - ✅ Player ID ('playerId') updated successfully for User: ${updatedUser._id} to '${updatedUser.playerId}'`);
+        
+        // CORRECTED RESPONSE: Send back 'playerId' and its value from updatedUser.playerId
         res.status(200).json({
             message: 'Player ID updated successfully',
             userId: updatedUser._id,
-            oneSignalPlayerId: updatedUser.oneSignalPlayerId // Confirm the updated value
+            playerId: updatedUser.playerId
         });
     } catch (err) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/player-id - ❌ Error updating 'oneSignalPlayerId' for User: ${paramUserId} with value '${bodyPlayerId}'. Error: ${err.message}`, { stack: err.stack });
+        // CORRECTED LOG: Use 'playerId' and the trimmed value in the error message
+        logger.error(`[${requestId}] PATCH /${paramUserId}/player-id - ❌ Error updating 'playerId' for User: ${paramUserId} with value '${bodyPlayerId}'. Error: ${err.message}`, { stack: err.stack });
+        
         if (err.name === 'ValidationError') {
             logger.warn(`[${requestId}] Mongoose validation error:`, err.errors);
             return res.status(400).json({ error: 'Validation error updating Player ID.', errors: err.errors });

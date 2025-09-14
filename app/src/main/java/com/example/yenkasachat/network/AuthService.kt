@@ -59,8 +59,9 @@ interface AuthService {
         @Body body: Map<String, String>
     ): Call<Void>
 
-    @POST("auth/refresh-token")
-    fun refreshToken(@Body request: RefreshTokenRequest): retrofit2.Call<TokenResponse>
-
+    @POST("refresh-token")
+    fun refreshToken(
+        @Body request: RefreshTokenRequest
+    ): Call<TokenResponse>
 
 }

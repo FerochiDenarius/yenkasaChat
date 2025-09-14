@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.location.Location
 import android.net.Uri
+import com.example.yenkasachat.model.Participant // Your app's Participant model
 import android.os.Handler
 import android.provider.ContactsContract
 import android.util.Log
@@ -37,9 +38,12 @@ interface ChatHelperCallback {
     fun requestHideKeyboard()
     fun requestSendChatMessage(messageData: Map<String, Any>)
     fun checkAndRequestPermission(permission: String): Boolean
-
-    // New callback method for delete confirmation
     fun requestDeleteConfirmation(messageToDelete: ChatMessage)
+
+    // Corrected definitions:
+    fun onReceiverParticipantDetailsReady(participant: Participant)
+    fun onReceiverParticipantStatusUpdate(isOnline: Boolean, statusText: String)
+    fun showDefaultReceiverHeader(defaultName: String?)
 }
 
 /**
@@ -115,7 +119,8 @@ class ChatActivityHelper(
                             Log.d("HelperFetchMessages", "Response successful but message list is null.")
                         }
                     } else {
-                        val errorMsg = parseError(response)
+                        // Call the class member parseError function
+                        val errorMsg = this@ChatActivityHelper.parseError(response)
                         Log.e("HelperFetchMessages", "Failed to fetch messages: $errorMsg (Code: ${response.code()})")
                     }
                 }
@@ -127,6 +132,61 @@ class ChatActivityHelper(
                 }
             })
     }
+
+    // Corrected initializeHeaderInformation - single definition, no nesting
+    fun initializeHeaderInformation() {
+        if (roomId.isBlank()) {
+            Log.e("ChatActivityHelper", "Room ID is blank, cannot fetch room details for header.")
+            callback.showDefaultReceiverHeader("Chat")
+            return
+        }
+
+        if (senderId.isBlank()) { // We need senderId to fetch their chat rooms
+            Log.e("ChatActivityHelper", "Sender ID is blank, cannot fetch user's chat rooms.")
+            callback.showDefaultReceiverHeader("Chat")
+            return
+        }
+
+        ApiClient.apiService.getUserChatRooms(senderId) // Fetch rooms for the current user
+            .enqueue(object : Callback<List<com.example.yenkasachat.model.ChatRoom>> {
+                override fun onResponse(
+                    call: Call<List<com.example.yenkasachat.model.ChatRoom>>,
+                    response: Response<List<com.example.yenkasachat.model.ChatRoom>>
+                ) {
+                    if (response.isSuccessful) {
+                        val allUserChatRooms = response.body()
+                        val currentChatRoom = allUserChatRooms?.firstOrNull { it._id == roomId }
+
+                        if (currentChatRoom != null) {
+                            val otherParticipant = currentChatRoom.participants?.firstOrNull { it._id != senderId }
+
+                            if (otherParticipant != null) {
+                                callback.onReceiverParticipantDetailsReady(otherParticipant)
+                                val statusText = if (otherParticipant.isOnline == true) "Online" else "Offline"
+                                callback.onReceiverParticipantStatusUpdate(otherParticipant.isOnline ?: false, statusText)
+                            } else {
+                                Log.w("ChatActivityHelper", "Could not find other participant in room $roomId for header.")
+                                // Corrected: Does not access currentChatRoom.name
+                                callback.showDefaultReceiverHeader("Chat")
+                            }
+                        } else {
+                            Log.w("ChatActivityHelper", "Target room $roomId not found in user's chat rooms list.")
+                            callback.showDefaultReceiverHeader("Chat")
+                        }
+                    } else {
+                        // Call the class member parseError function
+                        val errorMsg = this@ChatActivityHelper.parseError(response)
+                        Log.e("ChatActivityHelper", "Failed to fetch user chat rooms: $errorMsg (Code: ${response.code()})")
+                        callback.showDefaultReceiverHeader("Chat")
+                    }
+                }
+
+                override fun onFailure(call: Call<List<com.example.yenkasachat.model.ChatRoom>>, t: Throwable) {
+                    Log.e("ChatActivityHelper", "Error fetching user chat rooms for header", t)
+                    callback.showDefaultReceiverHeader("Chat")
+                }
+            })
+    } // End of initializeHeaderInformation
 
     fun onMessageSentByHandler(message: ChatMessage) {
         val currentMessages = callback.getCurrentMessageList().toMutableList()
@@ -166,21 +226,12 @@ class ChatActivityHelper(
             Log.e("ChatActivityHelper", "Attempted to delete message without an ID: ${message.text}")
             return
         }
-        // Request confirmation from the Activity
         callback.requestDeleteConfirmation(message)
     }
 
-    // New method called by ChatActivity after user confirms deletion
-// Ensure you have these imports at the top of ChatActivityHelper.kt
-    // import kotlinx.coroutines.Dispatchers
-    // import kotlinx.coroutines.withContext
-    // (CoroutineScope and launch are typically handled by the calling Activity's lifecycleScope)
-
-    // This is the method that should be in your ChatActivityHelper.kt
     suspend fun confirmDeleteMessageOnServer(messageToDelete: ChatMessage) {
         if (messageToDelete.messageId == null) {
             Log.e("ChatActivityHelper", "confirmDeleteMessageOnServer called with null messageId.")
-            // Ensure UI updates are on the main thread
             withContext(Dispatchers.Main) {
                 callback.showToast("Error: Message ID missing for deletion.", Toast.LENGTH_SHORT)
             }
@@ -190,12 +241,8 @@ class ChatActivityHelper(
         Log.d("ChatActivityHelper", "Proceeding to delete messageId on server: ${messageToDelete.messageId}")
 
         try {
-            // THE KEY CHANGE IS HERE:
-            // 1. Direct call to the suspend function.
-            // 2. Pass ALL required parameters (including authToken).
-            // 3. No .enqueue()
             val response = ApiClient.apiService.deleteMessage(
-                authToken = "Bearer $token", // Make sure 'token' is accessible and correct
+                authToken = "Bearer $token",
                 messageId = messageToDelete.messageId!!
             )
 
@@ -210,20 +257,17 @@ class ChatActivityHelper(
                         callback.updateMessages(currentMessages.toList())
                     } else {
                         Log.w("ChatActivityHelper", "Message ${messageToDelete.messageId} not found in current list after delete. Fetching fresh.")
-                        // If fetchMessages is still using .enqueue(), it can be called directly.
-                        // If fetchMessages is also a suspend function, you'd call it directly:
-                        // fetchMessages()
-                        fetchMessages() // Assuming this is still the old enqueue version for now or also converted
+                        fetchMessages()
                     }
                 }
             } else {
-                val errorMsg = parseError(response) // Ensure parseError handles Response<*>
+                val errorMsg = this@ChatActivityHelper.parseError(response)
                 withContext(Dispatchers.Main) {
                     callback.showToast("Failed to delete message: $errorMsg", Toast.LENGTH_LONG)
                     Log.e("ChatActivityHelper", "Failed to delete message ${messageToDelete.messageId}: $errorMsg (Code: ${response.code()})")
                 }
             }
-        } catch (e: Exception) { // Catch network errors or other exceptions
+        } catch (e: Exception) {
             Log.e("ChatActivityHelper", "Error deleting message ${messageToDelete.messageId}", e)
             withContext(Dispatchers.Main) {
                 callback.showToast("Error deleting message: ${e.message}", Toast.LENGTH_LONG)
@@ -233,18 +277,15 @@ class ChatActivityHelper(
 
     override fun onReplyToMessage(message: ChatMessage) {
         callback.showToast("Reply to: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: callback.requestSetupReplyUI(message)
     }
 
     override fun onForwardMessage(message: ChatMessage) {
         callback.showToast("Forward: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: callback.requestNavigateToForwardScreen(message)
     }
 
     override fun onEditMessage(message: ChatMessage, positionInAdapter: Int) {
         if (message.senderId == senderId && !message.text.isNullOrBlank()) {
             callback.showToast("Edit: ${message.text}. Logic pending.", Toast.LENGTH_SHORT)
-            // Future: callback.requestShowEditMessageDialog(message)
         } else {
             callback.showToast("Cannot edit this message.", Toast.LENGTH_SHORT)
         }
@@ -252,27 +293,22 @@ class ChatActivityHelper(
 
     override fun onPinMessage(message: ChatMessage, positionInAdapter: Int) {
         callback.showToast("Pin/Unpin: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: API call to pin/unpin, then update UI. May need a field in ChatMessage.
     }
 
     override fun onReact(message: ChatMessage, reactionEmoji: String, positionInAdapter: Int) {
         callback.showToast("React with $reactionEmoji to: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: API call to add reaction, then update specific message in UI.
     }
 
     override fun onReactWithImage(message: ChatMessage, positionInAdapter: Int) {
         callback.showToast("React with image to: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: similar to onReact, but might involve image selection/upload.
     }
 
     override fun onMarkMessage(message: ChatMessage, positionInAdapter: Int) {
         callback.showToast("Mark: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: could be for starring/bookmarking. API call, then UI update.
     }
 
     override fun onShowMessageInfo(message: ChatMessage) {
         callback.showToast("Info for: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
-        // Future: callback.requestShowMessageInfoScreen(message)
     }
 
     // --- Other Helper Methods ---
@@ -293,8 +329,6 @@ class ChatActivityHelper(
                 Log.e("ChatActivityHelper", "Location permission missing despite check.", se)
                 callback.showToast("Location permission error. Please grant permission.", Toast.LENGTH_LONG)
             }
-        } else {
-            // Toast is handled by ChatActivity or permission request flow
         }
     }
 
@@ -321,6 +355,7 @@ class ChatActivityHelper(
         }
     }
 
+    // Single, class-member parseError function
     private fun parseError(response: Response<*>): String {
         return try {
             response.errorBody()?.string() ?: "Unknown error (empty error body)"

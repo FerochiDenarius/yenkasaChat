@@ -7,6 +7,10 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import com.bumptech.glide.Glide
+import com.example.yenkasachat.model.Participant
+import android.widget.ImageView
+import android.widget.TextView
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
@@ -20,9 +24,8 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog // Corrected Import
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-// Removed: androidx.compose.ui.semantics.dismiss - Not used here
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -52,7 +55,10 @@ class ChatActivity : AppCompatActivity(),
     private lateinit var token: String
     private lateinit var senderId: String
     private lateinit var roomId: String
-
+    private lateinit var textViewReceiverName: TextView
+    private lateinit var imageViewReceiverPicture: de.hdodenhof.circleimageview.CircleImageView
+    private lateinit var imageViewStatusIndicator: ImageView
+    private lateinit var textViewOnlineStatus: TextView
     private lateinit var chatMessageHandler: ChatMessageHandler
     private lateinit var messageActionHandler: MessageActionHandler
     private lateinit var chatActivityHelper: ChatActivityHelper
@@ -112,7 +118,7 @@ class ChatActivity : AppCompatActivity(),
 
         chatActivityHelper = ChatActivityHelper(
             applicationContext,
-            this,
+            this, // Pass 'this' as the ChatHelperCallback
             token,
             senderId,
             roomId,
@@ -125,9 +131,111 @@ class ChatActivity : AppCompatActivity(),
         setupChatRecyclerView()
         setupListeners()
 
+        // --- THIS IS THE CRUCIAL ADDITION ---
+        chatActivityHelper.initializeHeaderInformation()
+        // --- END OF CRUCIAL ADDITION ---
+
         chatActivityHelper.startFetchingMessagesRepeatedly()
         requestNeededPermissions()
     }
+
+    fun updateReceiverHeader(participant: Participant) {
+        textViewReceiverName.text = participant.username ?: "User"
+
+        Glide.with(this)
+            .load(participant.profileImage)
+            .placeholder(R.drawable.ic_default_profile)
+            .error(R.drawable.ic_default_profile)
+            .into(imageViewReceiverPicture)
+
+        if (participant.isOnline == true) {
+            imageViewStatusIndicator.setImageResource(R.drawable.status_indicator_online)
+            textViewOnlineStatus.text = "Online"
+        } else {
+            imageViewStatusIndicator.setImageResource(R.drawable.status_indicator_offline)
+            textViewOnlineStatus.text = "Offline"
+        }
+    }
+
+    // --- ChatHelperCallback Implementation ---
+
+    override fun onReceiverParticipantDetailsReady(participant: Participant) {
+        updateReceiverHeader(participant)
+    }
+
+    override fun onReceiverParticipantStatusUpdate(isOnline: Boolean, statusText: String) {
+        textViewOnlineStatus.text = statusText
+        imageViewStatusIndicator.visibility = View.VISIBLE
+        if (isOnline) {
+            imageViewStatusIndicator.setImageResource(R.drawable.status_indicator_online)
+        } else {
+            imageViewStatusIndicator.setImageResource(R.drawable.status_indicator_offline)
+        }
+    }
+
+    override fun showDefaultReceiverHeader(defaultName: String?) {
+        textViewReceiverName.text = defaultName ?: "Chat"
+        if (::imageViewReceiverPicture.isInitialized) {
+            imageViewReceiverPicture.setImageResource(R.drawable.ic_default_profile)
+        }
+        textViewOnlineStatus.text = "" // Or "Status unavailable"
+        imageViewStatusIndicator.visibility = View.GONE
+    }
+
+    override fun showToast(message: String, length: Int) {
+        Toast.makeText(this, message, length).show()
+    }
+
+    override fun updateMessages(messages: List<ChatMessage>) {
+        messageAdapter.submitList(messages.toList()) {
+            if (messages.isNotEmpty()) {
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
+                if (lastVisibleItemPosition == RecyclerView.NO_POSITION || lastVisibleItemPosition >= messages.size - 2 || messages.size <=1) {
+                    recyclerView.smoothScrollToPosition(messages.size - 1)
+                }
+            }
+        }
+    }
+
+    override fun getCurrentMessageList(): List<ChatMessage> {
+        return messageAdapter.currentList
+    }
+
+    override fun requestHideKeyboard() {
+        hideKeyboard()
+    }
+
+    override fun requestSendChatMessage(messageData: Map<String, Any>) {
+        chatMessageHandler.sendMessage(messageData)
+    }
+
+    override fun checkAndRequestPermission(permission: String): Boolean {
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            permissionsLauncher.launch(arrayOf(permission))
+            return false
+        }
+        return true
+    }
+
+    override fun requestDeleteConfirmation(messageToDelete: ChatMessage) {
+        AlertDialog.Builder(this)
+            .setTitle("Delete Message")
+            .setMessage("Are you sure you want to delete this message?\n\"${messageToDelete.text ?: "Media Message"}\"")
+            .setPositiveButton("Delete") { dialog, _ ->
+                lifecycleScope.launch {
+                    chatActivityHelper.confirmDeleteMessageOnServer(messageToDelete)
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(true)
+            .show()
+    }
+
+    // --- End of ChatHelperCallback Implementation ---
 
     override fun onDestroy() {
         super.onDestroy()
@@ -142,6 +250,11 @@ class ChatActivity : AppCompatActivity(),
         micButton = findViewById(R.id.btnMic)
         attachButton = findViewById(R.id.buttonToggleAttachMenu)
         attachMenu = findViewById(R.id.attachmentMenu)
+
+        textViewReceiverName = findViewById(R.id.textViewReceiverName)
+        imageViewReceiverPicture = findViewById(R.id.imageViewReceiverPicture)
+        imageViewStatusIndicator = findViewById(R.id.imageViewStatusIndicator)
+        textViewOnlineStatus = findViewById(R.id.textViewOnlineStatus)
 
         sendButton.visibility = if (messageInput.text.isNullOrBlank()) View.GONE else View.VISIBLE
         micButton.visibility = if (messageInput.text.isNullOrBlank()) View.VISIBLE else View.GONE
@@ -225,7 +338,7 @@ class ChatActivity : AppCompatActivity(),
 
     private fun retrieveSessionAndValidate(): Boolean {
         token = TokenManager.getToken(this) ?: ""
-        senderId = TokenManager.getUserId(this) ?: ""
+        senderId = TokenManager.getUserId(this) ?: "" // Make sure you have a getUserId method
         roomId = intent.getStringExtra("roomId") ?: ""
 
         if (token.isBlank() || roomId.isBlank() || senderId.isBlank()) {
@@ -279,66 +392,12 @@ class ChatActivity : AppCompatActivity(),
         return true
     }
 
-    // --- ChatHelperCallback Implementation ---
-    override fun showToast(message: String, length: Int) {
-        Toast.makeText(this, message, length).show()
-    }
-
-    override fun updateMessages(messages: List<ChatMessage>) {
-        messageAdapter.submitList(messages.toList()) { // Use .toList() for new list instance
-            if (messages.isNotEmpty()) {
-                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
-                if (lastVisibleItemPosition == RecyclerView.NO_POSITION || lastVisibleItemPosition >= messages.size - 2 || messages.size <=1) {
-                    recyclerView.smoothScrollToPosition(messages.size - 1)
-                }
-            }
-        }
-    }
-
-    override fun getCurrentMessageList(): List<ChatMessage> {
-        return messageAdapter.currentList
-    }
-
-    override fun requestHideKeyboard() {
-        hideKeyboard()
-    }
-
-    override fun requestSendChatMessage(messageData: Map<String, Any>) {
-        chatMessageHandler.sendMessage(messageData)
-    }
-
-    override fun checkAndRequestPermission(permission: String): Boolean {
-        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-            permissionsLauncher.launch(arrayOf(permission))
-            return false
-        }
-        return true
-    }
-
-    override fun requestDeleteConfirmation(messageToDelete: ChatMessage) {
-        AlertDialog.Builder(this)
-            .setTitle("Delete Message")
-            .setMessage("Are you sure you want to delete this message?\n\"${messageToDelete.text ?: "Media Message"}\"")
-            .setPositiveButton("Delete") { dialog, _ ->
-                // Launch a coroutine here using lifecycleScope
-                lifecycleScope.launch {
-                    chatActivityHelper.confirmDeleteMessageOnServer(messageToDelete)
-                }
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setCancelable(true)
-            .show()
-    }
     // --- Utility Methods specific to ChatActivity ---
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         var view = currentFocus
         if (view == null) {
-            view = View(this)
+            view = View(this) // Create a new view if no view has focus
         }
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }

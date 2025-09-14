@@ -8,6 +8,7 @@ data class ChatMessage(
 
     val roomId: String? = null,
     val senderId: String? = null,
+
     val text: String? = null,
     val imageUrl: String? = null,
     val audioUrl: String? = null,
@@ -15,11 +16,17 @@ data class ChatMessage(
     val fileUrl: String? = null,
     val contactInfo: String? = null,
     val location: LocationData? = null,
+
     val timestamp: String? = null,
+
+    @SerializedName("status")
+    val status: String? = null, // New: sent, delivered, read
+
+    @SerializedName("sender")
+    val sender: Participant? = null // Optional: include sender info for easier display
 )
 
 data class LocationData(
     val latitude: Double,
     val longitude: Double
 )
-

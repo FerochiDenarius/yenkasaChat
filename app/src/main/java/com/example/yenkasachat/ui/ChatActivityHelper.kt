@@ -93,15 +93,21 @@ class ChatActivityHelper(
                     if (!isFetchingActive) return
 
                     if (response.isSuccessful) {
-                        val messages = response.body()
+                        val messages = response.body() // This is List<ChatMessage>?
                         if (messages != null) {
-                            val newMessages = messages.filter { (it.timestamp?.toLongOrNull() ?: 0L) > lastMessageTimestamp }
+                            // Assuming 'timestamp' in ChatMessage is a String that can be converted to Long
+                            val newMessages = messages.filter {
+                                (it.timestamp?.toLongOrNull() ?: 0L) > lastMessageTimestamp
+                            }
+
                             if (newMessages.isNotEmpty()) {
                                 newMessages.forEach { msg ->
-                                    if (msg.senderId != senderId) {
+                                    // Use the new 'actualSenderId' and 'actualSenderUsername'
+                                    if (msg.actualSenderId != senderId) { // Check if the message is from someone else
                                         NotificationHelper.showMessageNotification(
                                             context,
-                                            msg.senderId ?: "Someone",
+                                            // Prefer username from the nested sender object, fallback if needed
+                                            msg.actualSenderUsername ?: "Someone",
                                             msg.text ?: msg.imageUrl ?: msg.fileUrl ?: msg.contactInfo ?: "New message"
                                         )
                                     }
@@ -114,7 +120,8 @@ class ChatActivityHelper(
                         } else {
                             Log.d("HelperFetchMessages", "Response successful but message list is null.")
                         }
-                    } else {
+                    }
+else {
                         val errorMsg = parseError(response)
                         Log.e("HelperFetchMessages", "Failed to fetch messages: $errorMsg (Code: ${response.code()})")
                     }
@@ -157,7 +164,8 @@ class ChatActivityHelper(
     }
 
     override fun onDeleteMessage(message: ChatMessage, positionInAdapter: Int) {
-        if (message.senderId != senderId) {
+        // Use the new 'actualSenderId' convenience getter
+        if (message.actualSenderId != senderId) {
             callback.showToast("You can only delete your own messages.", Toast.LENGTH_SHORT)
             return
         }
@@ -170,13 +178,9 @@ class ChatActivityHelper(
         callback.requestDeleteConfirmation(message)
     }
 
-    // New method called by ChatActivity after user confirms deletion
-// Ensure you have these imports at the top of ChatActivityHelper.kt
-    // import kotlinx.coroutines.Dispatchers
-    // import kotlinx.coroutines.withContext
-    // (CoroutineScope and launch are typically handled by the calling Activity's lifecycleScope)
 
-    // This is the method that should be in your ChatActivityHelper.kt
+    // New method called by ChatActivity after user confirms deletion
+
     suspend fun confirmDeleteMessageOnServer(messageToDelete: ChatMessage) {
         if (messageToDelete.messageId == null) {
             Log.e("ChatActivityHelper", "confirmDeleteMessageOnServer called with null messageId.")
@@ -242,13 +246,15 @@ class ChatActivityHelper(
     }
 
     override fun onEditMessage(message: ChatMessage, positionInAdapter: Int) {
-        if (message.senderId == senderId && !message.text.isNullOrBlank()) {
+        // Use the new 'actualSenderId' convenience getter
+        if (message.actualSenderId == senderId && !message.text.isNullOrBlank()) {
             callback.showToast("Edit: ${message.text}. Logic pending.", Toast.LENGTH_SHORT)
             // Future: callback.requestShowEditMessageDialog(message)
         } else {
             callback.showToast("Cannot edit this message.", Toast.LENGTH_SHORT)
         }
     }
+
 
     override fun onPinMessage(message: ChatMessage, positionInAdapter: Int) {
         callback.showToast("Pin/Unpin: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
@@ -274,6 +280,7 @@ class ChatActivityHelper(
         callback.showToast("Info for: ${message.text ?: "Media Message"}. Logic pending.", Toast.LENGTH_SHORT)
         // Future: callback.requestShowMessageInfoScreen(message)
     }
+
 
     // --- Other Helper Methods ---
     fun sendCurrentLocation() {

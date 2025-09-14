@@ -45,12 +45,10 @@ class MessageActionHandler(
         val markItem = popup.menu.findItem(R.id.action_mark_message)
 
         copyItem?.isVisible = !message.text.isNullOrBlank()
-        deleteItem?.isVisible = message.senderId == currentUserId
-        editItem?.isVisible = message.senderId == currentUserId && !message.text.isNullOrBlank()
+        deleteItem?.isVisible = message.actualSenderId == currentUserId
+        editItem?.isVisible = message.actualSenderId == currentUserId && !message.text.isNullOrBlank()
 
-        // Placeholder for other visibility logic
-        // e.g., pinItem?.title = if (message.isPinned) "Unpin" else "Pin"
-        // replyItem?.isVisible = true // etc.
+
 
         popup.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {

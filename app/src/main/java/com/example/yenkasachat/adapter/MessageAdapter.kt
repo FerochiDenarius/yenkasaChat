@@ -40,9 +40,9 @@ class MessageAdapter(private val senderId: String) :
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (getItem(position).senderId == senderId) TYPE_SENT else TYPE_RECEIVED
-    }
 
+        return if (getItem(position).actualSenderId == senderId) TYPE_SENT else TYPE_RECEIVED
+    }
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return if (viewType == TYPE_SENT) {

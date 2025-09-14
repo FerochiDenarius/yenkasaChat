@@ -36,7 +36,17 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
-
+// In your user.model.js
+    // ...
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
+    lastSeen: {
+      type: Date,
+      default: Date.now
+    },
+    // ...
   // 🔑 Legacy generic fields
   verificationCode: { type: String },
   codeExpiresAt: { type: Date },

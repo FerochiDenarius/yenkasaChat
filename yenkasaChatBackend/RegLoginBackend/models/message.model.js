@@ -7,7 +7,8 @@ const messageSchema = new mongoose.Schema({
     ref: 'ChatRoom'
   },
   senderId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId, // ✅ CHANGED: Must be ObjectId
+    ref: 'User',                         // ✅ ADDED: Must reference the User model
     required: true
   },
   text: {
@@ -30,28 +31,33 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: false
   },
-  contactInfo: {
-    type: String,
+  contactInfo: { // Consider if this should be a structured object
+    type: String, 
     required: false
   },
-  location: {
+  location: { // This structure is fine
     type: {
       latitude: Number,
       longitude: Number
     },
     required: false
   },
-  timestamp: { // ✅ This is your custom field — optional, but now valid
-    type: Date,
-    default: Date.now
-  },
+  // timestamp: { // You have `timestamps: true` which adds `createdAt` and `updatedAt`
+  //   type: Date, // If you keep this custom 'timestamp', it's separate from 'createdAt'
+  //   default: Date.now
+  // },
   status: {
     type: String,
     enum: ['sent', 'delivered', 'read'],
     default: 'sent'
   }
 }, {
-  timestamps: true // ✅ Adds createdAt and updatedAt automatically
+  timestamps: true // This adds `createdAt` and `updatedAt`.
+                  // Your client uses 'createdAt' via @SerializedName("createdAt") val timestamp
 });
 
+// Important: Ensure your User model is registered as 'User'
+// e.g., module.exports = mongoose.model('User', userSchema);
+
 module.exports = mongoose.model('Message', messageSchema);
+

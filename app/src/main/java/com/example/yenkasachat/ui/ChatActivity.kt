@@ -98,18 +98,33 @@ class ChatActivity : AppCompatActivity(),
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
 
-        initViews()
+        initViews() // Initialize basic views like RecyclerView, EditText, etc.
 
+        // This is the critical validation step
         if (!retrieveSessionAndValidate()) {
-            return
+            // If retrieveSessionAndValidate() returns false (e.g., roomId is blank):
+            // 1. A Toast is shown.
+            // 2. An error is logged.
+            // 3. finish() is called on this Activity.
+            // 4. THIS 'return' STATEMENT IS EXECUTED.
+            return // <--- Execution of onCreate STOPS HERE.
         }
 
+        // --- THE CODE BELOW THIS LINE ONLY EXECUTES IF retrieveSessionAndValidate() RETURNED true ---
+        // --- This means 'token', 'senderId', and 'roomId' are considered valid at this point. ---
+
+        // Initialize ChatMessageHandler (depends on token, senderId, roomId)
         chatMessageHandler = ChatMessageHandler(this, this, token, senderId, roomId)
+
+        // Initialize FusedLocationProviderClient
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // Initialize MessageAdapter (depends on senderId)
         messageAdapter = MessageAdapter(senderId)
         messageAdapter.setOnMessageLongClickListener(this)
 
+        // Initialize ChatActivityHelper (depends on token, senderId, roomId, etc.)
+        // This is the lateinit var that was causing the crash in onDestroy
         chatActivityHelper = ChatActivityHelper(
             applicationContext,
             this,
@@ -120,20 +135,27 @@ class ChatActivity : AppCompatActivity(),
             uiHandler
         )
 
+        // Initialize MessageActionHandler (depends on senderId, chatActivityHelper)
         messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
 
+        // Setup UI and start operations that might use the initialized helpers
         setupChatRecyclerView()
         setupListeners()
 
+        // This call relies on chatActivityHelper being initialized
         chatActivityHelper.startFetchingMessagesRepeatedly()
-        requestNeededPermissions()
+        requestNeededPermissions() // This might also indirectly use chatActivityHelper
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
-        chatActivityHelper.stopFetchingMessages()
+        if (::chatActivityHelper.isInitialized) {
+            chatActivityHelper.stopFetchingMessages()
+        }
         uiHandler.removeCallbacksAndMessages(null)
     }
+
 
     private fun initViews() {
         recyclerView = findViewById(R.id.recyclerViewMessages)

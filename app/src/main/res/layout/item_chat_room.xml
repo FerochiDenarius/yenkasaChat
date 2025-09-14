@@ -1,21 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="12dp"
     android:gravity="center_vertical"
-    android:minHeight="64dp"
-    android:background="?android:selectableItemBackground">
+    android:minHeight="?android:attr/listPreferredItemHeightSmall"
+    android:background="?android:attr/selectableItemBackground">
 
-    <ImageView
-        android:id="@+id/imageProfile"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:scaleType="centerCrop"
-        android:src="@drawable/ic_profile_placeholder"
-        android:layout_marginEnd="12dp"
-        android:contentDescription="Profile picture" />
+    <!-- Profile Image and Online Status Container -->
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp">
+
+        <!-- Your Profile Image -->
+        <!-- If you are using de.hdodenhof.circleimageview.CircleImageView, use that tag instead of ImageView -->
+        <ImageView
+            android:id="@+id/imageProfile"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:scaleType="centerCrop"
+            tools:src="@drawable/ic_profile_placeholder"
+            android:src="@drawable/ic_profile_placeholder"
+            android:contentDescription="Profile picture" />
+        <!-- If using CircleImageView, you might not need scaleType if it handles it -->
+
+        <!-- Online Status Indicator Dot - THIS IS THE NEW VIEW -->
+        <View
+            android:id="@+id/viewOnlineStatus"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="2dp"
+        android:layout_marginBottom="2dp"
+        android:background="@drawable/shape_oval_offline"
+        tools:background="@drawable/shape_oval_online" /> <!-- Default background, tools for preview -->
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -23,48 +46,74 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <!-- Timestamp text -->
-        <TextView
-            android:id="@+id/textTimestamp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="12:45 PM"
-            android:textSize="12sp"
-            android:textColor="#999999"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentTop="true"
-            android:layout_marginEnd="8dp" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <!-- Unread badge -->
-        <TextView
-            android:id="@+id/textUnreadBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="3"
-            android:textSize="12sp"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/unread_badge_bg"
-            android:padding="4dp"
-            android:layout_alignParentEnd="true"
-            android:layout_below="@id/textTimestamp"
-            android:layout_marginTop="4dp"
-            android:visibility="gone" />
+            <TextView
+                android:id="@+id/textContactName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/textTimestamp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Contact Username Very Long Name"
+                android:text="Contact Username"
+                android:textAppearance="?attr/textAppearanceSubtitle1"
+                android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/textTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignBaseline="@id/textContactName"
+                android:layout_marginStart="8dp"
+                tools:text="12:45 PM"
+                android:text="12:45 PM"
+                android:textAppearance="?attr/textAppearanceCaption" />
 
-        <TextView
-            android:id="@+id/textContactName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Contact Username"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+        </RelativeLayout>
 
-        <TextView
-            android:id="@+id/textLastMessage"
-            android:layout_width="wrap_content"
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Last message preview..."
-            android:textColor="#666"
-            android:textSize="14sp" />
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:id="@+id/textLastMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/textUnreadBadge"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Last message preview goes here and it could be a bit long..."
+                android:text="Last message preview..."
+                android:textAppearance="?attr/textAppearanceBody2"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:id="@+id/textUnreadBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/unread_badge_bg"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                tools:text="3"
+                android:text="3"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:layout_marginStart="8dp"/>
+        </RelativeLayout>
+
     </LinearLayout>
 </LinearLayout>

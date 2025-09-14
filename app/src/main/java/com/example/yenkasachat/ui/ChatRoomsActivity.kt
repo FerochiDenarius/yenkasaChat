@@ -50,12 +50,33 @@ class ChatRoomsActivity : AppCompatActivity() {
             return
         }
 
+// In ChatRoomsActivity.kt -> onCreate()
         chatRoomAdapter = ChatRoomAdapter(currentUserId) { selectedRoom ->
-            val intent = Intent(this@ChatRoomsActivity, ChatActivity::class.java).apply {
-                putExtra("roomId", selectedRoom._id) // This assumes your ChatRoom has an _id field
+            val currentRoomId = selectedRoom._id
+            val chatPartnerNameFromMethod = determineChatDisplayNameForActivity(selectedRoom, currentUserId)
 
-                val chatName = determineChatDisplayNameForActivity(selectedRoom, currentUserId)
-                putExtra("chatPartnerName", chatName)
+            // Log the values you're about to use (for your own debugging when needed)
+            Log.d("ChatRoomsActivity", "Attempting to open chat. Room Name: '${selectedRoom.name}', Retrieved Room ID: '$currentRoomId', Chat Partner Name: '$chatPartnerNameFromMethod'")
+
+            // CRUCIAL CHECK: Ensure the Room ID is not blank
+            if (currentRoomId.isBlank()) {
+                Toast.makeText(
+                    this@ChatRoomsActivity,
+                    "Error: Cannot open chat for '${selectedRoom.name}'. Room ID is missing.",
+                    Toast.LENGTH_LONG
+                ).show()
+                Log.e(
+                    "ChatRoomsActivity",
+                    "Prevented opening chat: Room ID is blank for room '${selectedRoom.name}'. Value was: '$currentRoomId'"
+                )
+                return@ChatRoomAdapter // IMPORTANT: Do not proceed to start ChatActivity
+            }
+
+            // If the Room ID is valid, proceed to create the Intent
+            val intent = Intent(this@ChatRoomsActivity, ChatActivity::class.java).apply {
+                putExtra("roomId", currentRoomId) // Use the validated, non-blank ID
+                putExtra("chatPartnerName", chatPartnerNameFromMethod)
+                // You can add other extras here if needed by ChatActivity
             }
             startActivity(intent)
         }

@@ -4,58 +4,86 @@ package com.example.yenkasachat.model
 import android.util.Log
 import com.google.gson.annotations.SerializedName
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import java.util.Date // Make sure to import Date
 
 data class ChatRoom(
     @SerializedName("_id")
     val _id: String,
-    @SerializedName("participants")
-    val participants: List<Participant>?, // Assuming Participant model exists
-    @SerializedName("lastMessage")
-    val lastMessage: ChatMessage?, // Or your Message object type
-    @SerializedName("lastMessageTime")
-    private val lastMessageTime: String?, // Or Date, ensure this is handled
-    @SerializedName("unreadCount")
-    val unreadCount: Int = 0, // Assuming this field exists
 
-    // Add this field to receive the raw createdAt string from the backend
-    @SerializedName("createdAt") // Or whatever name your backend sends (e.g., "creationDate")
-    private val createdAt: String? = null // Store as String, make it private if only used for formatting
+    @SerializedName("name") // New: Name of the chat room (other user's name or group name)
+    val name: String?,
+
+    @SerializedName("participants")
+    val participants: List<Participant>?, // Uses the new Participant data class
+
+    @SerializedName("isGroupChat") // New: Boolean to indicate if it's a group chat
+    val isGroupChat: Boolean? = false, // Default to false
+
+    @SerializedName("lastMessage")
+    val lastMessage: ChatMessage?, // Uses the updated ChatMessage data class
+
+    @SerializedName("lastMessageTime") // This is the raw ISO string from backend
+    private val lastMessageTimeRaw: String?, // Renamed to avoid clash with getter, stores raw date
+
+    @SerializedName("unreadCount")
+    val unreadCount: Int = 0,
+
+    @SerializedName("createdAt") // Raw ISO string from backend
+    private val createdAtRaw: String?, // Renamed to avoid clash with getter
+
+    @SerializedName("updatedAt") // New: Raw ISO string from backend
+    private val updatedAtRaw: String? // Renamed to avoid clash with getter
+
+    // You can add other fields like 'groupImageUrl' if your backend sends it for group chats
+    // @SerializedName("groupImageUrl")
+    // val groupImageUrl: String?
 ) {
 
-    // Formatted getter for lastMessageTime (similar to what you might have had)
+    // Formatted getter for the displayable last message time
     val lastMessageTimeFormatted: String
         get() {
-            return formatDate(lastMessageTime)
+            // Prefer lastMessage.createdAt if available, then lastMessageTimeRaw (which might be room's updatedAt)
+            val effectiveTime = lastMessage?.timestamp ?: lastMessageTimeRaw
+            return formatDate(effectiveTime, "hh:mm a") // Example short format
         }
 
-    // Add this formatted getter for createdAt
+    // Formatted getter for the room's creation date (if needed for display)
     val createdAtFormatted: String
         get() {
-            return formatDate(createdAt) // Use the same formatDate utility
+            return formatDate(createdAtRaw, "MMM dd, yyyy") // Example format
         }
 
-    // Your existing formatDate function or a new one
-    // (Make sure this function is robust and handles null or malformed dates)
-    private fun formatDate(dateString: String?): String {
+    // Formatted getter for the room's last update time (if needed for display)
+    val updatedAtFormatted: String
+        get() {
+            return formatDate(updatedAtRaw, "MMM dd, yyyy hh:mm a") // Example format
+        }
+
+    // Common date formatting utility function
+    private fun formatDate(dateString: String?, outputPattern: String): String {
         if (dateString.isNullOrEmpty()) {
-            return "N/A" // Or an empty string, or some default
+            return "" // Return empty or a placeholder like "N/A"
         }
         return try {
-            // Input format from backend (e.g., ISO 8601)
+            // Input format from backend (ISO 8601)
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
             parser.timeZone = TimeZone.getTimeZone("UTC") // Assuming backend sends UTC
-            val date: Date = parser.parse(dateString) ?: return "Invalid Date"
+            val date: Date = parser.parse(dateString) ?: return dateString // Fallback to raw if parse returns null
 
             // Desired output format
-            val formatter = SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault())
+            val formatter = SimpleDateFormat(outputPattern, Locale.getDefault())
             formatter.timeZone = TimeZone.getDefault() // Display in user's local time
             formatter.format(date)
         } catch (e: Exception) {
-            Log.e("ChatRoomModel", "Error parsing date: $dateString", e)
-            dateString // Fallback to raw string if parsing fails
+            Log.e("ChatRoomModel", "Error parsing date: $dateString for pattern $outputPattern", e)
+            // Fallback: Try to return just the date part or the raw string if parsing fails badly
+            try {
+                dateString.substringBefore("T")
+            } catch (subError: Exception) {
+                dateString // Ultimate fallback
+            }
         }
     }
 }

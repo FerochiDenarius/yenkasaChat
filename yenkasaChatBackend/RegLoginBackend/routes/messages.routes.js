@@ -228,7 +228,7 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-// GET messages for a specific chat room
+// GET messages for a specific chat room// GET messages for a specific chat room
 router.get('/:roomId', auth, async (req, res) => {
     const { roomId } = req.params;
     const userId = req.user.id; // from auth middleware
@@ -241,7 +241,11 @@ router.get('/:roomId', auth, async (req, res) => {
     const roomObjectId = new mongoose.Types.ObjectId(roomId);
 
     try {
-        const chatRoom = await ChatRoom.findOne({ _id: roomObjectId, participants: userId }); // Check if user is part of the room
+        const chatRoom = await ChatRoom.findOne({ 
+            _id: roomObjectId, 
+            participants: new mongoose.Types.ObjectId(userId) // ✅ ensure ObjectId match
+        });
+
         if (!chatRoom) {
              console.warn(`[MessagesRoute] GET /${roomId} - User ${userId} not authorized for this room or room doesn't exist.`);
              return res.status(403).json({ error: 'Not authorized or room not found' });
@@ -249,10 +253,10 @@ router.get('/:roomId', auth, async (req, res) => {
         console.log(`[MessagesRoute] GET /${roomId} - User ${userId} authorized. Fetching messages from DB.`);
 
         const messages = await Message.find({ roomId: roomObjectId })
-            .sort({ timestamp: 1 }) // Sort by oldest first
+            .sort({ createdAt: 1 }) // ✅ use Mongoose timestamp field
             .populate({
                 path: 'senderId',
-                select: 'username profileImageUrl _id' // Populate sender details
+                select: 'username profileImage _id' // ✅ match your User model
             })
             .lean();
 
@@ -263,6 +267,7 @@ router.get('/:roomId', auth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
 });
+
 
 // Mark messages in a room as read for the current user
 router.post('/:roomId/mark-as-read', auth, async (req, res) => {

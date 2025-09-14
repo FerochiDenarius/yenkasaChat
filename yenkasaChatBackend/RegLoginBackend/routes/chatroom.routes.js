@@ -2,12 +2,13 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const ChatRoom = require('../models/chatroom.model'); // Ensure this path is correct
-const User = require('../models/user.model');         // Ensure this path is correct
-const Message = require('../models/message.model');   // Ensure this path is correct
-const authMiddleware = require('../middleware/auth'); // Ensure this path is correct
+const ChatRoom = require('../models/chatroom.model');
+const User = require('../models/user.model');
+const Message = require('../models/message.model');
+const authMiddleware = require('../middleware/auth');
 
 // --- CREATE OR REUSE A CHAT ROOM ---
+// KEEP YOUR EXISTING POST ROUTE UNCHANGED (UNLESS IT ALSO NEEDS MODIFICATION FOR OTHER REASONS)
 router.post('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const { username: rawRecipientUsername } = req.body;
@@ -52,13 +53,14 @@ router.post('/', authMiddleware, async (req, res) => {
       console.log(`Existing chat room found: ${existingRoom._id}`);
       return res.json({
         success: true,
-        roomId: existingRoom._id,
+        roomId: existingRoom._id, // Note: This POST route returns roomId, not _id for the room.
+                                  // Client creating a room might need to handle this differently
+                                  // than when fetching the list of rooms. Or you could align this too.
         message: 'Chat room already exists',
         participant: { // Sends a single participant object
-            _id: otherUser._id, // Changed 'id' to '_id' for consistency with GET response
+            id: otherUser._id, // Uses 'id', not '_id' for participant here
             username: otherUser.username,
-            profileImage: otherUser.profileImage || otherUser.avatar || null, // Consistent field name
-            isOnline: otherUser.isOnline || false // Include isOnline status
+            avatar: otherUser.avatar || otherUser.profileImage || null
         }
       });
     }
@@ -72,13 +74,12 @@ router.post('/', authMiddleware, async (req, res) => {
 
     res.status(201).json({
       success: true,
-      roomId: newRoom._id,
+      roomId: newRoom._id, // Note: This POST route returns roomId, not _id for the room.
       message: 'New chat room created',
       participant: { // Sends a single participant object
-        _id: otherUser._id, // Changed 'id' to '_id'
+        id: otherUser._id, // Uses 'id', not '_id' for participant here
         username: otherUser.username,
-        profileImage: otherUser.profileImage || otherUser.avatar || null, // Consistent field name
-        isOnline: otherUser.isOnline || false // Include isOnline status
+        avatar: otherUser.avatar || otherUser.profileImage || null
       }
     });
 
@@ -90,55 +91,41 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 
-// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER (MODIFIED) ---
+// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---
+// THIS IS THE MODIFIED GET ROUTE
 router.get('/', authMiddleware, async (req, res) => {
-  const userId = req.user.id; // This is the ID of the logged-in user (sender)
+  const userId = req.user.id;
   console.log(`Fetching enriched chat rooms for user ID: ${userId}`);
 
   try {
     const chatRoomsFromDB = await ChatRoom.find({ participants: new mongoose.Types.ObjectId(userId) })
-      // Populate all necessary fields for *all* participants in the room
-      // CRITICAL: Ensure your User model has 'isOnline' and that it's populated correctly
-      .populate('participants', '_id username profileImage avatar isOnline')
-      .sort({ updatedAt: -1 }) // Optional: sort by last updated
-      .lean(); // .lean() for plain JS objects, faster
+      .populate('participants', 'username avatar profileImage _id')
+      .lean();
 
     if (!chatRoomsFromDB || chatRoomsFromDB.length === 0) {
         console.log(`No chat rooms found for user ${userId}`);
-        return res.json([]); // Return empty array if no rooms
+        return res.json([]);
     }
 
-    // Map the database rooms to the structure the client expects
-    const clientReadyRooms = await Promise.all(chatRoomsFromDB.map(async (room) => {
-      // Create the participant objects for the client
-      // The client will iterate through these to find the "other" participant
-      const clientParticipants = room.participants.map(p => {
-        if (!p) return null; // Should ideally not happen if populate worked
-        return {
-          _id: p._id.toString(), // Ensure IDs are strings
-          username: p.username,
-          profileImage: p.profileImage || p.avatar || null, // Prioritize profileImage, fallback to avatar
-          isOnline: typeof p.isOnline === 'boolean' ? p.isOnline : false, // Ensure boolean, default false
-        };
-      }).filter(p => p !== null); // Remove any null participants if populate failed for one
+    const enrichedRooms = await Promise.all(chatRoomsFromDB.map(async (room) => {
+      const otherParticipantObject = room.participants.find(p => p && p._id && p._id.toString() !== userId);
 
-      // Ensure there's at least one "other" participant for the room to be valid for this user's list
-      const otherParticipantExists = clientParticipants.some(p => p._id !== userId);
-      if (!otherParticipantExists && clientParticipants.length > 0) {
-        // This case might indicate a room where the user is alone or data issue.
-        console.warn(`Room ${room._id} for user ${userId} does not have a clearly identifiable 'other' participant. Participants:`, clientParticipants);
-        // Depending on requirements, you might filter this room out or handle it differently
+      let participantForClient = null;
+      if (otherParticipantObject) {
+        participantForClient = {
+          _id: otherParticipantObject._id,
+          username: otherParticipantObject.username,
+          avatar: otherParticipantObject.avatar || otherParticipantObject.profileImage || null,
+        };
+      } else {
+        console.warn(`Could not find other participant for room ${room._id} for user ${userId}. Participants:`, room.participants);
       }
 
-
-      // Fetch the last message for the room
       const lastMessageFromDB = await Message.findOne({ roomId: room._id })
         .sort({ createdAt: -1 })
-        // Select all fields that the client might need for the ChatMessage model
-        .select('_id text imageUrl audioUrl videoUrl fileUrl contactInfo location createdAt senderId readBy')
+        .select('text imageUrl audioUrl videoUrl fileUrl contactInfo location createdAt senderId')
         .lean();
 
-      // Determine message type (optional, client might do this too)
       const lastMessageType =
         lastMessageFromDB?.imageUrl ? 'image' :
         lastMessageFromDB?.audioUrl ? 'audio' :
@@ -149,17 +136,14 @@ router.get('/', authMiddleware, async (req, res) => {
         lastMessageFromDB?.text ? 'text' :
         null;
 
-      // TODO: Implement actual unread messages count logic
-      // This is a placeholder. You'll need to compare lastReadTimestamp for the user in this room
-      // with message timestamps, or store unread counts explicitly.
-      const unreadMessagesCount = 0;
+      const unreadMessagesCount = 0; // TODO: Implement actual unread count logic
 
-      return {
-        _id: room._id.toString(), // Ensure room ID is a string
-        participants: clientParticipants, // Array of participant objects
+      const roomForClient = {
+        _id: room._id,
+        participants: participantForClient ? [participantForClient] : [],
         lastMessage: lastMessageFromDB ? {
-            _id: lastMessageFromDB._id.toString(),
-            senderId: lastMessageFromDB.senderId?.toString(), // Ensure senderId is string
+            _id: lastMessageFromDB._id,
+            senderId: lastMessageFromDB.senderId,
             text: lastMessageFromDB.text,
             imageUrl: lastMessageFromDB.imageUrl,
             audioUrl: lastMessageFromDB.audioUrl,
@@ -167,24 +151,23 @@ router.get('/', authMiddleware, async (req, res) => {
             fileUrl: lastMessageFromDB.fileUrl,
             contactInfo: lastMessageFromDB.contactInfo,
             location: lastMessageFromDB.location,
-            createdAt: lastMessageFromDB.createdAt,
-            // You might also want to send readBy or other relevant fields
+            createdAt: lastMessageFromDB.createdAt
         } : null,
-        // lastMessageTime is often used for sorting rooms on the client
         lastMessageTime: lastMessageFromDB?.createdAt || room.updatedAt || room.createdAt,
         unreadCount: unreadMessagesCount,
         createdAt: room.createdAt,
-        updatedAt: room.updatedAt, // Good to have for client-side sorting or checks
-        // Any other fields your Android ChatRoom model expects
       };
+
+      if (!participantForClient) {
+          console.warn(`Skipping room ${room._id} due to missing other participant information.`);
+          return null;
+      }
+
+      return roomForClient;
     }));
 
-    // Filter out any rooms that might have become invalid during mapping (e.g., no other participant found)
-    const validClientReadyRooms = clientReadyRooms.filter(room => {
-        return room && room.participants && room.participants.some(p => p._id !== userId);
-    });
-
-    res.json(validClientReadyRooms);
+    const validEnrichedRooms = enrichedRooms.filter(room => room !== null);
+    res.json(validEnrichedRooms);
 
   } catch (err) {
     console.error('❌ Error fetching chat rooms:', err.message);

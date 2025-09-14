@@ -47,68 +47,104 @@ object ApiClient {
                 val url = originalRequest.url.toString()
                 val requestBuilder = originalRequest.newBuilder()
 
-                // Skip token for reset endpoints
-                if (!url.contains("reset-password/confirm") && !url.contains("reset-password/verify")) {
-                    val token = TokenManager.getToken(applicationContext)
-                    token?.let { requestBuilder.header("Authorization", "Bearer $it") }
+                // 🚫 Skip attaching Authorization for password reset endpoints
+                if (!url.contains("reset-password/confirm") &&
+                    !url.contains("reset-password/verify")
+                ) {
+                    val currentToken = TokenManager.getToken(applicationContext)
+                    Log.d("ApiClientVerbose", "Token for request $url: $currentToken")
+
+                    if (!currentToken.isNullOrBlank()) {
+                        requestBuilder.addHeader("Authorization", "Bearer $currentToken")
+                        Log.d("ApiClient", "🔐 Token attached to $url")
+                    } else {
+                        Log.w("ApiClient", "⚠️ No access token found. Sending request without Authorization header.")
+                    }
+                } else {
+                    Log.d("ApiClient", "⏭️ Skipping token for request: $url")
                 }
 
                 var response = chain.proceed(requestBuilder.build())
 
-                if (response.code == 401 && !url.contains("auth/refresh-token")) {
-                    response.close() // Close old response
+                // 🔄 Handle expired access token (401)
+                if (response.code == 401 &&
+                    !originalRequest.url.toString().contains("auth/refresh-token")
+                ) {
+                    val currentTokenUsedInFailedRequest = originalRequest.header("Authorization")
+                    response.close() // Always close before retry
+                    Log.w("ApiClient", "🛑 Token expired or invalid (401) for ${originalRequest.url}. Attempting to refresh...")
 
-                    val refreshToken = TokenManager.getRefreshToken(applicationContext)
-                    if (refreshToken.isNullOrEmpty()) {
+                    val refreshTokenString = TokenManager.getRefreshToken(applicationContext)
+
+                    if (refreshTokenString.isNullOrEmpty()) {
+                        Log.e("ApiClient", "🚫 No refresh token found. Cannot refresh access token. Logging out.")
                         TokenManager.clearAll(applicationContext)
-                        throw IOException("Refresh token missing. User must login again.")
+                        return response
                     }
 
                     synchronized(this) {
-                        // Check if another thread already refreshed the token
-                        val currentToken = TokenManager.getToken(applicationContext)
-                        val currentAuthHeader = "Bearer $currentToken"
-                        if (originalRequest.header("Authorization") != currentAuthHeader) {
+                        val tokenAfterSync = TokenManager.getToken(applicationContext)
+                        val authHeaderAfterSync = tokenAfterSync?.let { "Bearer $it" }
+
+                        if (currentTokenUsedInFailedRequest != null &&
+                            authHeaderAfterSync != null &&
+                            currentTokenUsedInFailedRequest != authHeaderAfterSync
+                        ) {
+                            Log.i("ApiClient", "Token already refreshed by another thread. Retrying with new token.")
                             val newRequest = originalRequest.newBuilder()
-                                .header("Authorization", currentAuthHeader)
+                                .header("Authorization", authHeaderAfterSync)
                                 .build()
                             return chain.proceed(newRequest)
                         }
 
-                        // Perform refresh token call
                         try {
                             val refreshRetrofit = Retrofit.Builder()
                                 .baseUrl(BASE_URL)
                                 .addConverterFactory(GsonConverterFactory.create())
                                 .build()
-                            val refreshService = refreshRetrofit.create(AuthService::class.java)
-                            val refreshResponse = refreshService.refreshToken(RefreshTokenRequest(refreshToken)).execute()
+                            val refreshAuthService = refreshRetrofit.create(AuthService::class.java)
 
-                            if (refreshResponse.isSuccessful) {
-                                val newTokens = refreshResponse.body()
-                                val newAccess = newTokens?.token
-                                val newRefresh = newTokens?.refreshToken
+                            val refreshCall = refreshAuthService.refreshToken(
+                                RefreshTokenRequest(refreshTokenString)
+                            )
+                            val refreshApiResponse = refreshCall.execute()
 
-                                if (newAccess.isNullOrEmpty()) {
+                            if (refreshApiResponse.isSuccessful) {
+                                val newTokens = refreshApiResponse.body()
+                                if (!newTokens?.token.isNullOrEmpty()) {
+                                    val newAccessToken = newTokens!!.token
+                                    TokenManager.saveToken(applicationContext, newAccessToken)
+                                    Log.i("ApiClient", "✅ Token refresh successful. New access token saved.")
+
+                                    if (!newTokens.refreshToken.isNullOrEmpty() &&
+                                        newTokens.refreshToken != refreshTokenString
+                                    ) {
+                                        TokenManager.saveRefreshToken(applicationContext, newTokens.refreshToken)
+                                        Log.i("ApiClient", "🔑 New refresh token also saved.")
+                                    }
+
+                                    val newRequest = originalRequest.newBuilder()
+                                        .header("Authorization", "Bearer $newAccessToken")
+                                        .build()
+                                    return chain.proceed(newRequest)
+                                } else {
+                                    Log.e("ApiClient", "🚨 Refresh succeeded but returned empty token. Logging out.")
                                     TokenManager.clearAll(applicationContext)
-                                    throw IOException("Refresh returned empty access token.")
+                                    return response
                                 }
-
-                                TokenManager.saveToken(applicationContext, newAccess)
-                                newRefresh?.let { TokenManager.saveRefreshToken(applicationContext, it) }
-
-                                // Retry original request
-                                val newRequest = originalRequest.newBuilder()
-                                    .header("Authorization", "Bearer $newAccess")
-                                    .build()
-                                return chain.proceed(newRequest)
                             } else {
-                                TokenManager.clearAll(applicationContext)
-                                throw IOException("Refresh failed with code ${refreshResponse.code()}")
+                                val errorCode = refreshApiResponse.code()
+                                val errorBody = refreshApiResponse.errorBody()?.string() ?: "No error body"
+                                Log.e("ApiClient", "🚨 Refresh API failed. Code: $errorCode, Body: $errorBody")
+
+                                if (errorCode == 401 || errorCode == 403) {
+                                    TokenManager.clearAll(applicationContext)
+                                }
+                                return response
                             }
                         } catch (e: Exception) {
-                            TokenManager.clearAll(applicationContext)
-                            throw IOException("Exception during token refresh: ${e.message}", e)
+                            Log.e("ApiClient", "🔥 Exception during token refresh: ${e.message}", e)
+                            return response
                         }
                     }
                 }

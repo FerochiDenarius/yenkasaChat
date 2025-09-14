@@ -42,7 +42,10 @@ router.post('/', authMiddleware, async (req, res) => {
 
   try {
     // Assuming usernames are stored lowercase or you handle case-insensitivity consistently
-    const otherUser = await User.findOne({ username: recipientUsername }); 
+   const otherUser = await User.findOne({
+  username: new RegExp(`^${recipientUsername}$`, "i")
+});
+
 
     if (!otherUser) {
       console.error(`[ChatRoomRoute] POST / - Recipient NOT FOUND in DB with username: "${recipientUsername}"`);

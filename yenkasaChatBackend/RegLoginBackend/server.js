@@ -55,7 +55,6 @@ safeMount('/api/reset-password', './routes/changepwd.routes.js');
 safeMount('/api/verify', './routes/verify');
 safeMount('/api/account', './routes/account.routes'); 
 safeMount('/api/users', './routes/user.routes');
-safeMount('/api/refresh-token', './routes/refresh-token');
 
 // Core Features
 safeMount('/api/contacts', './routes/contacts.routes');

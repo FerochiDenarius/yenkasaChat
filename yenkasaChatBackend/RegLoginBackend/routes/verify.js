@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // ✅ Verify refresh token
+    // ✅ Verify refresh token with the REFRESH secret
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const userId = decoded.userId;
 
@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      token: newAccessToken,       // ✅ keep "token" for frontend compatibility
+      token: newAccessToken,       // ✅ matches frontend `TokenResponse`
       refreshToken: newRefreshToken
     });
 

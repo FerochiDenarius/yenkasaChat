@@ -59,9 +59,10 @@ interface AuthService {
         @Body body: Map<String, String>
     ): Call<Void>
 
-    @POST("refresh-token")
+    @POST("auth/token/refresh")
     fun refreshToken(
         @Body request: RefreshTokenRequest
     ): Call<TokenResponse>
+
 
 }

@@ -3,7 +3,7 @@ const router = require('express').Router();
 const User = require('../models/user.model'); 
 
 
-router.post('/refresh-token', async (req, res) => {
+router.post('/', async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
@@ -24,7 +24,7 @@ router.post('/refresh-token', async (req, res) => {
     const newAccessToken = jwt.sign(
       { id: user._id },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: '90d' }
+      { expiresIn: '15m' }
     );
 
     const newRefreshToken = jwt.sign(

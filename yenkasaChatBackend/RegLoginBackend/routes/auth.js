@@ -24,21 +24,19 @@ if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
 }
 console.log("routes/auth.js - JWT secrets check passed");
 
-const ACCESS_EXPIRES_IN = '1h'; // Ensure these are defined
-const REFRESH_EXPIRES_IN = '7d'; // Ensure these are defined
+const ACCESS_EXPIRES_IN = '120d';   // or '120d'
+const REFRESH_EXPIRES_IN = '120d'; // keep refresh slightly longer
 
-// ✅ REGISTER
-console.log("routes/auth.js - Defining POST /register route");
+
+// ✅ REGISTERconsole.log("routes/auth.js - Defining POST /register route");
 router.post('/register', async (req, res) => {
-  // ... your existing /register route code ...
-  // (No changes were made here in the previous suggestion for case-insensitive login)
   console.log("✅✅✅ /api/auth/register - ROUTE HANDLER REACHED ✅✅✅");
   let { email, phoneNumber, username, location, password } = req.body;
 
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
-    username = username ? sanitize(username.toLowerCase()) : null; // Stays lowercase for registration consistency
+    username = username ? sanitize(username.toLowerCase()) : null;
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
@@ -50,7 +48,7 @@ router.post('/register', async (req, res) => {
       $or: [
         ...(email ? [{ email }] : []),
         ...(phoneNumber ? [{ phoneNumber }] : []),
-        { username }, // Matches stored lowercase username
+        { username },
       ],
     });
 
@@ -71,13 +69,35 @@ router.post('/register', async (req, res) => {
     await newUser.save();
     console.log("routes/auth.js - /register: New user saved successfully.");
 
+    // ✅ Issue tokens right after registration
+    const accessTokenValue = jwt.sign(
+      { userId: newUser._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_EXPIRES_IN }
+    );
+
+    const refreshTokenValue = jwt.sign(
+      { userId: newUser._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: REFRESH_EXPIRES_IN }
+    );
+
+    newUser.refreshToken = refreshTokenValue;
+    await newUser.save();
+
+    // ✅ Respond with user + tokens
     res.status(201).json({
-      _id: newUser._id,
-      email: newUser.email,
-      phoneNumber: newUser.phoneNumber,
-      username: newUser.username,
-      location: newUser.location,
-      verified: newUser.verified,
+      user: {
+        _id: newUser._id,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        username: newUser.username,
+        location: newUser.location,
+        verified: newUser.verified,
+        playerId: newUser.playerId || null
+      },
+      token: accessTokenValue,        // ✅ matches LoginResponse
+      refreshToken: refreshTokenValue // ✅ matches LoginResponse
     });
 
   } catch (err) {
@@ -90,7 +110,8 @@ router.post('/register', async (req, res) => {
 });
 
 
-// ✅ LOGIN with Access + Refresh Token (<<<<< THIS IS THE MODIFIED SECTION)
+
+// ✅ LOGIN with Access + Refresh Token (<<<<< THIS IS THE MODIFIED SECTION)// ✅ LOGIN with Access + Refresh Token
 console.log("routes/auth.js - Defining POST /login route");
 router.post('/login', async (req, res) => {
   console.log("✅✅✅ /api/auth/login - ROUTE HANDLER REACHED ✅✅✅");
@@ -99,56 +120,47 @@ router.post('/login', async (req, res) => {
 
   try {
     if (!identifier || !password) {
-      console.log('Login attempt failed: Missing identifier or password.');
       return res.status(400).json({ message: 'Missing credentials' });
     }
 
     const trimmedIdentifier = identifier.trim();
     const identifierForEmailQuery = trimmedIdentifier.toLowerCase();
 
-    console.log(`Login attempt for identifier: "${trimmedIdentifier}"`);
-    console.log(` -> Searching for email as: "${identifierForEmailQuery}" (case-insensitive due to stored lowercase)`);
-    console.log(` -> Searching for username as: "${trimmedIdentifier}" (case-insensitive via regex)`);
-    console.log(` -> Searching for phone as: "${trimmedIdentifier}" (exact match)`);
-
     const user = await User.findOne({
       $or: [
-        { email: identifierForEmailQuery }, 
-        { phoneNumber: trimmedIdentifier }, 
-        { username: new RegExp(`^${trimmedIdentifier}$`, 'i') } 
+        { email: identifierForEmailQuery },
+        { phoneNumber: trimmedIdentifier },
+        { username: new RegExp(`^${trimmedIdentifier}$`, 'i') }
       ],
-    }).select('+refreshToken'); // Ensure password is also selected if not by default
+    }).select('+refreshToken');
 
     if (!user) {
-      console.log(`Login failed: User not found for identifier: "${trimmedIdentifier}"`);
       return res.status(404).json({ message: 'User not found' });
     }
-    console.log(`routes/auth.js - /login: User found: ${user.username} (ID: ${user._id})`);
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log(`Login failed: Password mismatch for user: ${user.username || identifier}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    console.log(`Login successful for user: ${user.username}`);
+    // Generate tokens
+    const accessTokenValue = jwt.sign(
+      { userId: user._id },
+      process.env.ACCESS_TOKEN_SECRET, // ✅ use correct secret
+      { expiresIn: ACCESS_EXPIRES_IN }
+    );
 
-    const accessTokenValue = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: ACCESS_EXPIRES_IN,
-    });
-    const refreshTokenValue = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, {
-      expiresIn: REFRESH_EXPIRES_IN,
-    });
-    console.log(`routes/auth.js - /login: Tokens created for user ${user.username}`);
+    const refreshTokenValue = jwt.sign(
+      { userId: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: REFRESH_EXPIRES_IN }
+    );
 
-    try {
-      user.refreshToken = refreshTokenValue;
-      await user.save();
-      console.log(`Refresh token saved for user: ${user.username}`);
-    } catch (saveError) {
-      console.error(`❌ Error saving refresh token for user ${user.username}:`, saveError.message);
-    }
+    // Save refresh token
+    user.refreshToken = refreshTokenValue;
+    await user.save();
 
+    // Response payload (matches frontend LoginResponse)
     const responsePayload = {
       user: {
         _id: user._id,
@@ -160,20 +172,18 @@ router.post('/login', async (req, res) => {
         verified: user.verified,
         playerId: user.playerId || null
       },
-      token: accessTokenValue,       
-      accessToken: accessTokenValue, 
-      refreshToken: refreshTokenValue
+      token: accessTokenValue,       // ✅ matches Android LoginResponse
+      refreshToken: refreshTokenValue // ✅ matches Android LoginResponse
     };
-    console.log('✅ Sending login success response payload:', JSON.stringify(responsePayload, null, 2));
+
     res.json(responsePayload);
 
   } catch (err) {
-    console.error('❌ Login error (main catch block):', err.message);
-    console.error(err.stack);
+    console.error('❌ Login error:', err.message);
     res.status(500).json({ message: 'Server error during login' });
   }
 });
-// (END OF MODIFIED /login SECTION >>>>>)
+
 
 
 // ✅ Refresh Token Endpoint

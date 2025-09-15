@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/user.model'); // ✅ Correct
 
+const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || '1h';
+const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || '7d';
 
 // ✅ Helper to sanitize input and trim long strings
 const sanitize = (val) =>
@@ -21,12 +23,10 @@ router.post('/register', async (req, res) => {
     location = sanitize(location);
     password = sanitize(password);
 
-    // ✅ Required field checks
     if (!username || !location || !password || (!email && !phone)) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // ✅ Check for existing user
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
@@ -39,28 +39,45 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'User already exists' });
     }
 
-    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Dynamically build user object
-    const userObj = {
+    const user = new User({
       username,
       location,
       password: hashedPassword,
-      ...(email ? { email } : {}),
-      ...(phone ? { phone } : {})
-    };
+      ...(email && { email }),
+      ...(phone && { phone })
+    });
 
-    const user = new User(userObj);
+    await user.save();
+
+    // ✅ Generate tokens immediately after register
+    const accessToken = jwt.sign(
+      { userId: user._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_EXPIRES_IN }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: REFRESH_EXPIRES_IN }
+    );
+
+    user.refreshToken = refreshToken;
     await user.save();
 
     res.status(201).json({
-      id: user._id,
-      email: user.email,
-      phone: user.phone,
-      username: user.username,
-      location: user.location,
-      verified: user.verified
+      user: {
+        id: user._id,
+        email: user.email,
+        phone: user.phone,
+        username: user.username,
+        location: user.location,
+        verified: user.verified
+      },
+      token: accessToken,
+      refreshToken
     });
 
   } catch (err) {
@@ -94,12 +111,21 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
-    if (!process.env.JWT_SECRET) {
-      console.error("❌ JWT_SECRET missing in environment");
-      return res.status(500).json({ message: 'Server config error' });
-    }
+    // ✅ Issue new tokens
+    const accessToken = jwt.sign(
+      { userId: user._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_EXPIRES_IN }
+    );
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: REFRESH_EXPIRES_IN }
+    );
+
+    user.refreshToken = refreshToken;
+    await user.save();
 
     res.json({
       user: {
@@ -110,7 +136,8 @@ router.post('/login', async (req, res) => {
         location: user.location,
         verified: user.verified
       },
-      token
+      token: accessToken,
+      refreshToken
     });
 
   } catch (err) {

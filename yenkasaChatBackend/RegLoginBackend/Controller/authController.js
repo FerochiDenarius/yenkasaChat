@@ -2,13 +2,20 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || "1h";
+const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || "7d";
+
 // POST /api/auth/login
 const loginUser = async (req, res) => {
   try {
     const { identifier, password } = req.body;
 
     const user = await User.findOne({
-      $or: [{ email: identifier }, { phone: identifier }, { username: identifier }]
+      $or: [
+        { email: identifier },
+        { phone: identifier },
+        { username: identifier }
+      ]
     });
 
     if (!user) {
@@ -16,16 +23,26 @@ const loginUser = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const token = jwt.sign(
+    // ✅ Issue access + refresh tokens
+    const accessToken = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || "secretKey",
-      { expiresIn: "7d" }
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_EXPIRES_IN }
     );
+
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: REFRESH_EXPIRES_IN }
+    );
+
+    // ✅ Save refreshToken in DB
+    user.refreshToken = refreshToken;
+    await user.save();
 
     const {
       _id,
@@ -53,7 +70,8 @@ const loginUser = async (req, res) => {
         createdAt,
         updatedAt
       },
-      token
+      token: accessToken,       // ✅ for frontend compatibility
+      refreshToken: refreshToken
     });
 
   } catch (error) {

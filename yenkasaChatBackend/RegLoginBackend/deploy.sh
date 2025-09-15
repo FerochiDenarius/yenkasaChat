@@ -11,7 +11,6 @@ RUNTIME="NODE:20-lts"                 # Node.js 20 on Linux
 
 # ========= App Settings =========
 MONGODB_URI="mongodb+srv://Denarius:%40Denarius01%40%24%24@yenkasachat.xsa2r9m.mongodb.net/yenkasaChat?retryWrites=true&w=majority"
-JWT_SECRET="YenkasaAuthKey2025!"
 REFRESH_TOKEN_SECRET="84Rw4xthXD9OXPF0uCZ66E1p+jAuwsg2RPncZ5KHImYD3v+82gCJKg8f57+HtfC/dTMsEmpbFirnHzdJD5sexQ=="
 
 CLOUDINARY_CLOUD_NAME="dwjj3zsaq"
@@ -62,7 +61,6 @@ az webapp config appsettings set \
   --settings \
     NODE_ENV="$NODE_ENV" \
     MONGODB_URI="$MONGODB_URI" \
-    JWT_SECRET="$JWT_SECRET" \
     REFRESH_TOKEN_SECRET="$REFRESH_TOKEN_SECRET" \
     CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
     CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \

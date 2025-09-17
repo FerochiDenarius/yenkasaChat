@@ -29,6 +29,12 @@ class MyApplication : Application(), OSSubscriptionObserver {
     override fun onCreate() {
         super.onCreate()
 
+        OneSignal.getDeviceState()?.let {
+            Log.d(
+                "MyApp",
+                "Initial OneSignal state: userId=${it.userId}, isSubscribed=${it.isSubscribed}"
+            )
+        }
         Log.d("MyApplication", "Application onCreate started.")
 
         // Initialize ApiClient

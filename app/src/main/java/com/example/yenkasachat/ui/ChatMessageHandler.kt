@@ -31,19 +31,32 @@ class ChatMessageHandler(
     fun sendMessage(data: Map<String, Any?>) {
         val messageMap = mutableMapOf<String, Any?>()
 
+        // Always include sender & room
         messageMap["senderId"] = senderId
         messageMap["roomId"] = roomId
 
+        // Handle text & contact info
         val text = data["text"] as? String
         val contactInfo = data["contactInfo"] as? String
-
         messageMap["text"] = contactInfo?.let { "📇 Contact: $it" } ?: text
+        messageMap["contactInfo"] = contactInfo
+
+        // Handle media (image, audio, video, file)
         messageMap["imageUrl"] = data["imageUrl"]
         messageMap["audioUrl"] = data["audioUrl"]
         messageMap["videoUrl"] = data["videoUrl"]
         messageMap["fileUrl"] = data["fileUrl"]
-        messageMap["contactInfo"] = contactInfo
 
+        // ✅ Always include OneSignal Player ID
+        val playerId = com.onesignal.OneSignal.getDeviceState()?.userId
+        if (!playerId.isNullOrBlank()) {
+            messageMap["playerId"] = playerId
+            Log.d("ChatMessageHandler", "Attached OneSignal playerId: $playerId")
+        } else {
+            Log.w("ChatMessageHandler", "No playerId found from OneSignal device state")
+        }
+
+        // Handle location if provided
         if (data["location"] is Map<*, *>) {
             val loc = data["location"] as Map<*, *>
             val lat = loc["latitude"] as? Double
@@ -52,7 +65,9 @@ class ChatMessageHandler(
                 messageMap["location"] = mapOf("latitude" to lat, "longitude" to lon)
             }
         }
-
+        // Log the final message payload before sending showing if playerId is included
+        Log.d("ChatMessageHandler", "📤 Final message payload being sent: $messageMap")
+        // Send to backend
         postMessage(messageMap)
     }
 

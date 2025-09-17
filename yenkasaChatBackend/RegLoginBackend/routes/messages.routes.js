@@ -54,6 +54,24 @@ router.post('/', auth, async (req, res) => {
         location
     } = req.body;
 
+        // --- START: Update Player ID if provided in the request ---
+    if (req.body.playerId) {
+        try {
+            const updatedUser = await User.findByIdAndUpdate(
+                req.user.id,
+                { playerId: req.body.playerId.trim() },
+                { new: true }
+            );
+            if (updatedUser) {
+                console.log(`[MessagesRoute] POST / - ✅ Player ID updated for user ${updatedUser.username} (${updatedUser._id}): ${updatedUser.playerId}`);
+            }
+        } catch (err) {
+            console.error(`[MessagesRoute] POST / - ⚠️ Failed to update Player ID for user ${req.user.id}:`, err.message);
+        }
+    }
+    // --- END: Update Player ID ---
+
+
     if (!roomId || !mongoose.Types.ObjectId.isValid(roomId)) {
         console.warn('[MessagesRoute] POST / - Invalid or missing roomId:', roomId);
         return res.status(400).json({ error: 'Valid roomId is required' });
@@ -91,6 +109,7 @@ router.post('/', auth, async (req, res) => {
             location,
             timestamp: new Date()
         });
+
 
         console.log('[MessagesRoute] POST / - 💾 Saving new message to DB...');
         await newMessage.save();

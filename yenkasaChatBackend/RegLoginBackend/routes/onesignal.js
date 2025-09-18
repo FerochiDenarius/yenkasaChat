@@ -1,157 +1,170 @@
-// File: routes/onesignal.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth'); // Ensure this path is correct and loads your auth.js
-const User = require('../models/user.model'); // Ensure this path is correct and User schema defines 'playerId'
-const { sendPushNotification } = require('../utils/onesignal'); // Assuming this utility exists and functions correctly
+const mongoose = require('mongoose');
+const authMiddleware = require('../middleware/auth'); // Renamed for clarity, assuming it's middleware
+const User = require('../models/user.model');
+const { sendPushNotification } = require('../utils/onesignal');
+const { v4: uuidv4 } = require('uuid'); // For unique request IDs
 
-// --- Simple Logger Function (Consistent with userProfileRoutes.js) ---
+// --- Simple Logger (Consider using a more robust logging library like Winston or Morgan for production) ---
+// This is fine for smaller projects, but a dedicated library offers more features (levels, transports, formatting).
 const logger = {
     info: (message, ...args) => console.log(`[OneSignalRoute][INFO] ${new Date().toISOString()} - ${message}`, ...args),
     warn: (message, ...args) => console.warn(`[OneSignalRoute][WARN] ${new Date().toISOString()} - ${message}`, ...args),
     error: (message, ...args) => console.error(`[OneSignalRoute][ERROR] ${new Date().toISOString()} - ${message}`, ...args),
     debug: (message, ...args) => console.debug(`[OneSignalRoute][DEBUG] ${new Date().toISOString()} - ${message}`, ...args)
 };
-// --- End Logger Function ---
 
+// --- Helper function for request logging ---
+function logRequest(req, res, next) {
+    req.requestId = uuidv4(); // Assign a unique ID to each request
+    logger.info(`[${req.requestId}] ${req.method} ${req.originalUrl} - Received request.`);
+    logger.debug(`[${req.requestId}] Body:`, req.body);
+    logger.debug(`[${req.requestId}] Params:`, req.params);
+    logger.debug(`[${req.requestId}] Authenticated User ID:`, (req.user?.id || req.user?._id)?.toString());
+    next();
+}
 
-// PATCH /api/users/:userId/player-id  
-// (Assuming this router is mounted under /api, so the full path becomes /api/users/:userId/player-id)
-// This endpoint updates the OneSignal Player ID for a specific user.
-router.patch('/users/:userId/player-id', auth, async (req, res) => {
-    const { userId: paramUserId } = req.params; // User ID from the URL parameter
-    const { playerId: bodyPlayerId } = req.body; // The OneSignal Player ID from the request body
+// --- Error Handling Middleware (Optional but good practice) ---
+// This can be added at the end of your main app.js to catch unhandled errors
+// For this router, we'll keep try-catch for now, but a global handler is good.
 
-    const requestId = `req_onesignal_patch_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString(); // Get user ID from authentication middleware
-
-    logger.info(`[${requestId}] PATCH /users/${paramUserId}/player-id - Received request. Authenticated User ID: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] Request Params: userId=${paramUserId}`);
-    logger.debug(`[${requestId}] Request Body: playerId=${bodyPlayerId}`);
-
-    // --- Validation and Authorization ---
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] CRITICAL: Authenticated User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed or User ID missing.' });
-    }
-
-    if (!bodyPlayerId || typeof bodyPlayerId !== 'string' || bodyPlayerId.trim() === '') {
-        logger.warn(`[${requestId}] Validation Failed: 'playerId' (OneSignal Player ID) is missing, not a string, or empty in request body. Provided: '${bodyPlayerId}'. Target User Param: ${paramUserId}`);
-        return res.status(400).json({ error: "Valid 'playerId' (OneSignal Player ID) is required in the request body." });
-    }
-
-    // Security: Ensure the authenticated user is the one whose player ID is being updated,
-    // or an admin (if you have admin roles, that logic would be added here).
-    if (authenticatedUserId !== paramUserId.toString()) {
-        logger.warn(`[${requestId}] FORBIDDEN attempt: Authenticated User ${authenticatedUserId} trying to update Player ID for User Param ${paramUserId}.`);
-        return res.status(403).json({ error: 'Forbidden: You can only update your own player ID.' });
-    }
-    // --- End Validation and Authorization ---
-
-    // CONSISTENCY: Log intent to update 'playerId' field
-    logger.info(`[${requestId}] Attempting to update 'playerId' to '${bodyPlayerId.trim()}' for User ID: ${paramUserId}`);
-
-    try {
-        // Find the user by their MongoDB _id and update their 'playerId' field.
-        const updatedUser = await User.findByIdAndUpdate(
-            paramUserId,
-            // MODIFIED: Use 'playerId' to be consistent with User model and other routes.
-            // Ensure your User model schema has a field named 'playerId: String'.
-            { $set: { playerId: bodyPlayerId.trim(), updatedAt: new Date() } },
-            { new: true, runValidators: true } // Returns the updated document and runs schema validators
-        );
-
-        if (!updatedUser) {
-            logger.warn(`[${requestId}] User not found with ID: ${paramUserId} during Player ID update.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // CONSISTENCY: Log success for 'playerId' field
-        logger.info(`[${requestId}] ✅ 'playerId' updated successfully for User ID ${updatedUser._id} to '${updatedUser.playerId}'.`);
-        logger.debug(`[${requestId}] Updated User Data:`, { id: updatedUser._id, username: updatedUser.username, playerId: updatedUser.playerId });
-        
-        res.status(200).json({
-            success: true,
-            message: 'Player ID updated successfully',
-            userId: updatedUser._id,
-            // MODIFIED: Send back 'playerId' field from the updated user document
-            playerId: updatedUser.playerId 
-        });
-
-    } catch (err) {
-        // CONSISTENCY: Log error for 'playerId' field
-        logger.error(`[${requestId}] ❌ Error updating 'playerId' for User ID ${paramUserId} to '${bodyPlayerId.trim()}'. Error: ${err.message}`, { stack: err.stack });
-        
-        if (err.name === 'ValidationError') {
-            logger.warn(`[${requestId}] Mongoose validation error:`, err.errors);
-            return res.status(400).json({ error: 'Validation error updating Player ID.', errors: err.errors });
-        }
-        if (err.name === 'CastError') {
-            logger.warn(`[${requestId}] Mongoose cast error: ${err.path} to ${err.kind} failed for value ${err.value}`);
-            return res.status(400).json({ error: `Invalid data format for ${err.path}.` });
-        }
-        res.status(500).json({ error: 'Server error while updating player ID' });
-    } finally {
-        logger.info(`[${requestId}] Finished processing PATCH /users/${paramUserId}/player-id. Authenticated User ID: ${authenticatedUserId}`);
-    }
-});
-
-
-// POST /api/notify 
-// (Assuming this router is mounted under /api, so the full path becomes /api/notify)
-// This is a generic endpoint to send a push notification to a specific OneSignal Player ID.
-// Could be used for testing or specific admin-initiated notifications.
-router.post('/notify', auth, async (req, res) => {
-    // 'playerId' in the request body is the TARGET OneSignal Player ID to send the notification to.
-    const { playerId: targetPlayerId, title, body, data } = req.body; 
-    
-    const requestId = `req_onesignal_notify_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString(); // User initiating the request
-
-    logger.info(`[${requestId}] POST /notify - Received request. Target OneSignal PlayerID: ${targetPlayerId}. Triggered by User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] Request Body:`, JSON.stringify(req.body));
+// =========================================================================================
+// ==                           UPDATE USER'S ONESIGNAL PLAYER ID                         ==
+// =========================================================================================
+router.patch('/users/:userId/player-id', authMiddleware, logRequest, async (req, res) => {
+    const { userId: paramUserId } = req.params;
+    const { playerId: bodyPlayerId } = req.body;
+    const { requestId } = req; // Get requestId from logRequest middleware
+    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
 
     // --- Validation ---
     if (!authenticatedUserId) {
-        logger.error(`[${requestId}] CRITICAL: Authenticated User ID not found in req.user after authMiddleware for notification request.`);
-        return res.status(401).json({ error: 'User authentication failed or User ID missing.' });
+        logger.warn(`[${requestId}] Authentication failed: No authenticated user ID found.`);
+        return res.status(401).json({ success: false, message: 'Authentication failed. Please log in.' });
     }
-
-    if (!targetPlayerId || typeof targetPlayerId !== 'string' || targetPlayerId.trim() === '') {
-        logger.warn(`[${requestId}] Validation Failed: 'targetPlayerId' is missing or invalid. Provided: '${targetPlayerId}'`);
-        return res.status(400).json({ error: "Valid 'targetPlayerId' (OneSignal Player ID) is required in the request body." });
+    if (!bodyPlayerId || typeof bodyPlayerId !== 'string' || bodyPlayerId.trim() === '') {
+        logger.warn(`[${requestId}] Validation failed: 'playerId' is required and must be a non-empty string. Received: ${bodyPlayerId}`);
+        return res.status(400).json({ success: false, message: "Valid 'playerId' is required." });
     }
-    if (!title || typeof title !== 'string' || title.trim() === '') {
-        logger.warn(`[${requestId}] Validation Failed: 'title' is missing or invalid. Provided: '${title}'`);
-        return res.status(400).json({ error: "Valid 'title' (string) is required in the request body." });
+    if (authenticatedUserId !== paramUserId.toString()) {
+        logger.warn(`[${requestId}] Authorization failed: User ${authenticatedUserId} attempted to update player ID for ${paramUserId}.`);
+        return res.status(403).json({ success: false, message: 'Forbidden: You can only update your own player ID.' });
     }
-    if (!body || typeof body !== 'string' || body.trim() === '') {
-        logger.warn(`[${requestId}] Validation Failed: 'body' is missing or invalid. Provided: '${body ? 'Present' : 'Missing/Empty'}'`);
-        return res.status(400).json({ error: "Valid 'body' (string) is required in the request body." });
+    if (!mongoose.Types.ObjectId.isValid(paramUserId)) {
+        logger.warn(`[${requestId}] Validation failed: Invalid User ID format. Received: ${paramUserId}`);
+        return res.status(400).json({ success: false, message: 'Invalid User ID format.' });
     }
-    // --- End Validation ---
-
-    logger.info(`[${requestId}] Attempting to send notification. Title: '${title.trim()}', Body: '${body.trim().substring(0,50)+'...'}', Target PlayerID: ${targetPlayerId.trim()}`);
 
     try {
-        // Call your utility function to send the push notification.
-        // Ensure this utility is correctly configured with your OneSignal App ID and REST API Key.
-        const result = await sendPushNotification({
-            targetPlayerIds: [targetPlayerId.trim()], // sendPushNotification might expect an array
-            title: title.trim(),
-            body: body.trim(),
-            data // Optional custom data to include in the notification
+        const trimmedPlayerId = bodyPlayerId.trim();
+        const updateFields = { playerId: trimmedPlayerId, updatedAt: new Date() };
+
+        // Find the user and update their player ID
+        const updatedUser = await User.findByIdAndUpdate(
+            paramUserId,
+            { $set: updateFields },
+            { new: true, runValidators: true } // Return the updated document and run schema validators
+        );
+
+        if (!updatedUser) {
+            logger.warn(`[${requestId}] User not found with ID: ${paramUserId}`);
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        logger.info(`[${requestId}] Player ID updated successfully for user ${updatedUser._id} to ${updatedUser.playerId}`);
+        res.status(200).json({
+            success: true,
+            message: 'Player ID updated successfully.',
+            data: { // Nesting response data can be good practice
+                userId: updatedUser._id,
+                playerId: updatedUser.playerId // Should always exist after a successful update
+            }
         });
 
-        logger.info(`[${requestId}] ✅ Manual notification sent successfully to PlayerID: ${targetPlayerId.trim()}. OneSignal API Result:`, result);
-        res.status(200).json({ success: true, message: 'Notification sent successfully', result });
+    } catch (err) {
+        logger.error(`[${requestId}] Server error while updating player ID for user ${paramUserId}: ${err.message}`, err.stack);
+        // More specific error handling if needed (e.g., Mongoose validation error)
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ success: false, message: 'Validation error updating player ID.', errors: err.errors });
+        }
+        res.status(500).json({ success: false, message: 'Server error while updating player ID.' });
+    } finally {
+        logger.info(`[${requestId}] Finished ${req.method} ${req.originalUrl}`);
+    }
+});
+
+// =========================================================================================
+// ==                                SEND PUSH NOTIFICATION                               ==
+// =========================================================================================
+router.post('/notify', authMiddleware, logRequest, async (req, res) => {
+    const { playerId: targetPlayerId, title, body, data } = req.body; // 'data' is optional additional data for the notification
+    const { requestId } = req;
+    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
+
+    // --- Validation ---
+    if (!authenticatedUserId) {
+        logger.warn(`[${requestId}] Authentication failed: No authenticated user ID found for sending notification.`);
+        return res.status(401).json({ success: false, message: 'Authentication failed. Please log in.' });
+    }
+    // Basic validation for required fields
+    if (!targetPlayerId || typeof targetPlayerId !== 'string' || targetPlayerId.trim() === '') {
+        logger.warn(`[${requestId}] Validation failed: 'targetPlayerId' is required. Received: ${targetPlayerId}`);
+        return res.status(400).json({ success: false, message: "Valid 'targetPlayerId' is required." });
+    }
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+        logger.warn(`[${requestId}] Validation failed: 'title' is required. Received: ${title}`);
+        return res.status(400).json({ success: false, message: "Valid 'title' is required." });
+    }
+    if (!body || typeof body !== 'string' || body.trim() === '') {
+        logger.warn(`[${requestId}] Validation failed: 'body' is required. Received: ${body}`);
+        return res.status(400).json({ success: false, message: "Valid 'body' is required." });
+    }
+    // Optional: Validate 'data' if it has a specific expected structure
+
+    try {
+        const trimmedTargetPlayerId = targetPlayerId.trim();
+        const trimmedTitle = title.trim();
+        const trimmedBody = body.trim();
+
+        logger.info(`[${requestId}] Attempting to send notification to PlayerID: ${trimmedTargetPlayerId} by User: ${authenticatedUserId}`);
+        logger.debug(`[${requestId}] Notification details - Title: "${trimmedTitle}", Body: "${trimmedBody}", Data:`, data);
+
+        // --- Send notification using the utility function ---
+        const oneSignalResult = await sendPushNotification({
+            targetPlayerIds: [trimmedTargetPlayerId], // sendPushNotification expects an array
+            title: trimmedTitle,
+            body: trimmedBody,
+            data // Pass along additional data
+        });
+
+        // Optional: Check oneSignalResult for specific success indicators if the utility provides them
+        // For example, if it throws on failure, this part is only reached on success.
+        // If it returns an object with error details, you'd check that here.
+
+        logger.info(`[${requestId}] Notification request processed for PlayerID: ${trimmedTargetPlayerId}. OneSignal Result (or part of it):`, oneSignalResult);
+        res.status(200).json({
+            success: true,
+            message: 'Notification sent successfully.',
+            result: oneSignalResult // Include OneSignal's response if useful for the client
+        });
 
     } catch (err) {
-        logger.error(`[${requestId}] ❌ Error sending manual notification to PlayerID: ${targetPlayerId.trim()}. Error: ${err.message}`, { errorDetails: err, stack: err.stack });
-        // The 'err' from sendPushNotification might have more specific details from the OneSignal API
-        res.status(500).json({ error: 'Failed to send notification', details: err.message || 'Unknown error from OneSignal utility' });
+        // This 'err' could be from sendPushNotification or other unexpected issues
+        logger.error(`[${requestId}] Error sending notification to PlayerID ${targetPlayerId?.trim()}: ${err.message}`, err.stack);
+
+        // Provide a more specific error message if the error object has details
+        // (e.g., if sendPushNotification throws a custom error with a 'status' property)
+        const statusCode = err.status || 500;
+        const errorMessage = err.isOneSignalError ? err.message : 'Failed to send notification.'; // Example
+
+        res.status(statusCode).json({
+            success: false,
+            message: errorMessage,
+            details: err.isOneSignalError ? (err.response?.data || err.message) : err.message // More detailed error
+        });
     } finally {
-        logger.info(`[${requestId}] Finished processing POST /notify. Triggered by User: ${authenticatedUserId}, Target PlayerID: ${targetPlayerId.trim()}`);
+        logger.info(`[${requestId}] Finished ${req.method} ${req.originalUrl}`);
     }
 });
 

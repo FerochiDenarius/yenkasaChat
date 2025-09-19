@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true"
+    tools:context=".webrtc.VideoCallActivity">
+
+
+<org.webrtc.SurfaceViewRenderer
+android:id="@+id/remote_video_view"
+android:layout_width="match_parent"
+android:layout_height="match_parent" />
+
+
+<org.webrtc.SurfaceViewRenderer
+android:id="@+id/local_video_view"
+android:layout_width="120dp"
+android:layout_height="180dp"
+android:layout_alignParentTop="true"
+android:layout_alignParentEnd="true"
+android:layout_marginTop="16dp"
+android:layout_marginEnd="16dp" />
+
+
+<LinearLayout
+android:id="@+id/call_controls_container"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:layout_alignParentBottom="true"
+android:gravity="center"
+android:orientation="horizontal"
+android:padding="16dp"
+android:background="#80000000"> <!-- Semi-transparent background -->
+
+<!-- Mute/Unmute Audio Button -->
+<ImageButton
+    android:id="@+id/btn_toggle_mic"
+    android:layout_width="60dp"
+    android:layout_height="60dp"
+    android:layout_marginEnd="24dp"
+    android:background="@drawable/selector_call_button_background"
+android:contentDescription="Toggle Microphone"
+android:padding="12dp"
+android:scaleType="fitCenter"
+android:src="@drawable/ic_mic_on"
+app:tint="@android:color/white" />
+
+<!-- End Call Button -->
+<ImageButton
+    android:id="@+id/btn_end_call"
+    android:layout_width="70dp"
+    android:layout_height="70dp"
+    android:background="@drawable/selector_end_call_button_background"
+android:contentDescription="End Call"
+android:padding="16dp"
+android:scaleType="fitCenter"
+android:src="@drawable/ic_call_end"
+app:tint="@android:color/white" />
+
+<!-- Toggle Video (Camera On/Off) Button -->
+<ImageButton
+    android:id="@+id/btn_toggle_camera"
+    android:layout_width="60dp"
+    android:layout_height="60dp"
+    android:layout_marginStart="24dp"
+    android:background="@drawable/selector_call_button_background"
+android:contentDescription="Toggle Camera"
+android:padding="12dp"
+android:scaleType="fitCenter"
+android:src="@drawable/ic_videocam_on"
+app:tint="@android:color/white" />
+
+<!-- (Optional) Switch Camera Button -->
+<!--
+<ImageButton
+    android:id="@+id/btn_switch_camera"
+    android:layout_width="50dp"
+    android:layout_height="50dp"
+    android:layout_marginStart="20dp"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:contentDescription="Switch Camera"
+    android:padding="10dp"
+    android:scaleType="fitCenter"
+    android:src="@drawable/ic_switch_camera"
+    app:tint="@android:color/white" />
+-->
+</LinearLayout>
+
+    <!-- (Optional) Status TextView (e.g., "Connecting...", "Ringing...") -->
+<TextView
+android:id="@+id/tv_call_status"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:layout_centerInParent="true"
+android:textColor="@android:color/white"
+android:textSize="18sp"
+android:background="#80000000"
+android:padding="8dp"
+android:visibility="gone"
+tools:text="Connecting..."
+tools:visibility="visible" />
+
+    </RelativeLayout>

@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M20,4h-3.17L15,2H9L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2zM12,17l-3,-3h2.5v-3h1v3H15l-3,3zM8,10H5V7h3v3z"/>
+    <!-- A more common switch camera icon looks like a camera with circular arrows -->
+    <!-- Example for a more typical icon: -->
+    <!-- <path android:fillColor="#FF000000" android:pathData="M12,5.5V3l4,4l-4,4V8.5C8.69,8.5 6,10.69 6,13.5S8.69,18.5 12,18.5c1.63,0 3.09,-0.78 4.05,-2.01l1.46,1.46C16.17,19.42 14.21,20.5 12,20.5c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8z"/> -->
+</vector>
+       

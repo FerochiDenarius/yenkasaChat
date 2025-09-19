@@ -111,7 +111,11 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    //deleting chats and messages
+    //video call and phone call
+    implementation("org.webrtc:google-webrtc:1.0.32006")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0") // Or latest stable version of OkHttp
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-common-java8:2.6.2")
 
 // Check for the latest version
 }

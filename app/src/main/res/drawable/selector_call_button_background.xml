@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="#40FFFFFF" /> <!-- Lighter semi-transparent white when pressed -->
+            <size android:width="60dp" android:height="60dp"/>
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#A0444444" /> <!-- Default dark semi-transparent gray -->
+            <size android:width="60dp" android:height="60dp"/>
+        </shape>
+    </item>
+</selector>
+       

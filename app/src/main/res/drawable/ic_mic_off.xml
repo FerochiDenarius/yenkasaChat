@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M19,11h-1.7c0,3-2.54,5.1-5.3,5.1S6.7,14 6.7,11H5c0,3.41 2.72,6.23 6,6.72V21h2v-3.28c3.28,-0.49 6,-3.31 6,-6.72zM12,13c1.66,0 3,-1.34 3,-3V4.34L8.34,11H8v-1H6v1c0,1.66 1.34,3 3,3h1zm-1.5,-5.5l6,6L12,15l-4.5,-4.5 6,-6zM10.17,6L12,7.83V5c0,-1.66 -1.34,-3 -3,-3S6,3.34 6,5v0.17l2,2H8.83L10.17,6z"/>
+    <!-- Simplified mic off path combining mic and slash concepts - actual material icon might be different but this works -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M4.77,3.3L3.3,4.77l16,16L20.77,19.3 L4.77,3.3zM9.17,6l2,2V5c0,-1.66-1.34,-3-3,-3S5.17,3.34 5.17,5L5.17,5.17L7.17,3.17C7.69,3.06 8.24,3 8.83,3c0.17,0 0.33,0.01 0.5,0.03L9.17,6zM19,11h-1.7c0,2.21-1.27,4.11-3.08,5.03l1.45,1.45C17.43,16.14 19,13.73 19,11zM12,14c1.66,0 3,-1.34 3,-3V5c0,-0.35-0.07,-0.68-0.18,-1L9.17,5.66C9.06,5.77 9,5.88 9,6v5c0,1.66 1.34,3 3,3z"/>
+</vector>
+       

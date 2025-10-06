@@ -1,10 +1,8 @@
 package com.example.yenkasachat.webrtc
+
 import android.content.Context
-import android.media.AudioTrack
 import android.util.Log
-import androidx.compose.foundation.layout.add
 import org.webrtc.*
-import org.json.JSONObject
 
 class WebRTCClient(
     private val context: Context,
@@ -14,12 +12,15 @@ class WebRTCClient(
 ) {
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
+
     private var localVideoTrack: VideoTrack? = null
     private var localAudioTrack: AudioTrack? = null
     private var videoCapturer: CameraVideoCapturer? = null
 
+    // Callbacks for the Activity to use
     var onRemoteStream: ((MediaStream) -> Unit)? = null
-    var onIceCandidate: ((IceCandidate) -> Unit)? = null // Callback to send candidate via WebSocket
+    var onIceCandidate: ((IceCandidate) -> Unit)? = null
+    var onConnectionStateChange: ((PeerConnection.IceConnectionState) -> Unit)? = null
 
 
     init {
@@ -35,33 +36,26 @@ class WebRTCClient(
         val factoryBuilder = PeerConnectionFactory.builder()
             .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBaseContext, true, true))
             .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBaseContext))
-            .setOptions(PeerConnectionFactory.Options().apply {
-                // networkIgnoreMask = 0 // Optional: configure network interface usage
-            })
+            .setOptions(PeerConnectionFactory.Options())
         peerConnectionFactory = factoryBuilder.createPeerConnectionFactory()
     }
 
     fun startLocalMedia(surfaceViewRenderer: SurfaceViewRenderer) {
-        // Audio
         val audioSource = peerConnectionFactory?.createAudioSource(MediaConstraints())
         localAudioTrack = peerConnectionFactory?.createAudioTrack("ARDAMSa0", audioSource)
 
-        // Video
         videoCapturer = createCameraCapturer()
         val videoSource = peerConnectionFactory?.createVideoSource(videoCapturer?.isScreencast ?: false)
         videoCapturer?.initialize(SurfaceTextureHelper.create("VideoCapturerThread", eglBaseContext), context, videoSource?.capturerObserver)
-        videoCapturer?.startCapture(1280, 720, 30) // Adjust resolution/fps
+        videoCapturer?.startCapture(1280, 720, 30)
 
         localVideoTrack = peerConnectionFactory?.createVideoTrack("ARDAMSv0", videoSource)
-        localVideoTrack?.addSink(surfaceViewRenderer) // Display local video
-        surfaceViewRenderer.setMirror(true) // For front camera
+        localVideoTrack?.addSink(surfaceViewRenderer)
+        surfaceViewRenderer.setMirror(true)
     }
 
     fun setupPeerConnection(iceServers: List<PeerConnection.IceServer>) {
-        val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
-            // Additional RTCConfiguration options if needed
-            // e.g., iceTransportPolicy = PeerConnection.IceTransportPolicy.RELAY (for TURN only)
-        }
+        val rtcConfig = PeerConnection.RTCConfiguration(iceServers)
         peerConnection = peerConnectionFactory?.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onSignalingChange(newState: PeerConnection.SignalingState?) {
                 Log.d("WebRTCClient", "SignalingState: $newState")
@@ -69,8 +63,10 @@ class WebRTCClient(
 
             override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
                 Log.d("WebRTCClient", "IceConnectionState: $newState")
-                // Handle connected, disconnected states
+                newState?.let { onConnectionStateChange?.invoke(it) }
             }
+
+            override fun onIceConnectionReceivingChange(p0: Boolean) {}
 
             override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {
                 Log.d("WebRTCClient", "IceGatheringState: $newState")
@@ -79,14 +75,17 @@ class WebRTCClient(
             override fun onIceCandidate(candidate: IceCandidate?) {
                 candidate?.let {
                     Log.d("WebRTCClient", "onIceCandidate: $it")
-                    // Send this candidate to the other peer via WebSocket
                     val candidateInfo = mapOf(
                         "candidate" to it.sdp,
                         "sdpMid" to it.sdpMid,
                         "sdpMLineIndex" to it.sdpMLineIndex
                     )
-                    webSocketManager.sendSignalingMessage("candidate", candidateInfo = candidateInfo, targetUserId = targetUserId)
-                    onIceCandidate?.invoke(it) // For local handling if needed
+                    webSocketManager.sendSignalingMessage(
+                        type = SignalingMessageType.CANDIDATE.name,
+                        candidateInfo = candidateInfo,
+                        targetUserId = targetUserId
+                    )
+                    onIceCandidate?.invoke(it)
                 }
             }
 
@@ -105,22 +104,18 @@ class WebRTCClient(
 
             override fun onDataChannel(dataChannel: DataChannel?) {
                 Log.d("WebRTCClient", "onDataChannel: ${dataChannel?.label()}")
-                // Handle incoming data channel if the other peer initiates it
             }
 
             override fun onRenegotiationNeeded() {
                 Log.d("WebRTCClient", "onRenegotiationNeeded")
-                // Could potentially create a new offer here if needed
             }
 
             override fun onAddTrack(receiver: RtpReceiver?, mediaStreams: Array<out MediaStream>?) {}
         })
 
-        // Add local tracks to the connection
         localAudioTrack?.let { peerConnection?.addTrack(it) }
         localVideoTrack?.let { peerConnection?.addTrack(it) }
     }
-
 
     fun createOffer() {
         val sdpConstraints = MediaConstraints().apply {
@@ -130,10 +125,13 @@ class WebRTCClient(
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription?) {
                 sdp?.let {
-                    Log.d("WebRTCClient", "Offer created: ${it.description}")
-                    peerConnection?.setLocalDescription(this, it) // 'this' refers to SdpObserver for setLocalDescription
-                    // Send this offer (it.description) to the other peer via WebSocket
-                    webSocketManager.sendSignalingMessage("offer", sdp = it.description, targetUserId = targetUserId)
+                    Log.d("WebRTCClient", "Offer created")
+                    peerConnection?.setLocalDescription(this, it)
+                    webSocketManager.sendSignalingMessage(
+                        type = SignalingMessageType.OFFER.name,
+                        sdp = it.description,
+                        targetUserId = targetUserId
+                    )
                 }
             }
             override fun onCreateFailure(error: String?) { Log.e("WebRTCClient", "Offer creation failed: $error") }
@@ -150,10 +148,13 @@ class WebRTCClient(
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription?) {
                 sdp?.let {
-                    Log.d("WebRTCClient", "Answer created: ${it.description}")
+                    Log.d("WebRTCClient", "Answer created")
                     peerConnection?.setLocalDescription(this, it)
-                    // Send this answer (it.description) to the other peer via WebSocket
-                    webSocketManager.sendSignalingMessage("answer", sdp = it.description, targetUserId = targetUserId)
+                    webSocketManager.sendSignalingMessage(
+                        type = SignalingMessageType.ANSWER.name,
+                        sdp = it.description,
+                        targetUserId = targetUserId
+                    )
                 }
             }
             override fun onCreateFailure(error: String?) { Log.e("WebRTCClient", "Answer creation failed: $error") }
@@ -163,7 +164,6 @@ class WebRTCClient(
     }
 
     fun handleRemoteOffer(sdpDescription: String) {
-        Log.d("WebRTCClient", "Handling remote offer")
         val sdp = SessionDescription(SessionDescription.Type.OFFER, sdpDescription)
         peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onSetSuccess() {
@@ -171,14 +171,12 @@ class WebRTCClient(
                 createAnswer()
             }
             override fun onSetFailure(error: String?) { Log.e("WebRTCClient", "setRemoteDescription (offer) failed: $error") }
-            // No need to implement onCreateSuccess/Failure here
             override fun onCreateSuccess(p0: SessionDescription?) {}
             override fun onCreateFailure(p0: String?) {}
         }, sdp)
     }
 
     fun handleRemoteAnswer(sdpDescription: String) {
-        Log.d("WebRTCClient", "Handling remote answer")
         val sdp = SessionDescription(SessionDescription.Type.ANSWER, sdpDescription)
         peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onSetSuccess() { Log.d("WebRTCClient", "RemoteDescription (answer) set successfully") }
@@ -193,40 +191,49 @@ class WebRTCClient(
         peerConnection?.addIceCandidate(candidate)
     }
 
-
     fun close() {
+        Log.d("WebRTCClient", "Closing PeerConnection.")
         videoCapturer?.stopCapture()
         videoCapturer?.dispose()
         videoCapturer = null
 
         localVideoTrack?.dispose()
         localAudioTrack?.dispose()
+        localVideoTrack = null
+        localAudioTrack = null
 
         peerConnection?.close()
         peerConnection = null
 
         peerConnectionFactory?.dispose()
         peerConnectionFactory = null
-
-        EglBase.terminate() // If you created an EglBase instance
     }
 
     private fun createCameraCapturer(): CameraVideoCapturer? {
         val enumerator = Camera2Enumerator(context)
-        val deviceNames = enumerator.deviceNames
-
-        // Try front camera
-        for (deviceName in deviceNames) {
+        for (deviceName in enumerator.deviceNames) {
             if (enumerator.isFrontFacing(deviceName)) {
                 return enumerator.createCapturer(deviceName, null)
             }
         }
-        // Try back camera
-        for (deviceName in deviceNames) {
-            if (enumerator.isBackFacing(deviceName)) {
+        for (deviceName in enumerator.deviceNames) {
+            if (!enumerator.isFrontFacing(deviceName)) {
                 return enumerator.createCapturer(deviceName, null)
             }
         }
-        return null // No camera found
+        return null
+    }
+
+    fun toggleAudio(isMuted: Boolean) {
+        localAudioTrack?.setEnabled(!isMuted)
+    }
+
+    fun toggleVideo(isVideoDisabled: Boolean) {
+        localVideoTrack?.setEnabled(!isVideoDisabled)
+        if (isVideoDisabled) {
+            videoCapturer?.stopCapture()
+        } else {
+            videoCapturer?.startCapture(1280, 720, 30)
+        }
     }
 }

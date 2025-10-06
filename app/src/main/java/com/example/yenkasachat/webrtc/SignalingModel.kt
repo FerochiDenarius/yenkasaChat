@@ -1,14 +1,25 @@
-// In a new file, e.g., webrtc/SignalingModel.kt
-package com.example.yenkasachat.webrtc // Or your appropriate model package
+package com.example.yenkasachat.webrtc
 
-// Represents a parsed signaling message received from the WebSocket
+enum class SignalingMessageType {
+    OFFER,
+    ANSWER,
+    CANDIDATE,
+    ICE_CANDIDATE,
+    USER_JOINED,
+    USER_LEFT,
+    ERROR,
+    UNKNOWN,
+    CONNECTION_ACK,
+    CALL_ENDED,
+    USER_BUSY
+}
+
 data class SignalingMessage(
-    val type: SignalingMessageType, // Use an enum for type safety
+    val type: SignalingMessageType,
     val sdp: String? = null,
     val candidate: CandidateData? = null,
-    val fromUserId: String? = null, // Who sent this message (populated by server or parsed)
-    val error: String? = null // For error messages from server
-    // Add other fields your server might send, e.g., roomId
+    val fromUserId: String? = null,
+    val error: String? = null
 )
 
 data class CandidateData(
@@ -16,18 +27,3 @@ data class CandidateData(
     val sdpMid: String,
     val sdpMLineIndex: Int
 )
-
-// Enum for signaling message types for better type safety and clarity
-enum class SignalingMessageType {
-    OFFER,
-    ANSWER,
-    CANDIDATE,
-    USER_JOINED, // Example: if server notifies about other users
-    USER_LEFT,   // Example
-    CALL_ENDED,  // Example: Peer explicitly ended the call
-    USER_BUSY,   // Example
-    CONNECTION_ACK, // Example: Server acknowledges connection
-    ERROR,         // Example: For server-side errors related to signaling
-    UNKNOWN        // Fallback for types not explicitly handled
-}
-   

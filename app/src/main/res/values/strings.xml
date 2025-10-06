@@ -1,5 +1,14 @@
 <resources>
     <string name="app_name">yenkasaChat</string>
     <string name="default_web_client_id">AIzaSyBm1FoiLEXHhPLVMT_2gPQXOnMyhBlsGyo.apps.googleusercontent.com</string>
-
+    <string name="call_status_initializing">Initializing...</string>
+    <string name="call_status_connected">Connected</string>
+    <string name="call_status_state">State: %1$s</string>
+    <string name="call_status_calling">Calling %1$s...</string>
+    <string name="call_status_incoming">Incoming call...</string>
+    <string name="call_status_answered">Call answered</string>
+    <string name="call_status_ended_by_peer">Call ended by peer</string>
+    <string name="call_status_user_busy">User is busy</string>
+    <string name="call_status_error">Error: %1$s</string>
+    <string name="call_status_ended">Call Ended</string>
 </resources>

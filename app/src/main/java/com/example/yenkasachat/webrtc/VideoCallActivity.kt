@@ -1,6 +1,5 @@
 package com.example.yenkasachat.webrtc
 
-// Standard Android Imports
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -9,20 +8,19 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.yenkasachat.R
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import org.webrtc.EglBase
 import org.webrtc.PeerConnection
 import org.webrtc.SurfaceViewRenderer
 
 class VideoCallActivity : AppCompatActivity() {
 
-    // UI Elements from XML
     private lateinit var localVideoView: SurfaceViewRenderer
     private lateinit var remoteVideoView: SurfaceViewRenderer
     private lateinit var btnEndCall: ImageButton
@@ -30,14 +28,12 @@ class VideoCallActivity : AppCompatActivity() {
     private lateinit var btnToggleCamera: ImageButton
     private lateinit var tvCallStatus: TextView
 
-    // WebRTC & WebSocket components
     private lateinit var webSocketManager: WebSocketManager
     private var webRTCClient: WebRTCClient? = null
     private var eglBase: EglBase? = null
 
-    // Call State
     private var targetUserId: String? = null
-    private lateinit var currentUserId: String
+    private lateinit var currentUserId: String // TODO: This needs to be set from your app's user management
     private var isMicMuted = false
     private var isLocalVideoDisabled = false
 
@@ -53,7 +49,7 @@ class VideoCallActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // TODO: Replace this with your actual method of getting the current user's ID
-        currentUserId = "YOUR_CURRENT_USER_ID" // e.g., from your app's user management
+        currentUserId = "YOUR_CURRENT_USER_ID" 
 
         targetUserId = intent.getStringExtra("TARGET_USER_ID")
         val isCaller = intent.getBooleanExtra("IS_CALLER", false)
@@ -66,6 +62,7 @@ class VideoCallActivity : AppCompatActivity() {
 
         if (currentUserId == "YOUR_CURRENT_USER_ID" || currentUserId.isBlank()) {
             Log.e(TAG, "Current User ID is not set!")
+            Toast.makeText(this, "Error: Your user ID is not configured.", Toast.LENGTH_LONG).show()
             finish()
             return
         }
@@ -87,9 +84,7 @@ class VideoCallActivity : AppCompatActivity() {
         btnToggleCamera = findViewById(R.id.btn_toggle_camera)
         tvCallStatus = findViewById(R.id.tv_call_status)
 
-        btnEndCall.setOnClickListener {
-            endCall()
-        }
+        btnEndCall.setOnClickListener { endCall(notifyPeer = true) }
 
         btnToggleMic.setOnClickListener {
             isMicMuted = !isMicMuted
@@ -111,11 +106,8 @@ class VideoCallActivity : AppCompatActivity() {
         tvCallStatus.text = getString(R.string.call_status_initializing)
 
         eglBase = EglBase.create()
-        val eglContext = eglBase?.eglBaseContext ?: run {
-            Log.e(TAG, "EGL Base Context is null.")
-            endCall()
-            return
-        }
+        val eglContext = eglBase?.eglBaseContext ?: return
+        
         localVideoView.init(eglContext, null)
         remoteVideoView.init(eglContext, null)
         localVideoView.setZOrderMediaOverlay(true)
@@ -127,11 +119,7 @@ class VideoCallActivity : AppCompatActivity() {
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
         )
 
-        val currentTargetUserId = targetUserId ?: run {
-            Log.e(TAG, "TargetUserID is null before creating WebRTCClient")
-            endCall()
-            return
-        }
+        val currentTargetUserId = targetUserId ?: return
 
         webRTCClient = WebRTCClient(
             applicationContext,
@@ -145,18 +133,15 @@ class VideoCallActivity : AppCompatActivity() {
                 Log.i(TAG, "Remote stream received.")
                 tvCallStatus.text = getString(R.string.call_status_connected)
                 mediaStream.videoTracks.firstOrNull()?.addSink(remoteVideoView)
+                // Example of sending data after connection
+                webRTCClient?.sendData("Hello from the other side!")
             }
         }
 
-        webRTCClient?.onConnectionStateChange = { newState ->
+        webRTCClient?.onDataChannelMessage = { message ->
             runOnUiThread {
-                Log.i(TAG, "PeerConnection State: $newState")
-                tvCallStatus.text = getString(R.string.call_status_state, newState.name)
-                if (newState == PeerConnection.IceConnectionState.FAILED ||
-                    newState == PeerConnection.IceConnectionState.DISCONNECTED ||
-                    newState == PeerConnection.IceConnectionState.CLOSED) {
-                    endCall()
-                }
+                Log.i(TAG, "DataChannel Message: $message")
+                Toast.makeText(this, "Received: $message", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -174,65 +159,35 @@ class VideoCallActivity : AppCompatActivity() {
     private fun observeSignalingMessages() {
         lifecycleScope.launch {
             webSocketManager.signalingMessages.collect { message ->
-                Log.d(TAG, "Signaling: Type=${message.type}, SDP=${message.sdp != null}, Cand=${message.candidate != null}, From=${message.fromUserId}, Error=${message.error}")
+                Log.d(TAG, "Signaling: Type=${message.type}, From=${message.fromUserId}")
 
                 if (message.fromUserId != null && message.fromUserId != targetUserId &&
                     message.type != SignalingMessageType.ERROR && message.type != SignalingMessageType.CONNECTION_ACK) {
-                    Log.w(TAG, "Ignoring signaling message from unexpected user: ${message.fromUserId}. Expected: $targetUserId")
                     return@collect
                 }
 
                 when (message.type) {
                     SignalingMessageType.OFFER -> {
-                        Log.i(TAG, "Received OFFER from ${message.fromUserId}")
-                        tvCallStatus.text = getString(R.string.call_status_incoming)
-                        message.sdp?.let { webRTCClient?.handleRemoteOffer(it) } ?: Log.e(TAG, "Offer SDP is null")
+                        message.sdp?.let { webRTCClient?.handleRemoteOffer(it) }
                     }
                     SignalingMessageType.ANSWER -> {
-                        Log.i(TAG, "Received ANSWER from ${message.fromUserId}")
-                        tvCallStatus.text = getString(R.string.call_status_answered)
-                        message.sdp?.let { webRTCClient?.handleRemoteAnswer(it) } ?: Log.e(TAG, "Answer SDP is null")
+                        message.sdp?.let { webRTCClient?.handleRemoteAnswer(it) }
                     }
                     SignalingMessageType.CANDIDATE -> {
-                        message.candidate?.let { candidateData ->
-                            Log.i(TAG, "Received CANDIDATE from ${message.fromUserId}")
-                            webRTCClient?.addIceCandidate(candidateData.sdp, candidateData.sdpMid, candidateData.sdpMLineIndex)
-                        } ?: Log.e(TAG, "Candidate data is null for CANDIDATE message")
+                        message.candidate?.let { 
+                            webRTCClient?.addIceCandidate(it.sdp, it.sdpMid, it.sdpMLineIndex)
+                        }
                     }
                     SignalingMessageType.CALL_ENDED -> {
-                        Log.i(TAG, "Call ended by peer: ${message.fromUserId}")
-                        tvCallStatus.text = getString(R.string.call_status_ended_by_peer)
-                        runOnUiThread { endCall() }
+                        runOnUiThread { endCall(notifyPeer = false) }
                     }
                     SignalingMessageType.USER_BUSY -> {
-                        Log.i(TAG, "Peer is busy: ${message.fromUserId}")
-                        tvCallStatus.text = getString(R.string.call_status_user_busy)
-                        runOnUiThread { endCall() }
+                        runOnUiThread { endCall(notifyPeer = false) }
                     }
                     SignalingMessageType.ERROR -> {
-                        Log.e(TAG, "Received signaling error: ${message.error} from ${message.fromUserId ?: "server"}")
                         tvCallStatus.text = getString(R.string.call_status_error, message.error)
                     }
-                    SignalingMessageType.CONNECTION_ACK -> {
-                        Log.i(TAG, "WebSocket connection acknowledged by server.")
-                    }
-                    else -> {
-                        Log.w(TAG, "Received unhandled SignalingMessageType: ${message.type}")
-                    }
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            webSocketManager.messages.collect { rawMessage ->
-                try {
-                    val jsonData = JSONObject(rawMessage)
-                    if (jsonData.optString("type") == "custom_chat_message") {
-                        val chatText = jsonData.optJSONObject("payload")?.optString("text")
-                        Log.i(TAG, "Received custom data (chat): $chatText")
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Received non-JSON general message or parse error: $rawMessage", e)
+                    else -> {}
                 }
             }
         }
@@ -254,9 +209,15 @@ class VideoCallActivity : AppCompatActivity() {
         }
     }
 
-    private fun endCall() {
-        Log.i(TAG, "Ending call.")
+    private fun endCall(notifyPeer: Boolean) {
         tvCallStatus.text = getString(R.string.call_status_ended)
+
+        if (notifyPeer && targetUserId != null) {
+            webSocketManager.sendSignalingMessage(
+                type = SignalingMessageType.CALL_ENDED.name,
+                targetUserId = targetUserId!!
+            )
+        }
 
         webRTCClient?.close()
         webRTCClient = null
@@ -281,18 +242,16 @@ class VideoCallActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (allPermissionsGranted()) {
-                val isCaller = intent.getBooleanExtra("IS_CALLER", false)
-                initializeCallLogic(isCaller)
+                initializeCallLogic(intent.getBooleanExtra("IS_CALLER", false))
             } else {
-                Log.e(TAG, "Permissions not granted by the user.")
+                Toast.makeText(this, "Camera & Microphone permissions are required.", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy called")
-        endCall()
+        endCall(notifyPeer = false)
         super.onDestroy()
     }
 }

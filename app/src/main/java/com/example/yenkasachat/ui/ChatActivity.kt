@@ -261,6 +261,9 @@ class ChatActivity : AppCompatActivity(),
     }
 
     private fun setupListeners() {
+        findViewById<ImageView>(R.id.imageViewBackButton).setOnClickListener {
+            finish()
+        }
         findViewById<ImageButton>(R.id.buttonAttachImage).setOnClickListener {
             attachMenu.visibility = View.GONE
             imagePickerLauncher.launch("image/*")

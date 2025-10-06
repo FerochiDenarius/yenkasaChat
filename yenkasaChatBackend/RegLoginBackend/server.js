@@ -9,13 +9,12 @@ const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
 const morgan = require('morgan');
-
+const http = require('http');
+const { Server } = require('socket.io');
+const User = require('./models/user.model'); // ✅ Needed for online tracking
 
 const app = express();
 console.log("server.js: Starting application setup...");
-
-
-
 
 // ---------------------------------
 // 1. Global Middlewares
@@ -23,7 +22,7 @@ console.log("server.js: Starting application setup...");
 app.use(helmet());
 app.use(compression());
 app.use(cors({
-    origin: process.env.CLIENT_URL || "*", // ✅ restrict in prod
+    origin: process.env.CLIENT_URL || "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
 }));
@@ -31,7 +30,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 if (process.env.NODE_ENV !== "test") {
-    app.use(morgan("combined")); // ✅ request logging
+    app.use(morgan("combined"));
 }
 console.log("server.js: Core middlewares configured.");
 
@@ -53,7 +52,7 @@ console.log("server.js: Mounting API routes...");
 safeMount('/api/auth', './routes/auth');
 safeMount('/api/reset-password', './routes/changepwd.routes.js');
 safeMount('/api/verify', './routes/verify');
-safeMount('/api/account', './routes/account.routes'); 
+safeMount('/api/account', './routes/account.routes');
 safeMount('/api/users', './routes/user.routes');
 
 // Core Features
@@ -66,19 +65,16 @@ safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
 safeMount('/api/profile', './routes/profile');
 
-// Profile
-//safeMount('/api/profile', './routes/userProfileRoutes');
-
 console.log("✅ Finished mounting API routes.");
 
 // ---------------------------------
 // 3. Health check (important for DO)
 // ---------------------------------
 app.get("/health", (req, res) => {
-    res.status(200).json({ 
-        status: "ok", 
-        uptime: process.uptime(), 
-        env: process.env.NODE_ENV 
+    res.status(200).json({
+        status: "ok",
+        uptime: process.uptime(),
+        env: process.env.NODE_ENV
     });
 });
 
@@ -124,9 +120,10 @@ app.use((err, req, res, next) => {
 });
 
 // ---------------------------------
-// 7. DB + Server start
+// 7. DB + Server + Socket.IO start
 // ---------------------------------
 console.log("server.js: Connecting to MongoDB...");
+
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -134,15 +131,36 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => {
     console.log('✅ MongoDB connected successfully.');
 
-
-
-
-    // ✅ DigitalOcean sets PORT automatically (usually 8080)
-    const PORT = process.env.PORT || 8080;
-
-    app.listen(PORT, "0.0.0.0", () => {
-        console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    // ✅ Create HTTP server and attach Socket.IO
+    const server = http.createServer(app);
+    const io = new Server(server, {
+        cors: { origin: process.env.CLIENT_URL || "*", methods: ["GET", "POST"] }
     });
+
+    io.on('connection', (socket) => {
+        const userId = socket.handshake.query.userId;
+        if (userId) {
+            User.findByIdAndUpdate(userId, { online: true }).catch(console.error);
+            console.log(`🟢 User ${userId} is online.`);
+        }
+
+        socket.on('disconnect', () => {
+            if (userId) {
+                User.findByIdAndUpdate(userId, {
+                    online: false,
+                    lastSeen: new Date()
+                }).catch(console.error);
+                console.log(`🔴 User ${userId} went offline.`);
+            }
+        });
+    });
+
+    // ✅ Start server (for DigitalOcean)
+    const PORT = process.env.PORT || 8080;
+    server.listen(PORT, "0.0.0.0", () => {
+        console.log(`🚀 Server + Socket.IO running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    });
+
 })
 .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);

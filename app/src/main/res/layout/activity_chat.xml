@@ -60,7 +60,7 @@
                 android:textSize="18sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
-                app:layout_constraintEnd_toStartOf="@+id/imageViewMoreOptions"
+                app:layout_constraintEnd_toStartOf="@+id/imageViewVideoCall"
                 app:layout_constraintTop_toTopOf="@id/imageViewReceiverPicture" />
 
             <!-- Status Indicator Dot -->
@@ -98,6 +98,32 @@
                 android:contentDescription="More options"
                 android:padding="12dp"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- Video Call Button -->
+            <ImageView
+                android:id="@+id/imageViewVideoCall"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_videocam"
+                app:tint="@android:color/white"
+                android:contentDescription="Video call"
+                android:padding="12dp"
+                app:layout_constraintEnd_toStartOf="@id/imageViewCall"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- Call Button -->
+            <ImageView
+                android:id="@+id/imageViewCall"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_call"
+                app:tint="@android:color/white"
+                android:contentDescription="Call"
+                android:padding="12dp"
+                app:layout_constraintEnd_toStartOf="@id/imageViewMoreOptions"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
@@ -182,7 +208,7 @@
             <!-- Message EditText -->
             <EditText
                 android:id="@+id/editTextMessage"
-                android.layout_width="0dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="Type a message"
@@ -271,21 +297,21 @@
             app:tint="#128C7E" />
 
         <ImageButton
+            android:id="@+id/buttonAttachFile"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_attach_file"
+            android:background="@android:color/transparent"
+            android:contentDescription="Attach File"
+            app:tint="#128C7E" />
+
+        <ImageButton
             android:id="@+id/buttonAttachLocation"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_location"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Location"
-            app:tint="#128C7E" />
-
-        <ImageButton
-            android:id="@+id/buttonAttachFile"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_file"
-            android:background="@android:color/transparent"
-            android:contentDescription="Attach File"
             app:tint="#128C7E" />
 
         <ImageButton
@@ -296,5 +322,7 @@
             android:background="@android:color/transparent"
             android:contentDescription="Attach Contact"
             app:tint="#128C7E" />
+
     </LinearLayout>
+
 </FrameLayout>

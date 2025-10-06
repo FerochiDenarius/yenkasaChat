@@ -63,11 +63,15 @@ const userSchema = new Schema({
 
   refreshToken: { type: String },
 
-  // 🔒 Password reset fields (required for forgot/reset password flow)
+  // 🔒 Password reset fields
   passwordResetToken: { type: String },
-  passwordResetExpires: { type: Date }
+  passwordResetExpires: { type: Date },
 
-}, { timestamps: true }); 
+  // 🟢 Online status fields
+  online: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: Date.now }
+
+}, { timestamps: true });
 
 userSchema.index({ email: 1 });
 userSchema.index({ phoneNumber: 1 });

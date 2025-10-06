@@ -4,7 +4,7 @@ import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
-import android.os.Looper // Import Looper for Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,10 +20,9 @@ import com.example.yenkasachat.ui.LocationPreviewActivity
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MessageAdapter(private val senderId: String) :
+class MessageAdapter(private val currentUserId: String) :
     ListAdapter<ChatMessage, RecyclerView.ViewHolder>(DiffCallback()) {
 
-    // 1. Define the interface for long-press callbacks
     interface OnMessageLongClickListener {
         fun onMessageLongClicked(message: ChatMessage, itemView: View, position: Int): Boolean
     }
@@ -40,7 +39,9 @@ class MessageAdapter(private val senderId: String) :
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (getItem(position).senderId == senderId) TYPE_SENT else TYPE_RECEIVED
+        val message = getItem(position)
+        // ✅ FIXED: compare senderId directly, not nested sender?._id
+        return if (message.senderId == currentUserId) TYPE_SENT else TYPE_RECEIVED
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -57,34 +58,23 @@ class MessageAdapter(private val senderId: String) :
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = getItem(position)
 
-        // 2. Set the long-press listener on the itemView
         holder.itemView.setOnLongClickListener {
-            // Pass the item view itself if you need to anchor a PopupMenu to it
             longClickListener?.onMessageLongClicked(message, it, holder.adapterPosition)
-            true // Return true to indicate the event was consumed
+            true
         }
 
-        if (holder is SentMessageViewHolder) {
-            holder.bind(message)
-        } else if (holder is ReceivedMessageViewHolder) {
-            holder.bind(message)
+        when (holder) {
+            is SentMessageViewHolder -> holder.bind(message, currentUserId)
+            is ReceivedMessageViewHolder -> holder.bind(message, currentUserId)
         }
     }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
-        if (holder is SentMessageViewHolder) {
-            holder.releaseMediaPlayer()
-        } else if (holder is ReceivedMessageViewHolder) {
-            holder.releaseMediaPlayer()
-        }
+        if (holder is BaseMessageViewHolder) holder.releaseMediaPlayer()
         super.onViewRecycled(holder)
     }
 
     abstract class BaseMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        // ... (your existing ViewHolder code is good)
-        // Make sure you have R.drawable.placeholder_image and R.drawable.error_image
-        // Also R.drawable.ic_pause and R.drawable.ic_play
-
         protected val messageText: TextView = itemView.findViewById(R.id.textMessage)
         protected val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
         protected val messageImage: ImageView = itemView.findViewById(R.id.imageMessage)
@@ -104,15 +94,17 @@ class MessageAdapter(private val senderId: String) :
         protected val layoutContact: LinearLayout? = itemView.findViewById(R.id.layoutContact)
         protected val textContactInfo: TextView? = itemView.findViewById(R.id.textContactInfo)
 
+        protected val replyLayout: View? = itemView.findViewById(R.id.replyLayout)
+        protected val repliedToName: TextView? = itemView.findViewById(R.id.repliedToName)
+        protected val repliedToMessage: TextView? = itemView.findViewById(R.id.repliedToMessage)
+
         protected var mediaPlayer: MediaPlayer? = null
-        // Ensure Handler is imported from android.os.Handler
-        // And initialized with Looper.getMainLooper() if created on a background thread,
-        // but here it's likely fine as it's tied to UI updates.
-        protected var handler: Handler? = Handler(Looper.getMainLooper()) // Initialize Handler
+        protected var handler: Handler? = Handler(Looper.getMainLooper())
+
         protected val updateSeekBar = object : Runnable {
             override fun run() {
                 mediaPlayer?.let { mp ->
-                    if (mp.isPlaying) { // Check if media player is still valid and playing
+                    if (mp.isPlaying) {
                         audioSeekBar?.progress = mp.currentPosition
                         audioDuration?.text = formatTime(mp.currentPosition)
                         handler?.postDelayed(this, 500)
@@ -121,23 +113,44 @@ class MessageAdapter(private val senderId: String) :
             }
         }
 
-
-        open fun bind(message: ChatMessage) {
+        open fun bind(message: ChatMessage, currentUserId: String) {
             val context = itemView.context
 
-            // Text
+            // --- Reply preview ---
+            if (message.replyTo != null && replyLayout != null && repliedToName != null && repliedToMessage != null) {
+                replyLayout.visibility = View.VISIBLE
+                repliedToName.text =
+                    if (message.replyTo.senderId == currentUserId) "You"
+                    else message.replyTo.sender?.username ?: "Someone"
+
+                val replyContent = when {
+                    !message.replyTo.text.isNullOrBlank() -> message.replyTo.text
+                    !message.replyTo.imageUrl.isNullOrBlank() -> "📷 Image"
+                    !message.replyTo.videoUrl.isNullOrBlank() -> "🎥 Video"
+                    !message.replyTo.audioUrl.isNullOrBlank() -> "🎵 Audio"
+                    !message.replyTo.fileUrl.isNullOrBlank() -> "📄 File"
+                    message.replyTo.location != null -> "📍 Location"
+                    !message.replyTo.contactInfo.isNullOrBlank() -> "👤 Contact"
+                    else -> "Message"
+                }
+                repliedToMessage.text = replyContent
+            } else {
+                replyLayout?.visibility = View.GONE
+            }
+
+            // --- Text ---
             messageText.visibility = if (!message.text.isNullOrBlank()) {
                 messageText.text = message.text
                 View.VISIBLE
             } else View.GONE
 
-            // Image
+            // --- Image ---
             if (!message.imageUrl.isNullOrBlank()) {
                 messageImage.visibility = View.VISIBLE
                 Glide.with(context)
                     .load(message.imageUrl)
-                    .placeholder(R.drawable.placeholder_image) // Ensure this drawable exists
-                    .error(R.drawable.error_image)       // Ensure this drawable exists
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.error_image)
                     .into(messageImage)
 
                 messageImage.setOnClickListener {
@@ -149,152 +162,105 @@ class MessageAdapter(private val senderId: String) :
                 messageImage.visibility = View.GONE
             }
 
-            // Audio
-            if (!message.audioUrl.isNullOrBlank() && audioContainer != null && btnPlayAudio != null && audioSeekBar != null && audioDuration != null) {
-                audioContainer.visibility = View.VISIBLE
-                // Reset audio state for recycled views
-                releaseMediaPlayer() // Good to call here to reset before binding new audio
-
-                btnPlayAudio.setOnClickListener {
-                    if (mediaPlayer == null) {
-                        mediaPlayer = MediaPlayer().apply {
-                            try {
-                                setDataSource(message.audioUrl)
-                                prepareAsync() // Use prepareAsync for network streams
-                                setOnPreparedListener { mp ->
-                                    mp.start()
-                                    audioSeekBar.max = mp.duration
-                                    btnPlayAudio.setImageResource(R.drawable.ic_pause) // Ensure this drawable exists
-                                    handler?.post(updateSeekBar)
-                                }
-                                setOnCompletionListener {
-                                    releaseMediaPlayer()
-                                }
-                                setOnErrorListener { _, _, _ ->
-                                    releaseMediaPlayer()
-                                    Toast.makeText(context, "Error playing audio", Toast.LENGTH_SHORT).show()
-                                    true
-                                }
-                            } catch (e: Exception) {
-                                releaseMediaPlayer()
-                                Toast.makeText(context, "Cannot play audio", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } else if (mediaPlayer?.isPlaying == true) {
-                        mediaPlayer?.pause()
-                        btnPlayAudio.setImageResource(R.drawable.ic_play) // Ensure this drawable exists
-                        handler?.removeCallbacks(updateSeekBar)
-                    } else {
-                        mediaPlayer?.start()
-                        btnPlayAudio.setImageResource(R.drawable.ic_pause)
-                        handler?.post(updateSeekBar)
-                    }
-                }
-
-                audioSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        if (fromUser && mediaPlayer != null && mediaPlayer!!.isPlaying) { // Check if media player is prepared
-                            try{
-                                mediaPlayer?.seekTo(progress)
-                            } catch(e: IllegalStateException){
-                                // Handle case where mediaPlayer might not be in a valid state to seek
-                            }
-                        }
-                    }
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-                })
+            // --- Audio ---
+            if (!message.audioUrl.isNullOrBlank()) {
+                audioContainer?.visibility = View.VISIBLE
+                setupAudioPlayer(message.audioUrl, context)
             } else {
                 audioContainer?.visibility = View.GONE
-                releaseMediaPlayer() // Also release if there's no audio URL for this item
+                releaseMediaPlayer()
             }
 
-
-            // Video
+            // --- Video ---
             if (!message.videoUrl.isNullOrBlank() && videoView != null) {
                 videoView.visibility = View.VISIBLE
                 videoView.setVideoURI(Uri.parse(message.videoUrl))
-                videoView.setOnPreparedListener { player ->
-                    // player.isLooping = true // You might want to control this more explicitly
-                }
-                // Consider adding MediaController for better video controls
                 videoView.setOnClickListener {
-                    if (!videoView.isPlaying) videoView.start() else videoView.pause()
+                    if (videoView.isPlaying) videoView.pause() else videoView.start()
                 }
-            } else {
-                videoView?.visibility = View.GONE
-            }
+            } else videoView?.visibility = View.GONE
 
-            // Location
-            if (message.location != null && layoutLocation != null && textLocation != null) {
-                layoutLocation.visibility = View.VISIBLE
+            // --- Location ---
+            if (message.location != null) {
+                layoutLocation?.visibility = View.VISIBLE
                 val lat = message.location.latitude
                 val lon = message.location.longitude
-                textLocation.text = "📍 $lat, $lon" // Consider using String resources for "📍 "
-
-                layoutLocation.setOnClickListener {
+                textLocation?.text = "📍 $lat, $lon"
+                layoutLocation?.setOnClickListener {
                     val intent = Intent(context, LocationPreviewActivity::class.java)
                     intent.putExtra("latitude", lat)
                     intent.putExtra("longitude", lon)
                     context.startActivity(intent)
                 }
-            } else {
-                layoutLocation?.visibility = View.GONE
-            }
+            } else layoutLocation?.visibility = View.GONE
 
-            // File
-            if (!message.fileUrl.isNullOrBlank() && layoutFile != null && textFileName != null) {
-                layoutFile.visibility = View.VISIBLE
-                // Potentially improve file name extraction if URLs are complex
+            // --- File ---
+            if (!message.fileUrl.isNullOrBlank()) {
+                layoutFile?.visibility = View.VISIBLE
                 val fileName = message.fileUrl.substringAfterLast('/')
-                textFileName.text = "📄 $fileName" // Consider using String resources for "📄 "
-                layoutFile.setOnClickListener {
-                    // TODO: Implement file opening logic
-                    //  val intent = Intent(Intent.ACTION_VIEW)
-                    //  intent.data = Uri.parse(message.fileUrl) // This might not be enough depending on file type and storage
-                    //  intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    //  try {
-                    //      context.startActivity(intent)
-                    //  } catch (e: ActivityNotFoundException) {
-                    //      Toast.makeText(context, "No app to open this file", Toast.LENGTH_SHORT).show()
-                    //  }
-                }
-            } else {
-                layoutFile?.visibility = View.GONE
-            }
+                textFileName?.text = "📄 $fileName"
+            } else layoutFile?.visibility = View.GONE
 
-            // Contact
-            if (!message.contactInfo.isNullOrBlank() && layoutContact != null && textContactInfo != null) {
-                layoutContact.visibility = View.VISIBLE
-                textContactInfo.text = "👥 ${message.contactInfo}" // Consider using String resources for "👥 "
-                layoutContact.setOnClickListener {
-                    // TODO: Implement contact viewing or saving logic
-                }
-            } else {
-                layoutContact?.visibility = View.GONE
-            }
+            // --- Contact ---
+            if (!message.contactInfo.isNullOrBlank()) {
+                layoutContact?.visibility = View.VISIBLE
+                textContactInfo?.text = "👥 ${message.contactInfo}"
+            } else layoutContact?.visibility = View.GONE
 
-            // Timestamp
+            // --- Timestamp ---
             timestampText.text = formatTimestamp(message.timestamp)
         }
 
-        protected fun formatTimestamp(rawTimestamp: String?): String {
-            return try {
-                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                inputFormat.timeZone = TimeZone.getTimeZone("UTC") // Assuming timestamp is UTC
-                val date = inputFormat.parse(rawTimestamp ?: "")
-                // Consider using device's default locale for output format
-                val outputFormat = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
-                outputFormat.timeZone = TimeZone.getDefault() // Format in local timezone
-                outputFormat.format(date ?: Date())
-            } catch (e: Exception) {
-                // Log.e("MessageAdapter", "Error parsing timestamp: $rawTimestamp", e)
-                rawTimestamp ?: ""
+        private fun setupAudioPlayer(url: String, context: android.content.Context) {
+            releaseMediaPlayer()
+            btnPlayAudio?.setOnClickListener {
+                if (mediaPlayer == null) {
+                    mediaPlayer = MediaPlayer().apply {
+                        try {
+                            setDataSource(url)
+                            prepareAsync()
+                            setOnPreparedListener { mp ->
+                                mp.start()
+                                audioSeekBar?.max = mp.duration
+                                btnPlayAudio?.setImageResource(R.drawable.ic_pause)
+                                handler?.post(updateSeekBar)
+                            }
+                            setOnCompletionListener { releaseMediaPlayer() }
+                            setOnErrorListener { _, _, _ ->
+                                releaseMediaPlayer()
+                                Toast.makeText(context, "Error playing audio", Toast.LENGTH_SHORT).show()
+                                true
+                            }
+                        } catch (e: Exception) {
+                            releaseMediaPlayer()
+                            Toast.makeText(context, "Cannot play audio", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else if (mediaPlayer?.isPlaying == true) {
+                    mediaPlayer?.pause()
+                    btnPlayAudio?.setImageResource(R.drawable.ic_play)
+                } else {
+                    mediaPlayer?.start()
+                    btnPlayAudio?.setImageResource(R.drawable.ic_pause)
+                    handler?.post(updateSeekBar)
+                }
             }
         }
 
+        protected fun formatTimestamp(isoString: String?): String {
+            if (isoString.isNullOrBlank()) return ""
+            return try {
+                val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                input.timeZone = TimeZone.getTimeZone("UTC")
+                val date = input.parse(isoString) ?: return ""
+                val output = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
+                output.timeZone = TimeZone.getDefault()
+                output.format(date)
+            } catch (_: Exception) { "" }
+        }
+
         protected fun formatTime(milliseconds: Int): String {
-            if (milliseconds < 0) return "00:00" // Handle invalid duration
+            if (milliseconds < 0) return "00:00"
             val totalSeconds = milliseconds / 1000
             val minutes = totalSeconds / 60
             val seconds = totalSeconds % 60
@@ -304,29 +270,32 @@ class MessageAdapter(private val senderId: String) :
         fun releaseMediaPlayer() {
             handler?.removeCallbacks(updateSeekBar)
             mediaPlayer?.let {
-                if (it.isPlaying) {
-                    it.stop()
-                }
-                it.reset() // Use reset() before release() for cleaner state
+                if (it.isPlaying) it.stop()
+                it.reset()
                 it.release()
             }
             mediaPlayer = null
             btnPlayAudio?.setImageResource(R.drawable.ic_play)
             audioSeekBar?.progress = 0
-            audioDuration?.text = formatTime(0) // Reset duration text
+            audioDuration?.text = formatTime(0)
         }
     }
 
-    class SentMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
+    class SentMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView) {
+        private val statusText: TextView = itemView.findViewById(R.id.textStatus)
+        override fun bind(message: ChatMessage, currentUserId: String) {
+            super.bind(message, currentUserId)
+            statusText.text = message.status
+        }
+    }
+
     class ReceivedMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
 
     class DiffCallback : DiffUtil.ItemCallback<ChatMessage>() {
-        override fun areItemsTheSame(oldItem: ChatMessage, newItem: ChatMessage): Boolean {
-            return oldItem.messageId == newItem.messageId
-        }
+        override fun areItemsTheSame(oldItem: ChatMessage, newItem: ChatMessage) =
+            oldItem.id == newItem.id
 
-        override fun areContentsTheSame(oldItem: ChatMessage, newItem: ChatMessage): Boolean {
-            return oldItem == newItem
-        }
+        override fun areContentsTheSame(oldItem: ChatMessage, newItem: ChatMessage) =
+            oldItem == newItem
     }
 }

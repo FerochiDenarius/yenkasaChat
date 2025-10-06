@@ -4,10 +4,11 @@ import com.google.gson.annotations.SerializedName
 
 data class ChatMessage(
     @SerializedName("_id")
-    val messageId: String? = null,
+    val id: String? = null,
 
     val roomId: String? = null,
-    val senderId: String? = null,
+
+    val senderId: String? = null, // ✅ Keep senderId as String
 
     val text: String? = null,
     val imageUrl: String? = null,
@@ -20,10 +21,13 @@ data class ChatMessage(
     val timestamp: String? = null,
 
     @SerializedName("status")
-    val status: String? = null, // New: sent, delivered, read
+    val status: String? = null,
+
+    @SerializedName("replyTo")
+    val replyTo: ChatMessage? = null,
 
     @SerializedName("sender")
-    val sender: Participant? = null // Optional: include sender info for easier display
+    val sender: Participant? = null // ✅ Keep sender object separate
 )
 
 data class LocationData(

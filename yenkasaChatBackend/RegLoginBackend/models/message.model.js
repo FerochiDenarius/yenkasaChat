@@ -7,18 +7,22 @@ const messageSchema = new mongoose.Schema({
     ref: 'ChatRoom'
   },
   senderId: {
-    type: String,
+    type: String, // ✅ still String for compatibility with your current setup
     required: true
   },
   text: {
     type: String,
     required: false
   },
-  replyTo: {
+
+  // ✅ Proper reply-to field (matches frontend key `repliedTo`)
+  repliedTo: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message',
-    required: false
+    ref: 'Message', // Self-reference to another message
+    required: false,
+    default: null
   },
+
   imageUrl: {
     type: String,
     required: false
@@ -46,7 +50,7 @@ const messageSchema = new mongoose.Schema({
     },
     required: false
   },
-  timestamp: { // ✅ This is your custom field — optional, but now valid
+  timestamp: {
     type: Date,
     default: Date.now
   },
@@ -56,7 +60,22 @@ const messageSchema = new mongoose.Schema({
     default: 'sent'
   }
 }, {
-  timestamps: true // ✅ Adds createdAt and updatedAt automatically
+  timestamps: true // Adds createdAt and updatedAt
+});
+
+// ✅ Auto-populate sender + repliedTo message when querying
+messageSchema.pre(/^find/, function (next) {
+  this.populate({
+    path: 'senderId',
+    select: 'username profileImage _id'
+  }).populate({
+    path: 'repliedTo',
+    populate: {
+      path: 'senderId',
+      select: 'username profileImage _id'
+    }
+  });
+  next();
 });
 
 module.exports = mongoose.model('Message', messageSchema);

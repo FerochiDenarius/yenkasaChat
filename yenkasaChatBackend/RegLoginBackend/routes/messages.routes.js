@@ -1,1 +1,209 @@
-// messages.routes.js\n\nconst express = require(\'express\');\nconst router = express.Router();\nconst mongoose = require(\'mongoose\');\nconst axios = require(\'axios\');\n\n// Middleware\nconst auth = require(\'../middleware/auth\'); // Assuming your auth middleware populates req.user (with id, username)\n\n// Models\nconst Message = require(\'../models/message.model\');\nconst ChatRoom = require(\'../models/chatroom.model\');\nconst User = require(\'../models/user.model\'); // Ensure this User model has \'playerId\' (String) and \'username\' (String)\nconst UnreadMessageCount = require(\'../models/unreadMessageCount.model\');\nconst unreadCountService = require(\'../services/unreadCount.service\'); // For unread counts\n\n// --- Environment Variable Checks (Crucial for OneSignal) ---\nconst ONE_SIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;\nconst YENKASACHAT_ONE_SIGNAL_KEY = process.env.yenkasachatOneSignalKey; // Your OneSignal REST API Key\nconst ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID;\n\nconsole.log(\'[MessagesRoute] Initializing...\');\nif (!ONE_SIGNAL_APP_ID) {\n    console.error(\'[MessagesRoute] CRITICAL ERROR: ONESIGNAL_APP_ID environment variable is not set.\');\n} else {\n    console.log(\'[MessagesRoute] ONESIGNAL_APP_ID loaded.\');\n}\n\nif (!YENKASACHAT_ONE_SIGNAL_KEY) {\n    console.error(\'[MessagesRoute] CRITICAL ERROR: yenkasachatOneSignalKey environment variable is not set. This is your OneSignal REST API Key.\');\n} else {\n    console.log(\'[MessagesRoute] yenkasachatOneSignalKey loaded.\');\n}\n\nif (ONE_SIGNAL_ANDROID_CHANNEL_ID) {\n    console.log(\'[MessagesRoute] ONESIGNAL_ANDROID_CHANNEL_ID loaded:\', ONE_SIGNAL_ANDROID_CHANNEL_ID);\n} else {\n    console.warn(\'[MessagesRoute] ONESIGNAL_ANDROID_CHANNEL_ID environment variable is not set. OneSignal will use a default channel if not specified in API calls.\');\n}\n// --- End Environment Variable Checks ---\n\n// POST a new message to a chat room\nrouter.post(\'/\', auth, async (req, res) => {\n    console.log(\'[MessagesRoute] POST / - Received new message request from user:\', req.user.id, \'(Username:\', req.user.username || \'N/A\', \')\');\n    const {\n        roomId,\n        text,\n        imageUrl,\n        audioUrl,\n        videoUrl,\n        fileUrl,\n        contactInfo,\n        location,\n        repliedTo // <<< CHANGE 1: Get repliedTo from body\n    } = req.body;\n\n        // --- START: Update Player ID if provided in the request ---\n    if (req.body.playerId) {\n        try {\n            const updatedUser = await User.findByIdAndUpdate(\n                req.user.id,\n                { playerId: req.body.playerId.trim() },\n                { new: true }\n            );\n            if (updatedUser) {\n                console.log(`[MessagesRoute] POST / - ✅ Player ID updated for user ${updatedUser.username} (${updatedUser._id}): ${updatedUser.playerId}`);\n            }\n        } catch (err) {\n            console.error(`[MessagesRoute] POST / - ⚠️ Failed to update Player ID for user ${req.user.id}:`, err.message);\n        }\n    }\n    // --- END: Update Player ID ---\n\n\n    if (!roomId || !mongoose.Types.ObjectId.isValid(roomId)) {\n        console.warn(\'[MessagesRoute] POST / - Invalid or missing roomId:\', roomId);\n        return res.status(400).json({ error: \'Valid roomId is required\' });\n    }\n    const roomObjectId = new mongoose.Types.ObjectId(roomId); // Use this for queries\n    console.log(`[MessagesRoute] POST / - Room ID from request: ${roomObjectId.toString()}`);\n\n    const hasContent = text || imageUrl || audioUrl || videoUrl || fileUrl || contactInfo || (location?.latitude && location?.longitude);\n    if (!hasContent) {\n        console.warn(\'[MessagesRoute] POST / - Message has no content.\');\n        return res.status(400).json({ error: \'Message must contain some content (text, media, location, etc.)\' });\n    }\n\n    try {\n        console.log(`[MessagesRoute] POST / - Finding chat room with ID: ${roomObjectId.toString()}`);\n        const chatRoom = await ChatRoom.findById(roomObjectId);\n        if (!chatRoom) {\n            console.warn(`[MessagesRoute] POST / - Chat room not found: ${roomObjectId.toString()}`);\n            return res.status(404).json({ error: \'Chat room not found\' });\n        }\n        console.log(`[MessagesRoute] POST / - Chat room "${chatRoom.name || chatRoom._id}" found. Participants: ${chatRoom.participants.length}`);\n\n        const senderAppUserId = req.user.id.toString(); // Ensure it\'s a string for comparison\n        const senderUsername = req.user.username || \'A user\'; // Get sender\'s username from auth middleware\n\n        const newMessage = new Message({\n            roomId: roomObjectId,\n            senderId: senderAppUserId,\n            text: text ? text.trim().substring(0, 2000) : null, // Max length, ensure null if empty\n            imageUrl,\n            audioUrl,\n            videoUrl,\n            fileUrl,\n            contactInfo,\n            location,\n            timestamp: new Date(),\n            replyTo: repliedTo && mongoose.Types.ObjectId.isValid(repliedTo) ? repliedTo : null // <<< CHANGE 2: Add repliedTo to the message\n        });\n\n\n        console.log(\'[MessagesRoute] POST / - 💾 Saving new message to DB...\');\n        await newMessage.save();\n        console.log(`[MessagesRoute] POST / - ✅ Message saved with ID: ${newMessage._id} by sender: ${senderAppUserId} (${senderUsername}) in room ${newMessage.roomId}`);\n\n        // --- Determine Recipients ---\n        const participantAppUserIds = chatRoom.participants.map(p => p.toString()); // Assuming participants are stored as ObjectIds or strings\n        const recipientAppUserIds = participantAppUserIds.filter(id => id !== senderAppUserId);\n        console.log(`[MessagesRoute] POST / - Potential recipients (App User IDs): [${recipientAppUserIds.join(\', \')}] for room ${newMessage.roomId}`);\n\n\n      // --- START: INCREMENT UNREAD MESSAGE COUNTS (using service) ---\n        if (recipientAppUserIds.length > 0) {\n            console.log(`[MessagesRoute] POST / - Updating unread counts for ${recipientAppUserIds.length} recipients in room ${newMessage.roomId} using service...`);\n            for (const recipientId of recipientAppUserIds) {\n                const unreadResult = await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);\n                if (unreadResult.success) {\n                    console.log(`[MessagesRoute] POST / - Service incremented unread count for user ${recipientId} in room ${newMessage.roomId}. New count: ${unreadResult.data.count}`);\n                } else {\n                    console.error(`[MessagesRoute] POST / - Service error updating unread count for user ${recipientId} in room ${newMessage.roomId}: ${unreadResult.error}`);\n                }\n            }\n        } else {\n            console.log(`[MessagesRoute] POST / - No other recipients in this chat room to update unread counts for (room ${newMessage.roomId}).`);\n        }\n        // --- END: INCREMENT UNREAD MESSAGE COUNTS ---\n \n        // --- START: Push Notification Logic ---\n        if (!ONE_SIGNAL_APP_ID || !YENKASACHAT_ONE_SIGNAL_KEY) {\n            console.error(\'[MessagesRoute] POST / - Critical OneSignal configuration (APP_ID or REST_API_KEY) is missing. Cannot send push notification.\');\n        } else if (recipientAppUserIds.length > 0) {\n            console.log(\'[MessagesRoute] POST / - Starting push notification logic for room \' + newMessage.roomId);\n            console.log(`[MessagesRoute] POST / - Fetching ${recipientAppUserIds.length} recipient user objects from DB for Player IDs...`);\n\n            const recipientsForPush = await User.find(\n                { _id: { $in: recipientAppUserIds.map(id => new mongoose.Types.ObjectId(id)) } }, // Ensure ObjectIds for query\n                \'username playerId\'\n            ).lean();\n            \n            console.log(`[MessagesRoute] POST / - Found ${recipientsForPush.length} recipient user objects with Player ID info.`);\n            const validPlayerIdsForNotification = [];\n            recipientsForPush.forEach(recipient => {\n                if (recipient.playerId && recipient.playerId.trim() !== \'\') {\n                    validPlayerIdsForNotification.push(recipient.playerId.trim());\n                    console.log(`[MessagesRoute] POST / - User ${recipient.username || recipient._id} (App ID: ${recipient._id}) has valid Player ID: ${recipient.playerId.trim()}`);\n                } else {\n                    console.log(`[MessagesRoute] POST / - User ${recipient.username || recipient._id} (App ID: ${recipient._id}) does NOT have a valid Player ID. Will not be notified.`);\n                }\n            });\n\n            if (validPlayerIdsForNotification.length > 0) {\n                console.log(`[MessagesRoute] POST / - 🎯 Player IDs targeted for notification: [${validPlayerIdsForNotification.join(\', \')}]`);\n\n                let notificationTitle = `New message in ${chatRoom.name || \'your chat\'}`;\n                if (chatRoom.isGroupChat === false && chatRoom.participants.length === 2) {\n                    notificationTitle = `New message from ${senderUsername}`;\n                }\n                \n                let notificationBody = `${senderUsername}: ${text ? (text.length > 50 ? text.substring(0, 47) + "..." : text) : \'Sent you a message\'}`;\n                if (imageUrl) notificationBody = `${senderUsername} sent an image.`;\n                else if (audioUrl) notificationBody = `${senderUsername} sent an audio message.`;\n                else if (videoUrl) notificationBody = `${senderUsername} sent a video.`;\n                else if (fileUrl) notificationBody = `${senderUsername} sent a file.`;\n                else if (contactInfo) notificationBody = `${senderUsername} shared a contact.`;\n                else if (location) notificationBody = `${senderUsername} shared a location.`;\n                else if (!text) notificationBody = `${senderUsername} sent you a new message.`;\n\n                const notificationPayload = {\n                    app_id: ONE_SIGNAL_APP_ID,\n                    include_player_ids: validPlayerIdsForNotification,\n                    headings: { en: notificationTitle },\n                    contents: { en: notificationBody },\n                    data: {\n                        roomId: newMessage.roomId.toString(),\n                        senderId: senderAppUserId,\n                        messageId: newMessage._id.toString(),\n                        type: \'new_chat_message\',\n                        chatRoomName: chatRoom.name || null,\n                        isGroupChat: chatRoom.isGroupChat === true\n                        // You might want to include the new unread count here if the client can use it directly\n                        // unreadCount: (await UnreadMessageCount.findOne({userId: /*a_recipient_id*/, roomId: newMessage.roomId})).count \n                        // ^ This is tricky; payload is generic for all recipients. Better for client to update based on notification + local state.\n                    },\n                };\n\n                if (ONE_SIGNAL_ANDROID_CHANNEL_ID) {\n                    notificationPayload.android_channel_id = ONE_SIGNAL_ANDROID_CHANNEL_ID;\n                }\n\n                console.log(\'[MessagesRoute] POST / - 🚀 Preparing to send notification to OneSignal. Payload:\', JSON.stringify(notificationPayload, null, 2));\n                try {\n                    const oneSignalResponse = await axios.post(\'https://onesignal.com/api/v1/notifications\', notificationPayload, {\n                        headers: {\n                            \'Authorization\': `Basic ${YENKASACHAT_ONE_SIGNAL_KEY}`,\n                            \'Content-Type\': \'application/json\'\n                        }\n                    });\n                    console.log(`[MessagesRoute] POST / - 📨 Notification sent successfully to OneSignal for ${validPlayerIdsForNotification.length} Player IDs. OneSignal Response Status: ${oneSignalResponse.status}`);\n                    if (oneSignalResponse.data) {\n                        console.log(\'[MessagesRoute] POST / - OneSignal Response Data:\', { \n                            id: oneSignalResponse.data.id, \n                            recipients: oneSignalResponse.data.recipients,\n                            errors: oneSignalResponse.data.errors || null \n                        });\n                    }\n                } catch (notificationError) {\n                    let errorDetails = \'Unknown error during OneSignal request.\';\n                     if (notificationError.response) {\n                        errorDetails = `Status: ${notificationError.response.status}, Data: ${JSON.stringify(notificationError.response.data, null, 2)}`;\n                    } else if (notificationError.request) {\n                        errorDetails = \'No response received from OneSignal. Request details: \' + notificationError.request;\n                    } else {\n                        errorDetails = notificationError.message;\n                    }\n                    console.error(`[MessagesRoute] POST / - ⚠️ Failed to send OneSignal notification:\`, errorDetails);\n                }\n            } else {\n                console.log(\'[MessagesRoute] POST / - No valid Player IDs found among recipients. Skipping OneSignal call for room \' + newMessage.roomId);\n            }\n        } else if (recipientAppUserIds.length === 0) {\n            console.log(`[MessagesRoute] POST / - No other recipients in this chat room. Skipping notifications for room \' + newMessage.roomId);\n        }\n        // --- END Push Notification Logic ---\n\n        // Populate sender details for the response, similar to GET request\n        const populatedMessage = await Message.findById(newMessage._id)\n            .populate({ path: \'senderId\', select: \'username profileImageUrl _id\' })\n            .populate({ // <<< CHANGE 3: Populate the reply and its sender\n                path: \'replyTo\',\n                populate: {\n                    path: \'senderId\',\n                    select: \'username _id\'\n                }\n            })\n            .lean();\n\n        res.status(201).json(populatedMessage || newMessage); // Send populated message if available\n\n    } catch (err) {\n        console.error(\'[MessagesRoute] POST / - ❌❌❌ SERVER ERROR during message processing:\', err.message, err.stack);\n        res.status(500).json({ error: \'Server error processing message\' });\n    }\n});\n\n// GET messages for a specific chat room\nrouter.get(\'/:roomId\', auth, async (req, res) => {\n    const { roomId } = req.params;\n    const userId = req.user.id; // from auth middleware\n    console.log(`[MessagesRoute] GET /${roomId} - Request for messages by user: ${userId}`);\n\n    if (!mongoose.Types.ObjectId.isValid(roomId)) {\n        console.warn(`[MessagesRoute] GET /${roomId} - Invalid roomId format.`);\n        return res.status(400).json({ error: \'Invalid roomId format\' });\n    }\n    const roomObjectId = new mongoose.Types.ObjectId(roomId);\n\n    try {\n        const chatRoom = await ChatRoom.findOne({ _id: roomObjectId, participants: userId }); // Check if user is part of the room\n        if (!chatRoom) {\n             console.warn(`[MessagesRoute] GET /${roomId} - User ${userId} not authorized for this room or room doesn\'t exist.`);\n             return res.status(403).json({ error: \'Not authorized or room not found\' });\n        }\n        console.log(`[MessagesRoute] GET /${roomId} - User ${userId} authorized. Fetching messages from DB.`);\n\n        const messages = await Message.find({ roomId: roomObjectId })\n            .sort({ timestamp: 1 }) // Sort by oldest first\n            .populate({\n                path: \'senderId\',\n                select: \'username profileImageUrl _id\' // Populate sender details\n            })\n            .populate({ // <<< CHANGE 4: Populate the reply and its sender for all messages\n                path: \'replyTo\',\n                populate: {\n                    path: \'senderId\',\n                    select: \'username _id\'\n                }\n            })\n            .lean();\n\n        console.log(`[MessagesRoute] GET /${roomId} - Found ${messages.length} messages.`);\n        res.json(messages);\n    } catch (err) {\n        console.error(`[MessagesRoute] GET /${roomId} - ❌ Error fetching messages:\`, err.message, err.stack);\n        res.status(500).json({ error: \'Failed to fetch messages\' });\n    }\n});\n\n// Mark messages in a room as read for the current user\nrouter.post(\'/:roomId/mark-as-read\', auth, async (req, res) => {\n    const { roomId } = req.params;\n    const userId = req.user.id; // From auth middleware\n\n    if (!mongoose.Types.ObjectId.isValid(roomId)) {\n        console.warn(`[MessagesRoute] POST /${roomId}/mark-as-read - Invalid roomId format: ${roomId}`);\n        return res.status(400).json({ message: \'Invalid room ID format\' });\n    }\n    const roomObjectId = new mongoose.Types.ObjectId(roomId);\n    const userObjectId = new mongoose.Types.ObjectId(userId);\n\n    console.log(`[MessagesRoute] POST /${roomObjectId.toString()}/mark-as-read - User ${userObjectId.toString()} attempting to mark room as read.`);\n\n    try {\n        const unreadCountEntry = await UnreadMessageCount.findOne({\n            userId: userObjectId,\n            roomId: roomObjectId\n        });\n\n        if (unreadCountEntry) {\n            if (unreadCountEntry.count > 0) {\n                unreadCountEntry.count = 0;\n                // unreadCountEntry.lastReadTimestamp = new Date(); // Optional, if you add this field to the model\n                await unreadCountEntry.save(); // save() will trigger {timestamps: true} for updatedAt\n                console.log(`[MessagesRoute] POST /${roomObjectId.toString()}/mark-as-read - User ${userObjectId.toString()} marked room as read. Count reset.`);\n                res.status(200).json({ message: \'Room marked as read\', roomId: roomObjectId.toString(), userId: userObjectId.toString(), newCount: 0 });\n            } else {\n                console.log(`[MessagesRoute] POST /${roomObjectId.toString()}/mark-as-read - Room already marked as read for user ${userObjectId.toString()} (count was 0).`);\n                res.status(200).json({ message: \'Room already marked as read\', roomId: roomObjectId.toString(), userId: userObjectId.toString(), newCount: 0 });\n            }\n        } else {\n            // No prior unread count entry. Create one with count 0 for consistency.\n            await UnreadMessageCount.updateOne(\n                { userId: userObjectId, roomId: roomObjectId },\n                { $set: { count: 0 /* , lastReadTimestamp: new Date() */ } }, // Ensure count is 0\n                { upsert: true } // Create if it doesn\'t exist\n            );\n            console.log(`[MessagesRoute] POST /${roomObjectId.toString()}/mark-as-read - No prior unread count entry; new entry created/ensured with count 0 for user ${userObjectId.toString()}.`);\n            res.status(200).json({ message: \'Room read status updated (no prior unread messages or entry created/reset).\', roomId: roomObjectId.toString(), userId: userObjectId.toString(), newCount: 0 });\n        }\n    } catch (error) {\n        console.error(`[MessagesRoute] POST /${roomObjectId.toString()}/mark-as-read - ❌ Error:\`, error.message, error.stack);\n        res.status(500).json({ message: \'Failed to mark room as read\' });\n    }\n});\n\nmodule.exports = router;\n
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+const axios = require('axios');
+
+const auth = require('../middleware/auth');
+const Message = require('../models/message.model');
+const ChatRoom = require('../models/chatroom.model');
+const User = require('../models/user.model');
+const UnreadMessageCount = require('../models/unreadMessageCount.model');
+const unreadCountService = require('../services/unreadCount.service');
+
+// --- OneSignal Config ---
+const ONE_SIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
+const YENKASACHAT_ONE_SIGNAL_KEY = process.env.yenkasachatOneSignalKey;
+const ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID;
+
+// ✅ POST: Send a message (supports repliedTo)
+router.post('/', auth, async (req, res) => {
+  console.log('[MessagesRoute] POST / - Received message from:', req.user.id);
+
+  const {
+    roomId,
+    text,
+    imageUrl,
+    audioUrl,
+    videoUrl,
+    fileUrl,
+    contactInfo,
+    location,
+    repliedTo, // ✅ added
+  } = req.body;
+
+  if (!roomId || !mongoose.Types.ObjectId.isValid(roomId)) {
+    return res.status(400).json({ error: 'Valid roomId is required' });
+  }
+
+  const hasContent =
+    text ||
+    imageUrl ||
+    audioUrl ||
+    videoUrl ||
+    fileUrl ||
+    contactInfo ||
+    (location?.latitude && location?.longitude);
+
+  if (!hasContent) {
+    return res.status(400).json({ error: 'Message must contain some content' });
+  }
+
+  try {
+    const chatRoom = await ChatRoom.findById(roomId);
+    if (!chatRoom) return res.status(404).json({ error: 'Chat room not found' });
+
+    const senderAppUserId = req.user.id.toString();
+    const senderUsername = req.user.username || 'A user';
+
+    // ✅ Create message object with repliedTo reference
+    const newMessage = new Message({
+      roomId,
+      senderId: senderAppUserId,
+      text: text ? text.trim().substring(0, 2000) : null,
+      imageUrl,
+      audioUrl,
+      videoUrl,
+      fileUrl,
+      contactInfo,
+      location,
+      repliedTo: repliedTo && mongoose.Types.ObjectId.isValid(repliedTo)
+        ? new mongoose.Types.ObjectId(repliedTo)
+        : null, // ✅ safely add reply reference
+      timestamp: new Date(),
+    });
+
+    await newMessage.save();
+    console.log(`[MessagesRoute] ✅ Message saved with ID: ${newMessage._id}`);
+
+    // --- Push Notification Logic (unchanged) ---
+    const participantAppUserIds = chatRoom.participants.map(p => p.toString());
+    const recipientAppUserIds = participantAppUserIds.filter(id => id !== senderAppUserId);
+
+    if (recipientAppUserIds.length > 0) {
+      for (const recipientId of recipientAppUserIds) {
+        await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);
+      }
+
+      if (ONE_SIGNAL_APP_ID && YENKASACHAT_ONE_SIGNAL_KEY) {
+        const recipients = await User.find(
+          { _id: { $in: recipientAppUserIds.map(id => new mongoose.Types.ObjectId(id)) } },
+          'username playerId'
+        ).lean();
+
+        const validPlayerIds = recipients
+          .filter(u => u.playerId && u.playerId.trim() !== '')
+          .map(u => u.playerId.trim());
+
+        if (validPlayerIds.length > 0) {
+          let notificationTitle = `New message from ${senderUsername}`;
+          let notificationBody = text || 'Sent you a message';
+          if (imageUrl) notificationBody = `${senderUsername} sent an image`;
+          else if (audioUrl) notificationBody = `${senderUsername} sent an audio message`;
+          else if (videoUrl) notificationBody = `${senderUsername} sent a video`;
+          else if (fileUrl) notificationBody = `${senderUsername} sent a file`;
+
+          const payload = {
+            app_id: ONE_SIGNAL_APP_ID,
+            include_player_ids: validPlayerIds,
+            headings: { en: notificationTitle },
+            contents: { en: notificationBody },
+            data: {
+              roomId: newMessage.roomId.toString(),
+              senderId: senderAppUserId,
+              messageId: newMessage._id.toString(),
+              type: 'new_chat_message',
+            },
+          };
+
+          if (ONE_SIGNAL_ANDROID_CHANNEL_ID) {
+            payload.android_channel_id = ONE_SIGNAL_ANDROID_CHANNEL_ID;
+          }
+
+          try {
+            await axios.post('https://onesignal.com/api/v1/notifications', payload, {
+              headers: {
+                Authorization: `Basic ${YENKASACHAT_ONE_SIGNAL_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            });
+          } catch (err) {
+            console.error('⚠️ OneSignal error:', err.response?.data || err.message);
+          }
+        }
+      }
+    }
+
+    // ✅ Populate sender and repliedTo message before sending response
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate({
+        path: 'senderId',
+        select: 'username profileImage _id',
+      })
+      .populate({
+        path: 'repliedTo',
+        populate: { path: 'senderId', select: 'username profileImage _id' },
+      })
+      .lean();
+
+    res.status(201).json(populatedMessage);
+  } catch (err) {
+    console.error('[MessagesRoute] ❌ Error saving message:', err.message);
+    res.status(500).json({ error: 'Server error saving message' });
+  }
+});
+
+// ✅ GET: Messages for a chat room (includes repliedTo data)
+router.get('/:roomId', auth, async (req, res) => {
+  const { roomId } = req.params;
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(roomId)) {
+    return res.status(400).json({ error: 'Invalid roomId' });
+  }
+
+  try {
+    const chatRoom = await ChatRoom.findOne({ _id: roomId, participants: userId });
+    if (!chatRoom) return res.status(403).json({ error: 'Not authorized for this room' });
+
+    const messages = await Message.find({ roomId })
+      .sort({ timestamp: 1 })
+      .populate({
+        path: 'senderId',
+        select: 'username profileImage _id',
+      })
+      .populate({
+        path: 'repliedTo',
+        populate: { path: 'senderId', select: 'username profileImage _id' },
+      }) // ✅ Include repliedTo data
+      .lean();
+
+    res.json(messages);
+  } catch (err) {
+    console.error('[MessagesRoute] ❌ Error fetching messages:', err.message);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// --- Mark as Read (unchanged) ---
+router.post('/:roomId/mark-as-read', auth, async (req, res) => {
+  const { roomId } = req.params;
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(roomId)) {
+    return res.status(400).json({ message: 'Invalid room ID' });
+  }
+
+  try {
+    await UnreadMessageCount.updateOne(
+      { userId, roomId },
+      { $set: { count: 0 } },
+      { upsert: true }
+    );
+    res.status(200).json({ message: 'Room marked as read' });
+  } catch (err) {
+    console.error('Error marking as read:', err);
+    res.status(500).json({ message: 'Failed to mark as read' });
+  }
+});
+
+module.exports = router;

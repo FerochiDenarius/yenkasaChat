@@ -7,11 +7,20 @@ data class Participant(
     val _id: String,
 
     @SerializedName("username")
-    val username: String?, // May be null
+    val username: String? = null,
+
+    // Backend may send either avatar or profileImage
+    @SerializedName("avatar")
+    val avatar: String? = null,
 
     @SerializedName("profileImage")
-    val profileImage: String?, // May be null
+    val profileImage: String? = null,
 
+    // Prepare for online status
     @SerializedName("isOnline")
-    val isOnline: Boolean? = false // New field for online/offline status
-)
+    val isOnline: Boolean = false
+) {
+    // Always prefer profileImage if available, else fallback to avatar
+    val displayImage: String?
+        get() = profileImage ?: avatar
+}

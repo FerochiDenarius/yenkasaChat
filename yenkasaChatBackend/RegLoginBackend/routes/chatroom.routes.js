@@ -112,6 +112,39 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch chat room details' });
   }
 });
+// --- GET RECEIVER INFO DIRECTLY BY ROOM ID ---
+router.get('/:roomId/receiver', authMiddleware, async (req, res) => {
+  const userId = req.user.id;
+  const { roomId } = req.params;
+
+  try {
+    const room = await ChatRoom.findById(roomId)
+      .populate('participants', 'username profileImage isOnline _id')
+      .lean();
+
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+
+    const receiver = room.participants.find(p => p._id.toString() !== userId);
+    if (!receiver) {
+      return res.status(404).json({ success: false, message: 'Receiver not found' });
+    }
+
+    res.json({
+      success: true,
+      receiver: {
+        _id: receiver._id,
+        username: receiver.username,
+        profileImage: receiver.profileImage || null,
+        isOnline: receiver.isOnline || false
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error fetching receiver info:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch receiver info' });
+  }
+});
 
 // --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---
 router.get('/', authMiddleware, async (req, res) => {

@@ -13,6 +13,8 @@ import com.example.yenkasachat.model.RoomUnreadCountResponse
 import com.example.yenkasachat.model.AllUnreadCountsResponse
 import com.example.yenkasachat.model.PushNotificationRequest
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.Participant
+import com.example.yenkasachat.model.ReceiverResponse
 import com.example.yenkasachat.model.ProfileResponse
 import com.example.yenkasachat.model.UpdateProfileRequest
 import com.example.yenkasachat.model.ForgotPasswordRequest
@@ -134,6 +136,13 @@ interface ApiService {
     fun getUserChatRooms(
         @Path("userId") userId: String
     ): Call<List<ChatRoom>>
+
+
+    @GET("chatrooms/{roomId}/receiver")
+    fun getReceiverInfo(
+        @Path("roomId") roomId: String
+    ): Call<ReceiverResponse>
+
 
     @POST("chatroom/{receiverId}")
     fun getOrCreateChatRoom(

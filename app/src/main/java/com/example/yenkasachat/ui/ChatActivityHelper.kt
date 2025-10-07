@@ -14,6 +14,7 @@ import android.widget.Toast
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.ChatRoom
 import com.example.yenkasachat.model.Participant
+import com.example.yenkasachat.model.ReceiverResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.NotificationHelper
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -152,33 +153,28 @@ class ChatActivityHelper(
             return
         }
 
-        ApiClient.apiService.getUserChatRooms(senderId)
-            .enqueue(object : Callback<List<ChatRoom>> {
-                override fun onResponse(call: Call<List<ChatRoom>>, response: Response<List<ChatRoom>>) {
-                    if (response.isSuccessful) {
-                        val currentChatRoom = response.body()?.firstOrNull { it._id == roomId }
-                        val participant = currentChatRoom?.participants?.firstOrNull { it._id != senderId }
-
-                        if (participant != null) {
-                            callback.onReceiverParticipantDetailsReady(participant)
-                            callback.onReceiverParticipantStatusUpdate(
-                                participant.isOnline ?: false,
-                                if (participant.isOnline == true) "Online" else "Offline"
-                            )
-                        } else {
-                            callback.showDefaultReceiverHeader("Chat")
-                        }
+        ApiClient.apiService.getReceiverInfo(roomId).enqueue(object : Callback<ReceiverResponse> {
+            override fun onResponse(call: Call<ReceiverResponse>, response: Response<ReceiverResponse>) {
+                if (response.isSuccessful) {
+                    val receiver = response.body()?.receiver
+                    if (receiver != null) {
+                        callback.onReceiverParticipantDetailsReady(receiver)
+                        callback.onReceiverParticipantStatusUpdate(
+                            receiver.isOnline ?: false,
+                            if (receiver.isOnline == true) "Online" else "Offline"
+                        )
                     } else {
-                        Log.e("ChatActivityHelper", "Failed to load header info: ${parseError(response)}")
                         callback.showDefaultReceiverHeader("Chat")
                     }
-                }
-
-                override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
-                    Log.e("ChatActivityHelper", "Error fetching chat rooms", t)
+                } else {
                     callback.showDefaultReceiverHeader("Chat")
                 }
-            })
+            }
+
+            override fun onFailure(call: Call<ReceiverResponse>, t: Throwable) {
+                callback.showDefaultReceiverHeader("Chat")
+            }
+        })
     }
 
     fun onMessageSentByHandler(message: ChatMessage) {

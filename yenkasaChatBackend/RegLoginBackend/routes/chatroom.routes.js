@@ -80,6 +80,38 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// --- GET SINGLE CHAT ROOM BY ID ---
+router.get('/:roomId', authMiddleware, async (req, res) => {
+  const userId = req.user.id;
+  const { roomId } = req.params;
+
+  try {
+    const room = await ChatRoom.findById(roomId)
+      .populate('participants', 'username avatar profileImage isOnline _id')
+      .lean();
+
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+
+    const otherParticipant = room.participants.find(p => p._id.toString() !== userId);
+    if (!otherParticipant) {
+      return res.status(400).json({ success: false, message: 'No other participant found' });
+    }
+
+    res.json({
+      success: true,
+      participant: {
+        _id: otherParticipant._id,
+        username: otherParticipant.username,
+        avatar: otherParticipant.avatar || otherParticipant.profileImage || null,
+        profileImage: otherParticipant.profileImage || otherParticipant.avatar || null,
+        isOnline: otherParticipant.isOnline || false
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error fetching chat room details:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch chat room details' });
+  }
+});
 
 // --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---
 router.get('/', authMiddleware, async (req, res) => {

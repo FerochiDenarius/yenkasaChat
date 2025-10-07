@@ -14,6 +14,11 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  replyTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Message',
+    required: false
+  },
   imageUrl: {
     type: String,
     required: false

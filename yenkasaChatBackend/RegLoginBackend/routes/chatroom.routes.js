@@ -113,15 +113,14 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
   }
 });
 
-// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---
+// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---// --- GET ALL CHAT ROOMS FOR THE LOGGED-IN USER ---
 router.get('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
   console.log(`Fetching enriched chat rooms for user ID: ${userId}`);
 
   try {
-    // ✅ Add online + lastSeen fields here
     const chatRoomsFromDB = await ChatRoom.find({ participants: new mongoose.Types.ObjectId(userId) })
-      .populate('participants', 'username avatar profileImage _id online lastSeen')
+      .populate('participants', 'username profileImage avatar isOnline lastSeen _id')
       .lean();
 
     if (!chatRoomsFromDB || chatRoomsFromDB.length === 0) {
@@ -135,9 +134,9 @@ router.get('/', authMiddleware, async (req, res) => {
       if (otherParticipantObject) {
         participantForClient = {
           _id: otherParticipantObject._id,
-          username: otherParticipantObject.username,
-          avatar: otherParticipantObject.avatar || otherParticipantObject.profileImage || null,
-          online: otherParticipantObject.online || false,
+          username: otherParticipantObject.username || null,
+          profileImage: otherParticipantObject.profileImage || otherParticipantObject.avatar || null,
+          isOnline: otherParticipantObject.isOnline || otherParticipantObject.online || false,
           lastSeen: otherParticipantObject.lastSeen || null
         };
       }
@@ -147,8 +146,6 @@ router.get('/', authMiddleware, async (req, res) => {
         .select('text imageUrl audioUrl videoUrl fileUrl contactInfo location createdAt senderId')
         .populate('senderId', 'username profileImage _id')
         .lean();
-
-      const unreadMessagesCount = 0; // TODO: Implement actual unread count logic later
 
       const roomForClient = {
         _id: room._id,
@@ -166,7 +163,7 @@ router.get('/', authMiddleware, async (req, res) => {
           timestamp: lastMessageFromDB.createdAt
         } : null,
         lastMessageTime: lastMessageFromDB?.createdAt || room.updatedAt || room.createdAt,
-        unreadCount: unreadMessagesCount,
+        unreadCount: 0,
         createdAt: room.createdAt,
       };
 
@@ -181,5 +178,6 @@ router.get('/', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch chat rooms' });
   }
 });
+
 
 module.exports = router;

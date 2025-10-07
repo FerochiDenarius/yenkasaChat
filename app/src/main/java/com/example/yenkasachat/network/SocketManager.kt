@@ -3,65 +3,79 @@ package com.example.yenkasachat.network
 import android.util.Log
 import io.socket.client.IO
 import io.socket.client.Socket
-import org.json.JSONObject
+import java.net.URISyntaxException
 
 object SocketManager {
 
-    private const val SERVER_URL = "https://yenkasa-bldrv.ondigitalocean.app" // or your backend base URL
+    private var socket: Socket? = null
+    private const val TAG = "SocketManager"
 
-    private var mSocket: Socket? = null
+    // ✅ Use the same server base (no /api)
+    private const val SOCKET_URL = "https://yenkasa-bldrv.ondigitalocean.app"
 
-    fun initSocket() {
+    fun connect(userId: String?) {
+        if (userId.isNullOrEmpty()) {
+            Log.w(TAG, "Cannot connect socket: userId is null or empty.")
+            return
+        }
+
         try {
-            if (mSocket == null) {
-                val opts = IO.Options()
-                opts.reconnection = true
-                opts.forceNew = true
-                mSocket = IO.socket(SERVER_URL, opts)
+            if (socket == null) {
+                val opts = IO.Options().apply {
+                    reconnection = true
+                    reconnectionAttempts = 5
+                    reconnectionDelay = 2000
+                    forceNew = true
+                }
+                socket = IO.socket(SOCKET_URL, opts)
             }
-        } catch (e: Exception) {
-            Log.e("SocketManager", "Socket initialization error: ${e.message}")
+
+            if (!(socket?.connected() ?: false)) {
+                socket?.connect()
+                socket?.on(Socket.EVENT_CONNECT) {
+                    Log.i(TAG, "✅ Socket connected.")
+                    emitUserConnected(userId)
+                }
+                socket?.on(Socket.EVENT_DISCONNECT) {
+                    Log.w(TAG, "⚠️ Socket disconnected.")
+                }
+            }
+        } catch (e: URISyntaxException) {
+            Log.e(TAG, "Socket connection failed: ${e.message}", e)
         }
     }
 
-    fun getSocket(): Socket? {
-        return mSocket
-    }
-
-    fun connect(userId: String) {
+    fun emitUserConnected(userId: String) {
         try {
-            initSocket()
-            mSocket?.connect()
-            Log.d("SocketManager", "🔌 Connecting socket for userId=$userId")
-
-            mSocket?.on(Socket.EVENT_CONNECT) {
-                Log.d("SocketManager", "✅ Socket connected!")
-                val userData = JSONObject()
-                userData.put("userId", userId)
-                mSocket?.emit("userConnected", userData)
-            }
-
-            mSocket?.on(Socket.EVENT_DISCONNECT) {
-                Log.d("SocketManager", "❌ Socket disconnected")
-                val userData = JSONObject()
-                userData.put("userId", userId)
-                mSocket?.emit("userDisconnected", userData)
-            }
-
+            socket?.emit("userOnline", userId)
+            Log.d(TAG, "Emitted userOnline for $userId")
         } catch (e: Exception) {
-            Log.e("SocketManager", "Error connecting socket: ${e.message}")
+            Log.e(TAG, "Error emitting userOnline", e)
         }
     }
 
-    fun disconnect(userId: String) {
+    fun emitUserDisconnected(userId: String) {
         try {
-            val userData = JSONObject()
-            userData.put("userId", userId)
-            mSocket?.emit("userDisconnected", userData)
-            mSocket?.disconnect()
-            Log.d("SocketManager", "🔴 Socket disconnected manually for $userId")
+            socket?.emit("userOffline", userId)
+            Log.d(TAG, "Emitted userOffline for $userId")
         } catch (e: Exception) {
-            Log.e("SocketManager", "Error disconnecting socket: ${e.message}")
+            Log.e(TAG, "Error emitting userOffline", e)
         }
+    }
+
+    fun disconnect() {
+        try {
+            if (socket != null && socket!!.connected()) {
+                socket?.disconnect()
+                Log.i(TAG, "Socket disconnected manually.")
+            }
+            socket = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error disconnecting socket", e)
+        }
+    }
+
+    fun isConnected(): Boolean {
+        return socket?.connected() ?: false
     }
 }

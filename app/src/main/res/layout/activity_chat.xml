@@ -206,7 +206,8 @@
                 app:tint="#128C7E" />
 
             <!-- Message EditText -->
-            <EditText
+            <!-- Message EditText -->
+            <com.example.yenkasachat.ui.RichContentEditText
                 android:id="@+id/editTextMessage"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

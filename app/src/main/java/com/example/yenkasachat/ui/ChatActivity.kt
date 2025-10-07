@@ -45,7 +45,7 @@ import java.io.IOException
 class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler.ChatMessageCallback, MessageAdapter.OnMessageLongClickListener {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var messageInput: EditText
+    private lateinit var messageInput: RichContentEditText
     private lateinit var sendButton: ImageButton
     private lateinit var micButton: ImageButton
     private lateinit var attachButton: ImageButton
@@ -251,6 +251,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 hideKeyboard()
             }
             attachMenu.visibility = if (attachMenu.visibility == View.GONE) View.VISIBLE else View.GONE
+        }
+
+        // ✅ THIS IS THE CORRECT PLACE FOR THE NEW LISTENER
+        // This listens for content (like stickers) coming from the keyboard.
+        messageInput.onRichContentListener = { contentUri ->
+            // The URI we get is a temporary content URI from the keyboard.
+            // We can treat it just like an image picked from the gallery.
+            Log.d("ChatActivity", "Sticker received with URI: $contentUri")
+
+            // Use your existing handler to upload it as an "image"
+            chatMessageHandler.uploadFileToCloudinary(contentUri, "image")
         }
     }
 

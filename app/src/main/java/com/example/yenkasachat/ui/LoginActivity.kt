@@ -3,6 +3,7 @@ package com.example.yenkasachat.ui
 // Keep your existing imports
 import android.content.Context
 import android.content.Intent
+import com.example.yenkasachat.network.SocketManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.*
@@ -175,6 +176,15 @@ class LoginActivity : AppCompatActivity() {
                         } else {
                             Log.w("LoginActivity", "OneSignal Player ID not available at login. Will attempt update later if needed.")
                         }
+// --- 👇 CONNECT SOCKET AFTER LOGIN SUCCESS ---
+                        val userId = user._id
+                        if (!userId.isNullOrEmpty()) {
+                            SocketManager.connect(userId)
+                            Log.i("LoginActivity", "🟢 Socket connected for userId: $userId (online status active)")
+                        } else {
+                            Log.w("LoginActivity", "⚠️ Cannot connect socket - userId is null or empty.")
+                        }
+// --- 👆 END SOCKET CONNECTION ---
 
                         val intent = Intent(this@LoginActivity, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

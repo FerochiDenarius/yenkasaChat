@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.example.yenkasachat.network.SocketManager
 
 object TokenManager {
 
@@ -106,6 +107,35 @@ object TokenManager {
             Log.e(TAG, "Error clearing access token from EncryptedSharedPreferences", e)
         }
     }
+
+    fun clearAll(context: Context) {
+        try {
+            // 🔌 Disconnect socket before clearing everything
+            val userId = getUserId(context)
+            if (!userId.isNullOrEmpty()) {
+                SocketManager.emitUserDisconnected(userId)
+            }
+            SocketManager.disconnect()
+
+            getEncryptedPrefs(context).edit()
+                .remove(TOKEN_KEY)
+                .remove(REFRESH_KEY)
+                .remove(USER_ID_KEY)
+                .remove(PROFILE_PIC_KEY)
+                .remove(USERNAME_KEY)
+                .remove(EMAIL_KEY)
+                .remove(PHONE_KEY)
+                .remove(LOCATION_KEY)
+                .remove(VERIFIED_KEY)
+                .remove(ONE_SIGNAL_PLAYER_ID_KEY)
+                .apply()
+
+            Log.i(TAG, "All data cleared from EncryptedSharedPreferences and socket disconnected.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing all data from EncryptedSharedPreferences", e)
+        }
+    }
+
 
     // === Refresh Token ===
     fun saveRefreshToken(context: Context, refreshToken: String?) {
@@ -402,23 +432,4 @@ object TokenManager {
     }
 
     // === Clear All ===
-    fun clearAll(context: Context) {
-        try {
-            getEncryptedPrefs(context).edit()
-                .remove(TOKEN_KEY)
-                .remove(REFRESH_KEY)
-                .remove(USER_ID_KEY)
-                .remove(PROFILE_PIC_KEY)
-                .remove(USERNAME_KEY)
-                .remove(EMAIL_KEY)
-                .remove(PHONE_KEY)
-                .remove(LOCATION_KEY)
-                .remove(VERIFIED_KEY)
-                .remove(ONE_SIGNAL_PLAYER_ID_KEY) // ✅ Also clear Player ID
-                .apply()
-            Log.i(TAG, "All data cleared from EncryptedSharedPreferences.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error clearing all data from EncryptedSharedPreferences", e)
-        }
-    }
 }

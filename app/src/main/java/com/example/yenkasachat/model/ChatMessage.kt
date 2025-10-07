@@ -23,8 +23,8 @@ data class ChatMessage(
     @SerializedName("status")
     val status: String? = null,
 
-    @SerializedName("replyTo")
-    val replyTo: ChatMessage? = null,
+    @SerializedName("repliedTo")
+    val repliedTo: ChatMessage? = null,
 
     @SerializedName("sender")
     val sender: Participant? = null // ✅ Keep sender object separate

@@ -117,26 +117,30 @@ class MessageAdapter(private val currentUserId: String) :
             val context = itemView.context
 
             // --- Reply preview ---
-            if (message.replyTo != null && replyLayout != null && repliedToName != null && repliedToMessage != null) {
+// In MessageAdapter.kt, inside the BaseMessageViewHolder's bind() function...
+
+// --- Reply preview ---
+            if (message.repliedTo != null && replyLayout != null && repliedToName != null && repliedToMessage != null) { // ✅ Use repliedTo
                 replyLayout.visibility = View.VISIBLE
                 repliedToName.text =
-                    if (message.replyTo.senderId == currentUserId) "You"
-                    else message.replyTo.sender?.username ?: "Someone"
+                    if (message.repliedTo.senderId == currentUserId) "You" // ✅ Use repliedTo
+                    else message.repliedTo.sender?.username ?: "Someone" // ✅ Use repliedTo
 
                 val replyContent = when {
-                    !message.replyTo.text.isNullOrBlank() -> message.replyTo.text
-                    !message.replyTo.imageUrl.isNullOrBlank() -> "📷 Image"
-                    !message.replyTo.videoUrl.isNullOrBlank() -> "🎥 Video"
-                    !message.replyTo.audioUrl.isNullOrBlank() -> "🎵 Audio"
-                    !message.replyTo.fileUrl.isNullOrBlank() -> "📄 File"
-                    message.replyTo.location != null -> "📍 Location"
-                    !message.replyTo.contactInfo.isNullOrBlank() -> "👤 Contact"
+                    !message.repliedTo.text.isNullOrBlank() -> message.repliedTo.text // ✅ Use repliedTo
+                    !message.repliedTo.imageUrl.isNullOrBlank() -> "📷 Image" // ✅ Use repliedTo
+                    !message.repliedTo.videoUrl.isNullOrBlank() -> "🎥 Video" // ✅ Use repliedTo
+                    !message.repliedTo.audioUrl.isNullOrBlank() -> "🎵 Audio" // ✅ Use repliedTo
+                    !message.repliedTo.fileUrl.isNullOrBlank() -> "📄 File" // ✅ Use repliedTo
+                    message.repliedTo.location != null -> "📍 Location" // ✅ Use repliedTo
+                    !message.repliedTo.contactInfo.isNullOrBlank() -> "👤 Contact" // ✅ Use repliedTo
                     else -> "Message"
                 }
                 repliedToMessage.text = replyContent
             } else {
                 replyLayout?.visibility = View.GONE
             }
+
 
             // --- Text ---
             messageText.visibility = if (!message.text.isNullOrBlank()) {

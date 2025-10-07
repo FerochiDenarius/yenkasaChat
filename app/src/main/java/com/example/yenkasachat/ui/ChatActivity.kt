@@ -296,14 +296,37 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
 
+// In ChatActivity.kt...
+
     private fun showReplyPreview(message: ChatMessage) {
-        replyingToMessage = message
+        replyingToMessage = message // Store the message object for when we send
         replyPreviewLayout.visibility = View.VISIBLE
 
-        val senderName = if (message.sender?._id == senderId) "You" else textViewReceiverName.text.toString()
-        textViewRepliedToName.text = "Replying to $senderName"
-        textViewRepliedToMessage.text = message.text ?: "Media message"
+        // --- ✅ IMPROVED LOGIC STARTS HERE ---
 
+        // 1. Determine the sender's name for the preview
+        // Your 'sender' object might be null if the message comes from a socket event
+        // without full population, so we fall back to senderId.
+        val isMyMessage = message.sender?._id == senderId || message.senderId == senderId
+        val senderName = if (isMyMessage) "You" else textViewReceiverName.text.toString()
+        textViewRepliedToName.text = "Replying to $senderName"
+
+        // 2. Create a rich summary of the message content
+        val messageContent = when {
+            !message.text.isNullOrBlank() -> message.text
+            !message.imageUrl.isNullOrBlank() -> "📷 Image"
+            !message.videoUrl.isNullOrBlank() -> "🎥 Video"
+            !message.audioUrl.isNullOrBlank() -> "🎵 Audio"
+            !message.fileUrl.isNullOrBlank() -> "📄 File"
+            message.location != null -> "📍 Location"
+            !message.contactInfo.isNullOrBlank() -> "👤 Contact"
+            else -> "Message" // Fallback for any other case
+        }
+        textViewRepliedToMessage.text = messageContent
+
+        // --- ✅ IMPROVED LOGIC ENDS HERE ---
+
+        // Focus the input and show the keyboard
         messageInput.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(messageInput, InputMethodManager.SHOW_IMPLICIT)

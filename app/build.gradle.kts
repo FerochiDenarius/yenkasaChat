@@ -96,6 +96,8 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2023.10.01") // Use latest stable
     implementation(composeBom)
     androidTestImplementation(composeBom)
+    implementation("io.socket:socket.io-client:2.1.0")
+
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")

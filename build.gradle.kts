@@ -35,3 +35,6 @@ buildscript {
     }
 }
 
+tasks.register("stage") {
+    dependsOn("build")
+}

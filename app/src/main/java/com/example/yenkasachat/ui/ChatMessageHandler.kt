@@ -72,22 +72,33 @@ class ChatMessageHandler(
     }
 
     fun uploadFileToCloudinary(uri: Uri, type: String) {
-        Log.d("ChatMessageHandler", "Attempting to upload $type file. URI: $uri") // Added pre-upload log
-        MediaManager.get().upload(uri)
-            .option("resource_type", if (type == "audio" || type == "video") "video" else "auto") // Optional: Be specific for audio/video
+        Log.d("ChatMessageHandler", "Attempting to upload $type file. URI: $uri")
+
+        // --- START OF FIX ---
+        // Read the URI content into a byte array immediately while we have permission.
+        val inputStream = context.contentResolver.openInputStream(uri)
+        if (inputStream == null) {
+            Log.e("ChatMessageHandler", "Failed to open input stream for URI: $uri")
+            callback.onError("Could not process the selected file.")
+            return
+        }
+        val fileBytes = inputStream.readBytes()
+        inputStream.close()
+        // --- END OF FIX ---
+
+        // Now, upload the byte array instead of the original URI.
+        MediaManager.get().upload(fileBytes) // ✅ USE THE BYTE ARRAY
+            .option("resource_type", if (type == "audio" || type == "video") "video" else "auto")
             .callback(object : UploadCallback {
                 override fun onStart(requestId: String?) {
-                    // Log when the upload starts
                     Log.d("ChatMessageHandler", "Cloudinary upload started. Request ID: $requestId, Type: $type")
                 }
 
                 override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {
-                    // Optional: Log progress if needed, can be verbose
-                    // Log.d("ChatMessageHandler", "Cloudinary upload progress. Request ID: $requestId, Bytes: $bytes/$totalBytes")
+                    // Progress logging
                 }
 
                 override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
-                    // Log the full result data from Cloudinary on success
                     Log.d("ChatMessageHandler", "Cloudinary upload success. Request ID: $requestId, Type: $type, Result: $resultData")
 
                     val secureUrl = resultData?.get("secure_url") as? String
@@ -98,27 +109,25 @@ class ChatMessageHandler(
                             "audio" -> "audioUrl"
                             "video" -> "videoUrl"
                             "file" -> "fileUrl"
-                            else -> "fileUrl" // Default case
+                            else -> "fileUrl"
                         }
                         sendMessage(mapOf(mediaKey to secureUrl))
                     } else {
-                        Log.e("ChatMessageHandler", "Cloudinary upload succeeded for Request ID: $requestId, Type: $type, but secure_url is null or blank. Result: $resultData")
+                        Log.e("ChatMessageHandler", "Cloudinary upload succeeded but secure_url is null or blank. Result: $resultData")
                         callback.onError("Upload to Cloudinary succeeded but no URL was returned.")
                     }
                 }
 
                 override fun onError(requestId: String?, error: ErrorInfo?) {
-                    // Log detailed error information from Cloudinary
-                    Log.e("ChatMessageHandler", "Cloudinary upload failed. Request ID: $requestId, Type: $type, Error Code: ${error?.code}, Description: ${error?.description}, Full Error: $error")
+                    Log.e("ChatMessageHandler", "Cloudinary upload failed. Request ID: $requestId, Type: $type, Error Code: ${error?.code}, Description: ${error?.description}")
                     callback.onError("Upload failed: ${error?.description} (Code: ${error?.code})")
                 }
 
                 override fun onReschedule(requestId: String?, error: ErrorInfo?) {
-                    // Log if the upload is rescheduled
-                    Log.w("ChatMessageHandler", "Cloudinary upload rescheduled. Request ID: $requestId, Type: $type, Error: ${error?.description}")
+                    Log.w("ChatMessageHandler", "Cloudinary upload rescheduled. Request ID: $requestId, Error: ${error?.description}")
                     callback.onError("Upload rescheduled: ${error?.description}")
                 }
-            }).dispatch() // Don't forget to call dispatch() to start the upload
+            }).dispatch()
     }
 
     fun checkAndUploadAudio(uri: Uri) {

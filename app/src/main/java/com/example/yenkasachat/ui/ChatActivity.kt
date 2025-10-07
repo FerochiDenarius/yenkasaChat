@@ -221,16 +221,29 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
+
+// In setupListeners()
         sendButton.setOnClickListener {
             val text = messageInput.text.toString().trim()
+
+            // The send button is only visible if text is not empty, so this check is sufficient.
             if (text.isNotEmpty()) {
+                // 1. Create the data map with the text.
                 val messageData = mutableMapOf<String, Any>("text" to text)
+
+                // 2. If we are in reply mode, add the ID of the message being replied to.
                 replyingToMessage?.let { message ->
+                    // ✅ USE 'id' which is the correct field name from your ChatMessage model.
                     message.id?.let { repliedToId ->
                         messageData["repliedTo"] = repliedToId
+                        Log.d("ChatActivity", "Attaching repliedTo ID: $repliedToId to message.")
                     }
                 }
+
+                // 3. Send the complete data package.
                 chatMessageHandler.sendMessage(messageData)
+
+                // 4. Reset the UI.
                 messageInput.setText("")
                 clearReplyingTo()
                 hideKeyboard()

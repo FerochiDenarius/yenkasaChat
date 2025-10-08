@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.yenkasachat">
 
-    <!-- ✅ Permissions -->
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -29,17 +29,17 @@
         android:theme="@style/Theme.YenkasaChat"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- ✅ Google Maps API Key -->
+        <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCQvcE4AW1KseUVC9_OZtiA4tlOo9sgdk0" />
 
-        <!-- ✅ OneSignal App ID -->
+        <!-- OneSignal App ID -->
         <meta-data
             android:name="onesignal_app_id"
             android:value="165df9e6-a0ea-4a37-a40a-110af7e28ad2" />
 
-        <!-- ✅ Launcher Activity -->
+        <!-- Launcher Activity -->
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true">
@@ -49,7 +49,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ Activities -->
+        <!-- App Activities -->
         <activity android:name=".ui.LoginActivity" />
         <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.ForgotPasswordActivity" />
@@ -63,15 +63,10 @@
         <activity android:name=".ui.EmailVerificationActivity" />
         <activity android:name=".ui.PhoneVerificationActivity" />
         <activity android:name=".ui.ImagePreviewActivity" />
-
-
-
-        <!-- ✅ Firebase Messaging -->
-
+        <activity android:name=".ui.DailyCallActivity" />
         <activity
             android:name=".ui.ResetPasswordActivity"
             android:exported="true">
-
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -83,9 +78,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Video Call Activity -->
+        <activity
+            android:name=".webrtc.VideoCallActivity"
+            android:screenOrientation="portrait"
+            android:exported="true" />
 
-
-        <!-- ✅ File Provider -->
+        <!-- File Provider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -95,5 +94,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
     </application>
 </manifest>

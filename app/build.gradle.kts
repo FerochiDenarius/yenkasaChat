@@ -53,7 +53,7 @@ android {
 
 dependencies {
     // Your existing dependencies remain the same, including the Compose BOM and libraries
-    
+
         implementation("androidx.security:security-crypto:1.1.0-alpha06") // Or the latest stable version
 
     // ✅ AndroidX Core + UI
@@ -114,10 +114,10 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     //video call and phone call
-    implementation("com.infobip:google-webrtc:1.0.45036")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0") // Or latest stable version of OkHttp
+
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.lifecycle:lifecycle-common-java8:2.6.2")
+
 
 // Check for the latest version
 }

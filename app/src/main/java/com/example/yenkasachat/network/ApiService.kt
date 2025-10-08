@@ -39,6 +39,12 @@ data class UnreadCountRequest(
 )
 
 
+// Daily.co API Models
+data class CreateRoomRequest(val roomName: String)
+data class CreateRoomResponse(val roomName: String, val roomUrl: String)
+
+data class GenerateTokenRequest(val roomName: String, val userId: String)
+data class GenerateTokenResponse(val token: String, val roomName: String)
 
 data class UnreadCountData(
     val userId: String,
@@ -137,6 +143,13 @@ interface ApiService {
         @Path("userId") userId: String
     ): Call<List<ChatRoom>>
 
+// --- Daily.co endpoints ---
+
+    @POST("dailyco/create-room")
+    fun createRoom(@Body request: CreateRoomRequest): Call<CreateRoomResponse>
+
+    @POST("dailyco/generate-token")
+    fun generateToken(@Body request: GenerateTokenRequest): Call<GenerateTokenResponse>
 
     @GET("chatrooms/{roomId}/receiver")
     fun getReceiverInfo(

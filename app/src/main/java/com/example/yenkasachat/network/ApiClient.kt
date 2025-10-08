@@ -27,6 +27,10 @@ object ApiClient {
         getClient().create(AuthService::class.java)
     }
 
+    val dailyApi: ApiService by lazy {
+        getClient().create(ApiService::class.java)
+    }
+
     private lateinit var applicationContext: Context
 
     @Synchronized

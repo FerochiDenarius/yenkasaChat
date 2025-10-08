@@ -36,6 +36,7 @@ import com.example.yenkasachat.adapter.MessageAdapter
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.Participant
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.webrtc.WebSocketManager
 import com.google.android.gms.location.LocationServices
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
@@ -72,6 +73,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var roomId: String? = null
     private var tempCameraUri: Uri? = null
     private var replyingToMessage: ChatMessage? = null
+    private lateinit var callButton: ImageView
+    private lateinit var videoCallButton: ImageView
+    private val webSocketManager = WebSocketManager()
+    private var receiverParticipant: Participant? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
@@ -120,6 +125,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         // Safe to use non-null assertion here because retrieveSessionAndValidate ensures they are not null.
         chatMessageHandler = ChatMessageHandler(this, this, token, senderId, roomId!!)
+
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         messageAdapter = MessageAdapter(senderId)
@@ -136,6 +142,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         )
 
         messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
+        webSocketManager.connect(senderId)
 
         setupChatRecyclerView()
         setupListeners()
@@ -158,6 +165,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         micButton = findViewById(R.id.btnMic)
         attachButton = findViewById(R.id.buttonToggleAttachMenu)
         attachMenu = findViewById(R.id.attachmentMenu)
+        callButton = findViewById(R.id.imageViewCall)
+        videoCallButton = findViewById(R.id.imageViewVideoCall)
 
         textViewReceiverName = findViewById(R.id.textViewReceiverName)
         imageViewReceiverPicture = findViewById(R.id.imageViewReceiverPicture)
@@ -252,6 +261,14 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
             attachMenu.visibility = if (attachMenu.visibility == View.GONE) View.VISIBLE else View.GONE
         }
+        callButton.setOnClickListener {
+            startVideoCall(isVideo = false)
+        }
+
+        videoCallButton.setOnClickListener {
+            startVideoCall(isVideo = true)
+        }
+
 
         // ✅ THIS IS THE CORRECT PLACE FOR THE NEW LISTENER
         // This listens for content (like stickers) coming from the keyboard.
@@ -263,6 +280,30 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             // Use your existing handler to upload it as an "image"
             chatMessageHandler.uploadFileToCloudinary(contentUri, "image")
         }
+    }
+
+    private fun startVideoCall(isVideo: Boolean) {
+        val targetUserId = receiverParticipant?._id
+        if (targetUserId.isNullOrBlank()) {
+            Toast.makeText(this, "Cannot start call: receiver ID missing.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (isVideo && !checkAndRequestPermission(Manifest.permission.CAMERA)) {
+            Toast.makeText(this, "Camera permission required for video call.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!checkAndRequestPermission(Manifest.permission.RECORD_AUDIO)) {
+            Toast.makeText(this, "Microphone permission required.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(this, com.example.yenkasachat.webrtc.VideoCallActivity::class.java)
+        intent.putExtra("TARGET_USER_ID", targetUserId)
+        intent.putExtra("IS_CALLER", true)
+        intent.putExtra("CURRENT_USER_ID", senderId) // <-- pass logged-in user ID
+        startActivity(intent)
     }
 
     private fun setupChatRecyclerView() {
@@ -305,6 +346,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onReceiverParticipantDetailsReady(participant: Participant) {
         updateReceiverHeader(participant)
+        receiverParticipant = participant // <-- Save the participant
     }
 
     private fun updateReceiverHeader(participant: Participant) {

@@ -19,7 +19,7 @@ class WebSocketManager {
     private val client = OkHttpClient.Builder().build()
 
     // Replace with your Heroku WebSocket URL (e.g., "wss://your-app-name.herokuapp.com")
-    private val webSocketUrl = "YOUR_HEROKU_WEBSOCKET_URL"
+    private val webSocketUrl = "wss://yenkasa-caller-6e2ee8b5bbd3.herokuapp.com"
 
     fun connect(userId: String) { // Or some other identifier
         if (webSocket != null) {

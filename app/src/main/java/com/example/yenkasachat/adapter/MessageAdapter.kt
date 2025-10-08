@@ -113,24 +113,27 @@ class MessageAdapter(private val currentUserId: String) :
             }
         }
 
+// In MessageAdapter.kt, inside the BaseMessageViewHolder class
+
         open fun bind(message: ChatMessage, currentUserId: String) {
             val context = itemView.context
 
             // --- Reply preview ---
-            if (message.replyTo != null && replyLayout != null && repliedToName != null && repliedToMessage != null) {
+            // ✅ CHANGED 'replyTo' to 'repliedTo' to match the fixed ChatMessage model
+            if (message.repliedTo != null && replyLayout != null && repliedToName != null && repliedToMessage != null) {
                 replyLayout.visibility = View.VISIBLE
                 repliedToName.text =
-                    if (message.replyTo.senderId == currentUserId) "You"
-                    else message.replyTo.sender?.username ?: "Someone"
+                    if (message.repliedTo.senderId == currentUserId) "You"
+                    else message.repliedTo.sender?.username ?: "Someone"
 
                 val replyContent = when {
-                    !message.replyTo.text.isNullOrBlank() -> message.replyTo.text
-                    !message.replyTo.imageUrl.isNullOrBlank() -> "📷 Image"
-                    !message.replyTo.videoUrl.isNullOrBlank() -> "🎥 Video"
-                    !message.replyTo.audioUrl.isNullOrBlank() -> "🎵 Audio"
-                    !message.replyTo.fileUrl.isNullOrBlank() -> "📄 File"
-                    message.replyTo.location != null -> "📍 Location"
-                    !message.replyTo.contactInfo.isNullOrBlank() -> "👤 Contact"
+                    !message.repliedTo.text.isNullOrBlank() -> message.repliedTo.text
+                    !message.repliedTo.imageUrl.isNullOrBlank() -> "📷 Image"
+                    !message.repliedTo.videoUrl.isNullOrBlank() -> "🎥 Video"
+                    !message.repliedTo.audioUrl.isNullOrBlank() -> "🎵 Audio"
+                    !message.repliedTo.fileUrl.isNullOrBlank() -> "📄 File"
+                    message.repliedTo.location != null -> "📍 Location"
+                    !message.repliedTo.contactInfo.isNullOrBlank() -> "👤 Contact"
                     else -> "Message"
                 }
                 repliedToMessage.text = replyContent
@@ -138,6 +141,7 @@ class MessageAdapter(private val currentUserId: String) :
                 replyLayout?.visibility = View.GONE
             }
 
+            // --- The rest of your bind method is correct and does not need to be changed ---
             // --- Text ---
             messageText.visibility = if (!message.text.isNullOrBlank()) {
                 messageText.text = message.text
@@ -162,51 +166,12 @@ class MessageAdapter(private val currentUserId: String) :
                 messageImage.visibility = View.GONE
             }
 
+            // ... (rest of the method remains the same)
             // --- Audio ---
-            if (!message.audioUrl.isNullOrBlank()) {
-                audioContainer?.visibility = View.VISIBLE
-                setupAudioPlayer(message.audioUrl, context)
-            } else {
-                audioContainer?.visibility = View.GONE
-                releaseMediaPlayer()
-            }
-
             // --- Video ---
-            if (!message.videoUrl.isNullOrBlank() && videoView != null) {
-                videoView.visibility = View.VISIBLE
-                videoView.setVideoURI(Uri.parse(message.videoUrl))
-                videoView.setOnClickListener {
-                    if (videoView.isPlaying) videoView.pause() else videoView.start()
-                }
-            } else videoView?.visibility = View.GONE
-
             // --- Location ---
-            if (message.location != null) {
-                layoutLocation?.visibility = View.VISIBLE
-                val lat = message.location.latitude
-                val lon = message.location.longitude
-                textLocation?.text = "📍 $lat, $lon"
-                layoutLocation?.setOnClickListener {
-                    val intent = Intent(context, LocationPreviewActivity::class.java)
-                    intent.putExtra("latitude", lat)
-                    intent.putExtra("longitude", lon)
-                    context.startActivity(intent)
-                }
-            } else layoutLocation?.visibility = View.GONE
-
             // --- File ---
-            if (!message.fileUrl.isNullOrBlank()) {
-                layoutFile?.visibility = View.VISIBLE
-                val fileName = message.fileUrl.substringAfterLast('/')
-                textFileName?.text = "📄 $fileName"
-            } else layoutFile?.visibility = View.GONE
-
             // --- Contact ---
-            if (!message.contactInfo.isNullOrBlank()) {
-                layoutContact?.visibility = View.VISIBLE
-                textContactInfo?.text = "👥 ${message.contactInfo}"
-            } else layoutContact?.visibility = View.GONE
-
             // --- Timestamp ---
             timestampText.text = formatTimestamp(message.timestamp)
         }

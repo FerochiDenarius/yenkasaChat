@@ -289,6 +289,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
+        // Check permissions
         if (isVideo && !checkAndRequestPermission(Manifest.permission.CAMERA)) {
             Toast.makeText(this, "Camera permission required for video call.", Toast.LENGTH_SHORT).show()
             return
@@ -299,11 +300,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
+        // --- 1️⃣ Launch caller's VideoCallActivity with all info ---
         val intent = Intent(this, com.example.yenkasachat.webrtc.VideoCallActivity::class.java)
         intent.putExtra("TARGET_USER_ID", targetUserId)
         intent.putExtra("IS_CALLER", true)
-        intent.putExtra("CURRENT_USER_ID", senderId) // <-- pass logged-in user ID
+        intent.putExtra("CURRENT_USER_ID", senderId)
+        intent.putExtra("IS_VIDEO_CALL", isVideo)
         startActivity(intent)
+
+        // --- 2️⃣ The VideoCallActivity itself will send the call_request ---
+        // No need to send here anymore; keeps logic centralized and ensures
+        // the room name and WebSocket connection are consistent.
     }
 
     private fun setupChatRecyclerView() {

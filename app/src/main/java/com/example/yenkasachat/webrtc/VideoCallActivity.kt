@@ -5,22 +5,20 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import java.util.Locale
 import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.example.yenkasachat.R
-import com.example.yenkasachat.network.*
-import com.example.yenkasachat.network.CreateRoomRequest
-import com.example.yenkasachat.network.CreateRoomResponse
-import com.example.yenkasachat.network.GenerateTokenRequest
-import com.example.yenkasachat.network.GenerateTokenResponse
-
+import kotlinx.coroutines.launch
 
 class VideoCallActivity : AppCompatActivity() {
 
@@ -28,108 +26,172 @@ class VideoCallActivity : AppCompatActivity() {
     private lateinit var btnEndCall: ImageButton
     private lateinit var tvCallStatus: TextView
 
+    private val webSocketManager = WebSocketManager()
+
     private var currentUserId: String? = null
+    private var targetUserId: String? = null
+    private var isCaller: Boolean = false
+    private var isVideoCall: Boolean = true
+    private var callAccepted = false
 
     companion object {
         private const val TAG = "VideoCallActivity"
         private const val CAMERA_PERMISSION_REQUEST_CODE = 101
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        private val REQUIRED_PERMISSIONS = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_video_call)
-
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Bind XML elements
+        // Bind XML views
         webView = findViewById(R.id.webview_call)
+        btnEndCall = findViewById(R.id.btn_end_call)
+        tvCallStatus = findViewById(R.id.tv_call_status)
+
         webView.settings.javaScriptEnabled = true
         webView.settings.mediaPlaybackRequiresUserGesture = false
         webView.webViewClient = WebViewClient()
 
-        btnEndCall = findViewById(R.id.btn_end_call)
-        tvCallStatus = findViewById(R.id.tv_call_status)
-
-        // Get current user ID
+        // Get intent extras
         currentUserId = intent.getStringExtra("CURRENT_USER_ID")
-        if (currentUserId.isNullOrBlank()) {
-            Toast.makeText(this, "Error: Your user ID is not configured.", Toast.LENGTH_LONG).show()
+        targetUserId = intent.getStringExtra("TARGET_USER_ID")
+        isCaller = intent.getBooleanExtra("IS_CALLER", false)
+        isVideoCall = intent.getBooleanExtra("IS_VIDEO_CALL", true)
+
+        if (currentUserId.isNullOrBlank() || targetUserId.isNullOrBlank()) {
+            Toast.makeText(this, "Error: User IDs not set.", Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
+        // Connect WebSocket
+        currentUserId?.let { webSocketManager.connect(it) }
+
+        // Set button listener
         btnEndCall.setOnClickListener { endCall() }
 
-        // Permissions check
+        // Check permissions
         if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, CAMERA_PERMISSION_REQUEST_CODE)
         } else {
-            startDailyCoCall()
+            setupCall()
+        }
+
+        // Listen for incoming call request (only for receiver)
+        if (!isCaller) {
+            listenForIncomingCall()
+        }
+    }
+    private fun onCallAccepted() {
+        runOnUiThread {
+            Toast.makeText(this, "Call accepted!", Toast.LENGTH_SHORT).show()
+            // Optionally: update UI to show connected state
         }
     }
 
-    private fun startDailyCoCall() {
-        tvCallStatus.text = getString(R.string.call_status_initializing)
-
-        // 1️⃣ Create a Daily.co room
-        val roomRequest = CreateRoomRequest("room-${System.currentTimeMillis()}")
-        ApiClient.dailyApi.createRoom(roomRequest).enqueue(object : retrofit2.Callback<CreateRoomResponse> {
-            override fun onResponse(call: retrofit2.Call<CreateRoomResponse>, response: retrofit2.Response<CreateRoomResponse>) {
-                val roomName = response.body()?.roomName
-                val roomUrl = response.body()?.roomUrl
-
-                if (roomName.isNullOrEmpty() || roomUrl.isNullOrEmpty()) {
-                    Toast.makeText(this@VideoCallActivity, "Failed to create room", Toast.LENGTH_LONG).show()
-                    return
-                }
-
-                // 2️⃣ Generate token for current user
-                val tokenRequest = GenerateTokenRequest(roomName, currentUserId!!)
-                ApiClient.dailyApi.generateToken(tokenRequest).enqueue(object : retrofit2.Callback<GenerateTokenResponse> {
-                    override fun onResponse(call: retrofit2.Call<GenerateTokenResponse>, tokenResponse: retrofit2.Response<GenerateTokenResponse>) {
-                        val token = tokenResponse.body()?.token
-                        if (token.isNullOrEmpty()) {
-                            Toast.makeText(this@VideoCallActivity, "Failed to generate token", Toast.LENGTH_LONG).show()
-                            return
-                        }
-
-                        // 3️⃣ Load room in WebView
-                        val urlWithToken = "$roomUrl?t=$token"
-                        webView.loadUrl(urlWithToken)
-                        tvCallStatus.text = getString(R.string.call_status_connected)
-                        tvCallStatus.visibility = View.GONE
-                    }
-
-                    override fun onFailure(call: retrofit2.Call<GenerateTokenResponse>, t: Throwable) {
-                        Toast.makeText(this@VideoCallActivity, "Token generation error: ${t.message}", Toast.LENGTH_LONG).show()
-                        Log.e(TAG, "Token generation failed", t)
-                    }
-                })
-            }
-
-            override fun onFailure(call: retrofit2.Call<CreateRoomResponse>, t: Throwable) {
-                Toast.makeText(this@VideoCallActivity, "Room creation error: ${t.message}", Toast.LENGTH_LONG).show()
-                Log.e(TAG, "Room creation failed", t)
-            }
-        })
+    private fun onCallRejected() {
+        runOnUiThread {
+            Toast.makeText(this, "Call rejected by the other user.", Toast.LENGTH_SHORT).show()
+            // Optionally: end call
+            endCall()
+        }
     }
 
     private fun allPermissionsGranted(): Boolean =
         REQUIRED_PERMISSIONS.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && allPermissionsGranted()) {
-            startDailyCoCall()
+    private fun setupCall() {
+        tvCallStatus.text = getString(R.string.call_status_initializing)
+
+        // --- 1️⃣ For caller, send call request ---
+        if (isCaller) {
+            webSocketManager.sendSignalingMessage(
+                type = "call_request",
+                targetUserId = targetUserId ?: return
+            )
+            tvCallStatus.text = "Calling..."
+        }
+
+        // --- 2️⃣ Join the same room URL ---
+        val roomName = if (currentUserId!! < targetUserId!!) {
+            "call_${currentUserId}_$targetUserId"
         } else {
-            Toast.makeText(this, "Camera & Microphone permissions are required.", Toast.LENGTH_LONG).show()
-            finish()
+            "call_${targetUserId}_$currentUserId"
+        }
+        val roomUrl = "https://your-daily-domain.daily.co/$roomName"
+
+        // TODO: Generate token from backend if needed
+        webView.loadUrl(roomUrl)
+        tvCallStatus.text = getString(R.string.call_status_connected)
+        tvCallStatus.visibility = View.GONE
+    }
+
+    private fun listenForIncomingCall() {
+        lifecycleScope.launch {
+            webSocketManager.signalingMessages.collect { msg ->
+                when (msg.type) {
+                    SignalingMessageType.CALL_REQUEST -> {
+                        if (msg.fromUserId == targetUserId) {
+                            showIncomingCallDialog(msg.fromUserId ?: "Unknown")
+                        }
+                    }
+                    SignalingMessageType.CALL_ACCEPT -> {
+                        if (msg.fromUserId == targetUserId) {
+                            onCallAccepted()
+                        }
+                    }
+                    SignalingMessageType.CALL_REJECT -> {
+                        if (msg.fromUserId == targetUserId) {
+                            onCallRejected()
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun showIncomingCallDialog(callerId: String) {
+        runOnUiThread {
+            if (callAccepted) return@runOnUiThread
+
+            AlertDialog.Builder(this)
+                .setTitle(if (isVideoCall) "Incoming Video Call" else "Incoming Audio Call")
+                .setMessage("Call from $callerId")
+                .setPositiveButton("Accept") { dialog, _ ->
+                    callAccepted = true
+                    setupCall()
+                    webSocketManager.sendSignalingMessage("call_accept", callerId)
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Reject") { dialog, _ ->
+                    webSocketManager.sendSignalingMessage("call_reject", callerId)
+                    finish()
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
         }
     }
 
     private fun endCall() {
+        Log.i(TAG, "📞 Ending call")
         webView.loadUrl("about:blank")
         finish()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && allPermissionsGranted()) {
+            setupCall()
+        } else {
+            Toast.makeText(this, "Camera & Microphone permissions are required.", Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
 }

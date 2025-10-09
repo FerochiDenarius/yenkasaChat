@@ -1,5 +1,8 @@
 package com.example.yenkasachat.webrtc
 
+// -----------------------------
+// Signaling message types enum
+// -----------------------------
 enum class SignalingMessageType {
     OFFER,
     ANSWER,
@@ -11,9 +14,15 @@ enum class SignalingMessageType {
     UNKNOWN,
     CONNECTION_ACK,
     CALL_ENDED,
-    USER_BUSY
+    USER_BUSY,
+    CALL_REQUEST,   // ✅ Added for 1-on-1 call request
+    CALL_ACCEPT,    // ✅ Added for call acceptance
+    CALL_REJECT     // ✅ Added for call rejection
 }
 
+// -----------------------------
+// Signaling message data class
+// -----------------------------
 data class SignalingMessage(
     val type: SignalingMessageType,
     val sdp: String? = null,
@@ -22,6 +31,9 @@ data class SignalingMessage(
     val error: String? = null
 )
 
+// -----------------------------
+// Candidate data class for ICE
+// -----------------------------
 data class CandidateData(
     val sdp: String,
     val sdpMid: String,

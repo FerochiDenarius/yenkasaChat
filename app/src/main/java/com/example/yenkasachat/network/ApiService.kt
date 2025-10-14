@@ -43,8 +43,17 @@ data class UnreadCountRequest(
 data class CreateRoomRequest(val roomName: String)
 data class CreateRoomResponse(val roomName: String, val roomUrl: String)
 
-data class GenerateTokenRequest(val roomName: String, val userId: String)
-data class GenerateTokenResponse(val token: String, val roomName: String)
+// 🔥 FIXED: use _id instead of userId to match backend
+data class GenerateTokenRequest(
+    val roomName: String,
+    val _id: String
+)
+
+data class GenerateTokenResponse(
+    val token: String,
+    val roomName: String
+)
+
 
 data class UnreadCountData(
     val userId: String,

@@ -32,9 +32,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
+import com.example.yenkasachat.webrtc.VideoCallActivity
 import com.example.yenkasachat.adapter.MessageAdapter
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.Participant
+import com.example.yenkasachat.model.User
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.webrtc.WebSocketManager
 import com.google.android.gms.location.LocationServices
@@ -142,7 +144,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         )
 
         messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
-        webSocketManager.connect(senderId)
+        webSocketManager.connect(this)
 
         setupChatRecyclerView()
         setupListeners()
@@ -261,6 +263,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
             attachMenu.visibility = if (attachMenu.visibility == View.GONE) View.VISIBLE else View.GONE
         }
+
         callButton.setOnClickListener {
             startVideoCall(isVideo = false)
         }
@@ -283,15 +286,16 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun startVideoCall(isVideo: Boolean) {
-        val targetUserId = receiverParticipant?._id
-        if (targetUserId.isNullOrBlank()) {
-            Toast.makeText(this, "Cannot start call: receiver ID missing.", Toast.LENGTH_SHORT).show()
+        val receiverId = receiverParticipant?._id
+        val currentUserId = TokenManager.getUserId(this)
+
+        if (receiverId.isNullOrBlank() || currentUserId.isNullOrBlank()) {
+            Toast.makeText(this, "Missing user IDs.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Check permissions
         if (isVideo && !checkAndRequestPermission(Manifest.permission.CAMERA)) {
-            Toast.makeText(this, "Camera permission required for video call.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Camera permission required.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -300,17 +304,15 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
-        // --- 1️⃣ Launch caller's VideoCallActivity with all info ---
-        val intent = Intent(this, com.example.yenkasachat.webrtc.VideoCallActivity::class.java)
-        intent.putExtra("TARGET_USER_ID", targetUserId)
-        intent.putExtra("IS_CALLER", true)
-        intent.putExtra("CURRENT_USER_ID", senderId)
-        intent.putExtra("IS_VIDEO_CALL", isVideo)
-        startActivity(intent)
+        val intent = Intent(this, VideoCallActivity::class.java).apply {
+            putExtra("CURRENT_USER_ID", currentUserId)
+            putExtra("RECEIVER_ID", receiverId)
+            putExtra("IS_CALLER", true)
+            putExtra("IS_VIDEO_CALL", isVideo)
+        }
 
-        // --- 2️⃣ The VideoCallActivity itself will send the call_request ---
-        // No need to send here anymore; keeps logic centralized and ensures
-        // the room name and WebSocket connection are consistent.
+        Log.d("ChatActivity", "Launching VideoCallActivity with CURRENT_USER_ID=$currentUserId, RECEIVER_ID=$receiverId")
+        startActivity(intent)
     }
 
     private fun setupChatRecyclerView() {

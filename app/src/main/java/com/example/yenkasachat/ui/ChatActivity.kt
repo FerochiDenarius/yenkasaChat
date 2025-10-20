@@ -36,9 +36,11 @@ import com.example.yenkasachat.webrtc.VideoCallActivity
 import com.example.yenkasachat.adapter.MessageAdapter
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.Participant
+import com.example.yenkasachat.ui.IncomingCallActivity
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.util.TokenManager
-import com.example.yenkasachat.webrtc.WebSocketManager
+import com.example.yenkasachat.webrtc.WebSocketProvider
+import com.example.yenkasachat.webrtc.SignalingMessageType
 import com.google.android.gms.location.LocationServices
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
@@ -77,7 +79,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var replyingToMessage: ChatMessage? = null
     private lateinit var callButton: ImageView
     private lateinit var videoCallButton: ImageView
-    private val webSocketManager = WebSocketManager()
+    private val webSocketManager = WebSocketProvider.instance
     private var receiverParticipant: Participant? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -125,9 +127,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return // Exit if session is not valid
         }
 
-        // Safe to use non-null assertion here because retrieveSessionAndValidate ensures they are not null.
+        // --- Initialize handlers and helpers ---
         chatMessageHandler = ChatMessageHandler(this, this, token, senderId, roomId!!)
-
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         messageAdapter = MessageAdapter(senderId)
@@ -135,17 +136,56 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         chatActivityHelper = ChatActivityHelper(
             applicationContext,
-            this, // '''this''' is a valid ChatHelperCallback
+            this,
             token,
             senderId,
-            roomId!!, // Use non-null roomId
+            roomId!!,
             fusedLocationClient,
             uiHandler
         )
 
         messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
+
+        // --- Connect WebSocket once (shared via WebSocketProvider) ---
         webSocketManager.connect(this)
 
+        // --- Listen for signaling messages (CALL_REQUEST / ACCEPT / REJECT) ---
+        lifecycleScope.launch {
+            webSocketManager.signalingMessages.collect { msg ->
+                when (msg.type) {
+                    SignalingMessageType.CALL_REQUEST -> {
+                        Log.i("ChatActivity", "📞 Incoming ${if (msg.isVideo == true) "video" else "audio"} call from ${msg.callerName}")
+
+                        // Launch the new IncomingCallActivity
+                        val intent = Intent(this@ChatActivity, IncomingCallActivity::class.java).apply {
+                            putExtra("CALLER_ID", msg.fromUserId)
+                            putExtra("CALLER_NAME", msg.callerName ?: "Unknown")
+                            putExtra("CALLER_PHOTO", msg.callerPhoto ?: "")
+                            putExtra("IS_VIDEO_CALL", msg.isVideo ?: true)
+                            putExtra("ROOM_URL", msg.roomUrl)
+                            putExtra("ROOM_TOKEN", msg.token)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                        }
+                        startActivity(intent)
+
+                    }
+
+                    // Optional: handle other signaling types if needed
+                    SignalingMessageType.CALL_ACCEPT -> {
+                        Log.d("ChatActivity", "✅ CALL_ACCEPT received — ignoring here (handled in VideoCallActivity)")
+                    }
+
+                    SignalingMessageType.CALL_REJECT -> {
+                        Log.d("ChatActivity", "🚫 CALL_REJECT received — call dismissed.")
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+
+        // --- Set up UI and chat ---
         setupChatRecyclerView()
         setupListeners()
 
@@ -287,6 +327,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun startVideoCall(isVideo: Boolean) {
         val receiverId = receiverParticipant?._id
+        val receiverName = receiverParticipant?.username
         val currentUserId = TokenManager.getUserId(this)
 
         if (receiverId.isNullOrBlank() || currentUserId.isNullOrBlank()) {
@@ -307,6 +348,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val intent = Intent(this, VideoCallActivity::class.java).apply {
             putExtra("CURRENT_USER_ID", currentUserId)
             putExtra("RECEIVER_ID", receiverId)
+            putExtra("RECEIVER_NAME", receiverName)
             putExtra("IS_CALLER", true)
             putExtra("IS_VIDEO_CALL", isVideo)
         }

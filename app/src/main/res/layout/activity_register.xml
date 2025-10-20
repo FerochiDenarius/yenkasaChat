@@ -39,7 +39,6 @@
             android:id="@+id/layoutEmail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="0dp"
             android:visibility="visible">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -55,7 +54,6 @@
             android:id="@+id/layoutPhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="0dp"
             android:visibility="gone">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -96,7 +94,7 @@
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Password input with Visibility Toggle -->
+        <!-- Password input -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layoutPassword"
             android:layout_width="match_parent"
@@ -112,7 +110,7 @@
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Confirm Password input with Visibility Toggle -->
+        <!-- Confirm Password input -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layoutConfirmPassword"
             android:layout_width="match_parent"
@@ -128,6 +126,35 @@
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- ✅ WhatsApp-style Terms Agreement -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="16dp">
+
+            <CheckBox
+                android:id="@+id/checkTerms"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:text="I agree to the"
+                android:textColor="@color/black" />
+
+            <TextView
+                android:id="@+id/textTermsLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" User Agreement"
+                android:textColor="@color/purple_700"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingStart="4dp" />
+        </LinearLayout>
+
+        <!-- Register Button -->
         <Button
             android:id="@+id/btnRegister"
             android:layout_width="match_parent"

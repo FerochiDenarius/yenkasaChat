@@ -346,6 +346,7 @@ object TokenManager {
             Log.e(TAG, "Error saving location", e)
         }
     }
+    fun getUserName(context: Context): String? = getUsername(context)
 
     fun getLocation(context: Context): String? {
         return try {

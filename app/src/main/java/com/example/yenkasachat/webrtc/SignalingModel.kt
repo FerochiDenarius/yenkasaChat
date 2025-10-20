@@ -15,9 +15,10 @@ enum class SignalingMessageType {
     CONNECTION_ACK,
     CALL_ENDED,
     USER_BUSY,
-    CALL_REQUEST,   // ✅ Added for 1-on-1 call request
-    CALL_ACCEPT,    // ✅ Added for call acceptance
-    CALL_REJECT     // ✅ Added for call rejection
+    CALL_REQUEST,   // ✅ 1-on-1 call request
+    CALL_ACCEPT,    // ✅ Call accepted
+    CALL_REJECT ,    // ✅ Call rejected
+    CALL_ACCEPT_WITH_ROOM
 }
 
 // -----------------------------
@@ -25,10 +26,22 @@ enum class SignalingMessageType {
 // -----------------------------
 data class SignalingMessage(
     val type: SignalingMessageType,
+
+    // --- Standard WebRTC fields ---
     val sdp: String? = null,
     val candidate: CandidateData? = null,
+
+    // --- Common meta ---
     val fromUserId: String? = null,
-    val error: String? = null
+    val error: String? = null,
+
+    // --- ✅ Caller / callee metadata ---
+    val callerName: String? = null,      // display name of the caller
+    val callerPhoto: String? = null,     // profile image URL of the caller
+    val isVideo: Boolean? = null,        // true for video, false for audio
+    val roomName: String? = null,        // Daily room name (if provided)
+    val roomUrl: String? = null,         // Daily room URL
+    val token: String? = null            // Daily meeting token
 )
 
 // -----------------------------

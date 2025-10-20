@@ -1,0 +1,49 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1C1C1E">
+
+    <TextView
+        android:id="@+id/textCallerName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Incoming call from..."
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="120dp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/textCallType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Video call"
+        android:textColor="@android:color/darker_gray"
+        android:textSize="18sp"
+        android:layout_below="@id/textCallerName"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp" />
+
+    <ImageButton
+        android:id="@+id/btnAcceptCall"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="150dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/sym_action_call"
+        android:contentDescription="Accept Call" />
+
+    <ImageButton
+        android:id="@+id/btnRejectCall"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="40dp"
+        android:layout_centerHorizontal="true"
+        android:background="@android:color/transparent"
+        android:src="@drawable/ic_call_end"
+        android:contentDescription="Reject Call" />
+</RelativeLayout>

@@ -8,7 +8,6 @@ import android.os.Build // Added
 import android.util.Log
 import com.cloudinary.android.MediaManager
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.network.SocketManager
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.util.OneSignalHelper // Make sure this import is correct
 import com.google.firebase.FirebaseApp
@@ -104,16 +103,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         Log.d("MyApplication", "MediaManager initialized.")
 
         Log.d("MyApplication", "Application onCreate finished.")
-
-        // --- SOCKET.IO INITIALIZATION ---
-        val userId = TokenManager.getUserId(this)
-        if (!userId.isNullOrEmpty()) {
-            SocketManager.connect(userId)
-            Log.d("MyApplication", "Socket.IO connected for user $userId")
-        } else {
-            Log.w("MyApplication", "Socket.IO not started (no logged-in user)")
-        }
-
     }
 
     private fun createNotificationChannels() {

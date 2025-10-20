@@ -154,6 +154,12 @@ app.get('/reset-password', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 console.log("server.js: Static file serving configured for /public.");
 
+// ✅ Serve User Agreement / Terms
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'user_agreement.html'));
+});
+
+
 // ---------------------------------
 // Error Handling
 // ---------------------------------

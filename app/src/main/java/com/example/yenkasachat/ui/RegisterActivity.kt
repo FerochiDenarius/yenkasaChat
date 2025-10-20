@@ -2,6 +2,7 @@ package com.example.yenkasachat.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -9,10 +10,10 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.RegisterRequest
 import com.example.yenkasachat.model.LoginResponse
 import com.example.yenkasachat.network.ApiClient
+import com.google.android.material.textfield.TextInputEditText
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import com.google.android.material.textfield.TextInputEditText
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -26,6 +27,8 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var editConfirmPassword: TextInputEditText
     private lateinit var btnRegister: Button
     private lateinit var textLoginLink: TextView
+    private lateinit var checkTerms: CheckBox
+    private lateinit var textTermsLink: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,10 +44,19 @@ class RegisterActivity : AppCompatActivity() {
         editConfirmPassword = findViewById(R.id.editConfirmPassword)
         btnRegister = findViewById(R.id.btnRegister)
         textLoginLink = findViewById(R.id.textLoginLink)
+        checkTerms = findViewById(R.id.checkTerms)
+        textTermsLink = findViewById(R.id.textTermsLink)
 
+        // Handle email/phone visibility
         radioEmail.setOnCheckedChangeListener { _, isChecked ->
             editEmail.visibility = if (isChecked) View.VISIBLE else View.GONE
             editPhone.visibility = if (!isChecked) View.VISIBLE else View.GONE
+        }
+
+        // Open User Agreement Activity when link is tapped
+        textTermsLink.setOnClickListener {
+            val intent = Intent(this, UserAgreementActivity::class.java)
+            startActivity(intent)
         }
 
         btnRegister.setOnClickListener {
@@ -92,6 +104,11 @@ class RegisterActivity : AppCompatActivity() {
 
         if (password != confirmPassword) {
             editConfirmPassword.error = "Passwords do not match"
+            return
+        }
+
+        if (!checkTerms.isChecked) {
+            Toast.makeText(this, "You must agree to the User Agreement before continuing.", Toast.LENGTH_LONG).show()
             return
         }
 

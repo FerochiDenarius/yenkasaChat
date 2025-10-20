@@ -295,6 +295,8 @@ class ChatActivityHelper(
         if (permissions[Manifest.permission.RECORD_AUDIO] == false)
             callback.showToast("Audio recording permission denied.", Toast.LENGTH_SHORT)
     }
+// Add this new function inside your ChatActivityHelper class
+
 
     private fun parseError(response: Response<*>): String {
         return try {

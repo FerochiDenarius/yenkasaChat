@@ -59,8 +59,9 @@ object CallNotificationHandler {
                 putExtra("IS_VIDEO_CALL", isVideo)
                 putExtra("ROOM_URL", roomUrl)
                 putExtra("ROOM_TOKEN", token)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP)            }
 
             val acceptPendingIntent = PendingIntent.getActivity(
                 context,

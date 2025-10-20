@@ -71,25 +71,36 @@ class ChatMessageHandler(
         postMessage(messageMap)
     }
 
+// Replace your old uploadFileToCloudinary function with this one
+
     fun uploadFileToCloudinary(uri: Uri, type: String) {
-        Log.d("ChatMessageHandler", "Attempting to upload $type file. URI: $uri") // Added pre-upload log
-        MediaManager.get().upload(uri)
-            .option("resource_type", if (type == "audio" || type == "video") "video" else "auto") // Optional: Be specific for audio/video
+        Log.d("ChatMessageHandler", "Preparing to upload $type file. Original URI: $uri")
+
+        // 1. ✅ THIS IS THE FIX: Copy the file to a safe local directory first.
+        val safeUri = copyFileToCacheDir(uri)
+
+        // 2. ✅ Only proceed if the copy was successful.
+        if (safeUri == null) {
+            Log.e("ChatMessageHandler", "Upload cancelled because file copy failed.")
+            return // Stop the function here
+        }
+
+        Log.d("ChatMessageHandler", "File copied successfully. Safe URI for upload: $safeUri")
+
+        // 3. ✅ Use the 'safeUri' for the upload, NOT the original 'uri'.
+        MediaManager.get().upload(safeUri)
+            .option("resource_type", if (type == "audio" || type == "video") "video" else "auto")
             .callback(object : UploadCallback {
                 override fun onStart(requestId: String?) {
-                    // Log when the upload starts
                     Log.d("ChatMessageHandler", "Cloudinary upload started. Request ID: $requestId, Type: $type")
                 }
 
                 override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {
-                    // Optional: Log progress if needed, can be verbose
-                    // Log.d("ChatMessageHandler", "Cloudinary upload progress. Request ID: $requestId, Bytes: $bytes/$totalBytes")
+                    // Optional: Log progress if needed
                 }
 
                 override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
-                    // Log the full result data from Cloudinary on success
-                    Log.d("ChatMessageHandler", "Cloudinary upload success. Request ID: $requestId, Type: $type, Result: $resultData")
-
+                    Log.d("ChatMessageHandler", "Cloudinary upload success. Result: $resultData")
                     val secureUrl = resultData?.get("secure_url") as? String
                     if (!secureUrl.isNullOrBlank()) {
                         Log.i("ChatMessageHandler", "Secure URL extracted: $secureUrl. Proceeding to send message.")
@@ -98,31 +109,50 @@ class ChatMessageHandler(
                             "audio" -> "audioUrl"
                             "video" -> "videoUrl"
                             "file" -> "fileUrl"
-                            else -> "fileUrl" // Default case
+                            else -> "fileUrl"
                         }
                         sendMessage(mapOf(mediaKey to secureUrl))
                     } else {
-                        Log.e("ChatMessageHandler", "Cloudinary upload succeeded for Request ID: $requestId, Type: $type, but secure_url is null or blank. Result: $resultData")
-                        callback.onError("Upload to Cloudinary succeeded but no URL was returned.")
+                        Log.e("ChatMessageHandler", "Cloudinary upload succeeded but secure_url is null or blank.")
+                        callback.onError("Upload succeeded but no URL was returned.")
                     }
                 }
 
                 override fun onError(requestId: String?, error: ErrorInfo?) {
-                    // Log detailed error information from Cloudinary
-                    Log.e("ChatMessageHandler", "Cloudinary upload failed. Request ID: $requestId, Type: $type, Error Code: ${error?.code}, Description: ${error?.description}, Full Error: $error")
+                    Log.e("ChatMessageHandler", "Cloudinary upload failed. Error: ${error?.description}")
                     callback.onError("Upload failed: ${error?.description} (Code: ${error?.code})")
                 }
 
                 override fun onReschedule(requestId: String?, error: ErrorInfo?) {
-                    // Log if the upload is rescheduled
-                    Log.w("ChatMessageHandler", "Cloudinary upload rescheduled. Request ID: $requestId, Type: $type, Error: ${error?.description}")
+                    Log.w("ChatMessageHandler", "Cloudinary upload rescheduled. Error: ${error?.description}")
                     callback.onError("Upload rescheduled: ${error?.description}")
                 }
-            }).dispatch() // Don't forget to call dispatch() to start the upload
+            }).dispatch()
     }
 
     fun checkAndUploadAudio(uri: Uri) {
         uploadFileToCloudinary(uri, "audio")
+    }
+// Add this new private function inside your ChatMessageHandler class
+
+    private fun copyFileToCacheDir(fileUri: Uri): Uri? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(fileUri) ?: return null
+            val fileName = "upload_${System.currentTimeMillis()}"
+            val outputFile = java.io.File(context.cacheDir, fileName)
+            val outputStream = java.io.FileOutputStream(outputFile)
+
+            inputStream.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            Uri.fromFile(outputFile)
+        } catch (e: Exception) {
+            Log.e("ChatMessageHandler", "Failed to copy file from URI: $fileUri", e)
+            callback.onError("Failed to process the selected file.")
+            null
+        }
     }
 
     private fun postMessage(messageMap: Map<String, Any?>) {
@@ -140,6 +170,7 @@ class ChatMessageHandler(
                     callback.onError("Message send failed: $errorBodyString (Code: ${response.code()})")
                 }
             }
+
 
             override fun onFailure(call: Call<ChatMessage>, t: Throwable) {
                 Log.e("ChatMessageHandler", "Send message to backend error (network/other). Message: ${t.message}", t)

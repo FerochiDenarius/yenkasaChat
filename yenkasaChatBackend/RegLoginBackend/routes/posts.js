@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
 const Post = require("../models/post"); // ✅ FIXED: lowercase filename
-const { verifyToken } = require("../middleware/auth");
+const verifyToken = require("../middleware/auth");
 const router = express.Router();
 
 // ✅ Multer for file uploads

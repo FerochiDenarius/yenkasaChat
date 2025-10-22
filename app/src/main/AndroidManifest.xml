@@ -70,9 +70,13 @@
 
 
 
-
         <!-- App Activities -->
         <activity android:name=".ui.LoginActivity" />
+
+        <activity android:name=".ui.MenuActivity"
+            android:exported="false"
+            android:label="Menu" />
+
         <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.ForgotPasswordActivity" />
         <activity android:name=".ui.MainActivity" />

@@ -32,12 +32,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // ✅ Setup Toolbar so the menu appears
+        // ✅ Setup Toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.title = "Yenkasa Feed"
 
-        // ✅ Validate user authentication
+        // ✅ Token validation
         val retrievedToken = TokenManager.getToken(this)
         val retrievedUserId = TokenManager.getUserId(this)
 
@@ -49,13 +49,13 @@ class MainActivity : AppCompatActivity() {
         }
         userId = retrievedUserId
 
-        // ✅ Setup RecyclerView
+        // ✅ RecyclerView setup
         recyclerViewPosts = findViewById(R.id.recyclerViewPosts)
         recyclerViewPosts.layoutManager = LinearLayoutManager(this)
         postAdapter = PostAdapter(posts)
         recyclerViewPosts.adapter = postAdapter
 
-        // ✅ Floating action button to create new post
+        // ✅ Floating action button to add post
         findViewById<FloatingActionButton>(R.id.btnAddPost).setOnClickListener {
             startActivity(Intent(this, PostActivity::class.java))
         }
@@ -65,10 +65,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        fetchPosts() // Refresh feed when returning from PostActivity
+        fetchPosts()
     }
 
-    // ✅ Fetch posts from backend
+    // ✅ Fetch posts
     private fun fetchPosts() {
         ApiClient.apiService.getAllPosts().enqueue(object : Callback<List<Post>> {
             override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
@@ -101,39 +101,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Inflate your existing main_menu.xml
+    // ✅ Inflate a simple menu icon instead of all items
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
+        menuInflater.inflate(R.menu.toolbar_menu, menu)
         return true
     }
 
-    // ✅ Handle menu item navigation
+    // ✅ When user clicks the toolbar menu icon → open full MenuActivity
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_contacts -> {
-                startActivity(Intent(this, ContactsActivity::class.java))
-                true
-            }
-            R.id.action_chat_rooms -> {
-                startActivity(Intent(this, ChatRoomsActivity::class.java))
-                true
-            }
-            R.id.action_account -> {
-                startActivity(Intent(this, AccountInfoActivity::class.java))
-                true
-            }
-            R.id.action_verify_account -> {
-                Toast.makeText(this, "Verification coming soon!", Toast.LENGTH_SHORT).show()
-                true
-            }
-            R.id.action_settings -> {
-                Toast.makeText(this, "Settings coming soon!", Toast.LENGTH_SHORT).show()
-                true
-            }
-            R.id.action_logout -> {
-                TokenManager.clearAll(this)
-                startActivity(Intent(this, LoginActivity::class.java))
-                finish()
+            R.id.action_open_menu -> {
+                startActivity(Intent(this, MenuActivity::class.java))
                 true
             }
             else -> super.onOptionsItemSelected(item)

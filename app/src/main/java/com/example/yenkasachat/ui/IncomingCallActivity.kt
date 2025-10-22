@@ -4,6 +4,7 @@ import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
@@ -30,6 +31,14 @@ class IncomingCallActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ✅ Make sure screen turns on and shows even if device is locked
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
+
         setContentView(R.layout.activity_incoming_call)
 
         webSocketManager = WebSocketProvider.instance
@@ -37,11 +46,12 @@ class IncomingCallActivity : AppCompatActivity() {
         callerId = intent.getStringExtra("CALLER_ID")
         callerName = intent.getStringExtra("CALLER_NAME")
         isVideo = intent.getBooleanExtra("IS_VIDEO_CALL", true)
-        roomUrl = intent.getStringExtra("ROOM_URL")   // ✅ now passed with the call request
+        roomUrl = intent.getStringExtra("ROOM_URL")
         roomToken = intent.getStringExtra("ROOM_TOKEN")
 
         findViewById<TextView>(R.id.textCallerName).text = callerName ?: "Unknown"
-        findViewById<TextView>(R.id.textCallType).text = if (isVideo) "Video Call" else "Audio Call"
+        findViewById<TextView>(R.id.textCallType).text =
+            if (isVideo) "Video Call" else "Audio Call"
 
         playIncomingTone()
 
@@ -69,15 +79,16 @@ class IncomingCallActivity : AppCompatActivity() {
         val token = roomToken ?: return
         val userName = TokenManager.getUsername(this) ?: "Receiver"
 
-        Log.i(TAG, "Accepting call from $caller — joining room $url")
+        Log.i(TAG, "✅ Accepting call from $caller — joining room $url")
 
-        // Send simple ACK (so caller can update UI if needed)
+        // Notify caller that receiver accepted
         webSocketManager.sendCallAccept(caller)
 
         Toast.makeText(this, "Connecting to call...", Toast.LENGTH_SHORT).show()
 
-        // Launch call activity using the same room info
+        // Launch VideoCallActivity safely even if backgrounded
         val intent = Intent(this, VideoCallActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra("CURRENT_USER_ID", TokenManager.getUserId(this@IncomingCallActivity))
             putExtra("RECEIVER_ID", caller)
             putExtra("RECEIVER_NAME", callerName)
@@ -86,6 +97,7 @@ class IncomingCallActivity : AppCompatActivity() {
             putExtra("ROOM_URL", url)
             putExtra("ROOM_TOKEN", token)
         }
+
         startActivity(intent)
         finish()
     }
@@ -104,12 +116,13 @@ class IncomingCallActivity : AppCompatActivity() {
      */
     private fun playIncomingTone() {
         try {
-            ringtone = MediaPlayer.create(this, R.raw.incoming_call).apply {
+            stopRingtone() // Ensure no overlap
+            ringtone = MediaPlayer.create(this, R.raw.incoming_call)?.apply {
                 isLooping = true
                 start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing ringtone: ${e.message}")
+            Log.e(TAG, "❌ Error playing ringtone: ${e.message}")
         }
     }
 
@@ -123,7 +136,7 @@ class IncomingCallActivity : AppCompatActivity() {
                 it.release()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Error stopping ringtone: ${e.message}")
+            Log.w(TAG, "⚠️ Error stopping ringtone: ${e.message}")
         } finally {
             ringtone = null
         }

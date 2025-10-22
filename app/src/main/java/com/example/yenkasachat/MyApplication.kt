@@ -6,6 +6,8 @@ import android.app.NotificationManager // Added
 import android.content.Context
 import android.os.Build // Added
 import android.util.Log
+import com.example.yenkasachat.notifications.IncomingCallService
+import com.pusher.pushnotifications.PushNotifications
 import com.cloudinary.android.MediaManager
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
@@ -41,6 +43,13 @@ class MyApplication : Application(), OSSubscriptionObserver {
         ApiClient.init(this)
         Log.d("MyApplication", "ApiClient initialized")
 
+        // Initialize Pusher Beams
+        PushNotifications.start(applicationContext, "f34a0d73-54be-4201-af13-7fd4dfa88bc0")
+
+
+        // Subscribe to an interest (like a topic)
+        PushNotifications.addDeviceInterest("hello")
+
         // Initialize Firebase
         FirebaseApp.initializeApp(this)
         Log.d("MyApplication", "FirebaseApp initialized")
@@ -59,6 +68,8 @@ class MyApplication : Application(), OSSubscriptionObserver {
         OneSignal.initWithContext(this)
         OneSignal.setAppId(ONESIGNAL_APP_ID) // Make sure this is called after initWithContext
         Log.d(ONE_SIGNAL_TAG, "OneSignal initialized with context and App ID: $ONESIGNAL_APP_ID")
+
+
 
         OneSignal.addSubscriptionObserver(this)
         Log.d(ONE_SIGNAL_TAG, "OSSubscriptionObserver added.")

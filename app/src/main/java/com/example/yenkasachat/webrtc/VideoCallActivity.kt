@@ -179,6 +179,12 @@ class VideoCallActivity : AppCompatActivity() {
 
         // Load the HTML early; JS will notify pageReady()
         webView.loadDataWithBaseURL("https://daily.co", DAILY_HTML, "text/html", "utf-8", null)
+        webView.postDelayed({
+            if (!pageLoaded) {
+                Log.w(TAG, "⚠️ Fallback join trigger — forcing flushPendingJoinIfAny()")
+                flushPendingJoinIfAny()
+            }
+        }, 2000)
 
         if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, CAMERA_PERMISSION_REQUEST_CODE)

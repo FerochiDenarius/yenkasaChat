@@ -1,96 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:padding="8dp"
-    android:background="@color/white">
+    android:background="#F9F9F9"
+    tools:context=".ui.MainActivity">
 
-    <!-- Left: Users list -->
+    <!-- Top Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:titleTextColor="@android:color/white"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+    <!-- RecyclerView to show posts -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewUsers"
-        android:layout_width="0dp"
+        android:id="@+id/recyclerViewPosts"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="3"
+        android:layout_below="@id/toolbar"
+        android:padding="8dp"
         android:clipToPadding="false"
-        android:paddingEnd="8dp"
+        tools:listitem="@layout/item_post"
         android:scrollbars="vertical" />
 
-    <!-- Right: Sidebar menu -->
-    <ScrollView
+    <!-- Floating Action Button to add a new post -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAddPost"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="end">
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        android:contentDescription="Add Post"
+        android:backgroundTint="@color/purple_500"
+        app:tint="@android:color/white"
+        app:srcCompat="@drawable/ic_add" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end"
-            android:padding="4dp">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnContacts"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Contacts"
-                app:icon="@drawable/ic_contacts"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnChatRooms"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chat Rooms"
-                app:icon="@drawable/ic_chat"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAccountInfo"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Account Info"
-                app:icon="@drawable/ic_info"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnVerify"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Verify"
-                app:icon="@drawable/ic_verified"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSettings"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Settings"
-                app:icon="@drawable/ic_settings"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLogout"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Logout"
-                app:icon="@drawable/ic_logout"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
-
-        </LinearLayout>
-    </ScrollView>
-</LinearLayout>
+</RelativeLayout>

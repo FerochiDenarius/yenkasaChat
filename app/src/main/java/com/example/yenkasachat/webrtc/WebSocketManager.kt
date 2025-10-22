@@ -59,7 +59,7 @@ class WebSocketManager {
 
         currentUserId = userId
         currentUserName = TokenManager.getUsername(context)
-        val profileImage = TokenManager.getProfilePicUrl(context)
+        currentUserPhoto = TokenManager.getProfilePicUrl(context)
 
         val request = Request.Builder()
             .url("$webSocketUrl?_id=$userId") // ✅ Backend expects _id param
@@ -275,13 +275,17 @@ class WebSocketManager {
     }
 
     fun sendCallReject(receiverId: String) {
-        val json = JSONObject().apply {
-            put("type", "call_reject")
-            put("fromUserId", currentUserId)
-            put("_id", receiverId)
+        try {
+            val json = JSONObject().apply {
+                put("type", "call_reject")
+                put("fromUserId", currentUserId)
+                put("_id", receiverId)
+            }
+            webSocket?.send(json.toString())
+            Log.i(TAG, "🚫 Sent CALL_REJECT to $receiverId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending CALL_REJECT: ${e.message}", e)
         }
-        Log.i(TAG, "🚫 Sending CALL_REJECT to $receiverId")
-        sendMessage(json.toString())
     }
 
     // ----------------------------------------------------------

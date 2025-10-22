@@ -62,6 +62,9 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
+    // ✅ Pusher Beams SDK (v1.9.0 stable)
+    implementation("com.pusher:push-notifications-android:1.9.0")
+    implementation("com.google.firebase:firebase-iid:21.1.0")
 
     // ✅ OneSignal SDK (v4.8.6 stable)
     implementation("com.onesignal:OneSignal:4.8.6")

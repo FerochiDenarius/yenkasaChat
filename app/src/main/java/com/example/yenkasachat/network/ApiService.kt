@@ -23,12 +23,18 @@ import com.example.yenkasachat.model.EmailRequest
 import com.example.yenkasachat.model.ConfirmRequest
 import com.example.yenkasachat.model.PhoneRequest
 import com.example.yenkasachat.model.ConfirmPhoneRequest
+import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.ResetPasswordRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response // Ensure this is imported for suspend functions
 import retrofit2.http.*
+import okhttp3.RequestBody
+import retrofit2.http.Multipart
+import retrofit2.http.POST
+import retrofit2.http.Part
+
 
 
 // --- Data classes for Unread Count feature ---
@@ -232,6 +238,21 @@ interface ApiService {
         @Path("messageId") messageId: String,
         @Header("Authorization") authToken: String // Assuming Bearer token authentication
     ): Response<Unit> // Response<Unit> is typical for DELETE if no body is returned
+
+    //post activities calls
+
+    // ✅ Fetch all posts
+    @GET("posts")
+    fun getAllPosts(): Call<List<Post>>
+
+    @Multipart
+    @POST("/posts")
+    fun createPost(
+        @Part("caption") caption: RequestBody,
+        @Part("mediaType") mediaType: RequestBody,
+        @Part mediaFile: MultipartBody.Part? = null
+    ): Call<Post>
+
 
     @GET("unread/all")
     suspend fun getAllUnreadCountsForUser(

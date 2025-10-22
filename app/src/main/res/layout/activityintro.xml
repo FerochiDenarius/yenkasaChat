@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#FFFFFF"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.IntroActivity">
+
+    <!-- Top illustration -->
+    <ImageView
+        android:id="@+id/introImage"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:src="@drawable/introimage"
+        android:contentDescription="Illustration"
+        android:layout_marginBottom="20dp"
+        android:adjustViewBounds="true" />
+
+    <!-- App name / tagline -->
+    <TextView
+        android:id="@+id/textAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="YenkasaChat"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#222222"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/textTagline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connect. Share. Chat Freely."
+        android:textSize="16sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="40dp" />
+
+    <!-- Get Started button -->
+    <Button
+        android:id="@+id/buttonGetStarted"
+        android:layout_width="250dp"
+        android:layout_height="50dp"
+        android:backgroundTint="@color/teal_700"
+        android:text="Get Started"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:elevation="4dp"
+        android:layout_marginTop="20dp" />
+
+</LinearLayout>

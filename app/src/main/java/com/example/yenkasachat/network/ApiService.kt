@@ -246,7 +246,7 @@ interface ApiService {
     fun getAllPosts(): Call<List<Post>>
 
     @Multipart
-    @POST("/posts")
+    @POST("posts")
     fun createPost(
         @Part("caption") caption: RequestBody,
         @Part("mediaType") mediaType: RequestBody,

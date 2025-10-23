@@ -159,6 +159,8 @@ app.get('/terms', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'user_agreement.html'));
 });
 
+//Post routes
+
 const postRoutes = require("./routes/posts");
 app.use("/api/posts", postRoutes);
 

@@ -1,8 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
-const Post = require("../models/post"); // ✅ FIXED: lowercase filename
-const verifyToken = require("../middleware/auth");
+const Post = require("../models/post");
+const verifyToken = require("../middleware/auth"); // ✅ fix: not destructured
 const router = express.Router();
 
 // ✅ Multer for file uploads
@@ -10,11 +10,12 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // ✅ CREATE POST (Text, Image, Video, or Audio)
-router.post("/", verifyToken, upload.single("mediaFile"), async (req, res) => {
+router.post("/", verifyToken, upload.single("media"), async (req, res) => {  // ✅ fix: use "media" (Android sends this)
   try {
     const userId = req.user.id;
     const { caption, mediaType } = req.body;
 
+    // Validate: must contain text or file
     if (!caption && !req.file) {
       return res.status(400).json({ message: "Post must have text or media." });
     }
@@ -27,7 +28,7 @@ router.post("/", verifyToken, upload.single("mediaFile"), async (req, res) => {
       const resourceType =
         mediaType === "video" || mediaType === "audio" ? "video" : "image";
 
-      // Upload file to Cloudinary
+      // ✅ Upload file to Cloudinary
       const uploadResult = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
@@ -63,7 +64,10 @@ router.post("/", verifyToken, upload.single("mediaFile"), async (req, res) => {
     res.status(201).json(populatedPost);
   } catch (error) {
     console.error("Error creating post:", error);
-    res.status(500).json({ message: "Error creating post", error: error.message });
+    res.status(500).json({
+      message: "Error creating post",
+      error: error.message,
+    });
   }
 });
 
@@ -76,7 +80,10 @@ router.get("/", verifyToken, async (req, res) => {
     res.status(200).json(posts);
   } catch (error) {
     console.error("Error fetching posts:", error);
-    res.status(500).json({ message: "Failed to fetch posts", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch posts",
+      error: error.message,
+    });
   }
 });
 
@@ -89,7 +96,10 @@ router.get("/my", verifyToken, async (req, res) => {
     res.status(200).json(posts);
   } catch (error) {
     console.error("Error fetching user posts:", error);
-    res.status(500).json({ message: "Failed to fetch user posts", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch user posts",
+      error: error.message,
+    });
   }
 });
 
@@ -110,7 +120,10 @@ router.delete("/:id", verifyToken, async (req, res) => {
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
     console.error("Error deleting post:", error);
-    res.status(500).json({ message: "Error deleting post", error: error.message });
+    res.status(500).json({
+      message: "Error deleting post",
+      error: error.message,
+    });
   }
 });
 

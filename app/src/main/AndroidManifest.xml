@@ -76,7 +76,8 @@
         <activity android:name=".ui.MenuActivity"
             android:exported="false"
             android:label="Menu" />
-
+        <!-- Make sure this declaration for PostActivity exists -->
+        <activity android:name=".ui.PostActivity" />
         <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.ForgotPasswordActivity" />
         <activity android:name=".ui.MainActivity" />

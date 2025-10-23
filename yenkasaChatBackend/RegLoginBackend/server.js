@@ -12,7 +12,6 @@ const morgan = require('morgan');
 const http = require('http');
 const { Server } = require("socket.io");
 const User = require('./models/user.model'); // ✅ Add this
-const socialRoutes = require("./routes/social.routes");
 
 const app = express();
 console.log("server.js: Starting application setup...");
@@ -120,7 +119,6 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
 safeMount('/api/profile', './routes/profile');
-safeMount('/api/social', './routes/social.routes');
 
 console.log("✅ Finished mounting API routes.");
 
@@ -173,6 +171,8 @@ app.get('/terms', (req, res) => {
 const postRoutes = require("./routes/posts");
 app.use("/api/posts", postRoutes);
 
+const socialRoutes = require('./routes/social.routes');
+app.use('/api/social', socialRoutes);
 
 
 // ---------------------------------

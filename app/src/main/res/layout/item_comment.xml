@@ -1,0 +1,70 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="8dp">
+
+    <!-- Profile image -->
+    <ImageView
+        android:id="@+id/imageUser"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:layout_marginEnd="10dp"
+        android:src="@drawable/ic_user_modern"
+        android:background="@drawable/circle_bg"
+        android:scaleType="centerCrop" />
+
+    <!-- Bubble container -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:background="@drawable/bg_comment_bubble"
+        android:elevation="1dp">
+
+        <!-- Username + timestamp row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/textUsername"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Username"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="#222" />
+
+            <!-- Spacer pushes timestamp to right -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/textTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2h ago"
+                android:textColor="#777"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Comment text -->
+        <TextView
+            android:id="@+id/textComment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="This is a comment."
+            android:textSize="14sp"
+            android:textColor="#333"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+</LinearLayout>

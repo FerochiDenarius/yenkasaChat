@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -17,7 +18,7 @@
             android:id="@+id/imageUser"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_user_placeholder"
+            android:src="@drawable/ic_contacts"
             android:layout_marginEnd="8dp"
             android:background="@drawable/circle_bg"
             android:scaleType="centerCrop" />
@@ -28,7 +29,8 @@
             android:layout_height="wrap_content"
             android:text="Username"
             android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:textColor="#111" />
     </LinearLayout>
 
     <!-- Caption -->
@@ -69,16 +71,16 @@
         android:src="@drawable/ic_play"
         android:visibility="gone" />
 
-    <!-- Like + Timestamp Section -->
+    <!-- Interaction Row: Likes + Comments + Views + Time -->
     <LinearLayout
-        android:id="@+id/likeSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginTop="8dp"
         android:paddingTop="6dp">
 
+        <!-- Like -->
         <ImageButton
             android:id="@+id/buttonLike"
             android:layout_width="28dp"
@@ -94,14 +96,35 @@
             android:text="0 likes"
             android:textColor="#444"
             android:textSize="14sp"
+            android:layout_marginStart="4dp" />
+
+        <!-- Comments -->
+        <TextView
+            android:id="@+id/textComments"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" • 0 comments"
+            android:textColor="#555"
+            android:textSize="14sp"
+            android:layout_marginStart="8dp" />
+
+        <!-- Views -->
+        <TextView
+            android:id="@+id/textViews"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" • 0 views"
+            android:textColor="#555"
+            android:textSize="14sp"
             android:layout_marginStart="6dp" />
 
-        <!-- This spacer view will expand to fill all available space -->
+        <!-- Spacer pushes timestamp to the right -->
         <View
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_weight="1" />
 
+        <!-- Timestamp -->
         <TextView
             android:id="@+id/textTimestamp"
             android:layout_width="wrap_content"

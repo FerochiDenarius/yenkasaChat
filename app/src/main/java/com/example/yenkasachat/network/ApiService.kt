@@ -26,6 +26,7 @@ import com.example.yenkasachat.model.ConfirmPhoneRequest
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.network.model.ToggleLikeResponse
 import com.example.yenkasachat.model.ResetPasswordRequest
+import com.example.yenkasachat.model.Comment
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
@@ -272,6 +273,19 @@ interface ApiService {
     suspend fun getAllUnreadCountsForUser(
         @Query("userId") userId: String
     ): Response<AllUnreadCountsResponse>
+//comments api calls
+@GET("social/comments/{postId}")
+fun getComments(
+    @Header("Authorization") token: String,
+    @Path("postId") postId: String
+): Call<List<Comment>>
+
+    @POST("social/comment/{postId}")
+    fun addComment(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String,
+        @Body body: Map<String, String>
+    ): Call<Comment>
 
     // ✅ Fetch profile
     @GET("profile")

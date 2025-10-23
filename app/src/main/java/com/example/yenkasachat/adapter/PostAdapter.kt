@@ -15,6 +15,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.ui.CommentsActivity
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -37,6 +38,9 @@ class PostAdapter(private val posts: MutableList<Post>) :
         val buttonLike: ImageButton = itemView.findViewById(R.id.buttonLike)
         val textLikes: TextView = itemView.findViewById(R.id.textLikes)
         val textTimestamp: TextView = itemView.findViewById(R.id.textTimestamp)
+        val textComments: TextView = itemView.findViewById(R.id.textComments)
+        val textViews: TextView = itemView.findViewById(R.id.textViews)
+
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
@@ -70,6 +74,17 @@ class PostAdapter(private val posts: MutableList<Post>) :
         holder.buttonLike.setImageResource(
             if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
         )
+
+        // Comments and views
+        holder.textComments.text = "${post.commentsCount ?: 0} comments"
+        holder.textViews.text = "${post.viewsCount ?: 0} views"
+
+        // 💬 Open CommentsActivity when user taps comments count
+        holder.textComments.setOnClickListener {
+            val intent = Intent(holder.itemView.context, CommentsActivity::class.java)
+            intent.putExtra("POST_ID", post._id)
+            holder.itemView.context.startActivity(intent)
+        }
 
         // Click listener uses adapterPosition and updates model optimistically
         holder.buttonLike.setOnClickListener {

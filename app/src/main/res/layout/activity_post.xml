@@ -1,73 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
     android:background="#F9F9F9">
 
-    <LinearLayout
-        android:orientation="vertical"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent"
+        android:padding="16dp">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-            app:titleTextColor="@android:color/white" />
-
-        <EditText
-            android:id="@+id/editTextContent"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="What's on your mind?"
-            android:inputType="textMultiLine"
-            android:lines="4"
-            android:gravity="top"
-            android:layout_marginTop="16dp" />
+            android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btnChooseMedia"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Choose Image, Video, or Audio"
-            android:layout_marginTop="12dp" />
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+                app:titleTextColor="@android:color/white" />
 
-        <ImageView
-            android:id="@+id/imagePreview"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="12dp"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
+            <EditText
+                android:id="@+id/editTextContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="top"
+                android:hint="What's on your mind?"
+                android:inputType="textMultiLine"
+                android:lines="4" />
 
-        <VideoView
-            android:id="@+id/videoPreview"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="12dp"
-            android:visibility="gone" />
+            <Button
+                android:id="@+id/btnChooseMedia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Choose Image, Video, or Audio" />
 
-        <TextView
-            android:id="@+id/audioPreview"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Audio selected"
-            android:visibility="gone"
-            android:layout_marginTop="12dp"
-            android:textColor="@color/black" />
+            <ImageView
+                android:id="@+id/imagePreview"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="12dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
 
-        <Button
-            android:id="@+id/btnPost"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Post"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="@color/purple_500"
-            android:textColor="@android:color/white" />
+            <VideoView
+                android:id="@+id/videoPreview"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
 
-    </LinearLayout>
-</ScrollView>
+            <TextView
+                android:id="@+id/audioPreview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Audio selected"
+                android:textColor="@color/black"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnPost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:backgroundTint="@color/purple_500"
+                android:text="Post"
+                android:textColor="@android:color/white" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ✅ PROGRESS BAR ADDED HERE -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+
+</RelativeLayout>

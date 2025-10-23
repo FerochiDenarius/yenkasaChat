@@ -17,7 +17,7 @@ android {
         minSdk = 21
         targetSdk = 35
         versionCode = 5
-        versionName = "0.1.8"
+        versionName = "0.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -69,11 +69,18 @@ dependencies {
     // ✅ OneSignal SDK (v4.8.6 stable)
     implementation("com.onesignal:OneSignal:4.8.6")
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
+    // ✅ OkHttp
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
     // ✅ Retrofit + Gson + OkHttp
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+        implementation ("com.squareup.okhttp3:okhttp:4.11.0" )// or latest
+        implementation ("com.squareup.okhttp3:okhttp-urlconnection:4.11.0")
+        implementation ("com.squareup.okhttp3:okhttp:4.11.0" )// includes Kotlin extensions
+
+
 
     // ✅ Cloudinary
     implementation("com.cloudinary:cloudinary-android:2.3.1")

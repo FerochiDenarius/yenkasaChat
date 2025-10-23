@@ -1,5 +1,6 @@
 package com.example.yenkasachat.adapter
 
+import android.app.AlertDialog // ✅ Import AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
@@ -25,10 +26,8 @@ import java.util.*
 class PostAdapter(private val posts: MutableList<Post>) :
     RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
-    // Track pending like requests to avoid duplicate calls for the same post
     private val pendingLikes = mutableSetOf<String>()
     private val viewedPosts = mutableSetOf<String>()
-
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageUser: ImageView = itemView.findViewById(R.id.imageUser)
@@ -42,7 +41,7 @@ class PostAdapter(private val posts: MutableList<Post>) :
         val textTimestamp: TextView = itemView.findViewById(R.id.textTimestamp)
         val textComments: TextView = itemView.findViewById(R.id.textComments)
         val textViews: TextView = itemView.findViewById(R.id.textViews)
-
+        val buttonDelete: ImageButton = itemView.findViewById(R.id.button_delete_post) // ✅ Get reference to delete button
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
@@ -51,19 +50,16 @@ class PostAdapter(private val posts: MutableList<Post>) :
         return PostViewHolder(view)
     }
 
+    // ✅ THIS IS THE BLOCK YOU WILL UPDATE
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         val post = posts[position]
+        val context = holder.itemView.context // Get context for later use
 
         // User info
         holder.textUser.text = post.user?.username ?: "Anonymous"
         val profileUrl = post.user?.profileImage
         if (!profileUrl.isNullOrBlank()) {
-            Glide.with(holder.itemView.context)
-                .load(profileUrl)
-                .placeholder(R.drawable.ic_user_placeholder)
-                .error(R.drawable.ic_user_placeholder)
-                .circleCrop()
-                .into(holder.imageUser)
+            Glide.with(context).load(profileUrl).placeholder(R.drawable.ic_user_placeholder).error(R.drawable.ic_user_placeholder).circleCrop().into(holder.imageUser)
         } else {
             holder.imageUser.setImageResource(R.drawable.ic_user_placeholder)
         }
@@ -71,39 +67,70 @@ class PostAdapter(private val posts: MutableList<Post>) :
         // Timestamp
         holder.textTimestamp.text = post.createdAt?.let { formatDate(it) } ?: ""
 
-        // Like info - drive UI from model
+        // Like info
         holder.textLikes.text = "${post.likesCount} likes"
-        holder.buttonLike.setImageResource(
-            if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-        )
+        holder.buttonLike.setImageResource(if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
 
         // Comments and views
         holder.textComments.text = "${post.commentsCount ?: 0} comments"
         holder.textViews.text = "${post.viewsCount ?: 0} views"
 
-        // 💬 Open CommentsActivity when user taps comments count
+        // Comments click listener
         holder.textComments.setOnClickListener {
-            val intent = Intent(holder.itemView.context, CommentsActivity::class.java)
+            val intent = Intent(context, CommentsActivity::class.java)
             intent.putExtra("POST_ID", post._id)
-            holder.itemView.context.startActivity(intent)
+            context.startActivity(intent)
         }
 
-        // Click listener uses adapterPosition and updates model optimistically
+        // Like button click listener
         holder.buttonLike.setOnClickListener {
             val pos = holder.adapterPosition
-            if (pos == RecyclerView.NO_POSITION) return@setOnClickListener
-            val currentPost = posts[pos]
-            toggleLike(currentPost, pos, holder)
+            if (pos != RecyclerView.NO_POSITION) {
+                toggleLike(posts[pos], pos, holder)
+            }
         }
 
-        // Reset visibility
+        // --- ✅ DELETE FUNCTIONALITY STARTS HERE ---
+
+        // Get the current user's ID from TokenManager
+        // Note: You must implement getUserId in your TokenManager to retrieve the ID you saved at login.
+        val currentUserId = TokenManager.getUserId(context)
+
+        // Only show the delete button if the current user created the post
+        if (post.user?._id == currentUserId) {
+            holder.buttonDelete.visibility = View.VISIBLE
+            holder.buttonDelete.setOnClickListener {
+                // Get the current position, as it might have changed
+                val currentPosition = holder.adapterPosition
+                if (currentPosition != RecyclerView.NO_POSITION) {
+                    // Show a confirmation dialog before deleting
+                    AlertDialog.Builder(context)
+                        .setTitle("Delete Post")
+                        .setMessage("Are you sure you want to permanently delete this post?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            val postToDelete = posts[currentPosition]
+                            performDelete(postToDelete, currentPosition, context)
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+            }
+        } else {
+            // Hide the button if the current user is not the author
+            holder.buttonDelete.visibility = View.GONE
+        }
+        // --- ✅ DELETE FUNCTIONALITY ENDS HERE ---
+
+
+        // Reset visibility and handle media types...
         holder.imagePost.visibility = View.GONE
         holder.videoPost.visibility = View.GONE
         holder.audioPlayButton.visibility = View.GONE
         holder.textCaption.visibility = View.GONE
-        markPostAsViewed(holder.itemView.context, post)
+        markPostAsViewed(context, post)
 
         when (post.mediaType) {
+            // ... (your existing when block code remains unchanged) ...
             "text" -> {
                 holder.textCaption.visibility = View.VISIBLE
                 holder.textCaption.text = post.caption ?: ""
@@ -168,16 +195,45 @@ class PostAdapter(private val posts: MutableList<Post>) :
         }
     }
 
+    // ... (your existing getItemCount, toggleLike, and other functions) ...
+
+    // ✅ ADD THIS NEW FUNCTION TO YOUR ADAPTER CLASS
+    private fun performDelete(post: Post, position: Int, context: Context) {
+        val postId = post._id
+        if (postId.isNullOrEmpty()) {
+            Toast.makeText(context, "Cannot delete post, ID is missing.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val token = TokenManager.getToken(context)
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(context, "Authentication error. Please log in again.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Assuming you have added deletePost to your ApiService interface
+        ApiClient.apiService.deletePost("Bearer $token", postId).enqueue(object : Callback<Map<String, Any>> {
+            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(context, "Post deleted successfully", Toast.LENGTH_SHORT).show()
+                    // Remove the item from the data set
+                    posts.removeAt(position)
+                    // Notify the adapter that an item was removed
+                    notifyItemRemoved(position)
+                } else {
+                    Toast.makeText(context, "Failed to delete post. Please try again.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    // ... (rest of your PostAdapter class) ...
     override fun getItemCount(): Int = posts.size
 
-    /**
-     * Toggle like state with optimistic UI, dedupe in-flight requests, and safe response parsing.
-     *
-     * NOTE: Your ApiService must accept an Authorization header, e.g.:
-     * @POST("social/like/{postId}") fun toggleLike(@Header("Authorization") auth: String, @Path("postId") postId: String): Call<Map<String, Any>>
-     *
-     * If toggleLike currently doesn't accept a header, either update ApiService or add an OkHttp interceptor that attaches the Bearer token.
-     */
     private fun toggleLike(post: Post, position: Int, holder: PostViewHolder) {
         val context = holder.itemView.context
         val token = TokenManager.getToken(context)

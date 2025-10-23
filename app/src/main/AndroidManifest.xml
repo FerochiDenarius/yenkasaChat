@@ -77,6 +77,10 @@
             android:exported="false"
             android:label="Menu" />
         <!-- Make sure this declaration for PostActivity exists -->
+        <activity android:name=".ui.FollowFeedActivity" />
+        <activity android:name=".ui.FollowListActivity" />
+        <activity android:name=".ui.EditProfileActivity" />
+
         <activity android:name=".ui.PostActivity" />
         <activity android:name=".ui.CommentsActivity" />
         <activity android:name=".ui.RegisterActivity" />

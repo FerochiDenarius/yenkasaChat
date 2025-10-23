@@ -297,10 +297,35 @@ fun getComments(
     @GET("profile")
     suspend fun getProfile(): ProfileResponse
 
-    @GET("social/feed/following")
-    fun getFollowingFeed(
-        @Header("Authorization") token: String
+    @GET("users/{userId}/followers")
+    fun getFollowers(@Path("userId") userId: String, @Header("Authorization") token: String): Call<List<User>>
+
+    @GET("users/{userId}/following")
+    fun getFollowing(@Path("userId") userId: String, @Header("Authorization") token: String): Call<List<User>>
+
+    // ✅ Fetch posts for a specific user
+    @GET("posts/user/{id}")
+    fun getPostsForUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
     ): Call<List<Post>>
+
+    @GET("feed/following")
+    fun getFollowingFeed(@Header("Authorization") token: String): Call<List<Post>>
+
+    // In ApiService.kt
+    @DELETE("posts/{postId}")
+    fun deletePost(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<Map<String, Any>>
+
+    // Follow/unfollow a user
+    @POST("follow/{targetUserId}")
+    fun toggleFollow(
+        @Path("targetUserId") targetUserId: String,
+        @Header("Authorization") token: String
+    ): Call<Map<String, Any>>
 
 
     // ✅ Update profile

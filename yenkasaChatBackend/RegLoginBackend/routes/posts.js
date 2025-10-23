@@ -92,20 +92,55 @@ router.get("/my", verifyToken, async (req, res) => {
   }
 });
 
-// ------------------- DELETE POST -------------------
-router.delete("/:id", verifyToken, async (req, res) => {
+/* -------------------
+ * 🗑️ DELETE POST with debug logs
+ * ------------------- */
+router.delete("/:postId", verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    if (post.user.toString() !== req.user.id)
-      return res.status(403).json({ message: "Unauthorized" });
+    const userId = req.user.id;
+    const { postId } = req.params;
 
-    await post.deleteOne();
-    res.status(200).json({ message: "Post deleted successfully" });
+    console.log("DELETE request received for post:", postId);
+    console.log("Authenticated user ID:", userId);
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      console.log("Post not found:", postId);
+      return res.status(404).json({ message: "Post not found." });
+    }
+
+    console.log("Post author ID:", post.user.toString());
+
+    // Security check: Ensure only the post's author can delete it.
+    if (post.user.toString() !== userId) {
+      console.log("Forbidden: User trying to delete someone else's post.");
+      return res.status(403).json({ message: "Forbidden: You cannot delete another user's post." });
+    }
+
+    // Optional: Delete media from Cloudinary
+    if (post.mediaUrl) {
+      try {
+        const publicIdWithFolder = post.mediaUrl.substring(post.mediaUrl.indexOf('yenkasachat/posts/'));
+        const publicId = publicIdWithFolder.substring(0, publicIdWithFolder.lastIndexOf('.'));
+        const resourceType = post.mediaType === "video" || post.mediaType === "audio" ? "video" : "image";
+        console.log("Deleting media from Cloudinary:", publicId);
+        await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+      } catch (cloudinaryError) {
+        console.error("Cloudinary delete error (non-fatal):", cloudinaryError);
+      }
+    }
+
+    await Post.findByIdAndDelete(postId);
+    console.log("Post deleted successfully:", postId);
+
+    res.status(200).json({ message: "Post deleted successfully." });
+
   } catch (error) {
     console.error("Error deleting post:", error);
     res.status(500).json({ message: "Error deleting post", error: error.message });
   }
 });
+
 
 module.exports = router;

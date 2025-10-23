@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is the simple layout for a single square in the post grid. -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/imagePostPreview"
+    android:layout_width="match_parent"
+    android:layout_height="120dp"
+    android:scaleType="centerCrop"
+    android:contentDescription="Post preview"
+    android:padding="1dp" />

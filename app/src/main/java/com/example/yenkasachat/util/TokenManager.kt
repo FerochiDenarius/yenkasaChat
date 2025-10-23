@@ -69,6 +69,17 @@ object TokenManager {
         Log.i(TAG, "User details batch save operation completed.")
     }
     // === END OF NEW FUNCTION ===
+    // ✅ THIS IS THE NEW FUNCTION THAT WAS MISSING
+    fun savePartialUserDetails(context: Context, username: String?, email: String?, phone: String?, location: String?) {
+        val editor = getEncryptedPrefs(context).edit()
+        username?.let { editor.putString(USERNAME_KEY, it) }
+        email?.let { editor.putString(EMAIL_KEY, it) }
+        phone?.let { editor.putString(PHONE_KEY, it) }
+        location?.let { editor.putString(LOCATION_KEY, it) }
+        editor.apply()
+        Log.i(TAG, "Partial user details saved.")
+    }
+
 
     // === Auth Token (Access Token) ===
     fun saveToken(context: Context, token: String?) {

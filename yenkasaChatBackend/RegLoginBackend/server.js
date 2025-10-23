@@ -120,6 +120,8 @@ safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
 safeMount('/api/profile', './routes/profile');
 console.log("✅ Finished mounting API routes.");
+safeMount('/social', './routes/social.routes');
+
 
 // ---------------------------------
 // Health Check

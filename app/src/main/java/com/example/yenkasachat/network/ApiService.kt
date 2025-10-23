@@ -253,6 +253,16 @@ interface ApiService {
         @Part mediaFile: MultipartBody.Part? = null
     ): Call<Post>
 
+    // ✅ Like a post
+
+    @POST("social/like/{postId}")
+    fun toggleLike(@Path("postId") postId: String): Call<Map<String, Any>>
+
+    // ✅ Get single post (for preview)
+    @GET("posts/{id}")
+    fun getPostById(
+        @Path("id") postId: String
+    ): Call<Post>
 
     @GET("unread/all")
     suspend fun getAllUnreadCountsForUser(

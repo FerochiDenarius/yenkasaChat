@@ -11,5 +11,8 @@ data class Post(
     val updatedAt: String? = null,           // ISO timestamp
     val likes: List<String>? = emptyList(),  // List of user IDs who liked
     val commentsCount: Int? = 0,             // Count of comments
-    val sharesCount: Int? = 0,               // Count of shares
+    val sharesCount: Int? = 0,
+    var viewsCount: Int = 0,
+    var isLiked: Boolean = false, // to track if current user liked it
+    var isViewed: Boolean = false // Count of shares
 )

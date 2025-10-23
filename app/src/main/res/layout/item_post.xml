@@ -69,4 +69,48 @@
         android:src="@drawable/ic_play"
         android:visibility="gone" />
 
+    <!-- Like + Timestamp Section -->
+    <LinearLayout
+        android:id="@+id/likeSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:paddingTop="6dp">
+
+        <ImageButton
+            android:id="@+id/buttonLike"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@null"
+            android:src="@drawable/ic_heart_outline"
+            android:contentDescription="Like" />
+
+        <TextView
+            android:id="@+id/textLikes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 likes"
+            android:textColor="#444"
+            android:textSize="14sp"
+            android:layout_marginStart="6dp" />
+
+        <!-- This spacer view will expand to fill all available space -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/textTimestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2h ago"
+            android:textColor="#777"
+            android:textSize="12sp"
+            android:paddingEnd="6dp" />
+
+    </LinearLayout>
+
 </LinearLayout>

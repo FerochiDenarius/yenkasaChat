@@ -287,6 +287,12 @@ fun getComments(
         @Body body: Map<String, String>
     ): Call<Comment>
 
+    @POST("social/view/{postId}")
+    fun addView(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<Map<String, Any>>
+
     // ✅ Fetch profile
     @GET("profile")
     suspend fun getProfile(): ProfileResponse

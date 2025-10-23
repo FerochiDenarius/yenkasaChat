@@ -27,6 +27,8 @@ class PostAdapter(private val posts: MutableList<Post>) :
 
     // Track pending like requests to avoid duplicate calls for the same post
     private val pendingLikes = mutableSetOf<String>()
+    private val viewedPosts = mutableSetOf<String>()
+
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageUser: ImageView = itemView.findViewById(R.id.imageUser)
@@ -99,6 +101,7 @@ class PostAdapter(private val posts: MutableList<Post>) :
         holder.videoPost.visibility = View.GONE
         holder.audioPlayButton.visibility = View.GONE
         holder.textCaption.visibility = View.GONE
+        markPostAsViewed(holder.itemView.context, post)
 
         when (post.mediaType) {
             "text" -> {
@@ -250,6 +253,31 @@ class PostAdapter(private val posts: MutableList<Post>) :
             is Number -> value.toInt() != 0
             else -> null
         }
+    }
+    private fun markPostAsViewed(context: Context, post: Post) {
+        val postId = post._id ?: return
+        if (viewedPosts.contains(postId)) return  // Already tracked this post
+
+        val token = TokenManager.getToken(context)
+        if (token.isNullOrEmpty()) return
+
+        viewedPosts.add(postId)
+
+        ApiClient.apiService.addView("Bearer $token", postId)
+            .enqueue(object : Callback<Map<String, Any>> {
+                override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                    if (response.isSuccessful) {
+                        val data = response.body()
+                        val newViews = (data?.get("viewsCount") as? Number)?.toInt() ?: post.viewsCount
+                        post.viewsCount = newViews
+                        notifyItemChanged(posts.indexOf(post))
+                    }
+                }
+
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    // Fail silently; not critical
+                }
+            })
     }
 
     // Helper: robust int parser for Map<String, Any> responses

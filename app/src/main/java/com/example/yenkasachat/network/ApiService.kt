@@ -310,6 +310,12 @@ fun getComments(
         @Path("id") userId: String
     ): Call<List<Post>>
 
+    @GET("posts/my")
+    fun getMyPosts(
+        @Header("Authorization") token: String
+    ): Call<List<Post>>
+
+
     @GET("feed/following")
     fun getFollowingFeed(@Header("Authorization") token: String): Call<List<Post>>
 

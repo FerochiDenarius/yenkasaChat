@@ -149,10 +149,9 @@ class AccountInfoActivity : AppCompatActivity() {
     }
 
     private fun loadUserPosts() {
-        val userId = TokenManager.getUserId(this) ?: return
         val token = TokenManager.getToken(this) ?: return
 
-        ApiClient.apiService.getPostsForUser("Bearer $token", userId)
+        ApiClient.apiService.getMyPosts("Bearer $token")
             .enqueue(object : Callback<List<Post>> {
                 override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
                     if (response.isSuccessful && response.body() != null) {

@@ -91,13 +91,12 @@ router.get("/my", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user posts", error: error.message });
   }
 });
-
 /* -------------------
- * 🗑️ DELETE POST with debug logs
+ * 🗑️ DELETE POST (with robust ObjectId handling + debug)
  * ------------------- */
 router.delete("/:postId", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.id || req.user._id; // Support both possible keys
     const { postId } = req.params;
 
     console.log("DELETE request received for post:", postId);
@@ -106,41 +105,59 @@ router.delete("/:postId", verifyToken, async (req, res) => {
     const post = await Post.findById(postId);
 
     if (!post) {
-      console.log("Post not found:", postId);
+      console.log("❌ Post not found:", postId);
       return res.status(404).json({ message: "Post not found." });
     }
 
-    console.log("Post author ID:", post.user.toString());
+    // Normalize IDs as strings for comparison
+    const postAuthorId = post.user?._id?.toString() || post.user?.toString();
+    const authUserId = userId?.toString();
 
-    // Security check: Ensure only the post's author can delete it.
-    if (post.user.toString() !== userId) {
-      console.log("Forbidden: User trying to delete someone else's post.");
-      return res.status(403).json({ message: "Forbidden: You cannot delete another user's post." });
+    console.log("Post author ID:", postAuthorId);
+    console.log("Authenticated user ID (string):", authUserId);
+
+    // ✅ Only the author can delete
+    if (postAuthorId !== authUserId) {
+      console.log("🚫 Forbidden: User is not the post's author.");
+      return res.status(403).json({
+        message: "Forbidden: You cannot delete another user's post.",
+        postAuthorId,
+        authUserId,
+      });
     }
 
-    // Optional: Delete media from Cloudinary
+    // ✅ Optional: delete media from Cloudinary
     if (post.mediaUrl) {
       try {
-        const publicIdWithFolder = post.mediaUrl.substring(post.mediaUrl.indexOf('yenkasachat/posts/'));
-        const publicId = publicIdWithFolder.substring(0, publicIdWithFolder.lastIndexOf('.'));
-        const resourceType = post.mediaType === "video" || post.mediaType === "audio" ? "video" : "image";
-        console.log("Deleting media from Cloudinary:", publicId);
-        await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+        const folderMarker = "yenkasachat/posts/";
+        const startIndex = post.mediaUrl.indexOf(folderMarker);
+        if (startIndex !== -1) {
+          const publicIdWithFolder = post.mediaUrl.substring(startIndex);
+          const publicId = publicIdWithFolder.substring(0, publicIdWithFolder.lastIndexOf("."));
+          const resourceType = ["video", "audio"].includes(post.mediaType)
+            ? "video"
+            : "image";
+          console.log("🗑️ Deleting media from Cloudinary:", publicId);
+          await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+        } else {
+          console.warn("⚠️ Could not extract Cloudinary publicId from:", post.mediaUrl);
+        }
       } catch (cloudinaryError) {
-        console.error("Cloudinary delete error (non-fatal):", cloudinaryError);
+        console.error("⚠️ Cloudinary delete error (non-fatal):", cloudinaryError);
       }
     }
 
+    // ✅ Delete post document
     await Post.findByIdAndDelete(postId);
-    console.log("Post deleted successfully:", postId);
+    console.log("✅ Post deleted successfully:", postId);
 
     res.status(200).json({ message: "Post deleted successfully." });
-
   } catch (error) {
-    console.error("Error deleting post:", error);
+    console.error("🔥 Error deleting post:", error);
     res.status(500).json({ message: "Error deleting post", error: error.message });
   }
 });
+
 
 
 module.exports = router;

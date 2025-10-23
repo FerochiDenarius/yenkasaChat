@@ -119,9 +119,17 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/notifications', './routes/notifications.route');
 safeMount('/api/profile', './routes/profile');
-console.log("✅ Finished mounting API routes.");
+// --- Add both mounts so both /social and /api/social resolve to the same routes
 safeMount('/social', './routes/social.routes');
+safeMount('/api/social', './routes/social.routes');
 
+console.log("✅ Finished mounting API routes.");
+
+// Add after all `app.use(...)` route mounts, before app.listen(...)
+const listEndpoints = require('express-list-endpoints');
+console.log('=== Registered endpoints ===');
+console.log(listEndpoints(app));
+console.log('=== End registered endpoints ===');
 
 // ---------------------------------
 // Health Check

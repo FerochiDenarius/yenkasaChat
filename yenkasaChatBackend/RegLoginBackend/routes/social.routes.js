@@ -1,6 +1,7 @@
 const express = require("express");
 const Post = require("../models/post");
 const User = require("../models/user.model");
+const Comment = require("../models/comment"); // ✅ Import added
 const verifyToken = require("../middleware/auth");
 
 const router = express.Router();
@@ -10,41 +11,24 @@ const router = express.Router();
  * ------------------------------------ */
 router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
-    const userId = req.user && req.user.id;
+    const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // Ensure post exists and get current likes
     const post = await Post.findById(req.params.postId).select("likes");
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // Determine current state (handle ObjectId vs string)
-    const alreadyLiked = Array.isArray(post.likes) && post.likes.some(id => id.toString() === userId);
-
-    // Use atomic update to avoid race conditions
+    const alreadyLiked = post.likes.some(id => id.toString() === userId);
     const update = alreadyLiked
-      ? { $pull: { likes: userId } }
-      : { $addToSet: { likes: userId } };
+      ? { $pull: { likes: userId }, $inc: { likesCount: -1 } }
+      : { $addToSet: { likes: userId }, $inc: { likesCount: 1 } };
 
-    // Return the updated document (with likes array) to compute authoritative values
-    const updatedPost = await Post.findByIdAndUpdate(
-      req.params.postId,
-      update,
-      { new: true, runValidators: true }
-    ).select("likes");
-
-    if (!updatedPost) {
-      return res.status(500).json({ message: "Failed to update like state" });
-    }
-
-    // Compute likedByUser from the updated document to be authoritative
-    const likedByUser = Array.isArray(updatedPost.likes) && updatedPost.likes.some(id => id.toString() === userId);
-    const likesCount = Array.isArray(updatedPost.likes) ? updatedPost.likes.length : 0;
+    const updatedPost = await Post.findByIdAndUpdate(req.params.postId, update, { new: true }).select("likes likesCount");
+    const likedByUser = updatedPost.likes.some(id => id.toString() === userId);
 
     res.status(200).json({
       message: likedByUser ? "Post liked" : "Post unliked",
-      likesCount,
+      likesCount: updatedPost.likesCount,
       likedByUser,
-      timestamp: new Date().toISOString(),
     });
   } catch (err) {
     console.error("❌ Error toggling like:", err);
@@ -52,11 +36,72 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
   }
 });
 
-/* ------------------------------------
- * 💬 COMMENT (placeholder for future)
- * ------------------------------------ */
+// 💬 Add comment to a post
 router.post("/comment/:postId", verifyToken, async (req, res) => {
-  res.status(501).json({ message: "Comment feature coming soon." });
+  try {
+    const { postId } = req.params;
+    const { text } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!text || text.trim() === "")
+      return res.status(400).json({ message: "Comment text required" });
+
+    // Make sure post exists
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Create the comment
+    const comment = await Comment.create({
+      user: userId,
+      post: postId,
+      text: text.trim(),
+    });
+
+    // Increment post's comment count
+    await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+
+    // Populate user before sending back
+    await comment.populate("user", "_id username profileImage");
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error("❌ Error adding comment:", err);
+    res.status(500).json({ message: "Failed to add comment", error: err.message });
+  }
+});
+
+/* ------------------------------------
+ * 💬 GET COMMENTS
+ * ------------------------------------ */
+router.get("/comments/:postId", verifyToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const comments = await Comment.find({ post: postId, isDeleted: false })
+      .populate("user", "_id username profileImage")
+      .sort({ createdAt: -1 });
+    res.json(comments);
+  } catch (err) {
+    console.error("❌ Error loading comments:", err);
+    res.status(500).json({ error: "Failed to load comments" });
+  }
+});
+
+/* ------------------------------------
+ * 👁️‍🗨️ ADD VIEW
+ * ------------------------------------ */
+router.post("/view/:postId", verifyToken, async (req, res) => {
+  try {
+    const post = await Post.findByIdAndUpdate(
+      req.params.postId,
+      { $inc: { viewsCount: 1 } },
+      { new: true }
+    );
+    res.json({ viewsCount: post.viewsCount });
+  } catch (err) {
+    console.error("❌ Error updating view count:", err);
+    res.status(500).json({ error: "Failed to update view count" });
+  }
 });
 
 /* ------------------------------------
@@ -64,22 +109,16 @@ router.post("/comment/:postId", verifyToken, async (req, res) => {
  * ------------------------------------ */
 router.post("/follow/:targetUserId", verifyToken, async (req, res) => {
   try {
-    const userId = req.user && req.user.id;
+    const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // Load minimal fields
     const user = await User.findById(userId).select("following");
     const target = await User.findById(req.params.targetUserId).select("followers");
 
-    if (!user) return res.status(404).json({ message: "Authenticated user not found" });
-    if (!target) return res.status(404).json({ message: "Target user not found" });
-
-    // Prevent following yourself
+    if (!user || !target) return res.status(404).json({ message: "User not found" });
     if (userId === String(target._id)) return res.status(400).json({ message: "Cannot follow yourself" });
 
-    const isFollowing = Array.isArray(user.following) && user.following.some(id => id.toString() === String(target._id));
-
-    // Atomic updates for both documents to avoid partial state
+    const isFollowing = user.following.some(id => id.toString() === String(target._id));
     if (isFollowing) {
       await Promise.all([
         User.findByIdAndUpdate(userId, { $pull: { following: target._id } }),
@@ -92,69 +131,40 @@ router.post("/follow/:targetUserId", verifyToken, async (req, res) => {
       ]);
     }
 
-    // Re-fetch counts from DB for authoritative values
     const freshUser = await User.findById(userId).select("following");
     const freshTarget = await User.findById(target._id).select("followers");
 
     res.status(200).json({
       message: isFollowing ? "Unfollowed user" : "Followed user",
-      followingCount: Array.isArray(freshUser.following) ? freshUser.following.length : 0,
-      followersCount: Array.isArray(freshTarget.followers) ? freshTarget.followers.length : 0,
+      followingCount: freshUser.following.length,
+      followersCount: freshTarget.followers.length,
     });
   } catch (err) {
     console.error("❌ Error in follow/unfollow:", err);
     res.status(500).json({ message: "Failed to follow/unfollow", error: err.message });
   }
 });
-// GET all comments for a post
-router.get('/comments/:postId', verifyToken, async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const comments = await Comment.find({ post: postId, isDeleted: false })
-      .sort({ createdAt: -1 });
-    res.json(comments);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load comments' });
-  }
-});
-
-router.post('/view/:postId', verifyToken, async (req, res) => {
-  try {
-    const post = await Post.findByIdAndUpdate(
-      req.params.postId,
-      { $inc: { viewsCount: 1 } },
-      { new: true }
-    );
-    res.json({ viewsCount: post.viewsCount });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update view count' });
-  }
-});
-
 
 /* ------------------------------------
  * 🚫 BLOCK USER
  * ------------------------------------ */
 router.post("/block/:targetUserId", verifyToken, async (req, res) => {
   try {
-    const userId = req.user && req.user.id;
+    const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const user = await User.findById(userId).select("blocked");
     const target = await User.findById(req.params.targetUserId).select("_id");
 
-    if (!user) return res.status(404).json({ message: "Authenticated user not found" });
-    if (!target) return res.status(404).json({ message: "Target user not found" });
+    if (!user || !target) return res.status(404).json({ message: "User not found" });
 
-    const alreadyBlocked = Array.isArray(user.blocked) && user.blocked.some(id => id.toString() === String(target._id));
-
+    const alreadyBlocked = user.blocked.some(id => id.toString() === String(target._id));
     const update = alreadyBlocked ? { $pull: { blocked: target._id } } : { $addToSet: { blocked: target._id } };
     const updated = await User.findByIdAndUpdate(userId, update, { new: true }).select("blocked");
 
     res.status(200).json({
       message: alreadyBlocked ? "User unblocked" : "User blocked",
-      blockedCount: Array.isArray(updated.blocked) ? updated.blocked.length : 0,
+      blockedCount: updated.blocked.length,
     });
   } catch (err) {
     console.error("❌ Error in block/unblock:", err);

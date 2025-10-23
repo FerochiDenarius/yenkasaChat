@@ -47,6 +47,20 @@ class PostAdapter(private val posts: List<Post>) :
             .circleCrop()
             .into(holder.imageUser)
 
+        // Load profile image
+        val profileUrl = post.user?.profileImage
+        if (!profileUrl.isNullOrBlank()) {
+            Glide.with(holder.itemView.context)
+                .load(profileUrl) // use the actual URL
+                .placeholder(R.drawable.ic_user_placeholder)
+                .error(R.drawable.ic_user_placeholder)
+                .circleCrop()
+                .into(holder.imageUser)
+        } else {
+            // fallback to default
+            holder.imageUser.setImageResource(R.drawable.ic_user_placeholder)
+        }
+
         // Reset visibility
         holder.imagePost.visibility = View.GONE
         holder.videoPost.visibility = View.GONE

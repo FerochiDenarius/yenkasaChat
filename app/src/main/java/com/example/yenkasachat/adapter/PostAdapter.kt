@@ -24,6 +24,9 @@ import java.util.*
 class PostAdapter(private val posts: MutableList<Post>) :
     RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
+    // Track pending like requests to avoid duplicate calls for the same post
+    private val pendingLikes = mutableSetOf<String>()
+
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageUser: ImageView = itemView.findViewById(R.id.imageUser)
         val textUser: TextView = itemView.findViewById(R.id.textUser)
@@ -62,12 +65,18 @@ class PostAdapter(private val posts: MutableList<Post>) :
         // Timestamp
         holder.textTimestamp.text = post.createdAt?.let { formatDate(it) } ?: ""
 
-        // Like info
-        val likeCount = post.likes?.size ?: 0
-        holder.textLikes.text = "$likeCount likes"
+        // Like info - drive UI from model
+        holder.textLikes.text = "${post.likesCount} likes"
+        holder.buttonLike.setImageResource(
+            if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+        )
 
+        // Click listener uses adapterPosition and updates model optimistically
         holder.buttonLike.setOnClickListener {
-            toggleLike(post, holder)
+            val pos = holder.adapterPosition
+            if (pos == RecyclerView.NO_POSITION) return@setOnClickListener
+            val currentPost = posts[pos]
+            toggleLike(currentPost, pos, holder)
         }
 
         // Reset visibility
@@ -93,7 +102,6 @@ class PostAdapter(private val posts: MutableList<Post>) :
                 holder.textCaption.visibility =
                     if (!post.caption.isNullOrBlank()) View.VISIBLE else View.GONE
 
-                // 🖼️ FIXED — check for null before using mediaUrl
                 holder.imagePost.setOnClickListener {
                     post.mediaUrl?.let { url ->
                         openPreview(holder.itemView.context, url)
@@ -105,8 +113,6 @@ class PostAdapter(private val posts: MutableList<Post>) :
 
             "video" -> {
                 holder.videoPost.visibility = View.VISIBLE
-
-                // 🎥 FIXED — only parse if not null
                 post.mediaUrl?.let { url ->
                     holder.videoPost.setVideoURI(Uri.parse(url))
                     holder.videoPost.setOnPreparedListener { it.isLooping = true }
@@ -124,7 +130,6 @@ class PostAdapter(private val posts: MutableList<Post>) :
                 holder.textCaption.visibility =
                     if (!post.caption.isNullOrBlank()) View.VISIBLE else View.GONE
 
-                // 🎧 FIXED — only start if URL exists
                 holder.audioPlayButton.setOnClickListener {
                     post.mediaUrl?.let { url ->
                         val mediaPlayer = MediaPlayer().apply {
@@ -147,7 +152,15 @@ class PostAdapter(private val posts: MutableList<Post>) :
 
     override fun getItemCount(): Int = posts.size
 
-    private fun toggleLike(post: Post, holder: PostViewHolder) {
+    /**
+     * Toggle like state with optimistic UI, dedupe in-flight requests, and safe response parsing.
+     *
+     * NOTE: Your ApiService must accept an Authorization header, e.g.:
+     * @POST("social/like/{postId}") fun toggleLike(@Header("Authorization") auth: String, @Path("postId") postId: String): Call<Map<String, Any>>
+     *
+     * If toggleLike currently doesn't accept a header, either update ApiService or add an OkHttp interceptor that attaches the Bearer token.
+     */
+    private fun toggleLike(post: Post, position: Int, holder: PostViewHolder) {
         val context = holder.itemView.context
         val token = TokenManager.getToken(context)
 
@@ -156,35 +169,81 @@ class PostAdapter(private val posts: MutableList<Post>) :
             return
         }
 
-        // Safely get the post ID. If it's null, show an error message and stop.
         val postId = post._id
-        if (postId == null) {
+        if (postId.isNullOrEmpty()) {
             Toast.makeText(context, "Cannot like post, ID is missing.", Toast.LENGTH_SHORT).show()
-            return // Stop the function here
+            return
         }
 
-        // At this point, 'postId' is guaranteed to be a non-null String
-        ApiClient.apiService.toggleLike(postId)
+        // If there's already a pending request for this post, ignore further taps
+        synchronized(pendingLikes) {
+            if (pendingLikes.contains(postId)) return
+            pendingLikes.add(postId)
+        }
+
+        // Optimistic update
+        val previousLiked = post.likedByUser
+        val previousCount = post.likesCount
+        val newLiked = !previousLiked
+        post.likedByUser = newLiked
+        post.likesCount = if (newLiked) previousCount + 1 else (previousCount - 1).coerceAtLeast(0)
+        notifyItemChanged(position)
+
+        // Make network request. Send token as "Bearer <token>" (backend verifies it)
+        ApiClient.apiService.toggleLike("Bearer $token", postId)
             .enqueue(object : Callback<Map<String, Any>> {
                 override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                    synchronized(pendingLikes) { pendingLikes.remove(postId) }
+
                     if (response.isSuccessful) {
                         val data = response.body()
-                        val liked = data?.get("likedByUser") as? Boolean ?: false
-                        val likesCount = (data?.get("likesCount") as? Double)?.toInt() ?: 0
+                        // Defensive parsing
+                        val liked = parseBoolean(data?.get("likedByUser")) ?: newLiked
+                        val likesCount = parseInt(data?.get("likesCount")) ?: post.likesCount
 
-                        holder.buttonLike.setImageResource(
-                            if (liked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-                        )
-                        holder.textLikes.text = "$likesCount likes"
+                        // Update model with server authoritative values
+                        post.likedByUser = liked
+                        post.likesCount = likesCount
+                        // Notify the specific item so the UI reflects server state
+                        notifyItemChanged(position)
                     } else {
-                        Toast.makeText(context, "Failed to like post", Toast.LENGTH_SHORT).show()
+                        // Revert optimistic update on failure
+                        post.likedByUser = previousLiked
+                        post.likesCount = previousCount
+                        notifyItemChanged(position)
+                        Toast.makeText(context, "Failed to update like", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    synchronized(pendingLikes) { pendingLikes.remove(postId) }
+
+                    // revert optimistic update
+                    post.likedByUser = previousLiked
+                    post.likesCount = previousCount
+                    notifyItemChanged(position)
                     Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    // Helper: robust boolean parser for Map<String, Any> responses
+    private fun parseBoolean(value: Any?): Boolean? {
+        return when (value) {
+            is Boolean -> value
+            is String -> value.equals("true", ignoreCase = true)
+            is Number -> value.toInt() != 0
+            else -> null
+        }
+    }
+
+    // Helper: robust int parser for Map<String, Any> responses
+    private fun parseInt(value: Any?): Int? {
+        return when (value) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull()
+            else -> null
+        }
     }
 
     private fun openPreview(context: Context, mediaUrl: String?) {

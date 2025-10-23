@@ -24,6 +24,7 @@ import com.example.yenkasachat.model.ConfirmRequest
 import com.example.yenkasachat.model.PhoneRequest
 import com.example.yenkasachat.model.ConfirmPhoneRequest
 import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.network.model.ToggleLikeResponse
 import com.example.yenkasachat.model.ResetPasswordRequest
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
@@ -255,14 +256,14 @@ interface ApiService {
 
     // ✅ Like a post
 
+    // Toggle like — AuthInterceptor in ApiClient will attach Authorization header.
     @POST("social/like/{postId}")
-    fun toggleLike(@Path("postId") postId: String): Call<Map<String, Any>>
+    fun toggleLike(
+        @Path("postId") postId: String
+    ): Call<ToggleLikeResponse>
 
-    // ✅ Get single post (for preview)
     @GET("posts/{id}")
-    fun getPostById(
-        @Path("id") postId: String
-    ): Call<Post>
+    fun getPostById(@Path("id") postId: String): Call<Post>
 
     @GET("unread/all")
     suspend fun getAllUnreadCountsForUser(

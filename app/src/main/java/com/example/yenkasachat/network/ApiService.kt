@@ -257,10 +257,13 @@ interface ApiService {
     // ✅ Like a post
 
     // Toggle like — AuthInterceptor in ApiClient will attach Authorization header.
-    @POST("social/like/{postId}")
+
+    // ✅ CORRECTED THIS LINE
+    @POST("like/{postId}")
     fun toggleLike(
+        @Header("Authorization") token: String,
         @Path("postId") postId: String
-    ): Call<ToggleLikeResponse>
+    ): Call<Map<String, Any>>
 
     @GET("posts/{id}")
     fun getPostById(@Path("id") postId: String): Call<Post>

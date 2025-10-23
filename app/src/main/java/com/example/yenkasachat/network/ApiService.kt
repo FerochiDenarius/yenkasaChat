@@ -297,6 +297,12 @@ fun getComments(
     @GET("profile")
     suspend fun getProfile(): ProfileResponse
 
+    @GET("social/feed/following")
+    fun getFollowingFeed(
+        @Header("Authorization") token: String
+    ): Call<List<Post>>
+
+
     // ✅ Update profile
     @PUT("profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>

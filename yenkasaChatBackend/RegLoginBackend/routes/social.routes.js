@@ -106,6 +106,32 @@ router.post("/follow/:targetUserId", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to follow/unfollow", error: err.message });
   }
 });
+// GET all comments for a post
+router.get('/comments/:postId', verifyToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const comments = await Comment.find({ post: postId, isDeleted: false })
+      .sort({ createdAt: -1 });
+    res.json(comments);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+router.post('/view/:postId', verifyToken, async (req, res) => {
+  try {
+    const post = await Post.findByIdAndUpdate(
+      req.params.postId,
+      { $inc: { viewsCount: 1 } },
+      { new: true }
+    );
+    res.json({ viewsCount: post.viewsCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update view count' });
+  }
+});
+
 
 /* ------------------------------------
  * 🚫 BLOCK USER

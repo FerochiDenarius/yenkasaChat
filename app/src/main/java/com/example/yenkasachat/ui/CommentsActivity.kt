@@ -68,7 +68,7 @@ class CommentsActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
                     if (response.isSuccessful) {
                         comments.clear()
-                        response.body()?.let { comments.addAll(it) }
+                        response.body()?.let { comments.addAll(it.reversed()) }
                         adapter.notifyDataSetChanged()
                     } else {
                         Toast.makeText(this@CommentsActivity, "Failed to load comments", Toast.LENGTH_SHORT).show()
@@ -93,9 +93,9 @@ class CommentsActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<Comment>, response: Response<Comment>) {
                     if (response.isSuccessful) {
                         response.body()?.let {
-                            comments.add(0, it)
-                            adapter.notifyItemInserted(0)
-                            recyclerComments.scrollToPosition(0)
+                            comments.add(it) // instead of comments.add(0, it)
+                            adapter.notifyItemInserted(comments.size - 1)
+                            recyclerComments.scrollToPosition(comments.size - 1)
                             editComment.text.clear()
                         }
                     } else {

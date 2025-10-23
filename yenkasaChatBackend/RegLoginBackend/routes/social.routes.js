@@ -79,7 +79,7 @@ router.get("/comments/:postId", verifyToken, async (req, res) => {
     const { postId } = req.params;
     const comments = await Comment.find({ post: postId, isDeleted: false })
       .populate("user", "_id username profileImage")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: 1 });
     res.json(comments);
   } catch (err) {
     console.error("❌ Error loading comments:", err);

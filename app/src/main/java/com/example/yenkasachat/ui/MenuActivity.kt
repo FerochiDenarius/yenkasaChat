@@ -29,6 +29,11 @@ class MenuActivity : AppCompatActivity() {
             startActivity(Intent(this, AccountInfoActivity::class.java))
         }
 
+        // ✅ Edit Profile (New)
+        findViewById<Button>(R.id.btnEditProfile).setOnClickListener {
+            startActivity(Intent(this, EditProfileActivity::class.java))
+        }
+
         // ⚠️ Verify Account — placeholder until your VerifyAccountActivity exists
         findViewById<Button>(R.id.btnVerifyAccount).setOnClickListener {
             Toast.makeText(this, "Verify Account feature coming soon!", Toast.LENGTH_SHORT).show()

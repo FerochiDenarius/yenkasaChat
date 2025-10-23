@@ -40,6 +40,16 @@
             android:text="Account Info"
             android:layout_marginTop="12dp" />
 
+        <!-- ✅ NEW: Edit Profile Button -->
+        <Button
+            android:id="@+id/btnEditProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Edit Profile"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="@color/teal_700"
+            android:textColor="@android:color/white" />
+
         <Button
             android:id="@+id/btnVerifyAccount"
             android:layout_width="match_parent"

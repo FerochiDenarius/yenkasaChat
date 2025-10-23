@@ -83,33 +83,24 @@
                 android:paddingEnd="16dp"
                 android:paddingBottom="16dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/textUsername"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Username"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
-                        android:padding="8dp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
+                <TextView
+                    android:id="@+id/textUsername"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp">
+                    android:text="Username"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:padding="8dp"
+                    android:textColor="@android:color/black" />
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/textLocation"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Location"
-                        android:inputType="textCapWords"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                <TextView
+                    android:id="@+id/textLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Location"
+                    android:textSize="14sp"
+                    android:textColor="#555555" />
 
                 <Button
                     android:id="@+id/btnEditSave"
@@ -141,30 +132,46 @@
             android:padding="16dp">
 
             <!-- Email -->
-            <LinearLayout style="@style/ProfileDetailRow">
-                <TextView style="@style/ProfileDetailLabel" android:text="Email:" />
-                <com.google.android.material.textfield.TextInputLayout style="@style/ProfileDetailInputLayout">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/textEmail"
-                        style="@style/ProfileDetailInput"
-                        android:hint="Email"
-                        android:inputType="textEmailAddress" />
-                </com.google.android.material.textfield.TextInputLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    style="@style/ProfileDetailLabel"
+                    android:text="Email:" />
+
+                <TextView
+                    android:id="@+id/textEmail"
+                    style="@style/ProfileDetailInput"
+                    android:text="user@example.com"
+                    android:textColor="@android:color/black"
+                    android:layout_marginStart="8dp" />
             </LinearLayout>
 
             <!-- Phone -->
-            <LinearLayout style="@style/ProfileDetailRow">
-                <TextView style="@style/ProfileDetailLabel" android:text="Phone:" />
-                <com.google.android.material.textfield.TextInputLayout style="@style/ProfileDetailInputLayout">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/textPhone"
-                        style="@style/ProfileDetailInput"
-                        android:hint="Phone"
-                        android:inputType="phone" />
-                </com.google.android.material.textfield.TextInputLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    style="@style/ProfileDetailLabel"
+                    android:text="Phone:" />
+
+                <TextView
+                    android:id="@+id/textPhone"
+                    style="@style/ProfileDetailInput"
+                    android:text="+233 000 000 000"
+                    android:textColor="@android:color/black"
+                    android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- Posts Section -->
+            <!-- Divider -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"

@@ -39,11 +39,6 @@ android {
         jvmTarget = "11"
     }
 
-    // ❌ REMOVE THIS ENTIRE BLOCK
-    // composeOptions {
-    //     kotlinCompilerExtensionVersion = "..."
-    // }
-
     packagingOptions {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -62,6 +57,7 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // ✅ Pusher Beams SDK (v1.9.0 stable)
     implementation("com.pusher:push-notifications-android:1.9.0")
     implementation("com.google.firebase:firebase-iid:21.1.0")
@@ -128,6 +124,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.lifecycle:lifecycle-common-java8:2.6.2")
 
+    // ExoPlayer core
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
+    implementation("androidx.media3:media3-common:1.5.1")
+// Optional: for loading media from URLs (HTTP(S))
+    implementation("androidx.media3:media3-exoplayer-dash:1.4.1")
+// Optional: if you plan to play audio focus aware background playback
+    implementation("androidx.media3:media3-session:1.4.1")
 
 // Check for the latest version
 }

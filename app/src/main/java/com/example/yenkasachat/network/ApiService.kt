@@ -293,9 +293,37 @@ fun getComments(
         @Path("postId") postId: String
     ): Call<Map<String, Any>>
 
+
+    // Fetches a user's complete profile, including their posts, in one call
+    @GET("users/{userId}/profile")
+    fun getUserProfile(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): Call<ProfileResponse> // ✅ Use your existing, modified ProfileResponse
+
     // ✅ Fetch profile
     @GET("profile")
     suspend fun getProfile(): ProfileResponse
+
+    @POST("/users/{id}/follow")
+    fun followUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<Void>
+
+    @GET("users/{id}")
+    fun getUserById(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<User>
+
+    @GET("posts/user/{id}")
+    fun getPostsByUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<List<Post>>
+
+
 
     @GET("users/{userId}/followers")
     fun getFollowers(@Path("userId") userId: String, @Header("Authorization") token: String): Call<List<User>>

@@ -22,6 +22,14 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
 
 class PostActivity : AppCompatActivity() {
 
@@ -153,7 +161,9 @@ class PostActivity : AppCompatActivity() {
                 }
 
                 val mime = contentResolver.getType(uri) ?: "application/octet-stream"
-                val requestFile = file.asRequestBody(mime.toMediaTypeOrNull())
+                val requestFile = RequestBody.create(mime.toMediaTypeOrNull(), file)
+
+
                 mediaPart = MultipartBody.Part.createFormData("media", file.name, requestFile)
 
             } catch (e: Exception) {
@@ -173,19 +183,50 @@ class PostActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
 
                     if (response.isSuccessful) {
-                        Toast.makeText(this@PostActivity, "Post uploaded!", Toast.LENGTH_SHORT)
-                            .show()
+                        Toast.makeText(this@PostActivity, "Post uploaded!", Toast.LENGTH_SHORT).show()
+
+                        // --- Send OneSignal notification to all subscribed users ---
+                        val postContent = editTextContent.text.toString().trim()
+                        val userId = TokenManager.getUserId(this@PostActivity)
+                        val postId = response.body()?._id ?: ""
+
+                        val jsonBody = JSONObject().apply {
+                            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2") // Your OneSignal App ID
+                            put("included_segments", JSONArray().put("Subscribed Users")) // or include_player_ids if targeting specific users
+                            put("headings", JSONObject().put("en", "New Post from $userId"))
+                            put("contents", JSONObject().put("en", postContent))
+                            put("data", JSONObject().put("post_id", postId))
+                        }
+
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val url = URL("https://onesignal.com/api/v1/notifications")
+                                val conn = url.openConnection() as HttpURLConnection
+                                conn.requestMethod = "POST"
+                                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                                conn.setRequestProperty(
+                                    "Authorization",
+                                    "Basic YOUR_REST_API_KEY" // Replace with your OneSignal REST API Key
+                                )
+                                conn.doOutput = true
+
+                                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
+
+                                val responseCode = conn.responseCode
+                                Log.d("PostActivity", "OneSignal response code: $responseCode")
+                            } catch (e: Exception) {
+                                Log.e("PostActivity", "OneSignal push failed: ${e.message}")
+                            }
+                        }
+
+                        // Finish the activity after post
                         finish()
                     } else {
                         Log.e(
                             "PostActivity",
                             "Upload failed - code: ${response.code()}, msg: ${response.message()}"
                         )
-                        Toast.makeText(
-                            this@PostActivity,
-                            "Failed to upload post.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@PostActivity, "Failed to upload post.", Toast.LENGTH_SHORT).show()
                     }
                 }
 

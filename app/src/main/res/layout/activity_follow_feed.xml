@@ -1,13 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/activity_follow_feed.xml -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
+    android:background="#FFFFFF"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:layout_height="match_parent">
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerFeed"
+        android:id="@+id/recyclerUsers"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp" />
+        android:padding="8dp"
+        android:scrollbars="vertical" />
+
 </LinearLayout>

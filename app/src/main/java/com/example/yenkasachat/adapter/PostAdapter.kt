@@ -50,7 +50,7 @@ class PostAdapter(private val posts: MutableList<Post>) :
         return PostViewHolder(view)
     }
 
-    // ✅ THIS IS THE BLOCK YOU WILL UPDATE
+//BindView
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         val post = posts[position]
         val context = holder.itemView.context // Get context for later use
@@ -63,6 +63,19 @@ class PostAdapter(private val posts: MutableList<Post>) :
         } else {
             holder.imageUser.setImageResource(R.drawable.ic_user_placeholder)
         }
+// 👇 When username or profile image is clicked → open user profile
+
+    holder.imageUser.setOnClickListener {
+        val intent = Intent(context, com.example.yenkasachat.ui.UserProfileActivity::class.java)
+        intent.putExtra("USER_ID", post.user?._id)
+        context.startActivity(intent)
+    }
+
+    holder.textUser.setOnClickListener {
+        val intent = Intent(context, com.example.yenkasachat.ui.UserProfileActivity::class.java)
+        intent.putExtra("USER_ID", post.user?._id)
+        context.startActivity(intent)
+    }
 
         // Timestamp
         holder.textTimestamp.text = post.createdAt?.let { formatDate(it) } ?: ""
@@ -149,11 +162,12 @@ class PostAdapter(private val posts: MutableList<Post>) :
 
                 holder.imagePost.setOnClickListener {
                     post.mediaUrl?.let { url ->
-                        openPreview(holder.itemView.context, url)
+                        openPreview(holder.itemView.context, url, post.mediaType)
                     } ?: run {
                         Toast.makeText(holder.itemView.context, "No media to preview", Toast.LENGTH_SHORT).show()
                     }
                 }
+
             }
 
             "video" -> {
@@ -195,7 +209,19 @@ class PostAdapter(private val posts: MutableList<Post>) :
         }
     }
 
-    // ... (your existing getItemCount, toggleLike, and other functions) ...
+  //user profile
+    private fun openUserProfile(context: Context, userId: String?) {
+        if (userId.isNullOrEmpty()) {
+            Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(context, com.example.yenkasachat.ui.FollowFeedActivity::class.java).apply {
+            putExtra("LIST_TYPE", "profile") // Optional flag if you want to handle differently
+            putExtra("USER_ID", userId)
+        }
+        context.startActivity(intent)
+    }
 
     // ✅ ADD THIS NEW FUNCTION TO YOUR ADAPTER CLASS
     private fun performDelete(post: Post, position: Int, context: Context) {
@@ -345,9 +371,16 @@ class PostAdapter(private val posts: MutableList<Post>) :
         }
     }
 
-    private fun openPreview(context: Context, mediaUrl: String?) {
-        if (mediaUrl.isNullOrEmpty()) return
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(mediaUrl))
+    private fun openPreview(context: Context, mediaUrl: String?, mediaType: String? = null) {
+        if (mediaUrl.isNullOrEmpty()) {
+            Toast.makeText(context, "No media to preview", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(context, com.example.yenkasachat.ui.PostPreviewActivity::class.java).apply {
+            putExtra("mediaUrl", mediaUrl)
+            putExtra("mediaType", mediaType)
+        }
         context.startActivity(intent)
     }
 

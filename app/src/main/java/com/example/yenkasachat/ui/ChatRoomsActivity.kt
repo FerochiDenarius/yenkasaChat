@@ -143,7 +143,18 @@ class ChatRoomsActivity : AppCompatActivity() {
                     if (response.isSuccessful && response.body() != null) {
                         val rooms = response.body()!!
                         Log.d("ChatRoomsActivity", "Chat rooms loaded: ${rooms.size}")
-                        chatRoomAdapter.submitList(rooms)
+
+                        // ✅ Remove duplicate chat rooms by unique participants or ID
+                        val uniqueRooms = rooms.distinctBy { room ->
+                            // Prefer unique room ID if available
+                            room._id ?: room.participants
+                                ?.filter { it._id != currentUserId }
+                                ?.joinToString(",") { it._id ?: "" }
+                        }
+
+                        Log.d("ChatRoomsActivity", "Filtered unique chat rooms: ${uniqueRooms.size}")
+
+                        chatRoomAdapter.submitList(uniqueRooms)
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ChatRoomsActivity", "Failed to load rooms. Code: ${response.code()}, Error: $errorMsg")

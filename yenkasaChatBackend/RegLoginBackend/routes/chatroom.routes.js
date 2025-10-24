@@ -37,9 +37,10 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: 'You cannot create a room with yourself' });
     }
 
-    const existingRoom = await ChatRoom.findOne({
-      participants: { $all: [new mongoose.Types.ObjectId(userId), otherUser._id] },
-    });
+ const existingRoom = await ChatRoom.findOne({
+  participants: { $size: 2, $all: [userId, otherUser._id] },
+});
+
 
     if (existingRoom) {
       return res.json({

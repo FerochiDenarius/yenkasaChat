@@ -40,7 +40,6 @@ class MessageAdapter(private val currentUserId: String) :
 
     override fun getItemViewType(position: Int): Int {
         val message = getItem(position)
-        // ✅ FIXED: compare senderId directly, not nested sender?._id
         return if (message.senderId == currentUserId) TYPE_SENT else TYPE_RECEIVED
     }
 
@@ -74,6 +73,9 @@ class MessageAdapter(private val currentUserId: String) :
         super.onViewRecycled(holder)
     }
 
+    // ------------------------------------------------------------
+    // Base ViewHolder
+    // ------------------------------------------------------------
     abstract class BaseMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         protected val messageText: TextView = itemView.findViewById(R.id.textMessage)
         protected val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
@@ -113,16 +115,13 @@ class MessageAdapter(private val currentUserId: String) :
             }
         }
 
-// In MessageAdapter.kt, inside the BaseMessageViewHolder class
-
         open fun bind(message: ChatMessage, currentUserId: String) {
             val context = itemView.context
 
-            // --- Reply preview ---
-            // ✅ CHANGED 'replyTo' to 'repliedTo' to match the fixed ChatMessage model
-            if (message.repliedTo != null && replyLayout != null && repliedToName != null && repliedToMessage != null) {
+            // ---------------- Reply Preview ----------------
+            if (message.repliedTo != null && replyLayout != null) {
                 replyLayout.visibility = View.VISIBLE
-                repliedToName.text =
+                repliedToName?.text =
                     if (message.repliedTo.senderId == currentUserId) "You"
                     else message.repliedTo.sender?.username ?: "Someone"
 
@@ -136,19 +135,18 @@ class MessageAdapter(private val currentUserId: String) :
                     !message.repliedTo.contactInfo.isNullOrBlank() -> "👤 Contact"
                     else -> "Message"
                 }
-                repliedToMessage.text = replyContent
+                repliedToMessage?.text = replyContent
             } else {
                 replyLayout?.visibility = View.GONE
             }
 
-            // --- The rest of your bind method is correct and does not need to be changed ---
-            // --- Text ---
+            // ---------------- Text ----------------
             messageText.visibility = if (!message.text.isNullOrBlank()) {
                 messageText.text = message.text
                 View.VISIBLE
             } else View.GONE
 
-            // --- Image ---
+            // ---------------- Image ----------------
             if (!message.imageUrl.isNullOrBlank()) {
                 messageImage.visibility = View.VISIBLE
                 Glide.with(context)
@@ -166,16 +164,83 @@ class MessageAdapter(private val currentUserId: String) :
                 messageImage.visibility = View.GONE
             }
 
-            // ... (rest of the method remains the same)
-            // --- Audio ---
-            // --- Video ---
-            // --- Location ---
-            // --- File ---
-            // --- Contact ---
-            // --- Timestamp ---
+            // ---------------- Audio ----------------
+            if (!message.audioUrl.isNullOrBlank()) {
+                audioContainer?.visibility = View.VISIBLE
+                messageImage.visibility = View.GONE
+                videoView?.visibility = View.GONE
+                messageText.visibility = View.GONE
+                audioSeekBar?.progress = 0
+                audioDuration?.text = formatTime(0)
+                setupAudioPlayer(message.audioUrl, context)
+            } else {
+                audioContainer?.visibility = View.GONE
+            }
+
+            // ---------------- Video ----------------
+            if (!message.videoUrl.isNullOrBlank()) {
+                videoView?.visibility = View.VISIBLE
+                messageImage.visibility = View.GONE
+                messageText.visibility = View.GONE
+                audioContainer?.visibility = View.GONE
+
+                videoView?.setVideoURI(Uri.parse(message.videoUrl))
+                videoView?.setOnPreparedListener { mp ->
+                    mp.isLooping = false
+                    videoView?.setOnClickListener {
+                        if (videoView?.isPlaying == true) videoView?.pause() else videoView?.start()
+                    }
+                }
+            } else {
+                videoView?.visibility = View.GONE
+            }
+
+            // ---------------- Location ----------------
+            if (message.location != null && layoutLocation != null) {
+                layoutLocation.visibility = View.VISIBLE
+                textLocation?.text = "View location"
+                layoutLocation.setOnClickListener {
+                    val intent = Intent(context, LocationPreviewActivity::class.java)
+                    intent.putExtra("latitude", message.location.latitude)
+                    intent.putExtra("longitude", message.location.longitude)
+                    context.startActivity(intent)
+                }
+            } else {
+                layoutLocation?.visibility = View.GONE
+            }
+
+            // ---------------- File ----------------
+            if (!message.fileUrl.isNullOrBlank()) {
+                layoutFile?.visibility = View.VISIBLE
+                // ✅ Safely extract file name from URL if backend didn’t send one
+                val fileName = message.fileUrl.substringAfterLast('/', "File")
+                textFileName?.text = fileName
+                layoutFile?.setOnClickListener {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse(message.fileUrl)
+                    }
+                    context.startActivity(intent)
+                }
+            } else {
+                layoutFile?.visibility = View.GONE
+            }
+
+
+            // ---------------- Contact ----------------
+            if (!message.contactInfo.isNullOrBlank()) {
+                layoutContact?.visibility = View.VISIBLE
+                textContactInfo?.text = message.contactInfo
+            } else {
+                layoutContact?.visibility = View.GONE
+            }
+
+            // ---------------- Timestamp ----------------
             timestampText.text = formatTimestamp(message.timestamp)
         }
 
+        // ------------------------------------------------------------
+        // Audio Player Logic
+        // ------------------------------------------------------------
         private fun setupAudioPlayer(url: String, context: android.content.Context) {
             releaseMediaPlayer()
             btnPlayAudio?.setOnClickListener {
@@ -221,7 +286,9 @@ class MessageAdapter(private val currentUserId: String) :
                 val output = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
                 output.timeZone = TimeZone.getDefault()
                 output.format(date)
-            } catch (_: Exception) { "" }
+            } catch (_: Exception) {
+                ""
+            }
         }
 
         protected fun formatTime(milliseconds: Int): String {
@@ -246,6 +313,9 @@ class MessageAdapter(private val currentUserId: String) :
         }
     }
 
+    // ------------------------------------------------------------
+    // Sent / Received ViewHolders
+    // ------------------------------------------------------------
     class SentMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView) {
         private val statusText: TextView = itemView.findViewById(R.id.textStatus)
         override fun bind(message: ChatMessage, currentUserId: String) {
@@ -256,6 +326,9 @@ class MessageAdapter(private val currentUserId: String) :
 
     class ReceivedMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
 
+    // ------------------------------------------------------------
+    // Diff Callback
+    // ------------------------------------------------------------
     class DiffCallback : DiffUtil.ItemCallback<ChatMessage>() {
         override fun areItemsTheSame(oldItem: ChatMessage, newItem: ChatMessage) =
             oldItem.id == newItem.id

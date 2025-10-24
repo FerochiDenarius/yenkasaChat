@@ -13,6 +13,15 @@ import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import android.util.Log
+
 
 class CommentsActivity : AppCompatActivity() {
 
@@ -92,11 +101,14 @@ class CommentsActivity : AppCompatActivity() {
             .enqueue(object : Callback<Comment> {
                 override fun onResponse(call: Call<Comment>, response: Response<Comment>) {
                     if (response.isSuccessful) {
-                        response.body()?.let {
-                            comments.add(it) // instead of comments.add(0, it)
+                        response.body()?.let { newComment ->
+                            comments.add(newComment)
                             adapter.notifyItemInserted(comments.size - 1)
                             recyclerComments.scrollToPosition(comments.size - 1)
                             editComment.text.clear()
+
+                            // ✅ Send OneSignal push to post owner
+                            sendCommentNotification(newComment)
                         }
                     } else {
                         Toast.makeText(this@CommentsActivity, "Failed to post comment", Toast.LENGTH_SHORT).show()
@@ -108,4 +120,36 @@ class CommentsActivity : AppCompatActivity() {
                 }
             })
     }
+    private fun sendCommentNotification(comment: Comment) {
+        val userId = TokenManager.getUserId(this@CommentsActivity)
+        val jsonBody = JSONObject().apply {
+            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2") // ✅ Your OneSignal App ID
+            put("included_segments", JSONArray().put("Subscribed Users")) // 🔄 Later replace with post owner playerId
+            put("headings", JSONObject().put("en", "New Comment on Your Post"))
+            put("contents", JSONObject().put("en", "${comment.user?.username ?: "Someone"}: ${comment.text}"))
+            put("data", JSONObject().put("post_id", postId))
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = URL("https://onesignal.com/api/v1/notifications")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                conn.setRequestProperty(
+                    "Authorization",
+                    "Basic YOUR_REST_API_KEY" // ⚠️ Replace with your OneSignal REST API key
+                )
+                conn.doOutput = true
+
+                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
+
+                val responseCode = conn.responseCode
+                Log.d("CommentsActivity", "OneSignal response: $responseCode")
+            } catch (e: Exception) {
+                Log.e("CommentsActivity", "Failed to send comment notification: ${e.message}")
+            }
+        }
+    }
+
 }

@@ -22,37 +22,38 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class AccountInfoActivity : AppCompatActivity() {
+class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var imageProfile: ImageView
     private lateinit var usernameView: TextView
-    private lateinit var emailView: TextView
-    private lateinit var phoneView: TextView
-    private lateinit var locationView: TextView
     private lateinit var followersCountView: TextView
     private lateinit var followingCountView: TextView
     private lateinit var postsCountView: TextView
     private lateinit var recyclerUserPosts: RecyclerView
-    private lateinit var btnEditProfile: Button
+    private lateinit var btnFollow: Button
+    private lateinit var btnMessage: Button
 
-    // ✅ Reuse PostAdapter here
     private lateinit var postAdapter: PostAdapter
     private val userPostsList = mutableListOf<Post>()
 
-    private val TAG = "AccountInfoActivity"
+    private var userId: String? = null
+    private val TAG = "UserProfileActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_account_info)
+        setContentView(R.layout.activity_user_profile)
 
         bindViews()
         setupRecyclerView()
         setupListeners()
 
-        // ✅ Show cached profile info immediately
-        loadProfileFromCache()
+        userId = intent.getStringExtra("USER_ID")
+        if (userId.isNullOrEmpty()) {
+            Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
-        // ✅ Fetch fresh profile + posts from backend
         fetchUserProfile()
         loadUserPosts()
     }
@@ -60,119 +61,114 @@ class AccountInfoActivity : AppCompatActivity() {
     private fun bindViews() {
         imageProfile = findViewById(R.id.imageProfile)
         usernameView = findViewById(R.id.textUsername)
-        emailView = findViewById(R.id.textEmail)
-        phoneView = findViewById(R.id.textPhone)
-        locationView = findViewById(R.id.textLocation)
         followersCountView = findViewById(R.id.textFollowersCount)
         followingCountView = findViewById(R.id.textFollowingCount)
         postsCountView = findViewById(R.id.textPostsCount)
         recyclerUserPosts = findViewById(R.id.recyclerUserPosts)
-        btnEditProfile = findViewById(R.id.btnEditSave)
+        btnFollow = findViewById(R.id.btnFollow)
+        btnMessage = findViewById(R.id.btnMessage)
     }
 
     private fun setupRecyclerView() {
         postAdapter = PostAdapter(userPostsList)
         recyclerUserPosts.apply {
-            layoutManager = GridLayoutManager(this@AccountInfoActivity, 3)
+            layoutManager = GridLayoutManager(this@UserProfileActivity, 3)
             adapter = postAdapter
             isNestedScrollingEnabled = false
         }
     }
 
     private fun setupListeners() {
-        btnEditProfile.setOnClickListener {
-            startActivity(Intent(this, EditProfileActivity::class.java))
+        imageProfile.setOnClickListener {
+            val intent = Intent(this, ProfileImagePreviewActivity::class.java)
+            intent.putExtra("IMAGE_URL", imageProfile.tag as? String ?: "")
+            startActivity(intent)
+        }
+
+        btnFollow.setOnClickListener { followUser() }
+
+        btnMessage.setOnClickListener {
+            val intent = Intent(this, ChatActivity::class.java)
+            intent.putExtra("RECIPIENT_ID", userId)
+            startActivity(intent)
         }
 
         followersCountView.setOnClickListener { openFollowList("followers") }
         followingCountView.setOnClickListener { openFollowList("following") }
     }
 
-    private fun loadProfileFromCache() {
-        usernameView.text = TokenManager.getUsername(this) ?: "Unknown"
-        emailView.text = TokenManager.getEmail(this) ?: "Not provided"
-        phoneView.text = TokenManager.getPhone(this) ?: "Not provided"
-        locationView.text = TokenManager.getLocation(this) ?: "No location"
-
-        val profileUrl = TokenManager.getProfilePicUrl(this)
-        Glide.with(this)
-            .load(profileUrl ?: R.drawable.default_avatar)
-            .apply(RequestOptions.circleCropTransform())
-            .into(imageProfile)
-    }
-
     private fun fetchUserProfile() {
-        ApiClient.apiService.getUserProfile()
+        val token = TokenManager.getToken(this) ?: return
+        ApiClient.apiService.getUserById("Bearer $token", userId!!)
             .enqueue(object : Callback<User> {
                 override fun onResponse(call: Call<User>, response: Response<User>) {
                     if (response.isSuccessful && response.body() != null) {
                         val user = response.body()!!
                         updateUI(user)
-
-                        // ✅ Save new data for cache
-                        TokenManager.saveUserDetails(
-                            this@AccountInfoActivity,
-                            user._id,
-                            user.username,
-                            user.email,
-                            user.phone,
-                            user.verified,
-                            user.profileImage,
-                            user.location
-                        )
                     } else {
-                        Log.e(TAG, "Failed to fetch user profile: ${response.code()}")
-                        Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@UserProfileActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
+                        Log.e(TAG, "Error: ${response.code()} ${response.message()}")
                     }
                 }
 
                 override fun onFailure(call: Call<User>, t: Throwable) {
-                    Log.e(TAG, "Error fetching user profile: ${t.message}")
+                    Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
     private fun updateUI(user: User) {
         usernameView.text = user.username
-        emailView.text = user.email ?: "Not provided"
-        phoneView.text = user.phone ?: "Not provided"
-        locationView.text = user.location ?: "No location"
+        followersCountView.text = "${user.followers?.size ?: 0}\nFollowers"
+        followingCountView.text = "${user.following?.size ?: 0}\nFollowing"
 
         Glide.with(this)
             .load(user.profileImage ?: R.drawable.default_avatar)
-            .apply(
-                RequestOptions()
-                    .placeholder(R.drawable.ic_user_placeholder)
-                    .error(R.drawable.ic_user_placeholder)
-                    .circleCrop()
-            )
+            .apply(RequestOptions.circleCropTransform())
             .into(imageProfile)
+
+        imageProfile.tag = user.profileImage
     }
 
     private fun loadUserPosts() {
         val token = TokenManager.getToken(this) ?: return
-
-        ApiClient.apiService.getMyPosts("Bearer $token")
+        ApiClient.apiService.getPostsByUser("Bearer $token", userId!!)
             .enqueue(object : Callback<List<Post>> {
                 override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
                     if (response.isSuccessful && response.body() != null) {
-                        val allPosts = response.body()!!
-
                         // Keep only posts with media
-                        val mediaPosts = allPosts.filter { !it.mediaUrl.isNullOrBlank() } // <-- adjust field name
+                        val mediaPosts = response.body()!!.filter { !it.mediaUrl.isNullOrBlank() } // adjust field name
 
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)
                         postAdapter.notifyDataSetChanged()
-
                         postsCountView.text = "${mediaPosts.size}\nPosts"
-                    } else {
-                        Log.e(TAG, "Failed to load posts: ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<List<Post>>, t: Throwable) {
-                    Log.e(TAG, "Posts load failed: ${t.message}")
+                    Log.e(TAG, "Error loading posts: ${t.message}")
+                }
+            })
+    }
+
+    private fun followUser() {
+        val token = TokenManager.getToken(this) ?: return
+        if (userId.isNullOrEmpty()) return
+
+        ApiClient.apiService.followUser("Bearer $token", userId!!)
+            .enqueue(object : Callback<Void> {
+                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(this@UserProfileActivity, "Followed ${usernameView.text}", Toast.LENGTH_SHORT).show()
+                        fetchUserProfile()
+                    } else {
+                        Toast.makeText(this@UserProfileActivity, "Failed to follow user", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<Void>, t: Throwable) {
+                    Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -180,7 +176,7 @@ class AccountInfoActivity : AppCompatActivity() {
     private fun openFollowList(type: String) {
         val intent = Intent(this, FollowListActivity::class.java)
         intent.putExtra("TYPE", type)
-        intent.putExtra("USER_ID", TokenManager.getUserId(this))
+        intent.putExtra("USER_ID", userId)
         startActivity(intent)
     }
 }

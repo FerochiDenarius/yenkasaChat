@@ -144,13 +144,13 @@ class ChatRoomsActivity : AppCompatActivity() {
                         val rooms = response.body()!!
                         Log.d("ChatRoomsActivity", "Chat rooms loaded: ${rooms.size}")
 
-                        // ✅ Remove duplicate chat rooms by unique participants or ID
                         val uniqueRooms = rooms.distinctBy { room ->
-                            // Prefer unique room ID if available
-                            room._id ?: room.participants
-                                ?.filter { it._id != currentUserId }
-                                ?.joinToString(",") { it._id ?: "" }
+                            // Identify each chat uniquely by the *other participant’s* ID
+                            room.participants
+                                ?.firstOrNull { it._id != currentUserId }
+                                ?._id ?: room._id
                         }
+
 
                         Log.d("ChatRoomsActivity", "Filtered unique chat rooms: ${uniqueRooms.size}")
 

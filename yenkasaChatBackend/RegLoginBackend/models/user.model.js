@@ -21,7 +21,7 @@ const userSchema = new Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    sparse: true, 
+    sparse: true,
     match: [/.+\@.+\..+/, 'Please fill a valid email address']
   },
   password: {
@@ -37,39 +37,36 @@ const userSchema = new Schema({
     default: false
   },
 
-  // 🔑 Legacy generic fields
-  verificationCode: { type: String },
-  codeExpiresAt: { type: Date },
+  // 🧍‍♂️ Profile fields
+  profileImage: { type: String, default: '' },
+  bio: { type: String, default: '' },
 
-  // 📧 Email verification
-  emailVerified: { type: Boolean, default: false },
-  emailVerificationCode: { type: String },
-  emailCodeExpiresAt: { type: Date },
+  // 🧑‍🤝‍🧑 Social graph
+  followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  followersCount: { type: Number, default: 0 },
+  followingCount: { type: Number, default: 0 },
 
-  // 📱 Phone verification
-  phoneVerified: { type: Boolean, default: false },
-  phoneVerificationCode: { type: String },
-  phoneCodeExpiresAt: { type: Date },
-
-  profileImage: {
-    type: String,
-    default: '' 
-  },
-
-  playerId: { 
-    type: String,
-    default: null 
-  },
-
+  // 🔒 Auth fields
   refreshToken: { type: String },
 
-  // 🔒 Password reset fields
-  passwordResetToken: { type: String },
-  passwordResetExpires: { type: Date },
-
-  // 🟢 Online status fields
+  // 🕓 Online tracking
   online: { type: Boolean, default: false },
-  lastSeen: { type: Date, default: Date.now }
+  lastSeen: { type: Date, default: Date.now },
+
+  // Verification fields
+  emailVerified: { type: Boolean, default: false },
+  phoneVerified: { type: Boolean, default: false },
+  verificationCode: String,
+  codeExpiresAt: Date,
+  emailVerificationCode: String,
+  emailCodeExpiresAt: Date,
+  phoneVerificationCode: String,
+  phoneCodeExpiresAt: Date,
+  passwordResetToken: String,
+  passwordResetExpires: Date,
+
+  playerId: { type: String, default: null }
 
 }, { timestamps: true });
 

@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F9F9F9"
+    android:background="#F5F5F5"
     android:padding="16dp">
 
     <LinearLayout
@@ -16,6 +16,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Main Menu"
+            android:textColor="#222222"
             android:textSize="22sp"
             android:textStyle="bold"
             android:layout_marginBottom="24dp" />
@@ -24,51 +25,63 @@
             android:id="@+id/btnContacts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
             android:text="Contacts" />
 
         <Button
             android:id="@+id/btnChatRooms"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chat Rooms"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
+            android:text="Chat Rooms" />
 
         <Button
             android:id="@+id/btnAccount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Account Info"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
+            android:text="Account Info" />
 
-        <!-- ✅ NEW: Edit Profile Button -->
+        <!-- Edit Profile Button (neutral version) -->
         <Button
             android:id="@+id/btnEditProfile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Edit Profile"
             android:layout_marginTop="12dp"
-            android:backgroundTint="@color/teal_700"
-            android:textColor="@android:color/white" />
+            android:backgroundTint="#D5D5D5"
+            android:textColor="#222222"
+            android:text="Edit Profile" />
 
         <Button
             android:id="@+id/btnVerifyAccount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Verify Account"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
+            android:text="Verify Account" />
 
         <Button
             android:id="@+id/btnSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Settings"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
+            android:text="Settings" />
 
         <Button
             android:id="@+id/btnLogout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Logout"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#CCCCCC"
+            android:textColor="#222222"
+            android:text="Logout" />
     </LinearLayout>
 </ScrollView>

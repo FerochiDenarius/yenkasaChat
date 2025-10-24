@@ -295,21 +295,18 @@ fun getComments(
 
 
     // Fetches a user's complete profile, including their posts, in one call
-    @GET("users/{userId}/profile")
-    fun getUserProfile(
-        @Header("Authorization") token: String,
-        @Path("userId") userId: String
-    ): Call<ProfileResponse> // ✅ Use your existing, modified ProfileResponse
+    @GET("users/{id}/profile")
+    fun getUserProfile
+                (@Header("Authorization") token:
+                 String,
+                 @Path("id") userId: String):
+            Call<ProfileResponse>
 
     // ✅ Fetch profile
     @GET("profile")
     suspend fun getProfile(): ProfileResponse
 
-    @POST("/users/{id}/follow")
-    fun followUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Void>
+
 
     @GET("users/{id}")
     fun getUserById(
@@ -323,7 +320,11 @@ fun getComments(
         @Path("id") userId: String
     ): Call<List<Post>>
 
-
+    @POST("users/toggle-follow/{userId}")
+    fun toggleFollow(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<Map<String, Any>>
 
     @GET("users/{userId}/followers")
     fun getFollowers(@Path("userId") userId: String, @Header("Authorization") token: String): Call<List<User>>
@@ -344,6 +345,22 @@ fun getComments(
     ): Call<List<Post>>
 
 
+
+
+    @POST("users/{id}/block")
+    fun blockUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<Map<String, Any>>
+
+    @POST("users/{id}/unblock")
+    fun unblockUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<Map<String, Any>>
+
+
+
     @GET("feed/following")
     fun getFollowingFeed(@Header("Authorization") token: String): Call<List<Post>>
 
@@ -355,11 +372,19 @@ fun getComments(
     ): Call<Map<String, Any>>
 
     // Follow/unfollow a user
-    @POST("follow/{targetUserId}")
-    fun toggleFollow(
-        @Path("targetUserId") targetUserId: String,
-        @Header("Authorization") token: String
+    @POST("/users/{id}/follow")
+    fun followUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
     ): Call<Map<String, Any>>
+
+    @POST("/users/{id}/unfollow")
+    fun unfollowUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<Map<String, Any>>
+
+
 
 
     // ✅ Update profile

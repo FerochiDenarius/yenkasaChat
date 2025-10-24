@@ -13,6 +13,8 @@ data class ProfileResponse(
     // ✅ ADD THESE THREE LINES
     val followers: List<String>?,
     val following: List<String>?,
-    val posts: List<Post>
+    val posts: List<Post>,
+    val isFollowing: Boolean,
+    val isBlocked: Boolean
     // ... any other fields
 )

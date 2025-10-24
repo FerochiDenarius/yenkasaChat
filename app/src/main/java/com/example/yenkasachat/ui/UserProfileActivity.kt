@@ -15,7 +15,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.model.Post
-import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.ProfileResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
@@ -32,11 +32,15 @@ class UserProfileActivity : AppCompatActivity() {
     private lateinit var recyclerUserPosts: RecyclerView
     private lateinit var btnFollow: Button
     private lateinit var btnMessage: Button
+    private lateinit var btnBlock: Button
 
     private lateinit var postAdapter: PostAdapter
     private val userPostsList = mutableListOf<Post>()
 
     private var userId: String? = null
+    private var isFollowing = false
+    private var isBlocked = false
+
     private val TAG = "UserProfileActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,7 +59,6 @@ class UserProfileActivity : AppCompatActivity() {
         }
 
         fetchUserProfile()
-        loadUserPosts()
     }
 
     private fun bindViews() {
@@ -67,15 +70,13 @@ class UserProfileActivity : AppCompatActivity() {
         recyclerUserPosts = findViewById(R.id.recyclerUserPosts)
         btnFollow = findViewById(R.id.btnFollow)
         btnMessage = findViewById(R.id.btnMessage)
+        btnBlock = findViewById(R.id.btnBlock)
     }
 
     private fun setupRecyclerView() {
         postAdapter = PostAdapter(userPostsList)
-        recyclerUserPosts.apply {
-            layoutManager = GridLayoutManager(this@UserProfileActivity, 3)
-            adapter = postAdapter
-            isNestedScrollingEnabled = false
-        }
+        recyclerUserPosts.layoutManager = GridLayoutManager(this, 3)
+        recyclerUserPosts.adapter = postAdapter
     }
 
     private fun setupListeners() {
@@ -85,7 +86,7 @@ class UserProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        btnFollow.setOnClickListener { followUser() }
+        btnFollow.setOnClickListener { toggleFollowUser() }
 
         btnMessage.setOnClickListener {
             val intent = Intent(this, ChatActivity::class.java)
@@ -93,84 +94,118 @@ class UserProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        btnBlock.setOnClickListener { toggleBlockUser() }
+
         followersCountView.setOnClickListener { openFollowList("followers") }
         followingCountView.setOnClickListener { openFollowList("following") }
     }
 
     private fun fetchUserProfile() {
         val token = TokenManager.getToken(this) ?: return
-        ApiClient.apiService.getUserById("Bearer $token", userId!!)
-            .enqueue(object : Callback<User> {
-                override fun onResponse(call: Call<User>, response: Response<User>) {
+
+        ApiClient.apiService.getUserProfile("Bearer $token", userId!!)
+            .enqueue(object : Callback<ProfileResponse> {
+                override fun onResponse(call: Call<ProfileResponse>, response: Response<ProfileResponse>) {
                     if (response.isSuccessful && response.body() != null) {
-                        val user = response.body()!!
-                        updateUI(user)
-                    } else {
-                        Toast.makeText(this@UserProfileActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "Error: ${response.code()} ${response.message()}")
-                    }
-                }
+                        val profile = response.body()!!
+                        updateUI(profile)
 
-                override fun onFailure(call: Call<User>, t: Throwable) {
-                    Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
-    }
-
-    private fun updateUI(user: User) {
-        usernameView.text = user.username
-        followersCountView.text = "${user.followers?.size ?: 0}\nFollowers"
-        followingCountView.text = "${user.following?.size ?: 0}\nFollowing"
-
-        Glide.with(this)
-            .load(user.profileImage ?: R.drawable.default_avatar)
-            .apply(RequestOptions.circleCropTransform())
-            .into(imageProfile)
-
-        imageProfile.tag = user.profileImage
-    }
-
-    private fun loadUserPosts() {
-        val token = TokenManager.getToken(this) ?: return
-        ApiClient.apiService.getPostsByUser("Bearer $token", userId!!)
-            .enqueue(object : Callback<List<Post>> {
-                override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        // Keep only posts with media
-                        val mediaPosts = response.body()!!.filter { !it.mediaUrl.isNullOrBlank() } // adjust field name
-
+                        val mediaPosts = profile.posts.filter { !it.mediaUrl.isNullOrBlank() }
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)
                         postAdapter.notifyDataSetChanged()
                         postsCountView.text = "${mediaPosts.size}\nPosts"
+                    } else {
+                        Log.e(TAG, "Profile load failed: ${response.code()} ${response.message()}")
+                        Toast.makeText(this@UserProfileActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
                     }
                 }
 
-                override fun onFailure(call: Call<List<Post>>, t: Throwable) {
-                    Log.e(TAG, "Error loading posts: ${t.message}")
+                override fun onFailure(call: Call<ProfileResponse>, t: Throwable) {
+                    Log.e(TAG, "Network error loading profile: ${t.message}")
+                    Toast.makeText(this@UserProfileActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
-    private fun followUser() {
+    private fun updateUI(profile: ProfileResponse) {
+        usernameView.text = profile.username
+        followersCountView.text = "${profile.followers?.size ?: 0}\nFollowers"
+        followingCountView.text = "${profile.following?.size ?: 0}\nFollowing"
+        postsCountView.text = "${profile.posts.size}\nPosts"
+
+        Glide.with(this)
+            .load(profile.profileImage ?: R.drawable.ic_user_placeholder)
+            .apply(RequestOptions.circleCropTransform())
+            .into(imageProfile)
+
+        imageProfile.tag = profile.profileImage
+
+        isFollowing = profile.isFollowing
+        isBlocked = profile.isBlocked
+
+        btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
+        btnBlock.text = if (isBlocked) "Unblock" else "Block"
+    }
+
+    private fun toggleFollowUser() {
         val token = TokenManager.getToken(this) ?: return
         if (userId.isNullOrEmpty()) return
 
-        ApiClient.apiService.followUser("Bearer $token", userId!!)
-            .enqueue(object : Callback<Void> {
-                override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                    if (response.isSuccessful) {
-                        Toast.makeText(this@UserProfileActivity, "Followed ${usernameView.text}", Toast.LENGTH_SHORT).show()
-                        fetchUserProfile()
-                    } else {
-                        Toast.makeText(this@UserProfileActivity, "Failed to follow user", Toast.LENGTH_SHORT).show()
-                    }
-                }
+        val call = ApiClient.apiService.toggleFollow(userId!!, "Bearer $token")
 
-                override fun onFailure(call: Call<Void>, t: Throwable) {
-                    Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+        call.enqueue(object : Callback<Map<String, Any>> {
+            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                if (response.isSuccessful) {
+                    isFollowing = !isFollowing
+                    btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
+
+                    Toast.makeText(
+                        this@UserProfileActivity,
+                        if (isFollowing) "Followed user" else "Unfollowed user",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    fetchUserProfile()
+                } else {
+                    Toast.makeText(this@UserProfileActivity, "Failed to update follow", Toast.LENGTH_SHORT).show()
                 }
-            })
+            }
+
+            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun toggleBlockUser() {
+        val token = TokenManager.getToken(this) ?: return
+        if (userId.isNullOrEmpty()) return
+
+        val call = if (isBlocked)
+            ApiClient.apiService.unblockUser("Bearer $token", userId!!)
+        else
+            ApiClient.apiService.blockUser("Bearer $token", userId!!)
+
+        call.enqueue(object : Callback<Map<String, Any>> {
+            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                if (response.isSuccessful) {
+                    isBlocked = !isBlocked
+                    btnBlock.text = if (isBlocked) "Unblock" else "Block"
+                    Toast.makeText(
+                        this@UserProfileActivity,
+                        if (isBlocked) "User blocked" else "User unblocked",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(this@UserProfileActivity, "Failed to block/unblock user", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                Toast.makeText(this@UserProfileActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun openFollowList(type: String) {

@@ -37,7 +37,7 @@ class FollowFeedActivity : AppCompatActivity() {
         recyclerUsers = findViewById(R.id.recyclerUsers)
         recyclerUsers.layoutManager = LinearLayoutManager(this)
 
-        adapter = UserAdapter(users) { user, view ->
+        adapter = UserAdapter(users) { user, _ ->
             val token = TokenManager.getToken(this)
             val currentUserId = TokenManager.getUserId(this)
             if (token.isNullOrEmpty() || currentUserId == null) {
@@ -45,10 +45,13 @@ class FollowFeedActivity : AppCompatActivity() {
                 return@UserAdapter
             }
 
-            // 🔹 Follow API request
-            ApiClient.apiService.followUser("Bearer $token", user._id)
-                .enqueue(object : Callback<Void> {
-                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+            // 🔹 Follow/Unfollow using toggleFollow
+            ApiClient.apiService.toggleFollow(user._id, "Bearer $token")
+                .enqueue(object : Callback<Map<String, Any>> {
+                    override fun onResponse(
+                        call: Call<Map<String, Any>>,
+                        response: Response<Map<String, Any>>
+                    ) {
                         if (response.isSuccessful) {
                             Toast.makeText(
                                 this@FollowFeedActivity,
@@ -67,7 +70,7 @@ class FollowFeedActivity : AppCompatActivity() {
                         }
                     }
 
-                    override fun onFailure(call: Call<Void>, t: Throwable) {
+                    override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
                         Toast.makeText(
                             this@FollowFeedActivity,
                             "Network error: ${t.message}",
@@ -119,11 +122,10 @@ class FollowFeedActivity : AppCompatActivity() {
         })
     }
 
-    // ✅ MOVE THIS OUTSIDE loadFollowList()
     private fun sendFollowNotification(followerId: String, followedId: String, followedUsername: String) {
         val jsonBody = JSONObject().apply {
-            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2") // Your OneSignal App ID
-            put("include_external_user_ids", JSONArray().put(followedId)) // Target specific user
+            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2")
+            put("include_external_user_ids", JSONArray().put(followedId))
             put("headings", JSONObject().put("en", "New Follower"))
             put("contents", JSONObject().put("en", "$followedUsername started following you"))
             put("data", JSONObject().put("type", "follow").put("from_user", followerId))
@@ -137,7 +139,7 @@ class FollowFeedActivity : AppCompatActivity() {
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 conn.setRequestProperty(
                     "Authorization",
-                    "Basic YOUR_REST_API_KEY" // 🔑 Replace with your OneSignal REST API key
+                    "Basic YOUR_REST_API_KEY"
                 )
                 conn.doOutput = true
                 conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }

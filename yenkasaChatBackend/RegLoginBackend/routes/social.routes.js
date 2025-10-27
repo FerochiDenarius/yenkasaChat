@@ -12,29 +12,47 @@ const router = express.Router();
 router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
     const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const post = await Post.findById(req.params.postId).select("likes");
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
     const alreadyLiked = post.likes.some(id => id.toString() === userId);
-    const update = alreadyLiked
-      ? { $pull: { likes: userId }, $inc: { likesCount: -1 } }
-      : { $addToSet: { likes: userId }, $inc: { likesCount: 1 } };
 
-    const updatedPost = await Post.findByIdAndUpdate(req.params.postId, update, { new: true }).select("likes likesCount");
-    const likedByUser = updatedPost.likes.some(id => id.toString() === userId);
+    // Prepare the update on the 'likes' array
+    const updateOperation = alreadyLiked
+      ? { $pull: { likes: userId } }
+      : { $addToSet: { likes: userId } };
+
+
+    await Post.findByIdAndUpdate(req.params.postId, updateOperation);
+
+    const freshPost = await Post.findById(req.params.postId).select("likes");
+
+    const newLikesCount = freshPost.likes.length;
+
+    await Post.findByIdAndUpdate(req.params.postId, { likesCount: newLikesCount });
+
+    const likedByUser = freshPost.likes.some(id => id.toString() === userId);
+
+    // --- ✅ FIX ENDS HERE ---
 
     res.status(200).json({
       message: likedByUser ? "Post liked" : "Post unliked",
-      likesCount: updatedPost.likesCount,
+      likesCount: newLikesCount, // Send the newly calculated, correct count
       likedByUser,
     });
+
   } catch (err) {
     console.error("❌ Error toggling like:", err);
     res.status(500).json({ message: "Failed to toggle like", error: err.message });
   }
 });
+
 
 // 💬 Add comment to a post
 router.post("/comment/:postId", verifyToken, async (req, res) => {
@@ -142,6 +160,33 @@ router.post("/follow/:targetUserId", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("❌ Error in follow/unfollow:", err);
     res.status(500).json({ message: "Failed to follow/unfollow", error: err.message });
+  }
+});
+
+/* ------------------------------------
+ * 📰 GET POSTS FROM FOLLOWED USERS
+ * ------------------------------------ */
+router.get("/feed/following", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // Fetch the user and their following list
+    const user = await User.findById(userId).select("following");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Find posts from followed users (including your own)
+    const posts = await Post.find({
+      user: { $in: [...user.following, userId] }, // include self
+      isDeleted: false
+    })
+      .populate("user", "_id username profileImage")
+      .sort({ createdAt: -1 }); // newest first
+
+    res.json(posts);
+  } catch (err) {
+    console.error("❌ Error loading following feed:", err);
+    res.status(500).json({ message: "Failed to load following feed", error: err.message });
   }
 });
 

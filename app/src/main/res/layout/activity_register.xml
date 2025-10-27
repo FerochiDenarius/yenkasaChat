@@ -94,6 +94,22 @@
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- ✅ Community selector -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Community"
+            android:textColor="@android:color/black"
+            android:layout_marginTop="16dp"
+            android:textStyle="bold"/>
+
+        <Spinner
+            android:id="@+id/spinnerCommunity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:spinnerMode="dropdown" />
+
         <!-- Password input -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layoutPassword"
@@ -126,7 +142,7 @@
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- ✅ WhatsApp-style Terms Agreement -->
+        <!-- WhatsApp-style Terms Agreement -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -140,7 +156,7 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="I agree to the"
-                android:textColor="@color/black" />
+                android:textColor="@android:color/black" />
 
             <TextView
                 android:id="@+id/textTermsLink"

@@ -1,6 +1,9 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('../models/user');
-const Community = require('../models/community');
+const User = require('../models/user.model');     // ✅ FIXED
+const Community = require('../models/community'); // ✅ correct since file = community.js
+
+
 
 async function assignCommunityFromLocation() {
   try {

@@ -295,12 +295,12 @@ fun getComments(
 
 
     // Fetches a user's complete profile, including their posts, in one call
-    @GET("users/{id}/profile")
-    fun getUserProfile
-                (@Header("Authorization") token:
-                 String,
-                 @Path("id") userId: String):
-            Call<ProfileResponse>
+    @GET
+    fun getProfileDynamic(
+        @Url url: String,
+        @Header("Authorization") token: String
+    ): Call<ProfileResponse>
+
 
     // ✅ Fetch profile
     @GET("profile")
@@ -390,5 +390,8 @@ fun getComments(
     // ✅ Update profile
     @PUT("profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
+
+    @GET("communities")
+    fun getCommunities(): Call<List<Community>>
 
 }

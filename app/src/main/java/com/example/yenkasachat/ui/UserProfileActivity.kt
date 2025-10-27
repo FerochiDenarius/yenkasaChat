@@ -102,8 +102,11 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun fetchUserProfile() {
         val token = TokenManager.getToken(this) ?: return
+        val userId = intent.getStringExtra("USER_ID") ?: return
 
-        ApiClient.apiService.getUserProfile("Bearer $token", userId!!)
+        val path = "profile/users/$userId/profile"
+
+        ApiClient.apiService.getProfileDynamic(path, "Bearer $token")
             .enqueue(object : Callback<ProfileResponse> {
                 override fun onResponse(call: Call<ProfileResponse>, response: Response<ProfileResponse>) {
                     if (response.isSuccessful && response.body() != null) {
@@ -117,13 +120,11 @@ class UserProfileActivity : AppCompatActivity() {
                         postsCountView.text = "${mediaPosts.size}\nPosts"
                     } else {
                         Log.e(TAG, "Profile load failed: ${response.code()} ${response.message()}")
-                        Toast.makeText(this@UserProfileActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<ProfileResponse>, t: Throwable) {
-                    Log.e(TAG, "Network error loading profile: ${t.message}")
-                    Toast.makeText(this@UserProfileActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Log.e(TAG, "Network error: ${t.message}")
                 }
             })
     }
@@ -132,10 +133,16 @@ class UserProfileActivity : AppCompatActivity() {
         usernameView.text = profile.username
         followersCountView.text = "${profile.followers?.size ?: 0}\nFollowers"
         followingCountView.text = "${profile.following?.size ?: 0}\nFollowing"
-        postsCountView.text = "${profile.posts.size}\nPosts"
+        postsCountView.text = "${profile.posts?.size ?: 0}\nPosts" // ✅ Fix: use safe call
+
+        val imageUrl = if (profile.profileImage?.startsWith("http") == true)
+            profile.profileImage
+        else
+            "https://yenkasa.xyz/${profile.profileImage}"
 
         Glide.with(this)
-            .load(profile.profileImage ?: R.drawable.ic_user_placeholder)
+            .load(imageUrl)
+            .placeholder(R.drawable.ic_user_placeholder)
             .apply(RequestOptions.circleCropTransform())
             .into(imageProfile)
 

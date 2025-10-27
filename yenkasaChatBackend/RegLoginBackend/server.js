@@ -12,9 +12,23 @@ const morgan = require('morgan');
 const http = require('http');
 const { Server } = require("socket.io");
 const User = require('./models/user.model'); // ✅ Add this
+// 🪙 Coins & Verification system
+const CoinSupply = require('./models/coinSupply');
+const CoinTransaction = require('./models/coinTransaction');
+const verificationEvaluator = require('./services/verificationEvaluator');
+const verificationRules = require('./config/verificationRules');
+
 
 const app = express();
 console.log("server.js: Starting application setup...");
+
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(async () => {
+  console.log('✅ MongoDB connected');
+  await seedCommunities(); // 🌱 run seeder here
+}).catch(err => console.error('MongoDB connection error:', err));
 
 // --- HTTP + Socket.IO Server ---
 const server = http.createServer(app);
@@ -174,6 +188,10 @@ app.use("/api/posts", postRoutes);
 const socialRoutes = require('./routes/social.routes');
 app.use('/api/social', socialRoutes);
 
+const coinsRoutes = require('./routes/coins');
+app.use('/coins', coinsRoutes);
+
+
 
 // ---------------------------------
 // Error Handling
@@ -200,6 +218,9 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => {
   console.log('✅ MongoDB connected successfully.');
+
+
+
 
   const PORT = process.env.PORT || 8080;
   server.listen(PORT, "0.0.0.0", () => {

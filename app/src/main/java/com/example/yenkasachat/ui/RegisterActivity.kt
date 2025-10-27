@@ -97,6 +97,12 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
+        // ✅ Check if location mentions Ghana
+        if (!location.contains("Ghana", ignoreCase = true)) {
+            Toast.makeText(this, "Sorry, registration is only allowed for Ghanaians.", Toast.LENGTH_LONG).show()
+            return
+        }
+
         if (password.length < 6) {
             editPassword.error = "Password must be at least 6 characters"
             return

@@ -17,6 +17,8 @@ const CoinSupply = require('./models/coinSupply');
 const CoinTransaction = require('./models/coinTransaction');
 const verificationEvaluator = require('./services/verificationEvaluator');
 const verificationRules = require('./config/verificationRules');
+const seedCommunities = require('./seed/seedCommunities');
+
 
 
 const app = express();

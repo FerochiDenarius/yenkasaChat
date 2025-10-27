@@ -191,8 +191,6 @@ app.use('/api/social', socialRoutes);
 const coinsRoutes = require('./routes/coins');
 app.use('/coins', coinsRoutes);
 
-const verificationCheck = require('./cron/verificationCheck');
-app.use('/api/verify-check', verificationCheck);
 
 
 

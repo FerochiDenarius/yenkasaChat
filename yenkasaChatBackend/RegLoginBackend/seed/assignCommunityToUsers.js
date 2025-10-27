@@ -1,31 +1,37 @@
+// seed/assignCommunityToUsers.js
+
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('../models/user.model');     // ✅ FIXED
-const Community = require('../models/community'); // ✅ correct since file = community.js
+const User = require('../models/user.model');
+const Community = require('../models/community');
 
-
-
-async function assignCommunityFromLocation() {
+async function assignCommunityToUsers() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
-    const users = await User.find({ $or: [{ community: null }, { community: { $exists: false } }] });
+    // Find users missing a community
+    const users = await User.find({
+      $or: [{ community: null }, { community: { $exists: false } }]
+    });
 
     console.log(`👥 Found ${users.length} users without a community.`);
 
     for (const user of users) {
+      // Use user's location as the community name, fallback to "Unassigned"
       const locationName = user.location?.trim() || 'Unassigned';
 
-      // Check if this location already exists as a community
+      // Try to find an existing community with the same name
       let community = await Community.findOne({ name: locationName });
 
+      // If it doesn't exist, create a new one
       if (!community) {
         community = await Community.create({
           name: locationName,
           description: `Community for users from ${locationName}`,
-          isDefault: true,
-          isActive: true,
+          locationTag: locationName,
+          createdBy: null, // Optional: leave null for now
+          coverImage: null,
         });
         console.log(`🌱 Created new community: ${locationName}`);
       }
@@ -33,10 +39,12 @@ async function assignCommunityFromLocation() {
       // Assign the community to the user
       user.community = community._id;
       await user.save();
+
       console.log(`✅ Assigned ${user.username} → ${locationName}`);
     }
 
     console.log('🎯 All users now have a community.');
+    await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error assigning communities:', error);
@@ -44,4 +52,4 @@ async function assignCommunityFromLocation() {
   }
 }
 
-assignCommunityFromLocation();
+assignCommunityToUsers();

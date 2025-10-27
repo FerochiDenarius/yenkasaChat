@@ -6,21 +6,18 @@
     android:layout_height="match_parent"
     android:background="@android:color/white">
 
-    <!-- AppBarLayout with scrollable top profile section -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/white">
 
-        <!-- Top profile section -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             app:layout_scrollFlags="scroll|enterAlways">
 
-            <!-- Toolbar -->
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
@@ -29,7 +26,6 @@
                 app:title="Profile"
                 app:titleTextColor="@android:color/white" />
 
-            <!-- Profile picture & stats -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -47,7 +43,6 @@
                     android:clickable="true"
                     android:focusable="true" />
 
-                <!-- Stats: Posts, Followers, Following -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -74,7 +69,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Username, Location, and Edit Button -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -83,15 +77,31 @@
                 android:paddingEnd="16dp"
                 android:paddingBottom="16dp">
 
-                <TextView
-                    android:id="@+id/textUsername"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Username"
-                    android:textStyle="bold"
-                    android:textSize="18sp"
-                    android:padding="8dp"
-                    android:textColor="@android:color/black" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/textUsername"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Username"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:padding="8dp"
+                        android:textColor="@android:color/black" />
+
+                    <ImageView
+                        android:id="@+id/iconVerified"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="6dp"
+                        android:src="@drawable/ic_verified"
+                        android:visibility="gone"
+                        android:contentDescription="Verified badge" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/textLocation"
@@ -102,6 +112,50 @@
                     android:textSize="14sp"
                     android:textColor="#555555" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:id="@+id/textCoinsLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Coins:"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/black" />
+
+                    <TextView
+                        android:id="@+id/textCoinsBalance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="0 YKC"
+                        android:textSize="14sp"
+                        android:textColor="#009688" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textCommunity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Community: None"
+                    android:textSize="14sp"
+                    android:textColor="#444444" />
+
+                <TextView
+                    android:id="@+id/textDateJoined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Date Joined: 01 Jan 2025"
+                    android:textSize="14sp"
+                    android:textColor="#444444" />
+
                 <Button
                     android:id="@+id/btnEditSave"
                     android:layout_width="match_parent"
@@ -110,16 +164,13 @@
                     android:text="Edit Profile" />
             </LinearLayout>
 
-            <!-- Divider -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#E0E0E0" />
-
         </LinearLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Scrollable content below profile -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -131,7 +182,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Email -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -151,7 +201,6 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- Phone -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -171,7 +220,6 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- Divider -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -194,7 +242,6 @@
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
                 android:padding="2dp" />
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

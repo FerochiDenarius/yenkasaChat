@@ -191,6 +191,10 @@ app.use('/api/social', socialRoutes);
 const coinsRoutes = require('./routes/coins');
 app.use('/coins', coinsRoutes);
 
+const verificationCheck = require('./cron/verificationCheck');
+app.use('/api/verify-check', verificationCheck);
+
+
 
 
 // ---------------------------------
@@ -219,6 +223,9 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => {
   console.log('✅ MongoDB connected successfully.');
 
+  // 🕒 Start the daily verification scheduler
+require('./services/verificationScheduler');
+console.log('🕒 Verification scheduler initialized and running daily checks.');
 
 
 

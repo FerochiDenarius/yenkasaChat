@@ -54,21 +54,32 @@ object TokenManager {
         username: String?,
         email: String?,
         phone: String?,
-        isVerified: Boolean, // Note: your User model might have Boolean? for isVerified
+        isVerified: Boolean, // User verification flag
         profileImageUrl: String?,
-        location: String? // Assuming location is also part of your User model
+        location: String?, // User’s location
+        coinsBalance: Int? = 0,
+        communityName: String? = null,
+        joinDate: String? = null
     ) {
         Log.d(TAG, "Attempting to save user details...")
+
+        // 🧩 Core user data
         saveUserId(context, userId)
         saveUsername(context, username)
         saveEmail(context, email)
         savePhone(context, phone)
-        setVerified(context, isVerified) // Uses your existing setVerified method
+        setVerified(context, isVerified)
         saveProfilePicUrl(context, profileImageUrl)
         saveLocation(context, location)
+
+        // 🪙 Extra Yenkasa data
+        saveCoins(context, coinsBalance ?: 0)
+        saveCommunityName(context, communityName)
+        saveJoinDate(context, joinDate)
+
         Log.i(TAG, "User details batch save operation completed.")
     }
-    // === END OF NEW FUNCTION ===
+
     // ✅ THIS IS THE NEW FUNCTION THAT WAS MISSING
     fun savePartialUserDetails(context: Context, username: String?, email: String?, phone: String?, location: String?) {
         val editor = getEncryptedPrefs(context).edit()
@@ -298,6 +309,68 @@ object TokenManager {
 
     fun isPhoneVerified(context: Context): Boolean {
         return getBoolean(context, "phoneVerified", false)
+    }
+    // === Coins Balance ===
+    private const val COINS_KEY = "coins_balance"
+
+    fun saveCoins(context: Context, coins: Int) {
+        try {
+            getEncryptedPrefs(context).edit().putInt(COINS_KEY, coins).apply()
+            Log.i(TAG, "Coins balance saved: $coins")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving coins balance", e)
+        }
+    }
+
+    fun getCoins(context: Context): Int {
+        return try {
+            getEncryptedPrefs(context).getInt(COINS_KEY, 0)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting coins balance", e)
+            0
+        }
+    }
+
+    // === Community Name ===
+    private const val COMMUNITY_NAME_KEY = "community_name"
+
+    fun saveCommunityName(context: Context, communityName: String?) {
+        try {
+            getEncryptedPrefs(context).edit().putString(COMMUNITY_NAME_KEY, communityName).apply()
+            Log.i(TAG, "Community name saved: $communityName")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving community name", e)
+        }
+    }
+
+    fun getCommunityName(context: Context): String? {
+        return try {
+            getEncryptedPrefs(context).getString(COMMUNITY_NAME_KEY, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting community name", e)
+            null
+        }
+    }
+
+    // === Join Date ===
+    private const val JOIN_DATE_KEY = "join_date"
+
+    fun saveJoinDate(context: Context, joinDate: String?) {
+        try {
+            getEncryptedPrefs(context).edit().putString(JOIN_DATE_KEY, joinDate).apply()
+            Log.i(TAG, "Join date saved: $joinDate")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving join date", e)
+        }
+    }
+
+    fun getJoinDate(context: Context): String? {
+        return try {
+            getEncryptedPrefs(context).getString(JOIN_DATE_KEY, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting join date", e)
+            null
+        }
     }
 
     // === Email ===

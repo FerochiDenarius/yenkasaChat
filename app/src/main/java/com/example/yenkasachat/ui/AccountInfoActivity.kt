@@ -3,6 +3,7 @@ package com.example.yenkasachat.ui
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -16,29 +17,34 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.*
 
 class AccountInfoActivity : AppCompatActivity() {
 
     private lateinit var imageProfile: ImageView
+    private lateinit var iconVerified: ImageView
     private lateinit var usernameView: TextView
     private lateinit var emailView: TextView
     private lateinit var phoneView: TextView
     private lateinit var locationView: TextView
+    private lateinit var coinsBalanceView: TextView
+    private lateinit var communityView: TextView
+    private lateinit var dateJoinedView: TextView
     private lateinit var followersCountView: TextView
     private lateinit var followingCountView: TextView
     private lateinit var postsCountView: TextView
     private lateinit var recyclerUserPosts: RecyclerView
     private lateinit var btnEditProfile: Button
 
-    // ✅ Reuse PostAdapter here
     private lateinit var postAdapter: PostAdapter
     private val userPostsList = mutableListOf<Post>()
-
     private val TAG = "AccountInfoActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,21 +54,21 @@ class AccountInfoActivity : AppCompatActivity() {
         bindViews()
         setupRecyclerView()
         setupListeners()
-
-        // ✅ Show cached profile info immediately
         loadProfileFromCache()
-
-        // ✅ Fetch fresh profile + posts from backend
         fetchUserProfile()
         loadUserPosts()
     }
 
     private fun bindViews() {
         imageProfile = findViewById(R.id.imageProfile)
+        iconVerified = findViewById(R.id.iconVerified)
         usernameView = findViewById(R.id.textUsername)
         emailView = findViewById(R.id.textEmail)
         phoneView = findViewById(R.id.textPhone)
         locationView = findViewById(R.id.textLocation)
+        coinsBalanceView = findViewById(R.id.textCoinsBalance)
+        communityView = findViewById(R.id.textCommunity)
+        dateJoinedView = findViewById(R.id.textDateJoined)
         followersCountView = findViewById(R.id.textFollowersCount)
         followingCountView = findViewById(R.id.textFollowingCount)
         postsCountView = findViewById(R.id.textPostsCount)
@@ -83,7 +89,6 @@ class AccountInfoActivity : AppCompatActivity() {
         btnEditProfile.setOnClickListener {
             startActivity(Intent(this, EditProfileActivity::class.java))
         }
-
         followersCountView.setOnClickListener { openFollowList("followers") }
         followingCountView.setOnClickListener { openFollowList("following") }
     }
@@ -93,12 +98,20 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = TokenManager.getEmail(this) ?: "Not provided"
         phoneView.text = TokenManager.getPhone(this) ?: "Not provided"
         locationView.text = TokenManager.getLocation(this) ?: "No location"
+        coinsBalanceView.text = "YenkasaCoins: 0"
+        communityView.text = "Community: None"
+        dateJoinedView.text = "Joined: Unknown"
 
-        val profileUrl = TokenManager.getProfilePicUrl(this)
         Glide.with(this)
-            .load(profileUrl ?: R.drawable.default_avatar)
+            .load(TokenManager.getProfilePicUrl(this) ?: R.drawable.default_avatar)
             .apply(RequestOptions.circleCropTransform())
             .into(imageProfile)
+
+        if (TokenManager.isVerified(this)) {
+            iconVerified.visibility = View.VISIBLE
+        } else {
+            iconVerified.visibility = View.GONE
+        }
     }
 
     private fun fetchUserProfile() {
@@ -108,8 +121,6 @@ class AccountInfoActivity : AppCompatActivity() {
                     if (response.isSuccessful && response.body() != null) {
                         val user = response.body()!!
                         updateUI(user)
-
-                        // ✅ Save new data for cache
                         TokenManager.saveUserDetails(
                             this@AccountInfoActivity,
                             user._id,
@@ -121,7 +132,6 @@ class AccountInfoActivity : AppCompatActivity() {
                             user.location
                         )
                     } else {
-                        Log.e(TAG, "Failed to fetch user profile: ${response.code()}")
                         Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -137,6 +147,15 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = user.email ?: "Not provided"
         phoneView.text = user.phone ?: "Not provided"
         locationView.text = user.location ?: "No location"
+        coinsBalanceView.text = "YenkasaCoins: ${user.coinsBalance ?: 0}"
+        communityView.text = "Community: ${user.community?.name ?: "None"}"
+        dateJoinedView.text = "Joined: ${formatDate(user.createdAt)}"
+
+        if (user.verified) {
+            iconVerified.visibility = View.VISIBLE
+        } else {
+            iconVerified.visibility = View.GONE
+        }
 
         Glide.with(this)
             .load(user.profileImage ?: R.drawable.default_avatar)
@@ -151,30 +170,32 @@ class AccountInfoActivity : AppCompatActivity() {
 
     private fun loadUserPosts() {
         val token = TokenManager.getToken(this) ?: return
-
         ApiClient.apiService.getMyPosts("Bearer $token")
             .enqueue(object : Callback<List<Post>> {
                 override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
                     if (response.isSuccessful && response.body() != null) {
-                        val allPosts = response.body()!!
-
-                        // Keep only posts with media
-                        val mediaPosts = allPosts.filter { !it.mediaUrl.isNullOrBlank() } // <-- adjust field name
-
+                        val mediaPosts = response.body()!!.filter { !it.mediaUrl.isNullOrBlank() }
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)
                         postAdapter.notifyDataSetChanged()
-
                         postsCountView.text = "${mediaPosts.size}\nPosts"
-                    } else {
-                        Log.e(TAG, "Failed to load posts: ${response.code()}")
                     }
                 }
-
                 override fun onFailure(call: Call<List<Post>>, t: Throwable) {
                     Log.e(TAG, "Posts load failed: ${t.message}")
                 }
             })
+    }
+
+    private fun formatDate(dateStr: String?): String {
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+            val date = parser.parse(dateStr ?: "")
+            val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+            formatter.format(date!!)
+        } catch (e: Exception) {
+            "Unknown"
+        }
     }
 
     private fun openFollowList(type: String) {

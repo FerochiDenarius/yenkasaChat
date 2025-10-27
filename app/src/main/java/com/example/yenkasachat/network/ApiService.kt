@@ -2,6 +2,7 @@ package com.example.yenkasachat.network
 
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.ChatRoom
+import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.model.Contact
 import com.example.yenkasachat.model.CreateChatRoomRequest
 import com.example.yenkasachat.model.CreateChatRoomResponse
@@ -393,5 +394,7 @@ fun getComments(
 
     @GET("communities")
     fun getCommunities(): Call<List<Community>>
+
+
 
 }

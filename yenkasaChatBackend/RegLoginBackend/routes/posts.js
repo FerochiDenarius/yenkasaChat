@@ -2,10 +2,58 @@ const express = require("express");
 const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
 const Post = require("../models/post");
+const User = require("../models/user");
 const verifyToken = require("../middleware/auth");
 const router = express.Router();
 
-// Multer setup for uploads
+// ------------------- COMMUNITY CONFIG -------------------
+
+// Default Yenkasa communities
+const DEFAULT_COMMUNITIES = [
+  "Ayimensah","Danfa","Kweiman","Oyarifa","Abokobi","Frafraha",
+  "New Legon","Adenta","Adenta NewSite","Amrahia","Oyibi",
+  "Legon Campus","East Legon","Menpeasem","Ogbojo","Adjinganor",
+  "Botwe","Madina Zongo Juntion","Atomic Juntion","UPSA","Bawaleshie",
+  "American House","Botwe","School Junction","Mataheko","Nana Krom",
+  "Hatso","Taifa","Odokor","Aboso Okai"
+];
+
+// In-memory cache for quick listing
+let customCommunities = [];
+
+// Get all communities (default + user-created)
+router.get("/communities", verifyToken, async (req, res) => {
+  try {
+    const allCommunities = [...DEFAULT_COMMUNITIES, ...customCommunities];
+    res.status(200).json({ communities: allCommunities });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch communities", error: error.message });
+  }
+});
+
+// Verified users can create new community
+router.post("/communities", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || !user.isVerified) {
+      return res.status(403).json({ message: "Only verified users can create communities." });
+    }
+
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Community name is required." });
+
+    if (DEFAULT_COMMUNITIES.includes(name) || customCommunities.includes(name)) {
+      return res.status(400).json({ message: "Community already exists." });
+    }
+
+    customCommunities.push(name);
+    res.status(201).json({ message: "Community created successfully.", name });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to create community", error: error.message });
+  }
+});
+
+// ------------------- MULTER SETUP -------------------
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -13,10 +61,20 @@ const upload = multer({ storage });
 router.post("/", verifyToken, upload.single("media"), async (req, res) => {
   try {
     const userId = req.user.id;
-    const { caption, mediaType } = req.body;
+    const { caption, mediaType, communityName } = req.body;
 
     if (!caption && !req.file) {
       return res.status(400).json({ message: "Post must have text or media." });
+    }
+
+    // Ensure post has a valid community
+    if (!communityName) {
+      return res.status(400).json({ message: "Each post must belong to a community." });
+    }
+
+    const allCommunities = [...DEFAULT_COMMUNITIES, ...customCommunities];
+    if (!allCommunities.includes(communityName)) {
+      return res.status(400).json({ message: "Invalid community selected." });
     }
 
     let mediaUrl = null;
@@ -27,7 +85,6 @@ router.post("/", verifyToken, upload.single("media"), async (req, res) => {
       const resourceType =
         mediaType === "video" || mediaType === "audio" ? "video" : "image";
 
-      // Upload file to Cloudinary
       const uploadResult = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
@@ -46,18 +103,18 @@ router.post("/", verifyToken, upload.single("media"), async (req, res) => {
       if (uploadResult.thumbnail_url) thumbnailUrl = uploadResult.thumbnail_url;
     }
 
-    // Create new post
+    // Create post (includes community info)
     const newPost = new Post({
       user: userId,
       caption,
       mediaType: mediaType || "text",
       mediaUrl,
       thumbnailUrl,
+      communityName, // string field
     });
 
     await newPost.save();
 
-    // Populate user info (username + profileImage)
     const populatedPost = await newPost.populate("user", "_id username profileImage");
     res.status(201).json(populatedPost);
   } catch (error) {
@@ -70,12 +127,27 @@ router.post("/", verifyToken, upload.single("media"), async (req, res) => {
 router.get("/", verifyToken, async (req, res) => {
   try {
     const posts = await Post.find()
-      .populate("user", "_id username profileImage") // populate profileImage for frontend
+      .populate("user", "_id username profileImage")
       .sort({ createdAt: -1 });
     res.status(200).json(posts);
   } catch (error) {
     console.error("Error fetching posts:", error);
     res.status(500).json({ message: "Failed to fetch posts", error: error.message });
+  }
+});
+
+// ------------------- GET POSTS BY COMMUNITY -------------------
+router.get("/community/:name", verifyToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const posts = await Post.find({ communityName: name })
+      .populate("user", "_id username profileImage")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error("Error fetching community posts:", error);
+    res.status(500).json({ message: "Failed to fetch community posts", error: error.message });
   }
 });
 
@@ -91,42 +163,22 @@ router.get("/my", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user posts", error: error.message });
   }
 });
-/* -------------------
- * 🗑️ DELETE POST (with robust ObjectId handling + debug)
- * ------------------- */
+
+// ------------------- DELETE POST -------------------
 router.delete("/:postId", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id; // Support both possible keys
+    const userId = req.user.id || req.user._id;
     const { postId } = req.params;
 
-    console.log("DELETE request received for post:", postId);
-    console.log("Authenticated user ID:", userId);
-
     const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found." });
 
-    if (!post) {
-      console.log("❌ Post not found:", postId);
-      return res.status(404).json({ message: "Post not found." });
-    }
-
-    // Normalize IDs as strings for comparison
     const postAuthorId = post.user?._id?.toString() || post.user?.toString();
-    const authUserId = userId?.toString();
-
-    console.log("Post author ID:", postAuthorId);
-    console.log("Authenticated user ID (string):", authUserId);
-
-    // ✅ Only the author can delete
-    if (postAuthorId !== authUserId) {
-      console.log("🚫 Forbidden: User is not the post's author.");
-      return res.status(403).json({
-        message: "Forbidden: You cannot delete another user's post.",
-        postAuthorId,
-        authUserId,
-      });
+    if (postAuthorId !== userId.toString()) {
+      return res.status(403).json({ message: "Forbidden: Cannot delete another user's post." });
     }
 
-    // ✅ Optional: delete media from Cloudinary
+    // Optional: delete media from Cloudinary
     if (post.mediaUrl) {
       try {
         const folderMarker = "yenkasachat/posts/";
@@ -137,27 +189,19 @@ router.delete("/:postId", verifyToken, async (req, res) => {
           const resourceType = ["video", "audio"].includes(post.mediaType)
             ? "video"
             : "image";
-          console.log("🗑️ Deleting media from Cloudinary:", publicId);
           await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-        } else {
-          console.warn("⚠️ Could not extract Cloudinary publicId from:", post.mediaUrl);
         }
       } catch (cloudinaryError) {
-        console.error("⚠️ Cloudinary delete error (non-fatal):", cloudinaryError);
+        console.error("Cloudinary delete error:", cloudinaryError);
       }
     }
 
-    // ✅ Delete post document
     await Post.findByIdAndDelete(postId);
-    console.log("✅ Post deleted successfully:", postId);
-
     res.status(200).json({ message: "Post deleted successfully." });
   } catch (error) {
-    console.error("🔥 Error deleting post:", error);
+    console.error("Error deleting post:", error);
     res.status(500).json({ message: "Error deleting post", error: error.message });
   }
 });
-
-
 
 module.exports = router;

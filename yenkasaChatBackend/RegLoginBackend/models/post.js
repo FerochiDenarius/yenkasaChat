@@ -1,39 +1,56 @@
 const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema({
+  // 👤 Author of the post
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  caption: { type: String },
-  mediaType: { type: String, enum: ['text', 'image', 'video', 'audio'], required: true },
+
+  // 🏘️ Belongs to a specific community (new)
+  community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', required: true },
+
+  // 📝 Core content
+  caption: { type: String, trim: true },
+  mediaType: { 
+    type: String, 
+    enum: ['text', 'image', 'video', 'audio', 'voice'], 
+    required: true 
+  },
   mediaUrl: { type: String },
   thumbnailUrl: { type: String },
 
-  // array of user ObjectId who liked the post
+  // ❤️ Engagement stats
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-
-  // denormalized count for quick access and to avoid counting the array repeatedly
   likesCount: { type: Number, default: 0 },
-
   commentsCount: { type: Number, default: 0 },
   sharesCount: { type: Number, default: 0 },
   viewsCount: { type: Number, default: 0 },
 
-  // optional soft delete
-  isDeleted: { type: Boolean, default: false }
+  // 🛡️ Moderation & integrity
+  isDeleted: { type: Boolean, default: false },
+  isApproved: { type: Boolean, default: true }, // moderators can toggle this
+  reports: { type: Number, default: 0 }, // number of user reports
+  flaggedReason: { type: String }, // e.g., "pornographic", "spam", "hate"
+
+  // 🪙 Reward system (future use with Yenkasa Coins)
+  engagementScore: { type: Number, default: 0 }, // helps calculate coins
+  rewarded: { type: Boolean, default: false }, // if already rewarded for engagement
+
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
 
-// Auto-populate user basic fields on all find queries
-function autoPopulateUser(next) {
-  // populate the 'user' field with id, username and profileImage
-  this.populate('user', '_id username profileImage');
+
+// Auto-populate user basic fields and community info on all find queries
+function autoPopulateRefs(next) {
+  this.populate('user', '_id username profileImage')
+      .populate('community', '_id name locationTag');
   next();
 }
-postSchema.pre(/^find/, autoPopulateUser);
+postSchema.pre(/^find/, autoPopulateRefs);
 
-// Keep likesCount in sync when saving (defensive; main updates should use atomic updates)
+
+// Keep likesCount in sync defensively
 postSchema.pre('save', function(next) {
   if (Array.isArray(this.likes)) {
     this.likesCount = this.likes.length;
@@ -41,9 +58,9 @@ postSchema.pre('save', function(next) {
   next();
 });
 
+
 /**
- * Atomic toggle helper: performs $addToSet/$pull + $inc in one operation.
- * Returns { likedByUser, likesCount } with server-authoritative values.
+ * Atomic toggle helper for likes — remains unchanged
  */
 postSchema.statics.toggleLike = async function (postId, userId) {
   if (!postId || !userId) throw new Error('postId and userId are required');
@@ -70,8 +87,11 @@ postSchema.statics.toggleLike = async function (postId, userId) {
   };
 };
 
-// Useful indexes
+
+// 🧭 Helpful indexes for performance
 postSchema.index({ createdAt: -1 });
 postSchema.index({ user: 1 });
+postSchema.index({ community: 1 });
+postSchema.index({ engagementScore: -1 });
 
 module.exports = mongoose.model('Post', postSchema);

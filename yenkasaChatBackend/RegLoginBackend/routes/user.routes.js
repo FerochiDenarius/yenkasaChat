@@ -108,7 +108,10 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
 
     try {
-        const user = await User.findById(authenticatedUserId).select('-password').lean(); // .lean() if you only need plain JS object
+const user = await User.findById(authenticatedUserId)
+  .select('-password')
+  .populate('community', 'name')
+  .lean();
         if (!user) {
             logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
             return res.status(404).json({ error: 'User not found' });

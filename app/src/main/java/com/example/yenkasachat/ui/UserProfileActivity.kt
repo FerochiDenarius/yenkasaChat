@@ -113,7 +113,9 @@ class UserProfileActivity : AppCompatActivity() {
                         val profile = response.body()!!
                         updateUI(profile)
 
-                        val mediaPosts = profile.posts.filter { !it.mediaUrl.isNullOrBlank() }
+                        // ✅ FIX: Use a safe call and provide an empty list if profile.posts is null
+                        val mediaPosts = profile.posts?.filter { !it.mediaUrl.isNullOrBlank() } ?: emptyList()
+
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)
                         postAdapter.notifyDataSetChanged()
@@ -133,7 +135,7 @@ class UserProfileActivity : AppCompatActivity() {
         usernameView.text = profile.username
         followersCountView.text = "${profile.followers?.size ?: 0}\nFollowers"
         followingCountView.text = "${profile.following?.size ?: 0}\nFollowing"
-        postsCountView.text = "${profile.posts?.size ?: 0}\nPosts" // ✅ Fix: use safe call
+        postsCountView.text = "${profile.posts?.size ?: 0}\nPosts"
 
         val imageUrl = if (profile.profileImage?.startsWith("http") == true)
             profile.profileImage

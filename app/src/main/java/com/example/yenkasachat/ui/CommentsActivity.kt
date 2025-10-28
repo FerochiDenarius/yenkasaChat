@@ -40,6 +40,11 @@ class CommentsActivity : AppCompatActivity() {
         editComment = findViewById(R.id.editComment)
         buttonSend = findViewById(R.id.buttonSend)
 
+        val buttonBack = findViewById<ImageButton>(R.id.buttonBack)
+        buttonBack.setOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
+
         // ✅ FIX: Pass both context and comments to match CommentAdapter constructor
         adapter = CommentAdapter(this, comments)
         recyclerComments.layoutManager = LinearLayoutManager(this)

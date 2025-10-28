@@ -99,6 +99,7 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
 router.get('/me', authMiddleware, async (req, res) => {
     const requestId = `req_get_me_${Date.now()}`;
     const authenticatedUserId = req.user?.id || req.user?._id;
+logger.debug(`[${requestId}] User coinsBalance:`, user.coinsBalance);
 
     logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
 

@@ -174,6 +174,7 @@ class AccountInfoActivity : AppCompatActivity() {
             .enqueue(object : Callback<List<Post>> {
                 override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
                     if (response.isSuccessful && response.body() != null) {
+                        Log.d(TAG, "User profile response: ${response.body()}")
                         val mediaPosts = response.body()!!.filter { !it.mediaUrl.isNullOrBlank() }
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)

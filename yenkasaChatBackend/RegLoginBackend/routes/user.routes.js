@@ -91,68 +91,40 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
     }
 });
 
-
 /**
  * @route   GET /api/users/me
  * @desc    Get logged-in user's profile (no password)
  * @access  Private
  */
 router.get('/me', authMiddleware, async (req, res) => {
-  const requestId = `req_get_me_${Date.now()}`;
-  const authenticatedUserId = req.user?.id || req.user?._id;
+    const requestId = `req_get_me_${Date.now()}`;
+    const authenticatedUserId = req.user?.id || req.user?._id;
 
-  logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
+    logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
 
-  if (!authenticatedUserId) {
-    logger.error(`[${requestId}] GET /me - CRITICAL: User ID not found in req.user after authMiddleware.`);
-    return res.status(401).json({ error: 'User authentication failed.' });
-  }
-
-  try {
-    const user = await User.findById(authenticatedUserId)
-      .select('-password -verificationCode -emailVerificationCode -refreshToken')
-      .populate({
-        path: 'community',
-        select: 'name location membersCount'
-      });
-
-    if (!user) {
-      logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
-      return res.status(404).json({ error: 'User not found' });
+    if (!authenticatedUserId) {
+        logger.error(`[${requestId}] GET /me - CRITICAL: User ID not found in req.user after authMiddleware.`);
+        return res.status(401).json({ error: 'User authentication failed.' });
     }
 
-    logger.debug(`[${requestId}] GET /me - User coinsBalance: ${user.coinsBalance}, community: ${user.community ? user.community.name : 'null'}`);
-
-    logger.info(`[${requestId}] GET /me - ✅ Successfully fetched profile for User: ${authenticatedUserId}`);
-    res.status(200).json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      location: user.location,
-      verified: user.verified,
-      profileImage: user.profileImage,
-      coinsBalance: user.coinsBalance ?? 0,
-      community: user.community ? user.community.name : null,
-      bio: user.bio,
-      followersCount: user.followersCount ?? 0,
-      followingCount: user.followingCount ?? 0,
-      walletId: user.walletId ?? null,
-      verificationPhase: user.verificationPhase ?? null,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    });
-  } catch (err) {
-    logger.error(
-      `[${requestId}] GET /me - ❌ Failed to fetch profile for User: ${authenticatedUserId}. Error: ${err.message}`,
-      { stack: err.stack }
-    );
-    res.status(500).json({ error: 'Failed to retrieve user profile' });
-  } finally {
-    logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
-  }
+    try {
+const user = await User.findById(authenticatedUserId)
+  .select('-password')
+  .populate('community', 'name')
+  .lean();
+        if (!user) {
+            logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
+            return res.status(404).json({ error: 'User not found' });
+        }
+        logger.info(`[${requestId}] GET /me - Successfully fetched profile for User: ${authenticatedUserId}`);
+        res.status(200).json(user);
+    } catch (err) {
+        logger.error(`[${requestId}] GET /me - ❌ Failed to fetch profile for User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack });
+        res.status(500).json({ error: 'Failed to retrieve user profile' });
+    } finally {
+        logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
+    }
 });
-
 
 /**
  * @route   POST /api/users/fix-contacts

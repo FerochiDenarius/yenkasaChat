@@ -93,38 +93,79 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
 
 /**
  * @route   GET /api/users/me
- * @desc    Get logged-in user's profile (no password)
+ * @desc    Get logged-in user's full profile (no password)
  * @access  Private
  */
 router.get('/me', authMiddleware, async (req, res) => {
-    const requestId = `req_get_me_${Date.now()}`;
-    const authenticatedUserId = req.user?.id || req.user?._id;
+  const requestId = `req_get_me_${Date.now()}`;
+  const authenticatedUserId = req.user?.id || req.user?._id;
 
-    logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
+  logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
 
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] GET /me - CRITICAL: User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
+  if (!authenticatedUserId) {
+    logger.error(`[${requestId}] GET /me - CRITICAL: User ID not found in req.user after authMiddleware.`);
+    return res.status(401).json({ error: 'User authentication failed.' });
+  }
+
+  try {
+    const user = await User.findById(authenticatedUserId)
+      .select('-password -verificationCode -emailVerificationCode -refreshToken')
+      .populate({
+        path: 'community',
+        select: '_id name location membersCount'
+      })
+      .lean();
+
+    if (!user) {
+      logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    try {
-const user = await User.findById(authenticatedUserId)
-  .select('-password')
-  .populate('community', 'name')
-  .lean();
-        if (!user) {
-            logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-        logger.info(`[${requestId}] GET /me - Successfully fetched profile for User: ${authenticatedUserId}`);
-        res.status(200).json(user);
-    } catch (err) {
-        logger.error(`[${requestId}] GET /me - ❌ Failed to fetch profile for User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack });
-        res.status(500).json({ error: 'Failed to retrieve user profile' });
-    } finally {
-        logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
-    }
+    // Safely prepare all values
+    const userProfile = {
+      _id: user._id,
+      username: user.username,
+      email: user.email || null,
+      phone: user.phone || null,
+      location: user.location || null,
+      verified: user.verified || false,
+      profileImage: user.profileImage || null,
+      bio: user.bio || '',
+      coinsBalance: user.coinsBalance ?? 0,
+      community: user.community
+        ? {
+            _id: user.community._id,
+            name: user.community.name,
+            location: user.community.location || null,
+            membersCount: user.community.membersCount || 0
+          }
+        : null,
+      followersCount: user.followersCount ?? (user.followers?.length || 0),
+      followingCount: user.followingCount ?? (user.following?.length || 0),
+      followers: user.followers || [],
+      following: user.following || [],
+      walletId: user.walletId || null,
+      verificationPhase: user.verificationPhase || null,
+      verificationScore: user.verificationScore ?? 0,
+      online: user.online || false,
+      lastSeen: user.lastSeen || null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+
+    logger.info(`[${requestId}] GET /me - ✅ Successfully fetched profile for User: ${authenticatedUserId}`);
+    res.status(200).json(userProfile);
+  } catch (err) {
+    logger.error(
+      `[${requestId}] GET /me - ❌ Failed to fetch profile for User: ${authenticatedUserId}. Error: ${err.message}`,
+      { stack: err.stack }
+    );
+    res.status(500).json({ error: 'Failed to retrieve user profile' });
+  } finally {
+    logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
+  }
 });
+
 
 /**
  * @route   POST /api/users/fix-contacts

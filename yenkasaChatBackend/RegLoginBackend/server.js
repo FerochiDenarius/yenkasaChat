@@ -193,13 +193,6 @@ app.use('/api/social', socialRoutes);
 const coinsRoutes = require('./routes/coins');
 app.use('/coins', coinsRoutes);
 
-// 🧩 Community Fix Route (temporary)
-const fixCommunityRoute = require('./routes/fixCommunity');
-app.use('/fix-community', fixCommunityRoute);
-
-
-
-
 
 // ---------------------------------
 // Error Handling

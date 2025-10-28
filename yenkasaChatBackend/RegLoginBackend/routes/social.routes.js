@@ -1,303 +1,271 @@
-// user.routes.js (assuming this is the correct filename based on content)
-const express = require('express');
+const express = require("express");
+const Post = require("../models/post");
+const User = require("../models/user.model");
+const Comment = require("../models/comment");
+const verifyToken = require("../middleware/auth");
+
 const router = express.Router();
-const multer = require('multer');
-const User = require('../models/user.model');
-const authMiddleware = require('../middleware/auth');
-const { storage } = require('../config/cloudinary'); // Assuming Cloudinary setup
 
-// --- Consistent Logger Function ---
-const logger = {
-    info: (message, ...args) => console.log(`[INFO] ${new Date().toISOString()} - ${message}`, ...args),
-    warn: (message, ...args) => console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...args),
-    error: (message, ...args) => console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, ...args),
-    debug: (message, ...args) => console.debug(`[DEBUG] ${new Date().toISOString()} - ${message}`, ...args)
-};
-// --- End Logger Function ---
+/* ------------------------------------
+ * 🪙 REWARD COINS HELPER
+ * ------------------------------------ */
+async function rewardCoins(userId, actionType = 'activity', amount = 10, referenceId = null) {
+  try {
+    const User = require("../models/user.model");
+    const CoinTransaction = require("../models/coinTransaction");
+    const CoinSupply = require("../models/coinSupply");
+    const MAX_SUPPLY = 100_000_000;
 
-const upload = multer({ storage }); // Using Cloudinary storage
+    // Ensure supply exists
+    await CoinSupply.findByIdAndUpdate(
+      "YENKASA_SUPPLY",
+      { $setOnInsert: { totalMinted: 0 } },
+      { upsert: true }
+    );
 
-/**
- * @route   GET /api/users (Assuming this router is mounted at /api/users)
- * @desc    Get all users (excluding passwords)
- * @access  Private
- */
-router.get('/', authMiddleware, async (req, res) => {
-    const requestId = `req_get_users_${Date.now()}`;
-    const authenticatedUserId = req.user?.id || req.user?._id;
+    // Check supply limit
+    const updatedSupply = await CoinSupply.findOneAndUpdate(
+      { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amount } },
+      { $inc: { totalMinted: amount } },
+      { new: true }
+    );
+    if (!updatedSupply) return console.warn("⚠️ Not enough supply to mint more coins");
 
-    logger.info(`[${requestId}] GET / - Request to fetch all users by User: ${authenticatedUserId}`);
+    // Reward user
+    const user = await User.findById(userId);
+    if (!user) return;
 
-    try {
-        // .lean() is good for performance if you don't need Mongoose model instances
-        const users = await User.find().select('-password').lean();
-        logger.info(`[${requestId}] GET / - Successfully fetched ${users.length} users.`);
-        res.status(200).json(users);
-    } catch (err) {
-        logger.error(`[${requestId}] GET / - ❌ Failed to fetch users. User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack });
-        res.status(500).json({ error: 'Failed to retrieve users' });
-    } finally {
-        logger.info(`[${requestId}] GET / - Finished processing request by User: ${authenticatedUserId}`);
+    user.coinsBalance += amount;
+    await user.save();
+
+    await CoinTransaction.create({
+      user: user._id,
+      type: "earn",
+      amount,
+      description: `Earned from ${actionType}`,
+      referenceId,
+      balanceAfter: user.coinsBalance
+    });
+
+    console.log(`✅ Rewarded ${amount} coins to user ${user.username} for ${actionType}`);
+  } catch (err) {
+    console.error("❌ Error rewarding coins:", err);
+  }
+}
+
+/* ------------------------------------
+ * 👍 LIKE / UNLIKE POST
+ * ------------------------------------ */
+router.post("/like/:postId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+
+    const post = await Post.findById(req.params.postId).select("likes");
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const alreadyLiked = post.likes.some(id => id.toString() === userId);
+
+    // Prepare the update operation
+    const updateOperation = alreadyLiked
+      ? { $pull: { likes: userId } }
+      : { $addToSet: { likes: userId } };
+
+    await Post.findByIdAndUpdate(req.params.postId, updateOperation);
+
+    const freshPost = await Post.findById(req.params.postId).select("likes");
+    const newLikesCount = freshPost.likes.length;
+    await Post.findByIdAndUpdate(req.params.postId, { likesCount: newLikesCount });
+
+    const likedByUser = freshPost.likes.some(id => id.toString() === userId);
+
+    // ✅ Reward only when liking (not unliking)
+    if (!alreadyLiked) {
+      await rewardCoins(userId, "like", 10, req.params.postId);
+    }
+
+    res.status(200).json({
+      message: likedByUser ? "Post liked" : "Post unliked",
+      likesCount: newLikesCount,
+      likedByUser,
+    });
+
+  } catch (err) {
+    console.error("❌ Error toggling like:", err);
+    res.status(500).json({ message: "Failed to toggle like", error: err.message });
+  }
 });
 
-/**
- * @route   POST /api/users/profile-picture
- * @desc    Upload profile picture to Cloudinary and save URL
- * @access  Private
- */
-router.post('/profile-picture', authMiddleware, upload.single('profileImage'), async (req, res) => {
-    const requestId = `req_upload_pp_${Date.now()}`;
-    const authenticatedUserId = req.user?.id || req.user?._id;
+/* ------------------------------------
+ * 💬 ADD COMMENT
+ * ------------------------------------ */
+router.post("/comment/:postId", verifyToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { text } = req.body;
+    const userId = req.user?.id;
 
-    logger.info(`[${requestId}] POST /profile-picture - Request by User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] POST /profile-picture - Request file details:`, req.file); // Log file info
-    logger.debug(`[${requestId}] POST /profile-picture - Request body (non-file parts):`, req.body);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!text || text.trim() === "")
+      return res.status(400).json({ message: "Comment text required" });
 
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
-    if (!authenticatedUserId) {
-        // Should be caught by authMiddleware, but as a safeguard
-        logger.error(`[${requestId}] POST /profile-picture - CRITICAL: User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
-    }
+    const comment = await Comment.create({
+      user: userId,
+      post: postId,
+      text: text.trim(),
+    });
 
-    try {
-        const user = await User.findById(authenticatedUserId);
-        if (!user) {
-            logger.warn(`[${requestId}] POST /profile-picture - User not found with ID: ${authenticatedUserId}.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
+    await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
-        if (!req.file || !req.file.path) {
-            logger.warn(`[${requestId}] POST /profile-picture - No image uploaded or upload failed for User: ${authenticatedUserId}. req.file is:`, req.file);
-            return res.status(400).json({ error: 'No image uploaded or upload failed' });
-        }
+    await comment.populate("user", "_id username profileImage");
 
-        logger.info(`[${requestId}] POST /profile-picture - File uploaded to Cloudinary. Path: ${req.file.path}. Updating user profileImage for User: ${authenticatedUserId}`);
-        user.profileImage = req.file.path; // URL from Cloudinary storage
-        user.updatedAt = new Date();
-        await user.save();
+    // ✅ Reward for commenting
+    await rewardCoins(userId, "comment", 10, postId);
 
-        logger.info(`[${requestId}] POST /profile-picture - ✅ Profile image URL saved successfully for User: ${authenticatedUserId}. New URL: ${user.profileImage}`);
-        res.status(200).json({
-            message: 'Profile image uploaded successfully',
-            imageUrl: user.profileImage,
-        });
-    } catch (err) {
-        logger.error(`[${requestId}] POST /profile-picture - ❌ Image upload or DB save error for User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack, file: req.file });
-        res.status(500).json({ error: 'Server error while uploading profile picture' });
-    } finally {
-        logger.info(`[${requestId}] POST /profile-picture - Finished processing request by User: ${authenticatedUserId}`);
-    }
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error("❌ Error adding comment:", err);
+    res.status(500).json({ message: "Failed to add comment", error: err.message });
+  }
 });
 
-/**
- * @route   GET /api/users/me
- * @desc    Get logged-in user's profile (no password)
- * @access  Private
- */
-router.get('/me', authMiddleware, async (req, res) => {
-    const requestId = `req_get_me_${Date.now()}`;
-    const authenticatedUserId = req.user?.id || req.user?._id;
-
-    logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
-
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] GET /me - CRITICAL: User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
-    }
-
-    try {
-        const user = await User.findById(authenticatedUserId)
-            .populate('community', 'name') // ✅ FIXED: populate community reference
-            .select('-password')
-            .lean();
-
-        if (!user) {
-            logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        logger.info(`[${requestId}] GET /me - ✅ Successfully fetched profile for User: ${authenticatedUserId}`);
-        res.status(200).json(user);
-    } catch (err) {
-        logger.error(`[${requestId}] GET /me - ❌ Failed to fetch profile for User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack });
-        res.status(500).json({ error: 'Failed to retrieve user profile' });
-    } finally {
-        logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
-    }
+/* ------------------------------------
+ * 💬 GET COMMENTS
+ * ------------------------------------ */
+router.get("/comments/:postId", verifyToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const comments = await Comment.find({ post: postId, isDeleted: false })
+      .populate("user", "_id username profileImage")
+      .sort({ createdAt: 1 });
+    res.json(comments);
+  } catch (err) {
+    console.error("❌ Error loading comments:", err);
+    res.status(500).json({ error: "Failed to load comments" });
+  }
 });
 
+/* ------------------------------------
+ * 👁️‍🗨️ ADD VIEW
+ * ------------------------------------ */
+router.post("/view/:postId", verifyToken, async (req, res) => {
+  try {
+    const post = await Post.findByIdAndUpdate(
+      req.params.postId,
+      { $inc: { viewsCount: 1 } },
+      { new: true }
+    );
 
-/**
- * @route   POST /api/users/fix-contacts
- * @desc    Fix user emails and phoneNumbers (lowercase, trimmed)
- * @access  Admin / Internal (No authMiddleware here, ensure this is intended and secured appropriately if exposed)
- */
-router.post('/fix-contacts', async (req, res) => {
-    const requestId = `req_fix_contacts_${Date.now()}`;
-    // Consider adding IP logging or some form of requestor identification if this is an open internal tool
-    logger.info(`[${requestId}] POST /fix-contacts - Request received to fix user contacts formatting.`);
+    // ✅ Reward for viewing
+    await rewardCoins(req.user.id, "view", 10, req.params.postId);
 
-    try {
-        const result = await User.updateMany(
-            {}, // Empty filter to update all documents
-            [ // Using aggregation pipeline for updates
-                {
-                    $set: {
-                        email: { $toLower: { $trim: { input: "$email" } } },
-                        phoneNumber: { $trim: { input: "$phoneNumber" } }
-                        // Consider adding updatedAt: new Date() here as well if you want to track this kind of mass update
-                    }
-                }
-            ],
-            { upsert: false } // Ensure no new documents are created
-        );
-
-        logger.info(`[${requestId}] POST /fix-contacts - ✅ Successfully processed fix-contacts. Documents matched: ${result.matchedCount}, Documents modified: ${result.modifiedCount}`);
-        res.json({
-            success: true,
-            message: 'Fixed emails and phone numbers formatting for applicable users.',
-            matchedCount: result.matchedCount,
-            modifiedCount: result.modifiedCount,
-            acknowledged: result.acknowledged
-        });
-    } catch (err) {
-        logger.error(`[${requestId}] POST /fix-contacts - ❌ Failed to fix user contacts. Error: ${err.message}`, { stack: err.stack });
-        res.status(500).json({ error: 'Server error fixing users' });
-    } finally {
-        logger.info(`[${requestId}] POST /fix-contacts - Finished processing request.`);
-    }
+    res.json({ viewsCount: post.viewsCount });
+  } catch (err) {
+    console.error("❌ Error updating view count:", err);
+    res.status(500).json({ error: "Failed to update view count" });
+  }
 });
 
-// PATCH /api/users/:userId/player-id
-// **IMPORTANT**: This duplicates functionality likely present in other route files.
-// Choose ONE place for this logic. Assuming this is the chosen one for this logging exercise.
-router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
-    const { userId: paramUserId } = req.params;
-    const { playerId: bodyPlayerId } = req.body; // This is the OneSignal Player ID value from Android
+/* ------------------------------------
+ * 🤝 FOLLOW / UNFOLLOW USER
+ * ------------------------------------ */
+router.post("/follow/:targetUserId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const requestId = `req_user_playerid_${Date.now()}`;
-    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
+    const user = await User.findById(userId).select("following");
+    const target = await User.findById(req.params.targetUserId).select("followers");
 
-    logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Request received by Auth User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/player-id - Request Params:`, req.params);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/player-id - Request Body (payload):`, JSON.stringify(req.body));
+    if (!user || !target) return res.status(404).json({ message: "User not found" });
+    if (userId === String(target._id)) return res.status(400).json({ message: "Cannot follow yourself" });
 
-
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/player-id - CRITICAL: Authenticated User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed or User ID missing.' });
+    const isFollowing = user.following.some(id => id.toString() === String(target._id));
+    if (isFollowing) {
+      await Promise.all([
+        User.findByIdAndUpdate(userId, { $pull: { following: target._id } }),
+        User.findByIdAndUpdate(target._id, { $pull: { followers: userId } }),
+      ]);
+    } else {
+      await Promise.all([
+        User.findByIdAndUpdate(userId, { $addToSet: { following: target._id } }),
+        User.findByIdAndUpdate(target._id, { $addToSet: { followers: userId } }),
+      ]);
+      // ✅ Reward for following
+      await rewardCoins(userId, "follow", 10, req.params.targetUserId);
     }
 
-    if (paramUserId !== authenticatedUserId) {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - FORBIDDEN: Auth User ${authenticatedUserId} attempting to update Player ID for target User Param ${paramUserId}.`);
-        return res.status(403).json({ error: 'Forbidden: You can only update your own player ID.' });
-    }
+    const freshUser = await User.findById(userId).select("following");
+    const freshTarget = await User.findById(target._id).select("followers");
 
-    if (!bodyPlayerId || typeof bodyPlayerId !== 'string' || bodyPlayerId.trim() === '') {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - VALIDATION FAILED: Invalid or missing 'playerId' in request body. Provided: "${bodyPlayerId}" by Auth User: ${authenticatedUserId}`);
-        return res.status(400).json({ error: 'Invalid or missing player ID. It must be a non-empty string.' });
-    }
-
-    logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Attempting to update DB for User: ${paramUserId} with oneSignalPlayerId: '${bodyPlayerId}'`);
-
-    try {
-        const updatedUser = await User.findByIdAndUpdate(
-            paramUserId, // User ID from URL parameter (already validated against authenticated user)
-            { $set: { oneSignalPlayerId: bodyPlayerId, updatedAt: new Date() } }, // ** CRITICAL: Ensure 'oneSignalPlayerId' is the correct field in your User model **
-            { new: true, runValidators: true } // Return updated doc, run schema validations
-        );
-
-        if (!updatedUser) {
-            logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - User not found in DB with ID: ${paramUserId} for Player ID update.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - ✅ Player ID ('oneSignalPlayerId') updated successfully for User: ${updatedUser._id} to '${updatedUser.oneSignalPlayerId}'`);
-        res.status(200).json({
-            message: 'Player ID updated successfully',
-            userId: updatedUser._id,
-            oneSignalPlayerId: updatedUser.oneSignalPlayerId // Confirm the updated value
-        });
-    } catch (err) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/player-id - ❌ Error updating 'oneSignalPlayerId' for User: ${paramUserId} with value '${bodyPlayerId}'. Error: ${err.message}`, { stack: err.stack });
-        if (err.name === 'ValidationError') {
-            logger.warn(`[${requestId}] Mongoose validation error:`, err.errors);
-            return res.status(400).json({ error: 'Validation error updating Player ID.', errors: err.errors });
-        }
-        if (err.name === 'CastError') {
-             logger.warn(`[${requestId}] Mongoose cast error: ${err.path} to ${err.kind} failed for value ${err.value}`);
-            return res.status(400).json({ error: `Invalid data format for ${err.path}.` });
-        }
-        res.status(500).json({ error: 'Failed to save Player ID due to server error' });
-    } finally {
-        logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Finished processing request by Auth User: ${authenticatedUserId}`);
-    }
+    res.status(200).json({
+      message: isFollowing ? "Unfollowed user" : "Followed user",
+      followingCount: freshUser.following.length,
+      followersCount: freshTarget.followers.length,
+    });
+  } catch (err) {
+    console.error("❌ Error in follow/unfollow:", err);
+    res.status(500).json({ message: "Failed to follow/unfollow", error: err.message });
+  }
 });
 
-/**
- * @route   PATCH /api/users/:userId/fcm-token
- * @desc    Update user's FCM token (legacy if needed)
- * @access  Private
- */
-router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {
-    const { userId: paramUserId } = req.params;
-    const { fcmToken } = req.body; // FCM token from request body
+/* ------------------------------------
+ * 📰 FEED FROM FOLLOWED USERS
+ * ------------------------------------ */
+router.get("/feed/following", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const requestId = `req_user_fcmtoken_${Date.now()}`;
-    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
+    const user = await User.findById(userId).select("following");
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - Request received by Auth User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/fcm-token - Request Params:`, req.params);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/fcm-token - Request Body (payload):`, JSON.stringify(req.body));
+    const posts = await Post.find({
+      user: { $in: [...user.following, userId] },
+      isDeleted: false
+    })
+      .populate("user", "_id username profileImage")
+      .sort({ createdAt: -1 });
 
+    res.json(posts);
+  } catch (err) {
+    console.error("❌ Error loading following feed:", err);
+    res.status(500).json({ message: "Failed to load following feed", error: err.message });
+  }
+});
 
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/fcm-token - CRITICAL: Authenticated User ID not found in req.user.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
-    }
+/* ------------------------------------
+ * 🚫 BLOCK / UNBLOCK USER
+ * ------------------------------------ */
+router.post("/block/:targetUserId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    if (paramUserId !== authenticatedUserId) {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/fcm-token - FORBIDDEN: Auth User ${authenticatedUserId} attempting to update FCM token for target User Param ${paramUserId}.`);
-        return res.status(403).json({ error: 'Forbidden: You can only update your own FCM token.' });
-    }
+    const user = await User.findById(userId).select("blocked");
+    const target = await User.findById(req.params.targetUserId).select("_id");
 
-    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/fcm-token - VALIDATION FAILED: Invalid or missing 'fcmToken' in request body. Provided: "${fcmToken}" by Auth User: ${authenticatedUserId}`);
-        return res.status(400).json({ error: 'Invalid or missing FCM token. It must be a non-empty string.' });
-    }
+    if (!user || !target) return res.status(404).json({ message: "User not found" });
 
-    logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - Attempting to update DB for User: ${paramUserId} with fcmToken: '${fcmToken.substring(0, 15)}...'`); // Log truncated token
+    const alreadyBlocked = user.blocked.some(id => id.toString() === String(target._id));
+    const update = alreadyBlocked ? { $pull: { blocked: target._id } } : { $addToSet: { blocked: target._id } };
+    const updated = await User.findByIdAndUpdate(userId, update, { new: true }).select("blocked");
 
-    try {
-        const updatedUser = await User.findByIdAndUpdate(
-            paramUserId,
-            { $set: { fcmToken: fcmToken, updatedAt: new Date() } }, // Ensure 'fcmToken' is the correct field in your User model
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedUser) {
-            logger.warn(`[${requestId}] PATCH /${paramUserId}/fcm-token - User not found in DB with ID: ${paramUserId} for FCM token update.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - ✅ FCM token updated successfully for User: ${updatedUser._id}.`);
-        // Typically a 204 (No Content) is fine for updates if not returning the full object,
-        // or 200 with a success message/partial data.
-        res.status(200).json({ message: 'FCM token updated successfully', userId: updatedUser._id });
-        // Or res.sendStatus(204); if you don't need to send a body
-
-    } catch (err) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/fcm-token - ❌ Error updating FCM token for User: ${paramUserId}. Error: ${err.message}`, { stack: err.stack });
-        if (err.name === 'ValidationError') {
-            logger.warn(`[${requestId}] Mongoose validation error for FCM token:`, err.errors);
-            return res.status(400).json({ error: 'Validation error updating FCM token.', errors: err.errors });
-        }
-        res.status(500).json({ error: 'Failed to save FCM token due to server error' });
-    } finally {
-        logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - Finished processing request by Auth User: ${authenticatedUserId}`);
-    }
+    res.status(200).json({
+      message: alreadyBlocked ? "User unblocked" : "User blocked",
+      blockedCount: updated.blocked.length,
+    });
+  } catch (err) {
+    console.error("❌ Error in block/unblock:", err);
+    res.status(500).json({ message: "Failed to block/unblock", error: err.message });
+  }
 });
 
 module.exports = router;

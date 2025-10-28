@@ -166,6 +166,75 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/users/toggle-follow/:targetUserId
+ * @desc    Toggle follow/unfollow another user
+ * @access  Private
+ */
+router.post('/toggle-follow/:targetUserId', authMiddleware, async (req, res) => {
+  const requestId = `req_toggle_follow_${Date.now()}`;
+  const authenticatedUserId = req.user?.id || req.user?._id;
+  const { targetUserId } = req.params;
+
+  logger.info(`[${requestId}] POST /toggle-follow/${targetUserId} - Request by User: ${authenticatedUserId}`);
+
+  try {
+    if (authenticatedUserId === targetUserId) {
+      return res.status(400).json({ message: "You cannot follow yourself." });
+    }
+
+    const user = await User.findById(authenticatedUserId);
+    const targetUser = await User.findById(targetUserId);
+
+    if (!user || !targetUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const alreadyFollowing = user.following.some(
+      (id) => id.toString() === targetUserId
+    );
+
+    if (alreadyFollowing) {
+      // Unfollow logic
+      user.following = user.following.filter(
+        (id) => id.toString() !== targetUserId
+      );
+      targetUser.followers = targetUser.followers.filter(
+        (id) => id.toString() !== authenticatedUserId
+      );
+
+      user.followingCount = Math.max(0, (user.followingCount || 0) - 1);
+      targetUser.followersCount = Math.max(0, (targetUser.followersCount || 0) - 1);
+
+      await user.save();
+      await targetUser.save();
+
+      logger.info(`[${requestId}] Unfollowed user ${targetUserId}`);
+      return res.status(200).json({ message: "Unfollowed successfully", isFollowing: false });
+    } else {
+      // Follow logic
+      user.following.push(targetUserId);
+      targetUser.followers.push(authenticatedUserId);
+
+      user.followingCount = (user.followingCount || 0) + 1;
+      targetUser.followersCount = (targetUser.followersCount || 0) + 1;
+
+      await user.save();
+      await targetUser.save();
+
+      logger.info(`[${requestId}] Followed user ${targetUserId}`);
+      return res.status(200).json({ message: "Followed successfully", isFollowing: true });
+    }
+  } catch (err) {
+    logger.error(
+      `[${requestId}] ❌ Error toggling follow for User: ${authenticatedUserId} -> ${targetUserId}. ${err.message}`,
+      { stack: err.stack }
+    );
+    res.status(500).json({ message: "Server error while toggling follow" });
+  } finally {
+    logger.info(`[${requestId}] POST /toggle-follow/${targetUserId} - Finished`);
+  }
+});
 
 /**
  * @route   POST /api/users/fix-contacts

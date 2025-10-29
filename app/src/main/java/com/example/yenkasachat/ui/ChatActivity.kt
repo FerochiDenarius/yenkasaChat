@@ -40,6 +40,7 @@ import com.example.yenkasachat.ui.IncomingCallActivity
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.webrtc.WebSocketProvider
+import com.example.yenkasachat.webrtc.WebSocketManager
 import com.example.yenkasachat.webrtc.SignalingMessageType
 import com.google.android.gms.location.LocationServices
 import de.hdodenhof.circleimageview.CircleImageView
@@ -129,22 +130,30 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         // --- Initialize handlers and helpers ---
         chatMessageHandler = ChatMessageHandler(this, this, token, senderId, roomId!!)
+
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         messageAdapter = MessageAdapter(senderId)
         messageAdapter.setOnMessageLongClickListener(this)
 
-        chatActivityHelper = ChatActivityHelper(
-            applicationContext,
-            this,
-            token,
-            senderId,
-            roomId!!,
-            fusedLocationClient,
-            uiHandler
-        )
-
-        messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
+        // ✅ Ensure non-null roomId and proper initialization
+        roomId?.let {
+            chatActivityHelper = ChatActivityHelper(
+                applicationContext,
+                this,
+                token,
+                senderId,
+                roomId!!,
+                fusedLocationClient,
+                uiHandler,
+            )
+            messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
+        } ?: run {
+            Log.e("ChatActivity", "❌ roomId is null — cannot start chat properly.")
+            Toast.makeText(this, "Error loading chat", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
         // --- Connect WebSocket once (shared via WebSocketProvider) ---
         webSocketManager.connect(this)
@@ -156,7 +165,6 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                     SignalingMessageType.CALL_REQUEST -> {
                         Log.i("ChatActivity", "📞 Incoming ${if (msg.isVideo == true) "video" else "audio"} call from ${msg.callerName}")
 
-                        // Launch the new IncomingCallActivity
                         val intent = Intent(this@ChatActivity, IncomingCallActivity::class.java).apply {
                             putExtra("CALLER_ID", msg.fromUserId)
                             putExtra("CALLER_NAME", msg.callerName ?: "Unknown")
@@ -164,41 +172,39 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                             putExtra("IS_VIDEO_CALL", msg.isVideo ?: true)
                             putExtra("ROOM_URL", msg.roomUrl)
                             putExtra("ROOM_TOKEN", msg.token)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                         startActivity(intent)
-
                     }
-
-                    // Optional: handle other signaling types if needed
                     SignalingMessageType.CALL_ACCEPT -> {
                         Log.d("ChatActivity", "✅ CALL_ACCEPT received — ignoring here (handled in VideoCallActivity)")
                     }
-
                     SignalingMessageType.CALL_REJECT -> {
                         Log.d("ChatActivity", "🚫 CALL_REJECT received — call dismissed.")
                     }
-
                     else -> {}
                 }
             }
         }
 
-        // --- Set up UI and chat ---
         setupChatRecyclerView()
         setupListeners()
 
+        // ✅ Now safe: only called after helper initialized
         chatActivityHelper.initializeHeaderInformation()
         chatActivityHelper.startFetchingMessagesRepeatedly()
         requestNeededPermissions()
     }
 
+    // --- Add this to prevent the crash ---
     override fun onDestroy() {
+        if (::chatActivityHelper.isInitialized) {
+            chatActivityHelper.cleanup()
+        }
         super.onDestroy()
-        chatActivityHelper.stopFetchingMessages()
-        uiHandler.removeCallbacksAndMessages(null)
     }
+
+
 
     private fun initViews() {
         recyclerView = findViewById(R.id.recyclerViewMessages)

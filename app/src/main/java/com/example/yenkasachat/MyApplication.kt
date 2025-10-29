@@ -17,6 +17,7 @@ import com.onesignal.OSSubscriptionObserver
 import com.onesignal.OSSubscriptionStateChanges
 import com.onesignal.OneSignal
 import java.util.HashMap
+import com.jakewharton.threetenabp.AndroidThreeTen
 
 class MyApplication : Application(), OSSubscriptionObserver {
 
@@ -30,7 +31,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
     override fun onCreate() {
         super.onCreate()
-
+        AndroidThreeTen.init(this)
         OneSignal.getDeviceState()?.let {
             Log.d(
                 "MyApp",
@@ -115,6 +116,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
         Log.d("MyApplication", "Application onCreate finished.")
     }
+
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

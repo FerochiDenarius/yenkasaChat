@@ -134,4 +134,5 @@ dependencies {
     implementation("androidx.media3:media3-session:1.4.1")
 
 // Check for the latest version
+    implementation("com.jakewharton.threetenabp:threetenabp:1.4.6")
 }

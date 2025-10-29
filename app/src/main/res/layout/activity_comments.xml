@@ -5,11 +5,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FFFFFF"
+    android:background="@color/white"
     android:padding="12dp"
     tools:context=".ui.CommentsActivity">
 
-    <!-- Header -->
+    <!-- 🔹 Header bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -32,10 +32,88 @@
             android:text="Comments"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:layout_marginStart="8dp" />
+            android:layout_marginStart="8dp"
+            android:textColor="@color/black" />
     </LinearLayout>
 
-    <!-- Comments list -->
+    <!-- 🔹 Post Header Section -->
+    <LinearLayout
+        android:id="@+id/layoutPostHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/light_gray"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:id="@+id/imagePostMedia"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:src="@drawable/sample_post" />
+        <!-- Inside layoutPostHeader -->
+        <ImageView
+            android:id="@+id/imagePostMedia"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:adjustViewBounds="true"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:src="@drawable/ic_contacts" />
+
+        <!-- ✅ Add this -->
+        <VideoView
+            android:id="@+id/videoPostMedia"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/textPostCaption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:paddingTop="6dp"
+            tools:text="Sample caption goes here" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="space_between"
+            android:paddingTop="6dp">
+
+            <TextView
+                android:id="@+id/textPostLikes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Likes"
+                android:textColor="@color/dark_gray" />
+
+            <TextView
+                android:id="@+id/textPostComments"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Comments"
+                android:textColor="@color/dark_gray" />
+
+            <TextView
+                android:id="@+id/textPostViews"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Views"
+                android:textColor="@color/dark_gray" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 🔹 Comments List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerComments"
         android:layout_width="match_parent"
@@ -51,7 +129,7 @@
         android:background="#E0E0E0"
         android:layout_marginVertical="8dp" />
 
-    <!-- Input area -->
+    <!-- 🔹 Input Area -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -66,8 +144,8 @@
             android:hint="Write a comment..."
             android:background="@drawable/bg_input_rounded"
             android:padding="10dp"
-            android:textColor="#000"
-            android:textColorHint="#888"
+            android:textColor="@color/black"
+            android:textColorHint="@color/dark_gray"
             android:maxLines="3" />
 
         <ImageButton

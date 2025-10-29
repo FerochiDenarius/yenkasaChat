@@ -21,6 +21,7 @@
                 android:layout_height="?attr/actionBarSize"
                 android:background="?attr/colorPrimary"
                 android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+                app:title="Create Post"
                 app:titleTextColor="@android:color/white" />
 
             <EditText
@@ -33,11 +34,28 @@
                 android:inputType="textMultiLine"
                 android:lines="4" />
 
+            <!-- ✅ COMMUNITY SELECTION FIELD -->
+            <TextView
+                android:id="@+id/tvCommunityLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Select Community"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/spinnerCommunity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:spinnerMode="dropdown" />
+
             <Button
                 android:id="@+id/btnChooseMedia"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
                 android:text="Choose Image, Video, or Audio" />
 
             <ImageView
@@ -72,11 +90,9 @@
                 android:backgroundTint="@color/purple_500"
                 android:text="Post"
                 android:textColor="@android:color/white" />
-
         </LinearLayout>
     </ScrollView>
 
-    <!-- ✅ PROGRESS BAR ADDED HERE -->
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleLarge"

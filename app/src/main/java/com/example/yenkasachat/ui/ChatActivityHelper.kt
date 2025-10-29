@@ -13,6 +13,7 @@ import android.util.Log
 import android.widget.Toast
 import com.example.yenkasachat.model.ChatMessage
 import com.example.yenkasachat.model.ChatRoom
+import com.example.yenkasachat.webrtc.WebSocketManager
 import com.example.yenkasachat.model.Participant
 import com.example.yenkasachat.model.ReceiverResponse
 import com.example.yenkasachat.network.ApiClient
@@ -61,6 +62,7 @@ class ChatActivityHelper(
     private var lastMessageTimestamp: Long = 0L
     private val refreshInterval = 5000L
     private var isFetchingActive = false
+
 
     private fun parseTimestamp(timestamp: String?): Long {
         if (timestamp.isNullOrBlank()) return 0L
@@ -296,6 +298,19 @@ class ChatActivityHelper(
             callback.showToast("Audio recording permission denied.", Toast.LENGTH_SHORT)
     }
 // Add this new function inside your ChatActivityHelper class
+fun cleanup() {
+    try {
+        // Stop message fetching safely
+        stopFetchingMessages()
+
+        // Remove any UI callbacks
+        uiHandler.removeCallbacksAndMessages(null)
+
+        Log.d("ChatActivityHelper", "✅ ChatActivityHelper cleaned up successfully")
+    } catch (e: Exception) {
+        Log.e("ChatActivityHelper", "⚠️ Error during cleanup: ${e.message}")
+    }
+}
 
 
     private fun parseError(response: Response<*>): String {

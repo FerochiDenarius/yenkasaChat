@@ -13,6 +13,8 @@ object TokenManager {
     private const val PREF_NAME = "secure_auth_prefs"
     private const val TOKEN_KEY = "auth_token"
     private const val REFRESH_KEY = "refresh_token"
+    // === Admin Flag ===
+    private const val ADMIN_KEY = "is_admin"
     private const val USER_ID_KEY = "userId"
     private const val PROFILE_PIC_KEY = "profile_pic_url"
     private const val USERNAME_KEY = "username"
@@ -495,6 +497,34 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting OneSignal Player ID from EncryptedSharedPreferences", e)
             null
+        }
+    }
+
+
+
+    /**
+     * Saves whether the current user is an admin.
+     */
+    fun setAdmin(context: Context, isAdmin: Boolean) {
+        try {
+            getEncryptedPrefs(context).edit().putBoolean(ADMIN_KEY, isAdmin).apply()
+            Log.i(TAG, "Admin status saved: $isAdmin")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving admin status", e)
+        }
+    }
+
+    /**
+     * Returns true if the user is marked as admin.
+     */
+    fun isAdmin(context: Context): Boolean {
+        return try {
+            val adminStatus = getEncryptedPrefs(context).getBoolean(ADMIN_KEY, false)
+            Log.d(TAG, "Retrieved admin status: $adminStatus")
+            adminStatus
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting admin status", e)
+            false
         }
     }
 

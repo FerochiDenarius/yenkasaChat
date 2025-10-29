@@ -387,6 +387,11 @@ fun getComments(
 
 
 
+    @PATCH("posts/{postId}/status")
+    fun updatePostStatus(
+        @Path("postId") postId: String,
+        @Query("approved") approved: Boolean
+    ): Call<Void>
 
     // ✅ Update profile
     @PUT("profile")
@@ -394,6 +399,15 @@ fun getComments(
 
     @GET("communities")
     fun getCommunities(): Call<List<Community>>
+
+    @POST("posts/approve/{id}")
+    fun approvePost(@Path("id") postId: String): Call<Post>
+
+    @POST("posts/reject/{id}")
+    fun rejectPost(@Path("id") postId: String): Call<Post>
+
+    @GET("posts/pending")
+    fun getPendingPosts(): Call<List<Post>>
 
 
 

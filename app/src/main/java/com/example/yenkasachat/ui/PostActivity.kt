@@ -13,6 +13,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.ui.PostApprovalActivity
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -183,51 +184,28 @@ class PostActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
 
                     if (response.isSuccessful) {
-                        Toast.makeText(this@PostActivity, "Post uploaded!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PostActivity, "Post submitted for review!", Toast.LENGTH_SHORT).show()
 
-                        // --- Send OneSignal notification to all subscribed users ---
-                        val postContent = editTextContent.text.toString().trim()
-                        val userId = TokenManager.getUserId(this@PostActivity)
-                        val postId = response.body()?._id ?: ""
-
-                        val jsonBody = JSONObject().apply {
-                            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2") // Your OneSignal App ID
-                            put("included_segments", JSONArray().put("Subscribed Users")) // or include_player_ids if targeting specific users
-                            put("headings", JSONObject().put("en", "New Post from $userId"))
-                            put("contents", JSONObject().put("en", postContent))
-                            put("data", JSONObject().put("post_id", postId))
-                        }
-
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                val url = URL("https://onesignal.com/api/v1/notifications")
-                                val conn = url.openConnection() as HttpURLConnection
-                                conn.requestMethod = "POST"
-                                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                                conn.setRequestProperty(
-                                    "Authorization",
-                                    "Basic YOUR_REST_API_KEY" // Replace with your OneSignal REST API Key
-                                )
-                                conn.doOutput = true
-
-                                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
-
-                                val responseCode = conn.responseCode
-                                Log.d("PostActivity", "OneSignal response code: $responseCode")
-                            } catch (e: Exception) {
-                                Log.e("PostActivity", "OneSignal push failed: ${e.message}")
-                            }
-                        }
-
-                        // Finish the activity after post
+                        // Redirect to PostApprovalActivity (admin review screen)
+                        val intent = Intent(this@PostActivity, PostApprovalActivity::class.java)
+                        startActivity(intent)
                         finish()
+
                     } else {
-                        Log.e(
-                            "PostActivity",
-                            "Upload failed - code: ${response.code()}, msg: ${response.message()}"
-                        )
-                        Toast.makeText(this@PostActivity, "Failed to upload post.", Toast.LENGTH_SHORT).show()
+                        // Better error logging
+                        val errorBody = response.errorBody()?.string()
+                        Log.e("PostActivity", "❌ Upload failed - code: ${response.code()}, message: ${response.message()}, body: $errorBody")
+
+                        // Specific server-side message if available
+                        val errorMessage = try {
+                            JSONObject(errorBody ?: "{}").optString("message", "Failed to upload post.")
+                        } catch (e: Exception) {
+                            "Failed to upload post."
+                        }
+
+                        Toast.makeText(this@PostActivity, errorMessage, Toast.LENGTH_LONG).show()
                     }
+
                 }
 
                 override fun onFailure(call: Call<Post>, t: Throwable) {

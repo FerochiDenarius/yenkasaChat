@@ -1,78 +1,33 @@
 package com.example.yenkasachat.network
 
-import com.example.yenkasachat.model.ChatMessage
-import com.example.yenkasachat.model.ChatRoom
-import com.example.yenkasachat.model.Community
-import com.example.yenkasachat.model.Contact
-import com.example.yenkasachat.model.CreateChatRoomRequest
-import com.example.yenkasachat.model.CreateChatRoomResponse
-import com.example.yenkasachat.model.LoginRequest
-import com.example.yenkasachat.model.LoginResponse
-import com.example.yenkasachat.model.UnreadCountRequest
-import com.example.yenkasachat.model.UnreadCountResponse
-import com.example.yenkasachat.model.RoomUnreadCountResponse
-import com.example.yenkasachat.model.AllUnreadCountsResponse
-import com.example.yenkasachat.model.PushNotificationRequest
-import com.example.yenkasachat.model.User
-import com.example.yenkasachat.model.Participant
-import com.example.yenkasachat.model.ReceiverResponse
-import com.example.yenkasachat.model.ProfileResponse
-import com.example.yenkasachat.model.UpdateProfileRequest
-import com.example.yenkasachat.model.ForgotPasswordRequest
-import com.example.yenkasachat.model.VerificationResponse
-import com.example.yenkasachat.model.EmailRequest
-import com.example.yenkasachat.model.ConfirmRequest
-import com.example.yenkasachat.model.PhoneRequest
-import com.example.yenkasachat.model.ConfirmPhoneRequest
-import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.model.ToggleLikeResponse
-import com.example.yenkasachat.model.ResetPasswordRequest
-import com.example.yenkasachat.model.Comment
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Call
-import retrofit2.Response // Ensure this is imported for suspend functions
+import retrofit2.Response
 import retrofit2.http.*
-import okhttp3.RequestBody
-import retrofit2.http.Multipart
-import retrofit2.http.POST
-import retrofit2.http.Part
 
+// ===========================================================
+// 📦 DATA CLASSES (Keep all)
+// ===========================================================
 
-
-// --- Data classes for Unread Count feature ---
-
+// --- Unread Count Feature ---
 data class UnreadCountRequest(
     val userId: String,
     val roomId: String
 )
 
-
-// Daily.co API Models
-data class CreateRoomRequest(val roomName: String)
-data class CreateRoomResponse(val roomName: String, val roomUrl: String)
-
-// 🔥 FIXED: use _id instead of userId to match backend
-data class GenerateTokenRequest(
-    val roomName: String,
-    val _id: String
-)
-
-data class GenerateTokenResponse(
-    val token: String,
-    val roomName: String
-)
-
-
 data class UnreadCountData(
     val userId: String,
     val roomId: String,
     val count: Int,
-    val updatedAt: String? = null, // Or use a Date type with a TypeAdapter if needed
-    val lastReadTimestamp: String? = null // Or use a Date type
+    val updatedAt: String? = null,
+    val lastReadTimestamp: String? = null
 )
 
-data class UnreadCountResponse( // Generic response for increment/reset
+data class UnreadCountResponse(
     val success: Boolean,
     val data: UnreadCountData?,
     val error: String?
@@ -84,11 +39,10 @@ data class RoomUnreadCountResponse(
     val error: String?
 )
 
-data class RoomCount( // For the list of rooms with unread messages
+data class RoomCount(
     val roomId: String,
     val count: Int
 )
-// Request model for updating profile
 
 data class AllUnreadCountsResponse(
     val success: Boolean,
@@ -97,26 +51,37 @@ data class AllUnreadCountsResponse(
     val error: String?
 )
 
+// --- Daily.co API Models ---
+data class CreateRoomRequest(val roomName: String)
+data class CreateRoomResponse(val roomName: String, val roomUrl: String)
+
+data class GenerateTokenRequest(
+    val roomName: String,
+    val _id: String
+)
+
+data class GenerateTokenResponse(
+    val token: String,
+    val roomName: String
+)
+
+// ===========================================================
+// 🌐 API INTERFACE
+// ===========================================================
 
 interface ApiService {
 
+    // ==================== AUTH ====================
+
     @POST("login")
-    fun login(
-        @Body request: LoginRequest
-    ): Call<LoginResponse>
-    // 1️⃣ Request password reset email
+    fun login(@Body request: LoginRequest): Call<LoginResponse>
+
     @POST("reset-password/request")
-    suspend fun requestPasswordReset(
-        @Body request: ForgotPasswordRequest
-    ): Response<Void>
+    suspend fun requestPasswordReset(@Body request: ForgotPasswordRequest): Response<Void>
 
-    // 2️⃣ Verify reset token
     @POST("reset-password/verify")
-    suspend fun verifyResetToken(
-        @Body body: Map<String, String> // { "token": "xyz123" }
-    ): Response<Void>
+    suspend fun verifyResetToken(@Body body: Map<String, String>): Response<Void>
 
-    // 3️⃣ Reset password with token
     @POST("reset-password/confirm/{token}")
     suspend fun resetPassword(
         @Path("token") token: String,
@@ -124,15 +89,14 @@ interface ApiService {
     ): Response<ResponseBody>
 
 
+    // ==================== USERS ====================
 
     @GET("users")
     fun getAllUsers(): Call<List<User>>
 
     @Multipart
     @POST("users/profile-picture")
-    fun uploadProfilePicture(
-        @Part image: MultipartBody.Part
-    ): Call<Map<String, Any>>
+    fun uploadProfilePicture(@Part image: MultipartBody.Part): Call<Map<String, Any>>
 
     @GET("users/me")
     fun getUserProfile(): Call<User>
@@ -144,12 +108,11 @@ interface ApiService {
     ): Call<ResponseBody>
 
     @PATCH("users/{userId}/fcm-token")
-    fun updateFcmToken(
-        @Path("userId") userId: String,
-        @Body body: Map<String, String>
-    ): Call<Void>
+    fun updateFcmToken(@Path("userId") userId: String, @Body body: Map<String, String>): Call<Void>
 
-    // --- Chat Rooms ---
+
+    // ==================== CHATROOMS ====================
+
     @POST("chatrooms")
     fun createChatRoom(@Body request: CreateChatRoomRequest): Call<CreateChatRoomResponse>
 
@@ -157,11 +120,10 @@ interface ApiService {
     fun getChatRooms(): Call<List<ChatRoom>>
 
     @GET("chatrooms/user/{userId}")
-    fun getUserChatRooms(
-        @Path("userId") userId: String
-    ): Call<List<ChatRoom>>
+    fun getUserChatRooms(@Path("userId") userId: String): Call<List<ChatRoom>>
 
-// --- Daily.co endpoints ---
+
+    // ==================== DAILY.CO VIDEO ====================
 
     @POST("dailyco/create-room")
     fun createRoom(@Body request: CreateRoomRequest): Call<CreateRoomResponse>
@@ -169,47 +131,50 @@ interface ApiService {
     @POST("dailyco/generate-token")
     fun generateToken(@Body request: GenerateTokenRequest): Call<GenerateTokenResponse>
 
-    @GET("chatrooms/{roomId}/receiver")
-    fun getReceiverInfo(
-        @Path("roomId") roomId: String
-    ): Call<ReceiverResponse>
 
+    // ==================== CHAT RECEIVER ====================
+
+    @GET("chatrooms/{roomId}/receiver")
+    fun getReceiverInfo(@Path("roomId") roomId: String): Call<ReceiverResponse>
 
     @POST("chatroom/{receiverId}")
-    fun getOrCreateChatRoom(
-        @Path("receiverId") receiverId: String
-    ): Call<CreateChatRoomResponse>
+    fun getOrCreateChatRoom(@Path("receiverId") receiverId: String): Call<CreateChatRoomResponse>
 
-    // --- Messages ---
+
+    // ==================== MESSAGES ====================
+
     @POST("messages")
-    fun sendMessage(
-        @Body body: Map<String, @JvmSuppressWildcards Any?>
-    ): Call<ChatMessage>
+    fun sendMessage(@Body body: Map<String, @JvmSuppressWildcards Any?>): Call<ChatMessage>
 
     @GET("messages/{roomId}")
-    fun getMessages(
-        @Path("roomId") roomId: String
-    ): Call<List<ChatMessage>>
+    fun getMessages(@Path("roomId") roomId: String): Call<List<ChatMessage>>
 
-    // --- Contacts ---
+    @DELETE("messages/{messageId}")
+    suspend fun deleteMessage(
+        @Path("messageId") messageId: String,
+        @Header("Authorization") authToken: String
+    ): Response<Unit>
+
+
+    // ==================== CONTACTS ====================
+
     @POST("contacts")
-    fun addContact(
-        @Body body: Map<String, String>
-    ): Call<Contact>
+    fun addContact(@Body body: Map<String, String>): Call<Contact>
 
     @GET("contacts")
     fun getContacts(): Call<List<Contact>>
 
     @DELETE("contacts/{contactId}")
-    fun deleteContact(
-        @Path("contactId") contactId: String
-    ): Call<Void>
+    fun deleteContact(@Path("contactId") contactId: String): Call<Void>
 
-    // --- Push Notifications ---
+
+    // ==================== NOTIFICATIONS ====================
+
     @POST("notify")
-    fun sendPushNotification(
-        @Body request: PushNotificationRequest
-    ): Call<Void>
+    fun sendPushNotification(@Body request: PushNotificationRequest): Call<Void>
+
+
+    // ==================== VERIFICATION ====================
 
     @POST("verify/request-email-code")
     suspend fun requestEmailVerification(@Body emailRequest: EmailRequest): Response<VerificationResponse>
@@ -217,12 +182,14 @@ interface ApiService {
     @POST("verify/confirm-email-code")
     suspend fun confirmEmailVerification(@Body confirmRequest: ConfirmRequest): Response<VerificationResponse>
 
-
     @POST("verify/request-phone-code")
     suspend fun requestPhoneVerification(@Body request: PhoneRequest): Response<VerificationResponse>
 
     @POST("verify/confirm-phone-code")
     suspend fun confirmPhoneVerification(@Body request: ConfirmPhoneRequest): Response<VerificationResponse>
+
+
+    // ==================== UNREAD COUNTS ====================
 
     @POST("unread/increment")
     suspend fun incrementUnreadCount(@Body request: UnreadCountRequest): Response<UnreadCountResponse>
@@ -235,16 +202,15 @@ interface ApiService {
         @Query("userId") userId: String,
         @Query("roomId") roomId: String
     ): Response<RoomUnreadCountResponse>
-    // NEW: API call to delete a message
-    @DELETE("messages/{messageId}")
-    suspend fun deleteMessage(
-        @Path("messageId") messageId: String,
-        @Header("Authorization") authToken: String // Assuming Bearer token authentication
-    ): Response<Unit> // Response<Unit> is typical for DELETE if no body is returned
 
-    //post activities calls
+    @GET("unread/all")
+    suspend fun getAllUnreadCountsForUser(
+        @Query("userId") userId: String
+    ): Response<AllUnreadCountsResponse>
 
-    // ✅ Fetch all posts
+
+    // ==================== POSTS ====================
+
     @GET("posts")
     fun getAllPosts(): Call<List<Post>>
 
@@ -256,11 +222,6 @@ interface ApiService {
         @Part mediaFile: MultipartBody.Part? = null
     ): Call<Post>
 
-    // ✅ Like a post
-
-    // Toggle like — AuthInterceptor in ApiClient will attach Authorization header.
-
-    // ✅ CORRECTED THIS LINE
     @POST("social/like/{postId}")
     fun toggleLike(
         @Header("Authorization") token: String,
@@ -270,16 +231,41 @@ interface ApiService {
     @GET("posts/{id}")
     fun getPostById(@Path("id") postId: String): Call<Post>
 
-    @GET("unread/all")
-    suspend fun getAllUnreadCountsForUser(
-        @Query("userId") userId: String
-    ): Response<AllUnreadCountsResponse>
-//comments api calls
-@GET("social/comments/{postId}")
-fun getComments(
-    @Header("Authorization") token: String,
-    @Path("postId") postId: String
-): Call<List<Comment>>
+    @GET("posts/my")
+    fun getMyPosts(@Header("Authorization") token: String): Call<List<Post>>
+
+    @GET("feed/following")
+    fun getFollowingFeed(@Header("Authorization") token: String): Call<List<Post>>
+
+    @DELETE("posts/{postId}")
+    fun deletePost(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<Map<String, Any>>
+
+    @POST("posts/approve/{id}")
+    fun approvePost(@Path("id") postId: String): Call<Post>
+
+    @POST("posts/reject/{id}")
+    fun rejectPost(@Path("id") postId: String): Call<Post>
+
+    @GET("posts/pending")
+    fun getPendingPosts(): Call<List<Post>>
+
+    @PATCH("posts/{postId}/status")
+    fun updatePostStatus(
+        @Path("postId") postId: String,
+        @Query("approved") approved: Boolean
+    ): Call<Void>
+
+
+    // ==================== COMMENTS ====================
+
+    @GET("social/comments/{postId}")
+    fun getComments(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<List<Comment>>
 
     @POST("social/comment/{postId}")
     fun addComment(
@@ -295,31 +281,22 @@ fun getComments(
     ): Call<Map<String, Any>>
 
 
-    // Fetches a user's complete profile, including their posts, in one call
+    // ==================== PROFILE ====================
+
     @GET
     fun getProfileDynamic(
         @Url url: String,
         @Header("Authorization") token: String
     ): Call<ProfileResponse>
 
-
-    // ✅ Fetch profile
     @GET("profile")
     suspend fun getProfile(): ProfileResponse
 
+    @PUT("profile")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
 
-    @GET("users/{id}")
-    fun getUserById(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<User>
-
-    @GET("posts/user/{id}")
-    fun getPostsByUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<List<Post>>
+    // ==================== FOLLOW SYSTEM ====================
 
     @POST("users/toggle-follow/{userId}")
     fun toggleFollow(
@@ -328,25 +305,28 @@ fun getComments(
     ): Call<Map<String, Any>>
 
     @GET("users/{userId}/followers")
-    fun getFollowers(@Path("userId") userId: String, @Header("Authorization") token: String): Call<List<User>>
+    fun getFollowers(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<List<User>>
 
     @GET("users/{userId}/following")
-    fun getFollowing(@Path("userId") userId: String, @Header("Authorization") token: String): Call<List<User>>
+    fun getFollowing(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<List<User>>
 
-    // ✅ Fetch posts for a specific user
-    @GET("posts/user/{id}")
-    fun getPostsForUser(
+    @POST("/users/{id}/follow")
+    fun followUser(
         @Header("Authorization") token: String,
         @Path("id") userId: String
-    ): Call<List<Post>>
+    ): Call<Map<String, Any>>
 
-    @GET("posts/my")
-    fun getMyPosts(
-        @Header("Authorization") token: String
-    ): Call<List<Post>>
-
-
-
+    @POST("/users/{id}/unfollow")
+    fun unfollowUser(
+        @Header("Authorization") token: String,
+        @Path("id") userId: String
+    ): Call<Map<String, Any>>
 
     @POST("users/{id}/block")
     fun blockUser(
@@ -361,54 +341,112 @@ fun getComments(
     ): Call<Map<String, Any>>
 
 
+    // ==================== COMMUNITIES ====================
 
-    @GET("feed/following")
-    fun getFollowingFeed(@Header("Authorization") token: String): Call<List<Post>>
+    @GET("/api/communities")
+    fun getCommunities(
+        @Query("search") search: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("order") order: String? = null
+    ): Call<List<Community>>
 
-    // In ApiService.kt
-    @DELETE("posts/{postId}")
-    fun deletePost(
+    @GET("/api/communities/{communityId}")
+    fun getCommunityDetails(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String
+    ): Call<Community>
+
+    @POST("/api/communities/{communityId}/join")
+    fun joinCommunity(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String
+    ): Call<JoinCommunityResponse>
+
+    @POST("/api/communities/{communityId}/leave")
+    fun leaveCommunity(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String
+    ): Call<JoinCommunityResponse>
+
+    @POST("/api/communities")
+    fun createCommunity(
+        @Header("Authorization") token: String,
+        @Body request: CreateCommunityRequest
+    ): Call<CreateCommunityResponse>
+
+    @GET("/api/communities/user/my-communities")
+    fun getMyCommunities(@Header("Authorization") token: String): Call<Map<String, Any>>
+
+
+    // ==================== COINS ====================
+
+    @GET("/api/coins/balance")
+    fun getCoinBalance(@Header("Authorization") token: String): Call<CoinBalance>
+
+    @POST("/api/coins/transfer")
+    fun transferCoins(
+        @Header("Authorization") token: String,
+        @Body request: TransferCoinsRequest
+    ): Call<TransferCoinsResponse>
+
+    @GET("/api/coins/transactions")
+    fun getTransactions(
+        @Header("Authorization") token: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 50,
+        @Query("type") type: String? = null
+    ): Call<TransactionsResponse>
+
+// ===========================
+    // 🏡 FEED ENDPOINTS
+    // ===========================
+
+    // ✅ Fetch community feed
+    @GET("feed")
+    fun getFeed(
+        @Header("Authorization") token: String,
+        @Query("page") page: Int,
+        @Query("limit") limit: Int
+    ): Call<FeedResponse>
+
+    // ✅ Like a post
+    @POST("feed/{postId}/like")
+    fun likePost(
         @Header("Authorization") token: String,
         @Path("postId") postId: String
-    ): Call<Map<String, Any>>
+    ): Call<LikeResponse>
 
-    // Follow/unfollow a user
-    @POST("/users/{id}/follow")
-    fun followUser(
+    // ✅ Unlike a post
+    @DELETE("feed/{postId}/like")
+    fun unlikePost(
         @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Map<String, Any>>
+        @Path("postId") postId: String
+    ): Call<LikeResponse>
 
-    @POST("/users/{id}/unfollow")
-    fun unfollowUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Map<String, Any>>
+    // ==================== APP VERIFICATION ====================
 
+    @GET("/api/appverification/dashboard")
+    fun getVerificationDashboard(
+        @Header("Authorization") token: String
+    ): Call<VerificationDashboard>
 
+    @POST("/api/appverification/track-login")
+    fun trackLogin(
+        @Header("Authorization") token: String
+    ): Call<TrackLoginResponse>
 
-    @PATCH("posts/{postId}/status")
-    fun updatePostStatus(
-        @Path("postId") postId: String,
-        @Query("approved") approved: Boolean
-    ): Call<Void>
+    @POST("/api/appverification/track-ad-view")
+    fun trackAdView(
+        @Header("Authorization") token: String
+    ): Call<TrackAdViewResponse>
 
-    // ✅ Update profile
-    @PUT("profile")
-    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
+    @GET("/api/appverification/progress")
+    fun getVerificationProgress(
+        @Header("Authorization") token: String
+    ): Call<VerificationProgressResponse>
 
-    @GET("communities")
-    fun getCommunities(): Call<List<Community>>
-
-    @POST("posts/approve/{id}")
-    fun approvePost(@Path("id") postId: String): Call<Post>
-
-    @POST("posts/reject/{id}")
-    fun rejectPost(@Path("id") postId: String): Call<Post>
-
-    @GET("posts/pending")
-    fun getPendingPosts(): Call<List<Post>>
-
-
-
+    @POST("/api/appverification/check-phase-advancement")
+    fun checkPhaseAdvancement(
+        @Header("Authorization") token: String
+    ): Call<PhaseAdvancementResponse>
 }

@@ -11,4 +11,6 @@
     <string name="call_status_user_busy">User is busy</string>
     <string name="call_status_error">Error: %1$s</string>
     <string name="call_status_ended">Call Ended</string>
+    <string name="add_post">add post\n</string>
+    <string name="create_post">create post\n</string>
 </resources>

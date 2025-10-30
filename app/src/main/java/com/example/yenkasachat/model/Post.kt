@@ -4,47 +4,101 @@ import com.google.gson.annotations.SerializedName
 
 data class Post(
     @SerializedName("_id")
-    val _id: String? = null,                 // MongoDB ID
+    val postId: String,
 
-    @SerializedName("user")
-    val user: User? = null,                  // The user who created the post
+    // Author info (populated)
+    val userId: UserBasic,
 
-    @SerializedName("caption")
-    val caption: String? = null,             // Text part of the post
+    // Community (populated)
+    val communityId: CommunityBasic,
 
-    @SerializedName("mediaType")
-    val mediaType: String? = null,           // "text", "image", "video", "audio"
+    // Content
+    val text: String,
+    val imageUrl: String? = null,
+    val videoUrl: String? = null,
 
-    @SerializedName("mediaUrl")
-    val mediaUrl: String? = null,            // Cloudinary / backend media URL
+    // ✅ New optional fields for multiple media + mentions
+    val mediaUrls: List<String>? = null, // For posts with multiple images/videos
+    val mentions: List<String>? = null,  // For highlighting @mentions
 
-    @SerializedName("thumbnailUrl")
-    val thumbnailUrl: String? = null,        // Optional (for videos)
+    // Engagement
+    val likes: List<String> = emptyList(),
+    val likeCount: Int = 0,
+    val commentCount: Int = 0,
+    val shareCount: Int = 0,
+    val viewCount: Int = 0,
 
-    @SerializedName("createdAt")
-    val createdAt: String? = null,           // ISO timestamp
+    // Status
+    val isActive: Boolean = true,
+    val isPinned: Boolean = false,
+    val visibility: String = "public",
 
-    @SerializedName("updatedAt")
-    val updatedAt: String? = null,           // ISO timestamp
+    // Tags
+    val tags: List<String> = emptyList(),
+    val location: String? = null,
 
-    @SerializedName("likes")
-    var likes: List<String> = emptyList(),   // List of user IDs who liked (non-null)
+    // Coins
+    val coinsEarned: Int = 0,
 
-    @SerializedName("likesCount")
-    var likesCount: Int = 0,                 // explicit count for quick access
+    // Timestamps
+    val createdAt: String,
+    val updatedAt: String? = null,
 
-    @SerializedName("likedByUser")
-    var likedByUser: Boolean = false,        // whether the current user has liked this post
+    // Client-side flag
+    var likedByCurrentUser: Boolean = false
+)
 
-    @SerializedName("commentsCount")
-    var commentsCount: Int = 0,              // Count of comments
+data class UserBasic(
+    @SerializedName("_id")
+    val id: String,
+    val username: String,
+    val profileImage: String? = null,
+    val verified: Boolean = false
+)
 
-    @SerializedName("sharesCount")
-    var sharesCount: Int = 0,
+data class CommunityBasic(
+    @SerializedName("_id")
+    val id: String,
+    val name: String,
+    val displayName: String
+)
 
-    @SerializedName("viewsCount")
-    var viewsCount: Int = 0,
+data class CreatePostRequest(
+    val text: String,
+    val imageUrl: String? = null,
+    val videoUrl: String? = null,
+    val tags: List<String> = emptyList(),
+    val location: String? = null,
+    val visibility: String = "public"
+)
 
-    @SerializedName("isViewed")
-    var isViewed: Boolean = false            // whether current user has viewed
+data class CreatePostResponse(
+    val success: Boolean,
+    val message: String,
+    val post: Post,
+    val coinsEarned: Int = 0
+)
+
+data class FeedResponse(
+    val posts: List<Post>,
+    val pagination: PaginationInfo
+)
+
+data class PaginationInfo(
+    val currentPage: Int,
+    val totalPages: Int,
+    val totalPosts: Int = 0,
+    val hasMore: Boolean
+)
+
+data class LikeResponse(
+    val success: Boolean,
+    val liked: Boolean,
+    val likeCount: Int,
+    val coinsRewarded: Int = 0
+)
+
+data class DeletePostResponse(
+    val success: Boolean,
+    val message: String
 )

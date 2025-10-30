@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <ImageView
+        android:id="@+id/iconRequirementStatus"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="12dp"
+        android:src="@drawable/ic_circle_outline"/>
+
+    <TextView
+        android:id="@+id/textRequirementTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Requirement"
+        android:textColor="@color/black"/>
+
+    <TextView
+        android:id="@+id/textRequirementValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0 / 100"
+        android:textColor="@color/gray_dark"/>
+</LinearLayout>

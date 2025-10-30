@@ -9,40 +9,39 @@
     android:background="#FFFDF5"
     tools:context=".ui.MainActivity">
 
+    <!-- Top Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="#FFFFFB"
+        android:elevation="2dp"
+        app:titleTextColor="#222222"
+        android:theme="@style/ThemeOverlay.AppCompat.Light"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-<androidx.appcompat.widget.Toolbar
-android:id="@+id/toolbar"
-android:layout_width="match_parent"
-android:layout_height="?attr/actionBarSize"
-android:background="#FFFFFB"
-    android:elevation="2dp"
-    app:titleTextColor="#222222"
-    android:theme="@style/ThemeOverlay.AppCompat.Light"
-    app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+    <!-- 🔹 Container that hosts the feed (FeedActivity layout or FeedFragment) -->
+    <FrameLayout
+        android:id="@+id/mainContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:background="#00FFFFFF"
+        tools:ignore="MissingConstraints"
+        tools:layout="@layout/activity_feed" />
 
-    <!-- RecyclerView for posts -->
-<androidx.recyclerview.widget.RecyclerView
-android:id="@+id/recyclerViewPosts"
-android:layout_width="match_parent"
-android:layout_height="match_parent"
-android:layout_below="@id/toolbar"
-android:padding="8dp"
-android:clipToPadding="false"
-android:scrollbars="vertical"
-tools:listitem="@layout/item_post"
-android:background="#00FFFFFF" /> <!-- transparent -->
+    <!-- ➕ Floating Action Button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAddPost"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/add_post"
+        app:srcCompat="@drawable/ic_add"
+        app:tint="#444444"
+        android:backgroundTint="#FFFFF2"
+        android:elevation="4dp" />
 
-    <!-- Floating Action Button -->
-<com.google.android.material.floatingactionbutton.FloatingActionButton
-android:id="@+id/btnAddPost"
-android:layout_width="wrap_content"
-android:layout_height="wrap_content"
-android:layout_alignParentEnd="true"
-android:layout_alignParentBottom="true"
-android:layout_margin="16dp"
-android:contentDescription="Add Post"
-android:backgroundTint="#FFFFF2"
-    app:tint="#444444"
-    app:srcCompat="@drawable/ic_add" />
-
-    </RelativeLayout>
+</RelativeLayout>

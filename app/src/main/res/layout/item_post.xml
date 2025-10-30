@@ -1,168 +1,180 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/commentsRoot"
+    android:id="@+id/layoutPostItem"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/white"
+    android:background="@drawable/bg_card_white"
     android:padding="12dp"
-    tools:context=".ui.CommentsActivity">
+    android:layout_marginVertical="6dp"
+    android:layout_marginHorizontal="8dp">
 
-
+    <!-- 🧑 User Row -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="8dp">
-
-        <ImageButton
-            android:id="@+id/buttonBack"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_back_arrow"
-            android:contentDescription="Back" />
-
-        <TextView
-            android:id="@+id/textCommentsTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Comments"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/black" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/layoutPostHeader"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/bg_card_white"
-        android:padding="12dp"
-        android:layout_marginBottom="8dp">
-
-        <TextView
-            android:id="@+id/textPostCaption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#333333"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:paddingBottom="6dp"
-            tools:text="This is the post caption" />
-
-        <ImageView
-            android:id="@+id/imagePostMedia"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"
-            android:adjustViewBounds="true"
-            android:visibility="gone"
-            tools:visibility="visible"
-            tools:src="@drawable/ic_contacts" />
-
-        <!-- Post Video -->
-        <VideoView
-            android:id="@+id/videoPostMedia"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="8dp"
-            android:visibility="gone" />
-
-        <!-- Interaction Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="8dp"
-            android:paddingTop="6dp">
-
-            <!-- Like -->
-            <ImageButton
-                android:id="@+id/buttonLike"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:background="@null"
-                android:src="@drawable/ic_heart_outline"
-                android:contentDescription="Like" />
-
-            <TextView
-                android:id="@+id/textPostLikes"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0 likes"
-                android:textColor="#444"
-                android:textSize="14sp"
-                android:layout_marginStart="4dp" />
-
-            <TextView
-                android:id="@+id/textPostComments"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=" • 0 comments"
-                android:textColor="#555"
-                android:textSize="14sp"
-                android:layout_marginStart="8dp" />
-
-            <TextView
-                android:id="@+id/textPostViews"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=" • 0 views"
-                android:textColor="#555"
-                android:textSize="14sp"
-                android:layout_marginStart="6dp" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- 🔹 Comments List -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerComments"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:overScrollMode="never"
-        android:paddingBottom="8dp" />
-
-    <!-- Divider -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0"
-        android:layout_marginVertical="8dp" />
-
-    <!-- 🔹 Input Area -->
-    <LinearLayout
+        android:id="@+id/layoutUserInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <EditText
-            android:id="@+id/editComment"
+        <ImageView
+            android:id="@+id/imageProfilePost"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/image_bg_rounded"
+            android:src="@drawable/ic_profile_placeholder" />
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Write a comment..."
-            android:background="@drawable/bg_input_rounded"
-            android:padding="10dp"
-            android:textColor="@color/black"
-            android:textColorHint="#888"
-            android:maxLines="3" />
+            android:orientation="vertical">
 
-        <ImageButton
-            android:id="@+id/buttonSend"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_send"
-            android:contentDescription="Send comment" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/textUsernamePost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Username"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:textSize="15sp" />
+
+                <ImageView
+                    android:id="@+id/imageVerifiedBadge"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_verified"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textCommunityName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ayimensah Community"
+                android:textColor="@color/gray"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textTimestampPost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2h ago"
+            android:textColor="@color/gray"
+            android:textSize="12sp" />
     </LinearLayout>
+
+    <!-- ✍️ Post Text -->
+    <TextView
+        android:id="@+id/textPostContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="This is a post caption with @mention"
+        android:textColor="@color/black"
+        android:textSize="15sp"
+        android:lineSpacingExtra="2dp" />
+
+    <!-- 🖼️ Post Image -->
+    <ImageView
+        android:id="@+id/imagePostContent"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:layout_marginTop="8dp"
+        android:scaleType="centerCrop"
+        android:adjustViewBounds="true"
+        android:visibility="gone"
+        android:background="@drawable/image_bg_rounded"
+        tools:visibility="visible"
+        tools:src="@drawable/placeholder_image" />
+
+    <!-- 🎞️ Multiple Media Recycler -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerMediaList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <!-- 💬 Engagement Row -->
+    <LinearLayout
+        android:id="@+id/layoutEngagement"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="10dp">
+
+        <!-- ❤️ Like -->
+        <ImageButton
+            android:id="@+id/btnLike"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@null"
+            android:src="@drawable/ic_heart_outline"
+            android:contentDescription="Like" />
+
+        <TextView
+            android:id="@+id/textLikeCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 likes"
+            android:textColor="@color/gray_dark"
+            android:textSize="14sp"
+            android:layout_marginStart="4dp" />
+
+        <!-- 💬 Comment -->
+        <ImageButton
+            android:id="@+id/btnComment"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="16dp"
+            android:background="@null"
+            android:src="@drawable/ic_comment"
+            android:contentDescription="Comment" />
+
+        <TextView
+            android:id="@+id/textCommentCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 comments"
+            android:textColor="@color/gray_dark"
+            android:textSize="14sp"
+            android:layout_marginStart="4dp" />
+
+        <!-- 🔗 Share -->
+        <ImageButton
+            android:id="@+id/btnShare"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="16dp"
+            android:background="@null"
+            android:src="@drawable/ic_share"
+            android:contentDescription="Share" />
+    </LinearLayout>
+
+    <!-- 🪙 Coins Earned -->
+    <TextView
+        android:id="@+id/textCoinsEarned"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🪙 10 coins earned"
+        android:textColor="@color/primary"
+        android:textSize="13sp"
+        android:layout_marginTop="6dp"
+        android:visibility="gone" />
 
 </LinearLayout>

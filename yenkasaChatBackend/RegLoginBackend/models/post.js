@@ -40,6 +40,44 @@ const postSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+const mongoose = require('mongoose');
+
+const communitySchema = new mongoose.Schema({
+  // Name: required, unique for easy identification
+  name: { type: String, required: true, unique: true, trim: true },
+
+  // Optional short description
+  description: { type: String, trim: true },
+
+  // The creator (verified user who made it)
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+  // Default communities will have this flag
+  isDefault: { type: Boolean, default: false },
+
+  // Optional tag for easy filtering (e.g., "Adenta, East Legon")
+  locationTag: { type: String, trim: true },
+
+  // Number of members and posts for quick stats
+  membersCount: { type: Number, default: 0 },
+  postsCount: { type: Number, default: 0 },
+
+  // Optional community image (banner or icon)
+  image: { type: String },
+
+  // Soft delete / disable flag (for moderation)
+  isActive: { type: Boolean, default: true },
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Index for name and activity
+communitySchema.index({ name: 1 });
+communitySchema.index({ isActive: 1 });
+
+module.exports = mongoose.model('Community', communitySchema);
 
 // Auto-populate user basic fields and community info on all find queries
 function autoPopulateRefs(next) {

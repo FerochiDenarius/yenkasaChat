@@ -150,7 +150,7 @@ safeMount('/api/chatrooms', './routes/chatroom.routes', 'Chat Rooms');
 
 // Posts & Comments
 safeMount('/api/posts', './routes/posts', 'Posts');
-safeMount('/api/comments', './routes/comment.routes', 'Comments');
+safeMount('/api/comments', './routes/comments.routes', 'Comments');
 
 // Communities
 safeMount('/api/communities', './routes/community.routes', 'Communities');

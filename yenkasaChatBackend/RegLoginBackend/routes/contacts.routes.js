@@ -67,16 +67,19 @@ router.delete('/:contactId', authMiddleware, async (req, res) => {
     }
 });
 // ✅ Get all contacts for the authenticated user
+// Fix the GET route in contacts.routes.js
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.id;
+        const contactDocs = await Contact.find({ userId })
+            .populate('contactId', 'username location profileImage');
 
-        const contactDocs = await Contact.find({ userId });
-
-        // Convert contact documents into simplified objects
         const contacts = contactDocs.map(contact => ({
-            id: contact._id,
-            username: contact.contactUsername
+            id: contact._id.toString(),
+            userId: contact.userId.toString(),
+            username: contact.contactId.username,
+            location: contact.contactId.location || '',
+            profileImage: contact.contactId.profileImage || ''
         }));
 
         res.json(contacts);

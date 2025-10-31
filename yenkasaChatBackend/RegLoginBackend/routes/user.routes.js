@@ -92,7 +92,7 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
 });
 
 /**
- * @route   GET /api/users/me
+ * @route   GET /api/users/me/**
  * @desc    Get logged-in user's full profile (no password)
  * @access  Private
  */
@@ -121,7 +121,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Safely prepare all values
+    // ✅ Build safe response object including role and permissions
     const userProfile = {
       _id: user._id,
       username: user.username,
@@ -149,6 +149,12 @@ router.get('/me', authMiddleware, async (req, res) => {
       verificationScore: user.verificationScore ?? 0,
       online: user.online || false,
       lastSeen: user.lastSeen || null,
+      role: user.role || 'user',                 // ✅ Added role
+      permissions: user.permissions || {         // ✅ Added permissions
+        canPost: false,
+        canComment: false,
+        canModerate: false
+      },
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -165,6 +171,7 @@ router.get('/me', authMiddleware, async (req, res) => {
     logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
   }
 });
+
 
 /**
  * @route   POST /api/users/toggle-follow/:targetUserId

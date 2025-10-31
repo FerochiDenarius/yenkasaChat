@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
-const appVerificationController = require('../controllers/appVerification.controller');
+const appVerificationController = require('../Controller/appVerification.controller');
 
 // ✅ Fetch full verification dashboard
 router.get('/dashboard', authMiddleware, appVerificationController.getDashboard);

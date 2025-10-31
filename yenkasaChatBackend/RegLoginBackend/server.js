@@ -15,7 +15,6 @@ const User = require('./models/user.model'); // ✅ Add this
 // 🪙 Coins & Verification system
 const CoinSupply = require('./models/coinSupply');
 const CoinTransaction = require('./models/cointransaction.model');
-const verificationEvaluator = require('./services/verificationEvaluator');
 const verificationRules = require('./config/verificationRules');
 const seedCommunities = require('./seed/seedCommunities');
 const coinRoutes = require('./routes/coin.routes');

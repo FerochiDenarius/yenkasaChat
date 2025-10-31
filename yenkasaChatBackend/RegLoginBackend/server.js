@@ -20,6 +20,7 @@ const seedCommunities = require('./seed/seedCommunities');
 const coinRoutes = require('./routes/coin.routes');
 const commentRoutes = require('./routes/comments.routes');
 
+
 const app = express();
 console.log("server.js: Starting application setup...");
 
@@ -189,7 +190,7 @@ app.get('/terms', (req, res) => {
 //Post routes
 
 const postRoutes = require('./routes/post.routes');
-app.use('/posts', postRoutes);
+app.use('/api/posts', postRoutes);
 
 
 const socialRoutes = require('./routes/social.routes');

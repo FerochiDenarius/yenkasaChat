@@ -138,35 +138,39 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     await post.save();
 
     // ✅ Reward verified users (only if approved immediately)
-    if (user.verified && isPrivilegedUser) {
-      await rewardUser(
-        userId,
-        REWARDS.CREATE_POST,
-        "Reward for creating post",
-        "Post",
-        post._id
-      );
-    }
+async function rewardUser(userId, amount, description, referenceModel, referenceId) {
+  try {
+    await ensureSupply();
+    const amt = Math.abs(Number(amount));
 
-    const populatedPost = await Post.findById(post._id)
-      .populate('userId', 'username profileImage verified role')
-      .populate('communityId', 'name displayName')
-      .lean();
+    const supply = await CoinSupply.findOneAndUpdate(
+      { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amt } },
+      { $inc: { totalMinted: amt } },
+      { new: true, upsert: true }
+    );
 
-    res.status(201).json({
-      success: true,
-      message: isPrivilegedUser
-        ? `Post approved and published! You earned ${REWARDS.CREATE_POST} coins.`
-        : `Post submitted for review. It will appear once approved.`,
-      post: populatedPost,
-      coinsEarned: user.verified && isPrivilegedUser ? REWARDS.CREATE_POST : 0
+    if (!supply) return;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { coinsBalance: amt } },
+      { new: true }
+    );
+
+    await CoinTransaction.create({
+      user: userId,
+      toUserId: userId, // ✅ Fix #1
+      type: "credit",   // ✅ Fix #2 (or "earn" if enum updated)
+      amount: amt,
+      description,
+      referenceModel,
+      referenceId,
+      balanceAfter: user?.coinsBalance,
     });
-
   } catch (err) {
-    console.error('❌ Failed to create post:', err);
-    res.status(500).json({ error: 'Failed to create post' });
+    console.error("❌ Error rewarding coins:", err);
   }
-});
+}
 
 
 /* ------------------------------------
@@ -246,6 +250,29 @@ router.delete('/:postId/like', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('❌ Failed to unlike post:', err);
     res.status(500).json({ error: 'Failed to unlike post' });
+  }
+});
+
+// 🕵️‍♂️ Get all pending posts
+router.get('/pending', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const approvers = ["admin", "moderator", "developer"];
+    if (!approvers.includes(user.role?.toLowerCase())) {
+      return res.status(403).json({ error: 'Not authorized to approve posts' });
+    }
+
+    const pendingPosts = await Post.find({ status: "pending" })
+      .populate('userId', 'username profileImage verified')
+      .populate('communityId', 'name displayName')
+      .sort({ createdAt: -1 });
+
+    res.json(pendingPosts);
+  } catch (err) {
+    console.error("❌ Error fetching pending posts:", err);
+    res.status(500).json({ error: "Server error fetching pending posts" });
   }
 });
 

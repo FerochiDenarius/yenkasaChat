@@ -1,30 +1,22 @@
-// models/cointransaction.model.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const coinTransactionSchema = new Schema({
-  // From user (null for system rewards)
   fromUserId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     default: null
   },
-  
-  // To user
   toUserId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
     index: true
   },
-  
-  // Amount
   amount: {
     type: Number,
     required: true
   },
-  
-  // Transaction type
   type: {
     type: String,
     enum: [
@@ -41,45 +33,33 @@ const coinTransactionSchema = new Schema({
     ],
     required: true
   },
-  
-  // Description
   description: {
     type: String,
     default: ''
   },
-  
-  // Related entities (for tracking)
   relatedPostId: {
     type: Schema.Types.ObjectId,
     ref: 'Post',
     default: null
   },
-  
   relatedCommentId: {
     type: Schema.Types.ObjectId,
     ref: 'Comment',
     default: null
   },
-  
-  // Status
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed', 'reversed'],
     default: 'completed'
   },
-  
-  // Balance snapshots (for auditing)
   fromUserBalanceBefore: Number,
   fromUserBalanceAfter: Number,
   toUserBalanceBefore: Number,
   toUserBalanceAfter: Number,
-  
-  // Admin notes
   adminNote: {
     type: String,
     default: ''
   }
-  
 }, { timestamps: true });
 
 // Indexes
@@ -88,5 +68,5 @@ coinTransactionSchema.index({ fromUserId: 1, createdAt: -1 });
 coinTransactionSchema.index({ type: 1 });
 coinTransactionSchema.index({ status: 1 });
 
-module.exports = mongoose.models.CoinTransaction || mongoose.model("CoinTransaction", CoinTransactionSchema);
-module.exports = CoinTransaction;
+// ✅ Export the model safely
+module.exports = mongoose.models.CoinTransaction || mongoose.model("CoinTransaction", coinTransactionSchema);

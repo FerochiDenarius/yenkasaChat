@@ -1,21 +1,74 @@
 // routes/post.routes.js
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const { v2: cloudinary } = require('cloudinary');
+
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const Community = require('../models/community.model');
 const CoinTransaction = require('../models/cointransaction.model');
+const CoinSupply = require('../models/coinSupply');
+
 const authMiddleware = require('../middleware/auth');
 
-// Coin reward amounts
-const REWARDS = {
-  CREATE_POST: 10,
-  GET_LIKE: 2,
-  GET_COMMENT: 3
-};
+/* ------------------------------------
+ * 💰 REWARD CONFIGURATION
+ * ------------------------------------ */
+const REWARDS = { CREATE_POST: 10, GET_LIKE: 2, GET_COMMENT: 3 };
+const MAX_SUPPLY = 100_000_000;
 
-// ✅ Create a new post
-router.post('/', authMiddleware, async (req, res) => {
+async function ensureSupply() {
+  await CoinSupply.findByIdAndUpdate(
+    "YENKASA_SUPPLY",
+    { $setOnInsert: { totalMinted: 0 } },
+    { upsert: true }
+  );
+}
+
+async function rewardUser(userId, amount, description, referenceModel, referenceId) {
+  try {
+    await ensureSupply();
+    const amt = Math.abs(Number(amount));
+
+    const supply = await CoinSupply.findOneAndUpdate(
+      { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amt } },
+      { $inc: { totalMinted: amt } },
+      { new: true, upsert: true }
+    );
+
+    if (!supply) return;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { coinsBalance: amt } },
+      { new: true }
+    );
+
+    await CoinTransaction.create({
+      user: userId,
+      type: "earn",
+      amount: amt,
+      description,
+      referenceModel,
+      referenceId,
+      balanceAfter: user?.coinsBalance,
+    });
+  } catch (err) {
+    console.error("❌ Error rewarding coins:", err);
+  }
+}
+
+/* ------------------------------------
+ * 📸 MULTER + CLOUDINARY
+ * ------------------------------------ */
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+/* ------------------------------------
+ * ✍️ CREATE POST
+ * ------------------------------------ */
+router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
   try {
     const {
       text,
@@ -26,65 +79,56 @@ router.post('/', authMiddleware, async (req, res) => {
       location,
       visibility,
       postType,
-      mentions
+      mentions,
+      communityName
     } = req.body;
 
     const userId = req.user.id;
-    if (!text || text.trim().length === 0) {
-      return res.status(400).json({ error: 'Post text is required' });
-    }
-
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!user.community) {
-      return res.status(400).json({ error: 'You must join a community first' });
+    let mediaUrl = imageUrl || videoUrl || null;
+
+    // Upload file if provided
+    if (req.file) {
+      const folder = "yenkasachat/posts";
+      const resourceType =
+        req.file.mimetype.startsWith('video') ? "video" : "image";
+
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder, resource_type: resourceType },
+          (error, result) => (error ? reject(error) : resolve(result))
+        );
+        stream.end(req.file.buffer);
+      });
+
+      mediaUrl = uploadResult.secure_url;
     }
 
-    // 📝 Create new post
+    // Create post
     const post = new Post({
       userId,
       communityId: user.community,
-      text: text.trim(),
-      postType: postType || 'text',
-      imageUrl: imageUrl || '',
-      videoUrl: videoUrl || '',
+      text: text?.trim(),
+      imageUrl: mediaUrl || '',
+      videoUrl: '',
       mediaUrls: mediaUrls || [],
       tags: tags || [],
       mentions: mentions || [],
       location: location || '',
       visibility: visibility || 'public',
-      status: 'approved'
+      postType: postType || 'text',
+      status: 'approved',
     });
 
     await post.save();
 
-    // 📈 Increment community post count
-    const community = await Community.findById(user.community);
-    if (community && typeof community.incrementPostCount === 'function') {
-      await community.incrementPostCount();
-    }
-
-    // 💰 Reward coins for creating post (only if verified)
+    // Reward user
     if (user.verified) {
-      const rewardAmount = REWARDS.CREATE_POST;
-      user.coinsBalance += rewardAmount;
-      post.coinsEarned = rewardAmount;
-      await user.save();
-      await post.save();
-
-      await CoinTransaction.create({
-        toUserId: userId,
-        amount: rewardAmount,
-        type: 'REWARD_POST',
-        description: 'Reward for creating a post',
-        relatedPostId: post._id,
-        toUserBalanceBefore: user.coinsBalance - rewardAmount,
-        toUserBalanceAfter: user.coinsBalance
-      });
+      await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
     }
 
-    // 🧩 Populate references for response
     const populatedPost = await Post.findById(post._id)
       .populate('userId', 'username profileImage verified')
       .populate('communityId', 'name displayName')
@@ -104,7 +148,9 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Get community feed
+/* ------------------------------------
+ * 📰 GET FEED (Community)
+ * ------------------------------------ */
 router.get('/feed', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -113,11 +159,8 @@ router.get('/feed', authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const targetCommunityId = communityId || user.community;
-    if (!targetCommunityId) {
-      return res.status(400).json({ error: 'No community specified' });
-    }
-
     const skip = (page - 1) * limit;
+
     const posts = await Post.find({
       communityId: targetCommunityId,
       isActive: true,
@@ -157,7 +200,9 @@ router.get('/feed', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Get user posts
+/* ------------------------------------
+ * 👤 USER POSTS
+ * ------------------------------------ */
 router.get('/user/:userId', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -172,11 +217,7 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
       .populate('communityId', 'name displayName')
       .lean();
 
-    const totalPosts = await Post.countDocuments({
-      userId,
-      isActive: true,
-      status: 'approved'
-    });
+    const totalPosts = await Post.countDocuments({ userId, isActive: true, status: 'approved' });
 
     res.json({
       posts,
@@ -193,12 +234,13 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Like a post
+/* ------------------------------------
+ * ❤️ LIKE / UNLIKE POST
+ * ------------------------------------ */
 router.post('/:postId/like', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
     const userId = req.user.id;
-
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
@@ -207,20 +249,7 @@ router.post('/:postId/like', authMiddleware, async (req, res) => {
     if (wasLiked) {
       const postAuthor = await User.findById(post.userId);
       if (postAuthor && postAuthor._id.toString() !== userId) {
-        const rewardAmount = REWARDS.GET_LIKE;
-        postAuthor.coinsBalance += rewardAmount;
-        post.coinsEarned += rewardAmount;
-        await postAuthor.save();
-        await post.save();
-
-        await CoinTransaction.create({
-          fromUserId: userId,
-          toUserId: post.userId,
-          amount: rewardAmount,
-          type: 'REWARD_LIKE',
-          description: 'Reward for receiving a like',
-          relatedPostId: post._id
-        });
+        await rewardUser(post.userId, REWARDS.GET_LIKE, "Reward for receiving a like", "Post", post._id);
       }
     }
 
@@ -236,7 +265,6 @@ router.post('/:postId/like', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Unlike a post
 router.delete('/:postId/like', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
@@ -245,19 +273,16 @@ router.delete('/:postId/like', authMiddleware, async (req, res) => {
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
     const wasUnliked = await post.removeLike(userId);
-
-    res.json({
-      success: true,
-      unliked: wasUnliked,
-      likeCount: post.likeCount
-    });
+    res.json({ success: true, unliked: wasUnliked, likeCount: post.likeCount });
   } catch (err) {
     console.error('❌ Failed to unlike post:', err);
     res.status(500).json({ error: 'Failed to unlike post' });
   }
 });
 
-// ✅ Delete a post
+/* ------------------------------------
+ * 🗑️ DELETE POST
+ * ------------------------------------ */
 router.delete('/:postId', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
@@ -273,10 +298,7 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
     post.isActive = false;
     await post.save();
 
-    res.json({
-      success: true,
-      message: 'Post deleted successfully'
-    });
+    res.json({ success: true, message: 'Post deleted successfully' });
   } catch (err) {
     console.error('❌ Failed to delete post:', err);
     res.status(500).json({ error: 'Failed to delete post' });

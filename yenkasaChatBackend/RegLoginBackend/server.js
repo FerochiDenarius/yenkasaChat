@@ -197,8 +197,9 @@ app.get('/terms', (req, res) => {
 
 //Post routes
 
-const postRoutes = require("./routes/posts");
-app.use("/api/posts", postRoutes);
+const postRoutes = require('./routes/post.routes');
+app.use('/api/posts', postRoutes);
+
 
 const socialRoutes = require('./routes/social.routes');
 app.use('/api/social', socialRoutes);

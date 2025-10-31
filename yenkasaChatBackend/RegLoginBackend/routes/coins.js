@@ -8,9 +8,7 @@ const CoinSupply = require('../models/coinSupply');
 const router = express.Router();
 const MAX_SUPPLY = 100_000_000;
 
-/**
- * 🧩 Ensure supply doc exists
- */
+/** 🧩 Ensure supply doc exists */
 async function ensureSupply() {
   await CoinSupply.findByIdAndUpdate(
     'YENKASA_SUPPLY',
@@ -19,34 +17,42 @@ async function ensureSupply() {
   );
 }
 
-/**
- * 🧾 GET /coins/balance
- */
+/** 🧾 GET /coins/balance */
 router.get('/balance', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('username coinsBalance walletId');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // total minted
     const supply = await CoinSupply.findById('YENKASA_SUPPLY');
     const totalMinted = supply ? supply.totalMinted : 0;
+
+    // total earned and spent
+    const earnedTransactions = await CoinTransaction.aggregate([
+      { $match: { user: user._id, amount: { $gt: 0 } } },
+      { $group: { _id: null, totalEarned: { $sum: '$amount' } } }
+    ]);
+    const spentTransactions = await CoinTransaction.aggregate([
+      { $match: { user: user._id, amount: { $lt: 0 } } },
+      { $group: { _id: null, totalSpent: { $sum: '$amount' } } }
+    ]);
 
     res.status(200).json({
       username: user.username,
       walletId: user.walletId,
       balance: user.coinsBalance,
       totalMinted,
-      remainingSupply: MAX_SUPPLY - totalMinted
+      remainingSupply: MAX_SUPPLY - totalMinted,
+      totalEarned: earnedTransactions[0]?.totalEarned || 0,
+      totalSpent: Math.abs(spentTransactions[0]?.totalSpent || 0)
     });
   } catch (error) {
+    console.error('Error fetching balance:', error);
     res.status(500).json({ message: 'Failed to fetch balance', error: error.message });
   }
 });
 
-/**
- * 💰 POST /coins/earn
- * Immediate reward for user actions (watching ads, viewing posts, etc.)
- * body: { amount?, actionType?, referenceId? }
- */
+/** 💰 POST /coins/earn */
 router.post('/earn', verifyToken, async (req, res) => {
   try {
     const { amount = 10, actionType = 'activity', referenceId } = req.body;
@@ -58,18 +64,14 @@ router.post('/earn', verifyToken, async (req, res) => {
 
     await ensureSupply();
 
-    // Check supply cap atomically
     const updatedSupply = await CoinSupply.findOneAndUpdate(
       { _id: 'YENKASA_SUPPLY', totalMinted: { $lte: MAX_SUPPLY - amt } },
       { $inc: { totalMinted: amt } },
       { new: true }
     );
 
-    if (!updatedSupply) {
-      return res.status(400).json({ message: 'Insufficient total supply to mint new coins' });
-    }
+    if (!updatedSupply) return res.status(400).json({ message: 'Insufficient total supply to mint new coins' });
 
-    // Reward user
     user.coinsBalance += amt;
     await user.save();
 
@@ -95,9 +97,7 @@ router.post('/earn', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * 🔁 POST /coins/transfer
- */
+/** 🔁 POST /coins/transfer */
 router.post('/transfer', verifyToken, async (req, res) => {
   try {
     const { recipientWalletId, amount, description } = req.body;
@@ -111,13 +111,16 @@ router.post('/transfer', verifyToken, async (req, res) => {
     if (recipient._id.equals(sender._id)) return res.status(400).json({ message: 'Cannot transfer to self' });
     if (sender.coinsBalance < amt) return res.status(400).json({ message: 'Insufficient balance' });
 
+    const fromBalanceBefore = sender.coinsBalance;
+    const toBalanceBefore = recipient.coinsBalance;
+
     sender.coinsBalance -= amt;
     recipient.coinsBalance += amt;
 
     await sender.save();
     await recipient.save();
 
-    await CoinTransaction.create([
+    const transaction = await CoinTransaction.create([
       {
         user: sender._id,
         type: 'transfer',
@@ -145,7 +148,8 @@ router.post('/transfer', verifyToken, async (req, res) => {
         username: recipient.username,
         walletId: recipient.walletId,
         newBalance: recipient.coinsBalance
-      }
+      },
+      transaction
     });
   } catch (error) {
     console.error('Error transferring coins:', error);
@@ -153,30 +157,61 @@ router.post('/transfer', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * 🪙 GET /coins/transactions
- */
+/** 🪙 GET /coins/transactions (with pagination) */
 router.get('/transactions', verifyToken, async (req, res) => {
   try {
-    const transactions = await CoinTransaction.find({ user: req.user.id })
+    const userId = req.user.id;
+    const { page = 1, limit = 50, type } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = { user: userId };
+    if (type) query.type = type;
+
+    const transactions = await CoinTransaction.find(query)
       .sort({ createdAt: -1 })
-      .limit(50);
-    res.status(200).json(transactions);
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const totalTransactions = await CoinTransaction.countDocuments(query);
+
+    res.status(200).json({
+      transactions,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalTransactions / limit),
+        totalTransactions,
+        hasMore: skip + transactions.length < totalTransactions
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch transactions', error: error.message });
   }
 });
 
-/**
- * 👑 POST /coins/mint
- * Admin-only controlled mint (respects total supply)
- */
+/** 👀 GET /coins/transactions/:transactionId */
+router.get('/transactions/:transactionId', verifyToken, async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const userId = req.user.id;
+
+    const transaction = await CoinTransaction.findById(transactionId)
+      .lean();
+
+    if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
+    if (transaction.user.toString() !== userId) return res.status(403).json({ message: 'Access denied' });
+
+    res.status(200).json(transaction);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch transaction', error: error.message });
+  }
+});
+
+/** 👑 POST /coins/mint (Admin only) */
 router.post('/mint', verifyToken, async (req, res) => {
   try {
     const admin = await User.findById(req.user.id);
-    if (!admin || admin.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied: Admins only' });
-    }
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ message: 'Admins only' });
 
     const { userId, amount, description } = req.body;
     const amt = Math.abs(Number(amount));
@@ -189,10 +224,7 @@ router.post('/mint', verifyToken, async (req, res) => {
       { $inc: { totalMinted: amt } },
       { new: true }
     );
-
-    if (!updatedSupply) {
-      return res.status(400).json({ message: 'Insufficient supply to mint' });
-    }
+    if (!updatedSupply) return res.status(400).json({ message: 'Insufficient supply to mint' });
 
     const recipient = await User.findById(userId);
     if (!recipient) return res.status(404).json({ message: 'Recipient not found' });

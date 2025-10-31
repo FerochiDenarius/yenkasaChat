@@ -26,13 +26,7 @@ const commentRoutes = require('./routes/comments.routes');
 const app = express();
 console.log("server.js: Starting application setup...");
 
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(async () => {
-  console.log('✅ MongoDB connected');
-  await seedCommunities(); // 🌱 run seeder here
-}).catch(err => console.error('MongoDB connection error:', err));
+
 
 // --- HTTP + Socket.IO Server ---
 const server = http.createServer(app);

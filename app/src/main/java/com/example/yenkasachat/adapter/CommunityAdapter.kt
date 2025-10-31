@@ -1,245 +1,69 @@
-package com.example.yenkasachat.ui
+// app/src/main/java/com/example/yenkasachat/adapter/CommunityAdapter.kt
+package com.example.yenkasachat.adapter
 
-import android.content.Context
-import android.content.Intent
-import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.ProgressBar
+import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
-import com.example.yenkasachat.adapter.CommunityAdapter
 import com.example.yenkasachat.model.Community
-import com.example.yenkasachat.model.JoinCommunityResponse
-import com.example.yenkasachat.network.ApiClient
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import com.bumptech.glide.request.RequestOptions
 
-class CommunitiesActivity : AppCompatActivity() {
 
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var searchView: SearchView
-    private lateinit var fabCreateCommunity: FloatingActionButton
-    private lateinit var progressBar: ProgressBar
-    private lateinit var emptyView: TextView
+class CommunityAdapter(
+    private val communities: List<Community>,
+    private val onCommunityClick: (Community) -> Unit
+) : RecyclerView.Adapter<CommunityAdapter.CommunityViewHolder>() {
 
-    private val communities = mutableListOf<Community>()
-    private lateinit var adapter: CommunityAdapter
-    private var token: String? = null
+    inner class CommunityViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val communityIcon: ImageView = itemView.findViewById(R.id.imageCommunityIcon)
+        val communityName: TextView = itemView.findViewById(R.id.textCommunityName)
+        val communityLocation: TextView = itemView.findViewById(R.id.editCommunityLocation)
+        val memberCount: TextView = itemView.findViewById(R.id.textMemberCount)
+        val postCount: TextView = itemView.findViewById(R.id.textPostCount)
+        val categories: TextView = itemView.findViewById(R.id.editCategories)
+        fun bind(community: Community) {
+            communityName.text = community.displayName
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activities_community)
-
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-        token = prefs.getString("token", null)
-
-        if (token == null) {
-            Toast.makeText(this, "Please log in", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        initViews()
-        setupRecyclerView()
-        setupSearch()
-        loadCommunities()
-
-        fabCreateCommunity.setOnClickListener {
-            val isVerified = prefs.getBoolean("verified", false)
-            if (isVerified) {
-                // ✅ Launch CreateCommunityActivity safely
-                try {
-                    val intent = Intent(this, Class.forName("com.example.yenkasachat.ui.CreateCommunityActivity"))
-                    startActivity(intent)
-                } catch (e: ClassNotFoundException) {
-                    Toast.makeText(this, "CreateCommunityActivity not found", Toast.LENGTH_SHORT).show()
-                }
+            // Show location or "Interest-based"
+            communityLocation.text = if (community.location.isNullOrEmpty()) {
+                "Interest-based Community"
             } else {
-                Toast.makeText(
-                    this,
-                    "You must be verified to create a community",
-                    Toast.LENGTH_LONG
-                ).show()
+                community.location
+            }
+
+            memberCount.text = "${community.memberCount} members"
+            postCount.text = "${community.postCount} posts"
+
+            // Show categories
+            categories.text = community.categories.joinToString(" • ")
+
+            // Load icon/image
+            Glide.with(itemView.context)
+                .load(community.icon ?: community.coverImage)
+                .placeholder(R.drawable.ic_community_placeholder)
+                .error(R.drawable.ic_community_placeholder)
+                .circleCrop()
+                .into(communityIcon)
+
+            itemView.setOnClickListener {
+                onCommunityClick(community)
             }
         }
     }
 
-    private fun initViews() {
-        recyclerView = findViewById(R.id.recyclerViewCommunities)
-        searchView = findViewById(R.id.searchViewCommunities)
-        fabCreateCommunity = findViewById(R.id.fabCreateCommunity)
-        progressBar = findViewById(R.id.progressBarCommunities)
-        emptyView = findViewById(R.id.textEmptyCommunities)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommunityViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_community, parent, false)
+        return CommunityViewHolder(view)
     }
 
-    private fun setupRecyclerView() {
-        adapter = CommunityAdapter(communities) { community ->
-            showCommunityDialog(community)
-        }
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+    override fun onBindViewHolder(holder: CommunityViewHolder, position: Int) {
+        holder.bind(communities[position])
     }
 
-    private fun setupSearch() {
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                query?.let { searchCommunities(it) }
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                if (newText.isNullOrEmpty()) {
-                    loadCommunities()
-                }
-                return true
-            }
-        })
-    }
-
-    private fun loadCommunities() {
-        showLoading(true)
-
-        ApiClient.apiService.getCommunities()
-            .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(
-                    call: Call<List<Community>>,
-                    response: Response<List<Community>>
-                ) {
-                    showLoading(false)
-                    if (response.isSuccessful && response.body() != null) {
-                        communities.clear()
-                        communities.addAll(response.body()!!)
-                        adapter.notifyDataSetChanged()
-                        emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
-                    } else {
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            "Failed to load communities",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-
-                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    showLoading(false)
-                    Toast.makeText(
-                        this@CommunitiesActivity,
-                        "Error: ${t.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            })
-    }
-
-    private fun searchCommunities(query: String) {
-        showLoading(true)
-
-        ApiClient.apiService.getCommunities(search = query)
-            .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(
-                    call: Call<List<Community>>,
-                    response: Response<List<Community>>
-                ) {
-                    showLoading(false)
-
-                    if (response.isSuccessful && response.body() != null) {
-                        communities.clear()
-                        communities.addAll(response.body()!!)
-                        adapter.notifyDataSetChanged()
-
-                        if (communities.isEmpty()) {
-                            emptyView.text = "No communities found for '$query'"
-                            emptyView.visibility = View.VISIBLE
-                        } else {
-                            emptyView.visibility = View.GONE
-                        }
-                    }
-                }
-
-                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    showLoading(false)
-                    Toast.makeText(
-                        this@CommunitiesActivity,
-                        "Search error: ${t.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            })
-    }
-
-    private fun showCommunityDialog(community: Community) {
-        val dialog = android.app.AlertDialog.Builder(this)
-            .setTitle(community.displayName)
-            .setMessage(
-                "${community.description}\n\n" +
-                        "📍 ${community.location ?: "Interest-based"}\n" +
-                        "👥 ${community.memberCount} members\n" +
-                        "📝 ${community.postCount} posts"
-            )
-            .setPositiveButton("Join") { _, _ ->
-                joinCommunity(community)
-            }
-            .setNegativeButton("Cancel", null)
-            .create()
-
-        dialog.show()
-    }
-
-    private fun joinCommunity(community: Community) {
-        progressBar.visibility = View.VISIBLE
-
-        ApiClient.apiService.joinCommunity("Bearer $token", community.id)
-            .enqueue(object : Callback<JoinCommunityResponse> {
-                override fun onResponse(
-                    call: Call<JoinCommunityResponse>,
-                    response: Response<JoinCommunityResponse>
-                ) {
-                    progressBar.visibility = View.GONE
-
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            "Joined ${community.displayName}!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        // Save joined community locally
-                        getSharedPreferences("auth", Context.MODE_PRIVATE).edit()
-                            .putString("communityId", community.id)
-                            .putString("communityName", community.displayName)
-                            .apply()
-
-                        startActivity(Intent(this@CommunitiesActivity, FeedActivity::class.java))
-                        finish()
-                    } else {
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            response.body()?.message ?: "Failed to join",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-
-                override fun onFailure(call: Call<JoinCommunityResponse>, t: Throwable) {
-                    progressBar.visibility = View.GONE
-                    Toast.makeText(
-                        this@CommunitiesActivity,
-                        "Error: ${t.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            })
-    }
-
-    private fun showLoading(show: Boolean) {
-        progressBar.visibility = if (show) View.VISIBLE else View.GONE
-        recyclerView.visibility = if (show) View.GONE else View.VISIBLE
-    }
+    override fun getItemCount(): Int = communities.size
 }

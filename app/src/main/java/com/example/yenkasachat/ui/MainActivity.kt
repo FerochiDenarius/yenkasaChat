@@ -2,6 +2,7 @@ package com.example.yenkasachat.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -11,6 +12,7 @@ import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -26,12 +28,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // ✅ Setup Toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.title = "Yenkasa Feed"
 
-        // ✅ Validate Token
         val retrievedToken = TokenManager.getToken(this)
         val retrievedUserId = TokenManager.getUserId(this)
 
@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         fabAddPost.isEnabled = false
         fabAddPost.alpha = 0.5f
 
-        // ✅ Load user profile
+        // ✅ Load user profile from API
         loadUserProfile()
 
         // ✅ Load Feed container fragment
@@ -65,6 +65,36 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body() != null) {
                     currentUser = response.body()
                     setupFab()
+
+                    // 🧩 Save/refresh user data locally for offline permission checks
+                    try {
+                        val user = currentUser!!
+                        val userJson = JSONObject().apply {
+                            put("_id", user._id)
+                            put("username", user.username ?: "")
+                            put("role", user.role ?: "user")
+                            put("verified", user.verified)
+                            put("profileImage", user.profileImage ?: "")
+                            put("email", user.email ?: "")
+                            put("phone", user.phone ?: "")
+                            put("community", user.community ?: JSONObject.NULL)
+                            put("coinsBalance", user.coinsBalance)
+
+                            val permissionsJson = JSONObject().apply {
+                                put("canPost", user.permissions?.canPost ?: false)
+                                put("canApprovePost", user.permissions?.canApprovePost ?: false)
+                                put("canRevokeAdmin", user.permissions?.canRevokeAdmin ?: false)
+                                put("canSuspendUser", user.permissions?.canSuspendUser ?: false)
+                                put("canAssignRoles", user.permissions?.canAssignRoles ?: false)
+                            }
+                            put("permissions", permissionsJson)
+                        }.toString()
+
+                        TokenManager.saveUserJson(this@MainActivity, userJson)
+                        Log.i("MainActivity", "🧩 User JSON updated and saved successfully.")
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "💥 Failed to save user JSON: ${e.message}", e)
+                    }
                 } else {
                     Toast.makeText(
                         this@MainActivity,
@@ -101,7 +131,6 @@ class MainActivity : AppCompatActivity() {
         fabAddPost.setOnClickListener {
             when {
                 canPost -> {
-                    // ✅ User has permission → Go to PostActivity
                     val intent = Intent(this, PostActivity::class.java)
                     intent.putExtra("userId", userId)
                     startActivity(intent)
@@ -126,7 +155,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Replace fragment helper
     private fun replaceFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.mainContainer, fragment)

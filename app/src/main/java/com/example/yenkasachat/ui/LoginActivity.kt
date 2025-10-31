@@ -9,10 +9,12 @@ import android.util.Log
 import android.widget.*
 import androidx.activity.viewModels // Import for by viewModels()
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.semantics.role
 import androidx.lifecycle.Observer // Import for LiveData Observer
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
 import com.example.yenkasachat.model.LoginResponse
+import com.example.yenkasachat.model.User
 import com.google.android.material.textfield.TextInputEditText
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
@@ -28,7 +30,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-
+import org.json.JSONObject // ✅ ADD THIS IMPORT for the new functionality
 
 class LoginActivity : AppCompatActivity() {
 
@@ -163,6 +165,7 @@ class LoginActivity : AppCompatActivity() {
 
         val request = LoginRequest(identifier, password)
 
+        // ✅ REFACTORED BLOCK: The old enqueue block is replaced with the new, more detailed one.
         ApiClient.authService.login(request).enqueue(object : Callback<LoginResponse> {
             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                 if (response.isSuccessful) {
@@ -182,13 +185,39 @@ class LoginActivity : AppCompatActivity() {
                         // 2. Save MongoDB User ID
                         userViewModel.saveLoggedInMongoDbUserIdToTokenManager(user._id)
 
-                        Log.d("LoginActivity","🔐 Token saved via TokenManager.")
-                        Log.d("LoginActivity","🪪 UserID saved via UserViewModel (using TokenManager): ${user._id}")
+                        // ✅ 3. Save full user JSON for offline role & permission checks
+                        try {
+                            val userJson = JSONObject().apply {
+                                put("_id", user._id)
+                                put("username", user.username ?: "")
+                                put("role", user.role ?: "user")
+                                put("verified", user.verified)
+                                put("profileImage", user.profileImage ?: "")
+                                put("email", user.email ?: "")
+                                put("phone", user.phone ?: "")
+                                put("community", user.community ?: JSONObject.NULL)
+                                put("coinsBalance", user.coinsBalance ?: 0)
+
+                                // Permissions (nested JSON)
+                                val permissionsJson = JSONObject().apply {
+                                    put("canPost", user.permissions?.canPost ?: false)
+                                    put("canApprovePost", user.permissions?.canApprovePost ?: false)
+                                    put("canSuspendUser", user.permissions?.canSuspendUser ?: false)
+                                    put("canAssignRoles", user.permissions?.canAssignRoles ?: false)
+                                }
+                                put("permissions", permissionsJson)
+                            }.toString()
+
+                            TokenManager.saveUserJson(this@LoginActivity, userJson)
+                            Log.i("LoginActivity", "🧩 Full user JSON saved successfully for offline permission checks.")
+                        } catch (e: Exception) {
+                            Log.e("LoginActivity", "💥 Failed to save user JSON: ${e.message}", e)
+                        }
 
                         Log.i("LoginActivity", "✅ Login successful for: ${user.username}")
                         Toast.makeText(this@LoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
 
-                        // --- 👇 ADDED SECTION ---
+                        // --- 👇 OneSignal setup ---
                         Log.d("LoginActivity", "Attempting to set OneSignal External User ID. AppUserID: ${user._id}")
                         if (user._id.isNotEmpty()) {
                             com.example.yenkasachat.util.OneSignalHelper.setOneSignalExternalUserId(
@@ -198,17 +227,17 @@ class LoginActivity : AppCompatActivity() {
                         } else {
                             Log.e("LoginActivity", "App Specific User ID is null or empty after login. Cannot set OneSignal External User ID.")
                         }
-                        // --- 👆 END OF ADDED SECTION ---
 
-                        // 3. Get OneSignal Player ID and update it via UserViewModel
+                        // --- 👇 Player ID update ---
                         val oneSignalPlayerId = OneSignal.getDeviceState()?.userId
-                        if (oneSignalPlayerId != null && oneSignalPlayerId.isNotBlank()) {
+                        if (!oneSignalPlayerId.isNullOrBlank()) {
                             Log.i("LoginActivity", "OneSignal Player ID found: $oneSignalPlayerId. Attempting to update via ViewModel.")
                             userViewModel.updateUserPlayerId(oneSignalPlayerId)
                         } else {
                             Log.w("LoginActivity", "OneSignal Player ID not available at login. Will attempt update later if needed.")
                         }
-// --- 👇 CONNECT SOCKET AFTER LOGIN SUCCESS ---
+
+                        // --- 👇 Connect socket ---
                         val userId = user._id
                         if (!userId.isNullOrEmpty()) {
                             SocketManager.connect(userId)
@@ -216,13 +245,14 @@ class LoginActivity : AppCompatActivity() {
                         } else {
                             Log.w("LoginActivity", "⚠️ Cannot connect socket - userId is null or empty.")
                         }
-// --- 👆 END SOCKET CONNECTION ---
 
+                        // --- 👇 Move to main screen ---
                         val intent = Intent(this@LoginActivity, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         }
                         startActivity(intent)
                         finish()
+
                     } else {
                         var errorMessage = "Login failed: "
                         if (token.isNullOrEmpty()) errorMessage += "Missing token. "

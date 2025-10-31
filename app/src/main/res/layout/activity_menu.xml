@@ -22,6 +22,16 @@
             android:layout_marginBottom="24dp" />
 
         <Button
+            android:id="@+id/btnCommunities"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
+            android:text="Communities" />
+
+
+        <Button
             android:id="@+id/btnContacts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -74,6 +84,7 @@
             android:backgroundTint="#E0E0E0"
             android:textColor="#222222"
             android:text="Verify Account" />
+
 
         <Button
             android:id="@+id/btnAppVerification"

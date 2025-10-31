@@ -249,8 +249,12 @@ object TokenManager {
         }
     }
     fun getUser(context: Context): String? {
-        val sharedPreferences = context.getSharedPreferences("YenkasaPrefs", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("user", null)
+        return try {
+            getEncryptedPrefs(context).getString("user", null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user JSON", e)
+            null
+        }
     }
 
     fun getProfilePicUrl(context: Context): String? {
@@ -552,15 +556,49 @@ object TokenManager {
     }
 
     fun canPost(context: Context): Boolean {
-        val userJson = getUser(context) ?: return false
+        val userJson = getUser(context) ?: run {
+            Log.w("CanPostCheck", "❌ No user data found in local storage — cannot post.")
+            return false
+        }
+
         return try {
             val jsonObject = JSONObject(userJson)
-            val permissions = jsonObject.optJSONObject("permissions")
-            val canPost = permissions?.optBoolean("canPost", false) ?: false
+
+            val role = jsonObject.optString("role", "").lowercase()
             val verified = jsonObject.optBoolean("verified", false)
-            verified && canPost
+            val permissions = jsonObject.optJSONObject("permissions")
+            val canPostFromPermissions = permissions?.optBoolean("canPost", false) ?: false
+
+            Log.d("CanPostCheck", "👤 Role: $role | Verified: $verified | canPost (permissions): $canPostFromPermissions")
+
+            // Master permission for developers
+            if (role == "developer") {
+                Log.i("CanPostCheck", "✅ Developer role detected — overriding all checks, posting allowed.")
+                return true
+            }
+
+            // Admin and Moderator can post if verified
+            if ((role == "admin" || role == "moderator") && verified) {
+                Log.i("CanPostCheck", "✅ $role role with verified=true — posting allowed.")
+                return true
+            }
+
+            // Normal users
+            val finalDecision = verified && canPostFromPermissions
+            Log.i("CanPostCheck", "👀 Normal user decision → verified=$verified & canPost=$canPostFromPermissions => $finalDecision")
+
+            return finalDecision
         } catch (e: Exception) {
+            Log.e("CanPostCheck", "💥 Error checking canPost permissions: ${e.message}")
             false
+        }
+    }
+    fun saveUserJson(context: Context, userJson: String) {
+        try {
+            getEncryptedPrefs(context).edit().putString("user", userJson).apply()
+            Log.i(TAG, "🧩 Full user JSON saved successfully (${userJson.length} chars)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving full user JSON", e)
         }
     }
 

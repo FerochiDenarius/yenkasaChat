@@ -174,6 +174,7 @@ interface ApiService {
     fun createPost(
         @Part("caption") caption: RequestBody,
         @Part("mediaType") mediaType: RequestBody,
+        @Part("communityName") communityName: RequestBody,
         @Part mediaFile: MultipartBody.Part? = null
     ): Call<Post>
 
@@ -303,40 +304,41 @@ interface ApiService {
 
     // ==================== COMMUNITIES ====================
 
-    @GET("/api/communities")
+    // ✅ Get all approved communities (optional search, sort, order)
+    @GET("communities")
     fun getCommunities(
+        @Header("Authorization") token: String? = null,
         @Query("search") search: String? = null,
         @Query("sort") sort: String? = null,
         @Query("order") order: String? = null
     ): Call<List<Community>>
 
-    @GET("/api/communities/{communityId}")
-    fun getCommunityDetails(
-        @Header("Authorization") token: String,
-        @Path("communityId") communityId: String
-    ): Call<Community>
-
-    @POST("/api/communities/{communityId}/join")
+    // ✅ Join a community
+    @POST("communities/{communityId}/join")
     fun joinCommunity(
         @Header("Authorization") token: String,
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
 
-    @POST("/api/communities/{communityId}/leave")
+    // ✅ Leave a community
+    @POST("communities/{communityId}/leave")
     fun leaveCommunity(
         @Header("Authorization") token: String,
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
 
-    @POST("/api/communities")
+    // ✅ Create a new community
+    @POST("communities")
     fun createCommunity(
         @Header("Authorization") token: String,
         @Body request: CreateCommunityRequest
     ): Call<CreateCommunityResponse>
 
+    // ✅ Get the communities created by the logged-in user
     @GET("/api/communities/user/my-communities")
-    fun getMyCommunities(@Header("Authorization") token: String): Call<Map<String, Any>>
-
+    fun getMyCommunities(
+        @Header("Authorization") token: String
+    ): Call<Map<String, Any>>
 
     // ==================== COINS ====================
 

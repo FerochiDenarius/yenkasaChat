@@ -2,24 +2,17 @@ package com.example.yenkasachat.model
 
 import com.google.gson.annotations.SerializedName
 
+/**
+ * Represents the entire JSON object returned by the server upon successful login.
+ */
 data class LoginResponse(
-    @SerializedName("user") // Good practice to keep @SerializedName even if field name matches JSON key
-    val user: AuthUser,
+    @SerializedName("token")
+    val token: String? = null,
 
-    @SerializedName("token") // This is your access token
-    val token: String,
+    @SerializedName("refreshToken")
+    val refreshToken: String? = null,
 
-    @SerializedName("refreshToken") // Assuming the JSON key from your backend will be "refreshToken"
-    val refreshToken: String? // <<<< ADDED THIS LINE (nullable)
+    @SerializedName("user")
+    val user: User? = null
 )
 
-data class AuthUser(
-    @SerializedName("_id")
-    val _id: String,
-    val email: String?,
-    val phone: String?,
-    val username: String,
-    val location: String,
-    val verified: Boolean,
-    val playerId: String? // This field is for player ID on the user object, not a token
-)

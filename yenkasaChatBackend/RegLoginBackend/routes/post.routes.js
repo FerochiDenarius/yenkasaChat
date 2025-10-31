@@ -65,7 +65,7 @@ async function rewardUser(userId, amount, description, referenceModel, reference
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-/* ------------------------------------
+/* ------------------------------------/* ------------------------------------
  * ✍️ CREATE POST
  * ------------------------------------ */
 router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
@@ -89,11 +89,12 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
 
     let mediaUrl = imageUrl || videoUrl || null;
 
-    // Upload file if provided
+    // ✅ Upload media if attached
     if (req.file) {
       const folder = "yenkasachat/posts";
-      const resourceType =
-        req.file.mimetype.startsWith('video') ? "video" : "image";
+      const resourceType = req.file.mimetype.startsWith('video')
+        ? "video"
+        : "image";
 
       const uploadResult = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -106,10 +107,21 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       mediaUrl = uploadResult.secure_url;
     }
 
-    // Create post
+    // ✅ If communityName is provided, find the matching community
+    let selectedCommunity = null;
+    if (communityName && communityName.trim() !== "") {
+      selectedCommunity = await Community.findOne({
+        $or: [
+          { name: communityName.trim() },
+          { displayName: communityName.trim() }
+        ]
+      });
+    }
+
+    // ✅ Create post
     const post = new Post({
       userId,
-      communityId: user.community,
+      communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
       text: text?.trim(),
       imageUrl: mediaUrl || '',
       videoUrl: '',
@@ -119,14 +131,21 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       location: location || '',
       visibility: visibility || 'public',
       postType: postType || 'text',
+      communityName: selectedCommunity ? selectedCommunity.displayName : communityName || '', // 👈 Store name directly
       status: 'approved',
     });
 
     await post.save();
 
-    // Reward user
+    // ✅ Reward verified users
     if (user.verified) {
-      await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
+      await rewardUser(
+        userId,
+        REWARDS.CREATE_POST,
+        "Reward for creating post",
+        "Post",
+        post._id
+      );
     }
 
     const populatedPost = await Post.findById(post._id)
@@ -142,61 +161,10 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       post: populatedPost,
       coinsEarned: user.verified ? REWARDS.CREATE_POST : 0
     });
+
   } catch (err) {
     console.error('❌ Failed to create post:', err);
     res.status(500).json({ error: 'Failed to create post' });
-  }
-});
-
-/* ------------------------------------
- * 📰 GET FEED (Community)
- * ------------------------------------ */
-router.get('/feed', authMiddleware, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { page = 1, limit = 20, communityId } = req.query;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const targetCommunityId = communityId || user.community;
-    const skip = (page - 1) * limit;
-
-    const posts = await Post.find({
-      communityId: targetCommunityId,
-      isActive: true,
-      visibility: { $in: ['public', 'followers'] },
-      status: 'approved'
-    })
-      .sort({ isPinned: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('userId', 'username profileImage verified')
-      .populate('communityId', 'name displayName')
-      .lean();
-
-    const postsWithLikeStatus = posts.map(post => ({
-      ...post,
-      likedByCurrentUser: post.likes.some(id => id.toString() === userId)
-    }));
-
-    const totalPosts = await Post.countDocuments({
-      communityId: targetCommunityId,
-      isActive: true,
-      status: 'approved'
-    });
-
-    res.json({
-      posts: postsWithLikeStatus,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalPosts / limit),
-        totalPosts,
-        hasMore: skip + posts.length < totalPosts
-      }
-    });
-  } catch (err) {
-    console.error('❌ Failed to fetch feed:', err);
-    res.status(500).json({ error: 'Failed to fetch feed' });
   }
 });
 

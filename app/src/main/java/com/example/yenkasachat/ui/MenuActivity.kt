@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.yenkasachat.R
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.ui.CommunitiesActivity
+
 
 class MenuActivity : AppCompatActivity() {
 
@@ -23,11 +25,13 @@ class MenuActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnChatRooms).setOnClickListener {
             startActivity(Intent(this, ChatRoomsActivity::class.java))
         }
-// ✅ Coin Wallet
+
+        // ✅ Coin Wallet
         findViewById<Button>(R.id.btnCoinWallet).setOnClickListener {
             startActivity(Intent(this, CoinWalletActivity::class.java))
         }
-// ✅ App Verification
+
+        // ✅ App Verification
         findViewById<Button>(R.id.btnAppVerification).setOnClickListener {
             startActivity(Intent(this, AppVerificationActivity::class.java))
         }
@@ -37,17 +41,17 @@ class MenuActivity : AppCompatActivity() {
             startActivity(Intent(this, AccountInfoActivity::class.java))
         }
 
-        // ✅ Edit Profile (New)
+        // ✅ Edit Profile
         findViewById<Button>(R.id.btnEditProfile).setOnClickListener {
             startActivity(Intent(this, EditProfileActivity::class.java))
         }
 
-        // ⚠️ Verify Account — placeholder until your VerifyAccountActivity exists
+        // ⚠️ Verify Account
         findViewById<Button>(R.id.btnVerifyAccount).setOnClickListener {
             Toast.makeText(this, "Verify Account feature coming soon!", Toast.LENGTH_SHORT).show()
         }
 
-        // ⚙️ Settings — placeholder until SettingsActivity exists
+        // ⚙️ Settings
         findViewById<Button>(R.id.btnSettings).setOnClickListener {
             Toast.makeText(this, "Settings feature coming soon!", Toast.LENGTH_SHORT).show()
         }
@@ -58,6 +62,26 @@ class MenuActivity : AppCompatActivity() {
             Toast.makeText(this, "Logged out successfully.", Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
+        }
+
+        // ✅ Communities button — only for admin, verified, moderator, developer
+        val btnCommunities = findViewById<Button>(R.id.btnCommunities)
+        val hasPrivileges = TokenManager.isAdmin(this)
+                || TokenManager.isModerator(this)
+                || TokenManager.isDeveloper(this)
+                || TokenManager.isVerified(this)
+
+        if (hasPrivileges) {
+            btnCommunities.isEnabled = true
+            btnCommunities.setOnClickListener {
+                startActivity(Intent(this, CommunitiesActivity::class.java))
+            }
+        } else {
+            btnCommunities.isEnabled = false
+            btnCommunities.alpha = 0.5f
+            btnCommunities.setOnClickListener {
+                Toast.makeText(this, "You do not have permission to access Communities", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

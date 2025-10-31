@@ -33,29 +33,4 @@ data class Community(
     val updatedAt: String? = null
 )
 
-data class JoinCommunityResponse(
-    val success: Boolean,
-    val message: String,
-    val community: CommunityInfo? = null
-)
 
-data class CommunityInfo(
-    val id: String,
-    val name: String,
-    val displayName: String
-)
-
-data class CreateCommunityRequest(
-    val name: String,
-    val displayName: String,
-    val description: String,
-    val location: String? = null,
-    val categories: List<String> = emptyList()
-)
-
-data class CreateCommunityResponse(
-    val success: Boolean,
-    val message: String,
-    val community: CommunityInfo? = null,
-    val note: String? = null
-)

@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Swipe to refresh for communities list -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshCommunities"
         android:layout_width="match_parent"
@@ -13,8 +14,10 @@
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:padding="8dp">
 
+            <!-- Search bar -->
             <androidx.appcompat.widget.SearchView
                 android:id="@+id/searchViewCommunities"
                 android:layout_width="match_parent"
@@ -22,6 +25,34 @@
                 android:queryHint="Search communities..."
                 android:iconifiedByDefault="false"/>
 
+            <!-- Action buttons for create/update -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="end"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp">
+
+                <Button
+                    android:id="@+id/btnCreateCommunity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Create"
+                    android:drawableStart="@drawable/ic_add"
+                    android:padding="8dp"/>
+
+                <Button
+                    android:id="@+id/btnEditCommunity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Edit"
+                    android:drawableStart="@drawable/ic_edit"
+                    android:layout_marginStart="8dp"
+                    android:padding="8dp"/>
+            </LinearLayout>
+
+            <!-- Progress bar -->
             <ProgressBar
                 android:id="@+id/progressBarCommunities"
                 style="?android:attr/progressBarStyleLarge"
@@ -31,6 +62,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
+            <!-- Empty view -->
             <TextView
                 android:id="@+id/textEmptyCommunities"
                 android:text="No communities found"
@@ -41,14 +73,18 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
 
+            <!-- RecyclerView -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerViewCommunities"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"/>
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingBottom="16dp"/>
         </LinearLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <!-- Floating button as secondary option to create community -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabCreateCommunity"
         android:layout_width="wrap_content"
@@ -58,5 +94,4 @@
         android:contentDescription="Create community"
         app:layout_anchorGravity="bottom|end"
         app:layout_anchor="@id/recyclerViewCommunities"/>
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

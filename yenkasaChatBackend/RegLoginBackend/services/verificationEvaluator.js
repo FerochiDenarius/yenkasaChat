@@ -1,6 +1,6 @@
 // services/verificationEvaluator.js
 const User = require('../models/user.model');
-const CoinTransaction = require('../models/coinTransaction');
+const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
 const verificationRules = require('../config/verificationRules');
 

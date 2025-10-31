@@ -2,7 +2,7 @@
 const express = require("express");
 const Post = require("../models/post.model");
 const User = require("../models/user.model");
-const Comment = require("../models/comment");
+const Comment = require("../models/comment.model");
 const verifyToken = require("../middleware/auth");
 
 const router = express.Router();
@@ -12,7 +12,7 @@ const router = express.Router();
  * ------------------------------------ */
 async function rewardCoins(userId, actionType = "activity", amount = 10, referenceId = null) {
   try {
-    const CoinTransaction = require("../models/coinTransaction");
+    const CoinTransaction = require("../models/cointransaction.model");
     const CoinSupply = require("../models/coinSupply");
     const MAX_SUPPLY = 100_000_000;
 

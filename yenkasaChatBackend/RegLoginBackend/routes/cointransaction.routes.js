@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const coinController = require('../controllers/cointransaction.controller');
+const coinController = require('../Controller/cointransaction.controller');
 
 // 🪙 Create (reward/transfer/purchase)
 router.post('/create', auth, coinController.createTransaction);

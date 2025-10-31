@@ -274,8 +274,12 @@ const interestCommunities = [
   }
 ];
 
-// Combine all communities
-const communities = [...yenkasaCommunities, ...interestCommunities];
+// 🔁 Add default flags to all communities
+const communities = [...yenkasaCommunities, ...interestCommunities].map(c => ({
+  ...c,
+  isActive: true,
+  isApproved: true
+}));
 
 async function seedCommunities() {
   try {
@@ -290,24 +294,10 @@ async function seedCommunities() {
     await Community.deleteMany({});
 
     console.log('🌱 Seeding Ghana communities...');
-    const createdCommunities = await Community.insertMany(communities);
+    const created = await Community.insertMany(communities);
 
-    console.log(`\n✅ Successfully created ${createdCommunities.length} communities!\n`);
-
-    console.log('📍 LOCATION-BASED COMMUNITIES:');
-    const locationBased = createdCommunities.filter(c => c.location);
-    locationBased.forEach(c => console.log(`   - ${c.displayName} (${c.location})`));
-
-    console.log('\n🎯 INTEREST-BASED COMMUNITIES:');
-    const interestBased = createdCommunities.filter(c => !c.location);
-    interestBased.forEach(c => console.log(`   - ${c.displayName}`));
-
-    console.log(`\n📊 Statistics:`);
-    console.log(`   Total: ${createdCommunities.length}`);
-    console.log(`   Location-based: ${locationBased.length}`);
-    console.log(`   Interest-based: ${interestBased.length}`);
-
-    console.log('\n✨ Database seeding completed!');
+    console.log(`✅ Successfully created ${created.length} communities!`);
+    console.log('✨ Done!');
   
   } catch (err) {
     console.error('❌ Error seeding database:', err);

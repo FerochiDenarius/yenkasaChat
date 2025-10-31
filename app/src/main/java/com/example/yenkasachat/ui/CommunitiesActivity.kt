@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.util.Log
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -16,6 +17,7 @@ import com.example.yenkasachat.adapter.CommunityAdapter
 import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.model.JoinCommunityResponse
 import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
@@ -40,28 +42,37 @@ class CommunitiesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activities_community)
 
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-        token = prefs.getString("token", null)
+        Log.d("CommunitiesActivity", "onCreate called — activity started")
+
+        // ✅ Use your TokenManager instead of SharedPreferences
+        val token = TokenManager.getToken(this)
+        Log.d("CommunitiesActivity", "Retrieved token from TokenManager: $token")
 
         if (token == null) {
+            Log.w("CommunitiesActivity", "No token found — finishing activity")
             Toast.makeText(this, "Please log in", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
+        Log.d("CommunitiesActivity", "Initializing views and components")
         initViews()
         setupRecyclerView()
         setupSearch()
         loadCommunities()
         setupCreateCommunityButtons()
 
+        Log.d("CommunitiesActivity", "Setting up FAB listener")
         fabCreateCommunity.setOnClickListener {
-            val isVerified = prefs.getBoolean("verified", false)
+            val isVerified = TokenManager.isVerified(this)
+            Log.d("CommunitiesActivity", "FAB clicked — isVerified=$isVerified")
+
             if (isVerified) {
-                // Directly launch CreateCommunityActivity
+                Log.d("CommunitiesActivity", "Launching CreateCommunityActivity")
                 val intent = Intent(this, CreateCommunityActivity::class.java)
                 startActivity(intent)
             } else {
+                Log.w("CommunitiesActivity", "User not verified — showing toast")
                 Toast.makeText(
                     this,
                     "You must be verified to create a community",
@@ -69,6 +80,8 @@ class CommunitiesActivity : AppCompatActivity() {
                 ).show()
             }
         }
+
+        Log.d("CommunitiesActivity", "onCreate completed successfully")
     }
 
     private fun initViews() {
@@ -105,73 +118,72 @@ class CommunitiesActivity : AppCompatActivity() {
 
     private fun loadCommunities() {
         showLoading(true)
-
-        ApiClient.apiService.getCommunities()
-            .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(
-                    call: Call<List<Community>>,
-                    response: Response<List<Community>>
-                ) {
-                    showLoading(false)
-                    if (response.isSuccessful && response.body() != null) {
-                        communities.clear()
-                        communities.addAll(response.body()!!)
-                        adapter.notifyDataSetChanged()
-                        emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
-                    } else {
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            "Failed to load communities",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+        ApiClient.apiService.getCommunities(
+            token = "Bearer $token"
+        ).enqueue(object : Callback<List<Community>> {
+            override fun onResponse(call: Call<List<Community>>, response: Response<List<Community>>) {
+                showLoading(false)
+                if (response.isSuccessful && response.body() != null) {
+                    communities.clear()
+                    communities.addAll(response.body()!!)
+                    adapter.notifyDataSetChanged()
+                    emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
+                } else {
+                    Toast.makeText(this@CommunitiesActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
                 }
+            }
 
-                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    showLoading(false)
-                    Toast.makeText(
-                        this@CommunitiesActivity,
-                        "Error: ${t.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            })
+            override fun onFailure(call: Call<List<Community>>, t: Throwable) {
+                showLoading(false)
+                Toast.makeText(this@CommunitiesActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun searchCommunities(query: String) {
         showLoading(true)
 
-        ApiClient.apiService.getCommunities(search = query)
-            .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(
-                    call: Call<List<Community>>,
-                    response: Response<List<Community>>
-                ) {
-                    showLoading(false)
+        ApiClient.apiService.getCommunities(
+            token = "Bearer $token",
+            search = query
+        ).enqueue(object : Callback<List<Community>> {
+            override fun onResponse(
+                call: Call<List<Community>>,
+                response: Response<List<Community>>
+            ) {
+                showLoading(false)
 
-                    if (response.isSuccessful && response.body() != null) {
-                        communities.clear()
-                        communities.addAll(response.body()!!)
-                        adapter.notifyDataSetChanged()
+                if (response.isSuccessful && response.body() != null) {
+                    communities.clear()
+                    communities.addAll(response.body()!!)
+                    adapter.notifyDataSetChanged()
 
-                        if (communities.isEmpty()) {
-                            emptyView.text = "No communities found for '$query'"
-                            emptyView.visibility = View.VISIBLE
-                        } else {
-                            emptyView.visibility = View.GONE
-                        }
+                    if (communities.isEmpty()) {
+                        emptyView.text = "No communities found for \"$query\""
+                        emptyView.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                    } else {
+                        emptyView.visibility = View.GONE
+                        recyclerView.visibility = View.VISIBLE
                     }
-                }
-
-                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    showLoading(false)
+                } else {
                     Toast.makeText(
                         this@CommunitiesActivity,
-                        "Search error: ${t.message}",
+                        "Failed to search communities (${response.code()})",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-            })
+            }
+
+            override fun onFailure(call: Call<List<Community>>, t: Throwable) {
+                showLoading(false)
+                Toast.makeText(
+                    this@CommunitiesActivity,
+                    "Search error: ${t.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
     }
 
     private fun showCommunityDialog(community: Community) {

@@ -172,11 +172,13 @@ interface ApiService {
     @Multipart
     @POST("posts")
     fun createPost(
-        @Part("caption") caption: RequestBody,
+        @Part("text") text: RequestBody,
         @Part("mediaType") mediaType: RequestBody,
+        @Part("communityId") communityId: RequestBody,
         @Part("communityName") communityName: RequestBody,
-        @Part mediaFile: MultipartBody.Part? = null
+        @Part media: MultipartBody.Part? = null
     ): Call<Post>
+
 
     @POST("social/like/{postId}")
     fun toggleLike(
@@ -312,6 +314,7 @@ interface ApiService {
         @Query("sort") sort: String? = null,
         @Query("order") order: String? = null
     ): Call<List<Community>>
+
 
     // ✅ Join a community
     @POST("communities/{communityId}/join")

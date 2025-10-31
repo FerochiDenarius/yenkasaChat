@@ -16,13 +16,21 @@ const requireVerified = (req, res, next) => {
   next();
 };
 
-// ✅ Get all APPROVED communities
-router.get('/', async (req, res) => {
+// ✅ Get all communities (filter depends on user role)
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const { search, sort = 'memberCount', order = 'desc' } = req.query;
-    
-    let query = { isActive: true, isApproved: true }; // Only show approved
-    
+
+    const userId = req.user?.id;
+    const user = userId ? await User.findById(userId) : null;
+
+    let query = { isActive: true };
+
+    /**  ✅ If not admin/developer, only show approved
+    if (!user || !['admin', 'developer'].includes(user.role)) {
+      query.isApproved = true;
+    }
+*/
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -30,21 +38,22 @@ router.get('/', async (req, res) => {
         { description: { $regex: search, $options: 'i' } }
       ];
     }
-    
+  
     const sortOrder = order === 'asc' ? 1 : -1;
     const sortObj = { [sort]: sortOrder };
-    
+
     const communities = await Community.find(query)
       .sort(sortObj)
       .select('-moderators -rules')
       .lean();
-    
+
     res.json(communities);
   } catch (err) {
     console.error('❌ Failed to fetch communities:', err);
     res.status(500).json({ error: 'Failed to retrieve communities' });
   }
 });
+
 
 // ✅ Get single community details
 router.get('/:communityId', async (req, res) => {

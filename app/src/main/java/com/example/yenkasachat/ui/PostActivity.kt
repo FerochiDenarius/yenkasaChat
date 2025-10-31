@@ -172,9 +172,22 @@ class PostActivity : AppCompatActivity() {
         btnPost.isEnabled = false
         progressBar.visibility = View.VISIBLE
 
+        // 📝 Prepare text and mediaType
         val textBody = RequestBody.create("text/plain".toMediaTypeOrNull(), content)
-        var mediaPart: MultipartBody.Part? = null
+        val mediaTypeBody = RequestBody.create("text/plain".toMediaTypeOrNull(), mediaType ?: "text")
 
+        // 🧩 Prepare community info
+        val communityIdBody = RequestBody.create(
+            "text/plain".toMediaTypeOrNull(),
+            selectedCommunityId ?: ""
+        )
+        val communityNameBody = RequestBody.create(
+            "text/plain".toMediaTypeOrNull(),
+            spinnerCommunity.selectedItem?.toString() ?: ""
+        )
+
+        // 🎥 Handle optional media upload
+        var mediaPart: MultipartBody.Part? = null
         mediaUri?.let { uri ->
             try {
                 val file = getFileFromUri(uri)
@@ -192,21 +205,24 @@ class PostActivity : AppCompatActivity() {
             }
         }
 
-        val communityBody = RequestBody.create("text/plain".toMediaTypeOrNull(), selectedCommunityId ?: "")
-
+        // 🚀 Upload to backend
         ApiClient.apiService.createPost(
             textBody,
-            RequestBody.create("text/plain".toMediaTypeOrNull(), mediaType ?: "text"),
-            communityBody,
+            mediaTypeBody,
+            communityIdBody,
+            communityNameBody,
             mediaPart
-        )
-            .enqueue(object : Callback<Post> {
+        ).enqueue(object : Callback<Post> {
             override fun onResponse(call: Call<Post>, response: Response<Post>) {
                 btnPost.isEnabled = true
                 progressBar.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    Toast.makeText(this@PostActivity, "✅ Post created successfully!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@PostActivity,
+                        "✅ Post created successfully!",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     setResult(Activity.RESULT_OK)
                     finish()
                 } else {

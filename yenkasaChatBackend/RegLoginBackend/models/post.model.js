@@ -10,12 +10,18 @@ const postSchema = new Schema({
     index: true
   },
 
-  // Community
+  // Community (linked + readable name)
   communityId: {
     type: Schema.Types.ObjectId,
     ref: 'Community',
-    required: true,
+    required: false, // made optional to handle posts without fixed community
     index: true
+  },
+
+  communityName: {
+    type: String,
+    trim: true,
+    default: ''
   },
 
   // Post type
@@ -34,54 +40,21 @@ const postSchema = new Schema({
   },
 
   // Media (single or multiple)
-  imageUrl: {
-    type: String,
-    default: ''
-  },
-  videoUrl: {
-    type: String,
-    default: ''
-  },
-  mediaUrls: [{
-    type: String,
-    default: ''
-  }],
+  imageUrl: { type: String, default: '' },
+  videoUrl: { type: String, default: '' },
+  mediaUrls: [{ type: String, default: '' }],
 
   // Engagement
-  likes: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  likeCount: {
-    type: Number,
-    default: 0
-  },
-  commentCount: {
-    type: Number,
-    default: 0
-  },
-  shareCount: {
-    type: Number,
-    default: 0
-  },
-  viewCount: {
-    type: Number,
-    default: 0
-  },
+  likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  likeCount: { type: Number, default: 0 },
+  commentCount: { type: Number, default: 0 },
+  shareCount: { type: Number, default: 0 },
+  viewCount: { type: Number, default: 0 },
 
   // Post status and visibility
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  isPinned: {
-    type: Boolean,
-    default: false
-  },
-  pinnedUntil: {
-    type: Date,
-    default: null
-  },
+  isActive: { type: Boolean, default: true },
+  isPinned: { type: Boolean, default: false },
+  pinnedUntil: { type: Date, default: null },
 
   // Moderation
   status: {
@@ -89,14 +62,8 @@ const postSchema = new Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'approved'
   },
-  isReported: {
-    type: Boolean,
-    default: false
-  },
-  reportCount: {
-    type: Number,
-    default: 0
-  },
+  isReported: { type: Boolean, default: false },
+  reportCount: { type: Number, default: 0 },
 
   // Visibility
   visibility: {
@@ -106,25 +73,16 @@ const postSchema = new Schema({
   },
 
   // Mentions (users tagged)
-  mentions: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
+  mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 
   // Tags/Categories
   tags: [String],
 
   // Location (optional)
-  location: {
-    type: String,
-    default: ''
-  },
+  location: { type: String, default: '' },
 
   // Coins earned from this post
-  coinsEarned: {
-    type: Number,
-    default: 0
-  }
+  coinsEarned: { type: Number, default: 0 }
 
 }, { timestamps: true });
 
@@ -135,12 +93,12 @@ postSchema.index({ createdAt: -1 });
 postSchema.index({ likeCount: -1 });
 
 // Check if user liked post
-postSchema.methods.isLikedBy = function(userId) {
+postSchema.methods.isLikedBy = function (userId) {
   return this.likes.some(id => id.toString() === userId.toString());
 };
 
 // Efficient add like
-postSchema.methods.addLike = async function(userId) {
+postSchema.methods.addLike = async function (userId) {
   const result = await mongoose.model('Post').updateOne(
     { _id: this._id, likes: { $ne: userId } },
     { $addToSet: { likes: userId }, $inc: { likeCount: 1 } }
@@ -149,7 +107,7 @@ postSchema.methods.addLike = async function(userId) {
 };
 
 // Efficient remove like
-postSchema.methods.removeLike = async function(userId) {
+postSchema.methods.removeLike = async function (userId) {
   const result = await mongoose.model('Post').updateOne(
     { _id: this._id, likes: userId },
     { $pull: { likes: userId }, $inc: { likeCount: -1 } }

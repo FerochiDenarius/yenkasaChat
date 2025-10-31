@@ -189,7 +189,7 @@ app.get('/terms', (req, res) => {
 //Post routes
 
 const postRoutes = require('./routes/post.routes');
-app.use('/api/posts', postRoutes);
+app.use('/posts', postRoutes);
 
 
 const socialRoutes = require('./routes/social.routes');

@@ -32,19 +32,22 @@ class PostApprovalActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerViewPendingPosts)
         progressBar = findViewById(R.id.progressBarApproval)
         emptyText = findViewById(R.id.textViewEmpty)
-
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // ✅ 1. Check if current user is admin (TokenManager should store this after login)
-        val isAdmin = TokenManager.isVerified(this) && TokenManager.getUserId(this) == "ADMIN_USER_ID" // Replace with real admin flag
+        // ✅ 1. Check current user's role
+        val userRole = TokenManager.getUserRole(this)
+        val hasApprovalPrivilege = userRole == "admin" || userRole == "moderator" || userRole == "developer"
 
-        if (!isAdmin) {
+        if (!hasApprovalPrivilege) {
+            // ✅ Block access for regular users
             emptyText.text = "You are not authorized to approve posts."
             emptyText.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+            progressBar.visibility = View.GONE
             return
         }
 
-        // ✅ 2. Initialize adapter with callbacks
+        // ✅ 2. Initialize adapter
         adapter = PostApprovalAdapter(
             posts = mutableListOf(),
             context = this,
@@ -63,24 +66,35 @@ class PostApprovalActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         emptyText.visibility = View.GONE
 
+        Log.d("PostApproval", "🔄 Fetching pending posts...")
+
         ApiClient.apiService.getPendingPosts()
             .enqueue(object : Callback<List<Post>> {
                 override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
                     progressBar.visibility = View.GONE
-                    if (response.isSuccessful && !response.body().isNullOrEmpty()) {
-                        val posts = response.body()!!
-                        adapter.updatePosts(posts.toMutableList())
+                    if (response.isSuccessful) {
+                        val posts = response.body()
+                        Log.d("PostApproval", "✅ Response success, posts count = ${posts?.size}")
+                        if (!posts.isNullOrEmpty()) {
+                            adapter.updatePosts(posts.toMutableList())
+                            recyclerView.visibility = View.VISIBLE
+                            emptyText.visibility = View.GONE
+                        } else {
+                            emptyText.text = "No pending posts to review."
+                            emptyText.visibility = View.VISIBLE
+                        }
                     } else {
-                        emptyText.text = "No pending posts to review."
+                        Log.e("PostApproval", "❌ Response failed: ${response.code()} ${response.message()}")
+                        emptyText.text = "Failed to load posts. (${response.code()})"
                         emptyText.visibility = View.VISIBLE
                     }
                 }
 
                 override fun onFailure(call: Call<List<Post>>, t: Throwable) {
                     progressBar.visibility = View.GONE
-                    emptyText.text = "Failed to load posts: ${t.message}"
+                    Log.e("PostApproval", "🚨 Network failure: ${t.message}", t)
+                    emptyText.text = "Network error: ${t.message}"
                     emptyText.visibility = View.VISIBLE
-                    Log.e("PostApproval", "Error loading pending posts", t)
                 }
             })
     }

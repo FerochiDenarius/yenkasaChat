@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Community Icon -->
+        <ImageView
+            android:id="@+id/imageCommunityIcon"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_gravity="center_horizontal"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_community_placeholder"
+            android:contentDescription="Community Icon"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Large"/>
+
+        <!-- Name -->
+        <TextView
+            android:id="@+id/textCommunityName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Community Name"
+            android:textAlignment="center"
+            android:textStyle="bold"
+            android:textSize="18sp"/>
+
+        <!-- Location -->
+        <TextView
+            android:id="@+id/editCommunityLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Accra, Ghana"
+            android:textAlignment="center"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"/>
+
+        <!-- Category -->
+        <TextView
+            android:id="@+id/editCategories"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Tech • Startups"
+            android:textAlignment="center"
+            android:textSize="14sp"/>
+
+        <!-- Member & Post Counts -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/textMemberCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="120 members"
+                android:drawableStart="@drawable/ic_group"
+                android:drawablePadding="6dp"/>
+
+            <TextView
+                android:id="@+id/textPostCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="45 posts"
+                android:drawableStart="@drawable/ic_post"
+                android:drawablePadding="6dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

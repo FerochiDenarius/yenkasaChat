@@ -95,6 +95,15 @@
             android:backgroundTint="#E0E0E0"
             android:textColor="#222222"/>
 
+        <Button
+            android:id="@+id/btnPostApproval"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"
+            android:text="Post Approvals" />
+
 
         <Button
             android:id="@+id/btnSettings"

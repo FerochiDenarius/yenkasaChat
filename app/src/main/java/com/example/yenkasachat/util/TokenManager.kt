@@ -256,6 +256,33 @@ object TokenManager {
             null
         }
     }
+    /**
+     * ✅ Returns the user's role from saved flags or JSON.
+     * Possible results: "admin", "moderator", "developer", or "user" (default).
+     */
+    fun getUserRole(context: Context): String {
+        return try {
+            // First, check explicit role flags
+            when {
+                isAdmin(context) -> "admin"
+                isModerator(context) -> "moderator"
+                isDeveloper(context) -> "developer"
+                else -> {
+                    // If no flags are set, try parsing from saved JSON
+                    val userJson = getUser(context)
+                    if (!userJson.isNullOrEmpty()) {
+                        val json = JSONObject(userJson)
+                        json.optString("role", "user").lowercase()
+                    } else {
+                        "user"
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error determining user role: ${e.message}")
+            "user"
+        }
+    }
 
     fun getProfilePicUrl(context: Context): String? {
         return try {

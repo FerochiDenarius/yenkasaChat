@@ -57,7 +57,7 @@ class CommunityAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommunityViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_community, parent, false)
+            .inflate(R.layout.item_community_card, parent, false)
         return CommunityViewHolder(view)
     }
 

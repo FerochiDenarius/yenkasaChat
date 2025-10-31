@@ -66,6 +66,11 @@ class MenuActivity : AppCompatActivity() {
             Log.d(TAG, "Settings button clicked")
             Toast.makeText(this, "Settings feature coming soon!", Toast.LENGTH_SHORT).show()
         }
+        val btnPostApproval = findViewById<Button>(R.id.btnPostApproval)
+        btnPostApproval.setOnClickListener {
+            val intent = Intent(this, PostApprovalActivity::class.java)
+            startActivity(intent)
+        }
 
         // 🚪 Logout
         findViewById<Button>(R.id.btnLogout).setOnClickListener {

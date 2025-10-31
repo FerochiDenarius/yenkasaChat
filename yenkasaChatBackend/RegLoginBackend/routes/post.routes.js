@@ -60,12 +60,6 @@ async function rewardUser(userId, amount, description, referenceModel, reference
 }
 
 /* ------------------------------------
- * 📸 MULTER + CLOUDINARY
- * ------------------------------------ */
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-/* ------------------------------------/* ------------------------------------
  * ✍️ CREATE POST
  * ------------------------------------ */
 router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
@@ -89,7 +83,7 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
 
     let mediaUrl = imageUrl || videoUrl || null;
 
-    // ✅ Upload media if attached
+    // ✅ Upload to Cloudinary
     if (req.file) {
       const folder = "yenkasachat/posts";
       const resourceType = req.file.mimetype.startsWith('video')
@@ -107,7 +101,7 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       mediaUrl = uploadResult.secure_url;
     }
 
-    // ✅ If communityName is provided, find the matching community
+    // ✅ Find community if provided
     let selectedCommunity = null;
     if (communityName && communityName.trim() !== "") {
       selectedCommunity = await Community.findOne({
@@ -117,6 +111,12 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
         ]
       });
     }
+
+    /* 🧠 Decide post approval status */
+    const approvers = ["admin", "moderator", "developer"];
+    const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
+
+    const postStatus = isPrivilegedUser ? "approved" : "pending";
 
     // ✅ Create post
     const post = new Post({
@@ -131,14 +131,14 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       location: location || '',
       visibility: visibility || 'public',
       postType: postType || 'text',
-      communityName: selectedCommunity ? selectedCommunity.displayName : communityName || '', // 👈 Store name directly
-      status: 'approved',
+      communityName: selectedCommunity ? selectedCommunity.displayName : communityName || '',
+      status: postStatus, // 👈 sets pending or approved
     });
 
     await post.save();
 
-    // ✅ Reward verified users
-    if (user.verified) {
+    // ✅ Reward verified users (only if approved immediately)
+    if (user.verified && isPrivilegedUser) {
       await rewardUser(
         userId,
         REWARDS.CREATE_POST,
@@ -149,17 +149,17 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     }
 
     const populatedPost = await Post.findById(post._id)
-      .populate('userId', 'username profileImage verified')
+      .populate('userId', 'username profileImage verified role')
       .populate('communityId', 'name displayName')
       .lean();
 
     res.status(201).json({
       success: true,
-      message: user.verified
-        ? `Post created! You earned ${REWARDS.CREATE_POST} coins.`
-        : 'Post created!',
+      message: isPrivilegedUser
+        ? `Post approved and published! You earned ${REWARDS.CREATE_POST} coins.`
+        : `Post submitted for review. It will appear once approved.`,
       post: populatedPost,
-      coinsEarned: user.verified ? REWARDS.CREATE_POST : 0
+      coinsEarned: user.verified && isPrivilegedUser ? REWARDS.CREATE_POST : 0
     });
 
   } catch (err) {
@@ -167,6 +167,7 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     res.status(500).json({ error: 'Failed to create post' });
   }
 });
+
 
 /* ------------------------------------
  * 👤 USER POSTS

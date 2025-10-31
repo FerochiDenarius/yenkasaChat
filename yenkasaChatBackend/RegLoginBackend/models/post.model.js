@@ -14,7 +14,7 @@ const postSchema = new Schema({
   communityId: {
     type: Schema.Types.ObjectId,
     ref: 'Community',
-    required: false, // made optional to handle posts without fixed community
+    required: false, // optional for posts outside community
     index: true
   },
 
@@ -56,11 +56,11 @@ const postSchema = new Schema({
   isPinned: { type: Boolean, default: false },
   pinnedUntil: { type: Date, default: null },
 
-  // Moderation
+  // 🧩 Moderation / Approval
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
-    default: 'approved'
+    default: 'pending' // 👈 Default changed from 'approved' to 'pending'
   },
   isReported: { type: Boolean, default: false },
   reportCount: { type: Number, default: 0 },
@@ -86,11 +86,17 @@ const postSchema = new Schema({
 
 }, { timestamps: true });
 
-// Indexes for performance
+/* ------------------------------------
+ * ⚡ Indexes
+ * ------------------------------------ */
 postSchema.index({ userId: 1, createdAt: -1 });
 postSchema.index({ communityId: 1, createdAt: -1 });
 postSchema.index({ createdAt: -1 });
 postSchema.index({ likeCount: -1 });
+
+/* ------------------------------------
+ * ⚙️ Instance Methods
+ * ------------------------------------ */
 
 // Check if user liked post
 postSchema.methods.isLikedBy = function (userId) {
@@ -113,6 +119,20 @@ postSchema.methods.removeLike = async function (userId) {
     { $pull: { likes: userId }, $inc: { likeCount: -1 } }
   );
   return result.modifiedCount > 0;
+};
+
+/* ------------------------------------
+ * 🧠 Static Helpers (optional but useful)
+ * ------------------------------------ */
+
+// Get only approved posts
+postSchema.statics.findApproved = function (filter = {}) {
+  return this.find({ ...filter, status: 'approved', isActive: true });
+};
+
+// Get pending posts for admin review
+postSchema.statics.findPending = function () {
+  return this.find({ status: 'pending' });
 };
 
 const Post = mongoose.model('Post', postSchema);

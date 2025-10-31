@@ -308,7 +308,7 @@ async function seedCommunities() {
     console.log(`   Interest-based: ${interestBased.length}`);
 
     console.log('\n✨ Database seeding completed!');
-    process.exit(0);
+  
   } catch (err) {
     console.error('❌ Error seeding database:', err);
     process.exit(1);

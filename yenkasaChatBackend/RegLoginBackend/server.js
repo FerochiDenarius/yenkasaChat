@@ -12,6 +12,8 @@ const cors = require('cors');
 const morgan = require('morgan');
 const http = require('http');
 const { Server } = require("socket.io");
+const feedRoutes = require("./routes/feed.routes");
+
 
 // ✅ Initialize Express App
 const app = express();
@@ -36,6 +38,7 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 }));
+app.use("/api/feed", feedRoutes);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -165,8 +168,6 @@ safeMount('/api/app-verification', './routes/appverification.routes', 'App Verif
 safeMount('/api/onesignal', './routes/onesignal', 'OneSignal');
 safeMount('/api/notifications', './routes/notifications.route', 'Notifications');
 
-const feedRoutes = require("./routes/feed.routes");
-app.use("/api/feed", feedRoutes);
 
 
 console.log("✅ All API routes mounted");

@@ -2,7 +2,7 @@
 const express = require('express');
 const verifyToken = require('../middleware/auth');
 const User = require('../models/user.model');
-const CoinTransaction = require('../models/coinTransaction');
+const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
 
 const router = express.Router();

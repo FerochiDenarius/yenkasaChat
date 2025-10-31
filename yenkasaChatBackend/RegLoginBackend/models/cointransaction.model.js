@@ -88,5 +88,5 @@ coinTransactionSchema.index({ fromUserId: 1, createdAt: -1 });
 coinTransactionSchema.index({ type: 1 });
 coinTransactionSchema.index({ status: 1 });
 
-const CoinTransaction = mongoose.model('CoinTransaction', coinTransactionSchema);
+module.exports = mongoose.models.CoinTransaction || mongoose.model("CoinTransaction", CoinTransactionSchema);
 module.exports = CoinTransaction;

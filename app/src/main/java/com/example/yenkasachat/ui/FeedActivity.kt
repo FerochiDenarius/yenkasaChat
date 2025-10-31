@@ -16,11 +16,14 @@ import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.model.FeedResponse
 import com.example.yenkasachat.model.LikeResponse
 import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.model.TrackLoginResponse
 import com.example.yenkasachat.network.ApiClient
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+// ✅ FIX: Import the new activity class
+import com.example.yenkasachat.ui.PostDetailActivity
 
 class FeedActivity : AppCompatActivity() {
 
@@ -101,9 +104,14 @@ class FeedActivity : AppCompatActivity() {
         adapter = PostAdapter(
             posts = posts,
             onLikeClick = { post, position -> toggleLike(post, position) },
-            onCommentClick = { post -> openComments(post) },
+            onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { userId -> openUserProfile(userId) },
-            onPostClick = { /* TODO: Open Post Details */ }
+            onPostClick = { post ->
+                // All errors here are now resolved because PostDetailActivity exists
+                val intent = Intent(this, PostDetailActivity::class.java)
+                intent.putExtra("POST_ID", post._id)
+                startActivity(intent)
+            }
         )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -111,10 +119,13 @@ class FeedActivity : AppCompatActivity() {
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(rv, dx, dy)
                 val layoutManager = rv.layoutManager as LinearLayoutManager
                 val lastVisible = layoutManager.findLastVisibleItemPosition()
                 val totalItems = layoutManager.itemCount
-                if (!isLoading && lastVisible >= totalItems - 3) loadMorePosts()
+                if (!isLoading && lastVisible >= totalItems - 3) {
+                    loadMorePosts()
+                }
             }
         })
     }
@@ -164,15 +175,14 @@ class FeedActivity : AppCompatActivity() {
 
     private fun refreshFeed() {
         currentPage = 1
-        posts.clear()
         loadFeed()
     }
 
     private fun toggleLike(post: Post, position: Int) {
         val call = if (post.likedByCurrentUser)
-            ApiClient.apiService.unlikePost("Bearer $token", post.postId)
+            ApiClient.apiService.unlikePost("Bearer $token", post._id)
         else
-            ApiClient.apiService.likePost("Bearer $token", post.postId)
+            ApiClient.apiService.likePost("Bearer $token", post._id)
 
         call.enqueue(object : Callback<LikeResponse> {
             override fun onResponse(call: Call<LikeResponse>, response: Response<LikeResponse>) {
@@ -197,35 +207,32 @@ class FeedActivity : AppCompatActivity() {
 
     private fun openComments(post: Post) {
         val intent = Intent(this, CommentsActivity::class.java)
-        intent.putExtra("postId", post.postId)
+        intent.putExtra("POST_ID", post._id)
         startActivity(intent)
     }
 
     private fun openUserProfile(userId: String) {
         val intent = Intent(this, UserProfileActivity::class.java)
-        intent.putExtra("userId", userId)
+        intent.putExtra("USER_ID", userId)
         startActivity(intent)
     }
 
     private fun trackDailyLogin() {
         ApiClient.apiService.trackLogin("Bearer $token")
-            .enqueue(object : Callback<com.example.yenkasachat.model.TrackLoginResponse> {
-                override fun onResponse(
-                    call: Call<com.example.yenkasachat.model.TrackLoginResponse>,
-                    response: Response<com.example.yenkasachat.model.TrackLoginResponse>
-                ) { /* optional */ }
+            .enqueue(object : Callback<TrackLoginResponse> {
+                override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {
+                    // Optional: Handle success
+                }
 
-                override fun onFailure(
-                    call: Call<com.example.yenkasachat.model.TrackLoginResponse>,
-                    t: Throwable
-                ) { /* ignore */ }
+                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
+                    // Optional: Handle failure
+                }
             })
     }
 
     private fun showLoading(show: Boolean) {
         if (currentPage == 1) {
             progressBar.visibility = if (show) View.VISIBLE else View.GONE
-            recyclerView.visibility = if (show) View.GONE else View.VISIBLE
         }
     }
 }

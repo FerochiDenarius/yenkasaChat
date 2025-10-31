@@ -1,7 +1,14 @@
-// app/src/main/java/com/example/yenkasachat/model/Coin.kt
 package com.example.yenkasachat.model
 
 import com.google.gson.annotations.SerializedName
+
+// NOTE: UserBasic and PaginationInfo have been moved to Shared.kt and will be imported automatically.
+
+// === Coin balance response ===
+data class CoinBalanceResponse(
+    val success: Boolean,
+    val balance: Int
+)
 
 data class CoinBalance(
     val balance: Int,
@@ -11,12 +18,23 @@ data class CoinBalance(
     val username: String
 )
 
+// === Coin transactions ===
+data class CoinTransactionResponse(
+    val success: Boolean,
+    val transactions: List<CoinTransaction>
+)
+
+data class TransactionsResponse(
+    val transactions: List<CoinTransaction>,
+    val pagination: PaginationInfo // This now refers to the class in Shared.kt
+)
+
 data class CoinTransaction(
     @SerializedName("_id")
     val transactionId: String,
 
-    val fromUserId: UserBasic? = null,
-    val toUserId: UserBasic,
+    val fromUserId: UserBasic? = null, // This now refers to the class in Shared.kt
+    val toUserId: UserBasic? = null,   // This now refers to the class in Shared.kt
 
     val amount: Int,
     val type: String, // REWARD_POST, REWARD_FOLLOW, REWARD_LIKE, REWARD_COMMENT, TRANSFER
@@ -34,11 +52,13 @@ data class CoinTransaction(
     var otherParty: UserBasic? = null
 )
 
+// === Basic post info for transactions ===
 data class PostBasic(
     val text: String,
     val imageUrl: String? = null
 )
 
+// === Transfer coins request & response ===
 data class TransferCoinsRequest(
     val toUsername: String,
     val amount: Int,
@@ -60,9 +80,4 @@ data class TransactionInfo(
     val from: String,
     val to: String,
     val newBalance: Int
-)
-
-data class TransactionsResponse(
-    val transactions: List<CoinTransaction>,
-    val pagination: PaginationInfo
 )

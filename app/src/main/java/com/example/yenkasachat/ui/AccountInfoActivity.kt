@@ -76,14 +76,33 @@ class AccountInfoActivity : AppCompatActivity() {
         btnEditProfile = findViewById(R.id.btnEditSave)
     }
 
+// ... (imports and other class members)
+
     private fun setupRecyclerView() {
-        postAdapter = PostAdapter(userPostsList)
+        // ✅ FIX: Provide all required lambda functions to the adapter's constructor
+        postAdapter = PostAdapter(
+            posts = userPostsList,
+            onPostClick = { post ->
+                // When a user clicks a post in the grid, open the detail view
+                val intent = Intent(this, PostDetailActivity::class.java)
+                intent.putExtra("POST_ID", post._id)
+                startActivity(intent)
+            },
+            // For the other listeners, you can provide empty lambdas if you
+            // don't need the functionality in this specific screen.
+            onLikeClick = { _, _ -> /* Not needed in this grid view */ },
+            onCommentClick = { _, _ -> /* Not needed in this grid view */ },
+            onUserClick = { /* Not needed, we are already on a user's profile */ }
+        )
+
         recyclerUserPosts.apply {
             layoutManager = GridLayoutManager(this@AccountInfoActivity, 3)
             adapter = postAdapter
-            isNestedScrollingEnabled = false
+            // isNestedScrollingEnabled = false // This is often not needed
         }
     }
+
+// ... (rest of the file)
 
     private fun setupListeners() {
         btnEditProfile.setOnClickListener {
@@ -121,6 +140,8 @@ class AccountInfoActivity : AppCompatActivity() {
                     if (response.isSuccessful && response.body() != null) {
                         val user = response.body()!!
                         updateUI(user)
+
+                        // ✅ Save user info
                         TokenManager.saveUserDetails(
                             this@AccountInfoActivity,
                             user._id,
@@ -131,6 +152,32 @@ class AccountInfoActivity : AppCompatActivity() {
                             user.profileImage,
                             user.location
                         )
+
+                        // ✅ Save user roles locally
+                        when (user.role?.lowercase()) {
+                            "admin" -> {
+                                TokenManager.setAdmin(this@AccountInfoActivity, true)
+                                TokenManager.setModerator(this@AccountInfoActivity, false)
+                                TokenManager.setDeveloper(this@AccountInfoActivity, false)
+                            }
+                            "moderator" -> {
+                                TokenManager.setAdmin(this@AccountInfoActivity, false)
+                                TokenManager.setModerator(this@AccountInfoActivity, true)
+                                TokenManager.setDeveloper(this@AccountInfoActivity, false)
+                            }
+                            "developer" -> {
+                                TokenManager.setAdmin(this@AccountInfoActivity, true)
+                                TokenManager.setModerator(this@AccountInfoActivity, true)
+                                TokenManager.setDeveloper(this@AccountInfoActivity, true)
+                            }
+                            else -> {
+                                TokenManager.setAdmin(this@AccountInfoActivity, false)
+                                TokenManager.setModerator(this@AccountInfoActivity, false)
+                                TokenManager.setDeveloper(this@AccountInfoActivity, false)
+                            }
+                        }
+
+                        Log.i("AccountInfoActivity", "User role: ${user.role}")
                     } else {
                         Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
                     }

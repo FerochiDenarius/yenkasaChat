@@ -49,6 +49,15 @@
 
         <!-- Edit Profile Button (neutral version) -->
         <Button
+            android:id="@+id/btnCoinWallet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Wallet"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#D5D5D5"
+            android:textColor="#222222"/>
+
+        <Button
             android:id="@+id/btnEditProfile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -67,6 +76,16 @@
             android:text="Verify Account" />
 
         <Button
+            android:id="@+id/btnAppVerification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Yenkasa Verification"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#222222"/>
+
+
+        <Button
             android:id="@+id/btnSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -74,6 +93,7 @@
             android:backgroundTint="#E0E0E0"
             android:textColor="#222222"
             android:text="Settings" />
+
 
         <Button
             android:id="@+id/btnLogout"

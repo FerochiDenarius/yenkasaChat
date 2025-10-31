@@ -62,11 +62,11 @@ class PostActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBar)
 
         // ✅ Check if the user is verified via TokenManager
-        val isVerified = TokenManager.isVerified(this)
-        if (!isVerified) {
+        val canPost = TokenManager.canPost(this)
+        if (!canPost) {
             Toast.makeText(
                 this,
-                "Only verified users can create posts.",
+                "You are not allowed to post. Please verify your account or contact support.",
                 Toast.LENGTH_LONG
             ).show()
             btnPost.isEnabled = false
@@ -75,10 +75,11 @@ class PostActivity : AppCompatActivity() {
             btnChooseMedia.alpha = 0.5f
         }
 
+
         // 🔹 Choose Media Button
         btnChooseMedia.setOnClickListener {
-            if (!isVerified) {
-                Toast.makeText(this, "You must be verified to select media.", Toast.LENGTH_SHORT).show()
+            if (!TokenManager.canPost(this)) {
+                Toast.makeText(this, "You don't have permission to select media.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -90,10 +91,11 @@ class PostActivity : AppCompatActivity() {
 
         // 🔹 Post Button
         btnPost.setOnClickListener {
-            if (!isVerified) {
-                Toast.makeText(this, "Only verified users can post.", Toast.LENGTH_SHORT).show()
+            if (!TokenManager.canPost(this)) {
+                Toast.makeText(this, "You don't have permission to post.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
 
             val content = editTextContent.text.toString().trim()
             if (content.isEmpty() && mediaUri == null) {

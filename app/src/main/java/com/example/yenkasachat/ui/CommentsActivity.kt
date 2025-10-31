@@ -3,6 +3,8 @@ package com.example.yenkasachat.ui
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,6 +24,9 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.net.HttpURLConnection
 import java.net.URL
+import android.media.MediaPlayer
+import android.view.animation.BounceInterpolator
+import android.view.animation.ScaleAnimation
 
 class CommentsActivity : AppCompatActivity() {
 
@@ -46,7 +51,7 @@ class CommentsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_comments)
 
-        // 🔹 Initialize views
+        // Initialize views
         recyclerComments = findViewById(R.id.recyclerComments)
         editComment = findViewById(R.id.editComment)
         buttonSend = findViewById(R.id.buttonSend)
@@ -62,7 +67,7 @@ class CommentsActivity : AppCompatActivity() {
 
         adapter = CommentAdapter(this, comments)
         val layoutManager = LinearLayoutManager(this)
-        layoutManager.stackFromEnd = true // show newest comments at bottom
+        layoutManager.stackFromEnd = true
         recyclerComments.layoutManager = layoutManager
         recyclerComments.adapter = adapter
 
@@ -83,10 +88,10 @@ class CommentsActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             postComment(text)
+
         }
     }
 
-    // ✅ Auto-refresh
     override fun onResume() {
         super.onResume()
         startAutoRefresh()
@@ -102,7 +107,7 @@ class CommentsActivity : AppCompatActivity() {
         autoRefreshJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {
                 loadComments(autoRefresh = true)
-                delay(15000) // every 15 seconds
+                delay(15000)
             }
         }
     }
@@ -112,33 +117,66 @@ class CommentsActivity : AppCompatActivity() {
         autoRefreshJob = null
     }
 
-    // ✅ Load post info (caption, media, likes, etc.)
     private fun loadPostDetails() {
-        val token = TokenManager.getToken(this)
-        if (token.isNullOrEmpty()) return
+        val token = TokenManager.getToken(this) ?: return
 
         ApiClient.apiService.getPostById("Bearer $token", postId!!)
             .enqueue(object : Callback<Post> {
                 override fun onResponse(call: Call<Post>, response: Response<Post>) {
                     if (response.isSuccessful && response.body() != null) {
                         val post = response.body()!!
-                        textCaption.text = post.caption ?: ""
-                        textLikes.text = "${post.likes?.size ?: 0} likes"
-                        textComments.text = " • ${(post.comments?.size ?: 0)} comments"
-                        textViews.text = " • ${post.views} views"
 
-                        if (!post.mediaUrl.isNullOrEmpty()) {
-                            if (post.mediaUrl!!.endsWith(".mp4")) {
-                                videoPost.setVideoURI(Uri.parse(post.mediaUrl))
-                                videoPost.visibility = android.view.View.VISIBLE
-                                imagePost.visibility = android.view.View.GONE
-                                videoPost.setOnPreparedListener { it.start() }
-                            } else {
+                        // Set caption
+                        textCaption.text = post.caption
+
+                        // Set likes, comments, views
+                        textLikes.text = "${post.likes.size} likes"
+                        textComments.text = " • ${post.commentCount} comments"
+                        textViews.text = " • ${post.viewCount} views"
+
+                        // ✅ FIX: Updated logic to use 'mediaUrl' instead of 'videoUrl'
+                        val mediaUrl = post.mediaUrl
+                        val imageUrl = post.imageUrl
+                        val mediaUrls = post.mediaUrls
+
+                        // Hide both views initially
+                        imagePost.visibility = View.GONE
+                        videoPost.visibility = View.GONE
+
+                        when {
+                            // Case 1: A single video is available in 'mediaUrl'
+                            !mediaUrl.isNullOrEmpty() && mediaUrl.endsWith(".mp4") -> {
+                                videoPost.setVideoURI(Uri.parse(mediaUrl))
+                                videoPost.visibility = View.VISIBLE
+                                videoPost.setOnPreparedListener { mp ->
+                                    mp.isLooping = true // Good for short videos
+                                    mp.start()
+                                }
+                            }
+                            // Case 2: A single image is available in 'imageUrl' or 'mediaUrl'
+                            !imageUrl.isNullOrEmpty() || !mediaUrl.isNullOrEmpty() -> {
+                                val urlToShow = imageUrl ?: mediaUrl // Prioritize imageUrl if both exist
                                 Glide.with(this@CommentsActivity)
-                                    .load(post.mediaUrl)
+                                    .load(urlToShow)
                                     .into(imagePost)
-                                imagePost.visibility = android.view.View.VISIBLE
-                                videoPost.visibility = android.view.View.GONE
+                                imagePost.visibility = View.VISIBLE
+                            }
+                            // Case 3: Multiple media items are available
+                            !mediaUrls.isNullOrEmpty() -> {
+                                val first = mediaUrls[0]
+                                if (first.endsWith(".mp4")) {
+                                    videoPost.setVideoURI(Uri.parse(first))
+                                    videoPost.visibility = View.VISIBLE
+                                    videoPost.setOnPreparedListener { mp ->
+                                        mp.isLooping = true
+                                        mp.start()
+                                    }
+                                } else {
+                                    Glide.with(this@CommentsActivity)
+                                        .load(first)
+                                        .into(imagePost)
+                                    imagePost.visibility = View.VISIBLE
+                                }
                             }
                         }
                     }
@@ -203,8 +241,11 @@ class CommentsActivity : AppCompatActivity() {
                             recyclerComments.scrollToPosition(comments.size - 1)
                             editComment.text.clear()
 
-                            loadComments() // force refresh for consistency
+                            loadComments() // refresh
                             sendCommentNotification(newComment)
+                            // ✅ trigger animation and floating emoji
+                            animateCommentSuccess()
+                            showFloatingEmoji()
                         }
                     } else {
                         Toast.makeText(this@CommentsActivity, "Failed to post comment", Toast.LENGTH_SHORT).show()
@@ -232,15 +273,39 @@ class CommentsActivity : AppCompatActivity() {
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                conn.setRequestProperty("Authorization", "Basic YOUR_REST_API_KEY") // replace this
+                conn.setRequestProperty("Authorization", "Basic YOUR_REST_API_KEY")
                 conn.doOutput = true
                 conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
-
-                val responseCode = conn.responseCode
-                Log.d("CommentsActivity", "OneSignal response: $responseCode")
+                Log.d("CommentsActivity", "OneSignal response: ${conn.responseCode}")
             } catch (e: Exception) {
                 Log.e("CommentsActivity", "Failed to send comment notification: ${e.message}")
             }
         }
+    }
+
+    // Optional: comment success animation
+    private fun animateCommentSuccess() {
+        val anim = ScaleAnimation(
+            0.8f, 1f, 0.8f, 1f,
+            ScaleAnimation.RELATIVE_TO_SELF, 0.5f,
+            ScaleAnimation.RELATIVE_TO_SELF, 0.5f
+        )
+        anim.duration = 300
+        anim.interpolator = BounceInterpolator()
+        buttonSend.startAnimation(anim)
+    }
+
+    private fun showFloatingEmoji() {
+        val emojiView = ImageView(this)
+        emojiView.setImageResource(R.drawable.ic_heart)
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        rootView.addView(emojiView, ViewGroup.LayoutParams(100, 100))
+        emojiView.translationY = rootView.height.toFloat()
+        emojiView.animate()
+            .translationYBy(-rootView.height.toFloat())
+            .alpha(0f)
+            .setDuration(1000)
+            .withEndAction { rootView.removeView(emojiView) }
+            .start()
     }
 }

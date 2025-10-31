@@ -14,6 +14,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
+
 class AppVerificationActivity : AppCompatActivity() {
 
     private lateinit var progressBar: ProgressBar
@@ -23,6 +24,7 @@ class AppVerificationActivity : AppCompatActivity() {
     private lateinit var layoutRequirements: LinearLayout
     private lateinit var btnAdvancePhase: Button
     private lateinit var swipeRefresh: SwipeRefreshLayout
+
 
     private var token: String? = null
 

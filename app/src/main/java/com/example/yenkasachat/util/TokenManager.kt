@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.example.yenkasachat.network.SocketManager
+import org.json.JSONObject
+
 
 object TokenManager {
 
@@ -24,7 +26,10 @@ object TokenManager {
     private const val VERIFIED_KEY = "is_verified"
     // 👇 NEW KEY FOR ONESIGNAL PLAYER ID
     private const val ONE_SIGNAL_PLAYER_ID_KEY = "one_signal_player_id"
-
+    // === Role Flags ===
+    private const val IS_ADMIN_KEY = "is_admin"
+    private const val IS_MODERATOR_KEY = "is_moderator"
+    private const val IS_DEVELOPER_KEY = "is_developer"
 
     // Logging Tag
     private const val TAG = "TokenManager"
@@ -242,6 +247,10 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error saving Profile Pic URL", e)
         }
+    }
+    fun getUser(context: Context): String? {
+        val sharedPreferences = context.getSharedPreferences("YenkasaPrefs", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("user", null)
     }
 
     fun getProfilePicUrl(context: Context): String? {
@@ -485,6 +494,76 @@ object TokenManager {
         }
     }
 
+
+
+
+    fun setAdmin(context: Context, isAdmin: Boolean) {
+        try {
+            getEncryptedPrefs(context).edit().putBoolean(IS_ADMIN_KEY, isAdmin).apply()
+            Log.i(TAG, "Admin status set to: $isAdmin")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting admin status", e)
+        }
+    }
+
+    fun isAdmin(context: Context): Boolean {
+        return try {
+            getEncryptedPrefs(context).getBoolean(IS_ADMIN_KEY, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting admin status", e)
+            false
+        }
+    }
+
+    fun setModerator(context: Context, isModerator: Boolean) {
+        try {
+            getEncryptedPrefs(context).edit().putBoolean(IS_MODERATOR_KEY, isModerator).apply()
+            Log.i(TAG, "Moderator status set to: $isModerator")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting moderator status", e)
+        }
+    }
+
+    fun isModerator(context: Context): Boolean {
+        return try {
+            getEncryptedPrefs(context).getBoolean(IS_MODERATOR_KEY, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting moderator status", e)
+            false
+        }
+    }
+
+    fun setDeveloper(context: Context, isDeveloper: Boolean) {
+        try {
+            getEncryptedPrefs(context).edit().putBoolean(IS_DEVELOPER_KEY, isDeveloper).apply()
+            Log.i(TAG, "Developer status set to: $isDeveloper")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting developer status", e)
+        }
+    }
+
+    fun isDeveloper(context: Context): Boolean {
+        return try {
+            getEncryptedPrefs(context).getBoolean(IS_DEVELOPER_KEY, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting developer status", e)
+            false
+        }
+    }
+
+    fun canPost(context: Context): Boolean {
+        val userJson = getUser(context) ?: return false
+        return try {
+            val jsonObject = JSONObject(userJson)
+            val permissions = jsonObject.optJSONObject("permissions")
+            val canPost = permissions?.optBoolean("canPost", false) ?: false
+            val verified = jsonObject.optBoolean("verified", false)
+            verified && canPost
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     /**
      * Retrieves the OneSignal Player ID from EncryptedSharedPreferences.
      */
@@ -502,31 +581,7 @@ object TokenManager {
 
 
 
-    /**
-     * Saves whether the current user is an admin.
-     */
-    fun setAdmin(context: Context, isAdmin: Boolean) {
-        try {
-            getEncryptedPrefs(context).edit().putBoolean(ADMIN_KEY, isAdmin).apply()
-            Log.i(TAG, "Admin status saved: $isAdmin")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving admin status", e)
-        }
-    }
 
-    /**
-     * Returns true if the user is marked as admin.
-     */
-    fun isAdmin(context: Context): Boolean {
-        return try {
-            val adminStatus = getEncryptedPrefs(context).getBoolean(ADMIN_KEY, false)
-            Log.d(TAG, "Retrieved admin status: $adminStatus")
-            adminStatus
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting admin status", e)
-            false
-        }
-    }
 
     /**
      * Clears the OneSignal Player ID from EncryptedSharedPreferences.

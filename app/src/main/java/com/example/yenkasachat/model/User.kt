@@ -33,6 +33,12 @@ data class User(
     @SerializedName("createdAt")
     val createdAt: String,
 
+    @SerializedName("role")
+    val role: String,
+
+    @SerializedName("permissions")
+    val permissions: Permissions,
+
     @SerializedName("followers")
     val followers: List<String>? = emptyList(),
 

@@ -51,21 +51,11 @@
             android:layout_width="match_parent"
             android:layout_height="200dp"
             android:scaleType="centerCrop"
-            android:visibility="gone"
-            tools:visibility="visible"
-            tools:src="@drawable/sample_post" />
-        <!-- Inside layoutPostHeader -->
-        <ImageView
-            android:id="@+id/imagePostMedia"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"
             android:adjustViewBounds="true"
             android:visibility="gone"
             tools:visibility="visible"
-            tools:src="@drawable/ic_contacts" />
+            tools:src="@drawable/sample_post" />
 
-        <!-- ✅ Add this -->
         <VideoView
             android:id="@+id/videoPostMedia"
             android:layout_width="match_parent"
@@ -83,34 +73,41 @@
             android:paddingTop="6dp"
             tools:text="Sample caption goes here" />
 
+        <!-- ✅ FIX STARTS HERE -->
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="space_between"
             android:paddingTop="6dp">
 
             <TextView
                 android:id="@+id/textPostLikes"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="0 Likes"
                 android:textColor="@color/dark_gray" />
 
             <TextView
                 android:id="@+id/textPostComments"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
                 android:text="0 Comments"
                 android:textColor="@color/dark_gray" />
 
             <TextView
                 android:id="@+id/textPostViews"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
                 android:text="0 Views"
                 android:textColor="@color/dark_gray" />
         </LinearLayout>
+        <!-- ✅ FIX ENDS HERE -->
+
     </LinearLayout>
 
     <!-- 🔹 Comments List -->

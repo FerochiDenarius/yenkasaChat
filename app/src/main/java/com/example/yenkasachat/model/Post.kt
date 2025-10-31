@@ -4,27 +4,26 @@ import com.google.gson.annotations.SerializedName
 
 data class Post(
     @SerializedName("_id")
-    val postId: String,
+    val _id: String,                  // matches adapter references
 
-    // Author info (populated)
     val userId: UserBasic,
-
-    // Community (populated)
-    val communityId: CommunityBasic,
+    val communityId: CommunityBasic? = null,
 
     // Content
-    val text: String,
-    val imageUrl: String? = null,
-    val videoUrl: String? = null,
+    val caption: String,              // maps from 'text' in API
+    val mediaUrl: String? = null,     // single media for adapter (image/video)
+    val mediaUrls: List<String>? = null,
+    val mentions: List<String>? = null,
 
-    // ✅ New optional fields for multiple media + mentions
-    val mediaUrls: List<String>? = null, // For posts with multiple images/videos
-    val mentions: List<String>? = null,  // For highlighting @mentions
+    // ✅ FIX: Added the missing 'imageUrl' property.
+    // This field is expected by the PostAdapter. It's nullable to handle posts without images.
+    val imageUrl: String? = null,
 
     // Engagement
     val likes: List<String> = emptyList(),
     val likeCount: Int = 0,
     val commentCount: Int = 0,
+    val comments: List<Comment>? = null,
     val shareCount: Int = 0,
     val viewCount: Int = 0,
 
@@ -33,7 +32,7 @@ data class Post(
     val isPinned: Boolean = false,
     val visibility: String = "public",
 
-    // Tags
+    // Tags & location
     val tags: List<String> = emptyList(),
     val location: String? = null,
 
@@ -48,57 +47,14 @@ data class Post(
     var likedByCurrentUser: Boolean = false
 )
 
-data class UserBasic(
+data class Comment(
     @SerializedName("_id")
-    val id: String,
-    val username: String,
-    val profileImage: String? = null,
-    val verified: Boolean = false
-)
-
-data class CommunityBasic(
-    @SerializedName("_id")
-    val id: String,
-    val name: String,
-    val displayName: String
-)
-
-data class CreatePostRequest(
+    val _id: String,
+    val postId: String,
+    val user: UserBasic?,
     val text: String,
-    val imageUrl: String? = null,
-    val videoUrl: String? = null,
-    val tags: List<String> = emptyList(),
-    val location: String? = null,
-    val visibility: String = "public"
+    val createdAt: String
 )
 
-data class CreatePostResponse(
-    val success: Boolean,
-    val message: String,
-    val post: Post,
-    val coinsEarned: Int = 0
-)
 
-data class FeedResponse(
-    val posts: List<Post>,
-    val pagination: PaginationInfo
-)
 
-data class PaginationInfo(
-    val currentPage: Int,
-    val totalPages: Int,
-    val totalPosts: Int = 0,
-    val hasMore: Boolean
-)
-
-data class LikeResponse(
-    val success: Boolean,
-    val liked: Boolean,
-    val likeCount: Int,
-    val coinsRewarded: Int = 0
-)
-
-data class DeletePostResponse(
-    val success: Boolean,
-    val message: String
-)

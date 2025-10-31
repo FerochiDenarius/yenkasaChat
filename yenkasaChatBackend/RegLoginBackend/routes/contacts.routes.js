@@ -44,6 +44,28 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
+// Add to yenkasaChatBackend/RegLoginBackend/routes/contacts.routes.js
+
+router.delete('/:contactId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { contactId } = req.params;
+
+        const result = await Contact.findOneAndDelete({
+            _id: contactId,
+            userId: userId
+        });
+
+        if (!result) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+
+        res.status(200).json({ message: 'Contact deleted successfully' });
+    } catch (err) {
+        console.error("❌ Delete contact error:", err.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 // ✅ Get all contacts for the authenticated user
 router.get('/', authMiddleware, async (req, res) => {
     try {

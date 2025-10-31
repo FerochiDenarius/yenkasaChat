@@ -23,6 +23,14 @@ class MenuActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnChatRooms).setOnClickListener {
             startActivity(Intent(this, ChatRoomsActivity::class.java))
         }
+// ✅ Coin Wallet
+        findViewById<Button>(R.id.btnCoinWallet).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
+// ✅ App Verification
+        findViewById<Button>(R.id.btnAppVerification).setOnClickListener {
+            startActivity(Intent(this, AppVerificationActivity::class.java))
+        }
 
         // ✅ Account Info
         findViewById<Button>(R.id.btnAccount).setOnClickListener {

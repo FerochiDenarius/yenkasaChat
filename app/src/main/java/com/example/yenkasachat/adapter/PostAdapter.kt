@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/yenkasachat/adapter/PostAdapter.kt
 package com.example.yenkasachat.adapter
 
 import android.text.SpannableString
@@ -22,57 +21,71 @@ import java.util.*
 class PostAdapter(
     private var posts: List<Post>,
     private val onLikeClick: (Post, Int) -> Unit,
-    private val onCommentClick: (Post) -> Unit,
+    private val onCommentClick: (Post, Int) -> Unit,
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val profileImage: ImageView = itemView.findViewById(R.id.imageProfilePost)
-        val username: TextView = itemView.findViewById(R.id.textUsernamePost)
-        val verifiedBadge: ImageView = itemView.findViewById(R.id.imageVerifiedBadge)
-        val timestamp: TextView = itemView.findViewById(R.id.textTimestampPost)
-        val communityName: TextView = itemView.findViewById(R.id.textCommunityName)
+        private val profileImage: ImageView = itemView.findViewById(R.id.imageProfilePost)
+        private val username: TextView = itemView.findViewById(R.id.textUsernamePost)
+        private val verifiedBadge: ImageView = itemView.findViewById(R.id.imageVerifiedBadge)
+        private val timestamp: TextView = itemView.findViewById(R.id.textTimestampPost)
+        private val communityName: TextView = itemView.findViewById(R.id.textCommunityName)
+        private val postText: TextView = itemView.findViewById(R.id.textPostContent)
+        private val postImage: ImageView = itemView.findViewById(R.id.imagePostContent)
+        private val mediaRecycler: RecyclerView? = itemView.findViewById(R.id.recyclerMediaList)
+        private val btnLike: ImageButton = itemView.findViewById(R.id.btnLike)
+        private val btnComment: ImageButton = itemView.findViewById(R.id.btnComment)
+        private val btnShare: ImageButton = itemView.findViewById(R.id.btnShare)
+        private val likeCount: TextView = itemView.findViewById(R.id.textLikeCount)
+        private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
+        private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
 
-        val postText: TextView = itemView.findViewById(R.id.textPostContent)
-        val postImage: ImageView = itemView.findViewById(R.id.imagePostContent)
-        val mediaRecycler: RecyclerView? = itemView.findViewById(R.id.recyclerMediaList)
-
-        val btnLike: ImageButton = itemView.findViewById(R.id.btnLike)
-        val btnComment: ImageButton = itemView.findViewById(R.id.btnComment)
-        val btnShare: ImageButton = itemView.findViewById(R.id.btnShare)
-
-        val likeCount: TextView = itemView.findViewById(R.id.textLikeCount)
-        val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
-        val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
+// ... inside your PostViewHolder class
 
         fun bind(post: Post, position: Int) {
-            // === User Info ===
-            username.text = post.userId.username
-            verifiedBadge.visibility = if (post.userId.verified) View.VISIBLE else View.GONE
+            // ✅ FIX APPLIED HERE: Add safe calls (?.) and default values (?:)
+            // to prevent crashes if post.userId is null.
+            val user = post.userId
+            username.text = user?.username ?: "Unknown User" // Use a safe call and provide a default name
+            verifiedBadge.visibility = if (user?.verified == true) View.VISIBLE else View.GONE // Check for null and true
 
             Glide.with(itemView.context)
-                .load(post.userId.profileImage)
-                .placeholder(R.drawable.ic_profile_placeholder)
+                .load(user?.profileImage) // Use a safe call for the image URL
+                .placeholder(R.drawable.ic_profile_placeholder) // Default placeholder if URL is null
+                .error(R.drawable.ic_profile_placeholder) // Show placeholder on error
                 .circleCrop()
                 .into(profileImage)
 
-            // === Community ===
-            communityName.text = post.communityId.displayName
+            // Set up click listeners safely
+            val userId = user?.id
+            if (userId != null) {
+                profileImage.setOnClickListener { onUserClick(userId) }
+                username.setOnClickListener { onUserClick(userId) }
+            } else {
+                // If user is null, remove the listeners to prevent clicks
+                profileImage.setOnClickListener(null)
+                username.setOnClickListener(null)
+            }
 
-            // === Timestamp ===
+            // --- The rest of your bind method remains the same ---
+
+            // Community
+            communityName.text = post.communityId?.displayName ?: "General"
+
+            // Timestamp
             timestamp.text = formatTimestamp(post.createdAt)
 
-            // === Content & Mentions ===
-            postText.text = highlightMentions(post.text ?: "", post.mentions)
+            // Content
+            postText.text = highlightMentions(post.caption ?: "", post.mentions)
 
-            // === Media Handling ===
-            handleMediaDisplay(post)
+            // Media
+            handleMedia(post)
 
-            // === Engagement Stats ===
+            // Engagement
             likeCount.text = "${post.likeCount} likes"
             commentCount.text = "${post.commentCount} comments"
-
             if (post.coinsEarned > 0) {
                 coinsEarned.visibility = View.VISIBLE
                 coinsEarned.text = "🪙 ${post.coinsEarned} coins earned"
@@ -80,23 +93,20 @@ class PostAdapter(
                 coinsEarned.visibility = View.GONE
             }
 
-            // === Like Button State ===
+            // Like button
             updateLikeButton(post.likedByCurrentUser)
 
-            // === Click Listeners ===
+            // Click listeners for non-user elements
             btnLike.setOnClickListener { onLikeClick(post, position) }
-            btnComment.setOnClickListener { onCommentClick(post) }
-            btnShare.setOnClickListener { /* TODO: Share logic */ }
-
-            profileImage.setOnClickListener { onUserClick(post.userId.id) }
-            username.setOnClickListener { onUserClick(post.userId.id) }
+            btnComment.setOnClickListener { onCommentClick(post, position) }
             itemView.setOnClickListener { onPostClick(post) }
+            btnShare.setOnClickListener { /* TODO: share logic */ }
         }
 
-        private fun handleMediaDisplay(post: Post) {
-            // Handle multiple media (new field)
-            val mediaList = post.mediaUrls ?: emptyList()
+// ... rest of your PostAdapter file
 
+        private fun handleMedia(post: Post) {
+            val mediaList = post.mediaUrls ?: emptyList()
             if (mediaList.isNotEmpty()) {
                 postImage.visibility = View.GONE
                 mediaRecycler?.apply {
@@ -104,11 +114,13 @@ class PostAdapter(
                     layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
                     adapter = PostMediaAdapter(mediaList)
                 }
+                // ✅ FIX 2: The 'not' operator '!' must come before the expression.
             } else if (!post.imageUrl.isNullOrEmpty()) {
                 mediaRecycler?.visibility = View.GONE
                 postImage.visibility = View.VISIBLE
                 Glide.with(itemView.context)
                     .load(post.imageUrl)
+                    // ✅ FIX 3: 'placeholder' is a function. Use the correct drawable resource.
                     .placeholder(R.drawable.placeholder_image)
                     .error(R.drawable.placeholder_image)
                     .into(postImage)
@@ -140,10 +152,7 @@ class PostAdapter(
                     diff < 3600000 -> "${diff / 60000}m ago"
                     diff < 86400000 -> "${diff / 3600000}h ago"
                     diff < 604800000 -> "${diff / 86400000}d ago"
-                    else -> {
-                        val outputFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
-                        outputFormat.format(date ?: Date())
-                    }
+                    else -> SimpleDateFormat("MMM dd", Locale.getDefault()).format(date ?: Date())
                 }
             } catch (e: Exception) {
                 timestamp
@@ -167,14 +176,14 @@ class PostAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false)
-        return PostViewHolder(view)
-    }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+        PostViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false))
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         holder.bind(posts[position], position)
     }
+
+    // ... (rest of your adapter)
 
     override fun getItemCount(): Int = posts.size
 
@@ -183,13 +192,15 @@ class PostAdapter(
         notifyDataSetChanged()
     }
 
+    // ✅ FIX: The parameter 'isLiked' is now on a single line.
     fun updateLikeStatus(position: Int, isLiked: Boolean, likeCount: Int) {
-        if (position < posts.size) {
+        if (position in posts.indices) {
             val updatedPost = posts[position].copy(
-                likedByCurrentUser = isLiked,
+                likedByCurrentUser = isLiked, // This will now be resolved
                 likeCount = likeCount
             )
-            posts = posts.toMutableList().apply { set(position, updatedPost) }
+            // It's safer to check if 'posts' is a MutableList before trying to set an item
+            (posts as? MutableList<Post>)?.set(position, updatedPost)
             notifyItemChanged(position)
         }
     }

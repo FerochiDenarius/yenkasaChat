@@ -23,8 +23,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.yenkasachat.R
-import com.example.yenkasachat.network.CreateRoomRequest
-import com.example.yenkasachat.network.GenerateTokenRequest
+import com.example.yenkasachat.model.GenerateTokenRequest
+import com.example.yenkasachat.model.CreateRoomRequest
 import com.example.yenkasachat.network.DailyApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.webrtc.WebSocketProvider

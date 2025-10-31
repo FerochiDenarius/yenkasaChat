@@ -8,62 +8,17 @@ import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.*
+import com.example.yenkasachat.model.FeedResponse
+import com.example.yenkasachat.model.LikeResponse
+import com.example.yenkasachat.model.UnreadCountRequest
+import com.example.yenkasachat.model.RoomUnreadCountResponse
 
-// ===========================================================
-// 📦 DATA CLASSES (Keep all)
-// ===========================================================
 
-// --- Unread Count Feature ---
-data class UnreadCountRequest(
-    val userId: String,
-    val roomId: String
-)
 
-data class UnreadCountData(
-    val userId: String,
-    val roomId: String,
-    val count: Int,
-    val updatedAt: String? = null,
-    val lastReadTimestamp: String? = null
-)
 
-data class UnreadCountResponse(
-    val success: Boolean,
-    val data: UnreadCountData?,
-    val error: String?
-)
 
-data class RoomUnreadCountResponse(
-    val success: Boolean,
-    val count: Int,
-    val error: String?
-)
 
-data class RoomCount(
-    val roomId: String,
-    val count: Int
-)
 
-data class AllUnreadCountsResponse(
-    val success: Boolean,
-    val data: List<RoomCount>?,
-    val totalUnread: Int?,
-    val error: String?
-)
-
-// --- Daily.co API Models ---
-data class CreateRoomRequest(val roomName: String)
-data class CreateRoomResponse(val roomName: String, val roomUrl: String)
-
-data class GenerateTokenRequest(
-    val roomName: String,
-    val _id: String
-)
-
-data class GenerateTokenResponse(
-    val token: String,
-    val roomName: String
-)
 
 // ===========================================================
 // 🌐 API INTERFACE
@@ -228,8 +183,13 @@ interface ApiService {
         @Path("postId") postId: String
     ): Call<Map<String, Any>>
 
-    @GET("posts/{id}")
-    fun getPostById(@Path("id") postId: String): Call<Post>
+    @GET("posts/{postId}")
+    fun getPostById(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String
+    ): Call<Post>
+
+
 
     @GET("posts/my")
     fun getMyPosts(@Header("Authorization") token: String): Call<List<Post>>
@@ -380,8 +340,10 @@ interface ApiService {
 
     // ==================== COINS ====================
 
-    @GET("/api/coins/balance")
-    fun getCoinBalance(@Header("Authorization") token: String): Call<CoinBalance>
+    @GET("coins/balance")
+    fun getCoinBalance(
+        @Header("Authorization") token: String
+    ): Call<CoinBalanceResponse>
 
     @POST("/api/coins/transfer")
     fun transferCoins(
@@ -396,6 +358,12 @@ interface ApiService {
         @Query("limit") limit: Int = 50,
         @Query("type") type: String? = null
     ): Call<TransactionsResponse>
+
+
+    @GET("coins/history")
+    fun getCoinHistory(
+        @Header("Authorization") token: String
+    ): Call<CoinTransactionResponse>
 
 // ===========================
     // 🏡 FEED ENDPOINTS

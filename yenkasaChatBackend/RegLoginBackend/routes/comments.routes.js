@@ -10,20 +10,21 @@ const authMiddleware = require('../middleware/auth');
 const REWARD_COMMENT = 3;
 
 // ✅ Add comment to a post
+// ✅ Add comment to a post
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { postId, text, imageUrl, parentCommentId } = req.body;
     const userId = req.user.id;
-    
+
     if (!postId || !text || text.trim().length === 0) {
       return res.status(400).json({ error: 'Post ID and comment text are required' });
     }
-    
+
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    
+
     // Create comment
     const comment = new Comment({
       postId,
@@ -32,21 +33,18 @@ router.post('/', authMiddleware, async (req, res) => {
       imageUrl: imageUrl || '',
       parentCommentId: parentCommentId || null
     });
-    
+
     await comment.save();
-    
+
     // Increment post comment count
     post.commentCount += 1;
     await post.save();
-    
+
     // If this is a reply, increment parent comment reply count
     if (parentCommentId) {
-      await Comment.findByIdAndUpdate(
-        parentCommentId,
-        { $inc: { replyCount: 1 } }
-      );
+      await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
     }
-    
+
     // Reward post author with coins
     const postAuthor = await User.findById(post.userId);
     if (postAuthor && postAuthor._id.toString() !== userId) {
@@ -54,8 +52,7 @@ router.post('/', authMiddleware, async (req, res) => {
       post.coinsEarned += REWARD_COMMENT;
       await postAuthor.save();
       await post.save();
-      
-      // Record transaction
+
       await CoinTransaction.create({
         fromUserId: userId,
         toUserId: post.userId,
@@ -66,12 +63,59 @@ router.post('/', authMiddleware, async (req, res) => {
         relatedCommentId: comment._id
       });
     }
-    
-    // Populate user info
+
+    // Populate user info for response
     const populatedComment = await Comment.findById(comment._id)
       .populate('userId', 'username profileImage verified')
       .lean();
-    
+
+    // 🔔 === START NOTIFICATION LOGIC ===
+    const commenter = await User.findById(userId);
+    const commentAuthorName = commenter?.username || 'Someone';
+
+    // Collect all user IDs to notify: post author + other commenters
+    let usersToNotify = new Set();
+
+    // 1️⃣ Post owner
+    if (post.userId.toString() !== userId) {
+      usersToNotify.add(post.userId.toString());
+    }
+
+    // 2️⃣ Other commenters (excluding current commenter)
+    const previousComments = await Comment.find({ postId }).select('userId');
+    previousComments.forEach(c => {
+      if (c.userId.toString() !== userId) {
+        usersToNotify.add(c.userId.toString());
+      }
+    });
+
+    // 3️⃣ Fetch OneSignal player IDs for all these users
+    const users = await User.find({ _id: { $in: Array.from(usersToNotify) } }).select('oneSignalPlayerId');
+    const playerIds = users
+      .map(u => u.oneSignalPlayerId)
+      .filter(id => id && id.trim().length > 0);
+
+    if (playerIds.length > 0) {
+      const notificationData = {
+        app_id: process.env.ONESIGNAL_APP_ID,
+        include_player_ids: playerIds,
+        headings: { en: "New Comment" },
+        contents: { en: `${commentAuthorName} commented: "${text.trim()}"` },
+        data: { postId: postId },
+      };
+
+      // Send to OneSignal
+      await fetch("https://onesignal.com/api/v1/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Authorization": "Basic os_v2_app_czo7tzva5jfdpjakcefppyuk2kfg5qu74gsed34rhjwskilsxsk43baomvtcp2wdtejrduitjubldd5atnpoakyb6hcwv6h5ncnmxmi"
+        },
+        body: JSON.stringify(notificationData)
+      });
+    }
+    // 🔔 === END NOTIFICATION LOGIC ===
+
     res.status(201).json({
       success: true,
       message: 'Comment added successfully',
@@ -82,6 +126,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to add comment' });
   }
 });
+
 
 // ✅ Get comments for a post
 router.get('/post/:postId', authMiddleware, async (req, res) => {

@@ -74,7 +74,35 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        postAdapter = PostAdapter(userPostsList)
+        postAdapter = PostAdapter(
+            posts = userPostsList,
+            // ✅ FIX: The lambda now accepts two parameters: 'post' and 'position'
+            onLikeClick = { post, position ->
+                // Handle like click (optional)
+                // You might want to implement the like logic here later
+            },
+            // ✅ FIX: The lambda now accepts 'post' and an ignored position '_'
+            onCommentClick = { post, _ ->
+                // Handle comment click
+                val intent = Intent(this, CommentsActivity::class.java)
+                // It's good practice to use a consistent key name, like "POST_ID"
+                intent.putExtra("POST_ID", post._id)
+                startActivity(intent)
+            },
+            onUserClick = { userId ->
+                // This is correct, but clicking a user on their own profile
+                // could be redundant. You might want to prevent this.
+                val intent = Intent(this, UserProfileActivity::class.java)
+                intent.putExtra("USER_ID", userId)
+                startActivity(intent)
+            },
+            onPostClick = { post ->
+                // ✅ FIX: It's better to handle post clicks here for clarity
+                val intent = Intent(this, PostDetailActivity::class.java)
+                intent.putExtra("POST_ID", post._id)
+                startActivity(intent)
+            }
+        )
         recyclerUserPosts.layoutManager = GridLayoutManager(this, 3)
         recyclerUserPosts.adapter = postAdapter
     }

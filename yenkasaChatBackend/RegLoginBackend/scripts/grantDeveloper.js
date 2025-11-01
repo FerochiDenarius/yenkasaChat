@@ -14,7 +14,7 @@ async function run() {
       useUnifiedTopology: true,
     });
 
-    const userEmail = 'ofosumenyabrightkofi@gmail.com'; // 👈 your email
+    const userEmail = 'ferochidenarius@gmail.com'; // 👈 your email
     console.log('🔍 Searching for user:', userEmail);
 
     const user = await User.findOne({ email: userEmail });
@@ -25,7 +25,7 @@ async function run() {
     }
 
     // ✅ Grant developer privileges
-    user.role = 'developer';
+    user.role = 'admin';
     user.verified = true;
     user.permissions = {
       canPost: true,

@@ -8,7 +8,7 @@ async function run() {
     console.log('Connecting to DB...');
     await mongoose.connect(process.env.MONGODB_URI);
 
-    const userEmail = 'joanaamoquandoh21@gmail.com'; // put your correct email
+    const userEmail = 'ferochidenarius@gmail.com'; // put your correct email
     console.log('Looking for user with email:', userEmail);
 
     const user = await User.findOne({ email: userEmail });

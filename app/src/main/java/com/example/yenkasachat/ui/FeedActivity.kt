@@ -3,6 +3,7 @@ package com.example.yenkasachat.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -15,6 +16,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.model.FeedResponse
 import com.example.yenkasachat.model.LikeResponse
+import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.TrackLoginResponse
 import com.example.yenkasachat.network.ApiClient
@@ -22,8 +24,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-// ✅ FIX: Import the new activity class
-import com.example.yenkasachat.ui.PostDetailActivity
 
 class FeedActivity : AppCompatActivity() {
 
@@ -50,14 +50,20 @@ class FeedActivity : AppCompatActivity() {
         initViews()
         setupRecyclerView()
         setupSwipeRefresh()
-        loadFeed()
 
-        // Track daily login for verification rewards
+        // ✅ Load feed once adapter is ready
+        recyclerView.post {
+            Log.d("FeedActivity", "🚀 Adapter attached, loading feed now...")
+            loadFeed()
+        }
+
+        // ✅ Track daily login
         trackDailyLogin()
 
+        // ✅ Use TokenManager instead of SharedPreferences
         fabCreatePost.setOnClickListener {
-            val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-            val isVerified = prefs.getBoolean("verified", false)
+            val isVerified = TokenManager.isVerified(this)
+
             if (isVerified) {
                 startActivity(Intent(this, PostActivity::class.java))
             } else {
@@ -71,19 +77,23 @@ class FeedActivity : AppCompatActivity() {
     }
 
     private fun initAuth() {
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-        token = prefs.getString("token", null)
-        userId = prefs.getString("userId", null)
+        token = TokenManager.getToken(this)
+        userId = TokenManager.getUserId(this)
 
-        if (token == null || userId == null) {
+        Log.d("FeedActivity", "🔑 Token from TokenManager: $token")
+        Log.d("FeedActivity", "👤 UserId from TokenManager: $userId")
+
+        if (token.isNullOrEmpty() || userId.isNullOrEmpty()) {
             Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
+            return
         }
     }
 
     override fun onResume() {
         super.onResume()
+        Log.d("FeedActivity", "🔁 onResume triggered — refreshing feed")
         refreshFeed()
     }
 
@@ -98,6 +108,8 @@ class FeedActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
         val communityName = prefs.getString("communityName", "Your Community")
         communityNameView.text = communityName
+
+        Log.d("FeedActivity", "🏘️ Community: $communityName")
     }
 
     private fun setupRecyclerView() {
@@ -107,13 +119,11 @@ class FeedActivity : AppCompatActivity() {
             onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { userId -> openUserProfile(userId) },
             onPostClick = { post ->
-                // All errors here are now resolved because PostDetailActivity exists
                 val intent = Intent(this, PostDetailActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             }
         )
-
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
@@ -132,6 +142,7 @@ class FeedActivity : AppCompatActivity() {
 
     private fun setupSwipeRefresh() {
         swipeRefresh.setOnRefreshListener {
+            Log.d("FeedActivity", "🔄 User triggered refresh")
             refreshFeed()
         }
     }
@@ -141,6 +152,8 @@ class FeedActivity : AppCompatActivity() {
         isLoading = true
         showLoading(true)
 
+        Log.d("FeedActivity", "📡 Fetching feed page $currentPage...")
+
         ApiClient.apiService.getFeed("Bearer $token", page = currentPage, limit = 20)
             .enqueue(object : Callback<FeedResponse> {
                 override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
@@ -148,13 +161,21 @@ class FeedActivity : AppCompatActivity() {
                     showLoading(false)
                     swipeRefresh.isRefreshing = false
 
+                    Log.d("FeedActivity", "✅ Response code: ${response.code()}")
+
                     if (response.isSuccessful && response.body() != null) {
                         val feedResponse = response.body()!!
+                        Log.d("FeedActivity", "📦 Posts received: ${feedResponse.posts.size}")
+                        Log.d("FeedActivity", "🧩 Pagination: ${feedResponse.pagination}")
+
                         if (currentPage == 1) posts.clear()
                         posts.addAll(feedResponse.posts)
                         adapter.updatePosts(posts)
+
                         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
                     } else {
+                        val errorBody = response.errorBody()?.string()
+                        Log.e("FeedActivity", "❌ Failed to load feed. Error body: $errorBody")
                         Toast.makeText(this@FeedActivity, "Failed to load feed.", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -163,6 +184,7 @@ class FeedActivity : AppCompatActivity() {
                     isLoading = false
                     showLoading(false)
                     swipeRefresh.isRefreshing = false
+                    Log.e("FeedActivity", "💥 Network failure: ${t.message}", t)
                     Toast.makeText(this@FeedActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -170,11 +192,13 @@ class FeedActivity : AppCompatActivity() {
 
     private fun loadMorePosts() {
         currentPage++
+        Log.d("FeedActivity", "⬇️ Loading more posts (page $currentPage)")
         loadFeed()
     }
 
     private fun refreshFeed() {
         currentPage = 1
+        Log.d("FeedActivity", "🔁 Refreshing feed from page 1")
         loadFeed()
     }
 
@@ -184,11 +208,14 @@ class FeedActivity : AppCompatActivity() {
         else
             ApiClient.apiService.likePost("Bearer $token", post._id)
 
+        Log.d("FeedActivity", "❤️ Toggle like for post ${post._id} (current liked=${post.likedByCurrentUser})")
+
         call.enqueue(object : Callback<LikeResponse> {
             override fun onResponse(call: Call<LikeResponse>, response: Response<LikeResponse>) {
                 if (response.isSuccessful && response.body() != null) {
                     val likeResponse = response.body()!!
                     adapter.updateLikeStatus(position, likeResponse.liked, likeResponse.likeCount)
+                    Log.d("FeedActivity", "👍 Like updated: liked=${likeResponse.liked}, count=${likeResponse.likeCount}")
                     if (likeResponse.coinsRewarded > 0) {
                         Toast.makeText(
                             this@FeedActivity,
@@ -196,10 +223,13 @@ class FeedActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
                     }
+                } else {
+                    Log.e("FeedActivity", "❌ Failed to update like. Code=${response.code()}")
                 }
             }
 
             override fun onFailure(call: Call<LikeResponse>, t: Throwable) {
+                Log.e("FeedActivity", "💥 Like request failed: ${t.message}", t)
                 Toast.makeText(this@FeedActivity, "Failed: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
@@ -218,14 +248,15 @@ class FeedActivity : AppCompatActivity() {
     }
 
     private fun trackDailyLogin() {
+        Log.d("FeedActivity", "📆 Tracking daily login...")
         ApiClient.apiService.trackLogin("Bearer $token")
             .enqueue(object : Callback<TrackLoginResponse> {
                 override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {
-                    // Optional: Handle success
+                    Log.d("FeedActivity", "✅ Login tracking response code: ${response.code()}")
                 }
 
                 override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
-                    // Optional: Handle failure
+                    Log.e("FeedActivity", "💥 Login tracking failed: ${t.message}", t)
                 }
             })
     }

@@ -1,3 +1,4 @@
+// models/feed.model.js
 const Post = require("./post.model");
 const User = require("./user.model");
 
@@ -9,18 +10,25 @@ async function getCommunityFeed(userId, page = 1, limit = 20) {
 
   const communityId = user.community ? user.community._id : null;
 
-  // ✅ Build dynamic filter
+  // ✅ Build flexible feed filter
   const filter = {
     isActive: true,
-    isApproved: true, // ✅ Only show approved posts
+    isApproved: true, // ✅ Show only approved posts
     visibility: { $in: ["public", "followers"] },
   };
 
-  // ✅ If user is in a community, show its posts; else show all approved public posts
+  // ✅ Temporary: Include posts without community (so new posts always show)
   if (communityId) {
     filter.$or = [
       { communityId: communityId },
-      { communityId: { $exists: false } }, // in case of posts without community
+      { communityId: { $exists: false } },
+      { communityId: null },
+    ];
+  } else {
+    // If user not in a community, show all active public posts
+    filter.$or = [
+      { communityId: { $exists: false } },
+      { communityId: null },
     ];
   }
 
@@ -39,7 +47,7 @@ async function getCommunityFeed(userId, page = 1, limit = 20) {
     likedByCurrentUser: post.likes?.some(
       (id) => id.toString() === userId.toString()
     ),
-    likes: undefined,
+    likes: undefined, // hide raw likes array
   }));
 
   return {

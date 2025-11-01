@@ -13,7 +13,6 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.network.ApiClient
-import com.example.yenkasachat.ui.CommunitiesActivity
 import com.example.yenkasachat.util.TokenManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -218,22 +217,28 @@ class PostActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    Toast.makeText(
-                        this@PostActivity,
-                        "✅ Post created successfully!",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    val post = response.body()
+                    Log.i("PostActivity", "✅ Post Response: ${response.body()}")
+
+                    // Get the current user's role
+                    val userRole = TokenManager.getUserRole(this@PostActivity)
+                    val hasApprovalPrivilege = userRole == "admin" || userRole == "moderator" || userRole == "developer"
+
+                    // Handle message based on role / approval status
+                    if (hasApprovalPrivilege) {
+                        Toast.makeText(this@PostActivity, "✅ Post published successfully!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@PostActivity, "🕓 Post submitted for approval.", Toast.LENGTH_SHORT).show()
+                    }
+
+                    Log.i("PostActivity", "isApproved=${post?.isApproved}")
+
                     setResult(Activity.RESULT_OK)
                     finish()
                 } else {
                     val errorBody = response.errorBody()?.string()
-                    val message = try {
-                        JSONObject(errorBody ?: "{}").optString("error", "Failed to upload post.")
-                    } catch (e: Exception) {
-                        "Failed to upload post."
-                    }
-                    Log.e("PostActivity", "Upload failed: $message")
-                    Toast.makeText(this@PostActivity, message, Toast.LENGTH_LONG).show()
+                    Log.e("PostActivity", "❌ Error body: $errorBody")
+                    Toast.makeText(this@PostActivity, "Failed to create post (${response.code()})", Toast.LENGTH_SHORT).show()
                 }
             }
 

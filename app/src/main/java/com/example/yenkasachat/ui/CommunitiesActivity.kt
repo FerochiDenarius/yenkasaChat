@@ -250,36 +250,31 @@ class CommunitiesActivity : AppCompatActivity() {
             })
     }
     private fun setupCreateCommunityButtons() {
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
+        val userRole = TokenManager.getUserRole(this)
+        val isVerified = TokenManager.isVerified(this)
 
-        // Top "Create" button
+        // ✅ Only these roles can create or edit communities
+        val canManageCommunity = userRole == "admin" || userRole == "moderator" || userRole == "developer"
+
+        Log.d("CommunitiesActivity", "User role=$userRole, verified=$isVerified, canManageCommunity=$canManageCommunity")
+
         val btnCreateCommunity = findViewById<Button>(R.id.btnCreateCommunity)
-        btnCreateCommunity.setOnClickListener {
-            val isVerified = prefs.getBoolean("verified", false)
-            if (isVerified) {
+
+        val launchCreateCommunity = {
+            if (canManageCommunity && isVerified) {
                 startActivity(Intent(this, CreateCommunityActivity::class.java))
             } else {
-                Toast.makeText(
-                    this,
-                    "You must be verified to create a community",
-                    Toast.LENGTH_LONG
-                ).show()
+                val message = when {
+                    !isVerified -> "You must be verified to create a community"
+                    else -> "Only admins, moderators, or developers can create communities"
+                }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }
 
-        // Floating action button
-        fabCreateCommunity.setOnClickListener {
-            val isVerified = prefs.getBoolean("verified", false)
-            if (isVerified) {
-                startActivity(Intent(this, CreateCommunityActivity::class.java))
-            } else {
-                Toast.makeText(
-                    this,
-                    "You must be verified to create a community",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
+        // Attach listeners
+        btnCreateCommunity.setOnClickListener { launchCreateCommunity() }
+        fabCreateCommunity.setOnClickListener { launchCreateCommunity() }
     }
 
     private fun showLoading(show: Boolean) {

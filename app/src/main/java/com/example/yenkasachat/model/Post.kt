@@ -10,13 +10,13 @@ data class Post(
     val communityId: CommunityBasic? = null,
 
     // Content
+    @SerializedName("text")
     val caption: String,              // maps from 'text' in API
     val mediaUrl: String? = null,     // single media for adapter (image/video)
     val mediaUrls: List<String>? = null,
     val mentions: List<String>? = null,
 
-    // ✅ FIX: Added the missing 'imageUrl' property.
-    // This field is expected by the PostAdapter. It's nullable to handle posts without images.
+    // ✅ Added because some adapters and older posts use it
     val imageUrl: String? = null,
 
     // Engagement
@@ -31,6 +31,14 @@ data class Post(
     val isActive: Boolean = true,
     val isPinned: Boolean = false,
     val visibility: String = "public",
+
+    // ✅ NEW: post approval status
+    @SerializedName("status")
+    val status: String? = null,       // "approved", "pending", "rejected"
+
+    // ✅ NEW: convenience flag
+    @SerializedName("isApproved")
+    val isApproved: Boolean = false,  // optional but nice for quick checks
 
     // Tags & location
     val tags: List<String> = emptyList(),
@@ -55,6 +63,3 @@ data class Comment(
     val text: String,
     val createdAt: String
 )
-
-
-

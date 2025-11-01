@@ -7,16 +7,23 @@ const { getCommunityFeed } = require("../models/feed.model");
 // GET /api/feed
 router.get("/", auth, async (req, res) => {
   try {
-    const userId = req.user.id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
 
-    const feedData = await getCommunityFeed(userId, page, limit);
-    res.status(200).json(feedData);
+    const posts = await require("../models/post.model")
+      .find()
+      .populate("user", "username profileImage")
+      .populate("community", "name")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.status(200).json({ posts });
   } catch (err) {
-    console.error("❌ Error fetching community feed:", err);
+    console.error("❌ Error fetching feed:", err);
     res.status(500).json({ error: err.message || "Failed to fetch feed" });
   }
 });
+
 
 module.exports = router;

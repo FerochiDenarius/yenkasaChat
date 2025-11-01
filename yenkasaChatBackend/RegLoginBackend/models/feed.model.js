@@ -1,31 +1,30 @@
-// models/feed.model.js
 const Post = require("./post.model");
 const User = require("./user.model");
 
-/**
- * Fetches a paginated feed for a specific user.
- * Includes only posts from the user's community (no follower filter yet).
- */
 async function getCommunityFeed(userId, page = 1, limit = 20) {
   const skip = (page - 1) * limit;
 
-  // Fetch user to identify their community
   const user = await User.findById(userId).populate("community");
+  if (!user) throw new Error("User not found");
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+  const communityId = user.community ? user.community._id : null;
 
-  if (!user.community) {
-    throw new Error("User is not part of any community");
-  }
-
-  // Query posts from that community
-  const posts = await Post.find({
-    communityId: user.community._id,
+  // ✅ Build dynamic filter
+  const filter = {
     isActive: true,
+    isApproved: true, // ✅ Only show approved posts
     visibility: { $in: ["public", "followers"] },
-  })
+  };
+
+  // ✅ If user is in a community, show its posts; else show all approved public posts
+  if (communityId) {
+    filter.$or = [
+      { communityId: communityId },
+      { communityId: { $exists: false } }, // in case of posts without community
+    ];
+  }
+
+  const posts = await Post.find(filter)
     .populate("userId", "username profileImage verified")
     .populate("communityId", "name displayName")
     .sort({ isPinned: -1, createdAt: -1 })
@@ -33,15 +32,11 @@ async function getCommunityFeed(userId, page = 1, limit = 20) {
     .limit(limit)
     .lean();
 
-  const totalPosts = await Post.countDocuments({
-    communityId: user.community._id,
-    isActive: true,
-  });
+  const totalPosts = await Post.countDocuments(filter);
 
-  // Add like flag
   const postsWithLikeStatus = posts.map((post) => ({
     ...post,
-    likedByCurrentUser: post.likes.some(
+    likedByCurrentUser: post.likes?.some(
       (id) => id.toString() === userId.toString()
     ),
     likes: undefined,

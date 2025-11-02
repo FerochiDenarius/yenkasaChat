@@ -1,11 +1,59 @@
 package com.example.yenkasachat.model
 
+import com.google.gson.annotations.SerializedName
 
+data class Comment(
+    @SerializedName("_id")
+    val _id: String,
 
+    @SerializedName("postId")
+    val postId: String,
 
-    data class CommentUser(
-        val _id: String,
-        val username: String,
-        val profileImage: String?
-    )
+    @SerializedName("userId")
+    val user: CommentUser,  // populated user info
 
+    @SerializedName("text")
+    val text: String,
+
+    @SerializedName("imageUrl")
+    val imageUrl: String? = null,
+
+    @SerializedName("likes")
+    val likes: List<String> = emptyList(),
+
+    @SerializedName("likeCount")
+    val likeCount: Int = 0,
+
+    @SerializedName("parentCommentId")
+    val parentCommentId: String? = null,
+
+    @SerializedName("replyCount")
+    val replyCount: Int = 0,
+
+    @SerializedName("isActive")
+    val isActive: Boolean = true,
+
+    @SerializedName("createdAt")
+    val createdAt: String? = null,
+
+    @SerializedName("updatedAt")
+    val updatedAt: String? = null
+) {
+    // Helper property to easily check if comment is deleted
+    val isDeleted: Boolean
+        get() = !isActive
+}
+
+data class CommentUser(
+    @SerializedName("_id")
+    val _id: String,
+
+    @SerializedName("username")
+    val username: String,
+
+    @SerializedName("profileImage")
+    val profileImage: String? = null,
+
+    @SerializedName("verified")
+    val verified: Boolean = false
+)

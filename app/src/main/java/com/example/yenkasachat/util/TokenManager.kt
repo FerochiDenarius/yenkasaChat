@@ -30,7 +30,7 @@ object TokenManager {
     private const val IS_ADMIN_KEY = "is_admin"
     private const val IS_MODERATOR_KEY = "is_moderator"
     private const val IS_DEVELOPER_KEY = "is_developer"
-
+    private const val COMMUNITY_ID_KEY = "community_id"
     // Logging Tag
     private const val TAG = "TokenManager"
 
@@ -546,6 +546,28 @@ object TokenManager {
         }
     }
 
+
+
+    fun saveCommunityId(context: Context, communityId: String?) {
+        try {
+            getEncryptedPrefs(context).edit().putString(COMMUNITY_ID_KEY, communityId).apply()
+            Log.i(TAG, "Community ID saved: $communityId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving community ID", e)
+        }
+    }
+
+    fun getCommunityId(context: Context): String? {
+        return try {
+            val id = getEncryptedPrefs(context).getString(COMMUNITY_ID_KEY, null)
+            Log.d(TAG, "Retrieved Community ID: $id")
+            id
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting community ID", e)
+            null
+        }
+    }
+
     fun setModerator(context: Context, isModerator: Boolean) {
         try {
             getEncryptedPrefs(context).edit().putBoolean(IS_MODERATOR_KEY, isModerator).apply()
@@ -645,6 +667,75 @@ object TokenManager {
     }
 
 
+    // === 🔒 BLOCKED USERS MANAGEMENT ===
+    private const val BLOCKED_USERS_KEY = "blocked_users_list"
+
+    /**
+     * Save the full set of blocked user IDs.
+     */
+    fun saveBlockedUsers(context: Context, blockedUsers: Set<String>) {
+        try {
+            getEncryptedPrefs(context).edit()
+                .putStringSet(BLOCKED_USERS_KEY, blockedUsers)
+                .apply()
+            Log.i(TAG, "🔒 Blocked users list saved (${blockedUsers.size} total).")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving blocked users list", e)
+        }
+    }
+
+    /**
+     * Retrieve the full list of blocked user IDs.
+     */
+    fun getBlockedUsers(context: Context): Set<String> {
+        return try {
+            getEncryptedPrefs(context).getStringSet(BLOCKED_USERS_KEY, emptySet()) ?: emptySet()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting blocked users list", e)
+            emptySet()
+        }
+    }
+
+    /**
+     * Add one user to the blocked list.
+     */
+    fun addBlockedUser(context: Context, userId: String) {
+        try {
+            val current = getBlockedUsers(context).toMutableSet()
+            current.add(userId)
+            saveBlockedUsers(context, current)
+            Log.i(TAG, "🚫 Added user $userId to blocked list.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding blocked user", e)
+        }
+    }
+
+    /**
+     * Remove one user from the blocked list.
+     */
+    fun removeBlockedUser(context: Context, userId: String) {
+        try {
+            val current = getBlockedUsers(context).toMutableSet()
+            if (current.remove(userId)) {
+                saveBlockedUsers(context, current)
+                Log.i(TAG, "✅ Unblocked user $userId successfully.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing blocked user", e)
+        }
+    }
+
+    /**
+     * Check if a user is currently blocked.
+     */
+    fun isUserBlocked(context: Context, userId: String): Boolean {
+        return try {
+            getBlockedUsers(context).contains(userId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking blocked user", e)
+            false
+        }
+    }
 
 
 

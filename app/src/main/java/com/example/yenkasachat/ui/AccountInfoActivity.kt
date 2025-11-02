@@ -88,17 +88,22 @@ class AccountInfoActivity : AppCompatActivity() {
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },
-            // For the other listeners, you can provide empty lambdas if you
-            // don't need the functionality in this specific screen.
             onLikeClick = { _, _ -> /* Not needed in this grid view */ },
             onCommentClick = { _, _ -> /* Not needed in this grid view */ },
-            onUserClick = { /* Not needed, we are already on a user's profile */ }
+            onUserClick = { /* Not needed, we are already on a user's profile */ },
+            onShareClick = { post ->
+                // Optional: implement sharing or leave empty if not needed
+                val shareIntent = Intent(Intent.ACTION_SEND)
+                shareIntent.type = "text/plain"
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
+                shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
+                startActivity(Intent.createChooser(shareIntent, "Share via"))
+            }
         )
 
         recyclerUserPosts.apply {
             layoutManager = GridLayoutManager(this@AccountInfoActivity, 3)
             adapter = postAdapter
-            // isNestedScrollingEnabled = false // This is often not needed
         }
     }
 
@@ -247,8 +252,8 @@ class AccountInfoActivity : AppCompatActivity() {
     }
 
     private fun openFollowList(type: String) {
-        val intent = Intent(this, FollowListActivity::class.java)
-        intent.putExtra("TYPE", type)
+        val intent = Intent(this, FollowFeedActivity::class.java)
+        intent.putExtra("LIST_TYPE", type) // "followers" or "following"
         intent.putExtra("USER_ID", TokenManager.getUserId(this))
         startActivity(intent)
     }

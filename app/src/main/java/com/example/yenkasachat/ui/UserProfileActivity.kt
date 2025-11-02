@@ -1,5 +1,6 @@
 package com.example.yenkasachat.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -14,8 +15,10 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
+import com.example.yenkasachat.model.BlockResponse
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.ProfileResponse
+import com.example.yenkasachat.model.FollowResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
@@ -76,31 +79,30 @@ class UserProfileActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         postAdapter = PostAdapter(
             posts = userPostsList,
-            // ✅ FIX: The lambda now accepts two parameters: 'post' and 'position'
             onLikeClick = { post, position ->
-                // Handle like click (optional)
-                // You might want to implement the like logic here later
+                // TODO: Handle like logic
             },
-            // ✅ FIX: The lambda now accepts 'post' and an ignored position '_'
             onCommentClick = { post, _ ->
-                // Handle comment click
                 val intent = Intent(this, CommentsActivity::class.java)
-                // It's good practice to use a consistent key name, like "POST_ID"
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },
             onUserClick = { userId ->
-                // This is correct, but clicking a user on their own profile
-                // could be redundant. You might want to prevent this.
                 val intent = Intent(this, UserProfileActivity::class.java)
                 intent.putExtra("USER_ID", userId)
                 startActivity(intent)
             },
             onPostClick = { post ->
-                // ✅ FIX: It's better to handle post clicks here for clarity
                 val intent = Intent(this, PostDetailActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
+            },
+            onShareClick = { post ->
+                val shareIntent = Intent(Intent.ACTION_SEND)
+                shareIntent.type = "text/plain"
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
+                shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
+                startActivity(Intent.createChooser(shareIntent, "Share via"))
             }
         )
         recyclerUserPosts.layoutManager = GridLayoutManager(this, 3)
@@ -191,64 +193,57 @@ class UserProfileActivity : AppCompatActivity() {
 
         val call = ApiClient.apiService.toggleFollow(userId!!, "Bearer $token")
 
-        call.enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
-                if (response.isSuccessful) {
+        call.enqueue(object : Callback<FollowResponse> {
+            override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
+                if (response.isSuccessful && response.body() != null) {
+                    // Toggle follow state
                     isFollowing = !isFollowing
                     btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
 
+                    // Show server message
                     Toast.makeText(
                         this@UserProfileActivity,
-                        if (isFollowing) "Followed user" else "Unfollowed user",
+                        response.body()!!.message,
                         Toast.LENGTH_SHORT
                     ).show()
 
                     fetchUserProfile()
                 } else {
-                    Toast.makeText(this@UserProfileActivity, "Failed to update follow", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@UserProfileActivity,
+                        "Failed to update follow",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+            override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                Toast.makeText(
+                    this@UserProfileActivity,
+                    "Network error: ${t.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
+
     }
 
     private fun toggleBlockUser() {
         val token = TokenManager.getToken(this) ?: return
-        if (userId.isNullOrEmpty()) return
+        val targetUserId = userId ?: return
 
-        val call = if (isBlocked)
-            ApiClient.apiService.unblockUser("Bearer $token", userId!!)
-        else
-            ApiClient.apiService.blockUser("Bearer $token", userId!!)
-
-        call.enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
-                if (response.isSuccessful) {
-                    isBlocked = !isBlocked
-                    btnBlock.text = if (isBlocked) "Unblock" else "Block"
-                    Toast.makeText(
-                        this@UserProfileActivity,
-                        if (isBlocked) "User blocked" else "User unblocked",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(this@UserProfileActivity, "Failed to block/unblock user", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                Toast.makeText(this@UserProfileActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+        // 🔄 Call the shared FeedUtils helper
+        FeedUtils.toggleBlock(this, token, targetUserId) { _, blockedUser ->
+            // ✅ Toggle UI based on local block state
+            isBlocked = if (TokenManager.isUserBlocked(this, blockedUser)) true else false
+            btnBlock.text = if (isBlocked) "Unblock" else "Block"
+        }
     }
 
     private fun openFollowList(type: String) {
-        val intent = Intent(this, FollowListActivity::class.java)
-        intent.putExtra("TYPE", type)
-        intent.putExtra("USER_ID", userId)
+        val intent = Intent(this, FollowFeedActivity::class.java)
+        intent.putExtra("LIST_TYPE", type) // "followers" or "following"
+        intent.putExtra("USER_ID", TokenManager.getUserId(this))
         startActivity(intent)
     }
 }

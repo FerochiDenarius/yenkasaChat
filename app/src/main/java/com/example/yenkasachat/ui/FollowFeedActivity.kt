@@ -2,12 +2,14 @@ package com.example.yenkasachat.ui
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.UserAdapter
+import com.example.yenkasachat.model.FollowResponse
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
@@ -27,82 +29,120 @@ class FollowFeedActivity : AppCompatActivity() {
     private lateinit var recyclerUsers: RecyclerView
     private lateinit var adapter: UserAdapter
     private val users = mutableListOf<User>()
+
     private lateinit var listType: String
     private lateinit var userId: String
+    private lateinit var btnFollowers: Button
+    private lateinit var btnFollowing: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_follow_feed)
 
         recyclerUsers = findViewById(R.id.recyclerUsers)
+        btnFollowers = findViewById(R.id.btnFollowers)
+        btnFollowing = findViewById(R.id.btnFollowing)
+
         recyclerUsers.layoutManager = LinearLayoutManager(this)
 
-        adapter = UserAdapter(users) { user, _ ->
-            val token = TokenManager.getToken(this)
-            val currentUserId = TokenManager.getUserId(this)
-            if (token.isNullOrEmpty() || currentUserId == null) {
-                Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show()
-                return@UserAdapter
-            }
-
-            // 🔹 Follow/Unfollow using toggleFollow
-            ApiClient.apiService.toggleFollow(user._id, "Bearer $token")
-                .enqueue(object : Callback<Map<String, Any>> {
-                    override fun onResponse(
-                        call: Call<Map<String, Any>>,
-                        response: Response<Map<String, Any>>
-                    ) {
-                        if (response.isSuccessful) {
-                            Toast.makeText(
-                                this@FollowFeedActivity,
-                                "You followed ${user.username}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            // ✅ Send OneSignal follow notification
-                            sendFollowNotification(currentUserId, user._id, user.username)
-                        } else {
-                            Toast.makeText(
-                                this@FollowFeedActivity,
-                                "Failed to follow ${user.username}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-
-                    override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                        Toast.makeText(
-                            this@FollowFeedActivity,
-                            "Network error: ${t.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                })
+        // ✅ Make sure UserAdapter’s callback actually sends (user, isFollowing: Boolean)
+        adapter = UserAdapter(users) { user, isFollowing ->
+            handleFollowAction(user, isFollowing)
         }
 
         recyclerUsers.adapter = adapter
 
+        // Determine which list to show first
         listType = intent.getStringExtra("LIST_TYPE") ?: "followers"
         userId = intent.getStringExtra("USER_ID") ?: TokenManager.getUserId(this) ?: ""
+
+        btnFollowers.setOnClickListener {
+            listType = "followers"
+            loadFollowList()
+        }
+
+        btnFollowing.setOnClickListener {
+            listType = "following"
+            loadFollowList()
+        }
 
         loadFollowList()
     }
 
+    /**
+     * Follow or unfollow a user
+     */
+    private fun handleFollowAction(user: User, currentlyFollowing: Boolean) {
+        val token = TokenManager.getToken(this)
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val call = if (currentlyFollowing) {
+            ApiClient.apiService.unfollowUser(user._id, "Bearer $token")
+        } else {
+            ApiClient.apiService.followUser(user._id, "Bearer $token")
+        }
+
+        call.enqueue(object : Callback<FollowResponse> {
+            override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
+                if (response.isSuccessful && response.body() != null) {
+                    val result = response.body()!!
+                    Toast.makeText(this@FollowFeedActivity, result.message, Toast.LENGTH_SHORT).show()
+                    loadFollowList()
+
+                    // Only send notification when following
+                    if (!currentlyFollowing) {
+                        val currentUserId = TokenManager.getUserId(this@FollowFeedActivity)
+                        if (currentUserId != null) {
+                            sendFollowNotification(currentUserId, user._id, user.username)
+                        }
+                    }
+                } else {
+                    Toast.makeText(
+                        this@FollowFeedActivity,
+                        "Failed: ${response.message()}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                Toast.makeText(
+                    this@FollowFeedActivity,
+                    "Network error: ${t.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
+    }
+
+    /**
+     * Fetch the list of followers or following users
+     */
     private fun loadFollowList() {
         val token = TokenManager.getToken(this)
-        if (token.isNullOrEmpty()) return
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Please log in", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        val call = when (listType) {
-            "followers" -> ApiClient.apiService.getFollowers(userId, "Bearer $token")
-            else -> ApiClient.apiService.getFollowing(userId, "Bearer $token")
+        val call: Call<List<User>> = if (listType == "followers") {
+            ApiClient.apiService.getFollowers(userId, "Bearer $token")
+        } else {
+            ApiClient.apiService.getFollowing(userId, "Bearer $token")
         }
 
         call.enqueue(object : Callback<List<User>> {
             override fun onResponse(call: Call<List<User>>, response: Response<List<User>>) {
-                if (response.isSuccessful) {
+                if (response.isSuccessful && response.body() != null) {
                     users.clear()
-                    response.body()?.let { users.addAll(it) }
+                    users.addAll(response.body()!!)
                     adapter.notifyDataSetChanged()
+
+                    val title = if (listType == "followers") "Followers" else "Following"
+                    Toast.makeText(this@FollowFeedActivity, "$title updated", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(
                         this@FollowFeedActivity,
@@ -122,6 +162,9 @@ class FollowFeedActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Sends OneSignal notification when user follows someone
+     */
     private fun sendFollowNotification(followerId: String, followedId: String, followedUsername: String) {
         val jsonBody = JSONObject().apply {
             put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2")
@@ -137,17 +180,14 @@ class FollowFeedActivity : AppCompatActivity() {
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                conn.setRequestProperty(
-                    "Authorization",
-                    "Basic YOUR_REST_API_KEY"
-                )
+                conn.setRequestProperty("Authorization", "Basic YOUR_REST_API_KEY")
                 conn.doOutput = true
                 conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
 
                 val responseCode = conn.responseCode
-                Log.d("FollowFeedActivity", "OneSignal follow response: $responseCode")
+                Log.d("FollowFeedActivity", "OneSignal response: $responseCode")
             } catch (e: Exception) {
-                Log.e("FollowFeedActivity", "Follow notification failed: ${e.message}")
+                Log.e("FollowFeedActivity", "Notification failed: ${e.message}")
             }
         }
     }

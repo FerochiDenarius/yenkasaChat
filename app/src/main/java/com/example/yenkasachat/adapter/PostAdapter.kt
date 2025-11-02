@@ -23,7 +23,9 @@ class PostAdapter(
     private val onLikeClick: (Post, Int) -> Unit,
     private val onCommentClick: (Post, Int) -> Unit,
     private val onUserClick: (String) -> Unit,
-    private val onPostClick: (Post) -> Unit
+    private val onPostClick: (Post) -> Unit,
+    private val onShareClick: (Post) -> Unit
+
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -42,65 +44,46 @@ class PostAdapter(
         private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
         private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
 
+
 // ... inside your PostViewHolder class
 
         fun bind(post: Post, position: Int) {
-            // ✅ FIX APPLIED HERE: Add safe calls (?.) and default values (?:)
-            // to prevent crashes if post.userId is null.
             val user = post.userId
-            username.text = user?.username ?: "Unknown User" // Use a safe call and provide a default name
-            verifiedBadge.visibility = if (user?.verified == true) View.VISIBLE else View.GONE // Check for null and true
+
+            username.text = user.username
+            verifiedBadge.visibility = if (user.verified) View.VISIBLE else View.GONE
 
             Glide.with(itemView.context)
-                .load(user?.profileImage) // Use a safe call for the image URL
-                .placeholder(R.drawable.ic_profile_placeholder) // Default placeholder if URL is null
-                .error(R.drawable.ic_profile_placeholder) // Show placeholder on error
+                .load(user.profileImage)
+                .placeholder(R.drawable.ic_profile_placeholder)
+                .error(R.drawable.ic_profile_placeholder)
                 .circleCrop()
                 .into(profileImage)
 
-            // Set up click listeners safely
-            val userId = user?.id
-            if (userId != null) {
-                profileImage.setOnClickListener { onUserClick(userId) }
-                username.setOnClickListener { onUserClick(userId) }
-            } else {
-                // If user is null, remove the listeners to prevent clicks
-                profileImage.setOnClickListener(null)
-                username.setOnClickListener(null)
-            }
+            val userId = user.id
+            profileImage.setOnClickListener { onUserClick(userId) }
+            username.setOnClickListener { onUserClick(userId) }
 
-            // --- The rest of your bind method remains the same ---
-
-            // Community
             communityName.text = post.communityId?.displayName ?: "General"
-
-            // Timestamp
             timestamp.text = formatTimestamp(post.createdAt)
+            postText.text = highlightMentions(post.caption, post.mentions)
 
-            // Content
-            postText.text = highlightMentions(post.caption ?: "", post.mentions)
-
-            // Media
             handleMedia(post)
 
-            // Engagement
             likeCount.text = "${post.likeCount} likes"
             commentCount.text = "${post.commentCount} comments"
-            if (post.coinsEarned > 0) {
-                coinsEarned.visibility = View.VISIBLE
-                coinsEarned.text = "🪙 ${post.coinsEarned} coins earned"
-            } else {
-                coinsEarned.visibility = View.GONE
-            }
 
-            // Like button
+            coinsEarned.visibility = if (post.coinsEarned > 0) {
+                coinsEarned.text = "🪙 ${post.coinsEarned} coins earned"
+                View.VISIBLE
+            } else View.GONE
+
             updateLikeButton(post.likedByCurrentUser)
 
-            // Click listeners for non-user elements
             btnLike.setOnClickListener { onLikeClick(post, position) }
             btnComment.setOnClickListener { onCommentClick(post, position) }
             itemView.setOnClickListener { onPostClick(post) }
-            btnShare.setOnClickListener { /* TODO: share logic */ }
+            btnShare.setOnClickListener { onShareClick(post) }
         }
 
 // ... rest of your PostAdapter file

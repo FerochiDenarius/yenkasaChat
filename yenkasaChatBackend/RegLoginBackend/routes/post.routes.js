@@ -207,51 +207,7 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-/* ------------------------------------
- * ❤️ LIKE / UNLIKE POST
- * ------------------------------------ */
-router.post('/:postId/like', authMiddleware, async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const userId = req.user.id;
-    const post = await Post.findById(postId);
-    if (!post) return res.status(404).json({ error: 'Post not found' });
 
-    const wasLiked = await post.addLike(userId);
-
-    if (wasLiked) {
-      const postAuthor = await User.findById(post.userId);
-      if (postAuthor && postAuthor._id.toString() !== userId) {
-        await rewardUser(post.userId, REWARDS.GET_LIKE, "Reward for receiving a like", "Post", post._id);
-      }
-    }
-
-    res.json({
-      success: true,
-      liked: wasLiked,
-      likeCount: post.likeCount,
-      coinsRewarded: wasLiked ? REWARDS.GET_LIKE : 0
-    });
-  } catch (err) {
-    console.error('❌ Failed to like post:', err);
-    res.status(500).json({ error: 'Failed to like post' });
-  }
-});
-
-router.delete('/:postId/like', authMiddleware, async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const userId = req.user.id;
-    const post = await Post.findById(postId);
-    if (!post) return res.status(404).json({ error: 'Post not found' });
-
-    const wasUnliked = await post.removeLike(userId);
-    res.json({ success: true, unliked: wasUnliked, likeCount: post.likeCount });
-  } catch (err) {
-    console.error('❌ Failed to unlike post:', err);
-    res.status(500).json({ error: 'Failed to unlike post' });
-  }
-});
 
 /* ------------------------------------
  * 🕵️‍♂️ GET ALL PENDING POSTS
@@ -278,29 +234,6 @@ router.get('/pending', authMiddleware, async (req, res) => {
   }
 });
 
-/* ------------------------------------
- * 🗑️ DELETE POST
- * ------------------------------------ */
-router.delete('/:postId', authMiddleware, async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const userId = req.user.id;
 
-    const post = await Post.findById(postId);
-    if (!post) return res.status(404).json({ error: 'Post not found' });
-
-    if (post.userId.toString() !== userId) {
-      return res.status(403).json({ error: 'You can only delete your own posts' });
-    }
-
-    post.isActive = false;
-    await post.save();
-
-    res.json({ success: true, message: 'Post deleted successfully' });
-  } catch (err) {
-    console.error('❌ Failed to delete post:', err);
-    res.status(500).json({ error: 'Failed to delete post' });
-  }
-});
 
 module.exports = router;

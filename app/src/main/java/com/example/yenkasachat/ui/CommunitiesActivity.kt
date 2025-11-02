@@ -44,35 +44,37 @@ class CommunitiesActivity : AppCompatActivity() {
 
         Log.d("CommunitiesActivity", "onCreate called — activity started")
 
-        // ✅ Use your TokenManager instead of SharedPreferences
         val token = TokenManager.getToken(this)
         Log.d("CommunitiesActivity", "Retrieved token from TokenManager: $token")
 
         if (token == null) {
-            Log.w("CommunitiesActivity", "No token found — finishing activity")
             Toast.makeText(this, "Please log in", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        Log.d("CommunitiesActivity", "Initializing views and components")
         initViews()
         setupRecyclerView()
         setupSearch()
         loadCommunities()
         setupCreateCommunityButtons()
 
-        Log.d("CommunitiesActivity", "Setting up FAB listener")
+        // ✅ Connect adapter’s "View" button click
+        adapter.onCommunitySelected = { community ->
+            Log.d("CommunitiesActivity", "Community selected: ${community.displayName}")
+
+            // Example action: open FeedActivity for this community
+            val intent = Intent(this, FeedActivity::class.java)
+            intent.putExtra("communityId", community.id)
+            intent.putExtra("communityName", community.displayName)
+            startActivity(intent)
+        }
+
         fabCreateCommunity.setOnClickListener {
             val isVerified = TokenManager.isVerified(this)
-            Log.d("CommunitiesActivity", "FAB clicked — isVerified=$isVerified")
-
             if (isVerified) {
-                Log.d("CommunitiesActivity", "Launching CreateCommunityActivity")
-                val intent = Intent(this, CreateCommunityActivity::class.java)
-                startActivity(intent)
+                startActivity(Intent(this, CreateCommunityActivity::class.java))
             } else {
-                Log.w("CommunitiesActivity", "User not verified — showing toast")
                 Toast.makeText(
                     this,
                     "You must be verified to create a community",
@@ -80,8 +82,6 @@ class CommunitiesActivity : AppCompatActivity() {
                 ).show()
             }
         }
-
-        Log.d("CommunitiesActivity", "onCreate completed successfully")
     }
 
     private fun initViews() {
@@ -94,7 +94,11 @@ class CommunitiesActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         adapter = CommunityAdapter(communities) { community ->
-            showCommunityDialog(community)
+            // ✅ Directly open feed activity here
+            val intent = Intent(this, FeedActivity::class.java)
+            intent.putExtra("communityId", community.id)
+            intent.putExtra("communityName", community.displayName)
+            startActivity(intent)
         }
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter

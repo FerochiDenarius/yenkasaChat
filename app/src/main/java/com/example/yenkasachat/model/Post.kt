@@ -55,11 +55,3 @@ data class Post(
     var likedByCurrentUser: Boolean = false
 )
 
-data class Comment(
-    @SerializedName("_id")
-    val _id: String,
-    val postId: String,
-    val user: UserBasic?,
-    val text: String,
-    val createdAt: String
-)

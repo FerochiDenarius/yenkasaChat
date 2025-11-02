@@ -180,6 +180,7 @@ interface ApiService {
     ): Call<Post>
 
 
+
     @POST("social/like/{postId}")
     fun toggleLike(
         @Header("Authorization") token: String,
@@ -197,8 +198,6 @@ interface ApiService {
     @GET("posts/my")
     fun getMyPosts(@Header("Authorization") token: String): Call<List<Post>>
 
-    @GET("feed/following")
-    fun getFollowingFeed(@Header("Authorization") token: String): Call<List<Post>>
 
     @DELETE("posts/{postId}")
     fun deletePost(
@@ -225,25 +224,86 @@ interface ApiService {
 
 
     // ==================== COMMENTS ====================
-
-    @GET("social/comments/{postId}")
-    fun getComments(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<List<Comment>>
-
-    @POST("social/comment/{postId}")
+    @POST("comments/{postId}")
     fun addComment(
         @Header("Authorization") token: String,
         @Path("postId") postId: String,
-        @Body body: Map<String, String>
+        @Body body: RequestBody
     ): Call<Comment>
 
-    @POST("social/view/{postId}")
-    fun addView(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<Map<String, Any>>
+
+        // -----------------------------
+        // 👍 LIKE / UNLIKE POST (toggle)
+        // -----------------------------
+        @POST("feed/{postId}/like")
+        fun likePost(
+            @Header("Authorization") token: String,
+            @Path("postId") postId: String
+        ): Call<LikeResponse>
+
+        // -----------------------------
+        // 👁️‍🗨️ ADD VIEW
+        // -----------------------------
+        @POST("feed/view/{postId}")
+        fun addView(
+            @Header("Authorization") token: String,
+            @Path("postId") postId: String
+        ): Call<ViewResponse>
+
+        // -----------------------------
+        // 🤝 FOLLOW / UNFOLLOW USER (toggle)
+        // -----------------------------
+        @POST("feed/toggle-follow/{targetUserId}")
+        fun toggleFollow(
+            @Header("Authorization") token: String,
+            @Path("targetUserId") targetUserId: String
+        ): Call<FollowResponse>
+
+        // -----------------------------
+        // 🚫 BLOCK / UNBLOCK USER (toggle)
+        // -----------------------------
+        @POST("feed/block/{targetUserId}")
+        fun blockUser(
+            @Header("Authorization") token: String,
+            @Path("targetUserId") targetUserId: String
+        ): Call<BlockResponse>
+
+
+
+        // 🔹 Follow a user
+        @POST("follow/{userId}/follow")
+        fun followUser(
+            @Path("userId") userId: String,
+            @Header("Authorization") token: String
+        ): Call<FollowResponse>
+
+        // 🔹 Unfollow a user
+        @DELETE("follow/{userId}/follow")
+        fun unfollowUser(
+            @Path("userId") userId: String,
+            @Header("Authorization") token: String
+        ): Call<FollowResponse>
+
+        // 🔹 Get followers
+        @GET("follow/{userId}/followers")
+        fun getFollowers(
+            @Path("userId") userId: String,
+            @Header("Authorization") token: String
+        ): Call<List<User>>
+
+        // 🔹 Get following
+        @GET("follow/{userId}/following")
+        fun getFollowing(
+            @Path("userId") userId: String,
+            @Header("Authorization") token: String
+        ): Call<List<User>>
+
+        // 🔹 Get follower/following counts
+        @GET("follow/{userId}/follow-stats")
+        fun getFollowStats(
+            @Path("userId") userId: String,
+            @Header("Authorization") token: String
+        ): Call<FollowResponse>
 
 
     // ==================== PROFILE ====================
@@ -263,47 +323,34 @@ interface ApiService {
 
     // ==================== FOLLOW SYSTEM ====================
 
-    @POST("users/toggle-follow/{userId}")
-    fun toggleFollow(
-        @Path("userId") userId: String,
+    // 💬 ADD COMMENT
+    @POST("feed/comment/{postId}")
+    @FormUrlEncoded
+    fun addComment(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String,
+        @Field("text") text: String
+    ): Call<Comment>
+
+    // 💬 GET COMMENTS
+    @GET("feed/comments/{postId}")
+    fun getComments(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<List<Comment>>
+
+    // -----------------------------
+    // 📰 FEED FROM FOLLOWED USERS
+    // -----------------------------
+    @GET("feed/following")
+    fun getFollowingFeed(
         @Header("Authorization") token: String
-    ): Call<Map<String, Any>>
+    ): Call<List<Post>>
 
-    @GET("users/{userId}/followers")
-    fun getFollowers(
-        @Path("userId") userId: String,
-        @Header("Authorization") token: String
-    ): Call<List<User>>
+    // -----------------------------
+    // Other social endpoints can be added here if needed
+    // -----------------------------
 
-    @GET("users/{userId}/following")
-    fun getFollowing(
-        @Path("userId") userId: String,
-        @Header("Authorization") token: String
-    ): Call<List<User>>
-
-    @POST("/users/{id}/follow")
-    fun followUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Map<String, Any>>
-
-    @POST("/users/{id}/unfollow")
-    fun unfollowUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Map<String, Any>>
-
-    @POST("users/{id}/block")
-    fun blockUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Map<String, Any>>
-
-    @POST("users/{id}/unblock")
-    fun unblockUser(
-        @Header("Authorization") token: String,
-        @Path("id") userId: String
-    ): Call<Map<String, Any>>
 
 
     // ==================== COMMUNITIES ====================
@@ -340,10 +387,17 @@ interface ApiService {
     ): Call<CreateCommunityResponse>
 
     // ✅ Get the communities created by the logged-in user
-    @GET("/api/communities/user/my-communities")
+    @GET("/communities/user/my-communities")
     fun getMyCommunities(
         @Header("Authorization") token: String
-    ): Call<Map<String, Any>>
+    ): Call<List<Community>>
+
+    @GET("communities")
+    suspend fun getCommunities(): Response<List<Community>>
+
+    @POST("communities/join")
+    suspend fun joinCommunities(@Body request: JoinCommunityRequest): Response<JoinCommunityResponse>
+
 
     // ==================== COINS ====================
 
@@ -352,13 +406,13 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<CoinBalanceResponse>
 
-    @POST("/api/coins/transfer")
+    @POST("coins/transfer")
     fun transferCoins(
         @Header("Authorization") token: String,
         @Body request: TransferCoinsRequest
     ): Call<TransferCoinsResponse>
 
-    @GET("/api/coins/transactions")
+    @GET("coins/transactions")
     fun getTransactions(
         @Header("Authorization") token: String,
         @Query("page") page: Int = 1,
@@ -376,6 +430,8 @@ interface ApiService {
     // 🏡 FEED ENDPOINTS
     // ===========================
 
+
+//Like and Unlike
     // ✅ Fetch community feed
     @GET("feed")
     fun getFeed(
@@ -384,12 +440,6 @@ interface ApiService {
         @Query("limit") limit: Int
     ): Call<FeedResponse>
 
-    // ✅ Like a post
-    @POST("feed/{postId}/like")
-    fun likePost(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<LikeResponse>
 
     // ✅ Unlike a post
     @DELETE("feed/{postId}/like")

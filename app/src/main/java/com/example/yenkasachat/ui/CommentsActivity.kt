@@ -27,6 +27,15 @@ import java.net.URL
 import android.media.MediaPlayer
 import android.view.animation.BounceInterpolator
 import android.view.animation.ScaleAnimation
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+
+
+
+
+
+
 
 class CommentsActivity : AppCompatActivity() {
 
@@ -65,7 +74,31 @@ class CommentsActivity : AppCompatActivity() {
         val buttonBack = findViewById<ImageButton>(R.id.buttonBack)
         buttonBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        adapter = CommentAdapter(this, comments)
+        // ✅ Initialize adapter with CommentActionListener
+        adapter = CommentAdapter(this, comments, object : CommentAdapter.CommentActionListener {
+            override fun onReply(comment: Comment) {
+                // TODO: Open reply input field or pre-fill editComment with @username
+                editComment.setText("@${comment.user?.username ?: ""} ")
+                editComment.requestFocus()
+                // Optionally, scroll to bottom
+                recyclerComments.scrollToPosition(comments.size - 1)
+            }
+
+            override fun onEdit(comment: Comment) {
+                // TODO: Open edit input with existing comment text
+                editComment.setText(comment.text ?: "")
+                editComment.requestFocus()
+                // Remove old comment temporarily or mark it as editing
+                recyclerComments.scrollToPosition(comments.indexOf(comment))
+            }
+
+            override fun onDelete(comment: Comment) {
+                // TODO: Call backend to delete, then remove from adapter
+                adapter.deleteComment(comment)
+                Toast.makeText(this@CommentsActivity, "Comment deleted", Toast.LENGTH_SHORT).show()
+            }
+        })
+
         val layoutManager = LinearLayoutManager(this)
         layoutManager.stackFromEnd = true
         recyclerComments.layoutManager = layoutManager
@@ -78,6 +111,7 @@ class CommentsActivity : AppCompatActivity() {
             return
         }
 
+        // Load post and comments
         loadPostDetails()
         loadComments()
 
@@ -88,7 +122,6 @@ class CommentsActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             postComment(text)
-
         }
     }
 
@@ -231,7 +264,14 @@ class CommentsActivity : AppCompatActivity() {
             return
         }
 
-        ApiClient.apiService.addComment("Bearer $token", postId!!, mapOf("text" to text))
+// 1️⃣ Create a JSON object with the comment text
+        val json = JSONObject().apply { put("text", text) }.toString()
+
+// 2️⃣ Convert JSON string to RequestBody
+        val body: RequestBody = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+// 3️⃣ Call the API with the RequestBody
+        ApiClient.apiService.addComment("Bearer $token", postId!!, body)
             .enqueue(object : Callback<Comment> {
                 override fun onResponse(call: Call<Comment>, response: Response<Comment>) {
                     if (response.isSuccessful) {
@@ -240,10 +280,8 @@ class CommentsActivity : AppCompatActivity() {
                             adapter.notifyItemInserted(comments.size - 1)
                             recyclerComments.scrollToPosition(comments.size - 1)
                             editComment.text.clear()
-
-                            loadComments() // refresh
+                            loadComments()
                             sendCommentNotification(newComment)
-                            // ✅ trigger animation and floating emoji
                             animateCommentSuccess()
                             showFloatingEmoji()
                         }

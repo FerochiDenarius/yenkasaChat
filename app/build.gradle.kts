@@ -58,6 +58,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("androidx.fragment:fragment-ktx:1.6.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     // ✅ Pusher Beams SDK (v1.9.0 stable)
     implementation("com.pusher:push-notifications-android:1.9.0")
     implementation("com.google.firebase:firebase-iid:21.1.0")

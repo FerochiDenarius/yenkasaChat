@@ -1,4 +1,3 @@
-// models/user.model.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -30,9 +29,15 @@ const userSchema = new Schema({
     required: true
   },
 
-  // 🌍 Optional location + community
+  // 🌍 Optional location + community (primary)
   location: { type: String, default: '' },
   community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', default: null },
+
+  // 👥 Joined communities (multi-membership, max 3)
+  joinedCommunities: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Community'
+  }],
 
   verified: { type: Boolean, default: false },
 
@@ -56,7 +61,7 @@ const userSchema = new Schema({
   },
 
   // 🕓 Suspension
-  suspendedUntil: { type: Date, default: null }, // null = not suspended
+  suspendedUntil: { type: Date, default: null },
 
   // 🧑‍🤝‍🧑 Social graph
   followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
@@ -67,7 +72,7 @@ const userSchema = new Schema({
   // 💰 Yenkasa Coins system
   coinsBalance: { type: Number, default: 0 },
 
-  // 🪙 Future-ready wallet system
+  // 🪙 Wallet system
   walletId: {
     type: String,
     unique: true,
@@ -159,6 +164,11 @@ userSchema.pre('save', function(next) {
 
   next();
 });
+
+// ✅ Helper: enforce join limit
+userSchema.methods.canJoinMoreCommunities = function() {
+  return this.joinedCommunities.length < 3;
+};
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

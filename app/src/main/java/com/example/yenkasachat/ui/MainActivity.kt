@@ -6,7 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
@@ -26,14 +26,27 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_main) // ✅ links to your activity_main.xml
 
+        // ✅ Setup toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = "Yenkasa Feed"
+        supportActionBar?.title = "Yenkasa"
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationIcon(R.drawable.ic_menu) // ✅ menu icon from drawable folder
 
+        // ✅ Handle toolbar menu button click
+        toolbar.setNavigationOnClickListener {
+            val intent = Intent(this, MenuActivity::class.java)
+            startActivity(intent)
+        }
+
+        // ✅ Retrieve auth info
         val retrievedToken = TokenManager.getToken(this)
         val retrievedUserId = TokenManager.getUserId(this)
+
+        Log.d("MainActivity", "🔑 Token: ${retrievedToken?.take(10)}...")
+        Log.d("MainActivity", "👤 UserId: $retrievedUserId")
 
         if (retrievedToken.isNullOrBlank() || retrievedUserId.isNullOrBlank()) {
             Toast.makeText(this, "Please log in again.", Toast.LENGTH_LONG).show()
@@ -45,16 +58,20 @@ class MainActivity : AppCompatActivity() {
         token = retrievedToken
         userId = retrievedUserId
 
-        fabAddPost = findViewById(R.id.btnAddPost)
+        // ✅ Setup FAB (disabled until user info loads)
+        fabAddPost = findViewById(R.id.fabCreatePost)
         fabAddPost.isEnabled = false
         fabAddPost.alpha = 0.5f
 
-        // ✅ Load user profile from API
+        // ✅ Load user info for permissions
         loadUserProfile()
 
-        // ✅ Load Feed container fragment
+        // ✅ Load FeedFragment into the container
         if (savedInstanceState == null) {
-            replaceFragment(FeedContainerFragment())
+            Log.d("MainActivity", "🧩 Loading FeedFragment into container")
+            supportFragmentManager.commit {
+                replace(R.id.feedContainer, FeedFragment())
+            }
         }
     }
 
@@ -66,7 +83,6 @@ class MainActivity : AppCompatActivity() {
                     currentUser = response.body()
                     setupFab()
 
-                    // 🧩 Save/refresh user data locally for offline permission checks
                     try {
                         val user = currentUser!!
                         val userJson = JSONObject().apply {
@@ -91,7 +107,7 @@ class MainActivity : AppCompatActivity() {
                         }.toString()
 
                         TokenManager.saveUserJson(this@MainActivity, userJson)
-                        Log.i("MainActivity", "🧩 User JSON updated and saved successfully.")
+                        Log.i("MainActivity", "✅ User JSON updated and saved successfully.")
                     } catch (e: Exception) {
                         Log.e("MainActivity", "💥 Failed to save user JSON: ${e.message}", e)
                     }
@@ -124,7 +140,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         val canPost = user.permissions?.canPost == true && user.verified
-
         fabAddPost.isEnabled = true
         fabAddPost.alpha = if (canPost) 1f else 0.5f
 
@@ -135,7 +150,6 @@ class MainActivity : AppCompatActivity() {
                     intent.putExtra("userId", userId)
                     startActivity(intent)
                 }
-
                 !user.verified -> {
                     Toast.makeText(
                         this,
@@ -143,7 +157,6 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 }
-
                 else -> {
                     Toast.makeText(
                         this,
@@ -152,27 +165,6 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 }
             }
-        }
-    }
-
-    private fun replaceFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.mainContainer, fragment)
-            .commit()
-    }
-
-    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
-        menuInflater.inflate(R.menu.toolbar_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_open_menu -> {
-                startActivity(Intent(this, MenuActivity::class.java))
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
         }
     }
 }

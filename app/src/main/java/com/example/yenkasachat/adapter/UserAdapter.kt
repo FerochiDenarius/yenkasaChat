@@ -10,24 +10,23 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.util.TokenManager
 import kotlinx.coroutines.launch
-
 
 class UserAdapter(
     private val users: List<User>,
-    private val onUserClick: (User, View) -> Unit // 🔄 Accept View as well
+    private val onFollowClick: (User, Boolean) -> Unit // ✅ Boolean instead of View
 ) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
     inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val textUsername: TextView = itemView.findViewById(R.id.textUsername)
         private val textLocation: TextView = itemView.findViewById(R.id.textLocation)
         private val imageProfile: ImageView = itemView.findViewById(R.id.imageProfile)
+        private val btnFollow: TextView = itemView.findViewById(R.id.btnFollow) // 👈 ensure exists in layout
 
         fun bind(user: User) {
             textUsername.text = user.username
             textLocation.text = user.location ?: ""
-
-            Log.d("UserAdapter", "Loading image: ${user.profileImage}")
 
             Glide.with(itemView.context)
                 .load(user.profileImage)
@@ -35,9 +34,19 @@ class UserAdapter(
                 .error(R.drawable.ic_profile_placeholder)
                 .into(imageProfile)
 
-            // 👇 Pass the clicked view to the callback
+            val currentUserId = TokenManager.getUserId(itemView.context)
+            val isFollowing = user.followers?.contains(currentUserId) == true
+
+            btnFollow.text = if (isFollowing) "Following" else "Follow"
+
+            // 🔹 Clicking the button toggles follow state
+            btnFollow.setOnClickListener {
+                onFollowClick(user, isFollowing)
+            }
+
+            // 🔹 Optional: click anywhere to open profile later
             itemView.setOnClickListener {
-                onUserClick(user, itemView)
+                Log.d("UserAdapter", "Clicked user: ${user.username}")
             }
         }
     }
@@ -53,10 +62,12 @@ class UserAdapter(
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         holder.bind(users[position])
     }
+
+    // Optional: move this notification logic out later
     fun sendFollowNotification(followerId: String, followedId: String) {
         val jsonBody = org.json.JSONObject().apply {
-            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2") // ✅ Your OneSignal App ID
-            put("include_external_user_ids", org.json.JSONArray().put(followedId)) // 🎯 Target the followed user
+            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2")
+            put("include_external_user_ids", org.json.JSONArray().put(followedId))
             put("headings", org.json.JSONObject().put("en", "New Follower!"))
             put("contents", org.json.JSONObject().put("en", "$followerId started following you"))
             put("data", org.json.JSONObject().put("type", "follow").put("from_user", followerId))
@@ -70,16 +81,15 @@ class UserAdapter(
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 conn.setRequestProperty(
                     "Authorization",
-                    "Basic YOUR_REST_API_KEY" // 🔑 Replace with your OneSignal REST API key
+                    "Basic YOUR_REST_API_KEY"
                 )
                 conn.doOutput = true
                 conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
                 val responseCode = conn.responseCode
-                android.util.Log.d("UserAdapter", "OneSignal follow notify: $responseCode")
+                Log.d("UserAdapter", "OneSignal follow notify: $responseCode")
             } catch (e: Exception) {
-                android.util.Log.e("UserAdapter", "Follow notify failed: ${e.message}")
+                Log.e("UserAdapter", "Follow notify failed: ${e.message}")
             }
         }
     }
-
 }

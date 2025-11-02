@@ -239,28 +239,32 @@ router.get("/feed/following", verifyToken, async (req, res) => {
 });
 
 /* ------------------------------------
- * 🚫 BLOCK / UNBLOCK USER
+ * 📰 🚫 BLOCK / UNBLOCK USER
  * ------------------------------------ */
+
 router.post("/block/:targetUserId", verifyToken, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
+    const targetUserId = req.params.targetUserId;
     const user = await User.findById(userId).select("blocked");
-    const target = await User.findById(req.params.targetUserId).select("_id");
+    const target = await User.findById(targetUserId).select("_id");
 
     if (!user || !target) return res.status(404).json({ message: "User not found" });
 
-    const alreadyBlocked = user.blocked.some((id) => id.toString() === String(target._id));
+    const alreadyBlocked = user.blocked.some((id) => id.toString() === targetUserId);
     const update = alreadyBlocked
       ? { $pull: { blocked: target._id } }
       : { $addToSet: { blocked: target._id } };
 
-    const updated = await User.findByIdAndUpdate(userId, update, { new: true }).select("blocked");
+    await User.findByIdAndUpdate(userId, update, { new: true });
 
+    // Return user IDs instead of count
     res.status(200).json({
       message: alreadyBlocked ? "User unblocked" : "User blocked",
-      blockedCount: updated.blocked.length,
+      userId: userId,
+      blockedUserId: targetUserId
     });
   } catch (err) {
     console.error("❌ Error in block/unblock:", err);

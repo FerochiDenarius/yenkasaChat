@@ -59,29 +59,34 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
+    // Find the post with only the likes field
     const post = await Post.findById(req.params.postId).select("likes");
     if (!post) return res.status(404).json({ message: "Post not found" });
 
+    // Check if the user already liked the post
     const alreadyLiked = post.likes.some((id) => id.toString() === userId);
-    const updateOperation = alreadyLiked
-      ? { $pull: { likes: userId } }
-      : { $addToSet: { likes: userId } };
 
+    // Decide whether to add or remove the like
+    const updateOperation = alreadyLiked
+      ? { $pull: { likes: userId }, $inc: { likeCount: -1 } }
+      : { $addToSet: { likes: userId }, $inc: { likeCount: 1 } };
+
+    // Apply the update
     await Post.findByIdAndUpdate(req.params.postId, updateOperation);
 
-    const freshPost = await Post.findById(req.params.postId).select("likes");
-    const newLikesCount = freshPost.likes.length;
+    // Fetch fresh version of post
+    const freshPost = await Post.findById(req.params.postId).select("likes likeCount");
 
-    await Post.findByIdAndUpdate(req.params.postId, { likesCount: newLikesCount });
     const likedByUser = freshPost.likes.some((id) => id.toString() === userId);
 
+    // Reward user only if newly liked
     if (!alreadyLiked) {
       await rewardCoins(userId, "like", 10, req.params.postId);
     }
 
     res.status(200).json({
       message: likedByUser ? "Post liked" : "Post unliked",
-      likesCount: newLikesCount,
+      likeCount: freshPost.likeCount,
       likedByUser,
     });
   } catch (err) {
@@ -89,6 +94,34 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to toggle like", error: err.message });
   }
 });
+
+
+
+/* ------------------------------------
+ * 🧩 GET ALL APPROVED POSTS (with like status)
+ * ------------------------------------ */
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    const posts = await Post.find({ status: "approved", isActive: true })
+      .populate("userId", "username profileImage")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Add "likedByUser" flag for each post
+    const result = posts.map((post) => ({
+      ...post,
+      likedByUser: post.likes?.some((like) => like.toString() === userId?.toString()),
+    }));
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("❌ Error fetching posts:", err);
+    res.status(500).json({ message: "Failed to fetch posts", error: err.message });
+  }
+});
+
 
 /* ------------------------------------
  * 💬 ADD COMMENT
@@ -239,7 +272,7 @@ router.get("/feed/following", verifyToken, async (req, res) => {
 });
 
 /* ------------------------------------
- * 📰 🚫 BLOCK / UNBLOCK USER
+ * 📰 FEED FROM FOLLOWED USERS
  * ------------------------------------ */
 
 router.post("/block/:targetUserId", verifyToken, async (req, res) => {

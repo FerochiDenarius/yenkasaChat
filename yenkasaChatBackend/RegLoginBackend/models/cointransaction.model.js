@@ -42,6 +42,18 @@ const coinTransactionSchema = new Schema({
     ref: 'Post',
     default: null
   },
+
+  activityId: {
+  type: String,
+  index: true,
+  unique: false // ✅ not unique because many different types can share
+},
+
+transactionId: {
+  type: String,
+  unique: true // ✅ unique transaction reference for each reward
+},
+
   relatedCommentId: {
     type: Schema.Types.ObjectId,
     ref: 'Comment',
@@ -61,6 +73,8 @@ const coinTransactionSchema = new Schema({
     default: ''
   }
 }, { timestamps: true });
+
+
 
 // Indexes
 coinTransactionSchema.index({ toUserId: 1, createdAt: -1 });

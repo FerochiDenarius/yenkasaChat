@@ -23,18 +23,38 @@ object FeedUtils {
         ApiClient.apiService.likePost("Bearer $token", post._id)
             .enqueue(object : Callback<LikeResponse> {
                 override fun onResponse(call: Call<LikeResponse>, response: Response<LikeResponse>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val likeResponse = response.body()!!
-                        Log.d("FeedUtils", "❤️ Like toggled: liked=${likeResponse.liked}, count=${likeResponse.likeCount}")
-                        onLikeUpdated(likeResponse.liked, likeResponse.likeCount)
+                    Log.d("FeedUtils", "📡 Like API called for postId=${post._id}")
+
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        Log.d("FeedUtils", "✅ Raw like response: ${body.toString()}")
+
+                        if (body != null) {
+                            val likeResponse = body
+                            Log.d(
+                                "FeedUtils",
+                                "❤️ Like toggled successfully -> liked=${likeResponse.liked}, " +
+                                        "count=${likeResponse.likeCount}"
+                            )
+
+                            // Call your update callback
+                            onLikeUpdated(likeResponse.liked, likeResponse.likeCount)
+                        } else {
+                            Log.w("FeedUtils", "⚠️ Response body is null (code=${response.code()})")
+                        }
+
                     } else {
-                        Log.w("FeedUtils", "⚠️ Like toggle failed: ${response.code()}")
+                        Log.w(
+                            "FeedUtils",
+                            "⚠️ Like toggle failed -> code=${response.code()}, " +
+                                    "message=${response.message()}, errorBody=${response.errorBody()?.string()}"
+                        )
                         Toast.makeText(context, "Failed to like post", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<LikeResponse>, t: Throwable) {
-                    Log.e("FeedUtils", "❌ Like network error: ${t.message}", t)
+                    Log.e("FeedUtils", "❌ Network or parsing error while liking post: ${t.localizedMessage}", t)
                     Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })

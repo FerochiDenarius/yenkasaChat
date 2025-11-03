@@ -50,37 +50,35 @@ async function rewardCoins(userId, actionType = "activity", amount = 10, referen
     console.error("❌ Error rewarding coins:", err);
   }
 }
-
-/* ------------------------------------
- * 👍 LIKE / UNLIKE POST
- * ------------------------------------ */
 router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // Find the post with only the likes field
-    const post = await Post.findById(req.params.postId).select("likes");
+    const post = await Post.findById(req.params.postId).select("likes likeCount");
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // Check if the user already liked the post
     const alreadyLiked = post.likes.some((id) => id.toString() === userId);
+    console.log("🩶 Like request:", { userId, postId: post._id, alreadyLiked });
 
-    // Decide whether to add or remove the like
     const updateOperation = alreadyLiked
       ? { $pull: { likes: userId }, $inc: { likeCount: -1 } }
       : { $addToSet: { likes: userId }, $inc: { likeCount: 1 } };
 
-    // Apply the update
-    await Post.findByIdAndUpdate(req.params.postId, updateOperation);
+    console.log("🔧 Applying update:", updateOperation);
 
-    // Fetch fresh version of post
+    await Post.findByIdAndUpdate(req.params.postId, updateOperation);
     const freshPost = await Post.findById(req.params.postId).select("likes likeCount");
 
     const likedByUser = freshPost.likes.some((id) => id.toString() === userId);
+    console.log("📊 Updated post:", {
+      likeCount: freshPost.likeCount,
+      totalLikes: freshPost.likes.length,
+      likedByUser,
+    });
 
-    // Reward user only if newly liked
     if (!alreadyLiked) {
+      console.log("💰 Rewarding user for like...");
       await rewardCoins(userId, "like", 10, req.params.postId);
     }
 
@@ -95,33 +93,51 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
   }
 });
 
-
-
 /* ------------------------------------
  * 🧩 GET ALL APPROVED POSTS (with like status)
  * ------------------------------------ */
 router.get("/", verifyToken, async (req, res) => {
   try {
     const userId = req.user?.id;
+    console.log("📥 Fetching approved posts for user:", userId);
 
     const posts = await Post.find({ status: "approved", isActive: true })
       .populate("userId", "username profileImage")
+      .select("userId content image likes likeCount comments createdAt") // ✅ include likeCount explicitly
       .sort({ createdAt: -1 })
       .lean();
 
-    // Add "likedByUser" flag for each post
-    const result = posts.map((post) => ({
-      ...post,
-      likedByUser: post.likes?.some((like) => like.toString() === userId?.toString()),
-    }));
+    if (!posts.length) {
+      console.log("⚠️ No approved posts found.");
+      return res.status(200).json([]);
+    }
 
+    const result = posts.map((post) => {
+      const likedByUser = post.likes?.some(
+        (like) => like.toString() === userId?.toString()
+      );
+
+      const computedLikeCount = post.likeCount ?? post.likes?.length ?? 0;
+
+      console.log(`🧾 Post ${post._id} → likes: ${post.likes?.length}, likeCount: ${computedLikeCount}, likedByUser: ${likedByUser}`);
+
+      return {
+        ...post,
+        likeCount: computedLikeCount,
+        likedByUser,
+      };
+    });
+
+    console.log(`✅ Returning ${result.length} posts with like info`);
     res.status(200).json(result);
   } catch (err) {
     console.error("❌ Error fetching posts:", err);
-    res.status(500).json({ message: "Failed to fetch posts", error: err.message });
+    res.status(500).json({
+      message: "Failed to fetch posts",
+      error: err.message,
+    });
   }
 });
-
 
 /* ------------------------------------
  * 💬 ADD COMMENT

@@ -17,6 +17,7 @@ import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.util.PostCacheManager  // ✅ Added import
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import retrofit2.Call
@@ -57,13 +58,51 @@ class FeedActivity : AppCompatActivity() {
         setupRecyclerView()
         setupSwipeRefresh()
         setupCommunitySelector()
+        setupListeners()
 
+        // ✅ Load cached posts first for instant UI (before API call)
+        loadCachedPosts()
+
+        // ✅ Fetch feed after showing cached posts
         recyclerView.post {
             Log.d("FeedActivity", "🚀 Loading feed after view initialized")
             loadFeed()
         }
+        // 🟡 Step 1: Load cached posts first (instant UI)
+        val cachedPosts = PostCacheManager.getCachedPosts(this)
+        if (cachedPosts != null) {
+            posts.clear()
+            posts.addAll(cachedPosts)
+            adapter.notifyDataSetChanged()
+            Log.d("FeedActivity", "📦 Loaded ${cachedPosts.size} cached posts")
+        }
 
-        setupListeners()
+        // 🟢 Step 2: Fetch fresh posts from server (and update cache)
+        fetchPostsFromServer()
+
+    }
+    private fun fetchPostsFromServer() {
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.getAllPosts("Bearer $token").execute()
+                if (response.isSuccessful) {
+                    val fetchedPosts = response.body() ?: emptyList()
+
+                    posts.clear()
+                    posts.addAll(fetchedPosts)
+                    adapter.notifyDataSetChanged()
+
+                    // ✅ Save to local cache
+                    PostCacheManager.savePosts(this@FeedActivity, posts)
+
+                    Log.d("FeedActivity", "✅ Posts loaded from server: ${posts.size}")
+                } else {
+                    Log.e("FeedActivity", "❌ Failed to fetch posts: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("FeedActivity", "⚠️ Error fetching posts: ${e.message}", e)
+            }
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -99,11 +138,20 @@ class FeedActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = PostAdapter(
             posts = posts,
-            onLikeClick = { post, _ ->  // discard position
+            onLikeClick = { post, _ ->
                 FeedUtils.toggleLike(this, token!!, post) { liked, likeCount ->
                     val position = posts.indexOf(post)
                     if (position != -1) {
                         adapter.updateLikeStatus(position, liked, likeCount)
+
+                        // ✅ Also update post object in cache
+                        val updatedPost = posts[position].copy(
+                            likedByCurrentUser = liked,
+                            likeCount = likeCount
+                        )
+                        posts[position] = updatedPost
+                        updateCachedPost(updatedPost)
+
                     }
                 }
             },
@@ -263,6 +311,12 @@ class FeedActivity : AppCompatActivity() {
                         posts.addAll(feedResponse.posts)
                         adapter.updatePosts(posts)
                         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+
+                        // ✅ Save posts in cache after successful API call
+                        if (currentPage == 1 && posts.isNotEmpty()) {
+                            PostCacheManager.savePosts(this@FeedActivity, posts)
+                            Log.d("FeedActivity", "💾 Feed cached successfully (${posts.size} posts)")
+                        }
                     } else {
                         Log.e("FeedActivity", "❌ Feed load failed: ${response.code()} ${response.errorBody()?.string()}")
                         Toast.makeText(this@FeedActivity, "Failed to load feed", Toast.LENGTH_SHORT).show()
@@ -289,6 +343,21 @@ class FeedActivity : AppCompatActivity() {
         loadFeed()
     }
 
+    // ✅ Load cached posts before hitting the API
+    private fun loadCachedPosts() {
+        val cachedPosts = PostCacheManager.getCachedPosts(this)
+        if (cachedPosts != null && cachedPosts.isNotEmpty()) {
+            posts.clear()
+            posts.addAll(cachedPosts)
+            adapter.updatePosts(posts)
+            recyclerView.visibility = View.VISIBLE
+            emptyView.visibility = View.GONE
+            Log.d("FeedActivity", "📦 Loaded ${cachedPosts.size} cached posts")
+        } else {
+            Log.d("FeedActivity", "📭 No cached posts found")
+        }
+    }
+
     // ----------------------------------------------------------------------
     // 🔹 Navigation
     // ----------------------------------------------------------------------
@@ -302,6 +371,16 @@ class FeedActivity : AppCompatActivity() {
         val intent = Intent(this, UserProfileActivity::class.java)
         intent.putExtra("USER_ID", userId)
         startActivity(intent)
+    }
+    // ✅ Update a single post inside cache
+    private fun updateCachedPost(updatedPost: Post) {
+        val cachedPosts = PostCacheManager.getCachedPosts(this)?.toMutableList() ?: return
+        val index = cachedPosts.indexOfFirst { it._id == updatedPost._id }
+        if (index != -1) {
+            cachedPosts[index] = updatedPost
+            PostCacheManager.savePosts(this, cachedPosts)
+            Log.d("FeedActivity", "💾 Updated cached post: ${updatedPost._id}")
+        }
     }
 
     // ----------------------------------------------------------------------

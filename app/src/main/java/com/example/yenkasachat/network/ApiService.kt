@@ -243,6 +243,11 @@ interface ApiService {
         ): Call<LikeResponse>
 
 
+    @GET("posts")
+    fun getAllPosts(
+        @Header("Authorization") token: String
+    ): Call<List<Post>>
+
     // ✅ Unlike a post
     @DELETE("social/unlike/{postId}")
     fun unlikePost(

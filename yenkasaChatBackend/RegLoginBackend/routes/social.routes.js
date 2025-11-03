@@ -102,51 +102,56 @@ async function rewardCoins(
 /* ------------------------------------
  * 👍 LIKE / UNLIKE POST (Fixed)
  * ------------------------------------ */
+/* ------------------------------------
+ * ❤️ LIKE / UNLIKE A POST
+ * ------------------------------------ */
 router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user.id;
+    const { postId } = req.params;
 
-    console.log("💥 Like route hit by user:", userId, "on post:", req.params.postId);
+    console.log(`💥 Like route hit by user: ${userId} on post: ${postId}`);
 
-    const post = await Post.findById(req.params.postId).select("likes likeCount userId");
+    const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const alreadyLiked = post.likes.some((id) => id.toString() === userId);
+    let liked = false;
 
-    // Build update operation
-    const updateOperation = alreadyLiked
-      ? { $pull: { likes: userId }, $inc: { likeCount: -1 } }
-      : { $addToSet: { likes: userId }, $inc: { likeCount: 1 } };
+    // Toggle like
+    if (post.likes.includes(userId)) {
+      await post.removeLike(userId);
+      liked = false;
+    } else {
+      await post.addLike(userId);
+      liked = true;
+    }
 
-    const updated = await Post.findByIdAndUpdate(
-      req.params.postId,
-      updateOperation,
-      { new: true }
-    ).select("likes likeCount");
+    // Refresh from DB to get new count
+    const updatedPost = await Post.findById(postId).select("likeCount likes");
 
-    const likedByUser = updated.likes.some((id) => id.toString() === userId);
+    console.log(`✅ Like status after toggle: liked=${liked}, count=${updatedPost.likeCount}`);
 
-    console.log(`✅ Like status after toggle: liked=${likedByUser}, count=${updated.likeCount}`);
+    // Reward logic (only reward when liked, not unliked)
+    if (liked && String(userId) !== String(post.userId)) {
+      console.log(`🏅 Rewarding user: ${post.userId}`);
 
-    // Reward coins only if newly liked
-    if (!alreadyLiked) {
-      try {
-        console.log("🏅 Rewarding user:", userId);
-        await rewardCoins(userId, "REWARD_LIKE", 10, req.params.postId);
-      } catch (rewardErr) {
-        console.error("⚠️ Reward system error:", rewardErr.message);
-      }
+      const activityId = `like_${userId}_${postId}`;
+      await rewardCoins(post.userId, "REWARD_LIKE", 2, {
+        fromUserId: userId,
+        relatedPostId: postId,
+        description: "Received a like on your post",
+        activityId,
+      });
     }
 
     res.status(200).json({
-      message: likedByUser ? "Post liked" : "Post unliked",
-      likeCount: updated.likeCount,
-      likedByUser,
+      success: true,
+      liked,
+      likeCount: updatedPost.likeCount,
     });
   } catch (err) {
-    console.error("❌ Error toggling like:", err);
-    res.status(500).json({ message: "Failed to toggle like", error: err.message });
+    console.error("❌ Error in like route:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 

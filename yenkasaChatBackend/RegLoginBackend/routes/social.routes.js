@@ -8,41 +8,89 @@ const verifyToken = require("../middleware/auth");
 const router = express.Router();
 
 /* ------------------------------------
- * 🪙 REWARD COINS HELPER
+ * 🪙 REWARD COINS HELPER (Updated)
  * ------------------------------------ */
-async function rewardCoins(userId, actionType = "activity", amount = 10, referenceId = null) {
+const { v4: uuidv4 } = require("uuid");
+
+async function rewardCoins(
+  userId,
+  actionType = "REWARD_ACTIVITY",
+  amount = 10,
+  extra = {}
+) {
   try {
     const CoinTransaction = require("../models/cointransaction.model");
     const CoinSupply = require("../models/coinSupply");
+    const User = require("../models/user.model");
+
     const MAX_SUPPLY = 100_000_000;
 
+    // Destructure useful fields from extra
+    const {
+      fromUserId = null,
+      relatedPostId = null,
+      relatedCommentId = null,
+      description = "",
+      activityId = null
+    } = extra;
+
+    // 🧩 Step 1: Avoid duplicate rewards for the same action
+    if (activityId) {
+      const existing = await CoinTransaction.findOne({ activityId });
+      if (existing) {
+        console.log(`⚠️ Reward skipped — activity ${activityId} already rewarded.`);
+        return;
+      }
+    }
+
+    // 🪙 Step 2: Ensure coin supply document exists
     await CoinSupply.findByIdAndUpdate(
       "YENKASA_SUPPLY",
       { $setOnInsert: { totalMinted: 0 } },
       { upsert: true }
     );
 
+    // 🧮 Step 3: Update coin supply (if within cap)
     const updatedSupply = await CoinSupply.findOneAndUpdate(
-      { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amount } },
+      {
+        _id: "YENKASA_SUPPLY",
+        totalMinted: { $lte: MAX_SUPPLY - amount }
+      },
       { $inc: { totalMinted: amount } },
       { new: true }
     );
 
-    if (!updatedSupply) return console.warn("⚠️ Not enough supply to mint more coins");
+    if (!updatedSupply) {
+      console.warn("⚠️ Not enough supply to mint more coins");
+      return;
+    }
 
+    // 👤 Step 4: Find user
     const user = await User.findById(userId);
-    if (!user) return;
+    if (!user) {
+      console.warn("⚠️ User not found for rewardCoins()");
+      return;
+    }
 
+    // 💰 Step 5: Update user balance
+    const before = user.coinsBalance || 0;
     user.coinsBalance += amount;
     await user.save();
 
+    // 🧾 Step 6: Record transaction
     await CoinTransaction.create({
-      user: user._id,
-      type: "earn",
+      fromUserId,
+      toUserId: user._id,
       amount,
-      description: `Earned from ${actionType}`,
-      referenceId,
-      balanceAfter: user.coinsBalance,
+      type: actionType,
+      description: description || `Rewarded for ${actionType}`,
+      relatedPostId,
+      relatedCommentId,
+      activityId,
+      transactionId: uuidv4(),
+      toUserBalanceBefore: before,
+      toUserBalanceAfter: user.coinsBalance,
+      status: "completed"
     });
 
     console.log(`✅ Rewarded ${amount} coins to ${user.username} for ${actionType}`);
@@ -50,41 +98,50 @@ async function rewardCoins(userId, actionType = "activity", amount = 10, referen
     console.error("❌ Error rewarding coins:", err);
   }
 }
+
+/* ------------------------------------
+ * 👍 LIKE / UNLIKE POST (Fixed)
+ * ------------------------------------ */
 router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const post = await Post.findById(req.params.postId).select("likes likeCount");
+    console.log("💥 Like route hit by user:", userId, "on post:", req.params.postId);
+
+    const post = await Post.findById(req.params.postId).select("likes likeCount userId");
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     const alreadyLiked = post.likes.some((id) => id.toString() === userId);
-    console.log("🩶 Like request:", { userId, postId: post._id, alreadyLiked });
 
+    // Build update operation
     const updateOperation = alreadyLiked
       ? { $pull: { likes: userId }, $inc: { likeCount: -1 } }
       : { $addToSet: { likes: userId }, $inc: { likeCount: 1 } };
 
-    console.log("🔧 Applying update:", updateOperation);
+    const updated = await Post.findByIdAndUpdate(
+      req.params.postId,
+      updateOperation,
+      { new: true }
+    ).select("likes likeCount");
 
-    await Post.findByIdAndUpdate(req.params.postId, updateOperation);
-    const freshPost = await Post.findById(req.params.postId).select("likes likeCount");
+    const likedByUser = updated.likes.some((id) => id.toString() === userId);
 
-    const likedByUser = freshPost.likes.some((id) => id.toString() === userId);
-    console.log("📊 Updated post:", {
-      likeCount: freshPost.likeCount,
-      totalLikes: freshPost.likes.length,
-      likedByUser,
-    });
+    console.log(`✅ Like status after toggle: liked=${likedByUser}, count=${updated.likeCount}`);
 
+    // Reward coins only if newly liked
     if (!alreadyLiked) {
-      console.log("💰 Rewarding user for like...");
-      await rewardCoins(userId, "like", 10, req.params.postId);
+      try {
+        console.log("🏅 Rewarding user:", userId);
+        await rewardCoins(userId, "REWARD_LIKE", 10, req.params.postId);
+      } catch (rewardErr) {
+        console.error("⚠️ Reward system error:", rewardErr.message);
+      }
     }
 
     res.status(200).json({
       message: likedByUser ? "Post liked" : "Post unliked",
-      likeCount: freshPost.likeCount,
+      likeCount: updated.likeCount,
       likedByUser,
     });
   } catch (err) {
@@ -92,6 +149,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to toggle like", error: err.message });
   }
 });
+
 
 /* ------------------------------------
  * 🧩 GET ALL APPROVED POSTS (with like status)

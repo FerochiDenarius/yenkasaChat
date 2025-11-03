@@ -54,63 +54,39 @@ async function rewardCoins(userId, actionType = "activity", amount = 10, referen
 /* ------------------------------------
  * 👍 LIKE / UNLIKE POST
  * ------------------------------------ */
-// Like or unlike a post
-router.post('/:id/like', async (req, res) => {
+router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    const userId = req.user._id; // assuming you use JWT middleware
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    const post = await Post.findById(req.params.postId).select("likes");
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const alreadyLiked = post.isLikedBy(userId);
+    const alreadyLiked = post.likes.some((id) => id.toString() === userId);
+    const updateOperation = alreadyLiked
+      ? { $pull: { likes: userId } }
+      : { $addToSet: { likes: userId } };
 
-    if (alreadyLiked) {
-      const removed = await post.removeLike(userId);
-      if (removed) {
-        const updated = await Post.findById(req.params.id);
-        return res.json({
-          message: 'Post unliked',
-          likeCount: updated.likeCount,
-          liked: false
-        });
-      }
-    } else {
-      const added = await post.addLike(userId);
-      if (added) {
-        const updated = await Post.findById(req.params.id);
-        return res.json({
-          message: 'Post liked',
-          likeCount: updated.likeCount,
-          liked: true
-        });
-      }
+    await Post.findByIdAndUpdate(req.params.postId, updateOperation);
+
+    const freshPost = await Post.findById(req.params.postId).select("likes");
+    const newLikesCount = freshPost.likes.length;
+
+    await Post.findByIdAndUpdate(req.params.postId, { likesCount: newLikesCount });
+    const likedByUser = freshPost.likes.some((id) => id.toString() === userId);
+
+    if (!alreadyLiked) {
+      await rewardCoins(userId, "like", 10, req.params.postId);
     }
 
-    return res.json({ message: 'No changes made' });
+    res.status(200).json({
+      message: likedByUser ? "Post liked" : "Post unliked",
+      likesCount: newLikesCount,
+      likedByUser,
+    });
   } catch (err) {
-    console.error('Error liking post:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-// 🧩 Get all approved posts with like status for the current user
-router.get('/', async (req, res) => {
-  try {
-    const userId = req.user?._id; // Make sure JWT middleware sets req.user
-
-    const posts = await Post.find({ status: 'approved', isActive: true })
-      .populate('userId', 'username profileImage')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    const result = posts.map(post => ({
-      ...post,
-      liked: post.likes?.some(like => like.toString() === userId?.toString()),
-    }));
-
-    res.json(result);
-  } catch (err) {
-    console.error('Error fetching posts:', err);
-    res.status(500).json({ message: 'Failed to fetch posts' });
+    console.error("❌ Error toggling like:", err);
+    res.status(500).json({ message: "Failed to toggle like", error: err.message });
   }
 });
 

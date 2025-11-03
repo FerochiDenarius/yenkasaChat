@@ -235,22 +235,32 @@ interface ApiService {
         // -----------------------------
         // 👍 LIKE / UNLIKE POST (toggle)
         // -----------------------------
-        @POST("feed/{postId}/like")
+
+        @POST("social/like/{postId}")
         fun likePost(
-            @Header("Authorization") token: String,
+            @Header("Authorization") token: String, // must be "Bearer <token>"
             @Path("postId") postId: String
         ): Call<LikeResponse>
 
-        // -----------------------------
+
+    // ✅ Unlike a post
+    @DELETE("social/unlike/{postId}")
+    fun unlikePost(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<LikeResponse>
+
+    // -----------------------------
         // 👁️‍🗨️ ADD VIEW
         // -----------------------------
-        @POST("feed/view/{postId}")
-        fun addView(
-            @Header("Authorization") token: String,
-            @Path("postId") postId: String
-        ): Call<ViewResponse>
+    @POST("feed/{postId}/view")
+    fun addView(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<ViewResponse>
 
-        // -----------------------------
+
+    // -----------------------------
         // 🤝 FOLLOW / UNFOLLOW USER (toggle)
         // -----------------------------
         @POST("feed/toggle-follow/{targetUserId}")
@@ -321,7 +331,7 @@ interface ApiService {
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
 
-    // ==================== FOLLOW SYSTEM ====================
+
 
     // 💬 ADD COMMENT
     @POST("feed/comment/{postId}")
@@ -342,10 +352,20 @@ interface ApiService {
     // -----------------------------
     // 📰 FEED FROM FOLLOWED USERS
     // -----------------------------
-    @GET("feed/following")
-    fun getFollowingFeed(
-        @Header("Authorization") token: String
-    ): Call<List<Post>>
+    @POST("follow/{userId}/follow")
+    suspend fun followUser(
+        @Path("userId") userId: String
+    ): Response<FollowResponse>
+
+    @DELETE("follow/{userId}/follow")
+    suspend fun unfollowUser(
+        @Path("userId") userId: String
+    ): Response<FollowResponse>
+
+    @GET("follow/{userId}/follow-stats")
+    suspend fun getFollowStats(
+        @Path("userId") userId: String
+    ): Response<FollowResponse>
 
     // -----------------------------
     // Other social endpoints can be added here if needed
@@ -441,12 +461,6 @@ interface ApiService {
     ): Call<FeedResponse>
 
 
-    // ✅ Unlike a post
-    @DELETE("feed/{postId}/like")
-    fun unlikePost(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<LikeResponse>
 
     // ==================== APP VERIFICATION ====================
 

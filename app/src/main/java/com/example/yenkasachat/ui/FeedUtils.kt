@@ -73,24 +73,35 @@ object FeedUtils {
     }
 
     // 🔹 Follow / Unfollow logic
-    fun toggleFollow(context: Context, token: String, targetUserId: String, onComplete: (() -> Unit)? = null) {
-        ApiClient.apiService.toggleFollow("Bearer $token", targetUserId)
-            .enqueue(object : Callback<FollowResponse> {
-                override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val body = response.body()!!
-                        Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
-                        onComplete?.invoke()
-                    } else {
-                        Toast.makeText(context, "Failed to follow/unfollow", Toast.LENGTH_SHORT).show()
-                    }
-                }
+    fun toggleFollow(
+        context: Context,
+        token: String,
+        targetUserId: String,
+        isFollowing: Boolean,
+        onComplete: (() -> Unit)? = null
+    ) {
+        val call = if (isFollowing) {
+            ApiClient.apiService.unfollowUser(targetUserId, "Bearer $token")
+        } else {
+            ApiClient.apiService.followUser(targetUserId, "Bearer $token")
+        }
 
-                override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
-                    Log.e("FeedUtils", "❌ Follow/unfollow failed: ${t.message}", t)
-                    Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+        call.enqueue(object : Callback<FollowResponse> {
+            override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
+                    onComplete?.invoke()
+                } else {
+                    Toast.makeText(context, "Failed to follow/unfollow", Toast.LENGTH_SHORT).show()
                 }
-            })
+            }
+
+            override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                Log.e("FeedUtils", "❌ Follow/unfollow failed: ${t.message}", t)
+                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     // 🔹 Block / Unblock logic

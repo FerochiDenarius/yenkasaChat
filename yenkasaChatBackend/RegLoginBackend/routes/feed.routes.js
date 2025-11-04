@@ -2,21 +2,16 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
-const { getCommunityFeed } = require("../models/feed.model");
+const Post = require("../models/post.model");
 
-// GET /api/feed
-// ✅ Updated Feed Route — matches Android FeedResponse model
-// ✅ Corrected Feed Route — fixes populate() path error
+// ✅ Existing feed fetching logic (unchanged)
 router.get("/", auth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const Post = require("../models/post.model");
-
     const posts = await Post.find({ isActive: true, status: "approved" })
-      // ❗ Use userId and communityId — not user or community
       .populate("userId", "username profileImage verified")
       .populate("communityId", "name displayName")
       .sort({ createdAt: -1 })
@@ -44,5 +39,27 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
+
+// ✅ Socket trigger route — when a new post is created or updated
+router.post("/notify-update", auth, async (req, res) => {
+  try {
+    const { action, postId } = req.body;
+
+    if (!action) {
+      return res.status(400).json({ error: "Missing action type" });
+    }
+
+    // Notify all connected clients to refresh feed
+    if (global.io) {
+      global.io.emit("feedUpdate", { action, postId });
+      console.log(`📢 Feed update broadcasted: ${action} (post: ${postId})`);
+    }
+
+    res.status(200).json({ success: true, message: "Feed update emitted" });
+  } catch (err) {
+    console.error("❌ Error emitting feed update:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;

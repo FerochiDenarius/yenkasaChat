@@ -78,4 +78,25 @@ object SocketManager {
     fun isConnected(): Boolean {
         return socket?.connected() ?: false
     }
+
+
+    fun on(event: String, listener: (data: Any) -> Unit) {
+        socket?.on(event) { args ->
+            if (args.isNotEmpty()) listener(args[0])
+        }
+    }
+
+    fun off(event: String) {
+        socket?.off(event)
+    }
+
+    fun emit(event: String, data: Any) {
+        try {
+            socket?.emit(event, data)
+            Log.d(TAG, "Emitted $event with $data")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error emitting $event", e)
+        }
+    }
+
 }

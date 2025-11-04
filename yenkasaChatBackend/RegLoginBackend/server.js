@@ -34,6 +34,10 @@ const io = new Server(server, {
   },
 });
 
+// ✅ Make io globally accessible so routes (e.g. feed.routes.js) can emit events
+global.io = io;
+
+
 // ---------------------------------
 // Middlewares
 // ---------------------------------
@@ -198,6 +202,8 @@ app.use('/api/social', socialRoutes);
 const coinsRoutes = require('./routes/coins');
 app.use('/coins', coinsRoutes);
 
+const viewRoutes = require('./routes/view.routes');
+app.use('/api', viewRoutes);
 
 // ---------------------------------
 // Error Handling

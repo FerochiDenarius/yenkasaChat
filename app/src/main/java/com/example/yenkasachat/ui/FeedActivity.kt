@@ -23,6 +23,11 @@ import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
+import org.json.JSONObject
+import com.example.yenkasachat.network.SocketManager
+
 
 class FeedActivity : AppCompatActivity() {
 
@@ -34,6 +39,8 @@ class FeedActivity : AppCompatActivity() {
     private lateinit var btnSelectCommunities: Button
     private lateinit var fabCreatePost: FloatingActionButton
     private lateinit var communityHeader: TextView
+    private lateinit var socket: Socket
+
 
     // 🔹 Data
     private val posts = mutableListOf<Post>()
@@ -56,7 +63,6 @@ class FeedActivity : AppCompatActivity() {
         initAuth()
         initViews()
         setupRecyclerView()
-        setupSwipeRefresh()
         setupCommunitySelector()
         setupListeners()
 
@@ -75,6 +81,11 @@ class FeedActivity : AppCompatActivity() {
             posts.addAll(cachedPosts)
             adapter.notifyDataSetChanged()
             Log.d("FeedActivity", "📦 Loaded ${cachedPosts.size} cached posts")
+
+            // 🟢 Connect socket & start live updates
+            SocketManager.connect(userId) // pass current userId (from SharedPrefs or session)
+            setupSocketListeners()
+
         }
 
         // 🟢 Step 2: Fetch fresh posts from server (and update cache)
@@ -182,18 +193,12 @@ class FeedActivity : AppCompatActivity() {
                 val lastVisible = layoutManager.findLastVisibleItemPosition()
                 val totalItems = layoutManager.itemCount
                 if (!isLoading && lastVisible >= totalItems - 3) {
-                    loadMorePosts()
+
                 }
             }
         })
     }
 
-    private fun setupSwipeRefresh() {
-        swipeRefresh.setOnRefreshListener {
-            Log.d("FeedActivity", "🔄 Swipe refresh triggered")
-            refreshFeed()
-        }
-    }
 
     // ----------------------------------------------------------------------
     // 🔹 Button & Listeners
@@ -205,6 +210,29 @@ class FeedActivity : AppCompatActivity() {
                 startActivity(Intent(this, PostActivity::class.java))
             } else {
                 Toast.makeText(this, "You must verify your account before posting.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+
+
+    private fun setupSocketListeners() {
+        SocketManager.on("likeUpdate") { data ->
+            runOnUiThread {
+                try {
+                    val json = data as JSONObject
+                    val postId = json.getString("postId")
+                    val likeCount = json.getInt("likeCount")
+
+                    val index = posts.indexOfFirst { it._id == postId }
+                    if (index != -1) {
+                        posts[index] = posts[index].copy(likeCount = likeCount)
+                        adapter.notifyItemChanged(index)
+                        Log.d("FeedActivity", "❤️ Like updated live for $postId -> $likeCount")
+                    }
+                } catch (e: Exception) {
+                    Log.e("FeedActivity", "likeUpdate parse error: ${e.message}")
+                }
             }
         }
     }
@@ -276,7 +304,7 @@ class FeedActivity : AppCompatActivity() {
                     )
                     if (joinResponse.isSuccessful) {
                         Toast.makeText(this@FeedActivity, "Communities updated!", Toast.LENGTH_SHORT).show()
-                        refreshFeed()
+
                     } else {
                         Toast.makeText(this@FeedActivity, "Failed to update communities", Toast.LENGTH_SHORT).show()
                     }
@@ -302,8 +330,8 @@ class FeedActivity : AppCompatActivity() {
             .enqueue(object : Callback<FeedResponse> {
                 override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
                     isLoading = false
-                    showLoading(false)
-                    swipeRefresh.isRefreshing = false
+
+
 
                     if (response.isSuccessful && response.body() != null) {
                         val feedResponse = response.body()!!
@@ -326,22 +354,13 @@ class FeedActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
                     isLoading = false
                     showLoading(false)
-                    swipeRefresh.isRefreshing = false
+
                     Log.e("FeedActivity", "💥 Feed network error: ${t.message}", t)
                     Toast.makeText(this@FeedActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
-    private fun loadMorePosts() {
-        currentPage++
-        loadFeed()
-    }
-
-    private fun refreshFeed() {
-        currentPage = 1
-        loadFeed()
-    }
 
     // ✅ Load cached posts before hitting the API
     private fun loadCachedPosts() {
@@ -380,6 +399,19 @@ class FeedActivity : AppCompatActivity() {
             cachedPosts[index] = updatedPost
             PostCacheManager.savePosts(this, cachedPosts)
             Log.d("FeedActivity", "💾 Updated cached post: ${updatedPost._id}")
+        }
+    }
+    // ----------------------------------------------------------------------
+// 🔹 Lifecycle Cleanup
+// ----------------------------------------------------------------------
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            // ✅ Remove all socket listeners related to this activity
+            SocketManager.off("likeUpdate")
+            Log.d("FeedActivity", "🧹 Socket listeners removed.")
+        } catch (e: Exception) {
+            Log.e("FeedActivity", "Error cleaning up socket listeners", e)
         }
     }
 

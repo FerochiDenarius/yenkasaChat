@@ -5,6 +5,10 @@ const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
 
+
+const io = require('../socket'); // ✅ import your Socket.IO instance
+const fetch = require('node-fetch');
+
 const REWARD_FOLLOW = 5;
 
 // ✅ Follow a user
@@ -42,7 +46,6 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
     currentUser.followingCount = (currentUser.followingCount || 0) + 1;
     targetUser.followersCount = (targetUser.followersCount || 0) + 1;
 
-    // ✅ Save updated timestamps
     currentUser.updatedAt = new Date();
     targetUser.updatedAt = new Date();
 
@@ -61,6 +64,34 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       type: 'REWARD_FOLLOW',
       description: 'Reward for gaining a follower',
     });
+
+    // ✅ SOCKET.IO EMIT BLOCK — broadcast follow event
+    io.emit('feedUpdate', {
+      type: 'newFollow',
+      followerId: currentUserId,
+      followedId: targetUserId,
+      timestamp: new Date(),
+    });
+
+    // ✅ NOTIFICATION — notify the person being followed
+    if (targetUser.oneSignalPlayerId) {
+      const notificationData = {
+        app_id: process.env.ONESIGNAL_APP_ID,
+        include_player_ids: [targetUser.oneSignalPlayerId],
+        headings: { en: 'New Follower' },
+        contents: { en: `${currentUser.username} started following you.` },
+        data: { followerId: currentUserId },
+      };
+
+      await fetch('https://onesignal.com/api/v1/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          Authorization: `Basic ${process.env.ONESIGNAL_KEY}`,
+        },
+        body: JSON.stringify(notificationData),
+      });
+    }
 
     res.json({
       success: true,
@@ -100,16 +131,23 @@ router.delete('/:userId/follow', authMiddleware, async (req, res) => {
       id => id.toString() !== currentUserId
     );
 
-    // ✅ Update counts safely
+    // ✅ Update counts
     currentUser.followingCount = Math.max(0, currentUser.following.length);
     targetUser.followersCount = Math.max(0, targetUser.followers.length);
 
-    // ✅ Update timestamps
     currentUser.updatedAt = new Date();
     targetUser.updatedAt = new Date();
 
     await currentUser.save();
     await targetUser.save();
+
+    // ✅ SOCKET.IO EMIT BLOCK — broadcast unfollow event
+    io.emit('feedUpdate', {
+      type: 'unfollow',
+      followerId: currentUserId,
+      unfollowedId: targetUserId,
+      timestamp: new Date(),
+    });
 
     res.json({
       success: true,
@@ -124,6 +162,7 @@ router.delete('/:userId/follow', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to unfollow user' });
   }
 });
+
 
 // ✅ Get user's followers
 router.get('/:userId/followers', authMiddleware, async (req, res) => {

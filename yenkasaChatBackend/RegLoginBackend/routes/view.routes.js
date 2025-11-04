@@ -6,6 +6,29 @@ const Post = require('../models/post.model');
 const authMiddleware = require('../middleware/auth');
 const io = require('../socket'); // ✅ Import global Socket.IO instance
 
+// socket.js
+let io;
+
+module.exports = {
+  init: (server) => {
+    const { Server } = require('socket.io');
+    io = new Server(server, {
+      cors: {
+        origin: '*', // you can restrict this later to your app domain
+      },
+    });
+    console.log('✅ Socket.IO initialized');
+    return io;
+  },
+  getIO: () => {
+    if (!io) {
+      throw new Error('Socket.io not initialized!');
+    }
+    return io;
+  },
+};
+
+
 // ---------------------------------------------
 // 👁️ Record a unique view for a post + emit socket event
 // ---------------------------------------------

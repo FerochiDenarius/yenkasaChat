@@ -505,6 +505,7 @@ interface ApiService {
 
 
 //=================ViewCOUNT=================//
+
 @POST("views/{postId}/view")
 suspend fun recordView(
     @Path("postId") postId: String,

@@ -1,4 +1,3 @@
-// models/view.model.js
 const mongoose = require('mongoose');
 
 const viewSchema = new mongoose.Schema(
@@ -17,7 +16,7 @@ const viewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Prevent duplicate views by same user
-viewSchema.index({ post: 1, user: 1 }, { unique: true });
+// ✅ Removed unique index so each view is counted
+// viewSchema.index({ post: 1, user: 1 }, { unique: true });
 
 module.exports = mongoose.model('View', viewSchema);

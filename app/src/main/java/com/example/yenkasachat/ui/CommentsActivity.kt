@@ -365,29 +365,29 @@ class CommentsActivity : AppCompatActivity() {
         isRefreshing = true
 
         val token = TokenManager.getToken(this)
-        if (token.isNullOrEmpty()) {
+        val id = postId
+        if (token.isNullOrEmpty() || id.isNullOrEmpty()) {
             isRefreshing = false
             return
         }
 
-        ApiClient.apiService.getComments("Bearer $token", postId!!)
-            .enqueue(object : retrofit2.Callback<CommentsResponse> {
-                override fun onResponse(
-                    call: Call<CommentsResponse>,
-                    response: Response<CommentsResponse>
-                ) {
-                    isRefreshing = false
-                    if (response.isSuccessful && response.body() != null) {
-                        val newComments = response.body()!!.comments
-                        if (newComments.size != comments.size ||
-                            newComments.lastOrNull()?._id != comments.lastOrNull()?._id
-                        ) {
-                            comments.clear()
-                            comments.addAll(newComments)
-                            adapter.notifyDataSetChanged()
-                            recyclerComments.scrollToPosition(comments.size - 1)
-                        }
-                    } else {
+        ApiClient.apiService.getComments(
+            token = "Bearer $token",
+            postId = id,
+            page = 1,
+            limit = 50
+        ).enqueue(object : Callback<CommentsResponse> {
+            override fun onResponse(call: Call<CommentsResponse>, response: Response<CommentsResponse>) {
+                isRefreshing = false
+                if (response.isSuccessful && response.body() != null) {
+                    val newComments = response.body()!!.comments
+                    comments.clear()
+                    comments.addAll(newComments)
+                    adapter.notifyDataSetChanged()
+                    recyclerComments.scrollToPosition(comments.size - 1)
+                } else {
+                    Log.e("CommentsActivity", "Failed to load comments: ${response.code()} | ${response.errorBody()?.string()}")
+                    if (!autoRefresh) {
                         Toast.makeText(
                             this@CommentsActivity,
                             "Failed to load comments (${response.code()})",
@@ -395,18 +395,20 @@ class CommentsActivity : AppCompatActivity() {
                         ).show()
                     }
                 }
+            }
 
-                override fun onFailure(call: Call<CommentsResponse>, t: Throwable) {
-                    isRefreshing = false
-                    if (!autoRefresh) {
-                        Toast.makeText(
-                            this@CommentsActivity,
-                            "Network error: ${t.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+            override fun onFailure(call: Call<CommentsResponse>, t: Throwable) {
+                isRefreshing = false
+                Log.e("CommentsActivity", "Network error fetching comments", t)
+                if (!autoRefresh) {
+                    Toast.makeText(
+                        this@CommentsActivity,
+                        "Network error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
-            })
+            }
+        })
     }
 
     private fun postComment(text: String) {

@@ -1,12 +1,15 @@
-// routes/view.routes.js
 const express = require('express');
 const router = express.Router();
 const View = require('../models/view.model');
 const Post = require('../models/post.model');
+const User = require('../models/user.model');
+const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
 
+const REWARD_VIEW = 2; // reward per view
+
 // ---------------------------------------------
-// 👁️ Record a unique view for a post + emit socket event
+// 👁️ Record a view for a post + reward coins + emit socket
 // ---------------------------------------------
 router.post('/:postId/view', authMiddleware, async (req, res) => {
   try {
@@ -15,41 +18,46 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
 
     // ✅ Verify post exists
     const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ success: false, message: 'Post not found' });
-    }
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
 
-    // ✅ Check if already viewed
-    const alreadyViewed = await View.findOne({ post: postId, user: userId });
+    // ✅ Always create a view
+    await View.create({ post: postId, user: userId });
 
-    if (!alreadyViewed) {
-      await View.create({ post: postId, user: userId });
-
-      // ✅ Count total views after new view
-      const viewsCount = await View.countDocuments({ post: postId });
-
-      // 🟢 Emit socket event using global.io
-      if (global.io) {
-        global.io.emit('viewUpdate', {
-          postId,
-          viewsCount,
-          viewerId: userId,
-          timestamp: new Date(),
+    // ✅ Reward post author if not self
+    if (post.userId.toString() !== userId) {
+      const postAuthor = await User.findById(post.userId);
+      if (postAuthor) {
+        postAuthor.coinsBalance += REWARD_VIEW;
+        post.coinsEarned += REWARD_VIEW;
+        await postAuthor.save();
+        
+        await CoinTransaction.create({
+          fromUserId: userId,
+          toUserId: postAuthor._id,
+          amount: REWARD_VIEW,
+          type: 'REWARD_VIEW',
+          description: 'Reward for post view',
+          relatedPostId: post._id,
         });
       }
+    }
 
-      return res.json({
-        success: true,
-        message: 'View recorded successfully',
+    // ✅ Count total views after new view
+    const viewsCount = await View.countDocuments({ post: postId });
+
+    // ✅ Emit socket event using global.io
+    if (global.io) {
+      global.io.emit('viewUpdate', {
+        postId,
         viewsCount,
+        viewerId: userId,
+        timestamp: new Date(),
       });
     }
 
-    // If already viewed
-    const viewsCount = await View.countDocuments({ post: postId });
-    return res.json({
+    res.json({
       success: true,
-      message: 'View already recorded',
+      message: 'View recorded successfully',
       viewsCount,
     });
 

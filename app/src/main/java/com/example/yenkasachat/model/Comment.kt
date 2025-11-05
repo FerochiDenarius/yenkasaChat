@@ -9,8 +9,9 @@ data class Comment(
     @SerializedName("postId")
     val postId: String,
 
+    // Keep as object from server
     @SerializedName("userId")
-    val user: CommentUser,  // populated user info
+    val userId: CommentUser,
 
     @SerializedName("text")
     val text: String,
@@ -39,6 +40,10 @@ data class Comment(
     @SerializedName("updatedAt")
     val updatedAt: String? = null
 ) {
+    // ✅ Custom getter for backward compatibility
+    val user: CommentUser
+        get() = userId
+
     // Helper property to easily check if comment is deleted
     val isDeleted: Boolean
         get() = !isActive
@@ -57,6 +62,7 @@ data class CommentUser(
     @SerializedName("verified")
     val verified: Boolean = false
 )
+
 data class RepliesResponse(
     val replies: List<Comment>,
     val pagination: Pagination
@@ -68,8 +74,6 @@ data class Pagination(
     val totalReplies: Int,
     val hasMore: Boolean
 )
-
-
 
 data class LikeResponse(
     val message: String,

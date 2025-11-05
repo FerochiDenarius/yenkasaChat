@@ -41,6 +41,14 @@ class CommentAdapter(
         val view = LayoutInflater.from(context).inflate(R.layout.item_comment, parent, false)
         return CommentViewHolder(view)
     }
+    // Inside CommentAdapter
+    fun updateComment(updated: Comment) {
+        val index = comments.indexOfFirst { it._id == updated._id }
+        if (index != -1) {
+            comments[index] = updated
+            notifyItemChanged(index)
+        }
+    }
 
     override fun getItemCount(): Int = comments.size
 
@@ -108,13 +116,6 @@ class CommentAdapter(
         notifyDataSetChanged()
     }
 
-    fun updateComment(updatedComment: Comment) {
-        val index = comments.indexOfFirst { it._id == updatedComment._id }
-        if (index != -1) {
-            comments[index] = updatedComment
-            notifyItemChanged(index)
-        }
-    }
 
     fun deleteComment(comment: Comment) {
         val index = comments.indexOfFirst { it._id == comment._id }

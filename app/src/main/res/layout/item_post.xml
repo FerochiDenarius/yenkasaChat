@@ -113,6 +113,29 @@
             android:visibility="gone"
             android:orientation="horizontal" />
 
+
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            app:use_controller="false"
+            app:resize_mode="fill"
+            android:background="@android:color/black" />
+
+        <!-- Centered play/pause overlay -->
+        <ImageButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:scaleType="centerInside"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_play_circle"
+            app:tint="@android:color/white"
+            android:visibility="gone" />
+
         <!-- follow FAB overlay on media (small) -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/overlayFollowFab"

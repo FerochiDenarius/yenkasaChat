@@ -107,7 +107,6 @@ dependencies {
     implementation("io.socket:socket.io-client:2.1.0")
     implementation("com.github.chrisbanes:PhotoView:2.0.0")
 
-
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
@@ -128,11 +127,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-common-java8:2.6.2")
 
     // ExoPlayer core
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
-    implementation("androidx.media3:media3-common:1.5.1")
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+
 // Optional: for loading media from URLs (HTTP(S))
     implementation("androidx.media3:media3-exoplayer-dash:1.4.1")
+
 // Optional: if you plan to play audio focus aware background playback
     implementation("androidx.media3:media3-session:1.4.1")
 

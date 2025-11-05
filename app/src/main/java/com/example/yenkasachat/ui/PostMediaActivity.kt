@@ -1,19 +1,15 @@
 package com.example.yenkasachat.ui
 
-import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
-import com.example.yenkasachat.model.Post
-import android.widget.MediaController
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 
 class PostMediaActivity : AppCompatActivity() {
 
@@ -22,152 +18,120 @@ class PostMediaActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var videoView: VideoView
     private lateinit var audioView: LinearLayout
+    private lateinit var audioSeekBar: SeekBar
     private lateinit var audioPlayBtn: ImageButton
     private lateinit var audioPauseBtn: ImageButton
     private lateinit var audioTitle: TextView
-    private lateinit var audioSeekBar: SeekBar
 
-    private var mediaPlayer: MediaPlayer? = null
-    private var post: Post? = null
-    private val handler = Handler(Looper.getMainLooper())
+    private var exoPlayer: ExoPlayer? = null
+    private var audioPlayer: MediaPlayer? = null
     private var isAudioPrepared = false
+    private var handler = android.os.Handler()
+
+    private var mediaUrl: String? = null
+    private var mediaType: String? = null
+    private var username: String? = null
+    private var caption: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_post_media)
 
+        // === Bind views ===
         textUsername = findViewById(R.id.textUsername)
         textCaption = findViewById(R.id.textCaption)
         imageView = findViewById(R.id.imageView)
         videoView = findViewById(R.id.videoView)
         audioView = findViewById(R.id.audioView)
+        audioSeekBar = findViewById(R.id.audioSeekBar)
         audioPlayBtn = findViewById(R.id.audioPlayBtn)
         audioPauseBtn = findViewById(R.id.audioPauseBtn)
         audioTitle = findViewById(R.id.audioTitle)
-        audioSeekBar = findViewById(R.id.audioSeekBar)
 
-        post = intent.getParcelableExtra("POST_DATA")
-        if (post == null) {
-            Log.e("PostMediaActivity", "No post data passed")
-            finish()
-            return
+        // === Get Intent data ===
+        mediaUrl = intent.getStringExtra("mediaUrl")
+        mediaType = intent.getStringExtra("mediaType")
+        username = intent.getStringExtra("username")
+        caption = intent.getStringExtra("caption")
+
+        // === Set text data ===
+        textUsername.text = username ?: "Unknown User"
+        textCaption.text = caption ?: ""
+
+        // === Show relevant media ===
+        when (mediaType) {
+            "image" -> showImage()
+            "video" -> showVideo()
+            "audio" -> showAudio()
+            else -> Toast.makeText(this, "Unknown media type", Toast.LENGTH_SHORT).show()
         }
-
-        setupUI()
     }
 
-    private fun setupUI() {
-        textUsername.text = post?.userId?.username ?: "Unknown"
-        textCaption.text = post?.caption ?: ""
-
-        // Hide all initially
-        imageView.visibility = View.GONE
+    // === IMAGE HANDLING ===
+    private fun showImage() {
+        imageView.visibility = View.VISIBLE
         videoView.visibility = View.GONE
         audioView.visibility = View.GONE
 
-        when (post?.mediaType) {
-            "image" -> showImage()
-            "video" -> playVideo()
-            "audio" -> setupAudio()
-        }
-    }
-
-    // -------------------------------
-    // Image handling with fullscreen
-    // -------------------------------
-    private fun showImage() {
-        imageView.visibility = View.VISIBLE
         Glide.with(this)
-            .load(post?.mediaUrl)
-            .placeholder(R.drawable.placeholder)
-            .error(R.drawable.placeholder)
+            .load(mediaUrl)
+            .placeholder(R.drawable.placeholder_image)
+            .error(R.drawable.error_image)
             .into(imageView)
-
-        imageView.setOnClickListener {
-            val intent = Intent(this, FullscreenImageActivity::class.java)
-            intent.putExtra("IMAGE_URL", post?.mediaUrl)
-            startActivity(intent)
-        }
     }
 
-    // -------------------------------
-    // Video handling with MediaController
-    // -------------------------------
-    private fun playVideo() {
+    // === VIDEO HANDLING ===
+    private fun showVideo() {
+        imageView.visibility = View.GONE
         videoView.visibility = View.VISIBLE
-        val uri = Uri.parse(post?.mediaUrl)
-        videoView.setVideoURI(uri)
+        audioView.visibility = View.GONE
 
-        val mediaController = MediaController(this)
-        mediaController.setAnchorView(videoView)
-        videoView.setMediaController(mediaController)
-
+        videoView.setVideoURI(Uri.parse(mediaUrl))
         videoView.setOnPreparedListener { mp ->
-            mp.isLooping = false
+            mp.isLooping = true
             videoView.start()
         }
-
-        videoView.setOnCompletionListener {
-            videoView.seekTo(0)
-        }
-
         videoView.setOnErrorListener { _, what, extra ->
-            Log.e("PostMediaActivity", "Video playback error what=$what extra=$extra")
-            Toast.makeText(this, "Failed to play video", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error playing video ($what, $extra)", Toast.LENGTH_SHORT).show()
             true
         }
     }
 
-    // -------------------------------
-    // Audio handling with SeekBar
-    // -------------------------------
-    private fun setupAudio() {
+    // === AUDIO HANDLING ===
+    private fun showAudio() {
+        imageView.visibility = View.GONE
+        videoView.visibility = View.GONE
         audioView.visibility = View.VISIBLE
-        audioTitle.text = post?.mediaUrl?.substringAfterLast("/") ?: "Audio"
-        audioPlayBtn.isEnabled = false
-        audioPauseBtn.isEnabled = false
 
-        mediaPlayer = MediaPlayer().apply {
-            setDataSource(post?.mediaUrl)
+        audioPlayer = MediaPlayer().apply {
+            setDataSource(mediaUrl)
             prepareAsync()
             setOnPreparedListener {
                 isAudioPrepared = true
-                audioPlayBtn.isEnabled = true
-                audioPauseBtn.isEnabled = true
-                audioSeekBar.max = duration
-                updateAudioSeekBar()
-            }
-            setOnCompletionListener {
-                seekTo(0)
-                audioPlayBtn.visibility = View.VISIBLE
-                audioPauseBtn.visibility = View.GONE
-            }
-            setOnErrorListener { mp, what, extra ->
-                Log.e("PostMediaActivity", "Audio playback error what=$what extra=$extra")
-                Toast.makeText(this@PostMediaActivity, "Failed to play audio", Toast.LENGTH_SHORT).show()
-                true
+                audioSeekBar.max = it.duration
+                audioTitle.text = "Audio ready (${formatTime(it.duration)})"
             }
         }
 
         audioPlayBtn.setOnClickListener {
             if (isAudioPrepared) {
-                mediaPlayer?.start()
+                audioPlayer?.start()
                 audioPlayBtn.visibility = View.GONE
                 audioPauseBtn.visibility = View.VISIBLE
-                updateAudioSeekBar()
+                startSeekbarUpdate()
             }
         }
 
         audioPauseBtn.setOnClickListener {
-            mediaPlayer?.pause()
-            audioPauseBtn.visibility = View.GONE
+            audioPlayer?.pause()
             audioPlayBtn.visibility = View.VISIBLE
+            audioPauseBtn.visibility = View.GONE
         }
 
         audioSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    mediaPlayer?.seekTo(progress)
+                if (fromUser && isAudioPrepared) {
+                    audioPlayer?.seekTo(progress)
                 }
             }
 
@@ -176,19 +140,37 @@ class PostMediaActivity : AppCompatActivity() {
         })
     }
 
-    private fun updateAudioSeekBar() {
-        mediaPlayer?.let { mp ->
-            if (mp.isPlaying) {
-                audioSeekBar.progress = mp.currentPosition
-                handler.postDelayed({ updateAudioSeekBar() }, 500)
+    private fun startSeekbarUpdate() {
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                audioPlayer?.let {
+                    if (it.isPlaying) {
+                        audioSeekBar.progress = it.currentPosition
+                        handler.postDelayed(this, 1000)
+                    }
+                }
             }
-        }
+        }, 1000)
+    }
+
+    private fun formatTime(ms: Int): String {
+        val totalSecs = ms / 1000
+        val mins = totalSecs / 60
+        val secs = totalSecs % 60
+        return String.format("%d:%02d", mins, secs)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        videoView.pause()
+        audioPlayer?.pause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        videoView.stopPlayback()
+        audioPlayer?.release()
+        exoPlayer?.release()
         handler.removeCallbacksAndMessages(null)
-        mediaPlayer?.release()
-        mediaPlayer = null
     }
 }

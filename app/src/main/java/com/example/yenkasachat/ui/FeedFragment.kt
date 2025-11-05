@@ -16,7 +16,6 @@ import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.SocketManager
 import com.example.yenkasachat.util.TokenManager
-import com.example.yenkasachat.ui.FeedUtils
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -36,6 +35,7 @@ class FeedFragment : Fragment() {
 
     private val posts = mutableListOf<Post>()
     private lateinit var adapter: PostAdapter
+    private lateinit var layoutManager: LinearLayoutManager
 
     private var token: String? = null
     private var userId: String? = null
@@ -45,12 +45,11 @@ class FeedFragment : Fragment() {
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
 
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? = inflater.inflate(R.layout.activity_feed, container, false)
+    ): View? = inflater.inflate(R.layout.feed_fragment, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -72,11 +71,9 @@ class FeedFragment : Fragment() {
 
         btnSelectCommunities.setOnClickListener { showCommunitySelectorDialog() }
 
-        // 🧠 Initialize socket listener
         setupSocketListeners()
     }
 
-    // 🔑 AUTH SETUP
     private fun initAuth() {
         token = TokenManager.getToken(requireContext())
         userId = TokenManager.getUserId(requireContext())
@@ -88,7 +85,6 @@ class FeedFragment : Fragment() {
         }
     }
 
-    // 🎨 VIEW INIT
     private fun initViews(view: View) {
         recyclerView = view.findViewById(R.id.recyclerViewFeed)
         progressBar = view.findViewById(R.id.progressBarFeed)
@@ -99,8 +95,9 @@ class FeedFragment : Fragment() {
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
     }
 
-    // 📰 RECYCLERVIEW
     private fun setupRecyclerView() {
+        layoutManager = LinearLayoutManager(requireContext())
+
         adapter = PostAdapter(
             posts = posts,
             onLikeClick = { post, position ->
@@ -109,9 +106,8 @@ class FeedFragment : Fragment() {
 
                 if (!token.isNullOrEmpty()) {
                     FeedUtils.toggleLike(context, token, post) { liked, newLikeCount ->
-                        // ✅ Update post with new like state + count
                         val updatedPost = post.copy(
-                            likedByCurrentUser = liked,  // must match Post model field
+                            likedByCurrentUser = liked,
                             likeCount = newLikeCount
                         )
 
@@ -126,9 +122,12 @@ class FeedFragment : Fragment() {
             onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
-                val intent = Intent(requireContext(), PostMediaActivity::class.java)
-                intent.putExtra("POST_ID", post._id)
-                startActivity(intent)
+                // Only open full screen for images
+                if (post.mediaType == "image") {
+                    val intent = Intent(requireContext(), PostMediaActivity::class.java)
+                    intent.putExtra("POST_ID", post._id)
+                    startActivity(intent)
+                }
             },
             onShareClick = { post ->
                 val shareIntent = Intent(Intent.ACTION_SEND)
@@ -139,11 +138,66 @@ class FeedFragment : Fragment() {
             }
         )
 
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter
+
+        // Instagram-style auto-play on scroll
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    playVisibleVideo()
+                }
+            }
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                // Pause videos when scrolling fast
+                if (Math.abs(dy) > 20) {
+                    adapter.pauseAllVideos()
+                }
+            }
+        })
     }
 
-    // 🌍 FETCH COMMUNITIES
+    private fun playVisibleVideo() {
+        val firstVisible = layoutManager.findFirstVisibleItemPosition()
+        val lastVisible = layoutManager.findLastVisibleItemPosition()
+
+        if (firstVisible == RecyclerView.NO_POSITION) return
+
+        // Find the most visible video post
+        var mostVisiblePosition = -1
+        var maxVisibleHeight = 0
+
+        for (i in firstVisible..lastVisible) {
+            val view = layoutManager.findViewByPosition(i) ?: continue
+            val post = posts.getOrNull(i) ?: continue
+
+            if (post.mediaType == "video") {
+                val location = IntArray(2)
+                view.getLocationOnScreen(location)
+                val viewTop = location[1]
+                val viewBottom = viewTop + view.height
+
+                val screenHeight = recyclerView.height
+                val visibleTop = Math.max(viewTop, 0)
+                val visibleBottom = Math.min(viewBottom, screenHeight)
+                val visibleHeight = visibleBottom - visibleTop
+
+                if (visibleHeight > maxVisibleHeight) {
+                    maxVisibleHeight = visibleHeight
+                    mostVisiblePosition = i
+                }
+            }
+        }
+
+        // Auto-play the most visible video
+        if (mostVisiblePosition != -1 && maxVisibleHeight > 200) {
+            adapter.playVideoAtPosition(mostVisiblePosition)
+        }
+    }
+
     private fun fetchCommunitiesAndFeed() {
         ApiClient.apiService.getCommunities("Bearer $token")
             .enqueue(object : Callback<List<Community>> {
@@ -162,9 +216,9 @@ class FeedFragment : Fragment() {
                         updateSelectedCommunitiesUI()
                         loadFeed()
 
-                        Log.d("FeedFragment", "✅ Loaded ${allCommunities.size} communities from backend")
+                        Log.d("FeedFragment", "✅ Loaded ${allCommunities.size} communities")
                     } else {
-                        Log.w("FeedFragment", "⚠️ Failed to load communities, empty or error response")
+                        Log.w("FeedFragment", "⚠️ Failed to load communities")
                         fallbackCommunity()
                     }
                 }
@@ -183,7 +237,6 @@ class FeedFragment : Fragment() {
         loadFeed()
     }
 
-    // 🧩 COMMUNITY SELECTOR DIALOG
     private fun showCommunitySelectorDialog() {
         if (allCommunities.isEmpty()) {
             Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
@@ -227,7 +280,6 @@ class FeedFragment : Fragment() {
         }
     }
 
-    // 📡 LOAD FEED
     private fun loadFeed(page: Int = 1) {
         if (isLoading) return
         isLoading = true
@@ -246,7 +298,10 @@ class FeedFragment : Fragment() {
                         adapter.updatePosts(posts)
                         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
 
-                        Log.d("FeedFragment", "✅ Loaded ${feedResponse.posts.size} posts, page ${feedResponse.pagination.currentPage}")
+                        // Auto-play first video after loading
+                        recyclerView.post { playVisibleVideo() }
+
+                        Log.d("FeedFragment", "✅ Loaded ${feedResponse.posts.size} posts")
                     } else {
                         Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                     }
@@ -285,9 +340,7 @@ class FeedFragment : Fragment() {
         progressBar.visibility = if (show && currentPage == 1) View.VISIBLE else View.GONE
     }
 
-    // ⚡️ SOCKET.IO INTEGRATION
     private fun setupSocketListeners() {
-        // Use your global SocketManager
         SocketManager.on("newPost") { data ->
             try {
                 val json = data as JSONObject
@@ -322,8 +375,21 @@ class FeedFragment : Fragment() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Pause all videos when fragment is not visible
+        adapter.pauseAllVideos()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Auto-play visible video when returning
+        recyclerView.post { playVisibleVideo() }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        adapter.pauseAllVideos()
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
     }

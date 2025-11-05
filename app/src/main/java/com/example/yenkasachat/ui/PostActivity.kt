@@ -124,17 +124,30 @@ class PostActivity : AppCompatActivity() {
     // 🔹 Handle media selection result
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_MEDIA_REQUEST && resultCode == Activity.RESULT_OK && data?.data != null) {
-            mediaUri = data.data
-            val mimeType = contentResolver.getType(mediaUri!!)
-            mediaType = when {
-                mimeType?.startsWith("image") == true -> "image"
-                mimeType?.startsWith("video") == true -> "video"
-                mimeType?.startsWith("audio") == true -> "audio"
+        val mimeType = contentResolver.getType(mediaUri!!) ?: run {
+            val path = mediaUri?.path?.lowercase() ?: ""
+            when {
+                path.endsWith(".mp4") || path.endsWith(".mov") || path.endsWith(".mkv") -> "video/mp4"
+                path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png") || path.endsWith(".webp") -> "image/jpeg"
+                path.endsWith(".mp3") || path.endsWith(".wav") || path.endsWith(".m4a") -> "audio/mpeg"
                 else -> null
             }
-            updatePreview()
         }
+
+        mediaType = when {
+            mimeType?.contains("image") == true -> "image"
+            mimeType?.contains("video") == true -> "video"
+            mimeType?.contains("audio") == true -> "audio"
+            else -> null
+        }
+
+        if (mediaType == null) {
+            Toast.makeText(this, "Unsupported file type selected.", Toast.LENGTH_SHORT).show()
+            mediaUri = null
+            return
+        }
+
+        updatePreview()
     }
 
     // 🔹 Display selected media preview

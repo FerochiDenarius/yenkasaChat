@@ -93,13 +93,9 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
   try {
     const {
       text,
-      imageUrl,
-      videoUrl,
-      mediaUrls,
       tags,
       location,
       visibility,
-      postType,
       mentions,
       communityName
     } = req.body;
@@ -108,22 +104,30 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    let mediaUrl = imageUrl || videoUrl || null;
+    let imageUrl = '';
+    let videoUrl = '';
+    let detectedPostType = 'text';
 
     // ✅ Upload to Cloudinary if file provided
     if (req.file) {
       const folder = "yenkasachat/posts";
-      const resourceType = req.file.mimetype.startsWith('video') ? "video" : "image";
+      const isVideo = req.file.mimetype.startsWith('video');
 
       const uploadResult = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder, resource_type: resourceType },
+          { folder, resource_type: isVideo ? 'video' : 'image' },
           (error, result) => (error ? reject(error) : resolve(result))
         );
         stream.end(req.file.buffer);
       });
 
-      mediaUrl = uploadResult.secure_url;
+      if (isVideo) {
+        videoUrl = uploadResult.secure_url;
+        detectedPostType = 'video';
+      } else {
+        imageUrl = uploadResult.secure_url;
+        detectedPostType = 'image';
+      }
     }
 
     // ✅ Find community if provided
@@ -137,31 +141,30 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       });
     }
 
-    /* 🧠 Decide post approval status */
+    // ✅ Determine approval status
     const approvers = ["admin", "moderator", "developer"];
     const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
     const postStatus = isPrivilegedUser ? "approved" : "pending";
 
-    // ✅ Create post
+    // ✅ Create and save the post
     const post = new Post({
       userId,
       communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
       text: text?.trim(),
-      imageUrl: mediaUrl || '',
-      videoUrl: '',
-      mediaUrls: mediaUrls || [],
+      imageUrl,
+      videoUrl,
       tags: tags || [],
       mentions: mentions || [],
       location: location || '',
       visibility: visibility || 'public',
-      postType: postType || 'text',
+      postType: detectedPostType,
       communityName: selectedCommunity ? selectedCommunity.displayName : communityName || '',
       status: postStatus,
     });
 
     await post.save();
 
-    // ✅ Reward user if post is auto-approved
+    // ✅ Reward + Emit if post auto-approved
     if (postStatus === "approved") {
       await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
 
@@ -178,6 +181,7 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       }
     }
 
+    // ✅ Return response
     res.json({ success: true, post });
   } catch (err) {
     console.error("❌ Failed to create post:", err);

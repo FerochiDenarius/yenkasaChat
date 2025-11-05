@@ -247,18 +247,23 @@ router.put('/:commentId', authMiddleware, async (req, res) => {
     }
 
     const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return res.status(404).json({ error: 'Comment not found' });
-    }
-
-    if (comment.userId.toString() !== userId) {
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (comment.userId.toString() !== userId)
       return res.status(403).json({ error: 'You can only edit your own comments' });
-    }
 
     comment.text = text.trim();
     await comment.save();
 
-    res.json({ success: true, message: 'Comment updated successfully', comment });
+    // ✅ populate before returning
+    const populatedComment = await Comment.findById(comment._id)
+      .populate('userId', 'username profileImage verified')
+      .lean();
+
+    res.json({
+      success: true,
+      message: 'Comment updated successfully',
+      comment: populatedComment
+    });
   } catch (err) {
     console.error('❌ Edit comment failed:', err);
     res.status(500).json({ error: 'Server error while editing comment' });

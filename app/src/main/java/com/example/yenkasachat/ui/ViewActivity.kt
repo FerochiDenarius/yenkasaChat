@@ -57,7 +57,7 @@ class ViewActivity : AppCompatActivity() {
         textUsername.text = post?.userId?.username ?: "Unknown"
         textCaption.text = post?.caption ?: ""
 
-        textViews.text = "👁️ ${post?.viewCount ?: 0}"
+        fetchTotalViews()
 
         post?.mediaUrl?.let {
             Glide.with(this)
@@ -110,6 +110,31 @@ class ViewActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e("ViewActivity", "Error parsing viewUpdate: ${e.message}")
+            }
+        }
+    }
+    private fun fetchTotalViews() {
+        val currentPostId = post?._id ?: return
+        val authToken = token ?: return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = ApiClient.apiService.getTotalViews(currentPostId, "Bearer $authToken")
+                if (response.isSuccessful) {
+                    val body: ViewResponse? = response.body()
+                    withContext(Dispatchers.Main) {
+                        if (body != null && body.success) {
+                            textViews.text = "👁️ ${body.viewsCount}"
+                            Log.d("ViewActivity", "👁️ Total views fetched: ${body.viewsCount}")
+                        } else {
+                            Log.w("ViewActivity", "⚠️ Fetch views response: ${body?.message}")
+                        }
+                    }
+                } else {
+                    Log.w("ViewActivity", "⚠️ Fetch views failed: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.e("ViewActivity", "❌ Error fetching total views: ${e.message}")
             }
         }
     }

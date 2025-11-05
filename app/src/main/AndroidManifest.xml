@@ -82,8 +82,8 @@
         <activity android:name=".ui.CreateTransactionActivity" />
         <activity android:name=".ui.CommunitiesActivity" />
         <activity android:name=".ui.CoinWalletActivity" />
-        <activity android:name=".ui.PostDetailActivity" />
         <activity android:name=".ui.PostApprovalActivity" />
+        <activity android:name=".ui.PostMediaActivity" />
         <activity android:name=".ui.ProfileImagePreviewActivity" />
         <activity android:name=".ui.UserProfileActivity" />
         <activity android:name=".ui.CreateCommunityActivity" />

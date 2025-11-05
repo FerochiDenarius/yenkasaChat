@@ -63,7 +63,7 @@ dependencies {
     // ✅ Pusher Beams SDK (v1.9.0 stable)
     implementation("com.pusher:push-notifications-android:1.9.0")
     implementation("com.google.firebase:firebase-iid:21.1.0")
-
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
     // ✅ OneSignal SDK (v4.8.6 stable)
     implementation("com.onesignal:OneSignal:4.8.6")
     implementation("de.hdodenhof:circleimageview:3.1.0")
@@ -105,6 +105,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("io.socket:socket.io-client:2.1.0")
+    implementation("com.github.chrisbanes:PhotoView:2.0.0")
 
 
     implementation("androidx.compose.ui:ui")

@@ -93,7 +93,7 @@ class UserProfileActivity : AppCompatActivity() {
                 startActivity(intent)
             },
             onPostClick = { post ->
-                val intent = Intent(this, PostDetailActivity::class.java)
+                val intent = Intent(this, PostMediaActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },

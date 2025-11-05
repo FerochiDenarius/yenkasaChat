@@ -126,7 +126,7 @@ class FeedFragment : Fragment() {
             onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
-                val intent = Intent(requireContext(), PostDetailActivity::class.java)
+                val intent = Intent(requireContext(), PostMediaActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },

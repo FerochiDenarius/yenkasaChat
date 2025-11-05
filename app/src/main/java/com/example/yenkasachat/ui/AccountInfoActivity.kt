@@ -84,7 +84,7 @@ class AccountInfoActivity : AppCompatActivity() {
             posts = userPostsList,
             onPostClick = { post ->
                 // When a user clicks a post in the grid, open the detail view
-                val intent = Intent(this, PostDetailActivity::class.java)
+                val intent = Intent(this, PostMediaActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },

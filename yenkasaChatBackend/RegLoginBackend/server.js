@@ -202,7 +202,7 @@ const coinsRoutes = require('./routes/coins');
 app.use('/coins', coinsRoutes);
 
 const viewRoutes = require('./routes/view.routes');
-app.use('/api', viewRoutes);
+app.use('/api/views', viewRoutes);
 
 // ---------------------------------
 // Error Handling

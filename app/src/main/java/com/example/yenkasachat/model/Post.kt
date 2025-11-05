@@ -16,6 +16,7 @@ data class Post(
     val mediaUrl: String? = null,
     val mediaUrls: List<String>? = null,
     val mentions: List<String>? = null,
+    val mediaType: String? = null,
     val imageUrl: String? = null, // legacy support for single image
     val likedByUser: Boolean = false,
     // Engagement

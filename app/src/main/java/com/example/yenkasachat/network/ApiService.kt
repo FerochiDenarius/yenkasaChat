@@ -513,6 +513,12 @@ suspend fun recordView(
 ): Response<ViewResponse>
 
 
+    @GET("views/{postId}/views")
+    suspend fun getTotalViews(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String
+    ): Response<ViewResponse>
+
     // ==================== APP VERIFICATION ====================
 
     @GET("/api/appverification/dashboard")

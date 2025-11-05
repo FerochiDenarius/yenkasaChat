@@ -5,7 +5,6 @@ const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
-const io = require('../socket');
 
 const REWARD_COMMENT = 5;
 const REWARD_REPLY = 2;

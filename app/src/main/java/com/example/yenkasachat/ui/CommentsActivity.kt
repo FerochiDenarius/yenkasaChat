@@ -146,7 +146,7 @@ class CommentsActivity : AppCompatActivity() {
                     val newText = editComment.text.toString().trim()
                     if (newText.isEmpty()) return@setOnClickListener
 
-                    val json = JSONObject().apply { put("text", newText) }.toString()
+                    val json = "{\"text\":\"${newText}\"}"
                     val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
                     val token = TokenManager.getToken(this@CommentsActivity) ?: return@setOnClickListener
 
@@ -163,28 +163,29 @@ class CommentsActivity : AppCompatActivity() {
                                     val map = response.body()!!
                                     val success = map["success"] as? Boolean ?: false
 
-                                    if (success) {
-                                        val updated = (map["comment"] as? Map<*, *>)
-                                        val newTextServer = updated?.get("text") as? String ?: newText
-
-                                        // ✅ Update local comment list with new text immediately
-                                        val index = comments.indexOfFirst { it._id == comment._id }
-                                        if (index != -1) {
-                                            comments[index] = comment.copy(text = newTextServer)
-                                            adapter.notifyItemChanged(index)
+                                    if (response.isSuccessful) {
+                                        val data = response.body()
+                                        if (data != null && data["success"] == true) {
+                                            // ✅ Normal success path
+                                            val gson = Gson()
+                                            val commentJson = gson.toJson(data["comment"])
+                                            val comment = gson.fromJson(commentJson, Comment::class.java)
+                                            runOnUiThread {
+                                                Toast.makeText(this@CommentsActivity, "Comment added!", Toast.LENGTH_SHORT).show()
+                                                loadComments()
+                                                editComment.text.clear()
+                                            }
+                                        } else {
+                                            // ✅ Success HTTP but unexpected JSON
+                                            Log.w("PostComment", "Unexpected response structure: $data")
+                                            Toast.makeText(this@CommentsActivity, "Comment added (response unparsed)", Toast.LENGTH_SHORT).show()
+                                            loadComments()
                                         }
-
-                                        editComment.text.clear()
-                                        Toast.makeText(this@CommentsActivity, "Comment updated", Toast.LENGTH_SHORT).show()
-                                        loadComments() // optional: re-sync with backend
-                                        resetSendButton()
                                     } else {
-                                        Toast.makeText(
-                                            this@CommentsActivity,
-                                            map["message"]?.toString() ?: "Failed to update comment",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        Toast.makeText(this@CommentsActivity, "Failed to post comment (${response.code()})", Toast.LENGTH_SHORT).show()
                                     }
+
+
                                 } else {
                                     val code = response.code()
                                     val error = response.errorBody()?.string()

@@ -87,10 +87,9 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
 }
 
 /* ------------------------------------
- * ✍️ CREATE POST (FULL FIXED & LOGGED)
+ * ✍️ CREATE POST
  * ------------------------------------ */
 router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
-  console.log("🟢 Incoming post creation request...");
   try {
     const {
       text,
@@ -106,84 +105,50 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     } = req.body;
 
     const userId = req.user.id;
-    console.log(`👤 Authenticated user: ${userId}`);
-
     const user = await User.findById(userId);
-    if (!user) {
-      console.warn("⚠️ User not found for post creation");
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    let uploadedImageUrl = imageUrl || '';
-    let uploadedVideoUrl = videoUrl || '';
+    let mediaUrl = imageUrl || videoUrl || null;
 
-    /* ------------------------------------
-     * ☁️ Upload file to Cloudinary if provided
-     * ------------------------------------ */
+    // ✅ Upload to Cloudinary if file provided
     if (req.file) {
-      console.log(`📤 File detected: ${req.file.originalname}, MIME: ${req.file.mimetype}`);
       const folder = "yenkasachat/posts";
-      const isVideo = req.file.mimetype.startsWith('video');
-      const resourceType = isVideo ? "video" : "image";
+      const resourceType = req.file.mimetype.startsWith('video') ? "video" : "image";
 
-      try {
-        const uploadResult = await new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder, resource_type: resourceType },
-            (error, result) => (error ? reject(error) : resolve(result))
-          );
-          stream.end(req.file.buffer);
-        });
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder, resource_type: resourceType },
+          (error, result) => (error ? reject(error) : resolve(result))
+        );
+        stream.end(req.file.buffer);
+      });
 
-        if (isVideo) {
-          uploadedVideoUrl = uploadResult.secure_url;
-          console.log(`🎥 Video uploaded to Cloudinary: ${uploadedVideoUrl}`);
-        } else {
-          uploadedImageUrl = uploadResult.secure_url;
-          console.log(`🖼️ Image uploaded to Cloudinary: ${uploadedImageUrl}`);
-        }
-      } catch (uploadErr) {
-        console.error("❌ Cloudinary upload failed:", uploadErr);
-        return res.status(500).json({ error: "Media upload failed" });
-      }
+      mediaUrl = uploadResult.secure_url;
     }
 
-    /* ------------------------------------
-     * 🏘️ Find community if provided
-     * ------------------------------------ */
+    // ✅ Find community if provided
     let selectedCommunity = null;
     if (communityName && communityName.trim() !== "") {
-      console.log(`🏘️ Checking for community: ${communityName}`);
       selectedCommunity = await Community.findOne({
         $or: [
           { name: communityName.trim() },
           { displayName: communityName.trim() }
         ]
       });
-      if (selectedCommunity) {
-        console.log(`✅ Community found: ${selectedCommunity.displayName}`);
-      } else {
-        console.log(`⚠️ No matching community found, post will be standalone`);
-      }
     }
 
-    /* ------------------------------------
-     * 🧠 Determine approval status
-     * ------------------------------------ */
+    /* 🧠 Decide post approval status */
     const approvers = ["admin", "moderator", "developer"];
     const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
     const postStatus = isPrivilegedUser ? "approved" : "pending";
-    console.log(`📝 Post status: ${postStatus} (user role: ${user.role})`);
 
-    /* ------------------------------------
-     * 🆕 Create Post Document
-     * ------------------------------------ */
+    // ✅ Create post
     const post = new Post({
       userId,
       communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
-      text: text?.trim() || '',
-      imageUrl: uploadedImageUrl,
-      videoUrl: uploadedVideoUrl,
+      text: text?.trim(),
+      imageUrl: mediaUrl || '',
+      videoUrl: '',
       mediaUrls: mediaUrls || [],
       tags: tags || [],
       mentions: mentions || [],
@@ -195,20 +160,12 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     });
 
     await post.save();
-    console.log(`✅ Post created successfully: ${post._id}`);
 
-    /* ------------------------------------
-     * 💰 Reward if auto-approved
-     * ------------------------------------ */
+    // ✅ Reward user if post is auto-approved
     if (postStatus === "approved") {
-      try {
-        await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
-        console.log(`💰 Reward sent to user ${user.username}`);
-      } catch (rewardErr) {
-        console.error("⚠️ Failed to process reward:", rewardErr);
-      }
+      await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
 
-      // 🔔 Emit new post event for realtime updates
+      // 🔔 Emit new post event to all connected clients
       if (global.io) {
         global.io.emit("feedUpdate", {
           action: "new_post",
@@ -218,16 +175,13 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
           timestamp: new Date(),
         });
         console.log(`📢 feedUpdate emitted for post ${post._id}`);
-      } else {
-        console.log("⚠️ Socket.io not initialized, skipping feedUpdate emit");
       }
     }
 
     res.json({ success: true, post });
-
   } catch (err) {
-    console.error("❌ Unexpected error during post creation:", err);
-    res.status(500).json({ error: "Failed to create post", details: err.message });
+    console.error("❌ Failed to create post:", err);
+    res.status(500).json({ error: "Failed to create post" });
   }
 });
 

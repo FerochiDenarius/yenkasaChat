@@ -304,6 +304,13 @@ interface ApiService {
         @Path("postId") postId: String
     ): Call<LikeResponse>
 
+    // 🗑️ Delete post
+    @DELETE("social/posts/{postId}")
+    fun deletePost(
+        @Path("postId") postId: String
+    ): Call<Map<String, Any>>
+
+
     // -----------------------------
         // 👁️‍🗨️ ADD VIEW
         // -----------------------------

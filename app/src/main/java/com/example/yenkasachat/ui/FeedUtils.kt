@@ -125,6 +125,41 @@ object FeedUtils {
                         Toast.makeText(context, "Failed to block/unblock", Toast.LENGTH_SHORT).show()
                     }
                 }
+                // 🔹 Delete post logic
+                fun deletePost(
+                    context: Context,
+                    token: String,
+                    postId: String,
+                    onDeleted: (() -> Unit)? = null
+                ) {
+                    Log.d("FeedUtils", "🗑️ Attempting to delete post with ID: $postId")
+
+                    ApiClient.apiService.deletePost("Bearer $token", postId)
+                        .enqueue(object : Callback<Map<String, Any>> {
+                            override fun onResponse(
+                                call: Call<Map<String, Any>>,
+                                response: Response<Map<String, Any>>
+                            ) {
+                                if (response.isSuccessful && response.body() != null) {
+                                    val message = response.body()?.get("message")?.toString() ?: "Post deleted"
+                                    Log.d("FeedUtils", "✅ Delete success: $message")
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    onDeleted?.invoke()
+                                } else {
+                                    Log.w(
+                                        "FeedUtils",
+                                        "⚠️ Delete failed -> code=${response.code()}, msg=${response.message()}"
+                                    )
+                                    Toast.makeText(context, "Failed to delete post", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+
+                            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                                Log.e("FeedUtils", "❌ Delete post error: ${t.message}", t)
+                                Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        })
+                }
 
                 override fun onFailure(call: Call<BlockResponse>, t: Throwable) {
                     Log.e("FeedUtils", "❌ Block/unblock failed: ${t.message}", t)

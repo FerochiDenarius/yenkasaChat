@@ -79,7 +79,6 @@
         <!-- Make sure this declaration for PostActivity exists -->
         <activity android:name=".ui.AppVerificationActivity" />
         <activity android:name=".ui.FollowFeedActivity" />
-        <activity android:name=".ui.FeedActivity" />
         <activity android:name=".ui.CreateTransactionActivity" />
         <activity android:name=".ui.CommunitiesActivity" />
         <activity android:name=".ui.CoinWalletActivity" />
@@ -88,7 +87,6 @@
         <activity android:name=".ui.ProfileImagePreviewActivity" />
         <activity android:name=".ui.UserProfileActivity" />
         <activity android:name=".ui.CreateCommunityActivity" />
-        <activity android:name=".ui.FollowListActivity" />
         <activity android:name=".ui.EditProfileActivity" />
         <activity android:name=".ui.PostPreviewActivity" />
         <activity android:name=".ui.PostActivity" />

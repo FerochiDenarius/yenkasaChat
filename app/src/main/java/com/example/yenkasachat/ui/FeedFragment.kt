@@ -1,22 +1,25 @@
 package com.example.yenkasachat.ui
 
 import android.app.AlertDialog
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.network.SocketManager
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.ui.FeedUtils
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -24,7 +27,6 @@ import retrofit2.Response
 class FeedFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var emptyView: TextView
     private lateinit var communityNameView: TextView
@@ -40,8 +42,9 @@ class FeedFragment : Fragment() {
     private var currentPage = 1
     private var isLoading = false
 
-    private var allCommunities: List<String> = emptyList()
-    private val selectedCommunities = mutableSetOf<String>()
+    private var allCommunities: List<Community> = emptyList()
+    private val selectedCommunities = mutableSetOf<Community>()
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,24 +57,23 @@ class FeedFragment : Fragment() {
         initAuth()
         initViews(view)
         setupRecyclerView()
-        setupSwipeRefresh()
 
-        recyclerView.post {
-            loadCommunitiesAndFeed()
-        }
+        recyclerView.post { fetchCommunitiesAndFeed() }
 
         trackDailyLogin()
 
         fabCreatePost.setOnClickListener {
             val isVerified = TokenManager.isVerified(requireContext())
-            if (isVerified) {
+            if (isVerified)
                 startActivity(Intent(requireContext(), PostActivity::class.java))
-            } else {
+            else
                 Toast.makeText(requireContext(), "Verify your account before posting.", Toast.LENGTH_LONG).show()
-            }
         }
 
         btnSelectCommunities.setOnClickListener { showCommunitySelectorDialog() }
+
+        // 🧠 Initialize socket listener
+        setupSocketListeners()
     }
 
     // 🔑 AUTH SETUP
@@ -89,7 +91,6 @@ class FeedFragment : Fragment() {
     // 🎨 VIEW INIT
     private fun initViews(view: View) {
         recyclerView = view.findViewById(R.id.recyclerViewFeed)
-        swipeRefresh = view.findViewById(R.id.swipeRefreshFeed)
         progressBar = view.findViewById(R.id.progressBarFeed)
         emptyView = view.findViewById(R.id.textEmptyFeed)
         communityNameView = view.findViewById(R.id.textCommunityNameHeader)
@@ -102,16 +103,34 @@ class FeedFragment : Fragment() {
     private fun setupRecyclerView() {
         adapter = PostAdapter(
             posts = posts,
-            onLikeClick = { post, position -> toggleLike(post, position) },
+            onLikeClick = { post, position ->
+                val context = requireContext()
+                val token = TokenManager.getToken(context)
+
+                if (!token.isNullOrEmpty()) {
+                    FeedUtils.toggleLike(context, token, post) { liked, newLikeCount ->
+                        // ✅ Update post with new like state + count
+                        val updatedPost = post.copy(
+                            likedByCurrentUser = liked,  // must match Post model field
+                            likeCount = newLikeCount
+                        )
+
+                        posts[position] = updatedPost
+                        adapter.notifyItemChanged(position)
+                    }
+                } else {
+                    Toast.makeText(context, "Please log in again", Toast.LENGTH_SHORT).show()
+                }
+            },
+
             onCommentClick = { post, _ -> openComments(post) },
-            onUserClick = { userId -> openUserProfile(userId) },
+            onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
                 val intent = Intent(requireContext(), PostDetailActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },
             onShareClick = { post ->
-                // Optional: implement sharing or leave empty if not needed
                 val shareIntent = Intent(Intent.ACTION_SEND)
                 shareIntent.type = "text/plain"
                 shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
@@ -119,81 +138,73 @@ class FeedFragment : Fragment() {
                 startActivity(Intent.createChooser(shareIntent, "Share via"))
             }
         )
+
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
     }
 
-    private fun setupSwipeRefresh() {
-        swipeRefresh.setOnRefreshListener {
-            refreshFeed()
-        }
-    }
-
-    // 🌍 LOAD COMMUNITIES
-    private fun loadCommunitiesAndFeed() {
-        Log.d("FeedFragment", "🌍 Loading available communities...")
-
-        ApiClient.apiService.getMyCommunities("Bearer $token")
+    // 🌍 FETCH COMMUNITIES
+    private fun fetchCommunitiesAndFeed() {
+        ApiClient.apiService.getCommunities("Bearer $token")
             .enqueue(object : Callback<List<Community>> {
                 override fun onResponse(
                     call: Call<List<Community>>,
                     response: Response<List<Community>>
                 ) {
                     if (response.isSuccessful && response.body() != null) {
-                        val communities = response.body()!!
+                        allCommunities = response.body()!!
 
-                        // ✅ Extract display names (fallback to name)
-                        allCommunities = communities.map { it.displayName.ifEmpty { it.name } }
-
-                        // ✅ Default selection
                         selectedCommunities.clear()
                         if (allCommunities.isNotEmpty()) {
                             selectedCommunities.add(allCommunities.first())
-                        } else {
-                            selectedCommunities.add("All")
                         }
 
                         updateSelectedCommunitiesUI()
                         loadFeed()
-                        Log.d("FeedFragment", "✅ Loaded ${communities.size} communities successfully")
+
+                        Log.d("FeedFragment", "✅ Loaded ${allCommunities.size} communities from backend")
                     } else {
-                        Log.w("FeedFragment", "⚠️ Could not fetch communities — code ${response.code()}")
-                        allCommunities = listOf("All")
-                        selectedCommunities.clear()
-                        selectedCommunities.add("All")
-                        updateSelectedCommunitiesUI()
-                        loadFeed()
+                        Log.w("FeedFragment", "⚠️ Failed to load communities, empty or error response")
+                        fallbackCommunity()
                     }
                 }
 
                 override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    Log.e("FeedFragment", "💥 Failed to load communities: ${t.message}", t)
-                    allCommunities = listOf("All")
-                    selectedCommunities.clear()
-                    selectedCommunities.add("All")
-                    updateSelectedCommunitiesUI()
-                    loadFeed()
+                    Log.e("FeedFragment", "❌ Error fetching communities: ${t.message}", t)
+                    fallbackCommunity()
                 }
             })
     }
 
-    private fun showCommunitySelectorDialog() {
-        if (allCommunities.isEmpty()) return
+    private fun fallbackCommunity() {
+        allCommunities = emptyList()
+        selectedCommunities.clear()
+        updateSelectedCommunitiesUI()
+        loadFeed()
+    }
 
+    // 🧩 COMMUNITY SELECTOR DIALOG
+    private fun showCommunitySelectorDialog() {
+        if (allCommunities.isEmpty()) {
+            Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val names = allCommunities.map { it.displayName }
         val checkedItems = BooleanArray(allCommunities.size) { i ->
             selectedCommunities.contains(allCommunities[i])
         }
 
         AlertDialog.Builder(requireContext())
             .setTitle("Select Communities")
-            .setMultiChoiceItems(allCommunities.toTypedArray(), checkedItems) { _, which, isChecked ->
+            .setMultiChoiceItems(names.toTypedArray(), checkedItems) { _, which, isChecked ->
                 val community = allCommunities[which]
                 if (isChecked) selectedCommunities.add(community)
                 else selectedCommunities.remove(community)
             }
             .setPositiveButton("Apply") { dialog, _ ->
                 updateSelectedCommunitiesUI()
-                refreshFeed()
+                loadFeed()
                 dialog.dismiss()
             }
             .setNegativeButton("Cancel", null)
@@ -201,27 +212,32 @@ class FeedFragment : Fragment() {
     }
 
     private fun updateSelectedCommunitiesUI() {
-        val displayText = if (selectedCommunities.isEmpty()) "No community selected"
-        else selectedCommunities.joinToString(", ")
-        selectedCommunitiesText.text = displayText
-        communityNameView.text = if (selectedCommunities.size == 1) selectedCommunities.first() else "Multiple Communities"
+        val text = if (selectedCommunities.isEmpty())
+            "No community selected"
+        else selectedCommunities.joinToString(", ") { it.displayName ?: it.name ?: "Unknown" }
+
+        selectedCommunitiesText.text = text
+
+        communityNameView.text = when {
+            selectedCommunities.isEmpty() -> "No Community"
+            selectedCommunities.size == 1 -> selectedCommunities.first().displayName
+                ?: selectedCommunities.first().name
+                ?: "Unnamed"
+            else -> "Multiple Communities"
+        }
     }
 
-    // 📡 FEED LOADING
-    private fun loadFeed() {
+    // 📡 LOAD FEED
+    private fun loadFeed(page: Int = 1) {
         if (isLoading) return
         isLoading = true
         showLoading(true)
 
-        val selected = selectedCommunities.joinToString(", ")
-        Log.d("FeedFragment", "📡 Loading feed for: $selected")
-
-        ApiClient.apiService.getFeed("Bearer $token", page = currentPage, limit = 20)
+        ApiClient.apiService.getFeed("Bearer $token", page, 20)
             .enqueue(object : Callback<FeedResponse> {
                 override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
                     isLoading = false
                     showLoading(false)
-                    swipeRefresh.isRefreshing = false
 
                     if (response.isSuccessful && response.body() != null) {
                         val feedResponse = response.body()!!
@@ -229,6 +245,8 @@ class FeedFragment : Fragment() {
                         posts.addAll(feedResponse.posts)
                         adapter.updatePosts(posts)
                         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+
+                        Log.d("FeedFragment", "✅ Loaded ${feedResponse.posts.size} posts, page ${feedResponse.pagination.currentPage}")
                     } else {
                         Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                     }
@@ -237,37 +255,9 @@ class FeedFragment : Fragment() {
                 override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
                     isLoading = false
                     showLoading(false)
-                    swipeRefresh.isRefreshing = false
-                    Log.e("FeedFragment", "💥 Network failure: ${t.message}", t)
+                    Log.e("FeedFragment", "Network failure: ${t.message}", t)
                 }
             })
-    }
-
-    private fun refreshFeed() {
-        currentPage = 1
-        posts.clear()
-        adapter.notifyDataSetChanged()
-        loadFeed()
-    }
-
-    private fun toggleLike(post: Post, position: Int) {
-        val call = if (post.likedByCurrentUser)
-            ApiClient.apiService.unlikePost("Bearer $token", post._id)
-        else
-            ApiClient.apiService.likePost("Bearer $token", post._id)
-
-        call.enqueue(object : Callback<LikeResponse> {
-            override fun onResponse(call: Call<LikeResponse>, response: Response<LikeResponse>) {
-                if (response.isSuccessful && response.body() != null) {
-                    val likeResponse = response.body()!!
-                    adapter.updateLikeStatus(position, likeResponse.liked, likeResponse.likeCount)
-                }
-            }
-
-            override fun onFailure(call: Call<LikeResponse>, t: Throwable) {
-                Log.e("FeedFragment", "💥 Like request failed: ${t.message}", t)
-            }
-        })
     }
 
     private fun openComments(post: Post) {
@@ -293,5 +283,48 @@ class FeedFragment : Fragment() {
 
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show && currentPage == 1) View.VISIBLE else View.GONE
+    }
+
+    // ⚡️ SOCKET.IO INTEGRATION
+    private fun setupSocketListeners() {
+        // Use your global SocketManager
+        SocketManager.on("newPost") { data ->
+            try {
+                val json = data as JSONObject
+                val newPost = Post.fromJson(json)
+                lifecycleScope.launch {
+                    posts.add(0, newPost)
+                    adapter.updatePosts(posts)
+                    recyclerView.scrollToPosition(0)
+                }
+            } catch (e: Exception) {
+                Log.e("FeedFragment", "Error parsing newPost", e)
+            }
+        }
+
+        SocketManager.on("likeUpdate") { data ->
+            try {
+                val json = data as JSONObject
+                val postId = json.getString("postId")
+                val likeCount = json.getInt("likeCount")
+
+                lifecycleScope.launch {
+                    val index = posts.indexOfFirst { it._id == postId }
+                    if (index >= 0) {
+                        val updated = posts[index].copy(likeCount = likeCount)
+                        posts[index] = updated
+                        adapter.notifyItemChanged(index)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FeedFragment", "Error parsing likeUpdate", e)
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        SocketManager.off("newPost")
+        SocketManager.off("likeUpdate")
     }
 }

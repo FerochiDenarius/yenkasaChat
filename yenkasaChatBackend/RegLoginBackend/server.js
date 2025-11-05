@@ -182,8 +182,7 @@ app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/reset-password', 'index.html'));
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
-console.log("server.js: Static file serving configured for /public.");
+
 
 // ✅ Serve User Agreement / Terms
 app.get('/terms', (req, res) => {
@@ -219,6 +218,9 @@ app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err);
   res.status(500).json({ error: "Internal server error" });
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
+console.log("server.js: Static file serving configured for /public.");
 
 // ---------------------------------
 // MongoDB Connection + Server Start

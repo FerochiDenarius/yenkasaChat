@@ -64,7 +64,7 @@ class CommunitiesActivity : AppCompatActivity() {
             Log.d("CommunitiesActivity", "Community selected: ${community.displayName}")
 
             // Example action: open FeedActivity for this community
-            val intent = Intent(this, FeedActivity::class.java)
+            val intent = Intent(this, FeedFragment::class.java)
             intent.putExtra("communityId", community.id)
             intent.putExtra("communityName", community.displayName)
             startActivity(intent)
@@ -95,7 +95,7 @@ class CommunitiesActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = CommunityAdapter(communities) { community ->
             // ✅ Directly open feed activity here
-            val intent = Intent(this, FeedActivity::class.java)
+            val intent = Intent(this, FeedFragment::class.java)
             intent.putExtra("communityId", community.id)
             intent.putExtra("communityName", community.displayName)
             startActivity(intent)
@@ -122,26 +122,36 @@ class CommunitiesActivity : AppCompatActivity() {
 
     private fun loadCommunities() {
         showLoading(true)
-        ApiClient.apiService.getCommunities(
-            token = "Bearer $token"
-        ).enqueue(object : Callback<List<Community>> {
-            override fun onResponse(call: Call<List<Community>>, response: Response<List<Community>>) {
-                showLoading(false)
-                if (response.isSuccessful && response.body() != null) {
-                    communities.clear()
-                    communities.addAll(response.body()!!)
-                    adapter.notifyDataSetChanged()
-                    emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
-                } else {
-                    Toast.makeText(this@CommunitiesActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+        ApiClient.apiService.getCommunities("Bearer $token")
+            .enqueue(object : Callback<List<Community>> {
+                override fun onResponse(
+                    call: Call<List<Community>>,
+                    response: Response<List<Community>>
+                ) {
+                    showLoading(false)
+                    if (response.isSuccessful && response.body() != null) {
+                        communities.clear()
+                        communities.addAll(response.body()!!)
+                        adapter.notifyDataSetChanged()
+                        emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
+                    } else {
+                        Toast.makeText(
+                            this@CommunitiesActivity,
+                            "Failed to load communities",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
-            }
 
-            override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                showLoading(false)
-                Toast.makeText(this@CommunitiesActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
+                    showLoading(false)
+                    Toast.makeText(
+                        this@CommunitiesActivity,
+                        "Error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
     }
 
     private fun searchCommunities(query: String) {
@@ -211,7 +221,13 @@ class CommunitiesActivity : AppCompatActivity() {
     private fun joinCommunity(community: Community) {
         progressBar.visibility = View.VISIBLE
 
-        ApiClient.apiService.joinCommunity("Bearer $token", community.id)
+        // ✅ Safely handle nullable ID
+        val communityId = community.id ?: return run {
+            progressBar.visibility = View.GONE
+            Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
+        }
+
+        ApiClient.apiService.joinCommunity("Bearer $token", communityId)
             .enqueue(object : Callback<JoinCommunityResponse> {
                 override fun onResponse(
                     call: Call<JoinCommunityResponse>,
@@ -220,20 +236,28 @@ class CommunitiesActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
 
                     if (response.isSuccessful && response.body()?.success == true) {
+                        // ✅ Use safe display name
+                        val displayName = community.displayName ?: "Community"
+
                         Toast.makeText(
                             this@CommunitiesActivity,
-                            "Joined ${community.displayName}!",
+                            "Joined $displayName!",
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // Save joined community locally
+                        // ✅ Save joined community locally
                         getSharedPreferences("auth", Context.MODE_PRIVATE).edit()
-                            .putString("communityId", community.id)
-                            .putString("communityName", community.displayName)
+                            .putString("communityId", communityId)
+                            .putString("communityName", displayName)
                             .apply()
 
-                        startActivity(Intent(this@CommunitiesActivity, FeedActivity::class.java))
+                        // 🚫 You can’t start a Fragment using Intent
+                        // ✅ Correct: open FeedActivity (or MainActivity) instead
+                        val intent = Intent(this@CommunitiesActivity, MainActivity::class.java)
+                        intent.putExtra("openFragment", "feed")
+                        startActivity(intent)
                         finish()
+
                     } else {
                         Toast.makeText(
                             this@CommunitiesActivity,

@@ -3,6 +3,7 @@ package com.example.yenkasachat.adapter
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +16,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.util.TokenManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -25,10 +31,10 @@ class PostAdapter(
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit,
     private val onShareClick: (Post) -> Unit
-
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+
         private val profileImage: ImageView = itemView.findViewById(R.id.imageProfilePost)
         private val username: TextView = itemView.findViewById(R.id.textUsernamePost)
         private val verifiedBadge: ImageView = itemView.findViewById(R.id.imageVerifiedBadge)
@@ -44,12 +50,8 @@ class PostAdapter(
         private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
         private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
 
-
-// ... inside your PostViewHolder class
-
         fun bind(post: Post, position: Int) {
             val user = post.userId
-
             username.text = user.username
             verifiedBadge.visibility = if (user.verified) View.VISIBLE else View.GONE
 
@@ -82,11 +84,30 @@ class PostAdapter(
 
             btnLike.setOnClickListener { onLikeClick(post, position) }
             btnComment.setOnClickListener { onCommentClick(post, position) }
-            itemView.setOnClickListener { onPostClick(post) }
             btnShare.setOnClickListener { onShareClick(post) }
-        }
 
-// ... rest of your PostAdapter file
+            // ✅ FIXED: Removed 'holder' – use itemView directly
+            itemView.setOnClickListener {
+                onPostClick(post)
+
+                // 👁️ Record a view when the post is opened (safe coroutine scope)
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val token = TokenManager.getToken(itemView.context)
+                        if (!token.isNullOrEmpty()) {
+                            val response = ApiClient.apiService.recordView(post._id, "Bearer $token")
+                            if (response.isSuccessful) {
+                                Log.d("PostAdapter", "✅ View recorded for ${post._id}")
+                            } else {
+                                Log.w("PostAdapter", "⚠️ Failed to record view: ${response.errorBody()?.string()}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PostAdapter", "❌ Error recording view: ${e.message}")
+                    }
+                }
+            }
+        }
 
         private fun handleMedia(post: Post) {
             val mediaList = post.mediaUrls ?: emptyList()
@@ -97,13 +118,11 @@ class PostAdapter(
                     layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
                     adapter = PostMediaAdapter(mediaList)
                 }
-                // ✅ FIX 2: The 'not' operator '!' must come before the expression.
             } else if (!post.imageUrl.isNullOrEmpty()) {
                 mediaRecycler?.visibility = View.GONE
                 postImage.visibility = View.VISIBLE
                 Glide.with(itemView.context)
                     .load(post.imageUrl)
-                    // ✅ FIX 3: 'placeholder' is a function. Use the correct drawable resource.
                     .placeholder(R.drawable.placeholder_image)
                     .error(R.drawable.placeholder_image)
                     .into(postImage)
@@ -159,14 +178,14 @@ class PostAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        PostViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false))
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false)
+        return PostViewHolder(view)
+    }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         holder.bind(posts[position], position)
     }
-
-    // ... (rest of your adapter)
 
     override fun getItemCount(): Int = posts.size
 
@@ -175,14 +194,12 @@ class PostAdapter(
         notifyDataSetChanged()
     }
 
-    // ✅ FIX: The parameter 'isLiked' is now on a single line.
     fun updateLikeStatus(position: Int, isLiked: Boolean, likeCount: Int) {
         if (position in posts.indices) {
             val updatedPost = posts[position].copy(
-                likedByCurrentUser = isLiked, // This will now be resolved
+                likedByCurrentUser = isLiked,
                 likeCount = likeCount
             )
-            // It's safer to check if 'posts' is a MutableList before trying to set an item
             (posts as? MutableList<Post>)?.set(position, updatedPost)
             notifyItemChanged(position)
         }

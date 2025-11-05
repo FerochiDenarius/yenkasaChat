@@ -57,3 +57,27 @@ data class CommentUser(
     @SerializedName("verified")
     val verified: Boolean = false
 )
+data class RepliesResponse(
+    val replies: List<Comment>,
+    val pagination: Pagination
+)
+
+data class Pagination(
+    val currentPage: Int,
+    val totalPages: Int,
+    val totalReplies: Int,
+    val hasMore: Boolean
+)
+
+
+
+data class LikeResponse(
+    val message: String,
+    val likeCount: Int,
+    val likedByUser: Boolean
+)
+
+data class CommentsResponse(
+    val comments: List<Comment>,
+    val pagination: Pagination
+)

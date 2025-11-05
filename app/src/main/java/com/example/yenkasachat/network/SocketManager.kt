@@ -1,18 +1,25 @@
 package com.example.yenkasachat.network
 
 import android.util.Log
+import com.example.yenkasachat.model.*
 import io.socket.client.IO
 import io.socket.client.Socket
+import org.json.JSONObject
 import java.net.URISyntaxException
 
 object SocketManager {
 
     private var socket: Socket? = null
     private const val TAG = "SocketManager"
-
-    // ✅ Use the same server base (no /api)
     private const val SOCKET_URL = "https://yenkasa-bldrv.ondigitalocean.app"
 
+    val instance: Socket?
+        get() = socket // 👈 ADD THIS LINE
+
+
+    // ------------------------------------------------------------------
+    // 🔹 Connection Management
+    // ------------------------------------------------------------------
     fun connect(userId: String?) {
         if (userId.isNullOrEmpty()) {
             Log.w(TAG, "Cannot connect socket: userId is null or empty.")
@@ -45,29 +52,15 @@ object SocketManager {
         }
     }
 
-    fun emitUserConnected(userId: String) {
-        try {
-            socket?.emit("userOnline", userId)
-            Log.d(TAG, "Emitted userOnline for $userId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error emitting userOnline", e)
-        }
-    }
-
-    fun emitUserDisconnected(userId: String) {
-        try {
-            socket?.emit("userOffline", userId)
-            Log.d(TAG, "Emitted userOffline for $userId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error emitting userOffline", e)
-        }
+    fun ensureConnected(userId: String?) {
+        if (!isConnected()) connect(userId)
     }
 
     fun disconnect() {
         try {
-            if (socket != null && socket!!.connected()) {
+            if (socket?.connected() == true) {
                 socket?.disconnect()
-                Log.i(TAG, "Socket disconnected manually.")
+                Log.i(TAG, "🔌 Socket disconnected manually.")
             }
             socket = null
         } catch (e: Exception) {
@@ -75,11 +68,21 @@ object SocketManager {
         }
     }
 
-    fun isConnected(): Boolean {
-        return socket?.connected() ?: false
+    fun cleanup() {
+        try {
+            socket?.off()
+            disconnect()
+            Log.i(TAG, "🧹 Socket cleaned and listeners removed.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during socket cleanup", e)
+        }
     }
 
+    fun isConnected(): Boolean = socket?.connected() ?: false
 
+    // ------------------------------------------------------------------
+    // 🔹 Event Handling
+    // ------------------------------------------------------------------
     fun on(event: String, listener: (data: Any) -> Unit) {
         socket?.on(event) { args ->
             if (args.isNotEmpty()) listener(args[0])
@@ -93,10 +96,77 @@ object SocketManager {
     fun emit(event: String, data: Any) {
         try {
             socket?.emit(event, data)
-            Log.d(TAG, "Emitted $event with $data")
+            Log.d(TAG, "📡 Emitted $event with $data")
         } catch (e: Exception) {
             Log.e(TAG, "Error emitting $event", e)
         }
     }
 
+    // ------------------------------------------------------------------
+    // 🔹 User connection events
+    // ------------------------------------------------------------------
+    fun emitUserConnected(userId: String) {
+        try {
+            socket?.emit("userOnline", userId)
+            Log.d(TAG, "👤 User connected: $userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error emitting userOnline", e)
+        }
+    }
+
+    fun emitUserDisconnected(userId: String) {
+        try {
+            socket?.emit("userOffline", userId)
+            Log.d(TAG, "👤 User disconnected: $userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error emitting userOffline", e)
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 🔹 JSON Parsing Helpers (instead of fromJson())
+    // ------------------------------------------------------------------
+    fun parseUser(json: JSONObject?): UserBasic {
+        if (json == null) return UserBasic("", "Unknown", null, false)
+        return UserBasic(
+            id = json.optString("_id"),
+            username = json.optString("username", "Unknown"),
+            profileImage = json.optString("profileImage", null),
+            verified = json.optBoolean("verified", false)
+        )
+    }
+
+    fun parseCommunity(json: JSONObject?): CommunityBasic? {
+        if (json == null) return null
+        return CommunityBasic(
+            id = json.optString("_id"),
+            name = json.optString("name", "general"),
+            displayName = json.optString("displayName", "General")
+        )
+    }
+
+    fun parsePost(json: JSONObject?): Post? {
+        if (json == null) return null
+        return try {
+            Post(
+                _id = json.optString("_id"),
+                userId = parseUser(json.optJSONObject("userId")),
+                communityId = parseCommunity(json.optJSONObject("communityId")),
+                caption = json.optString("text", ""),
+                mediaUrl = json.optString("mediaUrl", null),
+                mediaUrls = null,
+                mentions = null,
+                imageUrl = json.optString("imageUrl", null),
+                likeCount = json.optInt("likeCount", 0),
+                commentCount = json.optInt("commentCount", 0),
+                coinsEarned = json.optInt("coinsEarned", 0),
+                createdAt = json.optString("createdAt", ""),
+                updatedAt = json.optString("updatedAt", null),
+                likedByCurrentUser = false
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "⚠️ Error parsing post JSON: ${e.message}")
+            null
+        }
+    }
 }

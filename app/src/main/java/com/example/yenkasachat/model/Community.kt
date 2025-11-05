@@ -1,15 +1,15 @@
-// app/src/main/java/com/example/yenkasachat/model/Community.kt
 package com.example.yenkasachat.model
 
 import com.google.gson.annotations.SerializedName
 
 data class Community(
-    @SerializedName("_id")
-    val id: String,
 
-    val name: String,
-    val displayName: String,
-    val description: String,
+    @SerializedName("_id")
+    val id: String? = null,   // ✅ Made nullable to prevent hashCode() crash
+
+    val name: String? = null,
+    val displayName: String? = null,
+    val description: String? = null,
     val location: String? = null,
     val categories: List<String> = emptyList(),
 
@@ -31,6 +31,14 @@ data class Community(
 
     val createdAt: String? = null,
     val updatedAt: String? = null
-)
+) {
+    // ✅ Prevents NullPointerException in sets or maps
+    override fun hashCode(): Int = id?.hashCode() ?: 0
 
-
+    // ✅ Equality now based on id (safe for null)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Community) return false
+        return this.id == other.id
+    }
+}

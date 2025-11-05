@@ -6,6 +6,8 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.google.gson.Gson
+import com.example.yenkasachat.model.CommentsResponse
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -76,28 +78,164 @@ class CommentsActivity : AppCompatActivity() {
 
         // ✅ Initialize adapter with CommentActionListener
         adapter = CommentAdapter(this, comments, object : CommentAdapter.CommentActionListener {
+
+            // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
-                // TODO: Open reply input field or pre-fill editComment with @username
                 editComment.setText("@${comment.user?.username ?: ""} ")
                 editComment.requestFocus()
-                // Optionally, scroll to bottom
+
+                val parentCommentId = comment._id
+
+                buttonSend.setOnClickListener {
+                    val text = editComment.text.toString().trim()
+                    if (text.isEmpty()) return@setOnClickListener
+
+                    val json = JSONObject().apply {
+                        put("postId", postId)
+                        put("text", text)
+                        put("parentCommentId", parentCommentId)
+                    }.toString()
+
+                    val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+                    val token = TokenManager.getToken(this@CommentsActivity) ?: return@setOnClickListener
+
+                    ApiClient.apiService.addComment("Bearer $token", body)
+                        .enqueue(object : Callback<Map<String, Any>> {
+                            override fun onResponse(
+                                call: Call<Map<String, Any>>,
+                                response: Response<Map<String, Any>>
+                            ) {
+                                if (response.isSuccessful && response.body() != null) {
+                                    val map = response.body()!!
+                                    val success = map["success"] as? Boolean ?: false
+                                    if (success) {
+                                        val commentJson = Gson().toJson(map["comment"])
+                                        val newComment = Gson().fromJson(commentJson, Comment::class.java)
+
+                                        editComment.text.clear()
+                                        Toast.makeText(this@CommentsActivity, "Reply posted", Toast.LENGTH_SHORT).show()
+                                        loadComments()
+                                        resetSendButton()
+
+                                        Log.d("CommentsActivity", "✅ Added reply: ${newComment.text}")
+                                    } else {
+                                        Toast.makeText(this@CommentsActivity, map["message"].toString(), Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(this@CommentsActivity, "Failed to post reply", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+
+                            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                                Toast.makeText(this@CommentsActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        })
+                }
+
                 recyclerComments.scrollToPosition(comments.size - 1)
             }
 
+            // ✏️ Edit a comment
             override fun onEdit(comment: Comment) {
-                // TODO: Open edit input with existing comment text
                 editComment.setText(comment.text ?: "")
                 editComment.requestFocus()
-                // Remove old comment temporarily or mark it as editing
+
+                // Always reset the button to normal state before setting new listener
+                buttonSend.setOnClickListener(null)
+                buttonSend.setOnClickListener {
+                    val newText = editComment.text.toString().trim()
+                    if (newText.isEmpty()) return@setOnClickListener
+
+                    val json = JSONObject().apply { put("text", newText) }.toString()
+                    val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+                    val token = TokenManager.getToken(this@CommentsActivity) ?: return@setOnClickListener
+
+                    // 🧠 Debug log: check if this ID really exists in backend
+                    Log.d("EditComment", "Editing comment with ID: ${comment._id}")
+
+                    ApiClient.apiService.editComment("Bearer $token", comment._id, body)
+                        .enqueue(object : Callback<Map<String, Any>> {
+                            override fun onResponse(
+                                call: Call<Map<String, Any>>,
+                                response: Response<Map<String, Any>>
+                            ) {
+                                if (response.isSuccessful && response.body() != null) {
+                                    val map = response.body()!!
+                                    val success = map["success"] as? Boolean ?: false
+
+                                    if (success) {
+                                        val updated = (map["comment"] as? Map<*, *>)
+                                        val newTextServer = updated?.get("text") as? String ?: newText
+
+                                        // ✅ Update local comment list with new text immediately
+                                        val index = comments.indexOfFirst { it._id == comment._id }
+                                        if (index != -1) {
+                                            comments[index] = comment.copy(text = newTextServer)
+                                            adapter.notifyItemChanged(index)
+                                        }
+
+                                        editComment.text.clear()
+                                        Toast.makeText(this@CommentsActivity, "Comment updated", Toast.LENGTH_SHORT).show()
+                                        loadComments() // optional: re-sync with backend
+                                        resetSendButton()
+                                    } else {
+                                        Toast.makeText(
+                                            this@CommentsActivity,
+                                            map["message"]?.toString() ?: "Failed to update comment",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    val code = response.code()
+                                    val error = response.errorBody()?.string()
+                                    Log.e("EditComment", "Failed → $code | $error")
+                                    Toast.makeText(
+                                        this@CommentsActivity,
+                                        "Failed to update comment ($code)",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+
+                            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                                Log.e("EditComment", "Error → ${t.message}", t)
+                                Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        })
+                }
+
                 recyclerComments.scrollToPosition(comments.indexOf(comment))
             }
 
+            // 🗑️ Delete a comment
             override fun onDelete(comment: Comment) {
-                // TODO: Call backend to delete, then remove from adapter
-                adapter.deleteComment(comment)
-                Toast.makeText(this@CommentsActivity, "Comment deleted", Toast.LENGTH_SHORT).show()
+                val token = TokenManager.getToken(this@CommentsActivity) ?: return
+
+                ApiClient.apiService.deleteComment("Bearer $token", comment._id)
+                    .enqueue(object : Callback<Map<String, Any>> {
+                        override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                            if (response.isSuccessful && response.body() != null) {
+                                val map = response.body()!!
+                                val success = map["success"] as? Boolean ?: false
+                                if (success) {
+                                    adapter.deleteComment(comment)
+                                    Toast.makeText(this@CommentsActivity, "Comment deleted", Toast.LENGTH_SHORT).show()
+                                    loadComments()
+                                } else {
+                                    Toast.makeText(this@CommentsActivity, map["message"].toString(), Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(this@CommentsActivity, "Failed to delete comment", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                            Toast.makeText(this@CommentsActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    })
             }
         })
+
 
         val layoutManager = LinearLayoutManager(this)
         layoutManager.stackFromEnd = true
@@ -232,11 +370,14 @@ class CommentsActivity : AppCompatActivity() {
         }
 
         ApiClient.apiService.getComments("Bearer $token", postId!!)
-            .enqueue(object : Callback<List<Comment>> {
-                override fun onResponse(call: Call<List<Comment>>, response: Response<List<Comment>>) {
+            .enqueue(object : retrofit2.Callback<CommentsResponse> {
+                override fun onResponse(
+                    call: Call<CommentsResponse>,
+                    response: Response<CommentsResponse>
+                ) {
                     isRefreshing = false
-                    if (response.isSuccessful) {
-                        val newComments = response.body() ?: emptyList()
+                    if (response.isSuccessful && response.body() != null) {
+                        val newComments = response.body()!!.comments
                         if (newComments.size != comments.size ||
                             newComments.lastOrNull()?._id != comments.lastOrNull()?._id
                         ) {
@@ -245,13 +386,23 @@ class CommentsActivity : AppCompatActivity() {
                             adapter.notifyDataSetChanged()
                             recyclerComments.scrollToPosition(comments.size - 1)
                         }
+                    } else {
+                        Toast.makeText(
+                            this@CommentsActivity,
+                            "Failed to load comments (${response.code()})",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
-                override fun onFailure(call: Call<List<Comment>>, t: Throwable) {
+                override fun onFailure(call: Call<CommentsResponse>, t: Throwable) {
                     isRefreshing = false
                     if (!autoRefresh) {
-                        Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@CommentsActivity,
+                            "Network error: ${t.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             })
@@ -264,38 +415,73 @@ class CommentsActivity : AppCompatActivity() {
             return
         }
 
-// 1️⃣ Create a JSON object with the comment text
-        val json = JSONObject().apply { put("text", text) }.toString()
+        val json = JSONObject().apply {
+            put("postId", postId)
+            put("text", text)
+        }.toString()
 
-// 2️⃣ Convert JSON string to RequestBody
         val body: RequestBody = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
 
-// 3️⃣ Call the API with the RequestBody
-        ApiClient.apiService.addComment("Bearer $token", postId!!, body)
-            .enqueue(object : Callback<Comment> {
-                override fun onResponse(call: Call<Comment>, response: Response<Comment>) {
-                    if (response.isSuccessful) {
-                        response.body()?.let { newComment ->
-                            comments.add(newComment)
-                            adapter.notifyItemInserted(comments.size - 1)
-                            recyclerComments.scrollToPosition(comments.size - 1)
-                            editComment.text.clear()
-                            loadComments()
-                            sendCommentNotification(newComment)
-                            animateCommentSuccess()
-                            showFloatingEmoji()
+        ApiClient.apiService.addComment("Bearer $token", body)
+            .enqueue(object : retrofit2.Callback<Map<String, Any>> {
+                override fun onResponse(
+                    call: Call<Map<String, Any>>,
+                    response: Response<Map<String, Any>>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        try {
+                            val data = response.body()!!
+                            val gson = com.google.gson.Gson()
+
+                            // Extract the nested "comment" object
+                            val commentJson = gson.toJson(data["comment"])
+                            val comment = gson.fromJson(commentJson, Comment::class.java)
+
+                            runOnUiThread {
+                                Toast.makeText(
+                                    this@CommentsActivity,
+                                    "Comment added!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                // Optionally update RecyclerView
+                                // commentsAdapter.addComment(comment)
+                                loadComments()
+                                resetSendButton()
+                                editComment.text.clear()
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            runOnUiThread {
+                                Toast.makeText(
+                                    this@CommentsActivity,
+                                    "Failed to parse comment response",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     } else {
-                        Toast.makeText(this@CommentsActivity, "Failed to post comment", Toast.LENGTH_SHORT).show()
+                        runOnUiThread {
+                            Toast.makeText(
+                                this@CommentsActivity,
+                                "Failed to post comment",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
 
-                override fun onFailure(call: Call<Comment>, t: Throwable) {
-                    Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@CommentsActivity,
+                            "Error: ${t.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             })
     }
-
     private fun sendCommentNotification(comment: Comment) {
         val jsonBody = JSONObject().apply {
             put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2")
@@ -345,5 +531,19 @@ class CommentsActivity : AppCompatActivity() {
             .setDuration(1000)
             .withEndAction { rootView.removeView(emojiView) }
             .start()
+    }
+
+
+
+
+    private fun resetSendButton() {
+        buttonSend.setOnClickListener {
+            val text = editComment.text.toString().trim()
+            if (text.isEmpty()) {
+                Toast.makeText(this, "Enter a comment", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            postComment(text)
+        }
     }
 }

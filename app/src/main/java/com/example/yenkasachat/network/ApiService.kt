@@ -181,11 +181,7 @@ interface ApiService {
 
 
 
-    @POST("social/like/{postId}")
-    fun toggleLike(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<Map<String, Any>>
+
 
     @GET("posts/{postId}")
     fun getPostById(
@@ -224,23 +220,76 @@ interface ApiService {
 
 
     // ==================== COMMENTS ====================
-    @POST("comments/{postId}")
+    // ==================== COMMENTS ====================
+    @POST("comments")
     fun addComment(
         @Header("Authorization") token: String,
-        @Path("postId") postId: String,
         @Body body: RequestBody
-    ): Call<Comment>
+    ): Call<Map<String, Any>>
+
+    @PUT("comments/{commentId}")
+    fun editComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: String,
+        @Body body: RequestBody
+    ): Call<Map<String, Any>>
 
 
-        // -----------------------------
+    @DELETE("comments/{commentId}")
+    fun deleteComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: String
+    ): Call<Map<String, Any>>
+
+
+    // Get replies for a comment
+    @GET("comments/{commentId}/replies")
+    fun getReplies(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Call<RepliesResponse>
+
+    //================= Like comment===============//
+
+    @POST("comments/{commentId}/like")
+    fun likeComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: String
+    ): Call<LikeResponse>
+
+    // Unlike comment
+    @DELETE("comments/{commentId}/like")
+    fun unlikeComment(
+        @Header("Authorization") token: String,
+        @Path("commentId") commentId: String
+    ): Call<LikeResponse>
+
+    @GET("comments/post/{postId}")
+    fun getComments(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 50
+    ): Call<CommentsResponse>
+
+
+
+
+
+
+    // -----------------------------
         // 👍 LIKE / UNLIKE POST (toggle)
         // -----------------------------
-
         @POST("social/like/{postId}")
-        fun likePost(
-            @Header("Authorization") token: String, // must be "Bearer <token>"
+        fun toggleLike(
+            @Header("Authorization") token: String,
             @Path("postId") postId: String
         ): Call<LikeResponse>
+
+
+
 
 
     @GET("posts")
@@ -337,23 +386,6 @@ interface ApiService {
 
 
 
-
-    // 💬 ADD COMMENT
-    @POST("feed/comment/{postId}")
-    @FormUrlEncoded
-    fun addComment(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String,
-        @Field("text") text: String
-    ): Call<Comment>
-
-    // 💬 GET COMMENTS
-    @GET("feed/comments/{postId}")
-    fun getComments(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<List<Comment>>
-
     // -----------------------------
     // 📰 FEED FROM FOLLOWED USERS
     // -----------------------------
@@ -375,8 +407,6 @@ interface ApiService {
     // -----------------------------
     // Other social endpoints can be added here if needed
     // -----------------------------
-
-
 
     // ==================== COMMUNITIES ====================
 
@@ -418,7 +448,15 @@ interface ApiService {
     ): Call<List<Community>>
 
     @GET("communities")
-    suspend fun getCommunities(): Response<List<Community>>
+    fun getCommunities(
+        @Header("Authorization") token: String
+    ): Call<List<Community>>
+
+
+
+
+
+
 
     @POST("communities/join")
     suspend fun joinCommunities(@Body request: JoinCommunityRequest): Response<JoinCommunityResponse>
@@ -456,15 +494,22 @@ interface ApiService {
     // ===========================
 
 
-//Like and Unlike
+
     // ✅ Fetch community feed
     @GET("feed")
     fun getFeed(
         @Header("Authorization") token: String,
-        @Query("page") page: Int,
-        @Query("limit") limit: Int
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
     ): Call<FeedResponse>
 
+
+//=================ViewCOUNT=================//
+@POST("views/{postId}/view")
+suspend fun recordView(
+    @Path("postId") postId: String,
+    @Header("Authorization") token: String
+): Response<ViewResponse>
 
 
     // ==================== APP VERIFICATION ====================

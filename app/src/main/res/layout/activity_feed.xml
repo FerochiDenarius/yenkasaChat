@@ -56,41 +56,35 @@
         android:paddingStart="8dp"
         android:paddingBottom="6dp" />
 
-    <!-- Feed: swipe + RecyclerView (RecyclerView is the scrolling child) -->
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefreshFeed"
+    <!-- Feed RecyclerView (no SwipeRefreshLayout wrapper) -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <FrameLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewFeed"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerViewFeed"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingBottom="86dp"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="86dp"
             android:scrollbars="vertical" />
 
-            <ProgressBar
-                android:id="@+id/progressBarFeed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone" />
+        <ProgressBar
+            android:id="@+id/progressBarFeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/textEmptyFeed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="No posts yet."
-                android:textSize="13sp"
-                android:textColor="#777"
-                android:visibility="gone" />
-        </FrameLayout>
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+        <TextView
+            android:id="@+id/textEmptyFeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="No posts yet."
+            android:textSize="13sp"
+            android:textColor="#777"
+            android:visibility="gone" />
+    </FrameLayout>
 </LinearLayout>

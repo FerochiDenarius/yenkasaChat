@@ -13,4 +13,7 @@
     <string name="call_status_ended">Call Ended</string>
     <string name="add_post">add post\n</string>
     <string name="create_post">create post\n</string>
+    <string name="profile_image">profile image\n</string>
+    <string name="verified_badge">verified badge\n</string>
+    <string name="post_media">post media\n</string>
 </resources>

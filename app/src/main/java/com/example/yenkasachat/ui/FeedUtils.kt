@@ -20,63 +20,36 @@ object FeedUtils {
         post: Post,
         onLikeUpdated: (liked: Boolean, likeCount: Int) -> Unit
     ) {
-        ApiClient.apiService.likePost("Bearer $token", post._id)
+        ApiClient.apiService.toggleLike("Bearer $token", post._id)
             .enqueue(object : Callback<LikeResponse> {
                 override fun onResponse(call: Call<LikeResponse>, response: Response<LikeResponse>) {
                     Log.d("FeedUtils", "📡 Like API called for postId=${post._id}")
 
-                    if (response.isSuccessful) {
-                        val body = response.body()
-                        Log.d("FeedUtils", "✅ Raw like response: ${body.toString()}")
+                    if (response.isSuccessful && response.body() != null) {
+                        val body = response.body()!!
+                        Log.d(
+                            "FeedUtils",
+                            "❤️ Like toggled -> liked=${body.likedByUser}, count=${body.likeCount}"
+                        )
 
-                        if (body != null) {
-                            val likeResponse = body
-                            Log.d(
-                                "FeedUtils",
-                                "❤️ Like toggled successfully -> liked=${likeResponse.liked}, " +
-                                        "count=${likeResponse.likeCount}"
-                            )
-
-                            // Call your update callback
-                            onLikeUpdated(likeResponse.liked, likeResponse.likeCount)
-                        } else {
-                            Log.w("FeedUtils", "⚠️ Response body is null (code=${response.code()})")
-                        }
-
+                        onLikeUpdated(body.likedByUser, body.likeCount)
                     } else {
                         Log.w(
                             "FeedUtils",
-                            "⚠️ Like toggle failed -> code=${response.code()}, " +
-                                    "message=${response.message()}, errorBody=${response.errorBody()?.string()}"
+                            "⚠️ Like failed -> code=${response.code()}, msg=${response.message()}"
                         )
                         Toast.makeText(context, "Failed to like post", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<LikeResponse>, t: Throwable) {
-                    Log.e("FeedUtils", "❌ Network or parsing error while liking post: ${t.localizedMessage}", t)
-                    Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("FeedUtils", "❌ Like toggle error: ${t.message}", t)
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
-    // 🔹 Increment view count
-    fun addView(context: Context, token: String, postId: String) {
-        ApiClient.apiService.addView("Bearer $token", postId)
-            .enqueue(object : Callback<ViewResponse> {
-                override fun onResponse(call: Call<ViewResponse>, response: Response<ViewResponse>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        Log.d("FeedUtils", "👁️ View count updated: ${response.body()!!.viewsCount}")
-                    } else {
-                        Log.w("FeedUtils", "⚠️ Failed to update view count")
-                    }
-                }
 
-                override fun onFailure(call: Call<ViewResponse>, t: Throwable) {
-                    Log.e("FeedUtils", "❌ View update error: ${t.message}", t)
-                }
-            })
-    }
 
     // 🔹 Share post
     fun sharePost(context: Context, post: Post) {

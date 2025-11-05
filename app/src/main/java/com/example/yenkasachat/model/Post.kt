@@ -1,24 +1,23 @@
 package com.example.yenkasachat.model
 
 import com.google.gson.annotations.SerializedName
+import org.json.JSONObject
 
 data class Post(
     @SerializedName("_id")
-    val _id: String,                  // matches adapter references
+    val _id: String,
 
     val userId: UserBasic,
     val communityId: CommunityBasic? = null,
 
     // Content
     @SerializedName("text")
-    val caption: String,              // maps from 'text' in API
-    val mediaUrl: String? = null,     // single media for adapter (image/video)
+    val caption: String,
+    val mediaUrl: String? = null,
     val mediaUrls: List<String>? = null,
     val mentions: List<String>? = null,
-
-    // ✅ Added because some adapters and older posts use it
-    val imageUrl: String? = null,
-
+    val imageUrl: String? = null, // legacy support for single image
+    val likedByUser: Boolean = false,
     // Engagement
     val likes: List<String> = emptyList(),
     val likeCount: Int = 0,
@@ -32,13 +31,11 @@ data class Post(
     val isPinned: Boolean = false,
     val visibility: String = "public",
 
-    // ✅ NEW: post approval status
     @SerializedName("status")
-    val status: String? = null,       // "approved", "pending", "rejected"
+    val status: String? = null,
 
-    // ✅ NEW: convenience flag
     @SerializedName("isApproved")
-    val isApproved: Boolean = false,  // optional but nice for quick checks
+    val isApproved: Boolean = false,
 
     // Tags & location
     val tags: List<String> = emptyList(),
@@ -51,7 +48,43 @@ data class Post(
     val createdAt: String,
     val updatedAt: String? = null,
 
-    // Client-side flag
+    // Client-side UI state
     var likedByCurrentUser: Boolean = false
-)
+) {
 
+    companion object {
+        fun fromJson(json: JSONObject): Post {
+            return Post(
+                _id = json.optString("_id"),
+                caption = json.optString("text", json.optString("caption")),
+                mediaUrl = json.optString("mediaUrl", null),
+                mediaUrls = json.optJSONArray("mediaUrls")?.let { arr ->
+                    List(arr.length()) { i -> arr.optString(i) }
+                },
+                mentions = json.optJSONArray("mentions")?.let { arr ->
+                    List(arr.length()) { i -> arr.optString(i) }
+                },
+                imageUrl = json.optString("imageUrl", null),
+                likeCount = json.optInt("likeCount", 0),
+                commentCount = json.optInt("commentCount", 0),
+                shareCount = json.optInt("shareCount", 0),
+                viewCount = json.optInt("viewCount", 0),
+                coinsEarned = json.optInt("coinsEarned", 0),
+                isActive = json.optBoolean("isActive", true),
+                isPinned = json.optBoolean("isPinned", false),
+                visibility = json.optString("visibility", "public"),
+                status = json.optString("status", null),
+                isApproved = json.optBoolean("isApproved", false),
+                tags = json.optJSONArray("tags")?.let { arr ->
+                    List(arr.length()) { i -> arr.optString(i) }
+                } ?: emptyList(),
+                location = json.optString("location", null),
+                createdAt = json.optString("createdAt"),
+                updatedAt = json.optString("updatedAt", null),
+                likedByCurrentUser = json.optBoolean("likedByCurrentUser", false),
+                userId = UserBasic.fromJson(json.optJSONObject("userId")),
+                communityId = CommunityBasic.fromJson(json.optJSONObject("communityId"))
+            )
+        }
+    }
+}

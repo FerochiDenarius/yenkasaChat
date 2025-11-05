@@ -1,4 +1,3 @@
-// routes/comment.routes.js
 const express = require('express');
 const router = express.Router();
 const Comment = require('../models/comment.model');
@@ -6,11 +5,13 @@ const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
+const io = require('../socket');
 
-const REWARD_COMMENT = 3;
+const REWARD_COMMENT = 5;
+const REWARD_REPLY = 2;
 
-// ✅ Add comment to a post
-// ✅ Add comment to a post
+// ✅ Add comment or reply to a post
+// ✅ Add comment or reply to a post
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { postId, text, imageUrl, parentCommentId } = req.body;
@@ -21,11 +22,8 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
+    if (!post) return res.status(404).json({ error: 'Post not found' });
 
-    // Create comment
     const comment = new Comment({
       postId,
       userId,
@@ -33,19 +31,37 @@ router.post('/', authMiddleware, async (req, res) => {
       imageUrl: imageUrl || '',
       parentCommentId: parentCommentId || null
     });
-
     await comment.save();
 
     // Increment post comment count
     post.commentCount += 1;
     await post.save();
 
-    // If this is a reply, increment parent comment reply count
+    // If reply, increment parent comment reply count
     if (parentCommentId) {
       await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
+
+      const parentComment = await Comment.findById(parentCommentId);
+      if (parentComment && parentComment.userId.toString() !== userId) {
+        const parentAuthor = await User.findById(parentComment.userId);
+        if (parentAuthor) {
+          parentAuthor.coinsBalance += REWARD_REPLY;
+          await parentAuthor.save();
+
+          await CoinTransaction.create({
+            fromUserId: userId,
+            toUserId: parentAuthor._id,
+            amount: REWARD_REPLY,
+            type: 'REWARD_REPLY',
+            description: 'Reward for receiving a reply',
+            relatedPostId: post._id,
+            relatedCommentId: comment._id
+          });
+        }
+      }
     }
 
-    // Reward post author with coins
+    // Reward post author if not self
     const postAuthor = await User.findById(post.userId);
     if (postAuthor && postAuthor._id.toString() !== userId) {
       postAuthor.coinsBalance += REWARD_COMMENT;
@@ -64,36 +80,32 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-    // Populate user info for response
     const populatedComment = await Comment.findById(comment._id)
       .populate('userId', 'username profileImage verified')
       .lean();
 
-    // 🔔 === START NOTIFICATION LOGIC ===
+    // ✅ SOCKET.IO EMIT BLOCK — broadcast new comment/reply
+    io.emit('feedUpdate', {
+      type: parentCommentId ? 'newReply' : 'newComment',
+      postId,
+      parentCommentId: parentCommentId || null,
+      comment: populatedComment
+    });
+
+    // 🔔 Send notifications
     const commenter = await User.findById(userId);
     const commentAuthorName = commenter?.username || 'Someone';
 
-    // Collect all user IDs to notify: post author + other commenters
-    let usersToNotify = new Set();
+    const usersToNotify = new Set();
+    if (post.userId.toString() !== userId) usersToNotify.add(post.userId.toString());
 
-    // 1️⃣ Post owner
-    if (post.userId.toString() !== userId) {
-      usersToNotify.add(post.userId.toString());
-    }
-
-    // 2️⃣ Other commenters (excluding current commenter)
     const previousComments = await Comment.find({ postId }).select('userId');
     previousComments.forEach(c => {
-      if (c.userId.toString() !== userId) {
-        usersToNotify.add(c.userId.toString());
-      }
+      if (c.userId.toString() !== userId) usersToNotify.add(c.userId.toString());
     });
 
-    // 3️⃣ Fetch OneSignal player IDs for all these users
     const users = await User.find({ _id: { $in: Array.from(usersToNotify) } }).select('oneSignalPlayerId');
-    const playerIds = users
-      .map(u => u.oneSignalPlayerId)
-      .filter(id => id && id.trim().length > 0);
+    const playerIds = users.map(u => u.oneSignalPlayerId).filter(id => id && id.trim().length > 0);
 
     if (playerIds.length > 0) {
       const notificationData = {
@@ -104,17 +116,15 @@ router.post('/', authMiddleware, async (req, res) => {
         data: { postId: postId },
       };
 
-      // Send to OneSignal
       await fetch("https://onesignal.com/api/v1/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          "Authorization": "Basic os_v2_app_czo7tzva5jfdpjakcefppyuk2kfg5qu74gsed34rhjwskilsxsk43baomvtcp2wdtejrduitjubldd5atnpoakyb6hcwv6h5ncnmxmi"
+          "Authorization": `Basic ${process.env.ONESIGNAL_KEY}`
         },
         body: JSON.stringify(notificationData)
       });
     }
-    // 🔔 === END NOTIFICATION LOGIC ===
 
     res.status(201).json({
       success: true,
@@ -127,32 +137,22 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-
 // ✅ Get comments for a post
 router.get('/post/:postId', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
     const { page = 1, limit = 50 } = req.query;
     const skip = (page - 1) * limit;
-    
-    // Get top-level comments (not replies)
-    const comments = await Comment.find({
-      postId,
-      parentCommentId: null,
-      isActive: true
-    })
+
+    const comments = await Comment.find({ postId, parentCommentId: null, isActive: true })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .populate('userId', 'username profileImage verified')
       .lean();
-    
-    const totalComments = await Comment.countDocuments({
-      postId,
-      parentCommentId: null,
-      isActive: true
-    });
-    
+
+    const totalComments = await Comment.countDocuments({ postId, parentCommentId: null, isActive: true });
+
     res.json({
       comments,
       pagination: {
@@ -168,28 +168,22 @@ router.get('/post/:postId', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Get replies to a comment
+// ✅ Get replies
 router.get('/:commentId/replies', authMiddleware, async (req, res) => {
   try {
     const { commentId } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
-    
-    const replies = await Comment.find({
-      parentCommentId: commentId,
-      isActive: true
-    })
+
+    const replies = await Comment.find({ parentCommentId: commentId, isActive: true })
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(parseInt(limit))
       .populate('userId', 'username profileImage verified')
       .lean();
-    
-    const totalReplies = await Comment.countDocuments({
-      parentCommentId: commentId,
-      isActive: true
-    });
-    
+
+    const totalReplies = await Comment.countDocuments({ parentCommentId: commentId, isActive: true });
+
     res.json({
       replies,
       pagination: {
@@ -205,83 +199,94 @@ router.get('/:commentId/replies', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Like a comment
+// ✅ Like comment
 router.post('/:commentId/like', authMiddleware, async (req, res) => {
   try {
     const { commentId } = req.params;
     const userId = req.user.id;
-    
+
     const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return res.status(404).json({ error: 'Comment not found' });
-    }
-    
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
     const wasLiked = await comment.addLike(userId);
-    
-    res.json({
-      success: true,
-      liked: wasLiked,
-      likeCount: comment.likeCount
-    });
+
+    res.json({ success: true, liked: wasLiked, likeCount: comment.likeCount });
   } catch (err) {
     console.error('❌ Failed to like comment:', err);
     res.status(500).json({ error: 'Failed to like comment' });
   }
 });
 
-// ✅ Unlike a comment
+// ✅ Unlike comment
 router.delete('/:commentId/like', authMiddleware, async (req, res) => {
   try {
     const { commentId } = req.params;
     const userId = req.user.id;
-    
+
     const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return res.status(404).json({ error: 'Comment not found' });
-    }
-    
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
     const wasUnliked = await comment.removeLike(userId);
-    
-    res.json({
-      success: true,
-      unliked: wasUnliked,
-      likeCount: comment.likeCount
-    });
+
+    res.json({ success: true, unliked: wasUnliked, likeCount: comment.likeCount });
   } catch (err) {
     console.error('❌ Failed to unlike comment:', err);
     res.status(500).json({ error: 'Failed to unlike comment' });
   }
 });
 
-// ✅ Delete a comment
-router.delete('/:commentId', authMiddleware, async (req, res) => {
+// ✅ Edit comment
+// ✅ SIMPLE EDIT COMMENT ROUTE (for debugging)
+router.put('/:commentId', authMiddleware, async (req, res) => {
   try {
     const { commentId } = req.params;
+    const { text } = req.body;
     const userId = req.user.id;
-    
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
     const comment = await Comment.findById(commentId);
     if (!comment) {
       return res.status(404).json({ error: 'Comment not found' });
     }
-    
-    // Check if user owns the comment
+
     if (comment.userId.toString() !== userId) {
-      return res.status(403).json({ error: 'You can only delete your own comments' });
+      return res.status(403).json({ error: 'You can only edit your own comments' });
     }
-    
+
+    comment.text = text.trim();
+    await comment.save();
+
+    res.json({ success: true, message: 'Comment updated successfully', comment });
+  } catch (err) {
+    console.error('❌ Edit comment failed:', err);
+    res.status(500).json({ error: 'Server error while editing comment' });
+  }
+});
+
+
+// ✅ Delete comment
+router.delete('/:commentId', authMiddleware, async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (comment.userId.toString() !== userId) return res.status(403).json({ error: 'You can only delete your own comments' });
+
     comment.isActive = false;
     await comment.save();
-    
-    // Decrement post comment count
-    await Post.findByIdAndUpdate(
-      comment.postId,
-      { $inc: { commentCount: -1 } }
-    );
-    
-    res.json({
-      success: true,
-      message: 'Comment deleted successfully'
-    });
+
+    if (!comment.parentCommentId) {
+      await Post.findByIdAndUpdate(comment.postId, { $inc: { commentCount: -1 } });
+    } else {
+      await Comment.findByIdAndUpdate(comment.parentCommentId, { $inc: { replyCount: -1 } });
+    }
+
+    res.json({ success: true, message: 'Comment deleted successfully' });
   } catch (err) {
     console.error('❌ Failed to delete comment:', err);
     res.status(500).json({ error: 'Failed to delete comment' });

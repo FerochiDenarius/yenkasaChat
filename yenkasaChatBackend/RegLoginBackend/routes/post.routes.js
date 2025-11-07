@@ -86,7 +86,7 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
 /* ------------------------------------
  * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
-router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
+router.post('/', authMiddleware, upload, async (req, res) => { ... });
   try {
     const {
       text,              // caption / post text

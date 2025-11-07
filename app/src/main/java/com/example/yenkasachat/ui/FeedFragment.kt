@@ -99,7 +99,8 @@ class FeedFragment : Fragment() {
         layoutManager = LinearLayoutManager(requireContext())
 
         adapter = PostAdapter(
-            posts = posts,
+            requireContext(),  // ✅ pass context
+            posts,
             onLikeClick = { post, position ->
                 val context = requireContext()
                 val token = TokenManager.getToken(context)
@@ -110,7 +111,6 @@ class FeedFragment : Fragment() {
                             likedByCurrentUser = liked,
                             likeCount = newLikeCount
                         )
-
                         posts[position] = updatedPost
                         adapter.notifyItemChanged(position)
                     }
@@ -118,7 +118,6 @@ class FeedFragment : Fragment() {
                     Toast.makeText(context, "Please log in again", Toast.LENGTH_SHORT).show()
                 }
             },
-
             onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
@@ -145,8 +144,7 @@ class FeedFragment : Fragment() {
                         Toast.makeText(requireContext(), "No media available.", Toast.LENGTH_SHORT).show()
                     }
                 }
-            }
-,
+            },
             onShareClick = { post ->
                 val shareIntent = Intent(Intent.ACTION_SEND)
                 shareIntent.type = "text/plain"
@@ -155,6 +153,11 @@ class FeedFragment : Fragment() {
                 startActivity(Intent.createChooser(shareIntent, "Share via"))
             }
         )
+
+        recyclerView.layoutManager = layoutManager
+        recyclerView.adapter = adapter
+
+
 
         recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter

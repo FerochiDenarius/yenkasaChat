@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class PostAdapter(
+    private val context: Context,
     private var posts: List<Post>,
     private val onLikeClick: (Post, Int) -> Unit,
     private val onCommentClick: (Post, Int) -> Unit,
@@ -219,7 +220,7 @@ class PostAdapter(
         val videoUrl = post?.videoUrl ?: return
 
         if (exoPlayer == null) {
-            exoPlayer = ExoPlayer.Builder(itemViewContext()).build().apply {
+            exoPlayer = ExoPlayer.Builder(context).build().apply {   // ✅ use context directly
                 volume = 0f
                 activePlayers.add(this)
             }
@@ -287,15 +288,6 @@ class PostAdapter(
         return sdf.format(date)
     }
 
-    private fun itemViewContext(): Context {
-        return try {
-            posts.firstOrNull()?.let {
-                currentPlayerView?.context ?: throw IllegalStateException()
-            } ?: throw IllegalStateException()
-        } catch (e: Exception) {
-            throw IllegalStateException("Cannot obtain context for ExoPlayer.")
-        }
-    }
 
     fun releaseResources() {
         exoPlayer?.release()

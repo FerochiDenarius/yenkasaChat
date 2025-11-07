@@ -78,6 +78,7 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         postAdapter = PostAdapter(
+            context = this,  // ✅ Add this line — passing the Activity context
             posts = userPostsList,
             onLikeClick = { post, position ->
                 // TODO: Handle like logic
@@ -105,6 +106,7 @@ class UserProfileActivity : AppCompatActivity() {
                 startActivity(Intent.createChooser(shareIntent, "Share via"))
             }
         )
+
         recyclerUserPosts.layoutManager = GridLayoutManager(this, 3)
         recyclerUserPosts.adapter = postAdapter
     }

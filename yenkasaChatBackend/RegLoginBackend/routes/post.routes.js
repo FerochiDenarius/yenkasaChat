@@ -87,38 +87,45 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
 }
 
 /* ------------------------------------
- * ✍️ CREATE POST
- * ------------------------------------ */
-/* ------------------------------------
- * ✍️ CREATE POST (Single image/video)
+ * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
 router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
   try {
     const {
-      text,
+      text,              // caption / post text
       tags,
       location,
       visibility,
       mentions,
-      communityName
+      communityName,
+      postType           // optional hint from frontend ('video', 'image', 'audio', 'text')
     } = req.body;
 
     const userId = req.user.id;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Initialize fields
     let imageUrl = '';
     let videoUrl = '';
-    let detectedPostType = 'text';
+    let audioUrl = '';
+    let detectedPostType = postType || 'text';
 
-    // ✅ Upload file if provided
+    /* ------------------------------------
+     * ✅ Upload file if provided
+     * ------------------------------------ */
     if (req.file) {
       const folder = "yenkasachat/posts";
-      const isVideo = req.file.mimetype.startsWith('video');
+      const mime = req.file.mimetype;
+
+      // Detect file type
+      const isVideo = mime.startsWith('video');
+      const isAudio = mime.startsWith('audio');
+      const resourceType = isVideo || isAudio ? 'video' : 'image';
 
       const uploadResult = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder, resource_type: isVideo ? 'video' : 'image' },
+          { folder, resource_type: resourceType },
           (error, result) => (error ? reject(error) : resolve(result))
         );
         stream.end(req.file.buffer);
@@ -127,13 +134,18 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       if (isVideo) {
         videoUrl = uploadResult.secure_url;
         detectedPostType = 'video';
+      } else if (isAudio) {
+        audioUrl = uploadResult.secure_url;
+        detectedPostType = 'audio';
       } else {
         imageUrl = uploadResult.secure_url;
         detectedPostType = 'image';
       }
     }
 
-    // ✅ Find community if provided
+    /* ------------------------------------
+     * ✅ Community lookup (if provided)
+     * ------------------------------------ */
     let selectedCommunity = null;
     if (communityName && communityName.trim() !== "") {
       selectedCommunity = await Community.findOne({
@@ -144,32 +156,45 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       });
     }
 
-    // ✅ Determine approval status
+    /* ------------------------------------
+     * ✅ Determine approval status
+     * ------------------------------------ */
     const approvers = ["admin", "moderator", "developer"];
     const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
     const postStatus = isPrivilegedUser ? "approved" : "pending";
 
-    // ✅ Create and save post
+    /* ------------------------------------
+     * ✅ Create post
+     * ------------------------------------ */
     const post = new Post({
       userId,
       communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
-      text: text?.trim(),
+      text: text?.trim() || '', // text/caption optional
       imageUrl,
       videoUrl,
+      audioUrl,
       postType: detectedPostType,
       tags: tags || [],
       mentions: mentions || [],
       location: location || '',
       visibility: visibility || 'public',
-      communityName: selectedCommunity ? selectedCommunity.displayName : communityName || '',
+      communityName: selectedCommunity ? selectedCommunity.displayName : (communityName || ''),
       status: postStatus,
     });
 
     await post.save();
 
-    // ✅ Reward & emit feed update if auto-approved
+    /* ------------------------------------
+     * ✅ Reward & emit feed update
+     * ------------------------------------ */
     if (postStatus === "approved") {
-      await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
+      await rewardUser(
+        userId,
+        REWARDS.CREATE_POST,
+        "Reward for creating post",
+        "Post",
+        post._id
+      );
 
       if (global.io) {
         global.io.emit("feedUpdate", {
@@ -182,10 +207,20 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
       }
     }
 
-    res.json({ success: true, post });
+    /* ------------------------------------
+     * ✅ Response
+     * ------------------------------------ */
+    res.status(201).json({
+      success: true,
+      post
+    });
+
   } catch (err) {
     console.error("❌ Failed to create post:", err);
-    res.status(500).json({ error: "Failed to create post", details: err.message });
+    res.status(500).json({
+      error: "Failed to create post",
+      details: err.message
+    });
   }
 });
 

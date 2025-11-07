@@ -79,20 +79,20 @@ class AccountInfoActivity : AppCompatActivity() {
 // ... (imports and other class members)
 
     private fun setupRecyclerView() {
-        // ✅ FIX: Provide all required lambda functions to the adapter's constructor
+        // ✅ Pass 'this' (Activity context) as the first argument
         postAdapter = PostAdapter(
-            posts = userPostsList,
+            this, // <-- FIX HERE
+            userPostsList,
+            onLikeClick = { _, _ -> /* Not needed in this grid view */ },
+            onCommentClick = { _, _ -> /* Not needed in this grid view */ },
+            onUserClick = { /* Not needed, we are already on a user's profile */ },
             onPostClick = { post ->
                 // When a user clicks a post in the grid, open the detail view
                 val intent = Intent(this, PostMediaActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
                 startActivity(intent)
             },
-            onLikeClick = { _, _ -> /* Not needed in this grid view */ },
-            onCommentClick = { _, _ -> /* Not needed in this grid view */ },
-            onUserClick = { /* Not needed, we are already on a user's profile */ },
             onShareClick = { post ->
-                // Optional: implement sharing or leave empty if not needed
                 val shareIntent = Intent(Intent.ACTION_SEND)
                 shareIntent.type = "text/plain"
                 shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")

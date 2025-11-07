@@ -9,15 +9,9 @@ const Community = require('../models/community.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
 const authMiddleware = require('../middleware/auth');
+const upload = require("../utils/upload");
 
-/* ------------------------------------
- * ✅ Multer Setup (Memory Storage)
- * ------------------------------------ */
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
-});
+
 
 /* ------------------------------------
  * 💰 REWARD CONFIGURATION
@@ -83,6 +77,7 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
   }
 }
 
+
 /* ------------------------------------
  * ✅ CREATE POST
  * ------------------------------------ */
@@ -100,79 +95,24 @@ router.post("/", authMiddleware, upload.single("media"), async (req, res) => {
     let audioUrl = "";
     let detectedPostType = "text";
 
-    // ✅ Upload to Cloudinary if media exists
     if (req.file) {
-      const uploaded = await cloudinary.uploader.upload_stream(
-        { resource_type: "auto", folder: "yenkasachat/posts" },
-        async (error, result) => {
-          if (error) throw error;
+      const uploaded = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "auto",
+      });
 
-          const mimeType = req.file.mimetype;
-          if (mimeType.startsWith("image/")) {
-            imageUrl = result.secure_url;
-            detectedPostType = "image";
-          } else if (mimeType.startsWith("video/")) {
-            videoUrl = result.secure_url;
-            detectedPostType = "video";
-          } else if (mimeType.startsWith("audio/")) {
-            audioUrl = result.secure_url;
-            detectedPostType = "audio";
-          }
-
-          // ✅ Find user and community
-          const user = await User.findById(userId);
-          const privilegedRoles = ["admin", "moderator", "developer"];
-          const postStatus = privilegedRoles.includes(user.role)
-            ? "approved"
-            : "pending";
-
-          const post = new Post({
-            userId,
-            communityId: communityId || user.community || null,
-            text: text?.trim() || "",
-            imageUrl,
-            videoUrl,
-            audioUrl,
-            postType: detectedPostType,
-            tags: [],
-            mentions: [],
-            location: "",
-            visibility: "public",
-            communityName: communityName || "",
-            status: postStatus,
-          });
-
-          await post.save();
-
-          // ✅ Reward & Emit Feed Update
-          if (postStatus === "approved") {
-            await rewardUser(
-              userId,
-              REWARDS.CREATE_POST,
-              "Reward for creating post",
-              "Post",
-              post._id
-            );
-
-            if (global.io) {
-              global.io.emit("feedUpdate", {
-                action: "new_post",
-                postId: post._id,
-                userId,
-                community: post.communityName,
-                timestamp: new Date(),
-              });
-            }
-          }
-
-          return res.status(201).json({ success: true, post });
-        }
-      );
-      uploaded.end(req.file.buffer);
-      return; // prevent double response
+      const mimeType = req.file.mimetype;
+      if (mimeType.startsWith("image/")) {
+        imageUrl = uploaded.secure_url;
+        detectedPostType = "image";
+      } else if (mimeType.startsWith("video/")) {
+        videoUrl = uploaded.secure_url;
+        detectedPostType = "video";
+      } else if (mimeType.startsWith("audio/")) {
+        audioUrl = uploaded.secure_url;
+        detectedPostType = "audio";
+      }
     }
 
-    // ✅ No file upload, just text post
     const user = await User.findById(userId);
     const privilegedRoles = ["admin", "moderator", "developer"];
     const postStatus = privilegedRoles.includes(user.role)
@@ -183,9 +123,16 @@ router.post("/", authMiddleware, upload.single("media"), async (req, res) => {
       userId,
       communityId: communityId || user.community || null,
       text: text?.trim() || "",
-      postType: "text",
-      status: postStatus,
+      imageUrl,
+      videoUrl,
+      audioUrl,
+      postType: detectedPostType,
+      tags: [],
+      mentions: [],
+      location: "",
+      visibility: "public",
       communityName: communityName || "",
+      status: postStatus,
     });
 
     await post.save();
@@ -198,6 +145,16 @@ router.post("/", authMiddleware, upload.single("media"), async (req, res) => {
         "Post",
         post._id
       );
+
+      if (global.io) {
+        global.io.emit("feedUpdate", {
+          action: "new_post",
+          postId: post._id,
+          userId,
+          community: post.communityName,
+          timestamp: new Date(),
+        });
+      }
     }
 
     res.status(201).json({ success: true, post });
@@ -209,6 +166,7 @@ router.post("/", authMiddleware, upload.single("media"), async (req, res) => {
     });
   }
 });
+
 
 /* ------------------------------------
  * 👤 USER POSTS

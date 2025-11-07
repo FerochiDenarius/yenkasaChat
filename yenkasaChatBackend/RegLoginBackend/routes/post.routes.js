@@ -1,27 +1,17 @@
 // routes/post.routes.js
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
-
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const Community = require('../models/community.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
-const upload = require("../utils/multer"); 
+const upload = require("../utils/upload");
 
 
 const authMiddleware = require('../middleware/auth');
 
-/* ------------------------------------
- * ✅ Multer Setup (Memory Storage)
- * ------------------------------------ */
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
-});
 
 /* ------------------------------------
  * 💰 REWARD CONFIGURATION

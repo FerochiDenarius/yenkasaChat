@@ -1,36 +1,35 @@
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 
-// ✅ Create a temporary uploads folder if it doesn't exist
-const tempDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir, { recursive: true });
-}
-
-// ✅ Configure multer storage
+// Storage setup (keep yours if it's customized)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, tempDir); // store in /uploads
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
   },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext);
-    cb(null, `${Date.now()}-${baseName}${ext}`);
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
   },
 });
 
-// ✅ Allow images, videos, and audio
+// File filter (optional safety check)
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/", "video/", "audio/"];
-  if (allowed.some(prefix => file.mimetype.startsWith(prefix))) {
+  if (allowed.some((type) => file.mimetype.startsWith(type))) {
     cb(null, true);
   } else {
     cb(new Error("Unsupported file type"), false);
   }
 };
 
-// ✅ Export configured multer instance
-const upload = multer({ storage, fileFilter });
+// ✅ This line accepts imageUrl, videoUrl, or audioUrl
+const upload = multer({ storage, fileFilter }).fields([
+  { name: "imageUrl", maxCount: 1 },
+  { name: "videoUrl", maxCount: 1 },
+  { name: "audioUrl", maxCount: 1 },
+  { name: "media", maxCount: 1 }, // keep for backward compatibility
+]);
 
 module.exports = upload;

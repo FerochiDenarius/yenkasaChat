@@ -1,3 +1,4 @@
+// routes/post.routes.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -8,10 +9,19 @@ const User = require('../models/user.model');
 const Community = require('../models/community.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
+const upload = require("../utils/multer"); 
+
+
 const authMiddleware = require('../middleware/auth');
-const upload = require("../utils/upload");
 
-
+/* ------------------------------------
+ * ✅ Multer Setup (Memory Storage)
+ * ------------------------------------ */
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+});
 
 /* ------------------------------------
  * 💰 REWARD CONFIGURATION
@@ -38,6 +48,7 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
     await ensureSupply();
     const amt = Math.abs(Number(amount));
 
+    // Update total supply if within max
     const supply = await CoinSupply.findOneAndUpdate(
       { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amt } },
       { $inc: { totalMinted: amt } },
@@ -46,7 +57,10 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
     if (!supply) return;
 
     const user = await User.findById(userId);
-    if (!user) return console.warn(`⚠️ rewardUser: user ${userId} not found`);
+    if (!user) {
+      console.warn(`⚠️ rewardUser: user ${userId} not found`);
+      return;
+    }
 
     const beforeBalance = user.coinsBalance || 0;
     const afterBalance = beforeBalance + amt;
@@ -54,11 +68,13 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
     user.coinsBalance = afterBalance;
     await user.save();
 
+    // Determine transaction type
     let txType = 'BONUS';
     if (referenceModel === 'Post') txType = 'REWARD_POST';
     else if (referenceModel === 'Comment') txType = 'REWARD_COMMENT';
     else if (reason?.toLowerCase().includes('follow')) txType = 'REWARD_FOLLOW';
 
+    // Create coin transaction
     await CoinTransaction.create({
       toUserId: userId,
       amount: amt,
@@ -77,66 +93,105 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
   }
 }
 
-
 /* ------------------------------------
- * ✅ CREATE POST
+ * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
-router.post("/", authMiddleware, upload.single("media"), async (req, res) => {
+router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
   try {
-    const { text, communityId, communityName } = req.body;
+    const {
+      text,              // caption / post text
+      tags,
+      location,
+      visibility,
+      mentions,
+      communityName,
+      postType           // optional hint from frontend ('video', 'image', 'audio', 'text')
+    } = req.body;
+
     const userId = req.user.id;
-
-    if (!text && !req.file) {
-      return res.status(400).json({ error: "Post text or media is required." });
-    }
-
-    let imageUrl = "";
-    let videoUrl = "";
-    let audioUrl = "";
-    let detectedPostType = "text";
-
-    if (req.file) {
-      const uploaded = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "auto",
-      });
-
-      const mimeType = req.file.mimetype;
-      if (mimeType.startsWith("image/")) {
-        imageUrl = uploaded.secure_url;
-        detectedPostType = "image";
-      } else if (mimeType.startsWith("video/")) {
-        videoUrl = uploaded.secure_url;
-        detectedPostType = "video";
-      } else if (mimeType.startsWith("audio/")) {
-        audioUrl = uploaded.secure_url;
-        detectedPostType = "audio";
-      }
-    }
-
     const user = await User.findById(userId);
-    const privilegedRoles = ["admin", "moderator", "developer"];
-    const postStatus = privilegedRoles.includes(user.role)
-      ? "approved"
-      : "pending";
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Initialize fields
+    let imageUrl = '';
+    let videoUrl = '';
+    let audioUrl = '';
+    let detectedPostType = postType || 'text';
+
+    /* ------------------------------------
+     * ✅ Upload file if provided
+     * ------------------------------------ */
+if (req.file) {
+  const folder = "yenkasachat/posts";
+  const mime = req.file.mimetype;
+
+  // Detect type
+  const isVideo = mime.startsWith("video");
+  const isAudio = mime.startsWith("audio");
+  const resourceType = isVideo || isAudio ? "video" : "image";
+
+  const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+    folder,
+    resource_type: resourceType,
+  });
+
+  if (isVideo) {
+    videoUrl = uploadResult.secure_url;
+    detectedPostType = "video";
+  } else if (isAudio) {
+    audioUrl = uploadResult.secure_url;
+    detectedPostType = "audio";
+  } else {
+    imageUrl = uploadResult.secure_url;
+    detectedPostType = "image";
+  }
+}
+
+
+    /* ------------------------------------
+     * ✅ Community lookup (if provided)
+     * ------------------------------------ */
+    let selectedCommunity = null;
+    if (communityName && communityName.trim() !== "") {
+      selectedCommunity = await Community.findOne({
+        $or: [
+          { name: communityName.trim() },
+          { displayName: communityName.trim() }
+        ]
+      });
+    }
+
+    /* ------------------------------------
+     * ✅ Determine approval status
+     * ------------------------------------ */
+    const approvers = ["admin", "moderator", "developer"];
+    const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
+    const postStatus = isPrivilegedUser ? "approved" : "pending";
+
+    /* ------------------------------------
+     * ✅ Create post
+     * ------------------------------------ */
     const post = new Post({
       userId,
-      communityId: communityId || user.community || null,
-      text: text?.trim() || "",
+      communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
+      text: text?.trim() || '', // text/caption optional
       imageUrl,
       videoUrl,
       audioUrl,
       postType: detectedPostType,
-      tags: [],
-      mentions: [],
-      location: "",
-      visibility: "public",
-      communityName: communityName || "",
+      tags: tags || [],
+      mentions: mentions || [],
+      location: location || '',
+      visibility: visibility || 'public',
+      communityName: selectedCommunity ? selectedCommunity.displayName : (communityName || ''),
       status: postStatus,
     });
 
     await post.save();
 
+    /* ------------------------------------
+     * ✅ Reward & emit feed update
+     * ------------------------------------ */
     if (postStatus === "approved") {
       await rewardUser(
         userId,
@@ -157,15 +212,23 @@ router.post("/", authMiddleware, upload.single("media"), async (req, res) => {
       }
     }
 
-    res.status(201).json({ success: true, post });
+    /* ------------------------------------
+     * ✅ Response
+     * ------------------------------------ */
+    res.status(201).json({
+      success: true,
+      post
+    });
+
   } catch (err) {
     console.error("❌ Failed to create post:", err);
     res.status(500).json({
       error: "Failed to create post",
-      details: err.message,
+      details: err.message
     });
   }
 });
+
 
 
 /* ------------------------------------
@@ -202,6 +265,8 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+
+
 /* ------------------------------------
  * 🕵️‍♂️ GET ALL PENDING POSTS
  * ------------------------------------ */
@@ -226,5 +291,7 @@ router.get('/pending', authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Server error fetching pending posts" });
   }
 });
+
+
 
 module.exports = router;

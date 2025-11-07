@@ -32,6 +32,8 @@ import android.view.animation.ScaleAnimation
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import android.content.Intent
+
 
 
 
@@ -50,6 +52,8 @@ class CommentsActivity : AppCompatActivity() {
     private lateinit var textCaption: TextView
     private lateinit var imagePost: ImageView
     private lateinit var videoPost: VideoView
+    private lateinit var audioIcon: ImageView
+
     private lateinit var textLikes: TextView
     private lateinit var textComments: TextView
     private lateinit var textViews: TextView
@@ -298,64 +302,60 @@ class CommentsActivity : AppCompatActivity() {
                     if (response.isSuccessful && response.body() != null) {
                         val post = response.body()!!
 
-                        // Set caption
+                        // --- 📝 Text & Stats ---
                         textCaption.text = post.caption
-
-                        // Set likes, comments, views
-                        textLikes.text = "${post.likes.size} likes"
+                        textLikes.text = "${post.likeCount} likes"
                         textComments.text = " • ${post.commentCount} comments"
                         textViews.text = " • ${post.viewCount} views"
 
-                        // ✅ FIX: Updated logic to use 'mediaUrl' instead of 'videoUrl'
-                        val mediaUrl = post.mediaUrl
-                        val imageUrl = post.imageUrl
-                        val mediaUrls = post.mediaUrls
-
-                        // Hide both views initially
+                        // --- 🎬 Media Handling ---
                         imagePost.visibility = View.GONE
                         videoPost.visibility = View.GONE
+                        audioIcon.visibility = View.GONE
 
                         when {
-                            // Case 1: A single video is available in 'mediaUrl'
-                            !mediaUrl.isNullOrEmpty() && mediaUrl.endsWith(".mp4") -> {
-                                videoPost.setVideoURI(Uri.parse(mediaUrl))
+                            // 🎥 Video post
+                            !post.videoUrl.isNullOrEmpty() -> {
+                                videoPost.setVideoURI(Uri.parse(post.videoUrl))
                                 videoPost.visibility = View.VISIBLE
                                 videoPost.setOnPreparedListener { mp ->
-                                    mp.isLooping = true // Good for short videos
+                                    mp.isLooping = true
                                     mp.start()
                                 }
                             }
-                            // Case 2: A single image is available in 'imageUrl' or 'mediaUrl'
-                            !imageUrl.isNullOrEmpty() || !mediaUrl.isNullOrEmpty() -> {
-                                val urlToShow = imageUrl ?: mediaUrl // Prioritize imageUrl if both exist
+
+                            // 🖼️ Image post
+                            !post.imageUrl.isNullOrEmpty() -> {
                                 Glide.with(this@CommentsActivity)
-                                    .load(urlToShow)
+                                    .load(post.imageUrl)
+                                    .placeholder(R.drawable.placeholder_image)
                                     .into(imagePost)
                                 imagePost.visibility = View.VISIBLE
                             }
-                            // Case 3: Multiple media items are available
-                            !mediaUrls.isNullOrEmpty() -> {
-                                val first = mediaUrls[0]
-                                if (first.endsWith(".mp4")) {
-                                    videoPost.setVideoURI(Uri.parse(first))
-                                    videoPost.visibility = View.VISIBLE
-                                    videoPost.setOnPreparedListener { mp ->
-                                        mp.isLooping = true
-                                        mp.start()
+
+                            // 🎧 Audio post
+                            !post.audioUrl.isNullOrEmpty() -> {
+                                audioIcon.visibility = View.VISIBLE
+                                audioIcon.setImageResource(R.drawable.ic_audio_placeholder)
+                                audioIcon.setOnClickListener {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(Uri.parse(post.audioUrl), "audio/*")
                                     }
-                                } else {
-                                    Glide.with(this@CommentsActivity)
-                                        .load(first)
-                                        .into(imagePost)
-                                    imagePost.visibility = View.VISIBLE
+                                    startActivity(intent)
                                 }
                             }
+
+                            else -> {
+                                Log.w("CommentsActivity", "⚠️ No media found for post ${post._id}")
+                            }
                         }
+                    } else {
+                        Log.w("CommentsActivity", "⚠️ Failed to load post: ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<Post>, t: Throwable) {
-                    Log.e("CommentsActivity", "Failed to load post: ${t.message}")
+                    Log.e("CommentsActivity", "❌ Failed to load post: ${t.message}", t)
                 }
             })
     }

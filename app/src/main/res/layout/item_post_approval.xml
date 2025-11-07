@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/itemContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/item_card_bg">
+
+    <!-- 🖼️ Media preview -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="8dp">
+
+        <!-- Image / Video Thumbnail -->
+        <ImageView
+            android:id="@+id/imagePost"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:adjustViewBounds="true"
+            android:src="@drawable/placeholder_image"
+            android:contentDescription="@string/post_image" />
+
+        <ImageView
+            android:id="@+id/playIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@drawable/placeholder_video"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- 🎧 Audio indicator -->
+    <TextView
+        android:id="@+id/audioIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🎧 Audio post"
+        android:textColor="@color/gray"
+        android:textSize="14sp"
+        android:visibility="gone"
+        android:layout_marginBottom="6dp"/>
+
+    <!-- 📝 Caption -->
+    <TextView
+        android:id="@+id/textContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This is a post caption."
+        android:textSize="15sp"
+        android:textColor="@color/black"
+        android:layout_marginBottom="6dp" />
+
+    <!-- 📊 Admin stats -->
+    <TextView
+        android:id="@+id/textStats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Approved: 0 • Followers: 0 • Comments: 0"
+        android:textSize="13sp"
+        android:textColor="@color/gray_dark"
+        android:layout_marginBottom="8dp" />
+
+    <!-- ✅ / ❌ Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnReject"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reject"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/red"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btnApprove"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Approve"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/green"
+            android:textColor="@android:color/white"/>
+    </LinearLayout>
+</LinearLayout>

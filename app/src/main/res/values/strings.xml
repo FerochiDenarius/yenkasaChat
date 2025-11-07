@@ -16,4 +16,8 @@
     <string name="profile_image">profile image\n</string>
     <string name="verified_badge">verified badge\n</string>
     <string name="post_media">post media\n</string>
+    <string name="audio_icon">audio icon\n</string>
+    <string name="post_video">post video\n</string>
+    <string name="post_image">post image\n</string>
+    <string name="send_comment">Send comment</string>
 </resources>

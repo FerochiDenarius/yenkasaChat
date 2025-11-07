@@ -138,25 +138,43 @@ class UserProfileActivity : AppCompatActivity() {
 
         ApiClient.apiService.getProfileDynamic(path, "Bearer $token")
             .enqueue(object : Callback<ProfileResponse> {
-                override fun onResponse(call: Call<ProfileResponse>, response: Response<ProfileResponse>) {
+                override fun onResponse(
+                    call: Call<ProfileResponse>,
+                    response: Response<ProfileResponse>
+                ) {
                     if (response.isSuccessful && response.body() != null) {
                         val profile = response.body()!!
                         updateUI(profile)
 
-                        // ✅ FIX: Use a safe call and provide an empty list if profile.posts is null
-                        val mediaPosts = profile.posts?.filter { !it.mediaUrl.isNullOrBlank() } ?: emptyList()
+                        // ✅ Filter only posts that actually have media
+                        val mediaPosts = profile.posts.filter { post ->
+                            !post.imageUrl.isNullOrBlank() ||
+                                    !post.videoUrl.isNullOrBlank() ||
+                                    !post.audioUrl.isNullOrBlank()
+                        }
 
+                        Log.d(
+                            TAG,
+                            "✅ Loaded ${mediaPosts.size} media posts for user ${profile.username} (Total posts: ${profile.posts.size})"
+                        )
+
+                        // ✅ Update RecyclerView
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)
                         postAdapter.notifyDataSetChanged()
+
+                        // ✅ Update UI count
                         postsCountView.text = "${mediaPosts.size}\nPosts"
                     } else {
-                        Log.e(TAG, "Profile load failed: ${response.code()} ${response.message()}")
+                        Log.e(
+                            TAG,
+                            "❌ Profile load failed: ${response.code()} ${response.message()}"
+                        )
                     }
                 }
 
                 override fun onFailure(call: Call<ProfileResponse>, t: Throwable) {
-                    Log.e(TAG, "Network error: ${t.message}")
+                    Log.e(TAG, "⚠️ Network error while fetching profile: ${t.message}", t)
                 }
             })
     }

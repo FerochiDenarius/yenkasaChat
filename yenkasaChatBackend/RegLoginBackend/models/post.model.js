@@ -14,7 +14,7 @@ const postSchema = new Schema({
   communityId: {
     type: Schema.Types.ObjectId,
     ref: 'Community',
-    required: false, // optional for posts outside community
+    required: false,
     index: true
   },
 
@@ -24,25 +24,25 @@ const postSchema = new Schema({
     default: ''
   },
 
-  // Post type
+  // Post type (text, image, video, audio, etc.)
   postType: {
     type: String,
-    enum: ['text', 'image', 'video', 'poll', 'link'],
+    enum: ['text', 'image', 'video', 'audio', 'poll', 'link'],
     default: 'text'
   },
 
   // Content
   text: {
     type: String,
-    required: true,
     trim: true,
-    maxlength: 5000
+    maxlength: 5000,
+    default: ''
   },
 
-  // Media (single or multiple)
+  // 🖼️ Media fields (only one type used per post)
   imageUrl: { type: String, default: '' },
   videoUrl: { type: String, default: '' },
-  mediaUrls: [{ type: String, default: '' }],
+  audioUrl: { type: String, default: '' },
 
   // Engagement
   likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
@@ -56,11 +56,11 @@ const postSchema = new Schema({
   isPinned: { type: Boolean, default: false },
   pinnedUntil: { type: Date, default: null },
 
-  // 🧩 Moderation / Approval
+  // Moderation / Approval
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
-    default: 'pending' // 👈 Default changed from 'approved' to 'pending'
+    default: 'pending'
   },
   isReported: { type: Boolean, default: false },
   reportCount: { type: Number, default: 0 },
@@ -72,10 +72,8 @@ const postSchema = new Schema({
     default: 'public'
   },
 
-  // Mentions (users tagged)
+  // Mentions and tags
   mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-
-  // Tags/Categories
   tags: [String],
 
   // Location (optional)
@@ -97,13 +95,10 @@ postSchema.index({ likeCount: -1 });
 /* ------------------------------------
  * ⚙️ Instance Methods
  * ------------------------------------ */
-
-// Check if user liked post
 postSchema.methods.isLikedBy = function (userId) {
   return this.likes.some(id => id.toString() === userId.toString());
 };
 
-// Efficient add like
 postSchema.methods.addLike = async function (userId) {
   const result = await mongoose.model('Post').updateOne(
     { _id: this._id, likes: { $ne: userId } },
@@ -112,7 +107,6 @@ postSchema.methods.addLike = async function (userId) {
   return result.modifiedCount > 0;
 };
 
-// Efficient remove like
 postSchema.methods.removeLike = async function (userId) {
   const result = await mongoose.model('Post').updateOne(
     { _id: this._id, likes: userId },
@@ -122,15 +116,12 @@ postSchema.methods.removeLike = async function (userId) {
 };
 
 /* ------------------------------------
- * 🧠 Static Helpers (optional but useful)
+ * 🧠 Static Helpers
  * ------------------------------------ */
-
-// Get only approved posts
 postSchema.statics.findApproved = function (filter = {}) {
   return this.find({ ...filter, status: 'approved', isActive: true });
 };
 
-// Get pending posts for admin review
 postSchema.statics.findPending = function () {
   return this.find({ status: 'pending' });
 };

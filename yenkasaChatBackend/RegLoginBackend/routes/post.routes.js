@@ -89,6 +89,9 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
 /* ------------------------------------
  * ✍️ CREATE POST
  * ------------------------------------ */
+/* ------------------------------------
+ * ✍️ CREATE POST (Single image/video)
+ * ------------------------------------ */
 router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
   try {
     const {
@@ -108,7 +111,7 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     let videoUrl = '';
     let detectedPostType = 'text';
 
-    // ✅ Upload to Cloudinary if file provided
+    // ✅ Upload file if provided
     if (req.file) {
       const folder = "yenkasachat/posts";
       const isVideo = req.file.mimetype.startsWith('video');
@@ -146,29 +149,28 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
     const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
     const postStatus = isPrivilegedUser ? "approved" : "pending";
 
-    // ✅ Create and save the post
+    // ✅ Create and save post
     const post = new Post({
       userId,
       communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
       text: text?.trim(),
       imageUrl,
       videoUrl,
+      postType: detectedPostType,
       tags: tags || [],
       mentions: mentions || [],
       location: location || '',
       visibility: visibility || 'public',
-      postType: detectedPostType,
       communityName: selectedCommunity ? selectedCommunity.displayName : communityName || '',
       status: postStatus,
     });
 
     await post.save();
 
-    // ✅ Reward + Emit if post auto-approved
+    // ✅ Reward & emit feed update if auto-approved
     if (postStatus === "approved") {
       await rewardUser(userId, REWARDS.CREATE_POST, "Reward for creating post", "Post", post._id);
 
-      // 🔔 Emit new post event to all connected clients
       if (global.io) {
         global.io.emit("feedUpdate", {
           action: "new_post",
@@ -177,17 +179,16 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
           community: post.communityName,
           timestamp: new Date(),
         });
-        console.log(`📢 feedUpdate emitted for post ${post._id}`);
       }
     }
 
-    // ✅ Return response
     res.json({ success: true, post });
   } catch (err) {
     console.error("❌ Failed to create post:", err);
-    res.status(500).json({ error: "Failed to create post" });
+    res.status(500).json({ error: "Failed to create post", details: err.message });
   }
 });
+
 
 
 /* ------------------------------------

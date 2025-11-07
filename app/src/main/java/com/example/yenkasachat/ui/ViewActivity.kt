@@ -1,9 +1,13 @@
 package com.example.yenkasachat.ui
 
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -23,10 +27,13 @@ class ViewActivity : AppCompatActivity() {
     private lateinit var textUsername: TextView
     private lateinit var textCaption: TextView
     private lateinit var textViews: TextView
-    private lateinit var imageMedia: ImageView
+    private lateinit var imageContent: ImageView
+    private lateinit var videoContent: VideoView
+    private lateinit var audioIcon: ImageView
 
     private var post: Post? = null
     private var token: String? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,11 +42,11 @@ class ViewActivity : AppCompatActivity() {
         textUsername = findViewById(R.id.textUsername)
         textCaption = findViewById(R.id.textCaption)
         textViews = findViewById(R.id.textViews)
-        imageMedia = findViewById(R.id.imageMedia)
+        imageContent = findViewById(R.id.imageMedia)
+        videoContent = findViewById(R.id.videoContent)
+        audioIcon = findViewById(R.id.audioIcon)
 
         token = TokenManager.getToken(this)
-
-        // ✅ Get post object passed via Intent
         post = intent.getParcelableExtra("POST_DATA")
 
         if (post == null) {
@@ -56,14 +63,39 @@ class ViewActivity : AppCompatActivity() {
     private fun setupUI() {
         textUsername.text = post?.userId?.username ?: "Unknown"
         textCaption.text = post?.caption ?: ""
-
         fetchTotalViews()
 
-        post?.mediaUrl?.let {
-            Glide.with(this)
-                .load(it)
-                .placeholder(R.drawable.placeholder)
-                .into(imageMedia)
+        // Hide all first
+        imageContent.visibility = View.GONE
+        videoContent.visibility = View.GONE
+        audioIcon.visibility = View.GONE
+
+        // Decide what to show
+        when {
+            !post?.imageUrl.isNullOrEmpty() -> {
+                imageContent.visibility = View.VISIBLE
+                Glide.with(this)
+                    .load(post?.imageUrl)
+                    .placeholder(R.drawable.placeholder)
+                    .into(imageContent)
+            }
+            !post?.videoUrl.isNullOrEmpty() -> {
+                videoContent.visibility = View.VISIBLE
+                val uri = Uri.parse(post?.videoUrl)
+                videoContent.setVideoURI(uri)
+                videoContent.setOnPreparedListener { it.isLooping = true; videoContent.start() }
+            }
+            !post?.audioUrl.isNullOrEmpty() -> {
+                audioIcon.visibility = View.VISIBLE
+                audioIcon.setImageResource(R.drawable.ic_audio)
+                try {
+                    val uri = Uri.parse(post?.audioUrl)
+                    mediaPlayer = MediaPlayer.create(this, uri)
+                    mediaPlayer?.start()
+                } catch (e: Exception) {
+                    Log.e("ViewActivity", "🎧 Error playing audio: ${e.message}")
+                }
+            }
         }
     }
 
@@ -113,6 +145,7 @@ class ViewActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun fetchTotalViews() {
         val currentPostId = post?._id ?: return
         val authToken = token ?: return
@@ -141,6 +174,7 @@ class ViewActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        mediaPlayer?.release()
         SocketManager.off("viewUpdate")
     }
 }

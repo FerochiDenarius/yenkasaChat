@@ -173,11 +173,11 @@ interface ApiService {
     @POST("posts")
     fun createPost(
         @Part("text") text: RequestBody,
-        @Part("mediaType") mediaType: RequestBody,
-        @Part("communityId") communityId: RequestBody,
-        @Part("communityName") communityName: RequestBody,
-        @Part media: MultipartBody.Part? = null
+        @Part("communityId") communityId: RequestBody?,
+        @Part("communityName") communityName: RequestBody?,
+        @Part media: MultipartBody.Part?      // ✅ correct
     ): Call<Post>
+
 
 
 

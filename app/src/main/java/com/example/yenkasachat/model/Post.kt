@@ -12,13 +12,12 @@ data class Post(
 
     // Content
     @SerializedName("text")
-    val caption: String,
-    val mediaUrl: String? = null,
-    val mediaUrls: List<String>? = null,
+    val caption: String? = null,
+    val imageUrl: String? = null,
+    val videoUrl: String? = null,
+    val audioUrl: String? = null,
     val mentions: List<String>? = null,
-    val mediaType: String? = null,
-    val imageUrl: String? = null, // legacy support for single image
-    val likedByUser: Boolean = false,
+
     // Engagement
     val likes: List<String> = emptyList(),
     val likeCount: Int = 0,
@@ -57,15 +56,13 @@ data class Post(
         fun fromJson(json: JSONObject): Post {
             return Post(
                 _id = json.optString("_id"),
-                caption = json.optString("text", json.optString("caption")),
-                mediaUrl = json.optString("mediaUrl", null),
-                mediaUrls = json.optJSONArray("mediaUrls")?.let { arr ->
-                    List(arr.length()) { i -> arr.optString(i) }
-                },
+                caption = json.optString("text", json.optString("caption", null)),
+                imageUrl = json.optString("imageUrl", null),
+                videoUrl = json.optString("videoUrl", null),
+                audioUrl = json.optString("audioUrl", null),
                 mentions = json.optJSONArray("mentions")?.let { arr ->
                     List(arr.length()) { i -> arr.optString(i) }
                 },
-                imageUrl = json.optString("imageUrl", null),
                 likeCount = json.optInt("likeCount", 0),
                 commentCount = json.optInt("commentCount", 0),
                 shareCount = json.optInt("shareCount", 0),

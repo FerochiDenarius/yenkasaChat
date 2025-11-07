@@ -1,116 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingHorizontal="12dp"
-    android:paddingVertical="8dp"
-    android:background="@color/white">
+    android:padding="8dp"
+    android:background="@color/transparent">
 
-    <!-- Profile Image -->
     <ImageView
         android:id="@+id/imageUser"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_marginEnd="10dp"
         android:src="@drawable/ic_user_placeholder"
-        android:background="@drawable/circle_bg"
+        android:layout_marginEnd="8dp"
+        android:contentDescription="User profile image"
         android:scaleType="centerCrop"
-        android:contentDescription="User Profile" />
+        android:background="@drawable/profile_image_bg" />
 
-    <!-- Comment Bubble -->
     <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:background="@drawable/bg_comment_bubble_modern"
-        android:elevation="2dp"
-        android:clipToPadding="false">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <!-- Username + Timestamp Row -->
+        <TextView
+            android:id="@+id/textUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Username"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/textComment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="This is a comment text."
+            android:textColor="@color/dark_gray"
+            android:textSize="14sp"
+            android:layout_marginTop="2dp" />
+
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/textUsername"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Username"
-                android:textStyle="bold"
-                android:textSize="14sp"
-                android:textColor="#222" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
+            android:layout_marginTop="4dp">
 
             <TextView
                 android:id="@+id/textTimestamp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="2h ago"
-                android:textColor="#777"
+                android:textColor="@color/gray"
                 android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Comment Text -->
-        <TextView
-            android:id="@+id/textComment"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="This is a comment."
-            android:textSize="14sp"
-            android:textColor="#333"
-            android:layout_marginTop="4dp" />
-
-        <!-- Action Buttons: Reply, Edit, Delete -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="6dp">
 
             <TextView
                 android:id="@+id/buttonReply"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Reply"
+                android:text=" • Reply"
+                android:textColor="@color/blue"
                 android:textSize="12sp"
-                android:textColor="@color/primary_color"
-                android:drawablePadding="4dp"
-                android:padding="4dp"
-                android:drawableStart="@drawable/ic_reply_modern" />
+                android:paddingStart="6dp" />
 
             <TextView
                 android:id="@+id/buttonEdit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Edit"
+                android:text=" • Edit"
+                android:textColor="@color/blue"
                 android:textSize="12sp"
-                android:textColor="@color/primary_color"
-                android:layout_marginStart="16dp"
-                android:drawablePadding="4dp"
-                android:padding="4dp"
-                android:drawableStart="@drawable/ic_edit_modern" />
+                android:paddingStart="6dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/buttonDelete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Delete"
+                android:text=" • Delete"
+                android:textColor="@color/red"
                 android:textSize="12sp"
-                android:textColor="#FF3B30"
-                android:layout_marginStart="16dp"
-                android:drawablePadding="4dp"
-                android:padding="4dp"
-                android:drawableStart="@drawable/ic_delete_modern" />
+                android:paddingStart="6dp"
+                android:visibility="gone" />
         </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>

@@ -226,16 +226,28 @@ class AccountInfoActivity : AppCompatActivity() {
             .enqueue(object : Callback<List<Post>> {
                 override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
                     if (response.isSuccessful && response.body() != null) {
-                        Log.d(TAG, "User profile response: ${response.body()}")
-                        val mediaPosts = response.body()!!.filter { !it.mediaUrl.isNullOrBlank() }
+                        val allPosts = response.body()!!
+                        Log.d(TAG, "✅ User posts loaded: $allPosts")
+
+                        // ✅ Filter posts that actually have media (image, video, or audio)
+                        val mediaPosts = allPosts.filter {
+                            !it.imageUrl.isNullOrBlank() ||
+                                    !it.videoUrl.isNullOrBlank() ||
+                                    !it.audioUrl.isNullOrBlank()
+                        }
+
                         userPostsList.clear()
                         userPostsList.addAll(mediaPosts)
                         postAdapter.notifyDataSetChanged()
+
                         postsCountView.text = "${mediaPosts.size}\nPosts"
+                    } else {
+                        Log.w(TAG, "⚠️ Failed to load posts: ${response.code()} - ${response.message()}")
                     }
                 }
+
                 override fun onFailure(call: Call<List<Post>>, t: Throwable) {
-                    Log.e(TAG, "Posts load failed: ${t.message}")
+                    Log.e(TAG, "❌ Posts load failed: ${t.message}", t)
                 }
             })
     }

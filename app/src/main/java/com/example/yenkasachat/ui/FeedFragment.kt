@@ -122,13 +122,31 @@ class FeedFragment : Fragment() {
             onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
-                // Only open full screen for images
-                if (post.mediaType == "image") {
-                    val intent = Intent(requireContext(), PostMediaActivity::class.java)
-                    intent.putExtra("POST_ID", post._id)
-                    startActivity(intent)
+                when {
+                    !post.imageUrl.isNullOrEmpty() -> {
+                        val intent = Intent(requireContext(), PostMediaActivity::class.java)
+                        intent.putExtra("MEDIA_URL", post.imageUrl)
+                        intent.putExtra("MEDIA_TYPE", "image")
+                        startActivity(intent)
+                    }
+                    !post.videoUrl.isNullOrEmpty() -> {
+                        val intent = Intent(requireContext(), PostMediaActivity::class.java)
+                        intent.putExtra("MEDIA_URL", post.videoUrl)
+                        intent.putExtra("MEDIA_TYPE", "video")
+                        startActivity(intent)
+                    }
+                    !post.audioUrl.isNullOrEmpty() -> {
+                        val intent = Intent(requireContext(), PostMediaActivity::class.java)
+                        intent.putExtra("MEDIA_URL", post.audioUrl)
+                        intent.putExtra("MEDIA_TYPE", "audio")
+                        startActivity(intent)
+                    }
+                    else -> {
+                        Toast.makeText(requireContext(), "No media available.", Toast.LENGTH_SHORT).show()
+                    }
                 }
-            },
+            }
+,
             onShareClick = { post ->
                 val shareIntent = Intent(Intent.ACTION_SEND)
                 shareIntent.type = "text/plain"
@@ -174,7 +192,7 @@ class FeedFragment : Fragment() {
             val view = layoutManager.findViewByPosition(i) ?: continue
             val post = posts.getOrNull(i) ?: continue
 
-            if (post.mediaType == "video") {
+            if (!post.videoUrl.isNullOrEmpty()) {
                 val location = IntArray(2)
                 view.getLocationOnScreen(location)
                 val viewTop = location[1]

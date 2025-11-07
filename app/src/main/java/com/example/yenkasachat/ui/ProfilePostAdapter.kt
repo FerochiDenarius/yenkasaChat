@@ -9,17 +9,14 @@ import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
 
-// This is the new adapter for the profile post grid.
 class ProfilePostAdapter(private val posts: List<Post>) :
     RecyclerView.Adapter<ProfilePostAdapter.PostViewHolder>() {
 
-    // The ViewHolder holds a reference to the single ImageView in our grid item layout.
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val postImage: ImageView = itemView.findViewById(R.id.imagePostPreview)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
-        // We will create this new layout file in the next step.
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_post_preview, parent, false)
         return PostViewHolder(view)
@@ -27,12 +24,28 @@ class ProfilePostAdapter(private val posts: List<Post>) :
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         val post = posts[position]
-        // Load the post's media URL into the ImageView.
-        Glide.with(holder.itemView.context)
-            .load(post.mediaUrl)
-            .placeholder(R.drawable.placeholder) // Make sure you have a 'placeholder.png' in your drawable folder
-            .centerCrop()
-            .into(holder.postImage)
+
+        // Pick the right thumbnail source — image, video, or audio
+        val thumbnailUrl = when {
+            !post.imageUrl.isNullOrEmpty() -> post.imageUrl
+            !post.videoUrl.isNullOrEmpty() -> post.videoUrl
+            !post.audioUrl.isNullOrEmpty() -> null // You could use a static audio icon if you prefer
+            else -> null
+        }
+
+        if (thumbnailUrl != null) {
+            Glide.with(holder.itemView.context)
+                .load(thumbnailUrl)
+                .placeholder(R.drawable.placeholder)
+                .centerCrop()
+                .into(holder.postImage)
+        } else {
+            // No media: show placeholder or audio icon
+            holder.postImage.setImageResource(
+                if (!post.audioUrl.isNullOrEmpty()) R.drawable.ic_audio_placeholder
+                else R.drawable.placeholder
+            )
+        }
     }
 
     override fun getItemCount(): Int = posts.size

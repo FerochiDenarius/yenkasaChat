@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2Z" />
+
+    <!-- Audio note icon -->
+    <path
+        android:fillColor="#424242"
+        android:pathData="M12,7V15.5A2.5,2.5 0 1,1 10,13H11.5V7H12M16,6V14.5A2.5,2.5 0 1,1 14,12H15.5V6H16Z" />
+</vector>

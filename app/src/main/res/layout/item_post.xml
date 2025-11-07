@@ -67,7 +67,6 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- timestamp -->
         <TextView
             android:id="@+id/textTimestampPost"
             android:layout_width="wrap_content"
@@ -75,9 +74,18 @@
             android:text="2h"
             android:textColor="@color/gray"
             android:textSize="11sp" />
+
+        <ImageButton
+            android:id="@+id/btnMoreOptions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_more_vert"
+            android:background="@null"
+            android:contentDescription="More options"
+            app:tint="@color/gray_dark"
+            android:layout_marginStart="6dp" />
     </LinearLayout>
 
-    <!-- Post Text -->
     <TextView
         android:id="@+id/textPostContent"
         android:layout_width="match_parent"
@@ -88,7 +96,6 @@
         android:textSize="14sp"
         android:lineSpacingExtra="1.5dp" />
 
-    <!-- Media container so we can overlay the follow FAB -->
     <FrameLayout
         android:id="@+id/mediaContainer"
         android:layout_width="match_parent"
@@ -106,14 +113,6 @@
             tools:visibility="visible"
             tools:src="@drawable/placeholder_image" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerMediaList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:orientation="horizontal" />
-
-
         <androidx.media3.ui.PlayerView
             android:id="@+id/playerView"
             android:layout_width="match_parent"
@@ -124,7 +123,34 @@
             app:resize_mode="fill"
             android:background="@android:color/black" />
 
-        <!-- Centered play/pause overlay -->
+        <LinearLayout
+            android:id="@+id/audioIcon"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone"
+            android:background="@drawable/image_bg_rounded"
+            android:padding="12dp">
+
+            <ImageView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/ic_audio_wave"
+                android:contentDescription="Audio Post"
+                app:tint="@color/primary" />
+
+            <TextView
+                android:id="@+id/audioLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tap to Play Audio"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+
         <ImageButton
             android:id="@+id/btnPlayPause"
             android:layout_width="64dp"
@@ -136,18 +162,16 @@
             app:tint="@android:color/white"
             android:visibility="gone" />
 
-        <!-- follow FAB overlay on media (small) -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/overlayFollowFab"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
+            android:id="@+id/fabFollow"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_gravity="bottom|end"
             android:layout_margin="12dp"
-            android:layout_gravity="top|end"
-            android:visibility="gone"
-            android:contentDescription="Follow"
-            app:useCompatPadding="true"
             app:backgroundTint="@color/primary"
-            app:srcCompat="@drawable/ic_person_add" />
+            app:srcCompat="@drawable/ic_person_add"
+            app:tint="@android:color/white"
+            android:contentDescription="Follow user" />
     </FrameLayout>
 
     <!-- Engagement Row -->
@@ -177,7 +201,6 @@
             android:textSize="13sp"
             android:layout_marginStart="6dp" />
 
-        <!-- Comment -->
         <ImageButton
             android:id="@+id/btnComment"
             android:layout_width="28dp"
@@ -206,7 +229,7 @@
             android:src="@drawable/ic_share"
             android:contentDescription="Share" />
 
-        <!-- View (new) -->
+        <!-- View -->
         <ImageButton
             android:id="@+id/btnView"
             android:layout_width="28dp"
@@ -216,7 +239,7 @@
             android:src="@drawable/ic_eye"
             android:contentDescription="View" />
 
-        <!-- spacer -->
+        <!-- Spacer -->
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
@@ -233,4 +256,5 @@
         android:textSize="12sp"
         android:layout_marginTop="6dp"
         android:visibility="gone" />
+
 </LinearLayout>

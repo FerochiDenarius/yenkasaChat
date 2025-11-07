@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/layoutViewPost"
@@ -9,7 +10,6 @@
     android:padding="16dp"
     tools:context=".ui.ViewActivity">
 
-    <!-- Scrollable content -->
     <ScrollView
         android:id="@+id/scrollViewPost"
         android:layout_width="0dp"
@@ -26,7 +26,7 @@
             android:gravity="center_horizontal"
             android:padding="8dp">
 
-            <!-- Profile section -->
+            <!-- 👤 Profile Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -63,7 +63,7 @@
                     android:contentDescription="@string/verified_badge" />
             </LinearLayout>
 
-            <!-- Post caption -->
+            <!-- 📝 Caption -->
             <TextView
                 android:id="@+id/textCaption"
                 android:layout_width="match_parent"
@@ -73,26 +73,69 @@
                 android:textSize="15sp"
                 android:paddingBottom="8dp" />
 
-            <!-- Post media (image/video) -->
-            <ImageView
-                android:id="@+id/imageMedia"
+            <!-- 🎞️ MEDIA WRAPPER -->
+            <FrameLayout
+                android:id="@+id/mediaContainer"
                 android:layout_width="match_parent"
                 android:layout_height="240dp"
-                android:scaleType="centerCrop"
-                android:adjustViewBounds="true"
-                android:src="@drawable/placeholder_image"
                 android:background="@drawable/media_bg"
-                android:visibility="visible"
-                android:contentDescription="@string/post_media" />
+                android:layout_marginBottom="8dp">
+
+                <!-- 🖼️ Image Placeholder -->
+                <ImageView
+                    android:id="@+id/imageMedia"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/placeholder_image"
+                    android:contentDescription="@string/post_media"
+                    android:visibility="gone" />
+
+                <!-- 🎬 Actual Video Player -->
+                <VideoView
+                    android:id="@+id/videoContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"
+                    android:background="@drawable/placeholder_video"
+                    android:contentDescription="@string/post_video" />
+
+                <!-- 🎧 Audio Placeholder -->
+                <LinearLayout
+                    android:id="@+id/audioLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/audioIcon"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:src="@drawable/ic_audio"
+                        android:contentDescription="@string/audio_icon" />
+
+                    <TextView
+                        android:id="@+id/audioLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Audio Post"
+                        android:textColor="@color/gray"
+                        android:textSize="14sp"
+                        android:layout_marginTop="6dp" />
+                </LinearLayout>
+            </FrameLayout>
 
             <!-- Divider -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="12dp"
-                android:background="@color/gray_light" />
+                android:background="@color/gray_light"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp" />
 
-            <!-- Stats Row (Views + Likes) -->
+            <!-- 👁️ Views + ❤️ Likes -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -100,7 +143,6 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center_vertical">
 
-                <!-- Views counter -->
                 <TextView
                     android:id="@+id/textViews"
                     android:layout_width="wrap_content"
@@ -110,12 +152,10 @@
                     android:textColor="@color/gray"
                     android:padding="4dp" />
 
-                <!-- Spacer -->
                 <View
                     android:layout_width="16dp"
                     android:layout_height="0dp" />
 
-                <!-- Likes counter -->
                 <TextView
                     android:id="@+id/textLikes"
                     android:layout_width="wrap_content"
@@ -125,7 +165,18 @@
                     android:textColor="@color/gray"
                     android:padding="4dp" />
             </LinearLayout>
+
+            <!-- ➕ Follow FAB -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabFollow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:src="@drawable/ic_person_add"
+                android:contentDescription="Follow"
+                app:backgroundTint="@color/primary"
+                app:tint="@android:color/white" />
+
         </LinearLayout>
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

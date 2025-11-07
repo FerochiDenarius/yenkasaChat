@@ -9,7 +9,7 @@
     android:padding="12dp"
     tools:context=".ui.CommentsActivity">
 
-    <!-- 🔹 Header bar -->
+    <!-- 🔹 Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,7 +36,7 @@
             android:textColor="@color/black" />
     </LinearLayout>
 
-    <!-- 🔹 Post Header Section -->
+    <!-- 🔹 Post Section -->
     <LinearLayout
         android:id="@+id/layoutPostHeader"
         android:layout_width="match_parent"
@@ -46,6 +46,7 @@
         android:padding="8dp"
         android:layout_marginBottom="8dp">
 
+        <!-- 🖼️ Image Placeholder -->
         <ImageView
             android:id="@+id/imagePostMedia"
             android:layout_width="match_parent"
@@ -54,7 +55,7 @@
             android:adjustViewBounds="true"
             android:visibility="gone"
             tools:visibility="visible"
-            tools:src="@drawable/sample_post" />
+            tools:src="@drawable/placeholder_image" />
 
         <VideoView
             android:id="@+id/videoPostMedia"
@@ -63,6 +64,18 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
+        <ImageView
+            android:id="@+id/audioIcon"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_audio_placeholder"
+            android:visibility="gone"
+            android:contentDescription="Audio Placeholder"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 📝 Caption -->
         <TextView
             android:id="@+id/textPostCaption"
             android:layout_width="match_parent"
@@ -73,7 +86,7 @@
             android:paddingTop="6dp"
             tools:text="Sample caption goes here" />
 
-        <!-- ✅ FIX STARTS HERE -->
+        <!-- ❤️ Likes / 💬 Comments / 👁 Views -->
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
@@ -106,28 +119,54 @@
                 android:text="0 Views"
                 android:textColor="@color/dark_gray" />
         </LinearLayout>
-        <!-- ✅ FIX ENDS HERE -->
-
     </LinearLayout>
 
-    <!-- 🔹 Comments List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerComments"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:overScrollMode="never"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="8dp"
+        tools:listitem="@layout/item_comment" />
 
-    <!-- Divider -->
+    <LinearLayout
+        android:id="@+id/layoutReplyPreview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp"
+        android:background="@color/light_gray"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textReplyingTo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/dark_gray"
+            android:textSize="13sp"
+            tools:text="Replying to @username" />
+
+        <ImageButton
+            android:id="@+id/buttonCancelReply"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Cancel reply" />
+    </LinearLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E0E0E0"
         android:layout_marginVertical="8dp" />
 
-    <!-- 🔹 Input Area -->
+    <!-- 🔹 Comment Input -->
     <LinearLayout
+        android:id="@+id/layoutCommentInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -152,7 +191,7 @@
             android:layout_marginStart="8dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_send"
-            android:contentDescription="Send comment" />
+            android:contentDescription="@string/send_comment" />
     </LinearLayout>
 
 </LinearLayout>

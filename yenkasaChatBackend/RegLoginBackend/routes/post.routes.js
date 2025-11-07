@@ -86,7 +86,7 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
 /* ------------------------------------
  * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
-router.post('/', authMiddleware, upload, async (req, res) => { ... });
+router.post('/', authMiddleware, upload, async (req, res) => {
   try {
     const {
       text,              // caption / post text
@@ -102,41 +102,45 @@ router.post('/', authMiddleware, upload, async (req, res) => { ... });
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Initialize fields
+    // Initialize post fields
     let imageUrl = '';
     let videoUrl = '';
     let audioUrl = '';
     let detectedPostType = postType || 'text';
 
     /* ------------------------------------
-     * ✅ Upload file if provided
+     * ✅ Determine uploaded file
      * ------------------------------------ */
-if (req.file) {
-  const folder = "yenkasachat/posts";
-  const mime = req.file.mimetype;
+    let file;
+    if (req.files.media) file = req.files.media[0];
+    else if (req.files.videoUrl) file = req.files.videoUrl[0];
+    else if (req.files.audioUrl) file = req.files.audioUrl[0];
+    else if (req.files.imageUrl) file = req.files.imageUrl[0];
 
-  // Detect type
-  const isVideo = mime.startsWith("video");
-  const isAudio = mime.startsWith("audio");
-  const resourceType = isVideo || isAudio ? "video" : "image";
+    if (file) {
+      const folder = "yenkasachat/posts";
+      const mime = file.mimetype;
 
-  const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-    folder,
-    resource_type: resourceType,
-  });
+      const isVideo = mime.startsWith('video');
+      const isAudio = mime.startsWith('audio');
+      const resourceType = isVideo || isAudio ? 'video' : 'image';
 
-  if (isVideo) {
-    videoUrl = uploadResult.secure_url;
-    detectedPostType = "video";
-  } else if (isAudio) {
-    audioUrl = uploadResult.secure_url;
-    detectedPostType = "audio";
-  } else {
-    imageUrl = uploadResult.secure_url;
-    detectedPostType = "image";
-  }
-}
+      const uploadResult = await cloudinary.uploader.upload(file.path, {
+        folder,
+        resource_type: resourceType,
+      });
 
+      if (isVideo) {
+        videoUrl = uploadResult.secure_url;
+        detectedPostType = 'video';
+      } else if (isAudio) {
+        audioUrl = uploadResult.secure_url;
+        detectedPostType = 'audio';
+      } else {
+        imageUrl = uploadResult.secure_url;
+        detectedPostType = 'image';
+      }
+    }
 
     /* ------------------------------------
      * ✅ Community lookup (if provided)
@@ -164,7 +168,7 @@ if (req.file) {
     const post = new Post({
       userId,
       communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
-      text: text?.trim() || '', // text/caption optional
+      text: text?.trim() || '',
       imageUrl,
       videoUrl,
       audioUrl,
@@ -218,7 +222,6 @@ if (req.file) {
     });
   }
 });
-
 
 
 /* ------------------------------------

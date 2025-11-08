@@ -84,9 +84,10 @@ class CommentsActivity : AppCompatActivity() {
         adapter = CommentAdapter(this, comments, object : CommentAdapter.CommentActionListener {
 
             // This MUST exist
-            override fun onLike(comment: Comment, isLiked: Boolean) {
-                toggleCommentLike(comment, isLiked)
+            override fun onLike(comment: Comment, isLiked: Boolean, position: Int) {
+                toggleCommentLike(comment, isLiked, position)
             }
+
             // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
                 editComment.setText("@${comment.user?.username ?: ""} ")
@@ -529,9 +530,24 @@ class CommentsActivity : AppCompatActivity() {
         anim.interpolator = BounceInterpolator()
         buttonSend.startAnimation(anim)
     }
-    private fun toggleCommentLike(comment: Comment, isLiked: Boolean) {
-        val token = TokenManager.getToken(this) ?: return
+    private fun toggleCommentLike(comment: Comment, isLiked: Boolean, position: Int) {
+        val token = TokenManager.getToken(this) ?: run {
+            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
+            return
+        }
 
+        // Optimistically update UI
+        val updatedLikes = comment.likes.toMutableList().apply {
+            if (isLiked) add("tempUserId") else remove("tempUserId") // optional, just for instant visual
+        }
+        val updatedComment = comment.copy(
+            likes = updatedLikes,
+            likeCount = updatedLikes.size
+        )
+        comments[position] = updatedComment
+        adapter.notifyItemChanged(position)
+
+        // Then call API
         val json = JSONObject().apply {
             put("commentId", comment._id)
             put("like", isLiked)
@@ -543,15 +559,16 @@ class CommentsActivity : AppCompatActivity() {
             .enqueue(object : retrofit2.Callback<Map<String, Any>> {
                 override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
                     if (response.isSuccessful && response.body() != null) {
-                        Toast.makeText(this@CommentsActivity, if (isLiked) "Liked comment" else "Unliked comment", Toast.LENGTH_SHORT).show()
-                        loadComments()
+                        Log.d("LikeComment", "✅ Server updated successfully")
                     } else {
                         Toast.makeText(this@CommentsActivity, "Failed to update like", Toast.LENGTH_SHORT).show()
+                        loadComments() // fallback to refresh state
                     }
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
                     Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    loadComments() // fallback to sync again
                 }
             })
     }

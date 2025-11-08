@@ -215,7 +215,7 @@ if (parentComment.user.toString() !== userId.toString()) {
 // ✅ Like comment
 // routes/commentRoutes.js
 // ✅ Like comment with coin rewards
-router.post("/toggle-like", verifyToken, async (req, res) => {
+router.post("/toggle-like", authMiddleware, async (req, res) => {
   try {
     const { commentId, like } = req.body;
     const userId = req.user.id;

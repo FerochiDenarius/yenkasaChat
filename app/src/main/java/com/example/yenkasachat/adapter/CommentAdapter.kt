@@ -25,8 +25,7 @@ class CommentAdapter(
         fun onReply(comment: Comment)
         fun onEdit(comment: Comment)
         fun onDelete(comment: Comment)
-        fun onLike(comment: Comment, isLiked: Boolean) // ✅ new callback
-    }
+        fun onLike(comment: Comment, isLiked: Boolean, position: Int)    }
 
     inner class CommentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageUser: ImageView = itemView.findViewById(R.id.imageUser)
@@ -77,7 +76,7 @@ class CommentAdapter(
         // ✅ Likes display
         val isLiked = comment.likes?.contains(currentUserId) == true
         holder.buttonLike.setImageResource(
-            if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+            if (isLiked) R.drawable.ic_heart else R.drawable.ic_heart_outline
         )
         holder.textLikeCount.text = (comment.likes?.size ?: 0).toString()
 
@@ -108,7 +107,7 @@ class CommentAdapter(
             notifyItemChanged(position)
 
             // Notify backend
-            listener.onLike(updatedComment, !liked)
+            listener.onLike(updatedComment, !liked, position)
         }
 
         // Reply click

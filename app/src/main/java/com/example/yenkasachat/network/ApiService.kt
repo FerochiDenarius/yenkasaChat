@@ -480,29 +480,28 @@ interface ApiService {
 
     // ==================== COINS ====================
 
-    @GET("coins/balance")
-    fun getCoinBalance(
-        @Header("Authorization") token: String
-    ): Call<CoinBalanceResponse>
-
-    @POST("coins/transfer")
+    @POST("coin-transactions/transfer")
     fun transferCoins(
         @Header("Authorization") token: String,
         @Body request: TransferCoinsRequest
     ): Call<TransferCoinsResponse>
 
-    @GET("wallet/{walletId}/username")
+    @GET("coin-transactions/balance")
+    fun getCoinBalance(
+        @Header("Authorization") token: String
+    ): Call<CoinBalanceResponse>
+
+    @GET("coin-transactions/history")
+    fun getCoinTransactionHistory(
+        @Header("Authorization") token: String
+    ): Call<CoinTransactionResponse>
+
+    @GET("coin-transactions/wallet/{walletId}/username")
     fun getUsernameByWalletId(
         @Header("Authorization") token: String,
         @Path("walletId") walletId: String
     ): Call<User>
 
-
-
-    @GET("coin/transactions")
-    fun getCoinTransactionHistory(
-        @Header("Authorization") token: String
-    ): Call<CoinTransactionResponse>
 
 // ===========================
     // 🏡 FEED ENDPOINTS

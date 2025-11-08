@@ -3,6 +3,7 @@ const User = require('../models/user.model');
 const { v4: uuidv4 } = require('uuid'); // For unique transactionId
 
 // 🪙 Transfer coins (walletId ➡ walletId)
+// 🪙 Transfer coins (walletId ➡ walletId)
 exports.createTransaction = async (req, res) => {
   try {
     const { toWalletId, amount, message } = req.body;
@@ -21,6 +22,9 @@ exports.createTransaction = async (req, res) => {
     const fromUser = await User.findById(fromUserId);
     const toUser = await User.findOne({ walletId: toWalletId });
 
+    if (!fromUser) {
+      return res.status(404).json({ error: 'Sender not found' });
+    }
     if (!toUser) {
       return res.status(404).json({ error: 'Recipient user not found' });
     }
@@ -29,17 +33,31 @@ exports.createTransaction = async (req, res) => {
       return res.status(400).json({ error: 'Cannot transfer to your own wallet' });
     }
 
-    if (fromUser.coins < amountNum) {
+    // ✅ Ensure balances are valid numbers
+    const fromBalance = Number(fromUser.coins ?? fromUser.coinsBalance ?? 0);
+    const toBalance = Number(toUser.coins ?? toUser.coinsBalance ?? 0);
+
+    if (isNaN(fromBalance) || isNaN(toBalance)) {
+      console.error('❌ Invalid balance values:', {
+        fromBalance,
+        toBalance,
+        fromUserId: fromUser._id,
+        toUserId: toUser._id
+      });
+      return res.status(500).json({ error: 'Invalid balance values detected' });
+    }
+
+    if (fromBalance < amountNum) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
     // 💰 Balances before update
-    const fromBefore = fromUser.coins;
-    const toBefore = toUser.coins;
+    const fromBefore = fromBalance;
+    const toBefore = toBalance;
 
-    // 🔄 Update balances
-    fromUser.coins -= amountNum;
-    toUser.coins += amountNum;
+    // 🔄 Update balances safely
+    fromUser.coins = fromBefore - amountNum;
+    toUser.coins = toBefore + amountNum;
 
     await fromUser.save();
     await toUser.save();
@@ -76,6 +94,7 @@ exports.createTransaction = async (req, res) => {
     res.status(500).json({ error: 'Failed to process transaction' });
   }
 };
+
 
 
 // 📋 Get transaction history for a user (includes usernames + walletIds)

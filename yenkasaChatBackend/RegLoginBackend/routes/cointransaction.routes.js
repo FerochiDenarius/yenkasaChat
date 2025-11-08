@@ -11,7 +11,7 @@ router.post('/transfer', auth, coinController.createTransaction);
 router.get('/history', auth, coinController.getUserTransactions);
 
 // 📛 Get username by walletId
-router.get('/wallet/:walletId/username', auth, coinController.getUsernameByWalletId);
+router.get('/wallet/:walletId/username', authMiddleware, coinController.getUsernameByWalletId);
 
 // 💰 Current user balance
 router.get('/balance', auth, coinController.getBalance);

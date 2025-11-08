@@ -490,7 +490,7 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: TransferCoinsRequest
     ): Call<TransferCoinsResponse>
-    
+
     @GET("coin/transactions")
     fun getCoinTransactionHistory(
         @Header("Authorization") token: String

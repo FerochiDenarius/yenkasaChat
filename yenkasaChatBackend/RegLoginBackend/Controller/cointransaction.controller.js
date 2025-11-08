@@ -1,53 +1,57 @@
-// controllers/cointransaction.controller.js
 const CoinTransaction = require('../models/cointransaction.model');
 const User = require('../models/user.model');
 
-// 🪙 Create a coin transaction (reward, transfer, etc.)
+// 🪙 Transfer coins (walletId ➡ walletId)
 exports.createTransaction = async (req, res) => {
   try {
-    const { toUserId, fromUserId, amount, type, description, relatedPostId, relatedCommentId } = req.body;
+    const { toWalletId, amount, message } = req.body;
+    const fromUserId = req.user.id;
 
-    if (!toUserId || !amount || !type) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!toWalletId || !amount) {
+      return res.status(400).json({ error: 'Missing required fields (toWalletId, amount)' });
     }
 
     const amountNum = Number(amount);
-    if (isNaN(amountNum) || amountNum === 0) {
+    if (isNaN(amountNum) || amountNum <= 0) {
       return res.status(400).json({ error: 'Invalid transaction amount' });
     }
 
-    const toUser = await User.findById(toUserId);
-    if (!toUser) return res.status(404).json({ error: 'Recipient not found' });
+    // Find sender and receiver by walletId
+    const fromUser = await User.findById(fromUserId);
+    const toUser = await User.findOne({ walletId: toWalletId });
 
-    const fromUser = fromUserId ? await User.findById(fromUserId) : null;
-
-    // Balances before
-    const fromBefore = fromUser?.coins || 0;
-    const toBefore = toUser.coins || 0;
-
-    // Adjust balances
-    if (fromUser) {
-      if (fromUser.coins < amountNum) {
-        return res.status(400).json({ error: 'Insufficient funds for transfer' });
-      }
-      fromUser.coins -= amountNum;
-      await fromUser.save();
+    if (!toUser) {
+      return res.status(404).json({ error: 'Recipient user not found' });
     }
 
+    if (fromUser.walletId === toWalletId) {
+      return res.status(400).json({ error: 'Cannot transfer to your own wallet' });
+    }
+
+    if (fromUser.coins < amountNum) {
+      return res.status(400).json({ error: 'Insufficient balance' });
+    }
+
+    // Balances before
+    const fromBefore = fromUser.coins;
+    const toBefore = toUser.coins;
+
+    // Update balances
+    fromUser.coins -= amountNum;
     toUser.coins += amountNum;
+
+    await fromUser.save();
     await toUser.save();
 
-    // Create transaction record
+    // Record transaction
     const transaction = new CoinTransaction({
-      fromUserId: fromUserId || null,
-      toUserId,
+      fromUserId: fromUser._id,
+      toUserId: toUser._id,
       amount: amountNum,
-      type,
-      description,
-      relatedPostId: relatedPostId || null,
-      relatedCommentId: relatedCommentId || null,
+      type: 'transfer',
+      description: message || 'Transfer between wallets',
       fromUserBalanceBefore: fromBefore,
-      fromUserBalanceAfter: fromUser ? fromUser.coins : fromBefore,
+      fromUserBalanceAfter: fromUser.coins,
       toUserBalanceBefore: toBefore,
       toUserBalanceAfter: toUser.coins,
       status: 'completed'
@@ -57,14 +61,16 @@ exports.createTransaction = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Transaction completed successfully',
+      message: `Transferred ${amountNum} coins to ${toUser.username}`,
       transaction
     });
+
   } catch (err) {
     console.error('❌ Error creating transaction:', err);
     res.status(500).json({ error: 'Failed to process transaction' });
   }
 };
+
 
 // 📋 Get transaction history for a user
 exports.getUserTransactions = async (req, res) => {

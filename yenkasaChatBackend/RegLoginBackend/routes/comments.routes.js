@@ -196,25 +196,85 @@ router.get('/:commentId/replies', authMiddleware, async (req, res) => {
     console.error('❌ Failed to fetch replies:', err);
     res.status(500).json({ error: 'Failed to fetch replies' });
   }
+
+  // after saving the reply
+if (parentComment.user.toString() !== userId.toString()) {
+  await User.findByIdAndUpdate(parentComment.user, { $inc: { coins: 1 } });
+
+  await CoinTransaction.create({
+    user: parentComment.user,
+    type: "reply_reward",
+    amount: 1,
+    fromUser: userId,
+    description: "Received 1 coin from comment reply"
+  });
+}
+
 });
 
 // ✅ Like comment
-router.post('/:commentId/like', authMiddleware, async (req, res) => {
+// routes/commentRoutes.js
+// ✅ Like comment with coin rewards
+router.post("/toggle-like", verifyToken, async (req, res) => {
   try {
-    const { commentId } = req.params;
+    const { commentId, like } = req.body;
     const userId = req.user.id;
 
     const comment = await Comment.findById(commentId);
-    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (!comment) {
+      return res.status(404).json({ success: false, message: "Comment not found" });
+    }
 
-    const wasLiked = await comment.addLike(userId);
+    const alreadyLiked = comment.likes.includes(userId);
+    const commentOwnerId = comment.user; // assuming Comment has 'user' or 'userId'
 
-    res.json({ success: true, liked: wasLiked, likeCount: comment.likeCount });
+    if (like && !alreadyLiked) {
+      // 👍 User likes the comment
+      comment.likes.push(userId);
+      comment.likeCount = comment.likes.length;
+
+      // 💰 Reward: give 2 coins to comment owner (if not self-like)
+      if (commentOwnerId.toString() !== userId.toString()) {
+        await User.findByIdAndUpdate(commentOwnerId, { $inc: { coins: 2 } });
+
+        // Optional: log transaction
+        await CoinTransaction.create({
+          user: commentOwnerId,
+          type: "comment_like",
+          amount: 2,
+          fromUser: userId,
+          description: "Received 2 coins from comment like"
+        });
+      }
+    } else if (!like && alreadyLiked) {
+      // 👎 User unlikes the comment
+      comment.likes.pull(userId);
+      comment.likeCount = comment.likes.length;
+
+      // 💰 Reverse reward: remove 2 coins from owner (if not self-like)
+      if (commentOwnerId.toString() !== userId.toString()) {
+        await User.findByIdAndUpdate(commentOwnerId, { $inc: { coins: -2 } });
+
+        // Optional: log transaction
+        await CoinTransaction.create({
+          user: commentOwnerId,
+          type: "comment_unlike",
+          amount: -2,
+          fromUser: userId,
+          description: "Lost 2 coins due to comment unlike"
+        });
+      }
+    }
+
+    await comment.save();
+
+    res.json({ success: true, comment });
   } catch (err) {
-    console.error('❌ Failed to like comment:', err);
-    res.status(500).json({ error: 'Failed to like comment' });
+    console.error("❌ Error toggling like:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // ✅ Unlike comment
 router.delete('/:commentId/like', authMiddleware, async (req, res) => {

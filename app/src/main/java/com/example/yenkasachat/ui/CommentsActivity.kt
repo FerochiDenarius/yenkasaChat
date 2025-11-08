@@ -83,6 +83,10 @@ class CommentsActivity : AppCompatActivity() {
         // ✅ Initialize adapter with CommentActionListener
         adapter = CommentAdapter(this, comments, object : CommentAdapter.CommentActionListener {
 
+            // This MUST exist
+            override fun onLike(comment: Comment, isLiked: Boolean) {
+                toggleCommentLike(comment, isLiked)
+            }
             // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
                 editComment.setText("@${comment.user?.username ?: ""} ")
@@ -211,6 +215,7 @@ class CommentsActivity : AppCompatActivity() {
 
                 recyclerComments.scrollToPosition(comments.indexOf(comment))
             }
+
 
             // 🗑️ Delete a comment
             override fun onDelete(comment: Comment) {
@@ -485,6 +490,9 @@ class CommentsActivity : AppCompatActivity() {
                 }
             })
     }
+
+    // ✅ Toggle Like on Comment
+
     private fun sendCommentNotification(comment: Comment) {
         val jsonBody = JSONObject().apply {
             put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2")
@@ -520,6 +528,32 @@ class CommentsActivity : AppCompatActivity() {
         anim.duration = 300
         anim.interpolator = BounceInterpolator()
         buttonSend.startAnimation(anim)
+    }
+    private fun toggleCommentLike(comment: Comment, isLiked: Boolean) {
+        val token = TokenManager.getToken(this) ?: return
+
+        val json = JSONObject().apply {
+            put("commentId", comment._id)
+            put("like", isLiked)
+        }.toString()
+
+        val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+        ApiClient.apiService.likeComment("Bearer $token", body)
+            .enqueue(object : retrofit2.Callback<Map<String, Any>> {
+                override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                    if (response.isSuccessful && response.body() != null) {
+                        Toast.makeText(this@CommentsActivity, if (isLiked) "Liked comment" else "Unliked comment", Toast.LENGTH_SHORT).show()
+                        loadComments()
+                    } else {
+                        Toast.makeText(this@CommentsActivity, "Failed to update like", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
     private fun showFloatingEmoji() {

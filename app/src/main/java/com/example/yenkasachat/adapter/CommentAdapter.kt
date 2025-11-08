@@ -25,6 +25,7 @@ class CommentAdapter(
         fun onReply(comment: Comment)
         fun onEdit(comment: Comment)
         fun onDelete(comment: Comment)
+        fun onLike(comment: Comment, isLiked: Boolean) // ✅ new callback
     }
 
     inner class CommentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -35,32 +36,29 @@ class CommentAdapter(
         val buttonReply: TextView = itemView.findViewById(R.id.buttonReply)
         val buttonEdit: TextView = itemView.findViewById(R.id.buttonEdit)
         val buttonDelete: TextView = itemView.findViewById(R.id.buttonDelete)
+
+        // ✅ new like views
+        val buttonLike: ImageView = itemView.findViewById(R.id.buttonLike)
+        val textLikeCount: TextView = itemView.findViewById(R.id.textLikeCount)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommentViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.item_comment, parent, false)
         return CommentViewHolder(view)
     }
-    // Inside CommentAdapter
-    fun updateComment(updated: Comment) {
-        val index = comments.indexOfFirst { it._id == updated._id }
-        if (index != -1) {
-            comments[index] = updated
-            notifyItemChanged(index)
-        }
-    }
 
     override fun getItemCount(): Int = comments.size
 
     override fun onBindViewHolder(holder: CommentViewHolder, position: Int) {
         val comment = comments[position]
+        val currentUserId = TokenManager.getUserId(context)
 
-        // Set username, comment text, timestamp
+        // Basic info
         holder.textUsername.text = comment.user?.username ?: "Unknown User"
         holder.textComment.text = comment.text ?: ""
         holder.textTimestamp.text = comment.createdAt?.let { formatDate(it) } ?: ""
 
-        // Load profile image
+        // Profile image
         val profileUrl = comment.user?.profileImage
         if (!profileUrl.isNullOrBlank()) {
             Glide.with(context)
@@ -76,11 +74,47 @@ class CommentAdapter(
             holder.imageUser.setImageResource(R.drawable.ic_user_placeholder)
         }
 
+        // ✅ Likes display
+        val isLiked = comment.likes?.contains(currentUserId) == true
+        holder.buttonLike.setImageResource(
+            if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+        )
+        holder.textLikeCount.text = (comment.likes?.size ?: 0).toString()
+
+        // ✅ Like click toggle
+        holder.buttonLike.setOnClickListener {
+            val liked = comment.likes?.contains(currentUserId) == true
+
+            // Create a mutable copy of likes
+            val updatedLikes = comment.likes.toMutableList()
+
+            if (liked) {
+                updatedLikes.remove(currentUserId)
+            } else {
+                currentUserId?.let { updatedLikes.add(it) }
+            }
+
+            // Create a new updated comment object
+            val updatedComment = comment.copy(likes = updatedLikes)
+
+            // Update UI instantly
+            holder.buttonLike.setImageResource(
+                if (liked) R.drawable.ic_heart_outline else R.drawable.ic_heart_filled
+            )
+            holder.textLikeCount.text = updatedLikes.size.toString()
+
+            // Update adapter list with the new comment
+            comments[position] = updatedComment
+            notifyItemChanged(position)
+
+            // Notify backend
+            listener.onLike(updatedComment, !liked)
+        }
+
         // Reply click
         holder.buttonReply.setOnClickListener { listener.onReply(comment) }
 
-        // Only show Edit/Delete if comment belongs to current user
-        val currentUserId = TokenManager.getUserId(context)
+        // Edit/Delete visibility
         if (comment.user?._id == currentUserId) {
             holder.buttonEdit.visibility = View.VISIBLE
             holder.buttonEdit.setOnClickListener { listener.onEdit(comment) }
@@ -105,6 +139,14 @@ class CommentAdapter(
         }
     }
 
+    fun updateComment(updated: Comment) {
+        val index = comments.indexOfFirst { it._id == updated._id }
+        if (index != -1) {
+            comments[index] = updated
+            notifyItemChanged(index)
+        }
+    }
+
     fun addComment(newComment: Comment) {
         comments.add(0, newComment)
         notifyItemInserted(0)
@@ -115,7 +157,6 @@ class CommentAdapter(
         comments.addAll(newList)
         notifyDataSetChanged()
     }
-
 
     fun deleteComment(comment: Comment) {
         val index = comments.indexOfFirst { it._id == comment._id }

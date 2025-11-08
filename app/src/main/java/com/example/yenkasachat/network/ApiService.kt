@@ -242,6 +242,14 @@ interface ApiService {
         @Path("commentId") commentId: String
     ): Call<Map<String, Any>>
 
+    @POST("comments/toggle-like")
+    fun likeComment(
+        @Header("Authorization") token: String,
+        @Body body: RequestBody
+    ): Call<Map<String, Any>>
+
+
+
 
     // Get replies for a comment
     @GET("comments/{commentId}/replies")

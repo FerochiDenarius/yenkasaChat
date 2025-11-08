@@ -25,24 +25,24 @@ data class CoinTransactionResponse(
 
 data class TransactionsResponse(
     val transactions: List<CoinTransaction>,
-    val pagination: PaginationInfo // refers to the shared pagination model
+    val pagination: PaginationInfo // from shared model file
 )
 
 data class CoinTransaction(
     @SerializedName("_id")
     val transactionId: String,
 
-    val fromUserId: UserBasic? = null, // populated from backend
-    val toUserId: UserBasic? = null,   // populated from backend
+    val fromUserId: UserBasic? = null, // uses existing UserBasic
+    val toUserId: UserBasic? = null,   // uses existing UserBasic
 
     val amount: Int,
-    val type: String, // REWARD_POST, REWARD_FOLLOW, REWARD_LIKE, REWARD_COMMENT, TRANSFER, etc.
+    val type: String, // e.g. REWARD_POST, REWARD_FOLLOW, etc.
     val description: String,
 
     val relatedPostId: PostBasic? = null,
     val relatedCommentId: String? = null,
 
-    // 🧾 Snapshot fields (immutable, stored in backend)
+    // 🧾 Snapshot fields
     val senderUsername: String? = null,
     val senderWalletId: String? = null,
     val recipientUsername: String? = null,
@@ -51,12 +51,12 @@ data class CoinTransaction(
     val status: String = "completed",
     val createdAt: String,
 
-    // Client-side computed fields (for UI display)
+    // UI-only fields
     var direction: String? = null, // "incoming" or "outgoing"
-    var otherParty: UserBasic? = null // other participant in the transaction
+    var otherParty: UserBasic? = null // other participant
 )
 
-// === Basic post info for transactions ===
+// === Basic post info ===
 data class PostBasic(
     val text: String,
     val imageUrl: String? = null
@@ -70,7 +70,6 @@ data class TransferCoinsRequest(
     val message: String?
 )
 
-
 data class TransferCoinsResponse(
     val success: Boolean,
     val message: String,
@@ -80,15 +79,14 @@ data class TransferCoinsResponse(
     val required: Int? = null
 )
 
-// === Transaction info snapshot (for quick responses) ===
+// === Transaction info snapshot ===
 data class TransactionInfo(
+    @SerializedName("_id")
     val transactionId: String,
     val amount: Int,
     val from: String,
     val to: String,
     val newBalance: Int,
-
-    // include snapshot usernames for context
     val senderUsername: String? = null,
     val recipientUsername: String? = null
 )

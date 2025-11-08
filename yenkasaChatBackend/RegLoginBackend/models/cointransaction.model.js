@@ -34,6 +34,7 @@ const coinTransactionSchema = new Schema({
       'REWARD_COMMENT',         // Reward for commenting
       'REWARD_COMMENT_LIKE',    // Reward for receiving a like on a comment
       'REWARD_FOLLOW',          // Reward for following another user
+      'REWARD_VIEWS',
       'REWARD_VERIFICATION',    // Reward for verifying account
       'REWARD_ACCOUNT_AGE',     // ✅ Reward for Yenkasa account age/milestone
       'REWARD_DAILY_LOGIN',     // ✅ Reward for daily login streak/bonus

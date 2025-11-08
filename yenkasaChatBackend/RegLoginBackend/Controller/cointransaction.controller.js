@@ -1,5 +1,6 @@
 const CoinTransaction = require('../models/cointransaction.model');
 const User = require('../models/user.model');
+const { v4: uuidv4 } = require('uuid'); // For unique transactionId
 
 // 🪙 Transfer coins (walletId ➡ walletId)
 exports.createTransaction = async (req, res) => {
@@ -16,7 +17,7 @@ exports.createTransaction = async (req, res) => {
       return res.status(400).json({ error: 'Invalid transaction amount' });
     }
 
-    // Find sender and receiver by walletId
+    // 🔍 Find sender and receiver
     const fromUser = await User.findById(fromUserId);
     const toUser = await User.findOne({ walletId: toWalletId });
 
@@ -32,24 +33,29 @@ exports.createTransaction = async (req, res) => {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
-    // Balances before
+    // 💰 Balances before update
     const fromBefore = fromUser.coins;
     const toBefore = toUser.coins;
 
-    // Update balances
+    // 🔄 Update balances
     fromUser.coins -= amountNum;
     toUser.coins += amountNum;
 
     await fromUser.save();
     await toUser.save();
 
-    // Record transaction
+    // 🧾 Record transaction with full identification
     const transaction = new CoinTransaction({
+      transactionId: uuidv4(),
       fromUserId: fromUser._id,
       toUserId: toUser._id,
+      fromUsername: fromUser.username,
+      toUsername: toUser.username,
+      fromWalletId: fromUser.walletId,
+      toWalletId: toUser.walletId,
       amount: amountNum,
-      type: 'transfer',
-      description: message || 'Transfer between wallets',
+      type: 'TRANSFER',
+      description: message || `Transfer from ${fromUser.username} to ${toUser.username}`,
       fromUserBalanceBefore: fromBefore,
       fromUserBalanceAfter: fromUser.coins,
       toUserBalanceBefore: toBefore,
@@ -72,32 +78,60 @@ exports.createTransaction = async (req, res) => {
 };
 
 
-// 📋 Get transaction history for a user
+// 📋 Get transaction history for a user (includes usernames + walletIds)
 exports.getUserTransactions = async (req, res) => {
   try {
     const userId = req.user.id;
+
     const transactions = await CoinTransaction.find({
       $or: [{ toUserId: userId }, { fromUserId: userId }]
     })
-      .populate('fromUserId', 'username')
-      .populate('toUserId', 'username')
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(100)
+      .lean();
 
-    res.json({ success: true, transactions });
+    res.json({
+      success: true,
+      transactions
+    });
   } catch (err) {
     console.error('❌ Failed to fetch transactions:', err);
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 };
 
+// 👤 Get username by walletId
+exports.getUsernameByWalletId = async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const user = await User.findOne({ walletId }).select('username walletId');
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found for this walletId' });
+    }
+
+    res.json({
+      success: true,
+      username: user.username,
+      walletId: user.walletId
+    });
+  } catch (err) {
+    console.error('❌ Error fetching username by walletId:', err);
+    res.status(500).json({ error: 'Failed to fetch username' });
+  }
+};
+
+
 // 💰 Get current balance for logged-in user
 exports.getBalance = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId).select('coins');
+    const user = await User.findById(userId).select('coins walletId username');
+
     res.json({
       success: true,
+      username: user.username,
+      walletId: user.walletId,
       balance: user.coins || 0
     });
   } catch (err) {

@@ -11,6 +11,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.TransferCoinsRequest
 import com.example.yenkasachat.model.TransferCoinsResponse
 import com.example.yenkasachat.model.CoinBalanceResponse
+import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
@@ -59,10 +60,10 @@ class CreateTransactionActivity : AppCompatActivity() {
 
         // 💸 Send coins
         btnSend.setOnClickListener {
-            val recipient = etRecipientId.text.toString().trim()
+            val recipientWalletId = etRecipientId.text.toString().trim()
             val amountText = etAmount.text.toString().trim()
 
-            if (recipient.isEmpty() || amountText.isEmpty()) {
+            if (recipientWalletId.isEmpty() || amountText.isEmpty()) {
                 Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -73,17 +74,13 @@ class CreateTransactionActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            sendCoins(recipient, amount)
+            fetchRecipientUsernameAndSend(recipientWalletId, amount)
         }
     }
 
     // ✅ Fetch wallet ID from /coins/balance endpoint
     private fun fetchWalletId() {
-        val token = TokenManager.getToken(this)
-        if (token == null) {
-            Toast.makeText(this, "User not authenticated", Toast.LENGTH_SHORT).show()
-            return
-        }
+        val token = TokenManager.getToken(this) ?: return
 
         progressBar.visibility = View.VISIBLE
 
@@ -119,18 +116,50 @@ class CreateTransactionActivity : AppCompatActivity() {
             })
     }
 
-    // ✅ Send coins to another user
-    private fun sendCoins(recipientId: String, amount: Int) {
-        val token = TokenManager.getToken(this)
-        if (token == null) {
-            Toast.makeText(this, "User not authenticated", Toast.LENGTH_SHORT).show()
-            return
-        }
+    // 🔹 New method: fetch recipient username before sending
+    private fun fetchRecipientUsernameAndSend(walletId: String, amount: Int) {
+        val token = TokenManager.getToken(this) ?: return
+
+        progressBar.visibility = View.VISIBLE
+
+        // Call backend API to get username for walletId
+        ApiClient.apiService.getUsernameByWalletId("Bearer $token", walletId)
+            .enqueue(object : Callback<User> {
+                override fun onResponse(call: Call<User>, response: Response<User>) {
+                    progressBar.visibility = View.GONE
+                    if (response.isSuccessful && response.body() != null) {
+                        val recipientUsername = response.body()!!.username
+                        sendCoins(walletId, recipientUsername, amount)
+                    } else {
+                        Toast.makeText(
+                            this@CreateTransactionActivity,
+                            "Failed to fetch recipient username",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                }
+
+                override fun onFailure(call: Call<User>, t: Throwable) {
+                    progressBar.visibility = View.GONE
+                    Toast.makeText(
+                        this@CreateTransactionActivity,
+                        "Network error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
+    }
+
+    // ✅ Send coins to another user (now includes recipientUsername)
+    private fun sendCoins(recipientWalletId: String, recipientUsername: String?, amount: Int) {
+        val token = TokenManager.getToken(this) ?: return
 
         progressBar.visibility = View.VISIBLE
 
         val request = TransferCoinsRequest(
-            toUsername = recipientId,
+            toWalletId = recipientWalletId,
+            recipientUsername = recipientUsername,   // <-- automatically filled
             amount = amount,
             message = "Transfer from mobile app"
         )
@@ -146,7 +175,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                     if (response.isSuccessful && body?.success == true) {
                         Toast.makeText(
                             this@CreateTransactionActivity,
-                            "✅ Sent $amount coins to $recipientId",
+                            "✅ Sent $amount coins to $recipientUsername",
                             Toast.LENGTH_LONG
                         ).show()
                         finish()

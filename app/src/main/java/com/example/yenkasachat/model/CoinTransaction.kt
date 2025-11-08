@@ -2,15 +2,12 @@ package com.example.yenkasachat.model
 
 import com.google.gson.annotations.SerializedName
 
-// NOTE: UserBasic and PaginationInfo have been moved to Shared.kt and will be imported automatically.
-
 // === Coin balance response ===
 data class CoinBalanceResponse(
     val success: Boolean,
     val walletId: String?,
     val balance: Int
 )
-
 
 data class CoinBalance(
     val balance: Int,
@@ -28,30 +25,35 @@ data class CoinTransactionResponse(
 
 data class TransactionsResponse(
     val transactions: List<CoinTransaction>,
-    val pagination: PaginationInfo // This now refers to the class in Shared.kt
+    val pagination: PaginationInfo // refers to the shared pagination model
 )
 
 data class CoinTransaction(
     @SerializedName("_id")
     val transactionId: String,
 
-    val fromUserId: UserBasic? = null, // This now refers to the class in Shared.kt
-    val toUserId: UserBasic? = null,   // This now refers to the class in Shared.kt
+    val fromUserId: UserBasic? = null, // populated from backend
+    val toUserId: UserBasic? = null,   // populated from backend
 
     val amount: Int,
-    val type: String, // REWARD_POST, REWARD_FOLLOW, REWARD_LIKE, REWARD_COMMENT, TRANSFER
+    val type: String, // REWARD_POST, REWARD_FOLLOW, REWARD_LIKE, REWARD_COMMENT, TRANSFER, etc.
     val description: String,
 
     val relatedPostId: PostBasic? = null,
     val relatedCommentId: String? = null,
 
-    val status: String = "completed",
+    // 🧾 Snapshot fields (immutable, stored in backend)
+    val senderUsername: String? = null,
+    val senderWalletId: String? = null,
+    val recipientUsername: String? = null,
+    val recipientWalletId: String? = null,
 
+    val status: String = "completed",
     val createdAt: String,
 
-    // Client-side computed
+    // Client-side computed fields (for UI display)
     var direction: String? = null, // "incoming" or "outgoing"
-    var otherParty: UserBasic? = null
+    var otherParty: UserBasic? = null // other participant in the transaction
 )
 
 // === Basic post info for transactions ===
@@ -62,10 +64,12 @@ data class PostBasic(
 
 // === Transfer coins request & response ===
 data class TransferCoinsRequest(
-    val toUsername: String,
+    val toWalletId: String,
+    val recipientUsername: String?,
     val amount: Int,
-    val message: String? = null
+    val message: String?
 )
+
 
 data class TransferCoinsResponse(
     val success: Boolean,
@@ -76,10 +80,15 @@ data class TransferCoinsResponse(
     val required: Int? = null
 )
 
+// === Transaction info snapshot (for quick responses) ===
 data class TransactionInfo(
     val transactionId: String,
     val amount: Int,
     val from: String,
     val to: String,
-    val newBalance: Int
+    val newBalance: Int,
+
+    // include snapshot usernames for context
+    val senderUsername: String? = null,
+    val recipientUsername: String? = null
 )

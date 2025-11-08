@@ -491,6 +491,14 @@ interface ApiService {
         @Body request: TransferCoinsRequest
     ): Call<TransferCoinsResponse>
 
+    @GET("wallet/{walletId}/username")
+    fun getUsernameByWalletId(
+        @Header("Authorization") token: String,
+        @Path("walletId") walletId: String
+    ): Call<User>
+
+
+
     @GET("coin/transactions")
     fun getCoinTransactionHistory(
         @Header("Authorization") token: String

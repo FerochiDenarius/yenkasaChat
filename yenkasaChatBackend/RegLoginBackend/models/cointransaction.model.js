@@ -14,7 +14,7 @@ const coinTransactionSchema = new Schema({
     index: true
   },
 
-  // 🪪 Add identifying info for audits
+  // 🪪 Identifying info for audit and traceability
   fromUsername: { type: String, default: '' },
   toUsername: { type: String, default: '' },
   fromWalletId: { type: String, default: '' },
@@ -25,32 +25,29 @@ const coinTransactionSchema = new Schema({
     required: true
   },
 
-  // 🎯 Expanded reward type list
+  // 🎯 Transaction category
   type: {
     type: String,
     enum: [
-      'REWARD_POST',            // Reward for creating a post
-      'REWARD_POST_LIKE',       // Reward for receiving a like on a post
-      'REWARD_COMMENT',         // Reward for commenting
-      'REWARD_COMMENT_LIKE',    // Reward for receiving a like on a comment
-      'REWARD_FOLLOW',          // Reward for following another user
+      'REWARD_POST',
+      'REWARD_POST_LIKE',
+      'REWARD_COMMENT',
+      'REWARD_COMMENT_LIKE',
+      'REWARD_FOLLOW',
       'REWARD_VIEWS',
-      'REWARD_VERIFICATION',    // Reward for verifying account
-      'REWARD_ACCOUNT_AGE',     // ✅ Reward for Yenkasa account age/milestone
-      'REWARD_DAILY_LOGIN',     // ✅ Reward for daily login streak/bonus
-      'TRANSFER',               // Manual user transfer
-      'PURCHASE',               // Purchase using coins
-      'REFUND',                 // Refund for a transaction
-      'BONUS',                  // Admin bonus or promotion
-      'ADMIN_ADJUSTMENT'        // Admin manual change
+      'REWARD_VERIFICATION',
+      'REWARD_ACCOUNT_AGE',
+      'REWARD_DAILY_LOGIN',
+      'TRANSFER',
+      'PURCHASE',
+      'REFUND',
+      'BONUS',
+      'ADMIN_ADJUSTMENT'
     ],
     required: true
   },
 
-  description: {
-    type: String,
-    default: ''
-  },
+  description: { type: String, default: '' },
 
   relatedPostId: {
     type: Schema.Types.ObjectId,
@@ -64,16 +61,17 @@ const coinTransactionSchema = new Schema({
     default: null
   },
 
-  activityId: {
-    type: String,
-    index: true,
-    unique: false
-  },
+  activityId: { type: String, index: true },
 
+  // 🔑 Unique transaction ID (used as external reference)
   transactionId: {
     type: String,
-    unique: true
+    unique: true,
+    required: true
   },
+
+  // ❌ referenceCode removed permanently
+  // referenceCode: not used anymore
 
   status: {
     type: String,
@@ -86,13 +84,10 @@ const coinTransactionSchema = new Schema({
   toUserBalanceBefore: Number,
   toUserBalanceAfter: Number,
 
-  adminNote: {
-    type: String,
-    default: ''
-  }
+  adminNote: { type: String, default: '' }
 }, { timestamps: true });
 
-// 🧭 Indexes
+// 🧭 Helpful indexes
 coinTransactionSchema.index({ toUserId: 1, createdAt: -1 });
 coinTransactionSchema.index({ fromUserId: 1, createdAt: -1 });
 coinTransactionSchema.index({ type: 1 });

@@ -225,19 +225,15 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: "Comment not found" });
     }
 
-    const alreadyLiked = comment.likes.includes(userId);
-    const commentOwnerId = comment.user; // assuming Comment has 'user' or 'userId'
+    const alreadyLiked = comment.isLikedBy(userId); // safer with model method
+    const commentOwnerId = comment.userId;
 
     if (like && !alreadyLiked) {
-      // 👍 User likes the comment
-      comment.likes.push(userId);
-      comment.likeCount = comment.likes.length;
+      await comment.addLike(userId);
 
-      // 💰 Reward: give 2 coins to comment owner (if not self-like)
+      // Reward 2 coins to comment owner (if not self-like)
       if (commentOwnerId.toString() !== userId.toString()) {
         await User.findByIdAndUpdate(commentOwnerId, { $inc: { coins: 2 } });
-
-        // Optional: log transaction
         await CoinTransaction.create({
           user: commentOwnerId,
           type: "comment_like",
@@ -246,16 +242,13 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
           description: "Received 2 coins from comment like"
         });
       }
-    } else if (!like && alreadyLiked) {
-      // 👎 User unlikes the comment
-      comment.likes.pull(userId);
-      comment.likeCount = comment.likes.length;
 
-      // 💰 Reverse reward: remove 2 coins from owner (if not self-like)
+    } else if (!like && alreadyLiked) {
+      await comment.removeLike(userId);
+
+      // Deduct 2 coins if unliked (if not self-like)
       if (commentOwnerId.toString() !== userId.toString()) {
         await User.findByIdAndUpdate(commentOwnerId, { $inc: { coins: -2 } });
-
-        // Optional: log transaction
         await CoinTransaction.create({
           user: commentOwnerId,
           type: "comment_unlike",
@@ -266,14 +259,14 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
       }
     }
 
-    await comment.save();
-
     res.json({ success: true, comment });
+
   } catch (err) {
     console.error("❌ Error toggling like:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 // ✅ Unlike comment

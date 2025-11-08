@@ -530,24 +530,30 @@ class CommentsActivity : AppCompatActivity() {
         anim.interpolator = BounceInterpolator()
         buttonSend.startAnimation(anim)
     }
+
+    //======Toggle Like on Comment=========//
     private fun toggleCommentLike(comment: Comment, isLiked: Boolean, position: Int) {
         val token = TokenManager.getToken(this) ?: run {
             Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Optimistically update UI
-        val updatedLikes = comment.likes.toMutableList().apply {
-            if (isLiked) add("tempUserId") else remove("tempUserId") // optional, just for instant visual
+        // 1️⃣ Optimistically update UI by creating a new Comment instance
+        val updatedLikes = if (isLiked) {
+            comment.likes + "tempUserId" // just for instant visual
+        } else {
+            comment.likes - "tempUserId"
         }
+
         val updatedComment = comment.copy(
             likes = updatedLikes,
             likeCount = updatedLikes.size
         )
+
         comments[position] = updatedComment
         adapter.notifyItemChanged(position)
 
-        // Then call API
+        // 2️⃣ Call API
         val json = JSONObject().apply {
             put("commentId", comment._id)
             put("like", isLiked)
@@ -557,18 +563,37 @@ class CommentsActivity : AppCompatActivity() {
 
         ApiClient.apiService.likeComment("Bearer $token", body)
             .enqueue(object : retrofit2.Callback<Map<String, Any>> {
-                override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                override fun onResponse(
+                    call: Call<Map<String, Any>>,
+                    response: Response<Map<String, Any>>
+                ) {
                     if (response.isSuccessful && response.body() != null) {
-                        Log.d("LikeComment", "✅ Server updated successfully")
+                        // ✅ Use server value to fully sync
+                        val serverLikeCount = (response.body()?.get("likeCount") as? Double)?.toInt() ?: updatedLikes.size
+                        val likesArray = response.body()?.get("likes") as? List<*>
+
+                        // Create another copy with server-corrected values
+                        val syncedComment = updatedComment.copy(
+                            likes = likesArray?.mapNotNull { it as? String } ?: updatedLikes,
+                            likeCount = serverLikeCount
+                        )
+
+                        comments[position] = syncedComment
+                        adapter.notifyItemChanged(position)
+                        Log.d("LikeComment", "✅ Synced with server")
                     } else {
+                        // Revert in case of failure
+                        comments[position] = comment
+                        adapter.notifyItemChanged(position)
                         Toast.makeText(this@CommentsActivity, "Failed to update like", Toast.LENGTH_SHORT).show()
-                        loadComments() // fallback to refresh state
                     }
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    // Revert in case of network failure
+                    comments[position] = comment
+                    adapter.notifyItemChanged(position)
                     Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-                    loadComments() // fallback to sync again
                 }
             })
     }

@@ -12,8 +12,8 @@ data class User(
     @SerializedName("email")
     val email: String?,
 
-    @SerializedName("phone")
-    val phone: String?,
+    @SerializedName("phoneNumber")
+    val phoneNumber: String?,
 
     @SerializedName("location")
     val location: String?,
@@ -26,6 +26,9 @@ data class User(
 
     @SerializedName("coinsBalance")
     val coinsBalance: Int = 0,
+
+    @SerializedName("walletId")
+    val walletId: String, // 🪙 Added field to match backend
 
     @SerializedName("community")
     val community: Community?,

@@ -1,85 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/createTransactionRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
     android:background="@color/white">
 
-    <LinearLayout
+    <!-- Scrollable content -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <!-- Receive Section -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Receive Coins"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:paddingBottom="12dp" />
+        android:layout_height="match_parent"
+        android:padding="24dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingBottom="24dp">
+            android:orientation="vertical">
+
+            <!-- Receive Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Receive Coins"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:paddingBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="24dp">
+
+                <TextView
+                    android:id="@+id/tvWalletId"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="USER_WALLET_ID"
+                    android:textSize="16sp"
+                    android:textColor="@color/black" />
+
+                <Button
+                    android:id="@+id/btnCopyWalletId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Copy"
+                    android:backgroundTint="@color/blue"
+                    android:textColor="@color/white" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/tvWalletId"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="USER_WALLET_ID"
-                android:textSize="16sp"
-                android:textColor="@color/black" />
+                android:text="Send Coins"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:paddingBottom="12dp" />
+
+            <EditText
+                android:id="@+id/etRecipientId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Recipient Wallet ID"
+                android:padding="12dp"
+                android:background="@drawable/bg_edittext"
+                android:layout_marginBottom="16dp" />
+
+            <EditText
+                android:id="@+id/etAmount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Amount"
+                android:inputType="numberDecimal"
+                android:padding="12dp"
+                android:background="@drawable/bg_edittext"
+                android:layout_marginBottom="24dp" />
 
             <Button
-                android:id="@+id/btnCopyWalletId"
-                android:layout_width="wrap_content"
+                android:id="@+id/btnSend"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Copy"
-                android:backgroundTint="@color/blue"
+                android:text="Send Coins"
+                android:backgroundTint="@color/green"
                 android:textColor="@color/white" />
         </LinearLayout>
+    </ScrollView>
 
-        <!-- Send Section -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Send Coins"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:paddingBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etRecipientId"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Recipient Wallet ID"
-            android:padding="12dp"
-            android:background="@drawable/bg_edittext"
-            android:layout_marginBottom="16dp" />
-
-        <EditText
-            android:id="@+id/etAmount"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Amount"
-            android:inputType="numberDecimal"
-            android:padding="12dp"
-            android:background="@drawable/bg_edittext"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/btnSend"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Send Coins"
-            android:backgroundTint="@color/green"
-            android:textColor="@color/white" />
-
-    </LinearLayout>
-</ScrollView>
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+</FrameLayout>

@@ -490,18 +490,9 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: TransferCoinsRequest
     ): Call<TransferCoinsResponse>
-
-    @GET("coins/transactions")
-    fun getTransactions(
-        @Header("Authorization") token: String,
-        @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 50,
-        @Query("type") type: String? = null
-    ): Call<TransactionsResponse>
-
-
-    @GET("coins/history")
-    fun getCoinHistory(
+    
+    @GET("coin/transactions")
+    fun getCoinTransactionHistory(
         @Header("Authorization") token: String
     ): Call<CoinTransactionResponse>
 

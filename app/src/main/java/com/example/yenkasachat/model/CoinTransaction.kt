@@ -7,8 +7,10 @@ import com.google.gson.annotations.SerializedName
 // === Coin balance response ===
 data class CoinBalanceResponse(
     val success: Boolean,
+    val walletId: String?,
     val balance: Int
 )
+
 
 data class CoinBalance(
     val balance: Int,

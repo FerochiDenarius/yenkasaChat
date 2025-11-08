@@ -3,7 +3,6 @@ const User = require('../models/user.model');
 const { v4: uuidv4 } = require('uuid'); // For unique transactionId
 
 // 🪙 Transfer coins (walletId ➡ walletId)
-// 🪙 Transfer coins (walletId ➡ walletId)
 exports.createTransaction = async (req, res) => {
   try {
     const { toWalletId, amount, message } = req.body;
@@ -34,8 +33,8 @@ exports.createTransaction = async (req, res) => {
     }
 
     // ✅ Ensure balances are valid numbers
-    const fromBalance = Number(fromUser.coins ?? fromUser.coinsBalance ?? 0);
-    const toBalance = Number(toUser.coins ?? toUser.coinsBalance ?? 0);
+    const fromBalance = Number(fromUser.coinsBalance ?? 0);
+    const toBalance = Number(toUser.coinsBalance ?? 0);
 
     if (isNaN(fromBalance) || isNaN(toBalance)) {
       console.error('❌ Invalid balance values:', {
@@ -56,8 +55,8 @@ exports.createTransaction = async (req, res) => {
     const toBefore = toBalance;
 
     // 🔄 Update balances safely
-    fromUser.coins = fromBefore - amountNum;
-    toUser.coins = toBefore + amountNum;
+    fromUser.coinsBalance = fromBefore - amountNum;
+    toUser.coinsBalance = toBefore + amountNum;
 
     await fromUser.save();
     await toUser.save();
@@ -75,9 +74,9 @@ exports.createTransaction = async (req, res) => {
       type: 'TRANSFER',
       description: message || `Transfer from ${fromUser.username} to ${toUser.username}`,
       fromUserBalanceBefore: fromBefore,
-      fromUserBalanceAfter: fromUser.coins,
+      fromUserBalanceAfter: fromUser.coinsBalance,
       toUserBalanceBefore: toBefore,
-      toUserBalanceAfter: toUser.coins,
+      toUserBalanceAfter: toUser.coinsBalance,
       status: 'completed'
     });
 
@@ -94,8 +93,6 @@ exports.createTransaction = async (req, res) => {
     res.status(500).json({ error: 'Failed to process transaction' });
   }
 };
-
-
 
 // 📋 Get transaction history for a user (includes usernames + walletIds)
 exports.getUserTransactions = async (req, res) => {
@@ -140,7 +137,6 @@ exports.getUsernameByWalletId = async (req, res) => {
   }
 };
 
-
 // 💰 Get current balance for logged-in user
 exports.getBalance = async (req, res) => {
   try {
@@ -158,4 +154,3 @@ exports.getBalance = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch balance' });
   }
 };
-

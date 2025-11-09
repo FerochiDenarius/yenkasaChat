@@ -34,7 +34,6 @@ async function ensureSupply() {
 /* ------------------------------------
  * 🎁 Reward User Utility
  * ------------------------------------ */
-const { v4: uuidv4 } = require('uuid');
 
 async function rewardUser(userId, amount, reason, referenceModel, referenceId, activityId = null) {
   try {

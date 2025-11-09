@@ -9,7 +9,7 @@ const upload = require("../utils/upload");
 const authMiddleware = require('../middleware/auth');
 
 // 🧩 import your centralized rewardService
-const rewardService = require('../services/rewardService'); 
+const rewardService = require('../services/reward.service');
 
 /* ------------------------------------
  * 💰 REWARD CONFIGURATION

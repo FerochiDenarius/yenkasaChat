@@ -66,21 +66,7 @@ async function rewardCoins({ toUserId, fromUserId, relatedPostId, amount, type, 
     user.coinsBalance += amount;
     await user.save();
 
-    // record transaction
-    await CoinTransaction.create({
-      transactionId: uuidv4(),
-      fromUserId,
-      toUserId,
-       relatedPostId: await Post.findById(relatedPostId), 
-      amount,
-      type,
-      description,
-      activityId,
-      toUserBalanceBefore: before,
-      toUserBalanceAfter: user.coinsBalance,
-      status: "completed",
-      createdAt: new Date(),
-    });
+ 
 
     console.log(`✅ Rewarded ${amount} coins to ${user.username} for ${type}`);
   } catch (err) {

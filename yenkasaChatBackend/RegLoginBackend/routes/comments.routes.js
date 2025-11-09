@@ -5,22 +5,24 @@ const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
+const { v4: uuidv4 } = require('uuid');
 
-const REWARD_COMMENT = 5;
-const REWARD_REPLY = 2;
+const REWARD_COMMENT = 5;          // reward to post author when someone comments
+const REWARD_REPLY = 2;            // reward to parent comment author
+const REWARD_COMMENT_ACTION = 2;   // reward to user who comments
+const REWARD_COMMENT_LIKE = 1;     // reward for liking / being liked
 
-// ✅ Add comment or reply to a post
-// ✅ Add comment or reply to a post
+// ✅ Add comment or reply
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { postId, text, imageUrl, parentCommentId } = req.body;
     const userId = req.user.id;
 
-    if (!postId || !text || text.trim().length === 0) {
+    if (!postId || !text?.trim()) {
       return res.status(400).json({ error: 'Post ID and comment text are required' });
     }
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate('userId', 'username walletId');
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
     const comment = new Comment({
@@ -36,46 +38,82 @@ router.post('/', authMiddleware, async (req, res) => {
     post.commentCount += 1;
     await post.save();
 
-    // If reply, increment parent comment reply count
+    // Reward the commenter (for making a comment)
+    const commenter = await User.findById(userId);
+    const beforeBalance = commenter.coinsBalance;
+    commenter.coinsBalance += REWARD_COMMENT_ACTION;
+    await commenter.save();
+
+    await CoinTransaction.create({
+      fromUserId: null,
+      toUserId: userId,
+      fromUsername: '',
+      toUsername: commenter.username,
+      fromWalletId: '',
+      toWalletId: commenter.walletId,
+      amount: REWARD_COMMENT_ACTION,
+      type: 'REWARD_COMMENT',
+      description: 'Reward for making a comment',
+       relatedPostId: await Post.findById(post._id),
+      relatedCommentId: comment._id,
+      transactionId: uuidv4(),
+      toUserBalanceBefore: beforeBalance,
+      toUserBalanceAfter: commenter.coinsBalance
+    });
+
+    // Reward parent comment author (if reply)
     if (parentCommentId) {
       await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
 
-      const parentComment = await Comment.findById(parentCommentId);
+      const parentComment = await Comment.findById(parentCommentId).populate('userId', 'username walletId');
       if (parentComment && parentComment.userId.toString() !== userId) {
         const parentAuthor = await User.findById(parentComment.userId);
-        if (parentAuthor) {
-          parentAuthor.coinsBalance += REWARD_REPLY;
-          await parentAuthor.save();
+        const parentBefore = parentAuthor.coinsBalance;
 
-          await CoinTransaction.create({
-            fromUserId: userId,
-            toUserId: parentAuthor._id,
-            amount: REWARD_REPLY,
-            type: 'REWARD_REPLY',
-            description: 'Reward for receiving a reply',
-            relatedPostId: post._id,
-            relatedCommentId: comment._id
-          });
-        }
+        parentAuthor.coinsBalance += REWARD_REPLY;
+        await parentAuthor.save();
+
+        await CoinTransaction.create({
+          fromUserId: userId,
+          toUserId: parentAuthor._id,
+          fromUsername: commenter.username,
+          toUsername: parentAuthor.username,
+          fromWalletId: commenter.walletId,
+          toWalletId: parentAuthor.walletId,
+          amount: REWARD_REPLY,
+          type: 'REWARD_COMMENT',
+          description: 'Reward for receiving a reply',
+           relatedPostId: await Post.findById(post._id),
+          relatedCommentId: comment._id,
+          transactionId: uuidv4(),
+          toUserBalanceBefore: parentBefore,
+          toUserBalanceAfter: parentAuthor.coinsBalance
+        });
       }
     }
 
     // Reward post author if not self
     const postAuthor = await User.findById(post.userId);
     if (postAuthor && postAuthor._id.toString() !== userId) {
+      const beforePostBalance = postAuthor.coinsBalance;
       postAuthor.coinsBalance += REWARD_COMMENT;
-      post.coinsEarned += REWARD_COMMENT;
       await postAuthor.save();
-      await post.save();
 
       await CoinTransaction.create({
         fromUserId: userId,
         toUserId: post.userId,
+        fromUsername: commenter.username,
+        toUsername: postAuthor.username,
+        fromWalletId: commenter.walletId,
+        toWalletId: postAuthor.walletId,
         amount: REWARD_COMMENT,
         type: 'REWARD_COMMENT',
-        description: 'Reward for receiving a comment',
+        description: 'Reward for receiving a comment on post',
         relatedPostId: post._id,
-        relatedCommentId: comment._id
+        relatedCommentId: comment._id,
+        transactionId: uuidv4(),
+        toUserBalanceBefore: beforePostBalance,
+        toUserBalanceAfter: postAuthor.coinsBalance
       });
     }
 
@@ -83,45 +121,13 @@ router.post('/', authMiddleware, async (req, res) => {
       .populate('userId', 'username profileImage verified')
       .lean();
 
-    // ✅ SOCKET.IO EMIT BLOCK — broadcast new comment/reply
-    io.emit('feedUpdate', {
-      type: parentCommentId ? 'newReply' : 'newComment',
-      postId,
-      parentCommentId: parentCommentId || null,
-      comment: populatedComment
-    });
-
-    // 🔔 Send notifications
-    const commenter = await User.findById(userId);
-    const commentAuthorName = commenter?.username || 'Someone';
-
-    const usersToNotify = new Set();
-    if (post.userId.toString() !== userId) usersToNotify.add(post.userId.toString());
-
-    const previousComments = await Comment.find({ postId }).select('userId');
-    previousComments.forEach(c => {
-      if (c.userId.toString() !== userId) usersToNotify.add(c.userId.toString());
-    });
-
-    const users = await User.find({ _id: { $in: Array.from(usersToNotify) } }).select('oneSignalPlayerId');
-    const playerIds = users.map(u => u.oneSignalPlayerId).filter(id => id && id.trim().length > 0);
-
-    if (playerIds.length > 0) {
-      const notificationData = {
-        app_id: process.env.ONESIGNAL_APP_ID,
-        include_player_ids: playerIds,
-        headings: { en: "New Comment" },
-        contents: { en: `${commentAuthorName} commented: "${text.trim()}"` },
-        data: { postId: postId },
-      };
-
-      await fetch("https://onesignal.com/api/v1/notifications", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          "Authorization": `Basic ${process.env.ONESIGNAL_KEY}`
-        },
-        body: JSON.stringify(notificationData)
+    // Optional broadcast (ensure io is defined globally)
+    if (typeof io !== 'undefined') {
+      io.emit('feedUpdate', {
+        type: parentCommentId ? 'newReply' : 'newComment',
+        postId,
+        parentCommentId: parentCommentId || null,
+        comment: populatedComment
       });
     }
 
@@ -130,143 +136,86 @@ router.post('/', authMiddleware, async (req, res) => {
       message: 'Comment added successfully',
       comment: populatedComment
     });
+
   } catch (err) {
     console.error('❌ Failed to add comment:', err);
     res.status(500).json({ error: 'Failed to add comment' });
   }
 });
 
-// ✅ Get comments for a post
-router.get('/post/:postId', authMiddleware, async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
-    const skip = (page - 1) * limit;
-
-    const comments = await Comment.find({ postId, parentCommentId: null, isActive: true })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('userId', 'username profileImage verified')
-      .lean();
-
-    const totalComments = await Comment.countDocuments({ postId, parentCommentId: null, isActive: true });
-
-    res.json({
-      comments,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalComments / limit),
-        totalComments,
-        hasMore: skip + comments.length < totalComments
-      }
-    });
-  } catch (err) {
-    console.error('❌ Failed to fetch comments:', err);
-    res.status(500).json({ error: 'Failed to fetch comments' });
-  }
-});
-
-// ✅ Get replies
-router.get('/:commentId/replies', authMiddleware, async (req, res) => {
-  try {
-    const { commentId } = req.params;
-    const { page = 1, limit = 20 } = req.query;
-    const skip = (page - 1) * limit;
-
-    const replies = await Comment.find({ parentCommentId: commentId, isActive: true })
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('userId', 'username profileImage verified')
-      .lean();
-
-    const totalReplies = await Comment.countDocuments({ parentCommentId: commentId, isActive: true });
-
-    res.json({
-      replies,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalReplies / limit),
-        totalReplies,
-        hasMore: skip + replies.length < totalReplies
-      }
-    });
-  } catch (err) {
-    console.error('❌ Failed to fetch replies:', err);
-    res.status(500).json({ error: 'Failed to fetch replies' });
-  }
-
-  // after saving the reply
-if (parentComment.user.toString() !== userId.toString()) {
-  await User.findByIdAndUpdate(parentComment.user, { $inc: { coins: 1 } });
-
-  await CoinTransaction.create({
-    user: parentComment.user,
-    type: "reply_reward",
-    amount: 1,
-    fromUser: userId,
-    description: "Received 1 coin from comment reply"
-  });
-}
-
-});
-
-// ✅ Like comment
-// routes/commentRoutes.js
-// ✅ Like comment with coin rewards
+// ✅ Like or unlike comment
 router.post("/toggle-like", authMiddleware, async (req, res) => {
   try {
     const { commentId, like } = req.body;
     const userId = req.user.id;
 
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return res.status(404).json({ success: false, message: "Comment not found" });
-    }
+    const comment = await Comment.findById(commentId).populate('userId', 'username walletId');
+    if (!comment) return res.status(404).json({ success: false, message: "Comment not found" });
 
-    const alreadyLiked = comment.isLikedBy(userId); // safer with model method
+    const alreadyLiked = comment.isLikedBy(userId);
     const commentOwnerId = comment.userId;
+
+    const liker = await User.findById(userId);
 
     if (like && !alreadyLiked) {
       await comment.addLike(userId);
 
-      // Reward 2 coins to comment owner (if not self-like)
+      // Reward liker
+      const beforeLikerBalance = liker.coinsBalance;
+      liker.coinsBalance += REWARD_COMMENT_LIKE;
+      await liker.save();
+
+      await CoinTransaction.create({
+        fromUserId: null,
+        toUserId: userId,
+        fromUsername: '',
+        toUsername: liker.username,
+        fromWalletId: '',
+        toWalletId: liker.walletId,
+        amount: REWARD_COMMENT_LIKE,
+        type: 'REWARD_COMMENT_LIKE',
+        description: 'Reward for liking a comment',
+        relatedCommentId: comment._id,
+        transactionId: uuidv4(),
+        toUserBalanceBefore: beforeLikerBalance,
+        toUserBalanceAfter: liker.coinsBalance
+      });
+
+      // Reward comment owner (if not self-like)
       if (commentOwnerId.toString() !== userId.toString()) {
-        await User.findByIdAndUpdate(commentOwnerId, { $inc: { coins: 2 } });
+        const owner = await User.findById(commentOwnerId);
+        const beforeOwnerBalance = owner.coinsBalance;
+        owner.coinsBalance += REWARD_COMMENT_LIKE;
+        await owner.save();
+
         await CoinTransaction.create({
-          user: commentOwnerId,
-          type: "comment_like",
-          amount: 2,
-          fromUser: userId,
-          description: "Received 2 coins from comment like"
+          fromUserId: userId,
+          toUserId: commentOwnerId,
+          fromUsername: liker.username,
+          toUsername: owner.username,
+          fromWalletId: liker.walletId,
+          toWalletId: owner.walletId,
+          amount: REWARD_COMMENT_LIKE,
+          type: 'REWARD_COMMENT_LIKE',
+          description: 'Reward for receiving a like on comment',
+          relatedCommentId: comment._id,
+          transactionId: uuidv4(),
+          toUserBalanceBefore: beforeOwnerBalance,
+          toUserBalanceAfter: owner.coinsBalance
         });
       }
-
-    } else if (!like && alreadyLiked) {
+    } 
+    else if (!like && alreadyLiked) {
       await comment.removeLike(userId);
-
-      // Deduct 2 coins if unliked (if not self-like)
-      if (commentOwnerId.toString() !== userId.toString()) {
-        await User.findByIdAndUpdate(commentOwnerId, { $inc: { coins: -2 } });
-        await CoinTransaction.create({
-          user: commentOwnerId,
-          type: "comment_unlike",
-          amount: -2,
-          fromUser: userId,
-          description: "Lost 2 coins due to comment unlike"
-        });
-      }
+      // Skipping coin deduction intentionally
     }
 
     res.json({ success: true, comment });
-
   } catch (err) {
     console.error("❌ Error toggling like:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 
 // ✅ Unlike comment
@@ -288,7 +237,6 @@ router.delete('/:commentId/like', authMiddleware, async (req, res) => {
 });
 
 // ✅ Edit comment
-// ✅ SIMPLE EDIT COMMENT ROUTE (for debugging)
 router.put('/:commentId', authMiddleware, async (req, res) => {
   try {
     const { commentId } = req.params;
@@ -307,7 +255,6 @@ router.put('/:commentId', authMiddleware, async (req, res) => {
     comment.text = text.trim();
     await comment.save();
 
-    // ✅ populate before returning
     const populatedComment = await Comment.findById(comment._id)
       .populate('userId', 'username profileImage verified')
       .lean();
@@ -323,7 +270,6 @@ router.put('/:commentId', authMiddleware, async (req, res) => {
   }
 });
 
-
 // ✅ Delete comment
 router.delete('/:commentId', authMiddleware, async (req, res) => {
   try {
@@ -332,7 +278,8 @@ router.delete('/:commentId', authMiddleware, async (req, res) => {
 
     const comment = await Comment.findById(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    if (comment.userId.toString() !== userId) return res.status(403).json({ error: 'You can only delete your own comments' });
+    if (comment.userId.toString() !== userId)
+      return res.status(403).json({ error: 'You can only delete your own comments' });
 
     comment.isActive = false;
     await comment.save();

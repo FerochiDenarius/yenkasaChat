@@ -4,6 +4,22 @@ const router = express.Router();
 const Community = require('../models/community.model');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
+const { v4: uuidv4 } = require('uuid');
+const CoinTransaction = require('../models/cointransaction.model');
+const CoinSupply = require('../models/coinSupply');
+
+// Reward configuration
+const COMMUNITY_CREATION_REWARD = 100; // YKC
+
+// Utility to ensure supply exists
+async function ensureSupply() {
+  await CoinSupply.findByIdAndUpdate(
+    "YENKASA_SUPPLY",
+    { $setOnInsert: { totalMinted: 0 } },
+    { upsert: true }
+  );
+}
+
 
 // Middleware to check if user is verified (Details Verification)
 const requireVerified = (req, res, next) => {
@@ -74,50 +90,56 @@ router.get('/:communityId', async (req, res) => {
   }
 });
 
-// ✅ Join a community
+// ✅ Join a community// ✅ Join a community (up to 3)
 router.post('/:communityId/join', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { communityId } = req.params;
-    
+
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
-    
+
     if (!community.isApproved) {
       return res.status(403).json({ error: 'This community is pending approval' });
     }
-    
+
     const user = await User.findById(userId);
-    
+
     // Check if already a member
-    if (user.community && user.community.toString() === communityId) {
+    if (user.joinedCommunities.includes(communityId)) {
       return res.status(400).json({ error: 'Already a member of this community' });
     }
-    
-    // Leave previous community
-    if (user.community) {
-      const oldCommunity = await Community.findById(user.community);
-      if (oldCommunity) {
-        await oldCommunity.decrementMemberCount();
-      }
+
+    // Enforce max 3 communities
+    if (user.joinedCommunities.length >= 3) {
+      return res.status(403).json({ error: 'You can only join up to 3 communities' });
     }
-    
-    // Join new community
-    user.community = communityId;
+
+    // Add to joined list
+    user.joinedCommunities.push(communityId);
+    user.community = communityId; // optional: set last joined as current
     await user.save();
-    
-    await community.incrementMemberCount();
-    
+
+    // Add user to community
+    if (!community.members) community.members = [];
+    if (!community.members.includes(userId)) {
+      community.members.push(userId);
+      await community.incrementMemberCount();
+      await community.save();
+    }
+
     res.json({
       success: true,
-      message: 'Successfully joined community',
+      message: `Joined ${community.displayName} successfully`,
       community: {
         id: community._id,
         name: community.name,
-        displayName: community.displayName
-      }
+        displayName: community.displayName,
+        memberCount: community.memberCount
+      },
+      joinedCommunities: user.joinedCommunities
     });
   } catch (err) {
     console.error('❌ Failed to join community:', err);
@@ -125,29 +147,46 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
   }
 });
 
+
 // ✅ Leave a community
 router.post('/:communityId/leave', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { communityId } = req.params;
-    
+
     const user = await User.findById(userId);
-    
-    if (!user.community || user.community.toString() !== communityId) {
+
+    // Ensure user is in this community
+    if (!user.joinedCommunities.includes(communityId)) {
       return res.status(400).json({ error: 'Not a member of this community' });
     }
-    
+
+    // Remove from joined list
+    user.joinedCommunities = user.joinedCommunities.filter(
+      id => id.toString() !== communityId
+    );
+
+    // If the user’s current community is this one, reset it
+    if (user.community && user.community.toString() === communityId) {
+      user.community = null;
+    }
+
+    await user.save();
+
+    // Update community stats
     const community = await Community.findById(communityId);
     if (community) {
+      if (community.members) {
+        community.members = community.members.filter(id => id.toString() !== userId);
+      }
       await community.decrementMemberCount();
+      await community.save();
     }
-    
-    user.community = null;
-    await user.save();
-    
+
     res.json({
       success: true,
-      message: 'Successfully left community'
+      message: 'Successfully left community',
+      joinedCommunities: user.joinedCommunities
     });
   } catch (err) {
     console.error('❌ Failed to leave community:', err);
@@ -155,27 +194,29 @@ router.post('/:communityId/leave', authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Create a new community (VERIFIED USERS OR ADMIN)
+
+
+
+// -----------------------------
+// CREATE COMMUNITY WITH REWARD
+// -----------------------------
 router.post('/', authMiddleware, requireVerified, async (req, res) => {
   try {
     const { name, displayName, description, location, categories } = req.body;
     const userId = req.user.id;
-    
+
     if (!name || !displayName) {
       return res.status(400).json({ error: 'Name and display name are required' });
     }
-    
-    // Check if community name already exists
-    const existingCommunity = await Community.findOne({ 
-      name: name.toLowerCase().trim() 
-    });
-    
+
+    const existingCommunity = await Community.findOne({ name: name.toLowerCase().trim() });
     if (existingCommunity) {
       return res.status(400).json({ error: 'Community with this name already exists' });
     }
-    
+
     const user = await User.findById(userId);
-    
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
     // Create community
     const community = new Community({
       name: name.toLowerCase().trim(),
@@ -185,11 +226,48 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
       categories: categories || [],
       createdBy: userId,
       moderators: [userId],
-      isApproved: false // Needs admin approval
+      isApproved: false
     });
-    
+
     await community.save();
-    
+
+    // -----------------------------
+    // Reward user for community creation
+    // -----------------------------
+    await ensureSupply();
+    const supply = await CoinSupply.findOneAndUpdate(
+      { _id: "YENKASA_SUPPLY", totalMinted: { $lte: 100_000_000 - COMMUNITY_CREATION_REWARD } },
+      { $inc: { totalMinted: COMMUNITY_CREATION_REWARD } },
+      { new: true, upsert: true }
+    );
+
+    const beforeBalance = user.coinsBalance || 0;
+    const afterBalance = beforeBalance + COMMUNITY_CREATION_REWARD;
+    user.coinsBalance = afterBalance;
+    await user.save();
+
+    const activityId = uuidv4();
+    const transaction = await CoinTransaction.create({
+      transactionId: uuidv4(),
+      activityId,
+      fromUserId: null, // system
+      toUserId: user._id,
+      fromUsername: 'System',
+      toUsername: user.username,
+      fromWalletId: null,
+      toWalletId: user.walletId,
+      amount: COMMUNITY_CREATION_REWARD,
+      type: 'REWARD_CREATE_COMMUNITY',
+      description: `Reward for creating community ${community.displayName}`,
+      fromUserBalanceBefore: null,
+      fromUserBalanceAfter: null,
+      toUserBalanceBefore: beforeBalance,
+      toUserBalanceAfter: afterBalance,
+      status: 'completed',
+      referenceModel: 'Community',
+      referenceId: community._id
+    });
+
     res.status(201).json({
       success: true,
       message: 'Community created! Pending admin approval.',
@@ -199,6 +277,10 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
         displayName: community.displayName,
         isApproved: community.isApproved
       },
+      reward: {
+        coins: COMMUNITY_CREATION_REWARD,
+        transaction
+      },
       note: 'Your community will be visible once approved by an admin'
     });
   } catch (err) {
@@ -206,6 +288,7 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
     res.status(500).json({ error: 'Failed to create community' });
   }
 });
+
 
 // ✅ Get pending communities (ADMIN ONLY - add admin middleware later)
 router.get('/admin/pending', authMiddleware, async (req, res) => {
@@ -285,6 +368,31 @@ router.delete('/:communityId', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('❌ Failed to delete community:', err);
     res.status(500).json({ error: 'Failed to delete community' });
+  }
+});
+
+// ✅ Get communities the user has joined
+router.get('/user/joined-communities', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Assuming each Community has a field like "members: [userId]"
+    const joinedCommunities = await Community.find({
+      members: userId,
+      isActive: true
+    })
+      .sort({ name: 1 })
+      .select('_id name description')
+      .lean();
+
+    res.json({
+      success: true,
+      count: joinedCommunities.length,
+      communities: joinedCommunities
+    });
+  } catch (err) {
+    console.error('❌ Failed to fetch joined communities:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch joined communities' });
   }
 });
 

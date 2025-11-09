@@ -3,9 +3,14 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const Post = require("../models/post.model");
 const User = require("../models/user.model");
+const CoinTransaction = require("../models/cointransaction.model");
+const CoinSupply = require("../models/coinSupply");
 const verifyToken = require("../middleware/auth");
 
 const router = express.Router();
+
+const REWARD_LIKE = 10;
+const MAX_SUPPLY = 100_000_000;
 
 /* ------------------------------------
  * 🔌 SOCKET EMIT HELPER
@@ -22,76 +27,62 @@ function emitFeedUpdate(req, type, payload = {}) {
 /* ------------------------------------
  * 🪙 REWARD COINS HELPER
  * ------------------------------------ */
-async function rewardCoins(
-  userId,
-  actionType = "REWARD_ACTIVITY",
-  amount = 10,
-  extra = {}
-) {
+async function rewardCoins({ toUserId, fromUserId, relatedPostId, amount, type, description, activityId }) {
   try {
-    const CoinTransaction = require("../models/cointransaction.model");
-    const CoinSupply = require("../models/coinSupply");
-    const User = require("../models/user.model");
-    const MAX_SUPPLY = 100_000_000;
+    if (!toUserId) return console.warn("⚠️ Missing user for reward");
 
-    const {
-      fromUserId = null,
-      relatedPostId = null,
-      description = "",
-      activityId = null,
-    } = extra;
-
-    // 🧩 Step 1: Prevent duplicate rewards
+    // prevent duplicate rewards
     if (activityId) {
-      const existing = await CoinTransaction.findOne({ activityId });
-      if (existing) {
-        console.log(`⚠️ Reward skipped — activity ${activityId} already rewarded.`);
+      const exists = await CoinTransaction.findOne({ activityId });
+      if (exists) {
+        console.log(`⚠️ Skipping duplicate reward for ${activityId}`);
         return;
       }
     }
 
-    // 🪙 Step 2: Ensure supply doc exists
+    // ensure supply exists
     await CoinSupply.findByIdAndUpdate(
       "YENKASA_SUPPLY",
       { $setOnInsert: { totalMinted: 0 } },
       { upsert: true }
     );
 
-    // 🧮 Step 3: Check max supply and increment
-    const updatedSupply = await CoinSupply.findOneAndUpdate(
+    // check max supply and increment
+    const supply = await CoinSupply.findOneAndUpdate(
       { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amount } },
       { $inc: { totalMinted: amount } },
       { new: true }
     );
 
-    if (!updatedSupply) return console.warn("⚠️ Not enough supply to mint more coins");
+    if (!supply) return console.warn("⚠️ Max supply reached, cannot mint more coins");
 
-    // 👤 Step 4: Update user balance
-    const user = await User.findById(userId);
-    if (!user) return;
+    // update user balance
+    const user = await User.findById(toUserId);
+    if (!user) return console.warn("⚠️ User not found for reward");
 
     const before = user.coinsBalance || 0;
     user.coinsBalance += amount;
     await user.save();
 
-    // 🧾 Step 5: Record transaction
+    // record transaction
     await CoinTransaction.create({
-      fromUserId,
-      toUserId: user._id,
-      amount,
-      type: actionType,
-      description: description || `Rewarded for ${actionType}`,
-      relatedPostId,
-      activityId,
       transactionId: uuidv4(),
+      fromUserId,
+      toUserId,
+       relatedPostId: await Post.findById(relatedPostId), 
+      amount,
+      type,
+      description,
+      activityId,
       toUserBalanceBefore: before,
       toUserBalanceAfter: user.coinsBalance,
       status: "completed",
+      createdAt: new Date(),
     });
 
-    console.log(`✅ Rewarded ${amount} coins to ${user.username} for ${actionType}`);
+    console.log(`✅ Rewarded ${amount} coins to ${user.username} for ${type}`);
   } catch (err) {
-    console.error("❌ Error rewarding coins:", err);
+    console.error("❌ Error in rewardCoins:", err.message);
   }
 }
 
@@ -103,51 +94,45 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    console.log("💥 Like route hit by user:", userId, "on post:", req.params.postId);
+    const postId = req.params.postId;
+    const post = await Post.findById(postId).select("likes likeCount userId");
 
-    const post = await Post.findById(req.params.postId).select("likes likeCount userId");
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     const alreadyLiked = post.likes.some((id) => id.toString() === userId);
 
-    // Build update operation
-    const updateOperation = alreadyLiked
+    // toggle like
+    const update = alreadyLiked
       ? { $pull: { likes: userId }, $inc: { likeCount: -1 } }
       : { $addToSet: { likes: userId }, $inc: { likeCount: 1 } };
 
-    const updated = await Post.findByIdAndUpdate(
-      req.params.postId,
-      updateOperation,
-      { new: true }
-    ).select("likes likeCount");
+    const updatedPost = await Post.findByIdAndUpdate(postId, update, { new: true }).select("likes likeCount");
 
-    const likedByUser = updated.likes.some((id) => id.toString() === userId);
+    const likedByUser = updatedPost.likes.some((id) => id.toString() === userId);
 
-    console.log(`✅ Like status after toggle: liked=${likedByUser}, count=${updated.likeCount}`);
-
-    // Emit socket feed update
+    // emit socket event
     emitFeedUpdate(req, likedByUser ? "post_liked" : "post_unliked", {
-      postId: req.params.postId,
+      postId,
       userId,
-      likeCount: updated.likeCount,
+      likeCount: updatedPost.likeCount,
     });
 
-    // Reward coins if it's a new like
-    if (!alreadyLiked) {
-      try {
-        console.log("🏅 Rewarding user:", userId);
-        await rewardCoins(userId, "REWARD_LIKE", 10, {
-          relatedPostId: req.params.postId,
-          activityId: `like_${req.params.postId}_${userId}`,
-        });
-      } catch (rewardErr) {
-        console.error("⚠️ Reward system error:", rewardErr.message);
-      }
+    // ✅ reward the liker (not the post owner)
+    if (!alreadyLiked && likedByUser) {
+      await rewardCoins({
+        toUserId: userId, // liker is rewarded
+        fromUserId: post.userId, // post owner reference
+         relatedPostId: await Post.findById(post._id),
+        amount: REWARD_LIKE,
+        type: "REWARD_LIKE",
+        description: "Reward for liking a post",
+        activityId: `like_${postId}_${userId}`,
+      });
     }
 
     res.status(200).json({
       message: likedByUser ? "Post liked" : "Post unliked",
-      likeCount: updated.likeCount,
+      likeCount: updatedPost.likeCount,
       likedByUser,
     });
   } catch (err) {
@@ -155,6 +140,8 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Failed to toggle like", error: err.message });
   }
 });
+
+
 
 // ✅ Get likes for a post
 router.get("/likes/:postId", verifyToken, async (req, res) => {

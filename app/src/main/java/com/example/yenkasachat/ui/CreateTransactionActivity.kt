@@ -163,6 +163,27 @@ class CreateTransactionActivity : AppCompatActivity() {
                             "✅ Sent $amount coins to $recipientUsername",
                             Toast.LENGTH_LONG
                         ).show()
+
+                        // ✅ Build and save the transaction locally
+                        // ✅ Build and save the transaction locally using TransactionInfo from response
+                        val tx = body.transaction
+                        val newTransaction = TransactionUiModel(
+                            transactionId = tx?.transactionId ?: "temp_${System.currentTimeMillis()}",
+                            amount = tx?.amount ?: amount,
+                            from = tx?.fromWalletId ?: TokenManager.getUserId(this@CreateTransactionActivity) ?: "",
+                            to = tx?.toWalletId ?: recipientWalletId,
+                            newBalance = tx?.toUserBalanceAfter ?: 0,
+                            senderUsername = tx?.fromUsername ?: TokenManager.getUsername(this@CreateTransactionActivity),
+                            recipientUsername = tx?.toUsername ?: recipientUsername ?: "",
+                            description = "Sent $amount coins to $recipientUsername",
+                            type = "transfer",
+                            createdAt = System.currentTimeMillis().toString()
+                        )
+
+                        val existing = TokenManager.getTransactionHistory(this@CreateTransactionActivity).toMutableList()
+                        existing.add(0, newTransaction)
+                        TokenManager.saveTransactionHistory(this@CreateTransactionActivity, existing)
+
                         finish()
                     } else {
                         val errorMsg = body?.error ?: response.message()

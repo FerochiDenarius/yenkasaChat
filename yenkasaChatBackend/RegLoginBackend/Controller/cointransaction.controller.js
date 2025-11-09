@@ -95,12 +95,15 @@ exports.createTransaction = async (req, res) => {
 };
 
 // 📋 Get transaction history for a user (includes usernames + walletIds)
+// routes/coin.routes.js (or wherever getUserTransactions is)
 exports.getUserTransactions = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Only fetch transactions that have an activityId
     const transactions = await CoinTransaction.find({
-      $or: [{ toUserId: userId }, { fromUserId: userId }]
+      $or: [{ toUserId: userId }, { fromUserId: userId }],
+      activityId: { $exists: true, $ne: null }
     })
       .sort({ createdAt: -1 })
       .limit(100)
@@ -115,6 +118,7 @@ exports.getUserTransactions = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 };
+
 
 // 👤 Get username by walletId
 exports.getUsernameByWalletId = async (req, res) => {

@@ -5,15 +5,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat // ✅ 1. ADD THIS IMPORT
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
-import com.example.yenkasachat.model.CoinTransaction
+import com.example.yenkasachat.model.TransactionUiModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-class TransactionAdapter(private val transactions: List<CoinTransaction>) :
-    RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
+class TransactionAdapter(
+    private val transactions: List<TransactionUiModel>,
+    private val currentWalletId: String? = null // optional
+) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvDescription: TextView = itemView.findViewById(R.id.tvDescription)
@@ -30,14 +32,25 @@ class TransactionAdapter(private val transactions: List<CoinTransaction>) :
     }
 
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
-        val transaction = transactions[position]
-        holder.tvDescription.text = transaction.description
-        holder.tvType.text = transaction.type
-        holder.tvDate.text = formatDate(transaction.createdAt)
-        holder.tvAmount.text = formatAmount(transaction.amount)
+        val tx = transactions[position]
 
-        // ✅ 2. FIX: Use the compatibility method ContextCompat.getColor()
-        val colorRes = if (transaction.amount > 0) R.color.green else R.color.red
+        // Determine direction if currentWalletId is provided
+        val isOutgoing = currentWalletId != null && tx.from == currentWalletId
+        val otherParty = if (isOutgoing) tx.recipientUsername ?: tx.to else tx.senderUsername ?: tx.from
+
+        // Description and type
+        holder.tvDescription.text = tx.description.ifEmpty { "Transfer with $otherParty" }
+        holder.tvType.text = tx.type
+
+        // Format date
+        holder.tvDate.text = formatDate(tx.createdAt)
+
+        // Amount with sign
+        val displayAmount = if (isOutgoing) "-${tx.amount}" else "+${tx.amount}"
+        holder.tvAmount.text = displayAmount
+
+        // Color: green incoming, red outgoing
+        val colorRes = if (isOutgoing) R.color.red else R.color.green
         holder.tvAmount.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))
     }
 
@@ -46,15 +59,11 @@ class TransactionAdapter(private val transactions: List<CoinTransaction>) :
     private fun formatDate(isoDate: String): String {
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-            parser.timeZone = TimeZone.getTimeZone("UTC") // Good practice to set the timezone for parsing
+            parser.timeZone = TimeZone.getTimeZone("UTC")
             val date = parser.parse(isoDate)
             SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date!!)
         } catch (e: Exception) {
             isoDate
         }
-    }
-
-    private fun formatAmount(amount: Int): String {
-        return if (amount > 0) "+$amount" else "$amount"
     }
 }

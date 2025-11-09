@@ -8,6 +8,7 @@ const Community = require('../models/community.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
 const upload = require("../utils/upload");
+const { v4: uuidv4 } = require('uuid');
 
 
 const authMiddleware = require('../middleware/auth');
@@ -33,12 +34,13 @@ async function ensureSupply() {
 /* ------------------------------------
  * 🎁 Reward User Utility
  * ------------------------------------ */
-async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
+const { v4: uuidv4 } = require('uuid');
+
+async function rewardUser(userId, amount, reason, referenceModel, referenceId, activityId = null) {
   try {
     await ensureSupply();
     const amt = Math.abs(Number(amount));
 
-    // Update total supply if within max
     const supply = await CoinSupply.findOneAndUpdate(
       { _id: "YENKASA_SUPPLY", totalMinted: { $lte: MAX_SUPPLY - amt } },
       { $inc: { totalMinted: amt } },
@@ -47,9 +49,12 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
     if (!supply) return;
 
     const user = await User.findById(userId);
-    if (!user) {
-      console.warn(`⚠️ rewardUser: user ${userId} not found`);
-      return;
+    if (!user) return;
+
+    // Prevent double reward for same activity
+    if (activityId) {
+      const existingTx = await CoinTransaction.findOne({ activityId });
+      if (existingTx) return;
     }
 
     const beforeBalance = user.coinsBalance || 0;
@@ -58,26 +63,33 @@ async function rewardUser(userId, amount, reason, referenceModel, referenceId) {
     user.coinsBalance = afterBalance;
     await user.save();
 
-    // Determine transaction type
     let txType = 'BONUS';
     if (referenceModel === 'Post') txType = 'REWARD_POST';
     else if (referenceModel === 'Comment') txType = 'REWARD_COMMENT';
     else if (reason?.toLowerCase().includes('follow')) txType = 'REWARD_FOLLOW';
 
-    // Create coin transaction
     await CoinTransaction.create({
+      transactionId: uuidv4(),
+      activityId: activityId || uuidv4(),
+      fromUserId: null,
       toUserId: userId,
+      fromUsername: 'System',
+      toUsername: user.username,
+      fromWalletId: null,
+      toWalletId: user.walletId,
       amount: amt,
       type: txType,
       description: reason || `Reward for ${referenceModel || 'activity'}`,
-      relatedPostId: referenceModel === 'Post' ? referenceId : null,
+      relatedPostId: await Post.findById(post._id),
       relatedCommentId: referenceModel === 'Comment' ? referenceId : null,
+      fromUserBalanceBefore: null,
+      fromUserBalanceAfter: null,
       toUserBalanceBefore: beforeBalance,
       toUserBalanceAfter: afterBalance,
       status: 'completed'
     });
 
-    console.log(`✅ Rewarded ${amt} coins to user ${user.username} (${txType})`);
+    console.log(`✅ Rewarded ${amt} coins to ${user.username} (${txType})`);
   } catch (err) {
     console.error("❌ Error rewarding coins:", err);
   }

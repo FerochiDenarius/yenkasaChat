@@ -5,7 +5,19 @@ const mongoose = require("mongoose");
 async function cleanup() {
   try {
     console.log("🔌 Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGODB_URI);
+
+    // Use the same URI key as your working grantAdmin.js file
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!uri) {
+      throw new Error("❌ Missing MongoDB URI. Please set MONGODB_URI in your .env file.");
+    }
+
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
     console.log("✅ Connected successfully");
 
     const collection = mongoose.connection.collection("cointransactions");

@@ -61,7 +61,8 @@ const coinTransactionSchema = new Schema({
     default: null
   },
 
-  activityId: { type: String, index: true },
+  // 🎯 Optional for now, will enforce later
+  activityId: { type: String, default: null, index: true },
 
   // 🔑 Unique transaction ID (used as external reference)
   transactionId: {
@@ -69,9 +70,6 @@ const coinTransactionSchema = new Schema({
     unique: true,
     required: true
   },
-
-  // ❌ referenceCode removed permanently
-  // referenceCode: not used anymore
 
   status: {
     type: String,
@@ -92,6 +90,14 @@ coinTransactionSchema.index({ toUserId: 1, createdAt: -1 });
 coinTransactionSchema.index({ fromUserId: 1, createdAt: -1 });
 coinTransactionSchema.index({ type: 1 });
 coinTransactionSchema.index({ status: 1 });
+
+// 🔹 Static helper to get visible transactions (only with activityId)
+coinTransactionSchema.statics.getVisibleTransactionsForUser = function(userId) {
+  return this.find({
+    $or: [{ toUserId: userId }, { fromUserId: userId }],
+    activityId: { $ne: null } // enforce display rule
+  }).sort({ createdAt: -1 });
+};
 
 module.exports =
   mongoose.models.CoinTransaction ||

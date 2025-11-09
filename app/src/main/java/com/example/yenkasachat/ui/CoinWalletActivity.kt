@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.TransactionAdapter
-import com.example.yenkasachat.model.CoinTransaction
+import com.example.yenkasachat.model.TransactionUiModel
 import com.example.yenkasachat.model.CoinTransactionResponse
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
@@ -28,7 +28,8 @@ class CoinWalletActivity : AppCompatActivity() {
     private lateinit var btnTransaction: Button
     private lateinit var recyclerViewTransactions: RecyclerView
     private lateinit var transactionAdapter: TransactionAdapter
-    private val transactionList = mutableListOf<CoinTransaction>()
+    private val transactionList = mutableListOf<TransactionUiModel>()
+
 
     private val TAG = "CoinWalletActivity"
 
@@ -84,7 +85,18 @@ class CoinWalletActivity : AppCompatActivity() {
                 }
             })
 
-        // ✅ Load transactions
+        // ✅ Load transaction history
+        // Load cached transactions first, only with activityId
+        val cached = TokenManager.getTransactionHistory(this@CoinWalletActivity)
+            .filter { !it.activityId.isNullOrEmpty() }  // <-- filter here
+        if (cached.isNotEmpty()) {
+            transactionList.clear()
+            transactionList.addAll(cached)
+            transactionAdapter.notifyDataSetChanged()
+            Log.d(TAG, "Loaded ${cached.size} transactions from local cache")
+        }
+
+        // Then fetch from server
         ApiClient.apiService.getCoinTransactionHistory("Bearer $token")
             .enqueue(object : Callback<CoinTransactionResponse> {
                 override fun onResponse(
@@ -92,9 +104,30 @@ class CoinWalletActivity : AppCompatActivity() {
                     response: Response<CoinTransactionResponse>
                 ) {
                     if (response.isSuccessful && response.body() != null) {
+                        val transactions = response.body()!!.transactions
+                            .filter { !it.activityId.isNullOrEmpty() }  // <-- filter here too
+                            .map {
+                                TransactionUiModel(
+                                    transactionId = it.transactionId,
+                                    amount = it.amount,
+                                    from = it.fromWalletId ?: "",
+                                    to = it.toWalletId ?: "",
+                                    newBalance = 0,
+                                    senderUsername = it.fromUsername,
+                                    recipientUsername = it.toUsername,
+                                    description = it.description,
+                                    type = it.type,
+                                    activityId = it.activityId,           // <-- keep activityId
+                                    createdAt = it.createdAt
+                                )
+                            }
+
                         transactionList.clear()
-                        transactionList.addAll(response.body()!!.transactions)
+                        transactionList.addAll(transactions)
                         transactionAdapter.notifyDataSetChanged()
+
+                        // ✅ Save locally for offline use
+                        TokenManager.saveTransactionHistory(this@CoinWalletActivity, transactions)
                     } else {
                         Toast.makeText(
                             this@CoinWalletActivity,
@@ -107,7 +140,7 @@ class CoinWalletActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<CoinTransactionResponse>, t: Throwable) {
                     Toast.makeText(
                         this@CoinWalletActivity,
-                        "Failed to load transactions",
+                        "Failed to load transactions — showing cached data",
                         Toast.LENGTH_SHORT
                     ).show()
                     Log.e(TAG, "Failed to load transactions: ${t.message}")

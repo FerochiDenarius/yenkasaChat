@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.example.yenkasachat.network.SocketManager
+import com.example.yenkasachat.model.TransactionUiModel
 import org.json.JSONObject
 
 
@@ -754,6 +755,87 @@ object TokenManager {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing OneSignal Player ID from EncryptedSharedPreferences", e)
+        }
+    }
+
+    // === 🪙 Transaction History Cache ===
+    private const val TRANSACTION_HISTORY_KEY = "transaction_history_json"
+
+    /**
+     * Save transactions locally (as JSON string)
+     */
+    fun saveTransactionHistory(context: Context, transactions: List<TransactionUiModel>) {
+        try {
+            val jsonArray = org.json.JSONArray()
+            for (t in transactions) {
+                val obj = org.json.JSONObject().apply {
+                    put("transactionId", t.transactionId)
+                    put("amount", t.amount)
+                    put("from", t.from)
+                    put("to", t.to)
+                    put("newBalance", t.newBalance)
+                    put("senderUsername", t.senderUsername)
+                    put("recipientUsername", t.recipientUsername)
+                    put("description", t.description)
+                    put("type", t.type)
+                    put("createdAt", t.createdAt)
+                }
+                jsonArray.put(obj)
+            }
+
+            getEncryptedPrefs(context).edit()
+                .putString(TRANSACTION_HISTORY_KEY, jsonArray.toString())
+                .apply()
+
+            Log.i(TAG, "🪙 Cached ${transactions.size} transactions locally")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving transaction history", e)
+        }
+    }
+
+    /**
+     * Retrieve locally cached transactions
+     */
+    fun getTransactionHistory(context: Context): List<TransactionUiModel> {
+        val transactions = mutableListOf<TransactionUiModel>() // 👈 FIXED LINE
+        try {
+            val jsonString = getEncryptedPrefs(context).getString(TRANSACTION_HISTORY_KEY, null)
+            if (jsonString.isNullOrEmpty()) return transactions
+
+            val jsonArray = org.json.JSONArray(jsonString)
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                transactions.add(
+                    TransactionUiModel(
+                        transactionId = obj.optString("transactionId"),
+                        amount = obj.optDouble("amount").toInt(),
+                        from = obj.optString("from"),
+                        to = obj.optString("to"),
+                        newBalance = obj.optInt("newBalance"),
+                        senderUsername = obj.optString("senderUsername"),
+                        recipientUsername = obj.optString("recipientUsername"),
+                        description = obj.optString("description"),
+                        type = obj.optString("type"),
+                        createdAt = obj.optString("createdAt")
+                    )
+                )
+            }
+            Log.i(TAG, "✅ Loaded ${transactions.size} cached transactions")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading cached transactions", e)
+        }
+        return transactions
+    }
+
+    /**
+     * Clear cached transactions
+     */
+    fun clearTransactionHistory(context: Context) {
+        try {
+            getEncryptedPrefs(context).edit().remove(TRANSACTION_HISTORY_KEY).apply()
+            Log.i(TAG, "🧹 Cleared cached transaction history")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing transaction history", e)
         }
     }
 

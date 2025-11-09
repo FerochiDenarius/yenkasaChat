@@ -17,7 +17,6 @@ const CoinSupply = require('./models/coinSupply');
 const CoinTransaction = require('./models/cointransaction.model');
 const verificationRules = require('./config/verificationRules');
 const seedCommunities = require('./seed/seedCommunities');
-const coinRoutes = require('./routes/coin.routes');
 const commentRoutes = require('./routes/comments.routes');
 
 const app = express();
@@ -140,8 +139,17 @@ safeMount('/api/coin-transactions', './routes/cointransaction.routes');
 safeMount('/api/comments', './routes/comments.routes');
 safeMount('/api/feed', './routes/feed.routes');
 safeMount('/api/communities', './routes/community.routes');
-safeMount('/api/coins', './routes/coin.routes');
 safeMount('/api/roles', './routes/roles.routes');
+
+// 🧩 Handle Multer upload errors globally
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: `Multer error: ${err.message}` });
+  } else if (err.message === "Unsupported file type") {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
 
 
 console.log("✅ Finished mounting API routes.");
@@ -197,9 +205,6 @@ app.use('/api/posts', postRoutes);
 
 const socialRoutes = require('./routes/social.routes');
 app.use('/api/social', socialRoutes);
-
-const coinsRoutes = require('./routes/coins');
-app.use('/coins', coinsRoutes);
 
 const viewRoutes = require('./routes/view.routes');
 app.use('/api/views', viewRoutes);

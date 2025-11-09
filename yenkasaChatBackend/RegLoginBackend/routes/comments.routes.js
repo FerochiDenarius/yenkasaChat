@@ -6,9 +6,12 @@ const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const rewardService = require('../services/reward.service');
 
-const REWARD_COMMENT = 5;          // reward to post author when someone comments
-const REWARD_REPLY = 2;            // reward to parent comment author
+
+
+const REWARD_COMMENT = 5;          // reward to post author 
+const REWARD_REPLY = 2;            // reward to replies
 const REWARD_COMMENT_ACTION = 2;   // reward to user who comments
 const REWARD_COMMENT_LIKE = 1;     // reward for liking / being liked
 
@@ -25,6 +28,9 @@ router.post('/', authMiddleware, async (req, res) => {
     const post = await Post.findById(postId).populate('userId', 'username walletId');
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
+    const commenter = await User.findById(userId);
+
+    // Create the comment
     const comment = new Comment({
       postId,
       userId,
@@ -34,94 +40,55 @@ router.post('/', authMiddleware, async (req, res) => {
     });
     await comment.save();
 
+    // Reward post author (5 coins) — only if not self-comment
+    if (post.userId._id.toString() !== userId) {
+      await rewardService.reward(post.userId._id, REWARD_COMMENT, {
+        fromUserId: userId,
+        type: 'REWARD_COMMENT_RECEIVED',
+        description: `Earned ${REWARD_COMMENT} YKC for receiving a comment on post ${post._id}`,
+        relatedPostId: post._id,
+        relatedCommentId: comment._id,
+        activityId: `received_comment_${post._id}_${post.userId._id}`,
+      });
+    }
+
     // Increment post comment count
     post.commentCount += 1;
     await post.save();
 
-    // Reward the commenter (for making a comment)
-    const commenter = await User.findById(userId);
-    const beforeBalance = commenter.coinsBalance;
-    commenter.coinsBalance += REWARD_COMMENT_ACTION;
-    await commenter.save();
-
-    await CoinTransaction.create({
+    // Reward commenter (for commenting)
+    await rewardService.reward(userId, REWARD_COMMENT_ACTION, {
       fromUserId: null,
-      toUserId: userId,
-      fromUsername: '',
-      toUsername: commenter.username,
-      fromWalletId: '',
-      toWalletId: commenter.walletId,
-      amount: REWARD_COMMENT_ACTION,
       type: 'REWARD_COMMENT',
-      description: 'Reward for making a comment',
-       relatedPostId: await Post.findById(post._id),
+      description: `Earned ${REWARD_COMMENT_ACTION} YKC for commenting on post ${post._id}`,
+      relatedPostId: post._id,
       relatedCommentId: comment._id,
-      transactionId: uuidv4(),
-      toUserBalanceBefore: beforeBalance,
-      toUserBalanceAfter: commenter.coinsBalance
+      activityId: `comment_${post._id}_${userId}`,
     });
 
-    // Reward parent comment author (if reply)
+    // Reward parent comment author (if this is a reply)
     if (parentCommentId) {
       await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
 
       const parentComment = await Comment.findById(parentCommentId).populate('userId', 'username walletId');
       if (parentComment && parentComment.userId.toString() !== userId) {
-        const parentAuthor = await User.findById(parentComment.userId);
-        const parentBefore = parentAuthor.coinsBalance;
-
-        parentAuthor.coinsBalance += REWARD_REPLY;
-        await parentAuthor.save();
-
-        await CoinTransaction.create({
+        await rewardService.reward(parentComment.userId, REWARD_REPLY, {
           fromUserId: userId,
-          toUserId: parentAuthor._id,
-          fromUsername: commenter.username,
-          toUsername: parentAuthor.username,
-          fromWalletId: commenter.walletId,
-          toWalletId: parentAuthor.walletId,
-          amount: REWARD_REPLY,
-          type: 'REWARD_COMMENT',
-          description: 'Reward for receiving a reply',
-           relatedPostId: await Post.findById(post._id),
+          type: 'REWARD_REPLY',
+          description: `Earned ${REWARD_REPLY} YKC for receiving a reply on comment ${parentCommentId}`,
+          relatedPostId: post._id,
           relatedCommentId: comment._id,
-          transactionId: uuidv4(),
-          toUserBalanceBefore: parentBefore,
-          toUserBalanceAfter: parentAuthor.coinsBalance
+          activityId: `reply_${parentCommentId}_${userId}`,
         });
       }
     }
 
-    // Reward post author if not self
-    const postAuthor = await User.findById(post.userId);
-    if (postAuthor && postAuthor._id.toString() !== userId) {
-      const beforePostBalance = postAuthor.coinsBalance;
-      postAuthor.coinsBalance += REWARD_COMMENT;
-      await postAuthor.save();
-
-      await CoinTransaction.create({
-        fromUserId: userId,
-        toUserId: post.userId,
-        fromUsername: commenter.username,
-        toUsername: postAuthor.username,
-        fromWalletId: commenter.walletId,
-        toWalletId: postAuthor.walletId,
-        amount: REWARD_COMMENT,
-        type: 'REWARD_COMMENT',
-        description: 'Reward for receiving a comment on post',
-        relatedPostId: post._id,
-        relatedCommentId: comment._id,
-        transactionId: uuidv4(),
-        toUserBalanceBefore: beforePostBalance,
-        toUserBalanceAfter: postAuthor.coinsBalance
-      });
-    }
-
+    // Populate final comment for response
     const populatedComment = await Comment.findById(comment._id)
       .populate('userId', 'username profileImage verified')
       .lean();
 
-    // Optional broadcast (ensure io is defined globally)
+    // Optional broadcast (if socket.io is globally defined)
     if (typeof io !== 'undefined') {
       io.emit('feedUpdate', {
         type: parentCommentId ? 'newReply' : 'newComment',
@@ -143,6 +110,8 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+
+
 // ✅ Like or unlike comment
 router.post("/toggle-like", authMiddleware, async (req, res) => {
   try {
@@ -154,60 +123,36 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
 
     const alreadyLiked = comment.isLikedBy(userId);
     const commentOwnerId = comment.userId;
-
     const liker = await User.findById(userId);
 
+    // --- Like Action ---
     if (like && !alreadyLiked) {
       await comment.addLike(userId);
 
-      // Reward liker
-      const beforeLikerBalance = liker.coinsBalance;
-      liker.coinsBalance += REWARD_COMMENT_LIKE;
-      await liker.save();
-
-      await CoinTransaction.create({
-        fromUserId: null,
-        toUserId: userId,
-        fromUsername: '',
-        toUsername: liker.username,
-        fromWalletId: '',
-        toWalletId: liker.walletId,
-        amount: REWARD_COMMENT_LIKE,
+      // ✅ Reward liker (for engaging)
+      await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
         type: 'REWARD_COMMENT_LIKE',
-        description: 'Reward for liking a comment',
+        description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
         relatedCommentId: comment._id,
-        transactionId: uuidv4(),
-        toUserBalanceBefore: beforeLikerBalance,
-        toUserBalanceAfter: liker.coinsBalance
+        activityId: `like_comment_${commentId}_${userId}`,
       });
 
-      // Reward comment owner (if not self-like)
+      // ✅ Reward comment owner (for receiving a like)
       if (commentOwnerId.toString() !== userId.toString()) {
-        const owner = await User.findById(commentOwnerId);
-        const beforeOwnerBalance = owner.coinsBalance;
-        owner.coinsBalance += REWARD_COMMENT_LIKE;
-        await owner.save();
-
-        await CoinTransaction.create({
+        await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
           fromUserId: userId,
-          toUserId: commentOwnerId,
-          fromUsername: liker.username,
-          toUsername: owner.username,
-          fromWalletId: liker.walletId,
-          toWalletId: owner.walletId,
-          amount: REWARD_COMMENT_LIKE,
-          type: 'REWARD_COMMENT_LIKE',
-          description: 'Reward for receiving a like on comment',
+          type: 'REWARD_COMMENT_LIKE_RECEIVED',
+          description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
           relatedCommentId: comment._id,
-          transactionId: uuidv4(),
-          toUserBalanceBefore: beforeOwnerBalance,
-          toUserBalanceAfter: owner.coinsBalance
+          activityId: `receive_like_${commentId}_${userId}`,
         });
       }
-    } 
+    }
+
+    // --- Unlike Action ---
     else if (!like && alreadyLiked) {
       await comment.removeLike(userId);
-      // Skipping coin deduction intentionally
+      // ❌ No deduction — we intentionally skip balance reversal
     }
 
     res.json({ success: true, comment });
@@ -216,6 +161,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 // ✅ Unlike comment

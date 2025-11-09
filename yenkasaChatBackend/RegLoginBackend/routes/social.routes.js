@@ -6,6 +6,8 @@ const User = require("../models/user.model");
 const CoinTransaction = require("../models/cointransaction.model");
 const CoinSupply = require("../models/coinSupply");
 const verifyToken = require("../middleware/auth");
+const rewardService = require('../services/reward.service');
+
 
 const router = express.Router();
 
@@ -118,17 +120,17 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     });
 
     // ✅ reward the liker (not the post owner)
-    if (!alreadyLiked && likedByUser) {
-      await rewardCoins({
-        toUserId: userId, // liker is rewarded
-        fromUserId: post.userId, // post owner reference
-         relatedPostId: await Post.findById(post._id),
-        amount: REWARD_LIKE,
-        type: "REWARD_LIKE",
-        description: "Reward for liking a post",
-        activityId: `like_${postId}_${userId}`,
-      });
-    }
+  // reward the liker (not the post owner)
+if (!alreadyLiked && likedByUser) {
+  await rewardService.reward(userId, REWARD_LIKE, {
+    fromUserId: post.userId,
+    type: 'REWARD_POST_LIKE',
+    description: `Reward for liking post ${postId}`,
+    relatedPostId: postId,
+    activityId: `like_${postId}_${userId}`
+  });
+}
+
 
     res.status(200).json({
       message: likedByUser ? "Post liked" : "Post unliked",

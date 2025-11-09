@@ -4,9 +4,8 @@ const router = express.Router();
 const View = require('../models/view.model');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
-const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
+const rewardService = require('../services/reward.service');
 
 const REWARD_VIEW = 2; // coins per view
 
@@ -24,44 +23,33 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
-    // ✅ Always create a view record (no duplicate check here)
-    await View.create({ post: postId, user: viewerId });
-
-    // ✅ Reward the viewer (not the author)
+    // ✅ Fetch viewer info (needed for response)
     const viewer = await User.findById(viewerId);
     if (!viewer) {
       return res.status(404).json({ success: false, message: 'Viewer not found' });
     }
 
-    const beforeBalance = viewer.coinsBalance || 0;
-    const rewardAmount = REWARD_VIEW;
-    const afterBalance = beforeBalance + rewardAmount;
+    // ✅ Always record the view (you can later dedupe if needed)
+    await View.create({ post: postId, user: viewerId });
 
-    viewer.coinsBalance = afterBalance;
-    await viewer.save();
-
-    // 🧾 Record the transaction (System → Viewer)
-    const rewardTransaction = await CoinTransaction.create({
-      transactionId: uuidv4(),
+    // ✅ Reward the viewer (System → Viewer)
+    const tx = await rewardService.reward(viewerId, REWARD_VIEW, {
       fromUserId: null,
-      toUserId: viewer._id,
-      fromUsername: 'System',
-      toUsername: viewer.username,
-      fromWalletId: null,
-      toWalletId: viewer.walletId,
-      amount: rewardAmount,
-      type: 'REWARD_VIEWS', // ✅ corrected
-      description: `Earned ${rewardAmount} YKC for viewing ${post.title || 'a post'}`,
-      fromUserBalanceBefore: null,
-      fromUserBalanceAfter: null,
-      toUserBalanceBefore: beforeBalance,
-      toUserBalanceAfter: afterBalance,
-      status: 'completed',
-      relatedPostId: post._id
+      type: 'REWARD_VIEWS',
+      description: `Earned ${REWARD_VIEW} YKC for viewing post ${post._id}`,
+      relatedPostId: post._id,
+      activityId: `view_${post._id}_${viewerId}` // remove Date.now() if you want to dedupe
     });
 
+    if (!tx) {
+      return res.status(200).json({
+        success: true,
+        message: 'View recorded (no reward due to duplicate or supply limit)',
+      });
+    }
+
     // ✅ Update post stats
-    post.coinsEarned = (post.coinsEarned || 0) + rewardAmount;
+    post.coinsEarned = (post.coinsEarned || 0) + REWARD_VIEW;
     await post.save();
 
     // ✅ Count total views
@@ -74,15 +62,15 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
         viewsCount,
         viewerId,
         timestamp: new Date(),
-        rewardTransaction
+        rewardTransaction: tx,
       });
     }
 
     return res.json({
       success: true,
-      message: `View recorded successfully. ${rewardAmount} YKC rewarded to ${viewer.username}`,
+      message: `View recorded successfully. ${REWARD_VIEW} YKC rewarded to ${viewer.username}`,
       viewsCount,
-      rewardTransaction
+      rewardTransaction: tx,
     });
 
   } catch (error) {

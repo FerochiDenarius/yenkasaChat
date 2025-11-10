@@ -73,37 +73,50 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
     }
 
     /* ✅ Find community (if provided) */
-    let selectedCommunity = null;
-    if (communityName && communityName.trim() !== "") {
-      selectedCommunity = await Community.findOne({
-        $or: [
-          { name: communityName.trim() },
-          { displayName: communityName.trim() }
-        ]
-      });
-    }
+  /* ✅ Ensure a community is selected */
+/* ✅ Find community (if provided) */
+let selectedCommunity = null;
+if (communityName && communityName.trim() !== "") {
+  selectedCommunity = await Community.findOne({
+    $or: [
+      { name: communityName.trim() },
+      { displayName: communityName.trim() }
+    ]
+  });
+}
 
-    /* ✅ Approval logic */
-    const approvers = ["admin", "moderator", "developer"];
-    const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
-    const postStatus = isPrivilegedUser ? "approved" : "pending";
+/* ✅ Ensure a community is selected */
+if (!communityName || communityName.trim() === "") {
+  return res.status(400).json({ error: "Community selection is required to create a post." });
+}
 
-    /* ✅ Create post */
-    const post = new Post({
-      userId,
-      communityId: selectedCommunity ? selectedCommunity._id : user.community || null,
-      text: text?.trim() || '',
-      imageUrl,
-      videoUrl,
-      audioUrl,
-      postType: detectedPostType,
-      tags: tags || [],
-      mentions: mentions || [],
-      location: location || '',
-      visibility: visibility || 'public',
-      communityName: selectedCommunity ? selectedCommunity.displayName : (communityName || ''),
-      status: postStatus,
-    });
+/* ✅ Validate that community actually exists */
+if (!selectedCommunity) {
+  return res.status(404).json({ error: "Selected community not found" });
+}
+
+/* ✅ Approval logic */
+const approvers = ["admin", "moderator", "developer"];
+const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
+const postStatus = isPrivilegedUser ? "approved" : "pending";
+
+/* ✅ Create post */
+const post = new Post({
+  userId,
+  communityId: selectedCommunity._id,
+  text: text?.trim() || '',
+  imageUrl,
+  videoUrl,
+  audioUrl,
+  postType: detectedPostType,
+  tags: tags || [],
+  mentions: mentions || [],
+  location: location || '',
+  visibility: visibility || 'public',
+  communityName: selectedCommunity.displayName || selectedCommunity.name,
+  status: postStatus,
+});
+
 
     await post.save();
 
@@ -167,6 +180,81 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 });
+
+/* 🧩 GET POSTS BY COMMUNITY */
+router.get('/community/:communityId', authMiddleware, async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Verify community exists
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ error: 'Community not found' });
+
+    // Find posts for this community
+    const posts = await Post.find({
+      communityId,
+      isActive: true,
+      status: 'approved'
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('userId', 'username profileImage verified')
+      .populate('communityId', 'name displayName')
+      .lean();
+
+    const totalPosts = await Post.countDocuments({
+      communityId,
+      isActive: true,
+      status: 'approved'
+    });
+
+    res.json({
+      community: {
+        id: community._id,
+        name: community.name,
+        displayName: community.displayName,
+      },
+      posts,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalPosts / limit),
+        totalPosts,
+        hasMore: skip + posts.length < totalPosts
+      }
+    });
+  } catch (err) {
+    console.error('❌ Failed to fetch community posts:', err);
+    res.status(500).json({ error: 'Failed to fetch community posts' });
+  }
+});
+
+router.get('/community-name/:name', authMiddleware, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const community = await Community.findOne({
+      $or: [{ name }, { displayName: name }]
+    });
+    if (!community) return res.status(404).json({ error: 'Community not found' });
+
+    const posts = await Post.find({
+      communityId: community._id,
+      isActive: true,
+      status: 'approved'
+    })
+      .sort({ createdAt: -1 })
+      .populate('userId', 'username profileImage verified')
+      .populate('communityId', 'name displayName');
+
+    res.json({ community, posts });
+  } catch (err) {
+    console.error("❌ Error fetching posts by community name:", err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 /* 🕵️‍♂️ GET ALL PENDING POSTS */
 router.get('/pending', authMiddleware, async (req, res) => {

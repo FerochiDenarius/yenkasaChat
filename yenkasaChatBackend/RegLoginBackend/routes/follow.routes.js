@@ -170,6 +170,59 @@ router.get('/:userId/following', authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Unfollow a user
+router.post('/:userId/unfollow', authMiddleware, async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const targetUserId = req.params.userId;
+
+    if (currentUserId === targetUserId) {
+      return res.status(400).json({ error: 'You cannot unfollow yourself' });
+    }
+
+    const [currentUser, targetUser] = await Promise.all([
+      User.findById(currentUserId),
+      User.findById(targetUserId),
+    ]);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isFollowing = currentUser.following.some(
+      (id) => id.toString() === targetUserId
+    );
+    if (!isFollowing) {
+      return res.status(400).json({ error: 'You are not following this user' });
+    }
+
+    // ✅ Remove follow relationships
+    currentUser.following = currentUser.following.filter(
+      (id) => id.toString() !== targetUserId
+    );
+    targetUser.followers = targetUser.followers.filter(
+      (id) => id.toString() !== currentUserId
+    );
+
+    currentUser.followingCount = Math.max((currentUser.followingCount || 1) - 1, 0);
+    targetUser.followersCount = Math.max((targetUser.followersCount || 1) - 1, 0);
+
+    await currentUser.save();
+    await targetUser.save();
+
+    return res.json({
+      success: true,
+      message: `You unfollowed ${targetUser.username}`,
+      isFollowing: false,
+      followersCount: targetUser.followersCount,
+      followingCount: currentUser.followingCount,
+    });
+  } catch (err) {
+    console.error('❌ Unfollow error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ✅ Get follow stats for a user
 router.get('/:userId/follow-stats', authMiddleware, async (req, res) => {
   try {

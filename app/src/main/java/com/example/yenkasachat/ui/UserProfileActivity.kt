@@ -149,15 +149,15 @@ class UserProfileActivity : AppCompatActivity() {
                         updateUI(profile)
 
                         // ✅ Filter only posts that actually have media
-                        val mediaPosts = profile.posts.filter { post ->
+                        val mediaPosts = profile.posts?.filter { post ->
                             !post.imageUrl.isNullOrBlank() ||
                                     !post.videoUrl.isNullOrBlank() ||
                                     !post.audioUrl.isNullOrBlank()
-                        }
+                        } ?: emptyList()
 
                         Log.d(
                             TAG,
-                            "✅ Loaded ${mediaPosts.size} media posts for user ${profile.username} (Total posts: ${profile.posts.size})"
+                            "✅ Loaded ${mediaPosts.size} media posts for user ${profile.username} (Total posts: ${(profile.posts ?: emptyList()).size})"
                         )
 
                         // ✅ Update RecyclerView
@@ -211,16 +211,18 @@ class UserProfileActivity : AppCompatActivity() {
         val token = TokenManager.getToken(this) ?: return
         if (userId.isNullOrEmpty()) return
 
-        val call = ApiClient.apiService.toggleFollow(userId!!, "Bearer $token")
+        val call = if (isFollowing) {
+            ApiClient.apiService.unfollowUser(userId!!, "Bearer $token")
+        } else {
+            ApiClient.apiService.followUser(userId!!, "Bearer $token")
+        }
 
         call.enqueue(object : Callback<FollowResponse> {
             override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
                 if (response.isSuccessful && response.body() != null) {
-                    // Toggle follow state
                     isFollowing = !isFollowing
                     btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
 
-                    // Show server message
                     Toast.makeText(
                         this@UserProfileActivity,
                         response.body()!!.message,
@@ -245,7 +247,6 @@ class UserProfileActivity : AppCompatActivity() {
                 ).show()
             }
         })
-
     }
 
     private fun toggleBlockUser() {

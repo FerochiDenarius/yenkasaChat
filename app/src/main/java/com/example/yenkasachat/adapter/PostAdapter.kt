@@ -221,7 +221,7 @@ class PostAdapter(
 
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(context).build().apply {   // ✅ use context directly
-                volume = 0f
+                volume = 1f
                 activePlayers.add(this)
             }
         }

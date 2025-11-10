@@ -357,12 +357,11 @@ interface ApiService {
             @Header("Authorization") token: String
         ): Call<FollowResponse>
 
-        // 🔹 Unfollow a user
-        @DELETE("follow/{userId}/follow")
-        fun unfollowUser(
-            @Path("userId") userId: String,
-            @Header("Authorization") token: String
-        ): Call<FollowResponse>
+    @POST("follow/{userId}/unfollow")
+    fun unfollowUser(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<FollowResponse>
 
         // 🔹 Get followers
         @GET("follow/{userId}/followers")

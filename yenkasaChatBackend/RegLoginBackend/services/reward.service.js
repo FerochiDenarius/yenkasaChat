@@ -8,26 +8,12 @@ const { v4: uuidv4 } = require('uuid');
 const MAX_SUPPLY = 100_000_000;
 const SUPPLY_ID = 'YENKASA_SUPPLY';
 
-/**
- * RewardService.reward
- * - toUserId: ObjectId (required) — who receives coins
- * - amount: Number (required)
- * - opts: {
- *      fromUserId: ObjectId | null,
- *      type: String (enum type from schema) ,
- *      description: String,
- *      relatedPostId: ObjectId | null,
- *      relatedCommentId: ObjectId | null,
- *      activityId: String | null,
- *      skipSupplyCheck: Boolean (for admin/manual adjustments)
- *   }
- *
- * Returns created transaction doc or null if skipped (duplicate or supply)
- */
 async function reward(toUserId, amount, opts = {}) {
   try {
+    console.log('⚙️ [RewardService] Starting reward...', { toUserId, amount, opts });
+
     if (!toUserId || !amount || Number(amount) <= 0) {
-      console.warn('reward: invalid args', { toUserId, amount });
+      console.warn('⚠️ reward: invalid args', { toUserId, amount });
       return null;
     }
 
@@ -41,16 +27,16 @@ async function reward(toUserId, amount, opts = {}) {
       skipSupplyCheck = false
     } = opts;
 
-    // 1) dedupe by activityId (optional)
+    // 1️⃣ Dedupe check
     if (activityId) {
       const existing = await CoinTransaction.findOne({ activityId });
       if (existing) {
-        console.log(`⚠️ reward skipped — activityId already exists: ${activityId}`);
+        console.log(`⚠️ [RewardService] Skipped duplicate reward — activityId: ${activityId}`);
         return null;
       }
     }
 
-    // 2) ensure supply exists
+    // 2️⃣ Supply check
     if (!skipSupplyCheck) {
       await CoinSupply.findByIdAndUpdate(
         SUPPLY_ID,
@@ -65,26 +51,27 @@ async function reward(toUserId, amount, opts = {}) {
       );
 
       if (!supplyUpdate) {
-        console.warn('⚠️ reward aborted — insufficient supply');
+        console.warn('⚠️ [RewardService] Aborted — insufficient supply');
         return null;
       }
+      console.log(`💰 [RewardService] Supply OK → ${amount} minted`);
     }
 
-    // 3) find recipient and optional sender
+    // 3️⃣ Load users
     const toUser = await User.findById(toUserId).select('username walletId coinsBalance');
     if (!toUser) {
-      console.warn('⚠️ reward aborted — recipient not found', toUserId);
+      console.warn('⚠️ [RewardService] Aborted — recipient not found', toUserId);
       return null;
     }
-
     const fromUser = fromUserId ? await User.findById(fromUserId).select('username walletId') : null;
 
-    // 4) compute balances and save recipient
+    // 4️⃣ Apply balance update
     const toBefore = Number(toUser.coinsBalance || 0);
     toUser.coinsBalance = toBefore + Number(amount);
     await toUser.save();
+    console.log(`💸 [RewardService] Updated balance for ${toUser.username}: ${toBefore} → ${toUser.coinsBalance}`);
 
-    // 5) create transaction record
+    // 5️⃣ Create transaction record
     const tx = await CoinTransaction.create({
       transactionId: uuidv4(),
       fromUserId: fromUser ? fromUser._id : null,
@@ -104,11 +91,11 @@ async function reward(toUserId, amount, opts = {}) {
       status: 'completed',
     });
 
-    console.log(`✅ reward created: ${tx.transactionId} -> ${toUser.username} +${amount} (${type})`);
+    console.log(`✅ [RewardService] Transaction complete: ${tx.transactionId} | ${type} | +${amount} → ${toUser.username}`);
 
     return tx;
   } catch (err) {
-    console.error('❌ reward error:', err);
+    console.error('❌ [RewardService] Error:', err);
     return null;
   }
 }

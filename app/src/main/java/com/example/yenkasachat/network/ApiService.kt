@@ -179,17 +179,11 @@ interface ApiService {
     ): Call<Post>
 
 
-
-
-
-
-
     @GET("posts/{postId}")
     fun getPostById(
         @Path("postId") postId: String,
         @Header("Authorization") token: String
     ): Call<Post>
-
 
 
     @GET("posts/my")
@@ -210,7 +204,6 @@ interface ApiService {
 
     @GET("posts/pending")
     fun getPendingPosts(): Call<List<Post>>
-
 
 
     @PATCH("posts/{postId}/status")
@@ -249,8 +242,6 @@ interface ApiService {
     ): Call<Map<String, Any>>
 
 
-
-
     // Get replies for a comment
     @GET("comments/{commentId}/replies")
     fun getReplies(
@@ -284,21 +275,14 @@ interface ApiService {
     ): Call<CommentsResponse>
 
 
-
-
-
-
     // -----------------------------
-        // 👍 LIKE / UNLIKE POST (toggle)
-        // -----------------------------
-        @POST("social/like/{postId}")
-        fun toggleLike(
-            @Header("Authorization") token: String,
-            @Path("postId") postId: String
-        ): Call<LikeResponse>
-
-
-
+    // 👍 LIKE / UNLIKE POST (toggle)
+    // -----------------------------
+    @POST("social/like/{postId}")
+    fun toggleLike(
+        @Header("Authorization") token: String,
+        @Path("postId") postId: String
+    ): Call<LikeResponse>
 
 
     @GET("posts")
@@ -321,8 +305,8 @@ interface ApiService {
 
 
     // -----------------------------
-        // 👁️‍🗨️ ADD VIEW
-        // -----------------------------
+    // 👁️‍🗨️ ADD VIEW
+    // -----------------------------
     @POST("feed/{postId}/view")
     fun addView(
         @Header("Authorization") token: String,
@@ -331,31 +315,30 @@ interface ApiService {
 
 
     // -----------------------------
-        // 🤝 FOLLOW / UNFOLLOW USER (toggle)
-        // -----------------------------
-        @POST("feed/toggle-follow/{targetUserId}")
-        fun toggleFollow(
-            @Header("Authorization") token: String,
-            @Path("targetUserId") targetUserId: String
-        ): Call<FollowResponse>
+    // 🤝 FOLLOW / UNFOLLOW USER (toggle)
+    // -----------------------------
+    @POST("feed/toggle-follow/{targetUserId}")
+    fun toggleFollow(
+        @Header("Authorization") token: String,
+        @Path("targetUserId") targetUserId: String
+    ): Call<FollowResponse>
 
-        // -----------------------------
-        // 🚫 BLOCK / UNBLOCK USER (toggle)
-        // -----------------------------
-        @POST("feed/block/{targetUserId}")
-        fun blockUser(
-            @Header("Authorization") token: String,
-            @Path("targetUserId") targetUserId: String
-        ): Call<BlockResponse>
+    // -----------------------------
+    // 🚫 BLOCK / UNBLOCK USER (toggle)
+    // -----------------------------
+    @POST("feed/block/{targetUserId}")
+    fun blockUser(
+        @Header("Authorization") token: String,
+        @Path("targetUserId") targetUserId: String
+    ): Call<BlockResponse>
 
 
-
-        // 🔹 Follow a user
-        @POST("follow/{userId}/follow")
-        fun followUser(
-            @Path("userId") userId: String,
-            @Header("Authorization") token: String
-        ): Call<FollowResponse>
+    // 🔹 Follow a user
+    @POST("follow/{userId}/follow")
+    fun followUser(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<FollowResponse>
 
     @POST("follow/{userId}/unfollow")
     fun unfollowUser(
@@ -363,26 +346,26 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<FollowResponse>
 
-        // 🔹 Get followers
-        @GET("follow/{userId}/followers")
-        fun getFollowers(
-            @Path("userId") userId: String,
-            @Header("Authorization") token: String
-        ): Call<List<User>>
+    // 🔹 Get followers
+    @GET("follow/{userId}/followers")
+    fun getFollowers(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<List<User>>
 
-        // 🔹 Get following
-        @GET("follow/{userId}/following")
-        fun getFollowing(
-            @Path("userId") userId: String,
-            @Header("Authorization") token: String
-        ): Call<List<User>>
+    // 🔹 Get following
+    @GET("follow/{userId}/following")
+    fun getFollowing(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<List<User>>
 
-        // 🔹 Get follower/following counts
-        @GET("follow/{userId}/follow-stats")
-        fun getFollowStats(
-            @Path("userId") userId: String,
-            @Header("Authorization") token: String
-        ): Call<FollowResponse>
+    // 🔹 Get follower/following counts
+    @GET("follow/{userId}/follow-stats")
+    fun getFollowStats(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<FollowResponse>
 
 
     // ==================== PROFILE ====================
@@ -449,11 +432,6 @@ interface ApiService {
     ): Call<List<Community>>
 
 
-
-
-
-
-
     @POST("communities/join")
     suspend fun joinCommunities(@Body request: JoinCommunityRequest): Response<JoinCommunityResponse>
 
@@ -489,7 +467,6 @@ interface ApiService {
     // ===========================
 
 
-
     // ✅ Fetch community feed
     @GET("feed")
     fun getFeed(
@@ -509,7 +486,6 @@ interface ApiService {
     ): Response<ViewResponse>
 
 
-
     @GET("views/{postId}/views")
     suspend fun getTotalViews(
         @Path("postId") postId: String,
@@ -518,18 +494,18 @@ interface ApiService {
 
     // ==================== APP VERIFICATION ====================
 
-    @GET("/app-verification/dashboard")
+    @GET("/api/app-verification/dashboard")
     fun getVerificationDashboard(@Header("Authorization") token: String): Call<VerificationDashboard>
 
-    @POST("/app-verification/track-login")
+    @POST("/api/app-verification/track-login")
     fun trackLogin(@Header("Authorization") token: String): Call<TrackLoginResponse>
 
-    @POST("/app-verification/track-ad-view")
+    @POST("/api/app-verification/track-ad-view")
     fun trackAdView(@Header("Authorization") token: String): Call<TrackAdViewResponse>
 
-    @GET("/app-verification/progress")
+    @GET("/api/app-verification/progress")
     fun getVerificationProgress(@Header("Authorization") token: String): Call<VerificationProgressResponse>
 
-    @POST("/app-verification/check-phase-advancement")
+    @POST("/api/app-verification/check-phase-advancement")
     fun checkPhaseAdvancement(@Header("Authorization") token: String): Call<PhaseAdvancementResponse>
 }

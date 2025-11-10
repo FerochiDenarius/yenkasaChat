@@ -72,28 +72,71 @@ async function reward(toUserId, amount, opts = {}) {
     console.log(`💸 [RewardService] Updated balance for ${toUser.username}: ${toBefore} → ${toUser.coinsBalance}`);
 
     // 5️⃣ Create transaction record
-    const tx = await CoinTransaction.create({
-      transactionId: uuidv4(),
-      fromUserId: fromUser ? fromUser._id : null,
-      toUserId: toUser._id,
-      fromUsername: fromUser ? fromUser.username : 'System',
-      toUsername: toUser.username,
-      fromWalletId: fromUser ? fromUser.walletId : null,
-      toWalletId: toUser.walletId,
-      amount: Number(amount),
-      type,
-      description: description || `Reward: ${type}`,
-      relatedPostId: relatedPostId || null,
-      relatedCommentId: relatedCommentId || null,
-      activityId: activityId || null,
-      toUserBalanceBefore: toBefore,
-      toUserBalanceAfter: toUser.coinsBalance,
-      status: 'completed',
-    });
+const tx = await CoinTransaction.create({
+  transactionId: uuidv4(),
+  fromUserId: fromUser ? fromUser._id : null,
+  toUserId: toUser._id,
+  fromUsername: fromUser ? fromUser.username : 'System',
+  toUsername: toUser.username,
+  fromWalletId: fromUser ? fromUser.walletId : null,
+  toWalletId: toUser.walletId,
+  amount: Number(amount),
+  type,
+  description: description || `Reward: ${type}`,
+  relatedPostId: relatedPostId || null,
+  relatedCommentId: relatedCommentId || null,
+  activityId: activityId || null,
+  toUserBalanceBefore: toBefore,
+  toUserBalanceAfter: toUser.coinsBalance,
+  status: 'completed',
+});
 
-    console.log(`✅ [RewardService] Transaction complete: ${tx.transactionId} | ${type} | +${amount} → ${toUser.username}`);
+console.log(`✅ [RewardService] Transaction complete: ${tx.transactionId} | ${type} | +${amount} → ${toUser.username}`);
 
-    return tx;
+// 6️⃣ Update verification metrics automatically
+try {
+  const AppVerification = require('../models/appverification.model');
+  const appVer = await AppVerification.findOne({ userId: toUserId });
+  if (appVer) {
+    switch (tx.type) {
+      case 'REWARD_COMMENT':
+      case 'REWARD_COMMENT_LIKE':
+        appVer.metrics.totalComments += 1;
+        break;
+
+      case 'REWARD_FOLLOW':
+        appVer.metrics.totalFollowers += (opts.value || 1);
+        break;
+
+      case 'REWARD_POST_LIKE':
+        if (opts.value && opts.value > appVer.metrics.maxLikesOnPost) {
+          appVer.metrics.maxLikesOnPost = opts.value;
+        }
+        break;
+
+      case 'REWARD_DAILY_LOGIN':
+        await appVer.trackLogin();
+        break;
+
+      case 'REWARD_VIEWS':
+        await appVer.trackAdView();
+        break;
+
+      case 'REWARD_ACCOUNT_AGE':
+      case 'REWARD_VERIFICATION':
+        await appVer.updateAccountAge(toUser.createdAt);
+        break;
+    }
+
+    await appVer.save();
+    console.log(`📝 [AppVerification] Metrics updated for user ${toUser.username} (${tx.type})`);
+  }
+} catch (err) {
+  console.error('❌ [AppVerification] Failed to update metrics:', err);
+}
+
+return tx;
+
   } catch (err) {
     console.error('❌ [RewardService] Error:', err);
     return null;

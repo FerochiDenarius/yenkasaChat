@@ -400,25 +400,6 @@ interface ApiService {
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
 
-
-    // -----------------------------
-    // 📰 FEED FROM FOLLOWED USERS
-    // -----------------------------
-    @POST("follow/{userId}/follow")
-    suspend fun followUser(
-        @Path("userId") userId: String
-    ): Response<FollowResponse>
-
-    @DELETE("follow/{userId}/follow")
-    suspend fun unfollowUser(
-        @Path("userId") userId: String
-    ): Response<FollowResponse>
-
-    @GET("follow/{userId}/follow-stats")
-    suspend fun getFollowStats(
-        @Path("userId") userId: String
-    ): Response<FollowResponse>
-
     // -----------------------------
     // Other social endpoints can be added here if needed
     // -----------------------------
@@ -537,28 +518,18 @@ interface ApiService {
 
     // ==================== APP VERIFICATION ====================
 
-    @GET("/api/appverification/dashboard")
-    fun getVerificationDashboard(
-        @Header("Authorization") token: String
-    ): Call<VerificationDashboard>
+    @GET("/app-verification/dashboard")
+    fun getVerificationDashboard(@Header("Authorization") token: String): Call<VerificationDashboard>
 
-    @POST("/api/appverification/track-login")
-    fun trackLogin(
-        @Header("Authorization") token: String
-    ): Call<TrackLoginResponse>
+    @POST("/app-verification/track-login")
+    fun trackLogin(@Header("Authorization") token: String): Call<TrackLoginResponse>
 
-    @POST("/api/appverification/track-ad-view")
-    fun trackAdView(
-        @Header("Authorization") token: String
-    ): Call<TrackAdViewResponse>
+    @POST("/app-verification/track-ad-view")
+    fun trackAdView(@Header("Authorization") token: String): Call<TrackAdViewResponse>
 
-    @GET("/api/appverification/progress")
-    fun getVerificationProgress(
-        @Header("Authorization") token: String
-    ): Call<VerificationProgressResponse>
+    @GET("/app-verification/progress")
+    fun getVerificationProgress(@Header("Authorization") token: String): Call<VerificationProgressResponse>
 
-    @POST("/api/appverification/check-phase-advancement")
-    fun checkPhaseAdvancement(
-        @Header("Authorization") token: String
-    ): Call<PhaseAdvancementResponse>
+    @POST("/app-verification/check-phase-advancement")
+    fun checkPhaseAdvancement(@Header("Authorization") token: String): Call<PhaseAdvancementResponse>
 }

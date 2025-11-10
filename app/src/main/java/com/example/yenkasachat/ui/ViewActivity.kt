@@ -18,6 +18,7 @@ import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.SocketManager
 import com.example.yenkasachat.util.TokenManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -56,7 +57,6 @@ class ViewActivity : AppCompatActivity() {
         }
 
         setupUI()
-        recordView()
         setupSocketListener()
     }
 
@@ -65,12 +65,10 @@ class ViewActivity : AppCompatActivity() {
         textCaption.text = post?.caption ?: ""
         fetchTotalViews()
 
-        // Hide all first
         imageContent.visibility = View.GONE
         videoContent.visibility = View.GONE
         audioIcon.visibility = View.GONE
 
-        // Decide what to show
         when {
             !post?.imageUrl.isNullOrEmpty() -> {
                 imageContent.visibility = View.VISIBLE
@@ -78,12 +76,12 @@ class ViewActivity : AppCompatActivity() {
                     .load(post?.imageUrl)
                     .placeholder(R.drawable.placeholder)
                     .into(imageContent)
+                // Record immediately for image view
+                lifecycleScope.launch { recordViewWithDuration(3) }
             }
             !post?.videoUrl.isNullOrEmpty() -> {
                 videoContent.visibility = View.VISIBLE
-                val uri = Uri.parse(post?.videoUrl)
-                videoContent.setVideoURI(uri)
-                videoContent.setOnPreparedListener { it.isLooping = true; videoContent.start() }
+                setupVideoView(Uri.parse(post?.videoUrl))
             }
             !post?.audioUrl.isNullOrEmpty() -> {
                 audioIcon.visibility = View.VISIBLE
@@ -92,6 +90,11 @@ class ViewActivity : AppCompatActivity() {
                     val uri = Uri.parse(post?.audioUrl)
                     mediaPlayer = MediaPlayer.create(this, uri)
                     mediaPlayer?.start()
+                    // Record after a few seconds of audio play
+                    lifecycleScope.launch {
+                        delay(5000)
+                        recordViewWithDuration(5)
+                    }
                 } catch (e: Exception) {
                     Log.e("ViewActivity", "🎧 Error playing audio: ${e.message}")
                 }
@@ -99,50 +102,56 @@ class ViewActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Record unique view via API
-    private fun recordView() {
-        val currentPostId = post?._id ?: return
-        val authToken = token ?: return
+    private fun setupVideoView(uri: Uri) {
+        videoContent.setVideoURI(uri)
+        videoContent.setOnPreparedListener { player ->
+            player.isLooping = true
+            videoContent.start()
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val response = ApiClient.apiService.recordView(currentPostId, "Bearer $authToken")
-                if (response.isSuccessful) {
-                    val body: ViewResponse? = response.body()
-                    withContext(Dispatchers.Main) {
-                        if (body != null && body.success) {
-                            textViews.text = "👁️ ${body.viewsCount}"
-                            Log.d("ViewActivity", "✅ View recorded successfully for $currentPostId")
-                        } else {
-                            Log.w("ViewActivity", "⚠️ View record response: ${body?.message}")
-                        }
+            var watchSeconds = 0
+            val rewardThreshold = 10
+            var rewarded = false
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                while (videoContent.isPlaying) {
+                    delay(1000)
+                    watchSeconds++
+                    if (watchSeconds >= rewardThreshold && !rewarded) {
+                        rewarded = true
+                        recordViewWithDuration(watchSeconds)
                     }
-                } else {
-                    Log.w("ViewActivity", "⚠️ View record failed: ${response.errorBody()?.string()}")
                 }
-            } catch (e: Exception) {
-                Log.e("ViewActivity", "❌ Error recording view: ${e.message}")
             }
         }
     }
 
-    // ⚡ Listen for live view count updates
-    private fun setupSocketListener() {
-        SocketManager.on("viewUpdate") { data ->
-            try {
-                val json = data as JSONObject
-                val postId = json.getString("postId")
-                val viewsCount = json.getInt("viewsCount")
+    // ✅ Record view with duration and reward support
+    private suspend fun recordViewWithDuration(durationSeconds: Int) {
+        val currentPostId = post?._id ?: return
+        val authToken = token ?: return
 
-                if (postId == post?._id) {
-                    runOnUiThread {
-                        textViews.text = "👁️ $viewsCount"
-                        Log.d("ViewActivity", "👁️ Live view update → $viewsCount views")
+        try {
+            val payload = mapOf("watchDuration" to durationSeconds)
+            val response = ApiClient.apiService.recordView(currentPostId, "Bearer $authToken", payload)
+
+            withContext(Dispatchers.Main) {
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success) {
+                        textViews.text = "👁️ ${body.viewsCount}"
+                        Log.d("ViewActivity", "✅ View recorded (${durationSeconds}s)")
+                        body.view?.let {
+                            Log.d("ViewActivity", "🎁 Reward tracked: ${it.activityId}")
+                        }
+                    } else {
+                        Log.w("ViewActivity", "⚠️ View response: ${body?.message}")
                     }
+                } else {
+                    Log.w("ViewActivity", "⚠️ Failed to record view: ${response.errorBody()?.string()}")
                 }
-            } catch (e: Exception) {
-                Log.e("ViewActivity", "Error parsing viewUpdate: ${e.message}")
             }
+        } catch (e: Exception) {
+            Log.e("ViewActivity", "❌ Error recording view: ${e.message}")
         }
     }
 
@@ -168,6 +177,25 @@ class ViewActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e("ViewActivity", "❌ Error fetching total views: ${e.message}")
+            }
+        }
+    }
+
+    private fun setupSocketListener() {
+        SocketManager.on("viewUpdate") { data ->
+            try {
+                val json = data as JSONObject
+                val postId = json.getString("postId")
+                val viewsCount = json.getInt("viewsCount")
+
+                if (postId == post?._id) {
+                    runOnUiThread {
+                        textViews.text = "👁️ $viewsCount"
+                        Log.d("ViewActivity", "👁️ Live view update → $viewsCount views")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewActivity", "Error parsing viewUpdate: ${e.message}")
             }
         }
     }

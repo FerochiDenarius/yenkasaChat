@@ -521,11 +521,13 @@ interface ApiService {
 
 //=================ViewCOUNT=================//
 
-@POST("views/{postId}/view")
-suspend fun recordView(
-    @Path("postId") postId: String,
-    @Header("Authorization") token: String
-): Response<ViewResponse>
+    @POST("views/{postId}/view")
+    suspend fun recordView(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String,
+        @Body viewData: Map<String, Any> // send { "watchDuration": seconds }
+    ): Response<ViewResponse>
+
 
 
     @GET("views/{postId}/views")

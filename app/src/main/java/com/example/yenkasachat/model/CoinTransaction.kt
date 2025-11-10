@@ -36,7 +36,7 @@ data class CoinTransaction(
     val type: String, // e.g. REWARD_POST, REWARD_FOLLOW, TRANSFER, etc.
     val description: String,
 
-    val relatedPostId: PostBasic? = null,
+    val relatedPostId: String? = null,
     val relatedCommentId: String? = null,
 
     // Backend fields

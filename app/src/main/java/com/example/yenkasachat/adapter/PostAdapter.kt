@@ -266,7 +266,8 @@ class PostAdapter(
             try {
                 val token = TokenManager.getToken(context)
                 if (!token.isNullOrEmpty()) {
-                    val response = ApiClient.apiService.recordView(postId, "Bearer $token")
+                    val viewData = mapOf("watchDuration" to 45) // replace with actual duration
+                    val response = ApiClient.apiService.recordView(postId, "Bearer $token", viewData)
                     if (!response.isSuccessful) {
                         Log.w("PostAdapter", "Failed to record view for $postId")
                     }

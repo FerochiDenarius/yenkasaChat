@@ -1,4 +1,3 @@
-// routes/view.routes.js
 const express = require('express');
 const router = express.Router();
 const View = require('../models/view.model');
@@ -7,70 +6,89 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 
-const REWARD_VIEW = 2; // coins per view
+// ---------------------------------------------
+// 🎥 Reward tiers based on watch duration (seconds)
+// ---------------------------------------------
+function getRewardForDuration(seconds) {
+  if (seconds >= 120) return 20; // 2 minutes+
+  if (seconds >= 60) return 10;  // 1 minute+
+  if (seconds >= 30) return 5;   // 30s+
+  if (seconds >= 10) return 2;   // 10s+
+  return 0;                      // <10s → no reward
+}
 
 // ---------------------------------------------
-// 👁️ Record a view + reward viewer coins
+// 👁️ Record view and reward viewer dynamically
 // ---------------------------------------------
 router.post('/:postId/view', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
+    const { watchDuration = 0 } = req.body;
     const viewerId = req.user.id;
 
-    // ✅ Verify post exists
+    // ✅ Validate post
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
-    // ✅ Fetch viewer info (needed for response)
     const viewer = await User.findById(viewerId);
     if (!viewer) {
       return res.status(404).json({ success: false, message: 'Viewer not found' });
     }
 
-    // ✅ Always record the view (you can later dedupe if needed)
-    await View.create({ post: postId, user: viewerId });
+    // ✅ Generate activityId before saving view
+    const activityId = `view_${postId}_${viewerId}_${Date.now()}`;
 
-    // ✅ Reward the viewer (System → Viewer)
-    const tx = await rewardService.reward(viewerId, REWARD_VIEW, {
-      fromUserId: null,
-      type: 'REWARD_VIEWS',
-      description: `Earned ${REWARD_VIEW} YKC for viewing post ${post._id}`,
-      relatedPostId: post._id,
-      activityId: `view_${post._id}_${viewerId}` // remove Date.now() if you want to dedupe
+    // ✅ Always record view (consistent with model schema)
+    const view = await View.create({
+      postId,
+      userId: viewerId,
+      username: viewer.username,
+      activityId,
+      watchDuration,
+      viewedAt: new Date()
     });
 
-    if (!tx) {
-      return res.status(200).json({
-        success: true,
-        message: 'View recorded (no reward due to duplicate or supply limit)',
+    // ✅ Determine reward amount
+    const rewardAmount = getRewardForDuration(watchDuration);
+
+    let rewardTx = null;
+    if (rewardAmount > 0) {
+      rewardTx = await rewardService.reward(viewerId, rewardAmount, {
+        fromUserId: null,
+        type: 'REWARD_VIEWS',
+        description: `Earned ${rewardAmount} YKC for watching post ${post._id} (${watchDuration}s)`,
+        relatedPostId: post._id,
+        activityId // links transaction + view
       });
+
+      // ✅ Update post’s total earned
+      post.coinsEarned = (post.coinsEarned || 0) + rewardAmount;
+      await post.save();
     }
 
-    // ✅ Update post stats
-    post.coinsEarned = (post.coinsEarned || 0) + REWARD_VIEW;
-    await post.save();
-
     // ✅ Count total views
-    const viewsCount = await View.countDocuments({ post: postId });
+    const viewsCount = await View.countDocuments({ postId });
 
-    // ✅ Optional socket event
+    // ✅ Notify connected clients (optional)
     if (global.io) {
       global.io.emit('viewUpdate', {
         postId,
         viewsCount,
         viewerId,
+        rewardAmount,
         timestamp: new Date(),
-        rewardTransaction: tx,
+        rewardTransaction: rewardTx,
       });
     }
 
     return res.json({
       success: true,
-      message: `View recorded successfully. ${REWARD_VIEW} YKC rewarded to ${viewer.username}`,
+      message: `View recorded (${watchDuration}s). ${rewardAmount ? `${rewardAmount} YKC rewarded.` : 'No reward (less than 10s).'}`,
       viewsCount,
-      rewardTransaction: tx,
+      rewardAmount,
+      rewardTransaction: rewardTx,
     });
 
   } catch (error) {
@@ -85,7 +103,7 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
 router.get('/:postId/views', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
-    const viewsCount = await View.countDocuments({ post: postId });
+    const viewsCount = await View.countDocuments({ postId });
 
     res.json({
       success: true,

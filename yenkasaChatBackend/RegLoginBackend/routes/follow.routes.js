@@ -4,7 +4,6 @@ const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
-const io = require('../socket');
 const fetch = require('node-fetch');
 const rewardService = require('../services/reward.service');
 

@@ -491,6 +491,7 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<CoinBalanceResponse>
 
+    // 📜 Get transaction history
     @GET("coin-transactions/history")
     fun getCoinTransactionHistory(
         @Header("Authorization") token: String

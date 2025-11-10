@@ -110,6 +110,28 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Get comments for a post (with pagination)
+router.get('/post/:postId', authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+
+    const comments = await Comment.find({ postId, isActive: true })
+      .populate('userId', 'username profileImage verified')
+      .sort({ createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .lean();
+
+    res.json({
+      success: true,
+      comments
+    });
+  } catch (err) {
+    console.error('❌ Error loading comments:', err);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
 
 
 // ✅ Like or unlike comment

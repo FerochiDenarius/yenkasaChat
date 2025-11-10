@@ -13,6 +13,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.TransactionAdapter
 import com.example.yenkasachat.model.TransactionUiModel
 import com.example.yenkasachat.model.CoinTransactionResponse
+import com.example.yenkasachat.model.CoinBalanceResponse
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
@@ -67,36 +68,38 @@ class CoinWalletActivity : AppCompatActivity() {
     private fun loadWalletData() {
         val token = TokenManager.getToken(this) ?: return
 
-        // ✅ Load user profile for balance
-        ApiClient.apiService.getUserProfile()
-            .enqueue(object : Callback<User> {
-                override fun onResponse(call: Call<User>, response: Response<User>) {
+        // ✅ Load wallet balance from backend
+        ApiClient.apiService.getCoinBalance("Bearer $token")
+            .enqueue(object : Callback<CoinBalanceResponse> {
+                override fun onResponse(call: Call<CoinBalanceResponse>, response: Response<CoinBalanceResponse>) {
                     if (response.isSuccessful && response.body() != null) {
-                        val user = response.body()!!
-                        tvBalance.text = "YenkasaCoins: ${user.coinsBalance ?: 0}"
+                        val data = response.body()!!
+                        tvBalance.text = "YenkasaCoins: ${data.balance}"
+                        Log.d(TAG, "✅ Wallet loaded: ${data.balance} coins (Wallet ID: ${data.walletId})")
                     } else {
                         tvBalance.text = "YenkasaCoins: 0"
+                        Log.e(TAG, "⚠️ Failed to load wallet balance. Code: ${response.code()}")
                     }
                 }
 
-                override fun onFailure(call: Call<User>, t: Throwable) {
+                override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
                     tvBalance.text = "YenkasaCoins: 0"
-                    Log.e(TAG, "Failed to load user profile: ${t.message}")
+                    Log.e(TAG, "❌ Failed to load coin balance: ${t.message}")
                 }
             })
 
-        // ✅ Load transaction history
-        // Load cached transactions first, only with activityId
+        // ✅ Load cached transaction history first (only ones with activityId)
         val cached = TokenManager.getTransactionHistory(this@CoinWalletActivity)
-            .filter { !it.activityId.isNullOrEmpty() }  // <-- filter here
+            .filter { !it.activityId.isNullOrEmpty() }
+
         if (cached.isNotEmpty()) {
             transactionList.clear()
             transactionList.addAll(cached)
             transactionAdapter.notifyDataSetChanged()
-            Log.d(TAG, "Loaded ${cached.size} transactions from local cache")
+            Log.d(TAG, "📦 Loaded ${cached.size} cached transactions")
         }
 
-        // Then fetch from server
+        // ✅ Fetch latest transaction history from backend
         ApiClient.apiService.getCoinTransactionHistory("Bearer $token")
             .enqueue(object : Callback<CoinTransactionResponse> {
                 override fun onResponse(
@@ -105,7 +108,7 @@ class CoinWalletActivity : AppCompatActivity() {
                 ) {
                     if (response.isSuccessful && response.body() != null) {
                         val transactions = response.body()!!.transactions
-                            .filter { !it.activityId.isNullOrEmpty() }  // <-- filter here too
+                            .filter { !it.activityId.isNullOrEmpty() }
                             .map {
                                 TransactionUiModel(
                                     transactionId = it.transactionId,
@@ -117,8 +120,8 @@ class CoinWalletActivity : AppCompatActivity() {
                                     recipientUsername = it.toUsername,
                                     description = it.description,
                                     type = it.type,
-                                    activityId = it.activityId,           // <-- keep activityId
-                                    createdAt = it.createdAt
+                                    createdAt = it.createdAt,
+                                    activityId = it.activityId
                                 )
                             }
 
@@ -126,24 +129,17 @@ class CoinWalletActivity : AppCompatActivity() {
                         transactionList.addAll(transactions)
                         transactionAdapter.notifyDataSetChanged()
 
-                        // ✅ Save locally for offline use
                         TokenManager.saveTransactionHistory(this@CoinWalletActivity, transactions)
+                        Log.d(TAG, "✅ Fetched ${transactions.size} transactions from server")
                     } else {
-                        Toast.makeText(
-                            this@CoinWalletActivity,
-                            "Failed to load transactions",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@CoinWalletActivity, "Failed to load transactions", Toast.LENGTH_SHORT).show()
+                        Log.e(TAG, "⚠️ Failed to load transactions. Code: ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<CoinTransactionResponse>, t: Throwable) {
-                    Toast.makeText(
-                        this@CoinWalletActivity,
-                        "Failed to load transactions — showing cached data",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.e(TAG, "Failed to load transactions: ${t.message}")
+                    Toast.makeText(this@CoinWalletActivity, "Failed to load transactions — showing cached data", Toast.LENGTH_SHORT).show()
+                    Log.e(TAG, "❌ Transaction fetch error: ${t.message}")
                 }
             })
     }

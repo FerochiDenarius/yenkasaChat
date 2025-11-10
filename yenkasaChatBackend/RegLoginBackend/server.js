@@ -140,6 +140,8 @@ safeMount('/api/comments', './routes/comments.routes');
 safeMount('/api/feed', './routes/feed.routes');
 safeMount('/api/communities', './routes/community.routes');
 safeMount('/api/roles', './routes/roles.routes');
+safeMount('/api/follow', './routes/follow.routes');
+
 
 // 🧩 Handle Multer upload errors globally
 app.use((err, req, res, next) => {

@@ -1,42 +1,28 @@
-// scripts/grantDeveloper.js
 require('dotenv').config();
 const mongoose = require('mongoose');
 const path = require('path');
 
-// ✅ Adjust path to your User model if different
 const User = require(path.join(__dirname, '../models/user.model.js'));
+const Permission = require(path.join(__dirname, '../models/permission.model.js'));
 
 async function run() {
   try {
     console.log('🚀 Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI);
 
-    const userEmail = 'ferochidenarius@gmail.com'; // 👈 your email
+    const userEmail = 'ofosumenyabrightkofi@gmail.com';
     console.log('🔍 Searching for user:', userEmail);
 
     const user = await User.findOne({ email: userEmail });
+    if (!user) throw new Error(`No user found with email ${userEmail}`);
 
-    if (!user) {
-      console.log(`❌ No user found with email ${userEmail}`);
-      process.exit(1);
-    }
-
-    // ✅ Grant developer privileges
-    user.role = 'admin';
+    // Update role and verification
+    user.role = 'senior_developer';
     user.verified = true;
-    user.permissions = {
-      canPost: true,
-      canComment: true,
-      canCreateCommunity: true,
-    };
 
     await user.save();
 
-    console.log(`✅ ${userEmail} is now a DEVELOPER and verified!`);
-    console.log('👤 Updated user:', user);
+    console.log(`✅ ${userEmail} is now a SENIOR DEVELOPER and verified!`);
 
     await mongoose.disconnect();
     process.exit(0);

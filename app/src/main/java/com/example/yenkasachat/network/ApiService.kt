@@ -44,6 +44,9 @@ interface ApiService {
     @GET("users")
     fun getAllUsers(): Call<List<User>>
 
+    @Multipart
+    @POST("users/profile-picture")
+    fun uploadProfilePicture(@Part image: MultipartBody.Part): Call<Map<String, Any>>
 
     @GET("users/me")
     fun getUserProfile(): Call<User>
@@ -56,31 +59,6 @@ interface ApiService {
 
     @PATCH("users/{userId}/fcm-token")
     fun updateFcmToken(@Path("userId") userId: String, @Body body: Map<String, String>): Call<Void>
-
-    // ==================== PROFILE ====================
-
-    @GET
-    fun getProfileDynamic(
-        @Url url: String,
-        @Header("Authorization") token: String
-    ): Call<ProfileResponse>
-
-    @GET("profile")
-    suspend fun getProfile(): ProfileResponse
-
-    @PUT("profile")
-    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
-
-    @Multipart
-    @POST("users/profile-picture")
-    suspend fun uploadProfilePicture(
-        @Part profileImage: MultipartBody.Part
-    ): Response<ProfileResponse>
-
-    @PATCH("users/update")
-    suspend fun updateUserProfile(
-        @Body request: UpdateProfileRequest
-    ): Response<ProfileResponse>
 
 
     // ==================== CHATROOMS ====================
@@ -387,8 +365,19 @@ interface ApiService {
 
 
 
+    // ==================== PROFILE ====================
 
+    @GET
+    fun getProfileDynamic(
+        @Url url: String,
+        @Header("Authorization") token: String
+    ): Call<ProfileResponse>
 
+    @GET("profile")
+    suspend fun getProfile(): ProfileResponse
+
+    @PUT("profile")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
 
     // -----------------------------

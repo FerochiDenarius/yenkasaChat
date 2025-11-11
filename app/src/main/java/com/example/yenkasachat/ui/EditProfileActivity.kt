@@ -127,47 +127,29 @@ class EditProfileActivity : AppCompatActivity() {
         val file = createTempFileFromUri(uri) ?: return
         val mimeType = contentResolver.getType(uri) ?: "image/*"
         val requestBody = file.asRequestBody(mimeType.toMediaTypeOrNull())
-        val multipart = MultipartBody.Part.createFormData("profileImage", file.name, requestBody)
+        val multipart = MultipartBody.Part.createFormData("image", file.name, requestBody)
 
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.apiService.uploadProfilePicture(multipart)
-
-                if (response.isSuccessful) {
-                    val profileResponse = response.body()
-                    val imageUrl = profileResponse?.profileImage // ✅ Match your model
-
-                    if (!imageUrl.isNullOrEmpty()) {
-                        TokenManager.saveProfilePicUrl(this@EditProfileActivity, imageUrl)
-                        Toast.makeText(
-                            this@EditProfileActivity,
-                            "Profile image updated!",
-                            Toast.LENGTH_SHORT
-                        ).show()
+        ApiClient.apiService.uploadProfilePicture(multipart)
+            .enqueue(object : Callback<Map<String, Any>> {
+                override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+                    if (response.isSuccessful) {
+                        val imageUrl = response.body()?.get("imageUrl") as? String
+                        if (imageUrl != null) {
+                            TokenManager.saveProfilePicUrl(this@EditProfileActivity, imageUrl)
+                            Toast.makeText(this@EditProfileActivity, "Profile image updated!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@EditProfileActivity, "Upload succeeded but no URL returned.", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
-                        Toast.makeText(
-                            this@EditProfileActivity,
-                            "Upload succeeded but no image URL returned.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@EditProfileActivity, "Failed to upload image.", Toast.LENGTH_SHORT).show()
                     }
-                } else {
-                    Toast.makeText(
-                        this@EditProfileActivity,
-                        "Failed to upload image (${response.code()})",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
 
-            } catch (e: Exception) {
-                Log.e(TAG, "Upload failed: ${e.message}", e)
-                Toast.makeText(
-                    this@EditProfileActivity,
-                    "Upload error: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    Log.e(TAG, "Upload failed: ${t.message}")
+                    Toast.makeText(this@EditProfileActivity, "Upload error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
     private fun createTempFileFromUri(uri: Uri): File? {

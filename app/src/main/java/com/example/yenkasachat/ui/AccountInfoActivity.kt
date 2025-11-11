@@ -22,6 +22,7 @@ import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.model.FollowResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.util.UserPermissions
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -162,8 +163,22 @@ class AccountInfoActivity : AppCompatActivity() {
                             user.location
                         )
 
-                        // ✅ Save user roles locally
-                        when (user.role?.lowercase()) {
+                        // ✅ Handle role object
+                        val roleName = user.role?.name ?: "user"
+                        val perms = user.role?.permissions
+
+                        // ✅ Determine permissions using UserPermissions logic
+                        val canPost = UserPermissions.canPost(roleName, user.verified)
+                        val canApprove = UserPermissions.canApprove(roleName)
+                        val canSuspend = UserPermissions.canSuspend(roleName)
+                        val canAssign = UserPermissions.canAssignRoles(roleName)
+                        val canRevoke = UserPermissions.canRevoke(roleName)
+
+                        Log.i("AccountInfoActivity", "User Role: $roleName")
+                        Log.i("AccountInfoActivity", "canPost=$canPost, canApprove=$canApprove, canSuspend=$canSuspend, canAssign=$canAssign, canRevoke=$canRevoke")
+
+                        // ✅ Save role flags locally for quick checks
+                        when (roleName.lowercase()) {
                             "admin" -> {
                                 TokenManager.setAdmin(this@AccountInfoActivity, true)
                                 TokenManager.setModerator(this@AccountInfoActivity, false)
@@ -174,7 +189,7 @@ class AccountInfoActivity : AppCompatActivity() {
                                 TokenManager.setModerator(this@AccountInfoActivity, true)
                                 TokenManager.setDeveloper(this@AccountInfoActivity, false)
                             }
-                            "developer" -> {
+                            "senior_developer", "junior_developer" -> {
                                 TokenManager.setAdmin(this@AccountInfoActivity, true)
                                 TokenManager.setModerator(this@AccountInfoActivity, true)
                                 TokenManager.setDeveloper(this@AccountInfoActivity, true)
@@ -186,9 +201,7 @@ class AccountInfoActivity : AppCompatActivity() {
                             }
                         }
 
-                        Log.i("AccountInfoActivity", "User role: ${user.role}")
-
-                        // ✅ Fetch follow stats after profile loads
+                        // ✅ Continue app logic
                         fetchFollowStats(user._id)
                     } else {
                         Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()

@@ -3,7 +3,9 @@ package com.example.yenkasachat.model
 
 data class VerificationDashboard(
     val detailsVerification: DetailsVerification,
-    val appVerification: AppVerification
+    val appVerification: AppVerification,
+    val userRole: String? = null, // ✅ Added: Role information (admin, moderator, developer, user)
+    val developerOverride: Boolean? = false // ✅ Added: Developer bypass flag for UI logic
 )
 
 data class DetailsVerification(
@@ -30,7 +32,8 @@ data class VerificationRequirements(
     val followers: Int,
     val maxLikes: Int,
     val dailyLogins: Int,
-    val adsViewed: Int
+    val adsViewed: Int,
+    val roleMultiplier: Float? = 1.0f // ✅ Added: Used if backend scales requirements (e.g., moderator ×1.8)
 )
 
 data class VerificationMetrics(
@@ -94,4 +97,12 @@ data class PhaseAdvancementResponse(
     val nextRequirements: VerificationRequirements? = null,
     val error: String? = null,
     val daysRemaining: Int? = null
+)
+
+// ✅ Added optional role-based verification model (non-breaking)
+data class RoleVerificationProfile(
+    val roleName: String,
+    val baseRequirements: VerificationRequirements,
+    val effectiveRequirements: VerificationRequirements,
+    val canBypassRules: Boolean = false
 )

@@ -14,7 +14,6 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-
 class AppVerificationActivity : AppCompatActivity() {
 
     private lateinit var progressBar: ProgressBar
@@ -24,9 +23,11 @@ class AppVerificationActivity : AppCompatActivity() {
     private lateinit var layoutRequirements: LinearLayout
     private lateinit var btnAdvancePhase: Button
     private lateinit var swipeRefresh: SwipeRefreshLayout
-
+    private lateinit var textRoleBanner: TextView
 
     private var token: String? = null
+    private var userRole: String? = null
+    private var developerOverride: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,20 +36,15 @@ class AppVerificationActivity : AppCompatActivity() {
         supportActionBar?.title = "App Verification"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        // Get token
         val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
         token = prefs.getString("token", null)
 
         initViews()
         loadDashboard()
 
-        swipeRefresh.setOnRefreshListener {
-            loadDashboard()
-        }
+        swipeRefresh.setOnRefreshListener { loadDashboard() }
 
-        btnAdvancePhase.setOnClickListener {
-            checkPhaseAdvancement()
-        }
+        btnAdvancePhase.setOnClickListener { checkPhaseAdvancement() }
     }
 
     private fun initViews() {
@@ -59,6 +55,9 @@ class AppVerificationActivity : AppCompatActivity() {
         layoutRequirements = findViewById(R.id.layoutRequirements)
         btnAdvancePhase = findViewById(R.id.btnAdvancePhase)
         swipeRefresh = findViewById(R.id.swipeRefreshVerification)
+
+        // Role banner (add this TextView to your layout XML)
+        textRoleBanner = findViewById(R.id.textRoleBanner)
     }
 
     private fun loadDashboard() {
@@ -75,45 +74,94 @@ class AppVerificationActivity : AppCompatActivity() {
 
                     if (response.isSuccessful && response.body() != null) {
                         val dashboard = response.body()!!
+                        userRole = dashboard.userRole?.lowercase()
+                        developerOverride = dashboard.developerOverride ?: false
                         displayDashboard(dashboard)
                     } else {
-                        Toast.makeText(this@AppVerificationActivity, "Failed to load dashboard", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            "Failed to load dashboard",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<VerificationDashboard>, t: Throwable) {
                     showLoading(false)
                     swipeRefresh.isRefreshing = false
-                    Toast.makeText(this@AppVerificationActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@AppVerificationActivity,
+                        "Error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
 
     private fun displayDashboard(data: VerificationDashboard) {
         val appVer = data.appVerification
+        val role = userRole ?: "user"
+        val isDeveloper = role.contains("developer")
+        val isSeniorDev = role.contains("senior")
+        val isModerator = role == "moderator"
+        val isAdmin = role == "admin"
+
+        // 🟦 Display user role at top
+        val roleText = when {
+            isSeniorDev -> "👑 Senior Developer (Verification Override Enabled)"
+            isDeveloper -> "🧑‍💻 Developer (Override Active: $developerOverride)"
+            isModerator -> "🛡️ Moderator"
+            isAdmin -> "⚙️ Admin"
+            else -> "🔹 Verified User"
+        }
+        textRoleBanner.text = roleText
+        textRoleBanner.visibility = View.VISIBLE
 
         textPhase.text = "Phase ${appVer.currentPhase}"
         textDaysRemaining.text = "Days remaining: ${appVer.daysRemaining}"
 
-        // Show requirement progress
         layoutRequirements.removeAllViews()
 
         val reqs = appVer.requirements
         val metrics = appVer.currentMetrics
+        var roleMultiplier = reqs.roleMultiplier ?: 1.0f
 
-        addRequirementView("Account Age", metrics.accountAge, reqs.accountAge, appVer.progress.accountAge)
-        addRequirementView("Comments", metrics.totalComments, reqs.comments, appVer.progress.comments)
-        addRequirementView("Followers", metrics.totalFollowers, reqs.followers, appVer.progress.followers)
-        addRequirementView("Max Likes", metrics.maxLikesOnPost, reqs.maxLikes, appVer.progress.maxLikes)
-        addRequirementView("Daily Logins", metrics.dailyLogins, reqs.dailyLogins, appVer.progress.dailyLogins)
-        addRequirementView("Ads Viewed", metrics.adsViewed, reqs.adsViewed, appVer.progress.adsViewed)
+        // 🧮 Adjust multipliers based on role
+        roleMultiplier = when {
+            isModerator -> 1.8f
+            isAdmin -> 1.0f
+            else -> roleMultiplier
+        }
 
-        textProgress.text = if (appVer.progress.allMet)
-            "✅ All requirements met! You can advance your phase."
-        else
-            "Progress ongoing..."
+        val scaledReqs = reqs.copy(
+            accountAge = (reqs.accountAge * roleMultiplier).toInt(),
+            comments = (reqs.comments * roleMultiplier).toInt(),
+            followers = (reqs.followers * roleMultiplier).toInt(),
+            maxLikes = (reqs.maxLikes * roleMultiplier).toInt(),
+            dailyLogins = (reqs.dailyLogins * roleMultiplier).toInt(),
+            adsViewed = (reqs.adsViewed * roleMultiplier).toInt()
+        )
 
-        btnAdvancePhase.isEnabled = appVer.progress.allMet
+        // 🧠 Developer override: bypass requirements if developerOverride = true or senior dev
+        val allMet = if (isSeniorDev || developerOverride) {
+            true
+        } else appVer.progress.allMet
+
+        addRequirementView("Account Age", metrics.accountAge, scaledReqs.accountAge, appVer.progress.accountAge)
+        addRequirementView("Comments", metrics.totalComments, scaledReqs.comments, appVer.progress.comments)
+        addRequirementView("Followers", metrics.totalFollowers, scaledReqs.followers, appVer.progress.followers)
+        addRequirementView("Max Likes", metrics.maxLikesOnPost, scaledReqs.maxLikes, appVer.progress.maxLikes)
+        addRequirementView("Daily Logins", metrics.dailyLogins, scaledReqs.dailyLogins, appVer.progress.dailyLogins)
+        addRequirementView("Ads Viewed", metrics.adsViewed, scaledReqs.adsViewed, appVer.progress.adsViewed)
+
+        textProgress.text = when {
+            isSeniorDev -> "✅ Senior Developer: Verification automatically approved."
+            developerOverride -> "🧑‍💻 Developer override active — verification not required."
+            allMet -> "✅ All requirements met! You can advance your phase."
+            else -> "Progress ongoing..."
+        }
+
+        btnAdvancePhase.isEnabled = allMet
     }
 
     private fun addRequirementView(
@@ -122,7 +170,11 @@ class AppVerificationActivity : AppCompatActivity() {
         required: Int,
         achieved: Boolean
     ) {
-        val view = layoutInflater.inflate(R.layout.item_requirement_progress, layoutRequirements, false)
+        val view = layoutInflater.inflate(
+            R.layout.item_requirement_progress,
+            layoutRequirements,
+            false
+        )
         val textTitle = view.findViewById<TextView>(R.id.textRequirementTitle)
         val textValue = view.findViewById<TextView>(R.id.textRequirementValue)
         val iconStatus = view.findViewById<ImageView>(R.id.iconRequirementStatus)
@@ -143,7 +195,6 @@ class AppVerificationActivity : AppCompatActivity() {
 
     private fun checkPhaseAdvancement() {
         showLoading(true)
-
         ApiClient.apiService.checkPhaseAdvancement("Bearer $token")
             .enqueue(object : Callback<PhaseAdvancementResponse> {
                 override fun onResponse(
@@ -153,16 +204,28 @@ class AppVerificationActivity : AppCompatActivity() {
                     showLoading(false)
                     if (response.isSuccessful && response.body() != null) {
                         val res = response.body()!!
-                        Toast.makeText(this@AppVerificationActivity, res.message, Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            res.message,
+                            Toast.LENGTH_LONG
+                        ).show()
                         loadDashboard()
                     } else {
-                        Toast.makeText(this@AppVerificationActivity, "Unable to check phase advancement", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            "Unable to check phase advancement",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<PhaseAdvancementResponse>, t: Throwable) {
                     showLoading(false)
-                    Toast.makeText(this@AppVerificationActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@AppVerificationActivity,
+                        "Error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }

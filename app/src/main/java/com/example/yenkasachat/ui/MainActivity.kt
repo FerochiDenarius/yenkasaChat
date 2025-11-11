@@ -11,6 +11,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.util.UserPermissions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.json.JSONObject
 import retrofit2.Call
@@ -85,26 +86,30 @@ class MainActivity : AppCompatActivity() {
 
                     try {
                         val user = currentUser!!
+                        val roleName = user.role?.name ?: "user"
+                        val verified = user.verified
+
                         val userJson = JSONObject().apply {
                             put("_id", user._id)
                             put("username", user.username ?: "")
-                            put("role", user.role ?: "user")
-                            put("verified", user.verified)
+                            put("role", roleName)
+                            put("verified", verified)
                             put("profileImage", user.profileImage ?: "")
                             put("email", user.email ?: "")
                             put("phone", user.phone ?: "")
                             put("community", user.community ?: JSONObject.NULL)
-                            put("coinsBalance", user.coinsBalance)
+                            put("coinsBalance", user.coinsBalance ?: 0)
 
                             val permissionsJson = JSONObject().apply {
-                                put("canPost", user.permissions?.canPost ?: false)
-                                put("canApprovePost", user.permissions?.canApprovePost ?: false)
-                                put("canRevokeAdmin", user.permissions?.canRevokeAdmin ?: false)
-                                put("canSuspendUser", user.permissions?.canSuspendUser ?: false)
-                                put("canAssignRoles", user.permissions?.canAssignRoles ?: false)
+                                put("canPost", UserPermissions.canPost(roleName, verified))
+                                put("canApprovePost", UserPermissions.canApprove(roleName))
+                                put("canRevokeAdmin", UserPermissions.canRevoke(roleName))
+                                put("canSuspendUser", UserPermissions.canSuspend(roleName))
+                                put("canAssignRoles", UserPermissions.canAssignRoles(roleName))
                             }
                             put("permissions", permissionsJson)
-                        }.toString()
+                        }
+.toString()
 
                         TokenManager.saveUserJson(this@MainActivity, userJson)
                         Log.i("MainActivity", "✅ User JSON updated and saved successfully.")
@@ -139,8 +144,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val canPost = user.permissions?.canPost == true && user.verified
-        fabAddPost.isEnabled = true
+        val roleName = user.role?.name ?: "user"
+        val verified = user.verified
+        val canPost = UserPermissions.canPost(roleName, verified)
+
+        fabAddPost.isEnabled = canPost
         fabAddPost.alpha = if (canPost) 1f else 0.5f
 
         fabAddPost.setOnClickListener {
@@ -150,7 +158,7 @@ class MainActivity : AppCompatActivity() {
                     intent.putExtra("userId", userId)
                     startActivity(intent)
                 }
-                !user.verified -> {
+                !verified -> {
                     Toast.makeText(
                         this,
                         "Your account must be verified before you can post.",

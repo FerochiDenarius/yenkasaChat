@@ -17,6 +17,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal">
 
+            <!-- Progress bar -->
             <ProgressBar
                 android:id="@+id/progressBarVerification"
                 android:layout_width="40dp"
@@ -24,6 +25,22 @@
                 android:visibility="gone"
                 android:layout_marginBottom="12dp"/>
 
+            <!-- 🧩 New Role Banner -->
+            <TextView
+                android:id="@+id/textRoleBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔹 Role: User"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:textSize="16sp"
+                android:padding="6dp"
+                android:background="@android:color/transparent"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Phase Info -->
             <TextView
                 android:id="@+id/textPhase"
                 android:layout_width="wrap_content"
@@ -31,7 +48,7 @@
                 android:text="Phase 1"
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:textColor="@android:color/black"/>
 
             <TextView
@@ -65,7 +82,6 @@
                 android:text="Advance Phase"
                 android:enabled="false"
                 android:layout_marginTop="16dp"/>
-
         </LinearLayout>
     </ScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

@@ -45,19 +45,11 @@ const userSchema = new Schema({
   profileImage: { type: String, default: '' },
   bio: { type: String, default: '' },
 
-  // 🔑 Roles & permissions
-  role: {
-    type: String,
-    enum: ['user', 'moderator', 'admin', 'developer'],
-    default: 'user'
-  },
-
+  // 🔑 Permissions reference (no inline roles)
   permissions: {
-    canPost: { type: Boolean, default: false },
-    canApprovePost: { type: Boolean, default: false },
-    canRevokeAdmin: { type: Boolean, default: false },
-    canSuspendUser: { type: Boolean, default: false },
-    canAssignRoles: { type: Boolean, default: false } // mainly developer
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Permission',
+    default: null
   },
 
   // 🕓 Suspension
@@ -111,59 +103,6 @@ const userSchema = new Schema({
   playerId: { type: String, default: null }
 
 }, { timestamps: true });
-
-// ⚡ Middleware: auto-set permissions based on role
-userSchema.pre('save', function(next) {
-  switch (this.role) {
-    case 'developer':
-      this.permissions = {
-        canPost: true,
-        canApprovePost: true,
-        canRevokeAdmin: true,
-        canSuspendUser: true,
-        canAssignRoles: true
-      };
-      break;
-
-    case 'admin':
-      this.permissions = {
-        canPost: true,
-        canApprovePost: true,
-        canRevokeAdmin: false,
-        canSuspendUser: false,
-        canAssignRoles: false
-      };
-      break;
-
-    case 'moderator':
-      this.permissions = {
-        canPost: true,
-        canApprovePost: true,
-        canRevokeAdmin: true,
-        canSuspendUser: true,
-        canAssignRoles: false
-      };
-      break;
-
-    case 'user':
-    default:
-      this.permissions = {
-        canPost: false,
-        canApprovePost: false,
-        canRevokeAdmin: false,
-        canSuspendUser: false,
-        canAssignRoles: false
-      };
-      break;
-  }
-
-  // ⚠️ If suspended, override canPost
-  if (this.suspendedUntil && this.suspendedUntil > new Date()) {
-    this.permissions.canPost = false;
-  }
-
-  next();
-});
 
 // ✅ Helper: enforce join limit
 userSchema.methods.canJoinMoreCommunities = function() {

@@ -5,6 +5,8 @@ const multer = require('multer');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const { storage } = require('../config/cloudinary'); // Assuming Cloudinary setup
+const Permission = require('../models/permissions.model'); // ✅ Import permissions model
+
 
 // --- Consistent Logger Function ---
 const logger = {
@@ -93,40 +95,42 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
 
 /**
  * @route   GET /api/users/me
- * @desc    Get logged-in user's full profile (no password)
+ * @desc    Get logged-in user's full profile (including role + permissions)
  * @access  Private
  */
 router.get('/me', authMiddleware, async (req, res) => {
   const requestId = `req_get_me_${Date.now()}`;
-  const authenticatedUserId = req.user?.id || req.user?._id;
+  const authenticatedUserId = req.user?._id || req.user?.id;
 
-  logger.info(`[${requestId}] GET /me - Request to fetch profile for User: ${authenticatedUserId}`);
+  logger.info(`[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`);
 
   if (!authenticatedUserId) {
-    logger.error(`[${requestId}] GET /me - CRITICAL: User ID not found in req.user after authMiddleware.`);
     return res.status(401).json({ error: 'User authentication failed.' });
   }
 
   try {
+    // Fetch user
     const user = await User.findById(authenticatedUserId)
       .select('-password -verificationCode -emailVerificationCode -refreshToken')
       .populate({
         path: 'community',
-        select: '_id name location membersCount'
+        select: '_id name location membersCount',
       })
       .lean();
 
     if (!user) {
-      logger.warn(`[${requestId}] GET /me - User not found in DB with ID: ${authenticatedUserId}.`);
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Safely prepare all values
+    // ✅ Fetch permissions for the user's current role
+    const normalizedRole = Permission.normalize(user.role);
+    const rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();
+
     const userProfile = {
       _id: user._id,
       username: user.username,
       email: user.email || null,
-      phone: user.phone || null,
+      phoneNumber: user.phoneNumber || null,
       location: user.location || null,
       verified: user.verified || false,
       profileImage: user.profileImage || null,
@@ -137,35 +141,43 @@ router.get('/me', authMiddleware, async (req, res) => {
             _id: user.community._id,
             name: user.community.name,
             location: user.community.location || null,
-            membersCount: user.community.membersCount || 0
+            membersCount: user.community.membersCount || 0,
           }
         : null,
       followersCount: user.followersCount ?? (user.followers?.length || 0),
       followingCount: user.followingCount ?? (user.following?.length || 0),
-      followers: user.followers || [],
-      following: user.following || [],
-      walletId: user.walletId || null,
-      verificationPhase: user.verificationPhase || null,
+      walletId: user.walletId,
+      verificationPhase: user.verificationPhase,
       verificationScore: user.verificationScore ?? 0,
-      online: user.online || false,
-      lastSeen: user.lastSeen || null,
+      online: user.online,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt
+      updatedAt: user.updatedAt,
+
+      // ✅ Role and Permissions combined
+      role: {
+        name: normalizedRole,
+        permissions: rolePermissions
+          ? {
+              canPost: rolePermissions.canPost,
+              canApprove: rolePermissions.canApprove,
+              canCreateCommunity: rolePermissions.canCreateCommunity,
+              canAssignRoles: rolePermissions.canAssignRoles,
+              canRevoke: rolePermissions.canRevoke,
+              canSuspend: rolePermissions.canSuspend,
+            }
+          : {},
+      },
     };
 
-    logger.info(`[${requestId}] GET /me - ✅ Successfully fetched profile for User: ${authenticatedUserId}`);
     res.status(200).json(userProfile);
   } catch (err) {
-    logger.error(
-      `[${requestId}] GET /me - ❌ Failed to fetch profile for User: ${authenticatedUserId}. Error: ${err.message}`,
-      { stack: err.stack }
-    );
+    logger.error(`[${requestId}] ❌ Error fetching user profile: ${err.message}`);
     res.status(500).json({ error: 'Failed to retrieve user profile' });
   } finally {
-    logger.info(`[${requestId}] GET /me - Finished processing request by User: ${authenticatedUserId}`);
+    logger.info(`[${requestId}] GET /me - Done processing request.`);
   }
 });
-
 /**
  * @route   POST /api/users/toggle-follow/:targetUserId
  * @desc    Toggle follow/unfollow another user

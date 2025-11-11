@@ -2,26 +2,40 @@ package com.example.yenkasachat.model
 
 import com.google.gson.annotations.SerializedName
 
-data class Permissions(
+data class Role(
+    @SerializedName("_id")
+    val _id: String,
+
+    @SerializedName("name")
+    val name: String,
+
+    @SerializedName("description")
+    val description: String? = null,
+
+    @SerializedName("permissions")
+    val permissions: List<Permission>? = emptyList()
+)
+
+// ✅ Permissions model (matches backend fields)
+data class Permission(
+    @SerializedName("name")
+    val name: String,
+
+    @SerializedName("description")
+    val description: String? = null,
 
     @SerializedName("canPost")
     val canPost: Boolean = false,
 
-    @SerializedName("canComment")
-    val canComment: Boolean = false,
-
-    @SerializedName("canCreateCommunity")
-    val canCreateCommunity: Boolean = false,
-
     @SerializedName("canApprovePost")
     val canApprovePost: Boolean = false,
-
-    @SerializedName("canRevokeAdmin")
-    val canRevokeAdmin: Boolean = false,
 
     @SerializedName("canSuspendUser")
     val canSuspendUser: Boolean = false,
 
     @SerializedName("canAssignRoles")
-    val canAssignRoles: Boolean = false
+    val canAssignRoles: Boolean = false,
+
+    @SerializedName("canRevokeAdmin")
+    val canRevokeAdmin: Boolean = false
 )

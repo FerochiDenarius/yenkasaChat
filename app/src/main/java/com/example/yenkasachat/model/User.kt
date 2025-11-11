@@ -10,37 +10,38 @@ data class User(
     val username: String,
 
     @SerializedName("email")
-    val email: String?,
+    val email: String? = null,
 
     @SerializedName("phone")
-    val phone: String?,
+    val phone: String? = null,
 
     @SerializedName("location")
-    val location: String?,
+    val location: String? = null,
 
     @SerializedName("verified")
-    val verified: Boolean,
+    val verified: Boolean = false,
 
     @SerializedName("profileImage")
-    val profileImage: String?,
+    val profileImage: String? = null,
 
     @SerializedName("coinsBalance")
     val coinsBalance: Int = 0,
 
     @SerializedName("community")
-    val community: Community?,
-
-    @SerializedName("createdAt")
-    val createdAt: String,
-
-    @SerializedName("role")
-    val role: String,
+    val community: Community? = null,
 
     @SerializedName("walletId")
-    val walletId: String,
+    val walletId: String? = null,
 
-    @SerializedName("permissions")
-    val permissions: Permissions,
+    @SerializedName("createdAt")
+    val createdAt: String? = null,
+
+    @SerializedName("updatedAt")
+    val updatedAt: String? = null,
+
+    // ✅ Role is now an object
+    @SerializedName("role")
+    val role: Role? = null,
 
     @SerializedName("followers")
     val followers: List<String>? = emptyList(),
@@ -48,3 +49,5 @@ data class User(
     @SerializedName("following")
     val following: List<String>? = emptyList()
 )
+
+// ✅ Role model to match backend

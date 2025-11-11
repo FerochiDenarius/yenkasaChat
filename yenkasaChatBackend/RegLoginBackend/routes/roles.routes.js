@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
-const Permission = require('../models/permission.model'); // ✅ Correct model import
+const Permission = require('../models/permissions.model'); // ✅ Correct model import
 
 // Simple logger utility
 const logger = {

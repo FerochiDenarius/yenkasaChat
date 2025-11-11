@@ -15,9 +15,11 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
+import com.example.yenkasachat.databinding.ActivityAccountInfoBinding
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.User
 import com.example.yenkasachat.model.Community
+import com.example.yenkasachat.model.FollowResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
@@ -42,6 +44,8 @@ class AccountInfoActivity : AppCompatActivity() {
     private lateinit var postsCountView: TextView
     private lateinit var recyclerUserPosts: RecyclerView
     private lateinit var btnEditProfile: Button
+    private lateinit var binding: ActivityAccountInfoBinding
+
 
     private lateinit var postAdapter: PostAdapter
     private val userPostsList = mutableListOf<Post>()
@@ -183,6 +187,9 @@ class AccountInfoActivity : AppCompatActivity() {
                         }
 
                         Log.i("AccountInfoActivity", "User role: ${user.role}")
+
+                        // ✅ Fetch follow stats after profile loads
+                        fetchFollowStats(user._id)
                     } else {
                         Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
                     }
@@ -193,6 +200,28 @@ class AccountInfoActivity : AppCompatActivity() {
                 }
             })
     }
+
+    // 🔹 New method to get follow stats
+    private fun fetchFollowStats(userId: String?) {
+        val token = TokenManager.getToken(this) ?: return
+        val currentUserId = TokenManager.getUserId(this) ?: return
+
+        ApiClient.apiService.getFollowStats(currentUserId, "Bearer $token")
+            .enqueue(object : Callback<FollowResponse> {
+                override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
+                    if (response.isSuccessful && response.body() != null) {
+                        val stats = response.body()!!
+                        followersCountView.text = "${stats.followersCount} Followers"
+                        followingCountView.text = "${stats.followingCount} Following"
+                    }
+                }
+
+                override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                    Log.e(TAG, "Failed to fetch follow stats: ${t.message}")
+                }
+            })
+    }
+
 
     private fun updateUI(user: User) {
         usernameView.text = user.username

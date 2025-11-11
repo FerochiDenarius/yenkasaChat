@@ -20,4 +20,5 @@
     <string name="post_video">post video\n</string>
     <string name="post_image">post image\n</string>
     <string name="send_comment">Send comment</string>
+    <string name="select_community">select community\n</string>
 </resources>

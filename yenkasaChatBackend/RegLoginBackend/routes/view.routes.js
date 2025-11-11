@@ -1,5 +1,7 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
+
 const View = require('../models/view.model');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
@@ -24,25 +26,29 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
     const { watchDuration = 0 } = req.body;
-    const viewerId = req.user.id;
+    const viewerId = req.user?.id;
 
-    // ✅ Validate post
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ success: false, message: 'Post not found' });
-    }
+    console.log(`📡 Incoming view request → Post: ${postId}, Watch: ${watchDuration}s, User: ${viewerId}`);
 
-    const viewer = await User.findById(viewerId);
-    if (!viewer) {
-      return res.status(404).json({ success: false, message: 'Viewer not found' });
-    }
+    // ✅ Validate user and post
+    if (!viewerId) return res.status(401).json({ success: false, message: 'Unauthorized: Missing user ID' });
 
-    // ✅ Generate activityId before saving view
+    const [post, viewer] = await Promise.all([
+      Post.findById(postId),
+      User.findById(viewerId)
+    ]);
+
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+    if (!viewer) return res.status(404).json({ success: false, message: 'Viewer not found' });
+
+    // ✅ Consistent ObjectId casting
+    const objectIdPost = new mongoose.Types.ObjectId(postId);
+
     const activityId = `view_${postId}_${viewerId}_${Date.now()}`;
 
-    // ✅ Always record view (consistent with model schema)
+    // ✅ Record view
     const view = await View.create({
-      postId,
+      postId: objectIdPost,
       userId: viewerId,
       username: viewer.username,
       activityId,
@@ -50,28 +56,40 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       viewedAt: new Date()
     });
 
-    // ✅ Determine reward amount
+    // ✅ Determine and apply reward
     const rewardAmount = getRewardForDuration(watchDuration);
-
     let rewardTx = null;
-    if (rewardAmount > 0) {
-      rewardTx = await rewardService.reward(viewerId, rewardAmount, {
-        fromUserId: null,
-        type: 'REWARD_VIEWS',
-        description: `Earned ${rewardAmount} YKC for watching post ${post._id} (${watchDuration}s)`,
-        relatedPostId: post._id,
-        activityId // links transaction + view
-      });
 
-      // ✅ Update post’s total earned
-      post.coinsEarned = (post.coinsEarned || 0) + rewardAmount;
-      await post.save();
+    if (rewardAmount > 0) {
+      console.log(`🎁 Reward attempt: ${rewardAmount} YKC → ${viewer.username}`);
+
+      try {
+        rewardTx = await rewardService.reward(viewerId, rewardAmount, {
+          fromUserId: null,
+          type: 'REWARD_VIEWS',
+          description: `Earned ${rewardAmount} YKC for watching post ${post._id} (${watchDuration}s)`,
+          relatedPostId: post._id,
+          activityId
+        });
+
+        if (!rewardTx) {
+          console.warn('⚠️ Reward service returned null — transaction not recorded');
+        }
+
+        // ✅ Update post’s earned coins
+        post.coinsEarned = (post.coinsEarned || 0) + rewardAmount;
+        await post.save();
+      } catch (err) {
+        console.error('❌ Error applying reward:', err);
+      }
+    } else {
+      console.log('⏱️ No reward — duration too short (<10s)');
     }
 
-    // ✅ Count total views
-    const viewsCount = await View.countDocuments({ postId });
+    // ✅ Accurate total views count
+    const viewsCount = await View.countDocuments({ postId: objectIdPost });
 
-    // ✅ Notify connected clients (optional)
+    // ✅ Emit socket event if available
     if (global.io) {
       global.io.emit('viewUpdate', {
         postId,
@@ -79,8 +97,10 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
         viewerId,
         rewardAmount,
         timestamp: new Date(),
-        rewardTransaction: rewardTx,
+        rewardTransaction: rewardTx
       });
+    } else {
+      console.warn('⚠️ global.io not initialized — skipping socket emit');
     }
 
     return res.json({
@@ -88,7 +108,7 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       message: `View recorded (${watchDuration}s). ${rewardAmount ? `${rewardAmount} YKC rewarded.` : 'No reward (less than 10s).'}`,
       viewsCount,
       rewardAmount,
-      rewardTransaction: rewardTx,
+      rewardTransaction: rewardTx
     });
 
   } catch (error) {
@@ -103,13 +123,14 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
 router.get('/:postId/views', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
-    const viewsCount = await View.countDocuments({ postId });
+    const objectIdPost = new mongoose.Types.ObjectId(postId);
+    const viewsCount = await View.countDocuments({ postId: objectIdPost });
 
     res.json({
       success: true,
       postId,
       viewsCount,
-      timestamp: new Date(),
+      timestamp: new Date()
     });
   } catch (error) {
     console.error('❌ Error fetching view count:', error);

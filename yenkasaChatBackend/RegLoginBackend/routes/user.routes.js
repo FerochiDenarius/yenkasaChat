@@ -5,6 +5,8 @@ const multer = require('multer');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const { storage } = require('../config/cloudinary'); // Assuming Cloudinary setup
+const upload = require("../utils/upload");
+
 
 // --- Consistent Logger Function ---
 const logger = {
@@ -42,54 +44,105 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 /**
- * @route   POST /api/users/profile-picture
- * @desc    Upload profile picture to Cloudinary and save URL
- * @access  Private
+ * ✅ PATCH /api/users/update
+ * Update user text info (username, bio, phone, etc.)
  */
-router.post('/profile-picture', authMiddleware, upload.single('profileImage'), async (req, res) => {
+router.patch("/update", authMiddleware, async (req, res) => {
+  const requestId = `req_update_user_${Date.now()}`;
+  const authenticatedUserId = req.user?.id || req.user?._id;
+
+  const { username, bio, phone } = req.body;
+
+  if (!authenticatedUserId) {
+    return res.status(401).json({ error: "User authentication failed." });
+  }
+
+  try {
+    const user = await User.findById(authenticatedUserId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    if (username) user.username = username.trim();
+    if (bio) user.bio = bio.trim();
+    if (phone) user.phone = phone.trim();
+    user.updatedAt = new Date();
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully.",
+      user: {
+        username: user.username,
+        bio: user.bio,
+        phone: user.phone,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error(`[${requestId}] Error updating profile: ${err.message}`);
+    res.status(500).json({ error: "Server error updating profile." });
+  }
+});
+
+//update profile pic
+
+router.post(
+  "/profile-picture",
+  authMiddleware,
+  uploadFiles(), // ✅ use your centralized multer config
+  async (req, res) => {
     const requestId = `req_upload_pp_${Date.now()}`;
     const authenticatedUserId = req.user?.id || req.user?._id;
 
-    logger.info(`[${requestId}] POST /profile-picture - Request by User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] POST /profile-picture - Request file details:`, req.file); // Log file info
-    logger.debug(`[${requestId}] POST /profile-picture - Request body (non-file parts):`, req.body);
-
-
     if (!authenticatedUserId) {
-        // Should be caught by authMiddleware, but as a safeguard
-        logger.error(`[${requestId}] POST /profile-picture - CRITICAL: User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
+      return res.status(401).json({ error: "User authentication failed." });
+    }
+
+    const file = req.files?.imageUrl?.[0]; // ✅ use the "imageUrl" field from your upload.js
+    if (!file) {
+      return res.status(400).json({ error: "No image file uploaded." });
     }
 
     try {
-        const user = await User.findById(authenticatedUserId);
-        if (!user) {
-            logger.warn(`[${requestId}] POST /profile-picture - User not found with ID: ${authenticatedUserId}.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
+      // Wrap Cloudinary upload in a Promise
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: "profile_pictures" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
 
-        if (!req.file || !req.file.path) {
-            logger.warn(`[${requestId}] POST /profile-picture - No image uploaded or upload failed for User: ${authenticatedUserId}. req.file is:`, req.file);
-            return res.status(400).json({ error: 'No image uploaded or upload failed' });
-        }
+        uploadStream.end(file.buffer);
+      });
 
-        logger.info(`[${requestId}] POST /profile-picture - File uploaded to Cloudinary. Path: ${req.file.path}. Updating user profileImage for User: ${authenticatedUserId}`);
-        user.profileImage = req.file.path; // URL from Cloudinary storage
-        user.updatedAt = new Date();
-        await user.save();
+      const user = await User.findByIdAndUpdate(
+        authenticatedUserId,
+        { profileImage: result.secure_url, updatedAt: new Date() },
+        { new: true }
+      );
 
-        logger.info(`[${requestId}] POST /profile-picture - ✅ Profile image URL saved successfully for User: ${authenticatedUserId}. New URL: ${user.profileImage}`);
-        res.status(200).json({
-            message: 'Profile image uploaded successfully',
-            imageUrl: user.profileImage,
-        });
+      if (!user) {
+        return res.status(404).json({ error: "User not found." });
+      }
+
+      res.status(200).json({
+        message: "Profile picture updated successfully.",
+        imageUrl: user.profileImage,
+      });
     } catch (err) {
-        logger.error(`[${requestId}] POST /profile-picture - ❌ Image upload or DB save error for User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack, file: req.file });
-        res.status(500).json({ error: 'Server error while uploading profile picture' });
-    } finally {
-        logger.info(`[${requestId}] POST /profile-picture - Finished processing request by User: ${authenticatedUserId}`);
+      console.error(
+        `[${requestId}] Error uploading profile picture: ${err.message}`,
+        err
+      );
+      res.status(500).json({ error: "Server error uploading profile picture." });
     }
-});
+  }
+);
+
+
 
 /**
  * @route   GET /api/users/me/**
@@ -173,75 +226,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 });
 
 
-/**
- * @route   POST /api/users/toggle-follow/:targetUserId
- * @desc    Toggle follow/unfollow another user
- * @access  Private
- */
-router.post('/toggle-follow/:targetUserId', authMiddleware, async (req, res) => {
-  const requestId = `req_toggle_follow_${Date.now()}`;
-  const authenticatedUserId = req.user?.id || req.user?._id;
-  const { targetUserId } = req.params;
 
-  logger.info(`[${requestId}] POST /toggle-follow/${targetUserId} - Request by User: ${authenticatedUserId}`);
-
-  try {
-    if (authenticatedUserId === targetUserId) {
-      return res.status(400).json({ message: "You cannot follow yourself." });
-    }
-
-    const user = await User.findById(authenticatedUserId);
-    const targetUser = await User.findById(targetUserId);
-
-    if (!user || !targetUser) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    const alreadyFollowing = user.following.some(
-      (id) => id.toString() === targetUserId
-    );
-
-    if (alreadyFollowing) {
-      // Unfollow logic
-      user.following = user.following.filter(
-        (id) => id.toString() !== targetUserId
-      );
-      targetUser.followers = targetUser.followers.filter(
-        (id) => id.toString() !== authenticatedUserId
-      );
-
-      user.followingCount = Math.max(0, (user.followingCount || 0) - 1);
-      targetUser.followersCount = Math.max(0, (targetUser.followersCount || 0) - 1);
-
-      await user.save();
-      await targetUser.save();
-
-      logger.info(`[${requestId}] Unfollowed user ${targetUserId}`);
-      return res.status(200).json({ message: "Unfollowed successfully", isFollowing: false });
-    } else {
-      // Follow logic
-      user.following.push(targetUserId);
-      targetUser.followers.push(authenticatedUserId);
-
-      user.followingCount = (user.followingCount || 0) + 1;
-      targetUser.followersCount = (targetUser.followersCount || 0) + 1;
-
-      await user.save();
-      await targetUser.save();
-
-      logger.info(`[${requestId}] Followed user ${targetUserId}`);
-      return res.status(200).json({ message: "Followed successfully", isFollowing: true });
-    }
-  } catch (err) {
-    logger.error(
-      `[${requestId}] ❌ Error toggling follow for User: ${authenticatedUserId} -> ${targetUserId}. ${err.message}`,
-      { stack: err.stack }
-    );
-    res.status(500).json({ message: "Server error while toggling follow" });
-  } finally {
-    logger.info(`[${requestId}] POST /toggle-follow/${targetUserId} - Finished`);
-  }
-});
 
 /**
  * @route   POST /api/users/fix-contacts

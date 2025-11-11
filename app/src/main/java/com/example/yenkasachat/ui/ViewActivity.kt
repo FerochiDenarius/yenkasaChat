@@ -128,26 +128,29 @@ class ViewActivity : AppCompatActivity() {
     // ✅ Record view with duration and reward support
     private suspend fun recordViewWithDuration(durationSeconds: Int) {
         val currentPostId = post?._id ?: return
-        val authToken = token ?: return
+        val rawToken = token ?: return
+
+        // ✅ ensure token format
+        val authToken = if (rawToken.startsWith("Bearer")) rawToken else "Bearer $rawToken"
 
         try {
             val payload = mapOf("watchDuration" to durationSeconds)
-            val response = ApiClient.apiService.recordView(currentPostId, "Bearer $authToken", payload)
+            Log.d("ViewActivity", "📡 Sending view record → Post: $currentPostId | Duration: ${durationSeconds}s")
+
+            val response = ApiClient.apiService.recordView(currentPostId, authToken, payload)
 
             withContext(Dispatchers.Main) {
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.success) {
                         textViews.text = "👁️ ${body.viewsCount}"
-                        Log.d("ViewActivity", "✅ View recorded (${durationSeconds}s)")
-                        body.view?.let {
-                            Log.d("ViewActivity", "🎁 Reward tracked: ${it.activityId}")
-                        }
+                        Log.d("ViewActivity", "✅ View recorded (${durationSeconds}s, Reward: ${body.rewardAmount})")
                     } else {
-                        Log.w("ViewActivity", "⚠️ View response: ${body?.message}")
+                        Log.w("ViewActivity", "⚠️ View response error: ${body?.message}")
                     }
                 } else {
-                    Log.w("ViewActivity", "⚠️ Failed to record view: ${response.errorBody()?.string()}")
+                    val errorBody = response.errorBody()?.string()
+                    Log.w("ViewActivity", "⚠️ Failed to record view: $errorBody")
                 }
             }
         } catch (e: Exception) {

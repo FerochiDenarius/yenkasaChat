@@ -21,10 +21,10 @@ console.log("routes/auth.js - Token secrets check passed");
 const ACCESS_EXPIRES_IN = '120d';
 const REFRESH_EXPIRES_IN = '120d';
 
-// ✅ REGISTER
+// ✅ REGISTER (with mandatory community join)
 router.post('/register', async (req, res) => {
   console.log("✅✅✅ /api/auth/register - ROUTE HANDLER REACHED ✅✅✅");
-  let { email, phoneNumber, username, location, password } = req.body;
+  let { email, phoneNumber, username, location, password, communityId } = req.body;
 
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
@@ -33,10 +33,16 @@ router.post('/register', async (req, res) => {
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
-    if (!username || !location || !password || (!email && !phoneNumber)) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    if (!username || !location || !password || (!email && !phoneNumber) || !communityId) {
+      return res.status(400).json({ message: 'Missing required fields (including communityId)' });
     }
 
+    // ✅ Check community validity
+    const community = await Community.findById(communityId);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+    if (!community.isApproved) return res.status(403).json({ message: 'Community not approved' });
+
+    // ✅ Check for duplicates
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
@@ -44,24 +50,31 @@ router.post('/register', async (req, res) => {
         { username },
       ],
     });
-
     if (existingUser) {
       return res.status(409).json({ message: 'User already exists' });
     }
 
+    // ✅ Create user
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = new User({
       username,
       location,
       password: hashedPassword,
+      joinedCommunities: [communityId], // auto-join local community
       ...(email && { email }),
       ...(phoneNumber && { phoneNumber }),
     });
 
     await newUser.save();
 
-    // ✅ Issue tokens
+    // ✅ Add user to community
+    if (!community.members.includes(newUser._id)) {
+      community.members.push(newUser._id);
+      await community.incrementMemberCount();
+      await community.save();
+    }
+
+    // ✅ Generate tokens
     const accessTokenValue = jwt.sign(
       { userId: newUser._id },
       process.env.ACCESS_TOKEN_SECRET,
@@ -85,7 +98,7 @@ router.post('/register', async (req, res) => {
         username: newUser.username,
         location: newUser.location,
         verified: newUser.verified,
-        playerId: newUser.playerId || null
+        joinedCommunities: newUser.joinedCommunities,
       },
       token: accessTokenValue,
       refreshToken: refreshTokenValue
@@ -99,6 +112,7 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Server error during registration' });
   }
 });
+
 
 // ✅ LOGIN
 router.post('/login', async (req, res) => {

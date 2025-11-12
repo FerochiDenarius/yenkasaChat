@@ -115,8 +115,9 @@ router.post('/register', async (req, res) => {
 
 
 // ✅ LOGIN
+// ✅ LOGIN (permanent fix for role ref bug)
 router.post('/login', async (req, res) => {
-  console.log("✅✅✅ /api/auth/login - ROUTE HANDLER REACHED ✅✅✅");
+  console.log("✅ /api/auth/login - ROUTE HANDLER REACHED ✅");
   const { identifier, password } = req.body;
 
   try {
@@ -127,21 +128,38 @@ router.post('/login', async (req, res) => {
     const trimmedIdentifier = identifier.trim();
     const identifierForEmailQuery = trimmedIdentifier.toLowerCase();
 
-    const user = await User.findOne({
+    // 🔹 Include role in query for possible populate
+    let user = await User.findOne({
       $or: [
         { email: identifierForEmailQuery },
         { phoneNumber: trimmedIdentifier },
-        { username: new RegExp(`^${trimmedIdentifier}$`, 'i') }
+        { username: new RegExp(`^${trimmedIdentifier}$`, 'i') },
       ],
-    }).select('+refreshToken');
+    })
+      .select('+refreshToken')
+      .populate('role'); // ✅ populate Permission reference if valid
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // ✅ Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // 🔹 MIGRATION FIX: if user.role is a string or invalid, correct it on the fly
+    const Permission = require('../models/permission.model');
+
+    if (!user.role || typeof user.role === 'string') {
+      const normalized = (user.role || 'user').toString().trim().toLowerCase().replace(/\s+/g, '_');
+      const defaultPerm = await Permission.findOne({ role: normalized }) || await Permission.findOne({ role: 'user' });
+
+      user.role = defaultPerm ? defaultPerm._id : null;
+      await user.save(); // 🔹 Persist fix so next login is clean
+      user = await User.findById(user._id).populate('role'); // repopulate after fixing
+      console.log(`🩵 Auto-fixed user role for ${user.username} → ${user.role?.role}`);
     }
 
     // ✅ Generate tokens
@@ -157,9 +175,11 @@ router.post('/login', async (req, res) => {
       { expiresIn: REFRESH_EXPIRES_IN }
     );
 
+    // ✅ Update refresh token
     user.refreshToken = refreshTokenValue;
     await user.save();
 
+    // ✅ Return clean JSON with role details
     res.json({
       user: {
         _id: user._id,
@@ -169,51 +189,20 @@ router.post('/login', async (req, res) => {
         username: user.username,
         location: user.location,
         verified: user.verified,
-        playerId: user.playerId || null
+        playerId: user.playerId || null,
+        role: user.role?.role || 'user',                // 👈 readable role string
+        permissions: user.role || {},                   // 👈 full Permission doc
       },
       token: accessTokenValue,
-      refreshToken: refreshTokenValue
+      refreshToken: refreshTokenValue,
     });
 
   } catch (err) {
-    console.error('❌ Login error:', err.message);
+    console.error('❌ Login error:', err);
     res.status(500).json({ message: 'Server error during login' });
   }
 });
 
-// ✅ Refresh Token
-router.post('/token/refresh', async (req, res) => {
-  console.log("✅✅✅ /api/auth/token/refresh - ROUTE HANDLER REACHED ✅✅✅");
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) {
-    return res.status(400).json({ message: 'Refresh token required' });
-  }
-
-  try {
-    const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-
-    const user = await User.findById(payload.userId).select('+refreshToken');
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({ message: 'Invalid refresh token' });
-    }
-
-    const newAccessToken = jwt.sign(
-      { userId: user._id },
-      process.env.ACCESS_TOKEN_SECRET, // ✅ FIXED (was JWT_SECRET before)
-      { expiresIn: ACCESS_EXPIRES_IN }
-    );
-
-    res.json({ token: newAccessToken, refreshToken });
-
-  } catch (err) {
-    console.error('❌ Token refresh error:', err.message);
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Refresh token expired' });
-    }
-    return res.status(403).json({ message: 'Invalid or expired refresh token' });
-  }
-});
 
 // ✅ Debug route
 router.get('/ping', (req, res) => {

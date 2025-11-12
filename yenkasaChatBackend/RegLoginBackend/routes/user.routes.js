@@ -123,7 +123,7 @@ const user = await User.findById(authenticatedUserId)
     },
     {
       path: 'role',
-      select: 'name',
+      select: 'role',
     },
   ])
   .lean();
@@ -131,7 +131,8 @@ const user = await User.findById(authenticatedUserId)
 
     // ✅ Normalize role name safely
 // ✅ Extract role name safely (populated or fallback)
-const normalizedRole = Permission.normalize(user.role?.name || user.role || 'user');
+// ✅ Extract role name safely
+const normalizedRole = Permission.normalize(user.role?.role || user.role || 'user');
 logger.info(`[${requestId}] Role resolved: ${normalizedRole}`);
 
     // ✅ Fetch permissions for this role

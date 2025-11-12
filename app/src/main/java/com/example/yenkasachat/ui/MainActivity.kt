@@ -100,6 +100,7 @@ class MainActivity : AppCompatActivity() {
                             put("community", user.community ?: JSONObject.NULL)
                             put("coinsBalance", user.coinsBalance ?: 0)
 
+                            put("role", roleName)
                             val permissionsJson = JSONObject().apply {
                                 put("canPost", UserPermissions.canPost(roleName, verified))
                                 put("canApprovePost", UserPermissions.canApprove(roleName))
@@ -107,6 +108,7 @@ class MainActivity : AppCompatActivity() {
                                 put("canSuspendUser", UserPermissions.canSuspend(roleName))
                                 put("canAssignRoles", UserPermissions.canAssignRoles(roleName))
                             }
+                            put("permissions", permissionsJson)
                             put("permissions", permissionsJson)
                         }
 .toString()
@@ -136,43 +138,50 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==================== FAB Setup with Permission Checks ====================
-    private fun setupFab() {
-        val user = currentUser
-        if (user == null) {
-            fabAddPost.isEnabled = false
-            fabAddPost.alpha = 0.5f
-            return
-        }
 
-        val roleName = user.role?.name ?: "user"
-        val verified = user.verified
-        val canPost = UserPermissions.canPost(roleName, verified)
 
-        fabAddPost.isEnabled = canPost
-        fabAddPost.alpha = if (canPost) 1f else 0.5f
 
-        fabAddPost.setOnClickListener {
-            when {
-                canPost -> {
-                    val intent = Intent(this, PostActivity::class.java)
-                    intent.putExtra("userId", userId)
-                    startActivity(intent)
-                }
-                !verified -> {
-                    Toast.makeText(
-                        this,
-                        "Your account must be verified before you can post.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-                else -> {
-                    Toast.makeText(
-                        this,
-                        "You do not have permission to post at this time.",
-                        Toast.LENGTH_LONG
-                    ).show()
+        private fun setupFab() {
+            val user = currentUser
+            if (user == null) {
+                fabAddPost.isEnabled = false
+                fabAddPost.alpha = 0.5f
+                return
+            }
+
+            // Ensure roleName is a String, not Any
+            val roleName: String? = user.role?.name
+            val verified = user.verified
+
+            // ✅ Directly rely on your permission logic
+            val canPost = UserPermissions.canPost(roleName, verified)
+
+            fabAddPost.isEnabled = canPost
+            fabAddPost.alpha = if (canPost) 1f else 0.5f
+
+            fabAddPost.setOnClickListener {
+                when {
+                    canPost -> {
+                        val intent = Intent(this, PostActivity::class.java)
+                        intent.putExtra("userId", user._id)
+                        startActivity(intent)
+                    }
+                    !verified -> {
+                        Toast.makeText(
+                            this,
+                            "Your account must be verified before you can post.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    else -> {
+                        Toast.makeText(
+                            this,
+                            "You do not have permission to post at this time.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
         }
     }
-}
+

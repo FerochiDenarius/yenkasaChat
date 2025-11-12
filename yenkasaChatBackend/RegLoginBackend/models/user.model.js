@@ -45,12 +45,14 @@ const userSchema = new Schema({
   profileImage: { type: String, default: '' },
   bio: { type: String, default: '' },
 
-  // 🔑 Permissions reference (no inline roles)
-  permissions: {
-    type: mongoose.Schema.Types.ObjectId,
+
+  // ✅ Role as object reference to Permission schema
+  role: {
+    type: Schema.Types.ObjectId,
     ref: 'Permission',
-    default: null
+    default: null,
   },
+
 
   // 🕓 Suspension
   suspendedUntil: { type: Date, default: null },

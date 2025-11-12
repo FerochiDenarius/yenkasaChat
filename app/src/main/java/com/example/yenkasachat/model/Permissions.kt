@@ -13,8 +13,9 @@ data class Role(
     val description: String? = null,
 
     @SerializedName("permissions")
-    val permissions: List<Permission>? = emptyList()
+    val permissions: Permission? = null // 👈 not a list
 )
+
 
 // ✅ Permissions model (matches backend fields)
 data class Permission(

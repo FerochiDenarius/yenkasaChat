@@ -114,22 +114,25 @@ router.get('/me', authMiddleware, async (req, res) => {
 
   try {
     // ✅ Fetch user and populate community
-    const user = await User.findById(authenticatedUserId)
-      .select('-password -verificationCode -emailVerificationCode -refreshToken')
-      .populate([
-        {
-          path: 'community',
-          select: '_id name location membersCount',
-        },
-      ])
-      .lean();
+const user = await User.findById(authenticatedUserId)
+  .select('-password -verificationCode -emailVerificationCode -refreshToken')
+  .populate([
+    {
+      path: 'community',
+      select: '_id name location membersCount',
+    },
+    {
+      path: 'role',
+      select: 'name',
+    },
+  ])
+  .lean();
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
 
     // ✅ Normalize role name safely
-    const normalizedRole = Permission.normalize(user.role);
+// ✅ Extract role name safely (populated or fallback)
+const normalizedRole = Permission.normalize(user.role?.name || user.role || 'user');
+logger.info(`[${requestId}] Role resolved: ${normalizedRole}`);
 
     // ✅ Fetch permissions for this role
     let rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();

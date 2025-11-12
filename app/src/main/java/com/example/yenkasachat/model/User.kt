@@ -42,6 +42,9 @@ data class User(
     // ✅ Role is now an object
     @SerializedName("role")
     val role: Role? = null,
+    
+    @SerializedName("roleName")
+    val roleName: String?,
 
     @SerializedName("followers")
     val followers: List<String>? = emptyList(),

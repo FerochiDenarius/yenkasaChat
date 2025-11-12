@@ -180,22 +180,24 @@ router.post('/login', async (req, res) => {
     await user.save();
 
     // ✅ Return clean JSON with role details
-    res.json({
-      user: {
-        _id: user._id,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        phone: user.phoneNumber,
-        username: user.username,
-        location: user.location,
-        verified: user.verified,
-        playerId: user.playerId || null,
-        role: user.role?.role || 'user',                // 👈 readable role string
-        permissions: user.role || {},                   // 👈 full Permission doc
-      },
-      token: accessTokenValue,
-      refreshToken: refreshTokenValue,
-    });
+   res.json({
+  user: {
+    _id: user._id,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    phone: user.phoneNumber,
+    username: user.username,
+    location: user.location,
+    verified: user.verified,
+    playerId: user.playerId || null,
+    role: user.role || {},               // 👈 send full Permission object
+    // optional: send string separately if needed
+    roleName: user.role?.role || 'user',
+  },
+  token: accessTokenValue,
+  refreshToken: refreshTokenValue,
+});
+
 
   } catch (err) {
     console.error('❌ Login error:', err);

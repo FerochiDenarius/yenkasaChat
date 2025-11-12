@@ -1,4 +1,4 @@
-// models/permission.model.js
+// models/permissions.model.js
 
 const mongoose = require('mongoose');
 const { Schema } = mongoose;

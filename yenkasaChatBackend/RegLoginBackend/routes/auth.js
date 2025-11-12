@@ -150,7 +150,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 🔹 MIGRATION FIX: if user.role is a string or invalid, correct it on the fly
-    const Permission = require('../models/permission.model');
+    const Permission = require('../models/permissions.model');
 
     if (!user.role || typeof user.role === 'string') {
       const normalized = (user.role || 'user').toString().trim().toLowerCase().replace(/\s+/g, '_');

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 const User = require(path.join(__dirname, '../models/user.model.js'));
-const Permission = require(path.join(__dirname, '../models/permission.model.js'));
+const Permission = require(path.join(__dirname, '../models/permissions.model.js'));
 
 async function run() {
   try {

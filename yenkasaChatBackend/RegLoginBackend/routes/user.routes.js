@@ -109,23 +109,30 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 
   try {
-    // Fetch user
+    // ✅ Fetch user and populate role + community
     const user = await User.findById(authenticatedUserId)
       .select('-password -verificationCode -emailVerificationCode -refreshToken')
-      .populate({
-        path: 'community',
-        select: '_id name location membersCount',
-      })
+      .populate([
+        {
+          path: 'role',
+          select: 'role canPost canApprove canCreateCommunity canAssignRoles canRevoke canSuspend',
+        },
+        {
+          path: 'community',
+          select: '_id name location membersCount',
+        },
+      ])
       .lean();
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // ✅ Fetch permissions for the user's current role
-    const normalizedRole = Permission.normalize(user.role);
-    const rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();
+const normalizedRole = Permission.normalize(
+  typeof user.role === 'string' ? user.role : user.role?.role
+);
 
+    // ✅ Construct clean response object
     const userProfile = {
       _id: user._id,
       username: user.username,
@@ -154,7 +161,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
 
-      // ✅ Role and Permissions combined
+      // ✅ Merge normalized role & permissions
       role: {
         name: normalizedRole,
         permissions: rolePermissions
@@ -178,8 +185,8 @@ router.get('/me', authMiddleware, async (req, res) => {
     logger.info(`[${requestId}] GET /me - Done processing request.`);
   }
 });
-/**
- * @route   POST /api/users/toggle-follow/:targetUserId
+
+ /* @route   POST /api/users/toggle-follow/:targetUserId
  * @desc    Toggle follow/unfollow another user
  * @access  Private
  */

@@ -39,7 +39,7 @@ interface ApiService {
     ): Response<ResponseBody>
 
 
-    // ==================== USERS ====================
+    // ==================== USERS && USER Profile for AccountInfo====================
 
     @GET("users")
     fun getAllUsers(): Call<List<User>>
@@ -47,6 +47,7 @@ interface ApiService {
     @Multipart
     @POST("users/profile-picture")
     fun uploadProfilePicture(@Part image: MultipartBody.Part): Call<Map<String, Any>>
+
 
     @GET("users/me")
     fun getUserProfile(): Call<User>
@@ -378,6 +379,7 @@ interface ApiService {
 
     @PUT("profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
+
 
 
     // -----------------------------

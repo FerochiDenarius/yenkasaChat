@@ -18,8 +18,25 @@ const rankOrder = [
 // --------------------------------------------
 // Utility: Normalize Role String
 // --------------------------------------------
-const normalize = (role = '') =>
-  role.trim().toLowerCase().replace(/\s+/g, '_') || 'user';
+const normalize = (role = '') => {
+  if (!role) return 'user';
+
+  // Handle object reference (e.g., populated Permission doc)
+  if (typeof role === 'object') {
+    if (role.role) return String(role.role).trim().toLowerCase().replace(/\s+/g, '_');
+    if (role.name) return String(role.name).trim().toLowerCase().replace(/\s+/g, '_');
+    return 'user';
+  }
+
+  // Handle array (if multiple roles)
+  if (Array.isArray(role)) {
+    return normalize(role[0]);
+  }
+
+  // Default string normalization
+  return String(role).trim().toLowerCase().replace(/\s+/g, '_') || 'user';
+};
+
 
 // --------------------------------------------
 // Permission Schema

@@ -98,63 +98,102 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
  * @desc    Get logged-in user's full profile (including role + permissions)
  * @access  Private
  */
+
+
 router.get('/me', authMiddleware, async (req, res) => {
   const requestId = `req_get_me_${Date.now()}`;
-  const userId = req.user?._id || req.user?.id;
+  const authenticatedUserId = req.user?._id || req.user?.id;
+
+  logger.info(
+    `[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`
+  );
+
+  if (!authenticatedUserId) {
+    return res.status(401).json({ error: 'User authentication failed.' });
+  }
 
   try {
-    const user = await User.findById(userId)
+    // ✅ Fetch user and populate community
+    const user = await User.findById(authenticatedUserId)
       .select('-password -verificationCode -emailVerificationCode -refreshToken')
-      .populate({
-        path: 'community',
-        select: '_id name location membersCount',
-      })
-      .populate({
-        path: 'role',
-        select: 'role canPost canApprove canCreateCommunity canAssignRoles canRevoke canSuspend',
-      })
+      .populate([
+        {
+          path: 'community',
+          select: '_id name location membersCount',
+        },
+      ])
       .lean();
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // ✅ Normalize role safely
-    const normalizedRole = Permission.normalize(
-      typeof user.role === 'string' ? user.role : user.role?.role
-    );
+    // ✅ Normalize role name safely
+    const normalizedRole = Permission.normalize(user.role);
 
-    // ✅ Try to load the permissions from DB
-    const rolePermissions =
-      (await Permission.findOne({ role: normalizedRole }).lean()) || {};
+    // ✅ Fetch permissions for this role
+    let rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();
 
+    // Seed defaults if permissions missing (e.g., first run)
+    if (!rolePermissions) {
+      await Permission.seedDefaults();
+      rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();
+    }
+
+    // ✅ Construct clean response
     const userProfile = {
       _id: user._id,
       username: user.username,
       email: user.email || null,
+      phoneNumber: user.phoneNumber || null,
+      location: user.location || null,
       verified: user.verified || false,
       profileImage: user.profileImage || null,
+      bio: user.bio || '',
       coinsBalance: user.coinsBalance ?? 0,
-      community: user.community || null,
+      community: user.community
+        ? {
+            _id: user.community._id,
+            name: user.community.name,
+            location: user.community.location || null,
+            membersCount: user.community.membersCount || 0,
+          }
+        : null,
+      followersCount: user.followersCount ?? (user.followers?.length || 0),
+      followingCount: user.followingCount ?? (user.following?.length || 0),
+      walletId: user.walletId,
+      verificationPhase: user.verificationPhase,
+      verificationScore: user.verificationScore ?? 0,
+      online: user.online,
+      lastSeen: user.lastSeen,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+
+      // ✅ Include role + permissions
       role: {
         name: normalizedRole,
         permissions: {
-          canPost: rolePermissions.canPost || false,
-          canApprove: rolePermissions.canApprove || false,
-          canCreateCommunity: rolePermissions.canCreateCommunity || false,
-          canAssignRoles: rolePermissions.canAssignRoles || false,
-          canRevoke: rolePermissions.canRevoke || false,
-          canSuspend: rolePermissions.canSuspend || false,
+          canPost: rolePermissions?.canPost || false,
+          canApprove: rolePermissions?.canApprove || false,
+          canCreateCommunity: rolePermissions?.canCreateCommunity || false,
+          canAssignRoles: rolePermissions?.canAssignRoles || false,
+          canRevoke: rolePermissions?.canRevoke || false,
+          canSuspend: rolePermissions?.canSuspend || false,
         },
       },
     };
 
-    res.status(200).json(userProfile);
+    return res.status(200).json(userProfile);
   } catch (err) {
-    logger.error(`[${requestId}] ❌ Error fetching user profile: ${err.message}`);
-    res.status(500).json({ error: 'Failed to retrieve user profile' });
+    logger.error(
+      `[${requestId}] ❌ Error fetching user profile: ${err.message}`
+    );
+    return res.status(500).json({ error: 'Failed to retrieve user profile' });
+  } finally {
+    logger.info(`[${requestId}] GET /me - Done processing request.`);
   }
 });
+
 
 
  /* @route   POST /api/users/toggle-follow/:targetUserId

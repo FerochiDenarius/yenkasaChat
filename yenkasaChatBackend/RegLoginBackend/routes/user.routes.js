@@ -123,7 +123,7 @@ const user = await User.findById(authenticatedUserId)
     },
     {
       path: 'role',
-      select: 'role',
+      select: 'name permissions',
     },
   ])
   .lean();

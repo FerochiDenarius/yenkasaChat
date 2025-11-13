@@ -86,7 +86,7 @@ if (communityName && communityName.trim() !== "") {
   });
 }
 
-/* ✅ Ensure a community is selected */
+/* ✅ Ensure a community is selected *****/
 if (!communityName || communityName.trim() === "") {
   return res.status(400).json({ error: "Community selection is required to create a post." });
 }
@@ -96,7 +96,7 @@ if (!selectedCommunity) {
   return res.status(404).json({ error: "Selected community not found" });
 }
 
-/* ✅ Approval logic */
+/* ✅ Approval logic ******/
 const Permission = require('../models/permissions.model');
 const User = require('../models/user.model');
 

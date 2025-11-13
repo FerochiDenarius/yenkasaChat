@@ -99,12 +99,13 @@ router.get('/:communityId', async (req, res) => {
   }
 });
 
-// ✅ Join a community// ✅ Join a community (up to 3)
+// ✅ Join a community (max 2 allowed)
 router.post('/:communityId/join', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { communityId } = req.params;
 
+    // ✅ Find community
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
@@ -114,24 +115,32 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'This community is pending approval' });
     }
 
+    // ✅ Fetch user
     const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-    // Check if already a member
+    // ✅ Check if user already a member of this community
     if (user.joinedCommunities.includes(communityId)) {
       return res.status(400).json({ error: 'Already a member of this community' });
     }
 
-    // Enforce max 3 communities
-    if (user.joinedCommunities.length >= 3) {
-      return res.status(403).json({ error: 'You can only join up to 3 communities' });
+    // ✅ Enforce maximum 2 joined communities
+    const joinedCount = user.joinedCommunities.length;
+    if (joinedCount >= 2) {
+      return res.status(403).json({
+        error: 'You can only join up to 2 communities',
+        message: 'You have reached your limit of joined communities'
+      });
     }
 
-    // Add to joined list
+    // ✅ Add to user's joined list
     user.joinedCommunities.push(communityId);
-    user.community = communityId; // optional: set last joined as current
+    user.community = communityId; // optional: set this as current community
     await user.save();
 
-    // Add user to community
+    // ✅ Add user to community's member list
     if (!community.members) community.members = [];
     if (!community.members.includes(userId)) {
       community.members.push(userId);
@@ -155,6 +164,7 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to join community' });
   }
 });
+
 
 
 // ✅ Leave a community
@@ -239,10 +249,6 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
     });
 
     await community.save();
-
-    // -----------------------------
-    // Reward user for community creation
-    // -----------------------------
 // -----------------------------
 // Reward user for community creation
 // -----------------------------
@@ -259,56 +265,42 @@ user.coinsBalance = afterBalance;
 await user.save();
 
 const activityId = uuidv4();
+
 const transaction = await CoinTransaction.create({
-  ...
+  userId: user._id,
+  type: 'REWARD_CREATE_COMMUNITY',
+  amount: COMMUNITY_CREATION_REWARD,
+  activityId,
+  status: 'success',
+  relatedCommunityId: community._id,
+  beforeBalance,
+  afterBalance,
+  description: `Earned ${COMMUNITY_CREATION_REWARD} YKC for creating community "${community.displayName}"`
 });
 
-
-    res.status(201).json({
-      success: true,
-      message: 'Community created! Pending admin approval.',
-      community: {
-        id: community._id,
-        name: community.name,
-        displayName: community.displayName,
-        isApproved: community.isApproved
-      },
-      reward: {
-        coins: COMMUNITY_CREATION_REWARD,
-        transaction
-      },
-      note: 'Your community will be visible once approved by an admin'
-    });
-  } catch (err) {
-    console.error('❌ Failed to create community:', err);
-    res.status(500).json({ error: 'Failed to create community' });
-  }
+// ✅ Now safely respond
+res.status(201).json({
+  success: true,
+  message: 'Community created! Pending admin approval.',
+  community: {
+    id: community._id,
+    name: community.name,
+    displayName: community.displayName,
+    isApproved: community.isApproved
+  },
+  reward: {
+    coins: COMMUNITY_CREATION_REWARD,
+    transaction
+  },
+  note: 'Your community will be visible once approved by an admin'
 });
 
-
-// ✅ Get pending communities (ADMIN ONLY - add admin middleware later)
-router.get('/admin/pending', authMiddleware, async (req, res) => {
-  try {
-    // TODO: Add admin check middleware
-    // For now, any authenticated user can see (change this in production!)
-    
-    const pendingCommunities = await Community.find({ 
-      isApproved: false,
-      isActive: true 
-    })
-      .populate('createdBy', 'username email profileImage verified')
-      .sort({ createdAt: -1 })
-      .lean();
-    
-    res.json({
-      pendingCommunities,
-      count: pendingCommunities.length
-    });
-  } catch (err) {
-    console.error('❌ Failed to fetch pending communities:', err);
-    res.status(500).json({ error: 'Failed to retrieve pending communities' });
-  }
+} catch (err) {
+  console.error('❌ Failed to create community:', err);
+  res.status(500).json({ error: 'Failed to create community' });
+}
 });
+
 
 // ✅ Approve community (ADMIN ONLY)
 router.post('/:communityId/approve', authMiddleware, async (req, res) => {

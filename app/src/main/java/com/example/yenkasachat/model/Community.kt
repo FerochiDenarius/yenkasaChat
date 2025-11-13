@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class Community(
 
     @SerializedName("_id")
-    val id: String? = null,   // ✅ Made nullable to prevent hashCode() crash
+    val id: String? = null,   // ✅ Prevents null crash in sets/maps
 
     val name: String? = null,
     val displayName: String? = null,
@@ -30,12 +30,14 @@ data class Community(
     val pinnedPosts: List<String> = emptyList(),
 
     val createdAt: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+
+    // 🆕 Added field — helps split "Joined Communities" vs "Other Communities"
+    @SerializedName("isJoined")
+    val isJoined: Boolean = false
 ) {
-    // ✅ Prevents NullPointerException in sets or maps
     override fun hashCode(): Int = id?.hashCode() ?: 0
 
-    // ✅ Equality now based on id (safe for null)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Community) return false

@@ -827,6 +827,25 @@ object TokenManager {
         return transactions
     }
 
+    // === 🌐 COMMUNITY SELECTION HELPERS ===
+    fun saveSelectedCommunity(context: Context, communityId: String?, communityName: String?) {
+        try {
+            saveCommunityId(context, communityId)
+            saveCommunityName(context, communityName)
+            Log.i("TokenManager", "🏘️ Community selected: $communityName ($communityId)")
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error saving selected community", e)
+        }
+    }
+
+    fun getSelectedCommunityName(context: Context): String? {
+        return getCommunityName(context)
+    }
+
+    fun getSelectedCommunityId(context: Context): String? {
+        return getCommunityId(context)
+    }
+
     /**
      * Clear cached transactions
      */

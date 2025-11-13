@@ -36,6 +36,13 @@ class CommunitiesActivity : AppCompatActivity() {
     private val communities = mutableListOf<Community>()
     private lateinit var adapter: CommunityAdapter
     private var token: String? = null
+    private lateinit var textJoinedCommunitiesTitle: TextView
+    private lateinit var textLocalCommunitiesTitle: TextView
+    private lateinit var recyclerLocalCommunities: RecyclerView
+    private lateinit var textOtherJoinedCommunitiesTitle: TextView
+    private lateinit var recyclerOtherJoinedCommunities: RecyclerView
+    private lateinit var textAllCommunitiesTitle: TextView
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,7 +97,32 @@ class CommunitiesActivity : AppCompatActivity() {
         fabCreateCommunity = findViewById(R.id.fabCreateCommunity)
         progressBar = findViewById(R.id.progressBarCommunities)
         emptyView = findViewById(R.id.textEmptyCommunities)
+
+        // 🆕 Joined communities section
+        textJoinedCommunitiesTitle = findViewById(R.id.textJoinedCommunitiesTitle)
+        textLocalCommunitiesTitle = findViewById(R.id.textLocalCommunitiesTitle)
+        recyclerLocalCommunities = findViewById(R.id.recyclerLocalCommunities)
+        textOtherJoinedCommunitiesTitle = findViewById(R.id.textOtherJoinedCommunitiesTitle)
+        recyclerOtherJoinedCommunities = findViewById(R.id.recyclerOtherJoinedCommunities)
+        textAllCommunitiesTitle = findViewById(R.id.textAllCommunitiesTitle)
+
+        // Create button (top of page)
+        val btnCreateCommunity: Button = findViewById(R.id.btnCreateCommunity)
+        btnCreateCommunity.setOnClickListener {
+            val intent = Intent(this, CreateCommunityActivity::class.java)
+            startActivity(intent)
+        }
+
+// Floating Action Button (bottom corner)
+        val fabCreateCommunity: com.google.android.material.floatingactionbutton.FloatingActionButton =
+            findViewById(R.id.fabCreateCommunity)
+        fabCreateCommunity.setOnClickListener {
+            val intent = Intent(this, CreateCommunityActivity::class.java)
+            startActivity(intent)
+        }
+
     }
+
 
     private fun setupRecyclerView() {
         adapter = CommunityAdapter(communities) { community ->
@@ -129,11 +161,45 @@ class CommunitiesActivity : AppCompatActivity() {
                     response: Response<List<Community>>
                 ) {
                     showLoading(false)
+
                     if (response.isSuccessful && response.body() != null) {
+                        val allCommunities = response.body()!!
+
+                        // Separate local and other joined communities for clarity
+                        val joinedCommunities = allCommunities.filter { it.isActive && it.memberCount > 0 }
+                        val localCommunities = joinedCommunities.filter { !it.location.isNullOrEmpty() }
+                        val otherJoined = joinedCommunities.filter { it.location.isNullOrEmpty() }
+
+                        // 🧩 Local communities list
+                        if (localCommunities.isNotEmpty()) {
+                            textJoinedCommunitiesTitle.visibility = View.VISIBLE
+                            textLocalCommunitiesTitle.visibility = View.VISIBLE
+                            recyclerLocalCommunities.visibility = View.VISIBLE
+                            recyclerLocalCommunities.layoutManager = LinearLayoutManager(this@CommunitiesActivity)
+                            recyclerLocalCommunities.adapter = CommunityAdapter(localCommunities) { community ->
+                                showCommunityDialog(community)
+                            }
+                        }
+
+                        // 🧩 Other joined communities list
+                        if (otherJoined.isNotEmpty()) {
+                            textOtherJoinedCommunitiesTitle.visibility = View.VISIBLE
+                            recyclerOtherJoinedCommunities.visibility = View.VISIBLE
+                            recyclerOtherJoinedCommunities.layoutManager = LinearLayoutManager(this@CommunitiesActivity)
+                            recyclerOtherJoinedCommunities.adapter = CommunityAdapter(otherJoined) { community ->
+                                showCommunityDialog(community)
+                            }
+                        }
+
+                        // 🧩 All communities (default)
                         communities.clear()
-                        communities.addAll(response.body()!!)
+                        communities.addAll(allCommunities)
                         adapter.notifyDataSetChanged()
+                        textAllCommunitiesTitle.visibility = View.VISIBLE
+                        recyclerView.visibility = View.VISIBLE
+
                         emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
+
                     } else {
                         Toast.makeText(
                             this@CommunitiesActivity,
@@ -221,7 +287,6 @@ class CommunitiesActivity : AppCompatActivity() {
     private fun joinCommunity(community: Community) {
         progressBar.visibility = View.VISIBLE
 
-        // ✅ Safely handle nullable ID
         val communityId = community.id ?: return run {
             progressBar.visibility = View.GONE
             Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
@@ -234,9 +299,9 @@ class CommunitiesActivity : AppCompatActivity() {
                     response: Response<JoinCommunityResponse>
                 ) {
                     progressBar.visibility = View.GONE
+                    val body = response.body()
 
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        // ✅ Use safe display name
+                    if (response.isSuccessful && body?.success == true) {
                         val displayName = community.displayName ?: "Community"
 
                         Toast.makeText(
@@ -245,24 +310,40 @@ class CommunitiesActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // ✅ Save joined community locally
-                        getSharedPreferences("auth", Context.MODE_PRIVATE).edit()
-                            .putString("communityId", communityId)
-                            .putString("communityName", displayName)
-                            .apply()
+                        // ✅ Save joined community locally using TokenManager (simpler + cleaner)
+                        TokenManager.saveSelectedCommunity(
+                            context = this@CommunitiesActivity,
+                            communityId = community.id ?: "",
+                            communityName = displayName
+                        )
 
-                        // 🚫 You can’t start a Fragment using Intent
-                        // ✅ Correct: open FeedActivity (or MainActivity) instead
-                        val intent = Intent(this@CommunitiesActivity, MainActivity::class.java)
-                        intent.putExtra("openFragment", "feed")
+                        // ✅ Redirect to Feed tab in MainActivity
+                        val intent = Intent(this@CommunitiesActivity, MainActivity::class.java).apply {
+                            putExtra("openFragment", "feed")
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         startActivity(intent)
                         finish()
 
                     } else {
                         Toast.makeText(
                             this@CommunitiesActivity,
-                            response.body()?.message ?: "Failed to join",
+                            body?.message ?: "Failed to join community",
                             Toast.LENGTH_SHORT
+                        ).show()
+                    }
+ {
+                        // 🚨 Handle backend limits or duplicates
+                        val message = body?.message ?: when (response.code()) {
+                            400 -> "You can only join up to 3 communities."
+                            404 -> "Community not found."
+                            else -> "Failed to join community."
+                        }
+
+                        Toast.makeText(
+                            this@CommunitiesActivity,
+                            message,
+                            Toast.LENGTH_LONG
                         ).show()
                     }
                 }

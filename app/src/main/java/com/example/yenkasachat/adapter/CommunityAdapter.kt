@@ -17,35 +17,33 @@ class CommunityAdapter(
     private val onCommunityClick: (Community) -> Unit
 ) : RecyclerView.Adapter<CommunityAdapter.CommunityViewHolder>() {
 
-    // ✅ Add this callback property
+    // Optional callback for when user taps the "View" button
     var onCommunitySelected: ((Community) -> Unit)? = null
 
     inner class CommunityViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val communityIcon: ImageView = itemView.findViewById(R.id.imageCommunityIcon)
-        val communityName: TextView = itemView.findViewById(R.id.textCommunityName)
-        val communityLocation: TextView = itemView.findViewById(R.id.editCommunityLocation)
-        val memberCount: TextView = itemView.findViewById(R.id.textMemberCount)
-        val postCount: TextView = itemView.findViewById(R.id.textPostCount)
-        val categories: TextView = itemView.findViewById(R.id.editCategories)
-        val btnViewCommunity: Button = itemView.findViewById(R.id.btnViewCommunity) // ✅ link button
+        private val communityIcon: ImageView = itemView.findViewById(R.id.imageCommunityIcon)
+        private val communityName: TextView = itemView.findViewById(R.id.textCommunityName)
+        private val communityLocation: TextView = itemView.findViewById(R.id.editCommunityLocation)
+        private val memberCount: TextView = itemView.findViewById(R.id.textMemberCount)
+        private val postCount: TextView = itemView.findViewById(R.id.textPostCount)
+        private val categories: TextView = itemView.findViewById(R.id.editCategories)
+        private val btnViewCommunity: Button = itemView.findViewById(R.id.btnViewCommunity)
 
         fun bind(community: Community) {
+            // Basic info
             communityName.text = community.displayName
-
-            // Show location or "Interest-based"
-            communityLocation.text = if (community.location.isNullOrEmpty()) {
-                "Interest-based Community"
-            } else {
-                community.location
-            }
+            communityLocation.text =
+                if (community.location.isNullOrEmpty()) "Interest-based Community"
+                else community.location
 
             memberCount.text = "${community.memberCount} members"
             postCount.text = "${community.postCount} posts"
 
-            // Show categories
-            categories.text = community.categories.joinToString(" • ")
+            categories.text = if (community.categories.isNotEmpty())
+                community.categories.joinToString(" • ")
+            else "Uncategorized"
 
-            // Handle empty or null icon URLs safely
+            // Load image safely
             val imageUrl = when {
                 !community.icon.isNullOrEmpty() -> community.icon
                 !community.coverImage.isNullOrEmpty() -> community.coverImage
@@ -62,12 +60,10 @@ class CommunityAdapter(
                 )
                 .into(communityIcon)
 
-            // ✅ Entire card click
-            itemView.setOnClickListener {
-                onCommunityClick(community)
-            }
+            // Entire item click → open community feed
+            itemView.setOnClickListener { onCommunityClick(community) }
 
-            // ✅ View button click
+            // “View” button click → call secondary callback (dialog or join)
             btnViewCommunity.setOnClickListener {
                 onCommunitySelected?.invoke(community)
             }

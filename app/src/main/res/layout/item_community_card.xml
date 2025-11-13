@@ -22,8 +22,7 @@
             android:layout_gravity="center_horizontal"
             android:scaleType="centerCrop"
             android:src="@drawable/ic_community_placeholder"
-            android:contentDescription="Community Icon"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Large"/>
+            android:contentDescription="Community Icon" />
 
         <!-- Name -->
         <TextView
@@ -38,7 +37,7 @@
 
         <!-- Location -->
         <TextView
-            android:id="@+id/editCommunityLocation"
+            android:id="@+id/textCommunityLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Accra, Ghana"
@@ -48,7 +47,7 @@
 
         <!-- Category -->
         <TextView
-            android:id="@+id/editCategories"
+            android:id="@+id/textCommunityCategory"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
@@ -82,18 +81,38 @@
                 android:drawablePadding="6dp"/>
         </LinearLayout>
 
-        <!-- View Button -->
-        <Button
-            android:id="@+id/btnViewCommunity"
-            android:layout_width="wrap_content"
+        <!-- Buttons Row -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="12dp"
-            android:paddingHorizontal="24dp"
-            android:text="View"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:backgroundTint="?attr/colorPrimary"
-            android:elevation="2dp" />
+            android:layout_marginTop="12dp">
+
+            <!-- Join / Leave Button -->
+            <Button
+                android:id="@+id/btnJoinCommunity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="24dp"
+                android:text="Join"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:backgroundTint="?attr/colorPrimary"
+                android:elevation="2dp" />
+
+            <!-- View Button -->
+            <Button
+                android:id="@+id/btnViewCommunity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:paddingHorizontal="24dp"
+                android:text="View"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/teal_700"
+                android:elevation="2dp" />
+        </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

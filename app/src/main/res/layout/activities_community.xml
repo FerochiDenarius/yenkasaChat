@@ -11,80 +11,149 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
-            android:orientation="vertical"
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp">
+            android:fillViewport="true">
 
-            <!-- Search bar -->
-            <androidx.appcompat.widget.SearchView
-                android:id="@+id/searchViewCommunities"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:queryHint="Search communities..."
-                android:iconifiedByDefault="false"/>
-
-            <!-- Action buttons for create/update -->
             <LinearLayout
+                android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp">
+                android:padding="8dp">
 
-                <Button
-                    android:id="@+id/btnCreateCommunity"
+                <!-- Search bar -->
+                <androidx.appcompat.widget.SearchView
+                    android:id="@+id/searchViewCommunities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:queryHint="Search communities..."
+                    android:iconifiedByDefault="false"/>
+
+                <!-- Action buttons for create/update -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp">
+
+                    <Button
+                        android:id="@+id/btnCreateCommunity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Create"
+                        android:drawableStart="@drawable/ic_add"
+                        android:padding="8dp"/>
+
+                    <Button
+                        android:id="@+id/btnEditCommunity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Edit"
+                        android:drawableStart="@drawable/ic_edit"
+                        android:layout_marginStart="8dp"
+                        android:padding="8dp"/>
+                </LinearLayout>
+
+                <!-- Progress bar -->
+                <ProgressBar
+                    android:id="@+id/progressBarCommunities"
+                    style="?android:attr/progressBarStyleLarge"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="20dp"
+                    android:visibility="gone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <!-- Empty view -->
+                <TextView
+                    android:id="@+id/textEmptyCommunities"
+                    android:text="No communities found"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:layout_marginTop="20dp"
+                    android:visibility="gone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
+                <!-- Joined Communities Section -->
+                <TextView
+                    android:id="@+id/textJoinedCommunitiesTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Create"
-                    android:drawableStart="@drawable/ic_add"
-                    android:padding="8dp"/>
+                    android:text="Joined Communities"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone"/>
 
-                <Button
-                    android:id="@+id/btnEditCommunity"
+                <!-- Local Communities -->
+                <TextView
+                    android:id="@+id/textLocalCommunitiesTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Edit"
-                    android:drawableStart="@drawable/ic_edit"
-                    android:layout_marginStart="8dp"
-                    android:padding="8dp"/>
+                    android:text="Local Communities"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="4dp"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerLocalCommunities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone"/>
+
+                <TextView
+                    android:id="@+id/textOtherJoinedCommunitiesTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Other Joined Communities"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="4dp"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerOtherJoinedCommunities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone"/>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="12dp"
+                    android:background="?android:attr/listDivider"/>
+
+                <TextView
+                    android:id="@+id/textAllCommunitiesTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="All Communities"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerViewCommunities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:paddingBottom="16dp"
+                    android:nestedScrollingEnabled="false"/>
             </LinearLayout>
-
-            <!-- Progress bar -->
-            <ProgressBar
-                android:id="@+id/progressBarCommunities"
-                style="?android:attr/progressBarStyleLarge"
-                android:layout_gravity="center"
-                android:layout_marginTop="20dp"
-                android:visibility="gone"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-
-            <!-- Empty view -->
-            <TextView
-                android:id="@+id/textEmptyCommunities"
-                android:text="No communities found"
-                android:textSize="16sp"
-                android:textAlignment="center"
-                android:layout_marginTop="20dp"
-                android:visibility="gone"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <!-- RecyclerView -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerViewCommunities"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:paddingBottom="16dp"/>
-        </LinearLayout>
+        </ScrollView>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <!-- Floating button as secondary option to create community -->
+    <!-- Floating button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabCreateCommunity"
         android:layout_width="wrap_content"
@@ -93,5 +162,5 @@
         app:srcCompat="@drawable/ic_add"
         android:contentDescription="Create community"
         app:layout_anchorGravity="bottom|end"
-        app:layout_anchor="@id/recyclerViewCommunities"/>
+        app:layout_anchor="@id/swipeRefreshCommunities"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

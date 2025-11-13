@@ -21,7 +21,7 @@ console.log("routes/auth.js - Token secrets check passed");
 const ACCESS_EXPIRES_IN = '120d';
 const REFRESH_EXPIRES_IN = '120d';
 
-// ✅ REGISTER (with mandatory community join)
+// ✅ REGISTER (auto-join 1 local community)
 router.post('/register', async (req, res) => {
   console.log("✅✅✅ /api/auth/register - ROUTE HANDLER REACHED ✅✅✅");
   let { email, phoneNumber, username, location, password, communityId } = req.body;
@@ -33,16 +33,27 @@ router.post('/register', async (req, res) => {
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
+    // ✅ Validate inputs
     if (!username || !location || !password || (!email && !phoneNumber) || !communityId) {
       return res.status(400).json({ message: 'Missing required fields (including communityId)' });
     }
 
-    // ✅ Check community validity
+    // ✅ Validate community
     const community = await Community.findById(communityId);
-    if (!community) return res.status(404).json({ message: 'Community not found' });
-    if (!community.isApproved) return res.status(403).json({ message: 'Community not approved' });
+    if (!community) {
+      return res.status(404).json({ message: 'Community not found' });
+    }
 
-    // ✅ Check for duplicates
+    if (!community.isApproved) {
+      return res.status(403).json({ message: 'Community not approved yet' });
+    }
+
+    // (Optional) ✅ If you have a `type` field (e.g. "local" | "interest")
+    if (community.type && community.type.toLowerCase() !== "local") {
+      return res.status(403).json({ message: 'You can only join a local community at registration' });
+    }
+
+    // ✅ Check for existing user duplicates
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
@@ -54,27 +65,28 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'User already exists' });
     }
 
-    // ✅ Create user
+    // ✅ Create new user
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       username,
       location,
       password: hashedPassword,
       joinedCommunities: [communityId], // auto-join local community
+      community: communityId,           // set as current
       ...(email && { email }),
       ...(phoneNumber && { phoneNumber }),
     });
 
     await newUser.save();
 
-    // ✅ Add user to community
+    // ✅ Add user to community members
     if (!community.members.includes(newUser._id)) {
       community.members.push(newUser._id);
       await community.incrementMemberCount();
       await community.save();
     }
 
-    // ✅ Generate tokens
+    // ✅ Generate JWT tokens
     const accessTokenValue = jwt.sign(
       { userId: newUser._id },
       process.env.ACCESS_TOKEN_SECRET,
@@ -90,7 +102,10 @@ router.post('/register', async (req, res) => {
     newUser.refreshToken = refreshTokenValue;
     await newUser.save();
 
+    // ✅ Response
     res.status(201).json({
+      success: true,
+      message: 'Registration successful! You have joined your local community.',
       user: {
         _id: newUser._id,
         email: newUser.email,
@@ -107,7 +122,7 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     console.error('❌ Register error:', err.message);
     if (err.code === 11000) {
-      return res.status(409).json({ message: 'Duplicate entry detected (e.g., email or username already exists)' });
+      return res.status(409).json({ message: 'Duplicate entry detected (email, phone or username already exists)' });
     }
     res.status(500).json({ message: 'Server error during registration' });
   }

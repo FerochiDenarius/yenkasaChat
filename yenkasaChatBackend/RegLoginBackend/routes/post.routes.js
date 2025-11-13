@@ -7,6 +7,7 @@ const User = require('../models/user.model');
 const Community = require('../models/community.model');
 const upload = require("../utils/upload");
 const authMiddleware = require('../middleware/auth');
+const Permission = require('../models/permissions.model');
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -96,9 +97,7 @@ if (!selectedCommunity) {
   return res.status(404).json({ error: "Selected community not found" });
 }
 
-/* ✅ Approval logic ******/
-const Permission = require('../models/permissions.model');
-const User = require('../models/user.model');
+
 
 // ...
 

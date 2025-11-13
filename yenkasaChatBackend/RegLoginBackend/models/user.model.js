@@ -29,7 +29,7 @@ const userSchema = new Schema({
     required: true
   },
 
-  // 🌍 Optional location + community (primary)
+  // 🌍 Optional location + primary community
   location: { type: String, default: '' },
   community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', default: null },
 
@@ -45,14 +45,12 @@ const userSchema = new Schema({
   profileImage: { type: String, default: '' },
   bio: { type: String, default: '' },
 
-
   // ✅ Role as object reference to Permission schema
   role: {
     type: Schema.Types.ObjectId,
     ref: 'Permission',
     default: null,
   },
-
 
   // 🕓 Suspension
   suspendedUntil: { type: Date, default: null },
@@ -74,6 +72,7 @@ const userSchema = new Schema({
       `YKC-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
   },
 
+  // 🧾 Verification & growth
   verificationPhase: {
     type: String,
     enum: ['promotion', 'standard', 'growth'],
@@ -106,10 +105,26 @@ const userSchema = new Schema({
 
 }, { timestamps: true });
 
-// ✅ Helper: enforce join limit
+
+// 🧩 Helper Methods
+
+// Get the user's local (primary) community
+userSchema.methods.localCommunityId = function() {
+  return this.community;
+};
+
+// Get other joined communities (excluding the primary one)
+userSchema.methods.additionalCommunities = function() {
+  return this.joinedCommunities.filter(
+    c => c.toString() !== this.community?.toString()
+  );
+};
+
+// Check if the user can join more communities (max 3 total)
 userSchema.methods.canJoinMoreCommunities = function() {
   return this.joinedCommunities.length < 3;
 };
+
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

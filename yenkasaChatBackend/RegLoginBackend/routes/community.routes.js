@@ -9,7 +9,6 @@ const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
 const Permission = require('../models/permissions.model');
 const rewardService = require('../services/reward.service');
-const { REWARDS } = require('../config/reward.config');
 
 
 // Reward configuration

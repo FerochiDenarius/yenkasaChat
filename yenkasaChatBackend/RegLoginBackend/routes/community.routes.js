@@ -7,6 +7,10 @@ const authMiddleware = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
+const Permission = require('../models/permissions.model');
+const rewardService = require('../services/reward.service');
+const { REWARDS } = require('../config/reward.config');
+
 
 // Reward configuration
 const COMMUNITY_CREATION_REWARD = 100; // YKC
@@ -32,7 +36,7 @@ const requireVerified = (req, res, next) => {
   next();
 };
 
-// ✅ Get all communities (filter depends on user role)
+// ✅ Get all communities 
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const { search, sort = 'memberCount', order = 'desc' } = req.query;
@@ -42,11 +46,16 @@ router.get('/', authMiddleware, async (req, res) => {
 
     let query = { isActive: true };
 
-    /**  ✅ If not admin/developer, only show approved
-    if (!user || !['admin', 'developer'].includes(user.role)) {
-      query.isApproved = true;
-    }
-*/
+ if (user) {
+  const normalizedRole = Permission.normalize(user.role);
+  const privilegedRoles = ["admin", "moderator", "junior_developer", "senior_developer"];
+  if (!privilegedRoles.includes(normalizedRole)) {
+    query.isApproved = true; // regular users only see approved
+  }
+} else {
+  query.isApproved = true; // unauthenticated users
+}
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -234,39 +243,26 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
     // -----------------------------
     // Reward user for community creation
     // -----------------------------
-    await ensureSupply();
-    const supply = await CoinSupply.findOneAndUpdate(
-      { _id: "YENKASA_SUPPLY", totalMinted: { $lte: 100_000_000 - COMMUNITY_CREATION_REWARD } },
-      { $inc: { totalMinted: COMMUNITY_CREATION_REWARD } },
-      { new: true, upsert: true }
-    );
+// -----------------------------
+// Reward user for community creation
+// -----------------------------
+await ensureSupply();
+const supply = await CoinSupply.findOneAndUpdate(
+  { _id: "YENKASA_SUPPLY", totalMinted: { $lte: 100_000_000 - COMMUNITY_CREATION_REWARD } },
+  { $inc: { totalMinted: COMMUNITY_CREATION_REWARD } },
+  { new: true, upsert: true }
+);
 
-    const beforeBalance = user.coinsBalance || 0;
-    const afterBalance = beforeBalance + COMMUNITY_CREATION_REWARD;
-    user.coinsBalance = afterBalance;
-    await user.save();
+const beforeBalance = user.coinsBalance || 0;
+const afterBalance = beforeBalance + COMMUNITY_CREATION_REWARD;
+user.coinsBalance = afterBalance;
+await user.save();
 
-    const activityId = uuidv4();
-    const transaction = await CoinTransaction.create({
-      transactionId: uuidv4(),
-      activityId,
-      fromUserId: null, // system
-      toUserId: user._id,
-      fromUsername: 'System',
-      toUsername: user.username,
-      fromWalletId: null,
-      toWalletId: user.walletId,
-      amount: COMMUNITY_CREATION_REWARD,
-      type: 'REWARD_CREATE_COMMUNITY',
-      description: `Reward for creating community ${community.displayName}`,
-      fromUserBalanceBefore: null,
-      fromUserBalanceAfter: null,
-      toUserBalanceBefore: beforeBalance,
-      toUserBalanceAfter: afterBalance,
-      status: 'completed',
-      referenceModel: 'Community',
-      referenceId: community._id
-    });
+const activityId = uuidv4();
+const transaction = await CoinTransaction.create({
+  ...
+});
+
 
     res.status(201).json({
       success: true,

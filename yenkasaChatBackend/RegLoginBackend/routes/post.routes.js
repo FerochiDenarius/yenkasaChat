@@ -31,9 +31,10 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
       postType
     } = req.body;
 
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+const userId = req.user.userId || req.user.id;
+const user = await User.findById(userId).populate('role');
+if (!user) return res.status(404).json({ error: 'User not found' });
+
 
     // Initialize post fields
     let imageUrl = '';
@@ -96,9 +97,17 @@ if (!selectedCommunity) {
 }
 
 /* ✅ Approval logic */
-const approvers = ["admin", "moderator", "developer"];
-const isPrivilegedUser = approvers.includes(user.role?.toLowerCase());
+const Permission = require('../models/permissions.model');
+const User = require('../models/user.model');
+
+// ...
+
+// Normalize the role and check permissions
+const normalizedRole = Permission.normalize(user.role);
+const isPrivilegedUser = Permission.canApprove(normalizedRole);
 const postStatus = isPrivilegedUser ? "approved" : "pending";
+
+
 
 /* ✅ Create post */
 const post = new Post({
@@ -262,10 +271,18 @@ router.get('/pending', authMiddleware, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const approvers = ["admin", "moderator", "developer"];
-    if (!approvers.includes(user.role?.toLowerCase())) {
-      return res.status(403).json({ error: 'Not authorized to approve posts' });
-    }
+// Normalize the user's role properly
+const normalizedRole = Permission.normalize(user.role);
+
+// Define which roles can approve
+const approvers = ["admin", "moderator", "junior_developer", "senior_developer"];
+
+// Check if user is allowed to approve
+if (!approvers.includes(normalizedRole)) {
+  return res.status(403).json({ error: 'Not authorized to approve posts' });
+}
+
+    
 
     const pendingPosts = await Post.find({ status: "pending" })
       .populate('userId', 'username profileImage verified')

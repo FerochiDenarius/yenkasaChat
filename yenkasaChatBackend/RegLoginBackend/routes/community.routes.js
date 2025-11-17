@@ -53,13 +53,19 @@ router.get('/', async (req, res) => {
 
     const sortOrder = order === 'asc' ? 1 : -1;
     const sortObj = { [sort]: sortOrder };
-    
-const communities = await Community.find(query)
-  .sort(sortObj)
-  .select('-moderators -rules')
-  .lean({ getters: true, virtuals: true });
 
+    let communities = await Community.find(query)
+      .sort(sortObj)
+      .select('-moderators -rules')
+      .lean();
 
+    // ---------------------------------------------------------
+    // ✅ FIX: Recalculate memberCount for each community
+    // ---------------------------------------------------------
+    communities = communities.map(c => ({
+      ...c,
+      memberCount: Array.isArray(c.members) ? c.members.length : 0
+    }));
 
     res.status(200).json(communities);
   } catch (err) {
@@ -67,8 +73,6 @@ const communities = await Community.find(query)
     res.status(500).json({ error: 'Failed to retrieve communities' });
   }
 });
-
-
 
 // ✅ Get single community details
 router.get('/:communityId', async (req, res) => {

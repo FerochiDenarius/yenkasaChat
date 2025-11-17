@@ -93,13 +93,13 @@ router.get('/:communityId', async (req, res) => {
   }
 });
 
-// ✅ Join a community (max 2 allowed)
+// JOIN COMMUNITY (Max 2)
 router.post('/:communityId/join', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { communityId } = req.params;
 
-    // Find community
+    // Fetch community
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
@@ -109,48 +109,39 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'This community is pending approval' });
     }
 
-    // Find user
+    // Fetch user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Already a member?
+    // Already joined?
     if (user.joinedCommunities.includes(communityId)) {
       return res.status(400).json({ error: 'Already a member of this community' });
     }
 
-    // Max 2 communities
+    // Limit: 2 communities
     if (user.joinedCommunities.length >= 2) {
       return res.status(403).json({
         error: 'You can only join up to 2 communities',
-        message: 'You have reached your limit of joined communities'
+        message: 'You have reached your limit'
       });
     }
 
-    // ---------------------------
-    // 🚀 UPDATE USER
-    // ---------------------------
+    // ---- UPDATE USER ----
     user.joinedCommunities.push(communityId);
     user.community = communityId;
     await user.save();
 
-    // ---------------------------
-    // 🚀 UPDATE COMMUNITY
-    // ---------------------------
+    // ---- UPDATE COMMUNITY ----
     if (!community.members.includes(userId)) {
-      community.members.push(userId);                      // Add user to array
-      community.memberCount = (community.memberCount || 0) + 1; // Increase count
-
-      community.markModified('members'); // ⭐ Make sure Mongo tracks this array
-
-      await community.save(); // Save ONCE
+      community.members.push(userId);
+      community.memberCount = community.members.length;
+      community.markModified('members');
+      await community.save();
     }
 
-    // ---------------------------
-    // 🚀 RESPONSE
-    // ---------------------------
-    res.json({
+    return res.json({
       success: true,
       message: `Joined ${community.displayName} successfully`,
       community: {
@@ -168,6 +159,7 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
   }
 });
 
+// LEAVE COMMUNITY
 router.post('/:id/leave', authMiddleware, async (req, res) => {
   try {
     const communityId = req.params.id;
@@ -178,20 +170,38 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Community not found' });
     }
 
-    const isMember = community.members.includes(userId);
-    if (!isMember) {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Not a member?
+    if (!community.members.includes(userId)) {
       return res.status(400).json({ error: 'You are not a member of this community' });
     }
 
+    // ---- UPDATE COMMUNITY ----
     community.members.pull(userId);
     community.memberCount = community.members.length;
     await community.save();
 
-    res.status(200).json({
+    // ---- UPDATE USER ----
+    user.joinedCommunities = user.joinedCommunities.filter(
+      id => id.toString() !== communityId
+    );
+
+    if (user.community?.toString() === communityId) {
+      user.community = null; // Remove primary community
+    }
+
+    await user.save();
+
+    return res.json({
       success: true,
       message: 'Left community successfully',
       communityId,
-      memberCount: community.memberCount
+      memberCount: community.memberCount,
+      joinedCommunities: user.joinedCommunities
     });
 
   } catch (err) {

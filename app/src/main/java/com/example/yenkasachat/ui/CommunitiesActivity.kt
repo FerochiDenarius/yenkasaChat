@@ -446,79 +446,75 @@ class CommunitiesActivity : AppCompatActivity() {
 
 
     private fun joinCommunity(community: Community) {
-        Log.d("JOIN_COMMUNITY", "→ joinCommunity called for ${community.displayName} (ID=${community.id})")
-
-        progressBar.visibility = View.VISIBLE
-
         val communityId = community.id
-        if (communityId == null) {
-            Log.e("JOIN_COMMUNITY", "❌ Community ID is null")
-            progressBar.visibility = View.GONE
+
+        if (communityId.isNullOrEmpty()) {
+            Log.e("JOIN_COMMUNITY", "❌ ERROR: community.id is NULL")
             Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
             return
         }
 
-        Log.d("JOIN_COMMUNITY", "→ Sending join request for ID=$communityId")
+        Log.d("JOIN_COMMUNITY", "🔵 Joining community: ${community.displayName}  (ID=$communityId)")
 
-        ApiClient.apiService.joinCommunity("Bearer $token", communityId)
+        progressBar.visibility = View.VISIBLE
+
+        ApiClient.apiService
+            .joinCommunity("Bearer $token", communityId)
             .enqueue(object : Callback<JoinCommunityResponse> {
+
                 override fun onResponse(
                     call: Call<JoinCommunityResponse>,
                     response: Response<JoinCommunityResponse>
                 ) {
                     progressBar.visibility = View.GONE
-                    Log.d("JOIN_COMMUNITY", "→ Response code: ${response.code()}")
 
-                    val body = response.body()
+                    Log.d("JOIN_COMMUNITY", "🔵 Response Code: ${response.code()}")
 
-                    if (response.isSuccessful && body?.success == true) {
-                        Log.d("JOIN_COMMUNITY", "✔ Joined successfully: ${body.message}")
+                    val result = response.body()
 
-                        val displayName = community.displayName ?: "Community"
+                    when {
+                        response.isSuccessful && result?.success == true -> {
+                            Log.d("JOIN_COMMUNITY", "✔ SUCCESS: ${result.message}")
 
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            "Joined $displayName!",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                            Toast.makeText(
+                                this@CommunitiesActivity,
+                                "Joined ${community.displayName ?: "community"}!",
+                                Toast.LENGTH_SHORT
+                            ).show()
 
-                        // Save locally
-                        TokenManager.saveSelectedCommunity(
-                            context = this@CommunitiesActivity,
-                            communityId = communityId,
-                            communityName = displayName
-                        )
+                            // Save locally
+                            TokenManager.saveSelectedCommunity(
+                                context = this@CommunitiesActivity,
+                                communityId = communityId,
+                                communityName = community.displayName ?: ""
+                            )
 
-                        Log.d("JOIN_COMMUNITY", "→ Saved selected community in TokenManager")
-
-                        // Reload joined communities to show the newly joined one
-                        loadJoinedCommunities()
-
-                        // Also reload all communities to get updated member counts
-                        loadCommunities()
-
-                    } else {
-                        val message = body?.message ?: when (response.code()) {
-                            403 -> "You can only join 2 more communities."
-                            404 -> "Community not found."
-                            else -> "Failed to join community."
+                            // Reload lists
+                            loadJoinedCommunities()
+                            loadCommunities()
                         }
 
+                        response.code() == 404 -> {
+                            Log.e("JOIN_COMMUNITY", "❌ ERROR: Community not found")
+                            Toast.makeText(this@CommunitiesActivity, "Community not found.", Toast.LENGTH_LONG).show()
+                        }
 
-                        Log.e("JOIN_COMMUNITY", "❌ Join failed: $message")
-                        Toast.makeText(this@CommunitiesActivity, message, Toast.LENGTH_LONG).show()
+                        response.code() == 403 -> {
+                            Log.e("JOIN_COMMUNITY", "❌ ERROR: Join limit reached")
+                            Toast.makeText(this@CommunitiesActivity, "You can only join 2 more communities.", Toast.LENGTH_LONG).show()
+                        }
+
+                        else -> {
+                            Log.e("JOIN_COMMUNITY", "❌ ERROR: Failed to join")
+                            Toast.makeText(this@CommunitiesActivity, "Failed to join community.", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
 
                 override fun onFailure(call: Call<JoinCommunityResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
-                    Log.e("JOIN_COMMUNITY", "❌ Network error: ${t.message}", t)
-
-                    Toast.makeText(
-                        this@CommunitiesActivity,
-                        "Connection error. Try again.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Log.e("JOIN_COMMUNITY", "❌ NETWORK ERROR: ${t.message}", t)
+                    Toast.makeText(this@CommunitiesActivity, "Connection error. Try again.", Toast.LENGTH_SHORT).show()
                 }
             })
     }

@@ -396,7 +396,7 @@ interface ApiService {
         @Query("sort") sort: String? = "memberCount",
         @Query("order") order: String? = "desc"
     ): Call<List<Community>>
-    
+
 
     // ✅ Create a new community
     @POST("communities")

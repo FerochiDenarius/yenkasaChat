@@ -423,17 +423,19 @@ interface ApiService {
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
 
+
     // In your ApiService interface, add this method
     @GET("communities/user/joined-communities")
     fun getJoinedCommunities(
         @Header("Authorization") token: String
     ): Call<JoinedCommunitiesResponse>
 
-    @POST("communities/{id}/join")
+    @POST("communities/{communityId}/join")
     fun joinCommunity(
         @Header("Authorization") token: String,
-        @Path("id") communityId: String
+        @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
+
 
 
     // ==================== COINS ====================

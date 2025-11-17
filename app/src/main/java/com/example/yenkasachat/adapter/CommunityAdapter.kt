@@ -52,30 +52,21 @@ class CommunityAdapter(
                 community.categories.joinToString(" • ")
             else "Uncategorized"
 
-            Log.d("BUTTON_DEBUG", "Community: ${community.name}, ID: ${community.id}, isUserMember: ${community.isUserMember()}")
-
-            if (community.isUserMember()) {
-                btnJoinCommunity.visibility = View.GONE
-                btnLeaveCommunity.visibility = View.VISIBLE
-                btnViewCommunity.visibility = View.VISIBLE
-                Log.d("BUTTON_DEBUG", "Showing LEAVE button for ${community.name}")
-            } else {
-                btnJoinCommunity.visibility = View.VISIBLE
-                btnLeaveCommunity.visibility = View.GONE
-                btnViewCommunity.visibility = View.VISIBLE
-                Log.d("BUTTON_DEBUG", "Showing JOIN button for ${community.name}")
-            }
+            // Make leave button always visible
+            btnLeaveCommunity.visibility = View.VISIBLE
+            btnJoinCommunity.visibility = View.VISIBLE
+            btnViewCommunity.visibility = View.VISIBLE
 
             btnJoinCommunity.setOnClickListener {
                 onJoinCommunity?.invoke(community)
             }
 
             btnLeaveCommunity.setOnClickListener {
-                onLeaveCommunity?.invoke(community)  // This should trigger leave
+                onLeaveCommunity?.invoke(community)
             }
 
             btnViewCommunity.setOnClickListener {
-                onViewCommunity?.invoke(community)  // This should trigger view
+                onViewCommunity?.invoke(community)
             }
 
             // Load image safely

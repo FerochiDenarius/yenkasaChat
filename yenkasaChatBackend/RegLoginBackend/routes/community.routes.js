@@ -99,7 +99,7 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const { communityId } = req.params;
 
-    // ✅ Find community
+    // Find community
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
@@ -109,39 +109,47 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'This community is pending approval' });
     }
 
-    // ✅ Fetch user
+    // Find user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // ✅ Check if user already a member of this community
+    // Already a member?
     if (user.joinedCommunities.includes(communityId)) {
       return res.status(400).json({ error: 'Already a member of this community' });
     }
 
-    // ✅ Enforce maximum 2 joined communities
-    const joinedCount = user.joinedCommunities.length;
-    if (joinedCount >= 2) {
+    // Max 2 communities
+    if (user.joinedCommunities.length >= 2) {
       return res.status(403).json({
         error: 'You can only join up to 2 communities',
         message: 'You have reached your limit of joined communities'
       });
     }
 
-    // ✅ Add to user's joined list
+    // ---------------------------
+    // 🚀 UPDATE USER
+    // ---------------------------
     user.joinedCommunities.push(communityId);
-    user.community = communityId; // optional: set this as current community
+    user.community = communityId;
     await user.save();
 
-    // ✅ Add user to community's member list
-    if (!community.members) community.members = [];
+    // ---------------------------
+    // 🚀 UPDATE COMMUNITY
+    // ---------------------------
     if (!community.members.includes(userId)) {
-      community.members.push(userId);
-      await community.incrementMemberCount();
-      await community.save();
+      community.members.push(userId);                      // Add user to array
+      community.memberCount = (community.memberCount || 0) + 1; // Increase count
+
+      community.markModified('members'); // ⭐ Make sure Mongo tracks this array
+
+      await community.save(); // Save ONCE
     }
 
+    // ---------------------------
+    // 🚀 RESPONSE
+    // ---------------------------
     res.json({
       success: true,
       message: `Joined ${community.displayName} successfully`,
@@ -153,60 +161,12 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       },
       joinedCommunities: user.joinedCommunities
     });
+
   } catch (err) {
     console.error('❌ Failed to join community:', err);
     res.status(500).json({ error: 'Failed to join community' });
   }
 });
-
-
-
-// ✅ Leave a community
-router.post('/:communityId/leave', authMiddleware, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { communityId } = req.params;
-
-    const user = await User.findById(userId);
-
-    // Ensure user is in this community
-    if (!user.joinedCommunities.includes(communityId)) {
-      return res.status(400).json({ error: 'Not a member of this community' });
-    }
-
-    // Remove from joined list
-    user.joinedCommunities = user.joinedCommunities.filter(
-      id => id.toString() !== communityId
-    );
-
-    // If the user’s current community is this one, reset it
-    if (user.community && user.community.toString() === communityId) {
-      user.community = null;
-    }
-
-    await user.save();
-
-    // Update community stats
-    const community = await Community.findById(communityId);
-    if (community) {
-      if (community.members) {
-        community.members = community.members.filter(id => id.toString() !== userId);
-      }
-      await community.decrementMemberCount();
-      await community.save();
-    }
-
-    res.json({
-      success: true,
-      message: 'Successfully left community',
-      joinedCommunities: user.joinedCommunities
-    });
-  } catch (err) {
-    console.error('❌ Failed to leave community:', err);
-    res.status(500).json({ error: 'Failed to leave community' });
-  }
-});
-
 
 
 

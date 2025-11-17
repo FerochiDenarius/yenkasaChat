@@ -53,11 +53,13 @@ router.get('/', async (req, res) => {
 
     const sortOrder = order === 'asc' ? 1 : -1;
     const sortObj = { [sort]: sortOrder };
+    
+const communities = await Community.find(query)
+  .sort(sortObj)
+  .select('-moderators -rules')
+  .lean({ getters: true, virtuals: true });
 
-    const communities = await Community.find(query)
-      .sort(sortObj)
-      .select('-moderators -rules')
-      .lean();
+
 
     res.status(200).json(communities);
   } catch (err) {

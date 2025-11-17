@@ -497,10 +497,11 @@ class CommunitiesActivity : AppCompatActivity() {
 
                     } else {
                         val message = body?.message ?: when (response.code()) {
-                            400 -> "You can only join up to 3 communities."
+                            403 -> "You can only join 2 more communities."
                             404 -> "Community not found."
                             else -> "Failed to join community."
                         }
+
 
                         Log.e("JOIN_COMMUNITY", "❌ Join failed: $message")
                         Toast.makeText(this@CommunitiesActivity, message, Toast.LENGTH_LONG).show()

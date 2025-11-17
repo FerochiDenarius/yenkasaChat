@@ -290,8 +290,6 @@ async function seedCommunities() {
     });
     console.log('✅ Connected to MongoDB');
 
-    console.log('🗑️  Clearing existing communities...');
-    await Community.deleteMany({});
 
     console.log('🌱 Seeding Ghana communities...');
     const created = await Community.insertMany(communities);

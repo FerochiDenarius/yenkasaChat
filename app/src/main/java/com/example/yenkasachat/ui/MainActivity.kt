@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
 
         // ✅ Load user info for permissions
         loadUserProfile()
+        handleIntentExtras()
 
         // ✅ Load FeedFragment into the container
         if (savedInstanceState == null) {
@@ -183,5 +184,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-    }
+    private fun handleIntentExtras() {
+        val communityId = intent.getStringExtra("communityId")
+        val communityName = intent.getStringExtra("communityName")
+        val openFragment = intent.getStringExtra("openFragment")
+
+        if (openFragment == "feed" && communityId != null) {
+            // You can pass these to your FeedFragment
+            val bundle = Bundle().apply {
+                putString("communityId", communityId)
+                putString("communityName", communityName)
+            }
+
+            val feedFragment = FeedFragment().apply {
+                arguments = bundle
+            }
+
+            supportFragmentManager.commit {
+                replace(R.id.feedContainer, feedFragment)
+            }
+        }
+    }}
 

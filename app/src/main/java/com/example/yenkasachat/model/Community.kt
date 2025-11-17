@@ -3,7 +3,6 @@ package com.example.yenkasachat.model
 import com.google.gson.annotations.SerializedName
 
 data class Community(
-
     @SerializedName("_id")
     val id: String? = null,   // ✅ Prevents null crash in sets/maps
 
@@ -32,9 +31,32 @@ data class Community(
     val createdAt: String? = null,
     val updatedAt: String? = null,
 
-    // 🆕 Added field — helps split "Joined Communities" vs "Other Communities"
+    // 🆕 Membership status fields
     @SerializedName("isJoined")
-    val isJoined: Boolean = false
+    val isJoined: Boolean = false,
+
+    @SerializedName("isMember")
+    val isMember: Boolean = false,
+
+    @SerializedName("joinedAt")
+    val joinedAt: String? = null,
+
+    @SerializedName("membershipStatus")
+    val membershipStatus: String? = null, // "member", "moderator", "admin", "pending", etc.
+
+    // 🆕 Community type classification
+    @SerializedName("communityType")
+    val communityType: String? = null, // "local", "interest", "global", etc.
+
+    @SerializedName("distance")
+    val distance: Double? = null, // Distance from user for local communities
+
+    // 🆕 User-specific permissions
+    @SerializedName("canPost")
+    val canPost: Boolean = false,
+
+    @SerializedName("canModerate")
+    val canModerate: Boolean = false
 ) {
     override fun hashCode(): Int = id?.hashCode() ?: 0
 
@@ -42,5 +64,15 @@ data class Community(
         if (this === other) return true
         if (other !is Community) return false
         return this.id == other.id
+    }
+
+    // 🆕 Helper function to check if user is a member (using multiple possible indicators)
+    fun isUserMember(): Boolean {
+        return isJoined || isMember || membershipStatus in listOf("member", "moderator", "admin")
+    }
+
+    // 🆕 Helper function to check if community is local
+    fun isLocalCommunity(): Boolean {
+        return communityType == "local" || (location != null && distance != null && distance < 50.0)
     }
 }

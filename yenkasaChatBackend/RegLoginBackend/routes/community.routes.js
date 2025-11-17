@@ -240,31 +240,13 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
 // -----------------------------
 // Reward user for community creation
 // -----------------------------
-await ensureSupply();
-const supply = await CoinSupply.findOneAndUpdate(
-  { _id: "YENKASA_SUPPLY", totalMinted: { $lte: 100_000_000 - COMMUNITY_CREATION_REWARD } },
-  { $inc: { totalMinted: COMMUNITY_CREATION_REWARD } },
-  { new: true, upsert: true }
-);
-
-const beforeBalance = user.coinsBalance || 0;
-const afterBalance = beforeBalance + COMMUNITY_CREATION_REWARD;
-user.coinsBalance = afterBalance;
-await user.save();
-
-const activityId = uuidv4();
-
-const transaction = await CoinTransaction.create({
-  userId: user._id,
-  type: 'REWARD_CREATE_COMMUNITY',
-  amount: COMMUNITY_CREATION_REWARD,
-  activityId,
-  status: 'success',
-  relatedCommunityId: community._id,
-  beforeBalance,
-  afterBalance,
-  description: `Earned ${COMMUNITY_CREATION_REWARD} YKC for creating community "${community.displayName}"`
-});
+    const activityId = `community_${userId}_${community._id}`;
+    const tx = await reward(userId, COMMUNITY_CREATION_REWARD, {
+      type: 'REWARD_CREATE_COMMUNITY',
+      description: `Earned ${COMMUNITY_CREATION_REWARD} YKC for creating community "${community.displayName}"`,
+      relatedCommunityId: community._id,
+      activityId, // ensures deduplication
+    });
 
 // ✅ Now safely respond
 res.status(201).json({
@@ -353,13 +335,13 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Assuming each Community has a field like "members: [userId]"
-    const joinedCommunities = await Community.find({
-      members: userId,
-      isActive: true
-    })
-      .sort({ name: 1 })
-      .select('_id name description')
-      .lean();
+   const joinedCommunities = await Community.find({
+  members: userId,
+  isActive: true
+})
+  .sort({ name: 1 })
+  .select('_id name displayName description location categories memberCount postCount coverImage icon')  // ✅ Include all needed fields
+  .lean();
 
     res.json({
       success: true,

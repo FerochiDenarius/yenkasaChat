@@ -14,8 +14,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.CommunityAdapter
+import com.example.yenkasachat.adapter.JoinedCommunityAdapter
 import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.model.JoinCommunityResponse
+import com.example.yenkasachat.model.JoinedCommunitiesResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -24,26 +26,30 @@ import retrofit2.Callback
 import retrofit2.Response
 import android.widget.Button
 
-
 class CommunitiesActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
+    private val joinedCommunityIds = mutableSetOf<String>()
+
+    private fun Community.isUserMember(): Boolean {
+        return this.id?.let { joinedCommunityIds.contains(it) } ?: false
+    }
     private lateinit var searchView: SearchView
     private lateinit var fabCreateCommunity: FloatingActionButton
     private lateinit var progressBar: ProgressBar
     private lateinit var emptyView: TextView
 
     private val communities = mutableListOf<Community>()
+    private val joinedCommunities = mutableListOf<Community>() // For joined communities
     private lateinit var adapter: CommunityAdapter
+    private lateinit var joinedAdapter: JoinedCommunityAdapter // For joined communities
     private var token: String? = null
+
+    // ✅ ONLY views that exist in your XML
     private lateinit var textJoinedCommunitiesTitle: TextView
-    private lateinit var textLocalCommunitiesTitle: TextView
-    private lateinit var recyclerLocalCommunities: RecyclerView
-    private lateinit var textOtherJoinedCommunitiesTitle: TextView
-    private lateinit var recyclerOtherJoinedCommunities: RecyclerView
     private lateinit var textAllCommunitiesTitle: TextView
-
-
+    private lateinit var dividerAfterJoined: View
+    private lateinit var recyclerJoinedCommunities: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +57,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
         Log.d("CommunitiesActivity", "onCreate called — activity started")
 
-        val token = TokenManager.getToken(this)
+        token = TokenManager.getToken(this)
         Log.d("CommunitiesActivity", "Retrieved token from TokenManager: $token")
 
         if (token == null) {
@@ -62,16 +68,16 @@ class CommunitiesActivity : AppCompatActivity() {
 
         initViews()
         setupRecyclerView()
+        setupJoinedCommunitiesRecyclerView() // Setup joined communities
         setupSearch()
         loadCommunities()
+        loadJoinedCommunities() // Load user's joined communities
         setupCreateCommunityButtons()
 
-        // ✅ Connect adapter’s "View" button click
+        // Connect adapter's "View" button click
         adapter.onCommunitySelected = { community ->
             Log.d("CommunitiesActivity", "Community selected: ${community.displayName}")
-
-            // Example action: open FeedActivity for this community
-            val intent = Intent(this, FeedFragment::class.java)
+            val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("communityId", community.id)
             intent.putExtra("communityName", community.displayName)
             startActivity(intent)
@@ -98,13 +104,14 @@ class CommunitiesActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBarCommunities)
         emptyView = findViewById(R.id.textEmptyCommunities)
 
-        // 🆕 Joined communities section
+        // ✅ ONLY initialize views that exist in XML
         textJoinedCommunitiesTitle = findViewById(R.id.textJoinedCommunitiesTitle)
-        textLocalCommunitiesTitle = findViewById(R.id.textLocalCommunitiesTitle)
-        recyclerLocalCommunities = findViewById(R.id.recyclerLocalCommunities)
-        textOtherJoinedCommunitiesTitle = findViewById(R.id.textOtherJoinedCommunitiesTitle)
-        recyclerOtherJoinedCommunities = findViewById(R.id.recyclerOtherJoinedCommunities)
         textAllCommunitiesTitle = findViewById(R.id.textAllCommunitiesTitle)
+        dividerAfterJoined = findViewById(R.id.dividerAfterJoined)
+        recyclerJoinedCommunities = findViewById(R.id.recyclerJoinedCommunities)
+
+        recyclerView.isNestedScrollingEnabled = true
+        recyclerJoinedCommunities.isNestedScrollingEnabled = true
 
         // Create button (top of page)
         val btnCreateCommunity: Button = findViewById(R.id.btnCreateCommunity)
@@ -113,29 +120,196 @@ class CommunitiesActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-// Floating Action Button (bottom corner)
+        // Floating Action Button (bottom corner)
         val fabCreateCommunity: com.google.android.material.floatingactionbutton.FloatingActionButton =
             findViewById(R.id.fabCreateCommunity)
         fabCreateCommunity.setOnClickListener {
             val intent = Intent(this, CreateCommunityActivity::class.java)
             startActivity(intent)
         }
-
     }
 
-
-    private fun setupRecyclerView() {
-        adapter = CommunityAdapter(communities) { community ->
-            // ✅ Directly open feed activity here
-            val intent = Intent(this, FeedFragment::class.java)
+    private fun setupJoinedCommunitiesRecyclerView() {
+        joinedAdapter = JoinedCommunityAdapter(joinedCommunities) { community ->
+            // Handle click on joined community - navigate to feed
+            val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("communityId", community.id)
             intent.putExtra("communityName", community.displayName)
             startActivity(intent)
         }
+
+        recyclerJoinedCommunities.layoutManager = LinearLayoutManager(this)
+        recyclerJoinedCommunities.adapter = joinedAdapter
+    }
+
+    private fun loadJoinedCommunities() {
+        Log.d("JOINED_DEBUG", "Loading joined communities...")
+
+        // Change this to JoinedCommunitiesResponse (plural)
+        ApiClient.apiService.getJoinedCommunities("Bearer $token")
+            .enqueue(object : Callback<JoinedCommunitiesResponse> { // FIXED: Use JoinedCommunitiesResponse
+                override fun onResponse(
+                    call: Call<JoinedCommunitiesResponse>, // FIXED: Use JoinedCommunitiesResponse
+                    response: Response<JoinedCommunitiesResponse> // FIXED: Use JoinedCommunitiesResponse
+                ) {
+                    Log.d("JOINED_DEBUG", "Response code: ${response.code()}")
+
+                    if (response.isSuccessful && response.body() != null) {
+                        val responseBody = response.body()!!
+                        Log.d("JOINED_DEBUG", "Full response: $responseBody")
+                        Log.d("JOINED_DEBUG", "Response body class: ${responseBody.javaClass.simpleName}")
+
+                        val userCommunities = responseBody.communities
+                        Log.d("JOINED_DEBUG", "Communities list size: ${userCommunities.size}")
+
+                        // Log each community to see what's in them
+                        userCommunities.forEachIndexed { index, community ->
+                            Log.d("JOINED_DEBUG", "Community $index: $community")
+                            Log.d("JOINED_DEBUG", "  - ID: ${community.id}")
+                            Log.d("JOINED_DEBUG", "  - Name: ${community.displayName}")
+                            Log.d("JOINED_DEBUG", "  - MemberCount: ${community.memberCount}")
+                            Log.d("JOINED_DEBUG", "  - PostCount: ${community.postCount}")
+                        }
+
+                        joinedCommunities.clear()
+                        joinedCommunities.addAll(userCommunities)
+                        joinedAdapter.notifyDataSetChanged()
+
+                        joinedCommunityIds.clear()
+                        joinedCommunityIds.addAll(userCommunities.mapNotNull { it.id })
+
+                        Log.d("JOINED_DEBUG", "joinedCommunityIds: $joinedCommunityIds")
+
+                        // Refresh main adapter to update button states
+                        adapter.notifyDataSetChanged()
+
+                        // Show/hide the joined communities section
+                        if (userCommunities.isNotEmpty()) {
+                            textJoinedCommunitiesTitle.visibility = View.VISIBLE
+                            recyclerJoinedCommunities.visibility = View.VISIBLE
+                            dividerAfterJoined.visibility = View.VISIBLE
+
+                            textJoinedCommunitiesTitle.text = "Your Communities (${userCommunities.size})"
+                            Log.d("JOINED_DEBUG", "✅ Showing joined communities section with ${userCommunities.size} communities")
+                        } else {
+                            textJoinedCommunitiesTitle.visibility = View.GONE
+                            recyclerJoinedCommunities.visibility = View.GONE
+                            dividerAfterJoined.visibility = View.GONE
+                            Log.d("JOINED_DEBUG", "❌ Hiding joined communities section - no communities")
+                        }
+                    } else {
+                        Log.e("JOINED_DEBUG", "❌ API call failed: ${response.code()} - ${response.message()}")
+                        if (response.errorBody() != null) {
+                            Log.e("JOINED_DEBUG", "Error body: ${response.errorBody()!!.string()}")
+                        }
+                        // Hide section on failure
+                        textJoinedCommunitiesTitle.visibility = View.GONE
+                        recyclerJoinedCommunities.visibility = View.GONE
+                        dividerAfterJoined.visibility = View.GONE
+                    }
+                }
+
+                override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) { // FIXED
+                    Log.e("JOINED_DEBUG", "❌ Network error: ${t.message}", t)
+                    textJoinedCommunitiesTitle.visibility = View.GONE
+                    recyclerJoinedCommunities.visibility = View.GONE
+                    dividerAfterJoined.visibility = View.GONE
+                }
+            })
+    }
+    private fun setupRecyclerView() {
+        adapter = CommunityAdapter(communities) { community ->
+            // Directly open feed activity here
+            val intent = Intent(this, MainActivity::class.java)
+            intent.putExtra("communityId", community.id)
+            intent.putExtra("communityName", community.displayName)
+            startActivity(intent)
+        }
+
+        // ADD THESE: Separate handlers for each button
+        adapter.onJoinCommunity = { community ->
+            joinCommunity(community)  // This will call your join function
+        }
+
+        adapter.onViewCommunity = { community ->
+            showCommunityDialog(community)  // This will show the dialog
+        }
+
+        // NEW: Leave community handler
+        adapter.onLeaveCommunity = { community ->
+            leaveCommunity(community)  // This will call your leave function
+        }
+
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
     }
 
+    // NEW: Leave community function
+    private fun leaveCommunity(community: Community) {
+        Log.d("LEAVE_COMMUNITY", "→ leaveCommunity called for ${community.displayName} (ID=${community.id})")
+
+        progressBar.visibility = View.VISIBLE
+
+        val communityId = community.id
+        if (communityId == null) {
+            Log.e("LEAVE_COMMUNITY", "❌ Community ID is null")
+            progressBar.visibility = View.GONE
+            Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Log.d("LEAVE_COMMUNITY", "→ Sending leave request for ID=$communityId")
+
+        ApiClient.apiService.leaveCommunity("Bearer $token", communityId)
+            .enqueue(object : Callback<JoinCommunityResponse> {
+                override fun onResponse(
+                    call: Call<JoinCommunityResponse>,
+                    response: Response<JoinCommunityResponse>
+                ) {
+                    progressBar.visibility = View.GONE
+                    Log.d("LEAVE_COMMUNITY", "→ Response code: ${response.code()}")
+
+                    val body = response.body()
+
+                    if (response.isSuccessful && body?.success == true) {
+                        Log.d("LEAVE_COMMUNITY", "✔ Left successfully: ${body.message}")
+
+                        val displayName = community.displayName ?: "Community"
+
+                        Toast.makeText(
+                            this@CommunitiesActivity,
+                            "Left $displayName!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        // Reload both lists to update UI
+                        loadJoinedCommunities()
+                        loadCommunities()
+
+                    } else {
+                        val message = body?.message ?: when (response.code()) {
+                            400 -> "You are not a member of this community"
+                            404 -> "Community not found."
+                            else -> "Failed to leave community."
+                        }
+
+                        Log.e("LEAVE_COMMUNITY", "❌ Leave failed: $message")
+                        Toast.makeText(this@CommunitiesActivity, message, Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<JoinCommunityResponse>, t: Throwable) {
+                    progressBar.visibility = View.GONE
+                    Log.e("LEAVE_COMMUNITY", "❌ Network error: ${t.message}", t)
+
+                    Toast.makeText(
+                        this@CommunitiesActivity,
+                        "Connection error. Try again.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
+    }
     private fun setupSearch() {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
@@ -165,41 +339,15 @@ class CommunitiesActivity : AppCompatActivity() {
                     if (response.isSuccessful && response.body() != null) {
                         val allCommunities = response.body()!!
 
-                        // Separate local and other joined communities for clarity
-                        val joinedCommunities = allCommunities.filter { it.isActive && it.memberCount > 0 }
-                        val localCommunities = joinedCommunities.filter { !it.location.isNullOrEmpty() }
-                        val otherJoined = joinedCommunities.filter { it.location.isNullOrEmpty() }
-
-                        // 🧩 Local communities list
-                        if (localCommunities.isNotEmpty()) {
-                            textJoinedCommunitiesTitle.visibility = View.VISIBLE
-                            textLocalCommunitiesTitle.visibility = View.VISIBLE
-                            recyclerLocalCommunities.visibility = View.VISIBLE
-                            recyclerLocalCommunities.layoutManager = LinearLayoutManager(this@CommunitiesActivity)
-                            recyclerLocalCommunities.adapter = CommunityAdapter(localCommunities) { community ->
-                                showCommunityDialog(community)
-                            }
-                        }
-
-                        // 🧩 Other joined communities list
-                        if (otherJoined.isNotEmpty()) {
-                            textOtherJoinedCommunitiesTitle.visibility = View.VISIBLE
-                            recyclerOtherJoinedCommunities.visibility = View.VISIBLE
-                            recyclerOtherJoinedCommunities.layoutManager = LinearLayoutManager(this@CommunitiesActivity)
-                            recyclerOtherJoinedCommunities.adapter = CommunityAdapter(otherJoined) { community ->
-                                showCommunityDialog(community)
-                            }
-                        }
-
-                        // 🧩 All communities (default)
+                        // Show all communities in the main RecyclerView
                         communities.clear()
                         communities.addAll(allCommunities)
                         adapter.notifyDataSetChanged()
                         textAllCommunitiesTitle.visibility = View.VISIBLE
                         recyclerView.visibility = View.VISIBLE
 
-                        emptyView.visibility = if (communities.isEmpty()) View.VISIBLE else View.GONE
-
+                        // Handle empty state
+                        emptyView.visibility = if (allCommunities.isEmpty()) View.VISIBLE else View.GONE
                     } else {
                         Toast.makeText(
                             this@CommunitiesActivity,
@@ -234,8 +382,10 @@ class CommunitiesActivity : AppCompatActivity() {
                 showLoading(false)
 
                 if (response.isSuccessful && response.body() != null) {
+                    val searchedCommunities = response.body()!!
+
                     communities.clear()
-                    communities.addAll(response.body()!!)
+                    communities.addAll(searchedCommunities)
                     adapter.notifyDataSetChanged()
 
                     if (communities.isEmpty()) {
@@ -267,7 +417,9 @@ class CommunitiesActivity : AppCompatActivity() {
     }
 
     private fun showCommunityDialog(community: Community) {
-        val dialog = android.app.AlertDialog.Builder(this)
+        val isMember = community.isUserMember()
+
+        val dialogBuilder = android.app.AlertDialog.Builder(this)
             .setTitle(community.displayName)
             .setMessage(
                 "${community.description}\n\n" +
@@ -275,22 +427,36 @@ class CommunitiesActivity : AppCompatActivity() {
                         "👥 ${community.memberCount} members\n" +
                         "📝 ${community.postCount} posts"
             )
-            .setPositiveButton("Join") { _, _ ->
+
+        // Show appropriate button based on membership
+        if (isMember) {
+            dialogBuilder.setPositiveButton("Leave") { _, _ ->
+                leaveCommunity(community)
+            }
+        } else {
+            dialogBuilder.setPositiveButton("Join") { _, _ ->
                 joinCommunity(community)
             }
-            .setNegativeButton("Cancel", null)
-            .create()
+        }
 
+        dialogBuilder.setNegativeButton("Cancel", null)
+        val dialog = dialogBuilder.create()
         dialog.show()
     }
-
     private fun joinCommunity(community: Community) {
+        Log.d("JOIN_COMMUNITY", "→ joinCommunity called for ${community.displayName} (ID=${community.id})")
+
         progressBar.visibility = View.VISIBLE
 
-        val communityId = community.id ?: return run {
+        val communityId = community.id
+        if (communityId == null) {
+            Log.e("JOIN_COMMUNITY", "❌ Community ID is null")
             progressBar.visibility = View.GONE
             Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
+            return
         }
+
+        Log.d("JOIN_COMMUNITY", "→ Sending join request for ID=$communityId")
 
         ApiClient.apiService.joinCommunity("Bearer $token", communityId)
             .enqueue(object : Callback<JoinCommunityResponse> {
@@ -299,9 +465,13 @@ class CommunitiesActivity : AppCompatActivity() {
                     response: Response<JoinCommunityResponse>
                 ) {
                     progressBar.visibility = View.GONE
+                    Log.d("JOIN_COMMUNITY", "→ Response code: ${response.code()}")
+
                     val body = response.body()
 
                     if (response.isSuccessful && body?.success == true) {
+                        Log.d("JOIN_COMMUNITY", "✔ Joined successfully: ${body.message}")
+
                         val displayName = community.displayName ?: "Community"
 
                         Toast.makeText(
@@ -310,59 +480,63 @@ class CommunitiesActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // ✅ Save joined community locally using TokenManager (simpler + cleaner)
+                        // Save locally
                         TokenManager.saveSelectedCommunity(
                             context = this@CommunitiesActivity,
-                            communityId = community.id ?: "",
+                            communityId = communityId,
                             communityName = displayName
                         )
 
-                        // ✅ Redirect to Feed tab in MainActivity
-                        val intent = Intent(this@CommunitiesActivity, MainActivity::class.java).apply {
-                            putExtra("openFragment", "feed")
-                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        startActivity(intent)
-                        finish()
+                        Log.d("JOIN_COMMUNITY", "→ Saved selected community in TokenManager")
+
+                        // Reload joined communities to show the newly joined one
+                        loadJoinedCommunities()
+
+                        // Also reload all communities to get updated member counts
+                        loadCommunities()
 
                     } else {
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            body?.message ?: "Failed to join community",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
- {
-                        // 🚨 Handle backend limits or duplicates
                         val message = body?.message ?: when (response.code()) {
                             400 -> "You can only join up to 3 communities."
                             404 -> "Community not found."
                             else -> "Failed to join community."
                         }
 
-                        Toast.makeText(
-                            this@CommunitiesActivity,
-                            message,
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Log.e("JOIN_COMMUNITY", "❌ Join failed: $message")
+                        Toast.makeText(this@CommunitiesActivity, message, Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<JoinCommunityResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
+                    Log.e("JOIN_COMMUNITY", "❌ Network error: ${t.message}", t)
+
                     Toast.makeText(
                         this@CommunitiesActivity,
-                        "Error: ${t.message}",
+                        "Connection error. Try again.",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             })
     }
+
+    // Helper function to update UI for a specific community
+    private fun updateCommunityUI(joinedCommunityId: String) {
+        val position = communities.indexOfFirst { it.id == joinedCommunityId }
+        if (position != -1) {
+            // Update the community in the list
+            communities[position] = communities[position].copy(
+                // Update any properties if needed
+            )
+            adapter.notifyItemChanged(position)
+        }
+    }
+
     private fun setupCreateCommunityButtons() {
         val userRole = TokenManager.getUserRole(this)
         val isVerified = TokenManager.isVerified(this)
 
-        // ✅ Only these roles can create or edit communities
+        // Only these roles can create or edit communities
         val canManageCommunity = userRole == "admin" || userRole == "moderator" || userRole == "developer"
 
         Log.d("CommunitiesActivity", "User role=$userRole, verified=$isVerified, canManageCommunity=$canManageCommunity")

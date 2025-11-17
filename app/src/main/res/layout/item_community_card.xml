@@ -47,7 +47,7 @@
 
         <!-- Category -->
         <TextView
-            android:id="@+id/textCommunityCategory"
+            android:id="@+id/editCategories"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
@@ -81,7 +81,6 @@
                 android:drawablePadding="6dp"/>
         </LinearLayout>
 
-        <!-- Buttons Row -->
         <LinearLayout
             android:orientation="horizontal"
             android:gravity="center"
@@ -89,7 +88,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp">
 
-            <!-- Join / Leave Button -->
             <Button
                 android:id="@+id/btnJoinCommunity"
                 android:layout_width="wrap_content"
@@ -99,6 +97,17 @@
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:backgroundTint="?attr/colorPrimary"
+                android:elevation="2dp" />
+
+            <Button
+                android:id="@+id/btnLeaveCommunity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="24dp"
+                android:text="Leave"
+                android:textAllCaps="false"
+                android:textColor="@color/black"
+                android:backgroundTint="@color/red"
                 android:elevation="2dp" />
 
             <!-- View Button -->

@@ -391,11 +391,12 @@ interface ApiService {
     // ✅ Get all approved communities (optional search, sort, order)
     @GET("communities")
     fun getCommunities(
-        @Header("Authorization") token: String? = null,
+        @Header("Authorization") token: String,
         @Query("search") search: String? = null,
-        @Query("sort") sort: String? = null,
-        @Query("order") order: String? = null
+        @Query("sort") sort: String? = "memberCount",
+        @Query("order") order: String? = "desc"
     ): Call<List<Community>>
+
 
 
     // ✅ Join a community
@@ -405,12 +406,7 @@ interface ApiService {
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
 
-    // ✅ Leave a community
-    @POST("communities/{communityId}/leave")
-    fun leaveCommunity(
-        @Header("Authorization") token: String,
-        @Path("communityId") communityId: String
-    ): Call<JoinCommunityResponse>
+
 
     // ✅ Create a new community
     @POST("communities")
@@ -430,6 +426,18 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<List<Community>>
 
+    // ✅ Add leave community endpoint
+    @POST("communities/{communityId}/leave")
+    fun leaveCommunity(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String
+    ): Call<JoinCommunityResponse>
+
+    // In your ApiService interface, add this method
+    @GET("communities/user/joined-communities")
+    fun getJoinedCommunities(
+        @Header("Authorization") token: String
+    ): Call<JoinedCommunitiesResponse>
 
     @POST("communities/join")
     suspend fun joinCommunities(@Body request: JoinCommunityRequest): Response<JoinCommunityResponse>

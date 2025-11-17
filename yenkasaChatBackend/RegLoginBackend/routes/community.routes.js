@@ -240,6 +240,7 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
 // -----------------------------
 // Reward user for community creation
 // -----------------------------
+
     const activityId = `community_${userId}_${community._id}`;
     const tx = await reward(userId, COMMUNITY_CREATION_REWARD, {
       type: 'REWARD_CREATE_COMMUNITY',
@@ -335,13 +336,13 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     // Assuming each Community has a field like "members: [userId]"
-   const joinedCommunities = await Community.find({
-  members: userId,
-  isActive: true
-})
-  .sort({ name: 1 })
-  .select('_id name displayName description location categories memberCount postCount coverImage icon')  // ✅ Include all needed fields
-  .lean();
+    const joinedCommunities = await Community.find({
+      members: userId,
+      isActive: true
+    })
+      .sort({ name: 1 })
+      .select('_id name description')
+      .lean();
 
     res.json({
       success: true,

@@ -337,18 +337,17 @@ router.delete('/:communityId', authMiddleware, async (req, res) => {
 });
 
 // ✅ Get communities the user has joined
-// ✅ Get communities the user has joined
 router.get('/user/joined-communities', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Fetch communities where user is a member and community is active
+    // Assuming each Community has a field like "members: [userId]"
     const joinedCommunities = await Community.find({
       members: userId,
       isActive: true
     })
       .sort({ name: 1 })
-      .select('_id name displayName memberCount postCount location categories icon coverImage') // ADDED fields
+      .select('_id name description')
       .lean();
 
     res.json({
@@ -361,7 +360,6 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to fetch joined communities' });
   }
 });
-
 
 
 

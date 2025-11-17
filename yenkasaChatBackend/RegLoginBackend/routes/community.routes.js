@@ -240,7 +240,6 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
 // -----------------------------
 // Reward user for community creation
 // -----------------------------
-
     const activityId = `community_${userId}_${community._id}`;
     const tx = await reward(userId, COMMUNITY_CREATION_REWARD, {
       type: 'REWARD_CREATE_COMMUNITY',

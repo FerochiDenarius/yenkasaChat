@@ -274,7 +274,7 @@ const interestCommunities = [
   }
 ];
 
-// 🔁 Add default flags to all communities
+// 🔁 Combine and add default flags
 const communities = [...yenkasaCommunities, ...interestCommunities].map(c => ({
   ...c,
   isActive: true,
@@ -290,19 +290,27 @@ async function seedCommunities() {
     });
     console.log('✅ Connected to MongoDB');
 
-    console.log('🗑️  Clearing existing communities...');
-    await Community.deleteMany({});
+    console.log('🌱 Seeding Ghana communities (add only missing)...');
 
-    console.log('🌱 Seeding Ghana communities...');
-    const created = await Community.insertMany(communities);
+    for (const community of communities) {
+      const exists = await Community.findOne({ name: community.name });
+      if (!exists) {
+        await Community.create(community);
+        console.log(`🌟 Created community: ${community.displayName}`);
+      } else {
+        console.log(`⚡ Already exists, skipped: ${community.displayName}`);
+      }
+    }
 
-    console.log(`✅ Successfully created ${created.length} communities!`);
     console.log('✨ Done!');
-  
+
   } catch (err) {
     console.error('❌ Error seeding database:', err);
     process.exit(1);
   }
 }
 
+// Automatically seed on server start
 seedCommunities();
+
+

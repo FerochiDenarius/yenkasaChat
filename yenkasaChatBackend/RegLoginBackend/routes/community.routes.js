@@ -9,6 +9,7 @@ const CoinTransaction = require('../models/cointransaction.model');
 const CoinSupply = require('../models/coinSupply');
 const Permission = require('../models/permissions.model');
 const rewardService = require('../services/reward.service');
+const { getUserCommunities } = require('../helpers/community.helper');
 
 
 // Reward configuration
@@ -362,8 +363,16 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
   }
 });
 
-
-
+//community joined during registration
+router.get('/user/communities', authMiddleware, async (req, res) => {
+  try {
+    const communities = await getUserCommunities(req.user.id);
+    res.json({ success: true, communities });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to fetch user communities' });
+  }
+});
 
 // ✅ Get user's created communities
 router.get('/user/my-communities', authMiddleware, async (req, res) => {

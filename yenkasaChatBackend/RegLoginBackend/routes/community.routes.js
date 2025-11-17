@@ -168,6 +168,37 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/:id/leave', authMiddleware, async (req, res) => {
+  try {
+    const communityId = req.params.id;
+    const userId = req.user.id;
+
+    const community = await Community.findById(communityId);
+    if (!community) {
+      return res.status(404).json({ error: 'Community not found' });
+    }
+
+    const isMember = community.members.includes(userId);
+    if (!isMember) {
+      return res.status(400).json({ error: 'You are not a member of this community' });
+    }
+
+    community.members.pull(userId);
+    community.memberCount = community.members.length;
+    await community.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Left community successfully',
+      communityId,
+      memberCount: community.memberCount
+    });
+
+  } catch (err) {
+    console.error('❌ Failed to leave community:', err);
+    res.status(500).json({ error: 'Failed to leave community' });
+  }
+});
 
 
 // -----------------------------
@@ -319,6 +350,8 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to fetch joined communities' });
   }
 });
+
+
 
 // ✅ Get user's created communities
 router.get('/user/my-communities', authMiddleware, async (req, res) => {

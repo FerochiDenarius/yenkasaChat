@@ -396,17 +396,7 @@ interface ApiService {
         @Query("sort") sort: String? = "memberCount",
         @Query("order") order: String? = "desc"
     ): Call<List<Community>>
-
-
-
-    // ✅ Join a community
-    @POST("communities/{communityId}/join")
-    fun joinCommunity(
-        @Header("Authorization") token: String,
-        @Path("communityId") communityId: String
-    ): Call<JoinCommunityResponse>
-
-
+    
 
     // ✅ Create a new community
     @POST("communities")
@@ -439,8 +429,11 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<JoinedCommunitiesResponse>
 
-    @POST("communities/join")
-    suspend fun joinCommunities(@Body request: JoinCommunityRequest): Response<JoinCommunityResponse>
+    @POST("communities/{id}/join")
+    fun joinCommunity(
+        @Header("Authorization") token: String,
+        @Path("id") communityId: String
+    ): Call<JoinCommunityResponse>
 
 
     // ==================== COINS ====================

@@ -282,15 +282,15 @@ class CommunitiesActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // Reload both lists to update UI
+                        // Refresh lists
                         loadJoinedCommunities()
                         loadCommunities()
 
                     } else {
                         val message = body?.message ?: when (response.code()) {
                             400 -> "You are not a member of this community"
-                            404 -> "Community not found."
-                            else -> "Failed to leave community."
+                            404 -> "Community not found"
+                            else -> "Failed to leave community"
                         }
 
                         Log.e("LEAVE_COMMUNITY", "❌ Leave failed: $message")
@@ -443,6 +443,8 @@ class CommunitiesActivity : AppCompatActivity() {
         val dialog = dialogBuilder.create()
         dialog.show()
     }
+
+
     private fun joinCommunity(community: Community) {
         Log.d("JOIN_COMMUNITY", "→ joinCommunity called for ${community.displayName} (ID=${community.id})")
 

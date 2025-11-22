@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class Community(
     @SerializedName("_id")
-    val id: String? = null,   // ✅ Prevents null crash in sets/maps
+    val id: String? = null,   // Prevents null crash in sets/maps
 
     val name: String? = null,
     val displayName: String? = null,
@@ -31,7 +31,7 @@ data class Community(
     val createdAt: String? = null,
     val updatedAt: String? = null,
 
-    // 🆕 Membership status fields
+    // Membership status fields
     @SerializedName("isJoined")
     val isJoined: Boolean = false,
 
@@ -42,22 +42,27 @@ data class Community(
     val joinedAt: String? = null,
 
     @SerializedName("membershipStatus")
-    val membershipStatus: String? = null, // "member", "moderator", "admin", "pending", etc.
+    val membershipStatus: String? = null,
 
-    // 🆕 Community type classification
+    // Classification
     @SerializedName("communityType")
-    val communityType: String? = null, // "local", "interest", "global", etc.
+    val communityType: String? = null,
 
     @SerializedName("distance")
-    val distance: Double? = null, // Distance from user for local communities
+    val distance: Double? = null,
 
-    // 🆕 User-specific permissions
+    // User-specific permissions
     @SerializedName("canPost")
     val canPost: Boolean = false,
 
     @SerializedName("canModerate")
-    val canModerate: Boolean = false
+    val canModerate: Boolean = false,
+
+    // 🆕 ADD THIS ↓↓↓
+    @SerializedName("isRegistration")
+    val isRegistration: Boolean = false
 ) {
+
     override fun hashCode(): Int = id?.hashCode() ?: 0
 
     override fun equals(other: Any?): Boolean {
@@ -66,13 +71,16 @@ data class Community(
         return this.id == other.id
     }
 
-    // 🆕 Helper function to check if user is a member (using multiple possible indicators)
     fun isUserMember(): Boolean {
         return isJoined || isMember || membershipStatus in listOf("member", "moderator", "admin")
     }
 
-    // 🆕 Helper function to check if community is local
     fun isLocalCommunity(): Boolean {
-        return communityType == "local" || (location != null && distance != null && distance < 50.0)
+        return communityType == "local" ||
+                (location != null && distance != null && distance < 50.0)
     }
 }
+data class UserPrimaryCommunityResponse(
+    val success: Boolean,
+    val community: Community? // reuse your existing Community model
+)

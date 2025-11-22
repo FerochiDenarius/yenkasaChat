@@ -430,11 +430,21 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<JoinedCommunitiesResponse>
 
+    @GET("user/all-communities")
+    fun getAllUserCommunities(@Header("Authorization") token: String): Call<JoinedCommunitiesResponse>
+
+
+
     @POST("communities/{communityId}/join")
     fun joinCommunity(
         @Header("Authorization") token: String,
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
+
+    @GET("community/user/community")
+    fun getUserPrimaryCommunity(
+        @Header("Authorization") token: String
+    ): Call<UserPrimaryCommunityResponse>
 
 
 

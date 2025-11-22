@@ -18,6 +18,7 @@ import com.example.yenkasachat.adapter.JoinedCommunityAdapter
 import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.model.JoinCommunityResponse
 import com.example.yenkasachat.model.JoinedCommunitiesResponse
+import com.example.yenkasachat.model.UserPrimaryCommunityResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -217,6 +218,34 @@ class CommunitiesActivity : AppCompatActivity() {
                 }
             })
     }
+
+    private fun loadUserPrimaryCommunity() {
+        ApiClient.apiService.getUserPrimaryCommunity("Bearer $token")
+            .enqueue(object : Callback<UserPrimaryCommunityResponse> {
+                override fun onResponse(
+                    call: Call<UserPrimaryCommunityResponse>,
+                    response: Response<UserPrimaryCommunityResponse>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        val primary = response.body()!!.community
+
+                        // If primary community exists, add it ABOVE joined communities
+                        if (primary != null) {
+                            // Prevent duplicates (if user joined their own community too)
+                            if (!joinedCommunityIds.contains(primary.id)) {
+                                joinedCommunities.add(0, primary)
+                                joinedAdapter.notifyItemInserted(0)
+                            }
+                        }
+                    }
+                }
+
+                override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
+                    Log.e("PRIMARY_COMMUNITY", "Failed: ${t.message}")
+                }
+            })
+    }
+
     private fun setupRecyclerView() {
         adapter = CommunityAdapter(communities) { community ->
             // Directly open feed activity here

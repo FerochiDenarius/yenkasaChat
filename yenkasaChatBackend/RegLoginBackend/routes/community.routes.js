@@ -363,16 +363,31 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
   }
 });
 
-//community joined during registration
-router.get('/user/communities', authMiddleware, async (req, res) => {
-  try {
-    const communities = await getUserCommunities(req.user.id);
-    res.json({ success: true, communities });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Failed to fetch user communities' });
-  }
+// Fetch the user's primary (registration) community
+router.get('/user/community', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).lean();
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+        if (!user.community) {
+            return res.json({ success: true, community: null });
+        }
+
+        const community = await Community.findById(user.community)
+            .select('_id name displayName memberCount location')
+            .lean();
+
+        if (!community) {
+            return res.status(404).json({ success: false, error: 'Community not found' });
+        }
+
+        res.json({ success: true, community });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: 'Failed to fetch community' });
+    }
 });
+
 
 // ✅ Get user's created communities
 router.get('/user/my-communities', authMiddleware, async (req, res) => {

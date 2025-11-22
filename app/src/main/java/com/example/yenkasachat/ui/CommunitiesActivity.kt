@@ -73,6 +73,7 @@ class CommunitiesActivity : AppCompatActivity() {
         setupSearch()
         loadCommunities()
         loadJoinedCommunities() // Load user's joined communities
+        loadUserPrimaryCommunity()
         setupCreateCommunityButtons()
 
         // Connect adapter's "View" button click
@@ -220,28 +221,58 @@ class CommunitiesActivity : AppCompatActivity() {
     }
 
     private fun loadUserPrimaryCommunity() {
+
+        Log.d("PRIMARY_COMMUNITY", "▶️ Starting loadUserPrimaryCommunity call")
+
         ApiClient.apiService.getUserPrimaryCommunity("Bearer $token")
             .enqueue(object : Callback<UserPrimaryCommunityResponse> {
+
                 override fun onResponse(
                     call: Call<UserPrimaryCommunityResponse>,
                     response: Response<UserPrimaryCommunityResponse>
                 ) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val primary = response.body()!!.community
+                    Log.d("PRIMARY_COMMUNITY", "✔️ API responded. Code: ${response.code()}")
 
-                        // If primary community exists, add it ABOVE joined communities
-                        if (primary != null) {
-                            // Prevent duplicates (if user joined their own community too)
-                            if (!joinedCommunityIds.contains(primary.id)) {
-                                joinedCommunities.add(0, primary)
-                                joinedAdapter.notifyItemInserted(0)
-                            }
+                    if (response.isSuccessful) {
+                        Log.d("PRIMARY_COMMUNITY", "Body: ${response.body()}")
+
+                        val primaryResponse = response.body()
+                        if (primaryResponse == null) {
+                            Log.e("PRIMARY_COMMUNITY", "❌ Response body is NULL")
+                            return
                         }
+
+                        val primary = primaryResponse.community
+                        Log.d("PRIMARY_COMMUNITY", "Primary community extracted: $primary")
+
+                        if (primary == null) {
+                            Log.e("PRIMARY_COMMUNITY", "❌ primary.community is NULL")
+                            return
+                        }
+
+                        Log.d("PRIMARY_COMMUNITY", "Primary ID = ${primary.id}, Name = ${primary.displayName}")
+
+                        // Check if already in joined list
+                        if (joinedCommunityIds.contains(primary.id)) {
+                            Log.d("PRIMARY_COMMUNITY", "⚠️ Primary community already in joinedCommunityIds, skipping insert")
+                            return
+                        }
+
+                        // Insert at top
+                        joinedCommunities.add(0, primary)
+                        joinedAdapter.notifyItemInserted(0)
+                        Log.d("PRIMARY_COMMUNITY", "✅ Primary added to joinedCommunities at position 0")
+
+                    } else {
+                        Log.e(
+                            "PRIMARY_COMMUNITY",
+                            "❌ API Error: Code=${response.code()}, ErrorBody=${response.errorBody()?.string()}"
+                        )
                     }
                 }
 
                 override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
-                    Log.e("PRIMARY_COMMUNITY", "Failed: ${t.message}")
+                    Log.e("PRIMARY_COMMUNITY", "❌ onFailure: ${t.message}", t)
                 }
             })
     }

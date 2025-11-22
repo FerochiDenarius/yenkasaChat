@@ -159,7 +159,6 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to join community' });
   }
 });
-
 // LEAVE COMMUNITY
 router.post('/:id/leave', authMiddleware, async (req, res) => {
   try {
@@ -176,13 +175,14 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Not a member?
-    if (!community.members.includes(userId)) {
+    // Proper membership check
+    const isMember = community.members.some(m => m.toString() === userId);
+    if (!isMember) {
       return res.status(400).json({ error: 'You are not a member of this community' });
     }
 
     // ---- UPDATE COMMUNITY ----
-    community.members.pull(userId);
+    community.members = community.members.filter(m => m.toString() !== userId);
     community.memberCount = community.members.length;
     await community.save();
 
@@ -210,6 +210,7 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to leave community' });
   }
 });
+
 
 
 // -----------------------------

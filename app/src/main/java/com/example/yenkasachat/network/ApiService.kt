@@ -441,10 +441,11 @@ interface ApiService {
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
 
-    @GET("community/user/community")
+    @GET("/api/communities/user/community")
     fun getUserPrimaryCommunity(
         @Header("Authorization") token: String
     ): Call<UserPrimaryCommunityResponse>
+
 
 
 

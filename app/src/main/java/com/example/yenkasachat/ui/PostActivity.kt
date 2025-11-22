@@ -12,6 +12,8 @@ import androidx.appcompat.widget.Toolbar
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.Community
+import com.example.yenkasachat.model.JoinedCommunitiesResponse
+import com.example.yenkasachat.model.UserPrimaryCommunityResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -256,40 +258,94 @@ class PostActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         val token = TokenManager.getToken(this) ?: return
 
-        ApiClient.apiService.getCommunities("Bearer $token")
-            .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(call: Call<List<Community>>, response: Response<List<Community>>) {
-                    progressBar.visibility = View.GONE
-                    if (response.isSuccessful) {
-                        val communities = response.body().orEmpty()
-                        if (communities.isNotEmpty()) {
-                            val adapter = ArrayAdapter(
-                                this@PostActivity,
-                                android.R.layout.simple_spinner_item,
-                                communities.map { it.displayName }
-                            )
-                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                            spinnerCommunity.adapter = adapter
-                            spinnerCommunity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                                override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
-                                    selectedCommunityId = communities[pos].id
-                                }
+        // 1️⃣ Fetch primary community
+        ApiClient.apiService.getUserPrimaryCommunity("Bearer $token")
+            .enqueue(object : Callback<UserPrimaryCommunityResponse> {
+                override fun onResponse(
+                    call: Call<UserPrimaryCommunityResponse>,
+                    response: Response<UserPrimaryCommunityResponse>
+                ) {
+                    val primary = response.body()?.community
 
-                                override fun onNothingSelected(parent: AdapterView<*>) {
-                                    selectedCommunityId = null
-                                }
-                            }
-                        } else {
-                            Toast.makeText(this@PostActivity, "No communities available", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(this@PostActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+                    if (!response.isSuccessful || primary == null) {
+                        Log.e("COMM_FETCH", "Primary community not found or API failed")
+                        loadJoinedCommunitiesForPost(token, null)
+                        return
+                    }
+
+                    // Safe access with `let` ensures primary is not null
+                    primary.let {
+                        Log.d("COMM_FETCH", "Primary community: ${it.displayName} (${it.id})")
+                        // 2️⃣ Fetch joined communities
+                        loadJoinedCommunitiesForPost(token, it)
                     }
                 }
 
-                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
+                override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
+                    Log.e("COMM_FETCH", "Primary community fetch failed: ${t.message}", t)
+                    loadJoinedCommunitiesForPost(token, null)
+                }
+            })
+    }
+
+    private fun loadJoinedCommunitiesForPost(token: String, primary: Community?) {
+        ApiClient.apiService.getJoinedCommunities("Bearer $token")
+            .enqueue(object : Callback<JoinedCommunitiesResponse> {
+                override fun onResponse(
+                    call: Call<JoinedCommunitiesResponse>,
+                    response: Response<JoinedCommunitiesResponse>
+                ) {
                     progressBar.visibility = View.GONE
-                    Toast.makeText(this@PostActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    if (!response.isSuccessful || response.body() == null) {
+                        Log.e("COMM_FETCH", "Joined communities fetch failed: ${response.code()}")
+                        Toast.makeText(this@PostActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+
+                    val joined = response.body()!!.communities
+                    val finalList = mutableListOf<Community>()
+
+                    // Add primary first (if exists and not duplicate)
+                    primary?.let {
+                        if (!joined.any { c -> c.id == primary.id }) {
+                            finalList.add(primary)
+                        }
+                    }
+
+                    // Add joined communities
+                    finalList.addAll(joined)
+
+                    if (finalList.isEmpty()) {
+                        Toast.makeText(this@PostActivity, "You have no communities to post in", Toast.LENGTH_LONG).show()
+                        btnPost.isEnabled = false
+                        return
+                    }
+
+                    // Setup spinner
+                    val adapter = ArrayAdapter(
+                        this@PostActivity,
+                        android.R.layout.simple_spinner_item,
+                        finalList.map { it.displayName }
+                    )
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    spinnerCommunity.adapter = adapter
+
+                    spinnerCommunity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                        override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                            selectedCommunityId = finalList[pos].id
+                            Log.d("COMM_FETCH", "Selected community: ${finalList[pos].displayName} (${selectedCommunityId})")
+                        }
+
+                        override fun onNothingSelected(parent: AdapterView<*>) {
+                            selectedCommunityId = null
+                        }
+                    }
+                }
+
+                override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
+                    progressBar.visibility = View.GONE
+                    Log.e("COMM_FETCH", "Joined communities fetch failed: ${t.message}", t)
+                    Toast.makeText(this@PostActivity, "Error fetching communities", Toast.LENGTH_SHORT).show()
                 }
             })
     }

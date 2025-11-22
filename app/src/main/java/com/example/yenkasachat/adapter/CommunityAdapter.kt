@@ -40,7 +40,7 @@ class CommunityAdapter(
 
         fun bind(community: Community) {
             // Basic info
-            communityName.text = community.name ?: "Unnamed Community"
+            communityName.text = community.displayName ?: community.name ?: "Unnamed Community"
             communityLocation.text =
                 if (community.location.isNullOrEmpty()) "Interest-based Community"
                 else community.location

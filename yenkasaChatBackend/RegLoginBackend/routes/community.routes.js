@@ -159,7 +159,6 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to join community' });
   }
 });
-
 // LEAVE COMMUNITY
 router.post('/:id/leave', authMiddleware, async (req, res) => {
   try {
@@ -176,13 +175,14 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Not a member?
-    if (!community.members.includes(userId)) {
+    // Proper membership check
+    const isMember = community.members.some(m => m.toString() === userId);
+    if (!isMember) {
       return res.status(400).json({ error: 'You are not a member of this community' });
     }
 
     // ---- UPDATE COMMUNITY ----
-    community.members.pull(userId);
+    community.members = community.members.filter(m => m.toString() !== userId);
     community.memberCount = community.members.length;
     await community.save();
 
@@ -210,6 +210,7 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to leave community' });
   }
 });
+
 
 
 // -----------------------------
@@ -404,6 +405,87 @@ router.get('/user/community', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/user/all-communities', authMiddleware, async (req, res) => {
+  console.log("📌 [GET /user/all-communities] Request received");
+  const userId = req.user.id;
+  console.log("👉 Authenticated user ID:", userId);
+
+  try {
+    const user = await User.findById(userId).lean();
+    console.log("🔍 Loaded user:", user);
+
+    if (!user) {
+      console.log("❌ User not found in DB");
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const finalCommunities = [];
+
+    // 1️⃣ Registration community
+    if (user.community) {
+      console.log("➡️ Fetching registration community:", user.community);
+
+      const primary = await Community.findById(user.community)
+        .select('_id name displayName memberCount postCount location categories icon coverImage')
+        .lean();
+
+      console.log("🏛️ Loaded primary:", primary);
+
+      if (primary) {
+        finalCommunities.push({
+          ...primary,
+          isRegistration: true,
+          isJoined: true
+        });
+        console.log("✅ Added primary community to finalCommunities");
+      } else {
+        console.log("⚠️ Primary community reference exists but not found in DB");
+      }
+    } else {
+      console.log("⚠️ User has NO primary community assigned");
+    }
+
+    // 2️⃣ Joined communities
+    console.log("➡️ Fetching joined communities for user:", userId);
+
+    const joined = await Community.find({
+      members: userId,
+      isActive: true
+    })
+      .sort({ name: 1 })
+      .select('_id name displayName memberCount postCount location categories icon coverImage')
+      .lean();
+
+    console.log(`📦 Joined communities found: ${joined.length}`);
+    console.log("🔍 Joined list:", joined);
+
+    // 3️⃣ Add joined communities except primary
+    joined.forEach(c => {
+      if (c._id.toString() !== user.community?.toString()) {
+        console.log("➕ Adding joined community:", c._id);
+        finalCommunities.push({
+          ...c,
+          isRegistration: false,
+          isJoined: true
+        });
+      } else {
+        console.log("⏭️ Skipping primary (already added):", c._id);
+      }
+    });
+
+    console.log("✅ Final communities prepared:", finalCommunities);
+
+    return res.json({
+      success: true,
+      count: finalCommunities.length,
+      communities: finalCommunities
+    });
+
+  } catch (err) {
+    console.error("💥 ERROR in /user/all-communities:", err);
+    res.status(500).json({ success: false, error: 'Failed to fetch user communities' });
+  }
+});
 
 
 // ✅ Get user's created communities

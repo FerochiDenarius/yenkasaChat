@@ -117,9 +117,16 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     }
 
     // Already joined?
-    if (user.joinedCommunities.includes(communityId)) {
-      return res.status(400).json({ error: 'Already a member of this community' });
-    }
+   // Already joined?
+if (user.joinedCommunities.includes(communityId)) {
+  return res.status(400).json({ error: 'Already a member of this community' });
+}
+
+// Already primary?
+if (user.community?.toString() === communityId) {
+  return res.status(400).json({ error: 'This is already your primary community' });
+}
+
 
     // Limit: 2 communities
     if (user.joinedCommunities.length >= 2) {
@@ -130,9 +137,11 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     }
 
     // ---- UPDATE USER ----
+  if (!user.joinedCommunities.includes(communityId)) {
     user.joinedCommunities.push(communityId);
-    user.community = communityId;
-    await user.save();
+}
+
+await user.save();
 
     // ---- UPDATE COMMUNITY ----
     if (!community.members.includes(userId)) {

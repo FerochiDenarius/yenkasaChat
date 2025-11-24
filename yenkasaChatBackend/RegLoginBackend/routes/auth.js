@@ -6,6 +6,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model'); 
+const Community = require('../models/community.model');
+
 
 // ✅ Sanitize helper
 const sanitize = (val) =>
@@ -77,7 +79,15 @@ router.post('/register', async (req, res) => {
       ...(phoneNumber && { phoneNumber }),
     });
 
+        // Ensure primary community is always part of joinedCommunities
+if (!newUser.joinedCommunities.includes(communityId)) {
+    newUser.joinedCommunities.push(communityId);
+}
+
     await newUser.save();
+
+
+
 
     // ✅ Add user to community members
     if (!community.members.includes(newUser._id)) {

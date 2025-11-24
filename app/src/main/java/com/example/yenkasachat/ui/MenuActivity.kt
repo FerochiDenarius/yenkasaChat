@@ -83,31 +83,12 @@ class MenuActivity : AppCompatActivity() {
 
         // ✅ Communities button — only for admin, verified, moderator, developer
         val btnCommunities = findViewById<Button>(R.id.btnCommunities)
-        val isAdmin = TokenManager.isAdmin(this)
-        val isModerator = TokenManager.isModerator(this)
-        val isDeveloper = TokenManager.isDeveloper(this)
-        val isVerified = TokenManager.isVerified(this)
-
-        Log.d(TAG, "Checking privileges - Admin: $isAdmin, Moderator: $isModerator, Developer: $isDeveloper, Verified: $isVerified")
-
-        val hasPrivileges = isAdmin || isModerator || isDeveloper || isVerified
-
-        if (hasPrivileges) {
-            Log.d(TAG, "User has privileges — enabling Communities button")
-            btnCommunities.isEnabled = true
-            btnCommunities.alpha = 1.0f
-            btnCommunities.setOnClickListener {
-                Log.d(TAG, "Communities button clicked - opening CommunitiesActivity")
-                startActivity(Intent(this, CommunitiesActivity::class.java))
-            }
-        } else {
-            Log.d(TAG, "User does NOT have privileges — disabling Communities button")
-            btnCommunities.isEnabled = false
-            btnCommunities.alpha = 0.5f
-            btnCommunities.setOnClickListener {
-                Log.d(TAG, "Communities button clicked without permission")
-                Toast.makeText(this, "You do not have permission to access Communities", Toast.LENGTH_SHORT).show()
-            }
+        btnCommunities.isEnabled = true
+        btnCommunities.alpha = 1.0f
+        btnCommunities.setOnClickListener {
+            Log.d(TAG, "Communities button clicked")
+            startActivity(Intent(this, CommunitiesActivity::class.java))
         }
+
     }
-}
+    }

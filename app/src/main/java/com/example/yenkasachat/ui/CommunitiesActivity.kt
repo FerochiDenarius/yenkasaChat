@@ -288,8 +288,22 @@ class CommunitiesActivity : AppCompatActivity() {
 
         // ADD THESE: Separate handlers for each button
         adapter.onJoinCommunity = { community ->
-            joinCommunity(community)  // This will call your join function
+
+            // 🔥 Prevent duplicates in UI
+            if (joinedCommunityIds.contains(community.id)) {
+                Toast.makeText(this, "Already a member", Toast.LENGTH_SHORT).show()
+                return@onJoinCommunity
+            }
+
+            // 🔥 Also prevent joining primary community
+            if (community.id == TokenManager.getPrimaryCommunityId(this)) {
+                Toast.makeText(this, "This is already your primary community", Toast.LENGTH_SHORT).show()
+                return@onJoinCommunity
+            }
+
+            joinCommunity(community)
         }
+
 
         adapter.onViewCommunity = { community ->
             showCommunityDialog(community)  // This will show the dialog
@@ -513,6 +527,13 @@ class CommunitiesActivity : AppCompatActivity() {
             Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
             return
         }
+
+        // 🔒 Prevent duplicate join attempts (primary OR joined)
+        if (joinedCommunityIds.contains(communityId)) {
+            Toast.makeText(this, "Already a member", Toast.LENGTH_SHORT).show()
+            return
+        }
+
 
         Log.d("JOIN_COMMUNITY", "🔵 Joining community: ${community.displayName}  (ID=$communityId)")
 

@@ -68,23 +68,20 @@ router.post('/register', async (req, res) => {
     }
 
     // ✅ Create new user
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      username,
-      location,
-      password: hashedPassword,
-      joinedCommunities: [communityId], // auto-join local community
-      community: communityId,           // set as current
-      ...(email && { email }),
-      ...(phoneNumber && { phoneNumber }),
-    });
+const newUser = new User({
+    username,
+    location,
+    password: hashedPassword,
+    community: communityId,         // primary community
+    joinedCommunities: [communityId], // also joined list
+    ...(email && { email }),
+    ...(phoneNumber && { phoneNumber }),
+});
 
-        // Ensure primary community is always part of joinedCommunities
-if (!newUser.joinedCommunities.includes(communityId)) {
-    newUser.joinedCommunities.push(communityId);
-}
+await newUser.save();
 
-    await newUser.save();
+
+
 
 
 

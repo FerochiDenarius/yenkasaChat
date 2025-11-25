@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const viewSchema = new mongoose.Schema(
   {
     postId: {
@@ -34,3 +36,5 @@ const viewSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+module.exports = mongoose.model('View', viewSchema);

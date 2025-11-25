@@ -409,6 +409,7 @@ class FeedFragment : Fragment() {
         progressBar.visibility = if (show && currentPage == 1) View.VISIBLE else View.GONE
     }
 
+
     private fun setupSocketListeners() {
         SocketManager.on("newPost") { data ->
             try {
@@ -421,6 +422,23 @@ class FeedFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 Log.e("FeedFragment", "Error parsing newPost")
+            }
+        }
+        SocketManager.on("viewUpdate") { data ->
+            try {
+                val json = data as JSONObject
+                val postId = json.getString("postId")
+                val viewsCount = json.getInt("viewsCount")
+
+                lifecycleScope.launch {
+                    val index = posts.indexOfFirst { it._id == postId }
+                    if (index >= 0) {
+                        posts[index] = posts[index].copy(viewCount = viewsCount)
+                        adapter.notifyItemChanged(index)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FeedFragment", "Error parsing viewUpdate: ${e.message}")
             }
         }
 

@@ -44,6 +44,7 @@ class ViewActivity : AppCompatActivity() {
         textUsername = findViewById(R.id.textUsername)
         textCaption = findViewById(R.id.textCaption)
         textViews = findViewById(R.id.textViews)
+
         imageContent = findViewById(R.id.imageMedia)
         videoContent = findViewById(R.id.videoContent)
         audioIcon = findViewById(R.id.audioIcon)
@@ -162,6 +163,9 @@ class ViewActivity : AppCompatActivity() {
                     val body = response.body()
                     if (body != null && body.success) {
                         textViews.text = "👁️ ${body.viewsCount}"
+                        // Push update also to feed list when user returns
+                        post?.viewCount = body.viewsCount
+
                         Log.d(
                             "ViewActivity",
                             "✅ View recorded (${durationSeconds}s, Reward: ${body.rewardAmount})"

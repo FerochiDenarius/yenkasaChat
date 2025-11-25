@@ -59,6 +59,8 @@ class PostAdapter(
         private val likeCount: TextView = itemView.findViewById(R.id.textLikeCount)
         private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
         private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
+        private val viewCount: TextView = itemView.findViewById(R.id.textViewCount)
+
 
         private val playerView: PlayerView? = itemView.findViewById(R.id.playerView)
         private val btnPlayPause: ImageButton? = itemView.findViewById(R.id.btnPlayPause)
@@ -83,6 +85,7 @@ class PostAdapter(
 
             likeCount.text = "${post.likeCount} likes"
             commentCount.text = "${post.commentCount} comments"
+            viewCount.text = "👁 ${post.viewCount}"
 
             coinsEarned.visibility =
                 if (post.coinsEarned > 0) {
@@ -247,7 +250,7 @@ class PostAdapter(
                 val token = TokenManager.getToken(context) ?: return@launch
                 val post = getPostById(postId)
 
-                ApiClient.apiService.recordView(
+                val response = ApiClient.apiService.recordView(
                     postId,
                     "Bearer $token",
                     ViewRequest(
@@ -260,6 +263,16 @@ class PostAdapter(
                         }
                     )
                 )
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success) {
+                        post?.viewCount = body.viewsCount
+                        CoroutineScope(Dispatchers.Main).launch {
+                            notifyItemChanged(posts.indexOfFirst { it._id == postId })
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("PostAdapter", "Auto-view error: ${e.message}")
             }
@@ -272,7 +285,7 @@ class PostAdapter(
                 val token = TokenManager.getToken(context) ?: return@launch
                 val post = getPostById(postId)
 
-                ApiClient.apiService.recordView(
+                val response = ApiClient.apiService.recordView(
                     postId,
                     "Bearer $token",
                     ViewRequest(
@@ -285,6 +298,16 @@ class PostAdapter(
                         }
                     )
                 )
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success) {
+                        post?.viewCount = body.viewsCount
+                        CoroutineScope(Dispatchers.Main).launch {
+                            notifyItemChanged(posts.indexOfFirst { it._id == postId })
+                        }
+                    }
+                }
             } catch (e: Exception) { }
         }
     }

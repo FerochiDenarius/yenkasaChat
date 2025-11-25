@@ -24,7 +24,7 @@ data class Post(
     val commentCount: Int = 0,
     val comments: List<Comment>? = null,
     val shareCount: Int = 0,
-    val viewCount: Int = 0,
+    var viewCount: Int = 0,
 
     // Status
     val isActive: Boolean = true,

@@ -165,6 +165,16 @@ interface ApiService {
     @GET("posts")
     fun getAllPosts(): Call<List<Post>>
 
+    @GET("posts/by-communities")
+    fun getPostsByCommunities(
+        @Header("Authorization") token: String,
+        @Query("ids") ids: String, // comma-separated IDs
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Call<FeedResponse>
+
+
+
     @Multipart
     @POST("posts")
     fun createPost(
@@ -433,6 +443,8 @@ interface ApiService {
     @GET("user/all-communities")
     fun getAllUserCommunities(@Header("Authorization") token: String): Call<JoinedCommunitiesResponse>
 
+    @GET("communities/public/list")
+    fun getPublicCommunities(): Call<List<Community>>
 
 
     @POST("communities/{communityId}/join")

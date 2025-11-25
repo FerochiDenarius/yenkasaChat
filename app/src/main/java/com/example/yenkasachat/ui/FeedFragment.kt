@@ -306,34 +306,46 @@ class FeedFragment : Fragment() {
         isLoading = true
         showLoading(true)
 
-        ApiClient.apiService.getFeed("Bearer $token", page, 20)
-            .enqueue(object : Callback<FeedResponse> {
-                override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
-                    isLoading = false
-                    showLoading(false)
+        val communityIds = selectedCommunities.mapNotNull { it.id }
 
-                    if (response.isSuccessful && response.body() != null) {
-                        val feedResponse = response.body()!!
-                        posts.clear()
-                        posts.addAll(feedResponse.posts)
-                        adapter.updatePosts(posts)
-                        emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+        if (communityIds.isEmpty()) {
+            posts.clear()
+            adapter.updatePosts(posts)
+            emptyView.visibility = View.VISIBLE
+            showLoading(false)
+            return
+        }
 
-                        // Auto-play first video after loading
-                        recyclerView.post { playVisibleVideo() }
+        val idsString = communityIds.joinToString(",")
 
-                        Log.d("FeedFragment", "✅ Loaded ${feedResponse.posts.size} posts")
-                    } else {
-                        Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
-                    }
+        ApiClient.apiService.getPostsByCommunities(
+            "Bearer $token",
+            idsString,
+            page,
+            20
+        ).enqueue(object : Callback<FeedResponse> {
+            override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
+                isLoading = false
+                showLoading(false)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val feedResponse = response.body()!!
+                    posts.clear()
+                    posts.addAll(feedResponse.posts)
+                    adapter.updatePosts(posts)
+                    emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+                    recyclerView.post { playVisibleVideo() }
+                } else {
+                    Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                 }
+            }
 
-                override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
-                    isLoading = false
-                    showLoading(false)
-                    Log.e("FeedFragment", "Network failure: ${t.message}", t)
-                }
-            })
+            override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
+                isLoading = false
+                showLoading(false)
+                Log.e("FeedFragment", "Network failure: ${t.message}", t)
+            }
+        })
     }
 
     private fun openComments(post: Post) {

@@ -87,15 +87,13 @@
             android:layout_marginTop="12dp">
 
             <Spinner
-                android:id="@+id/spinnerCommunity"
+                android:id="@+id/spinnerCommunities"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:spinnerMode="dropdown"
-                android:prompt="@string/select_community"
-                android:backgroundTint="@color/black"
-                android:padding="8dp"
-                android:entries="@array/empty" />
+                android:background="?android:attr/colorBackground"
+                android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+                android:spinnerMode="dropdown" />
+
 
 
             <com.google.android.material.textfield.TextInputEditText

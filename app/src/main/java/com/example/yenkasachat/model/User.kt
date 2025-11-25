@@ -3,6 +3,7 @@ package com.example.yenkasachat.model
 import com.google.gson.annotations.SerializedName
 
 data class User(
+
     @SerializedName("_id")
     val _id: String,
 
@@ -12,7 +13,8 @@ data class User(
     @SerializedName("email")
     val email: String? = null,
 
-    @SerializedName("phone")
+    // 🔥 Backend uses phoneNumber, NOT phone
+    @SerializedName("phoneNumber")
     val phone: String? = null,
 
     @SerializedName("location")
@@ -27,6 +29,7 @@ data class User(
     @SerializedName("coinsBalance")
     val coinsBalance: Int = 0,
 
+    // 🔥 Backend now sends community AS AN OBJECT
     @SerializedName("community")
     val community: Community? = null,
 
@@ -39,12 +42,13 @@ data class User(
     @SerializedName("updatedAt")
     val updatedAt: String? = null,
 
-    // ✅ Role is now an object
+    // 🔥 Role is an object with name + permissions
     @SerializedName("role")
     val role: Role? = null,
 
+    // Provided separately in backend too
     @SerializedName("roleName")
-    val roleName: String?,
+    val roleName: String? = null,
 
     @SerializedName("followers")
     val followers: List<String>? = emptyList(),
@@ -52,5 +56,3 @@ data class User(
     @SerializedName("following")
     val following: List<String>? = emptyList()
 )
-
-// ✅ Role model to match backend

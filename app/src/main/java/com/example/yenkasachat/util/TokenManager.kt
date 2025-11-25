@@ -711,6 +711,28 @@ object TokenManager {
         }
     }
 
+    // 🔥 Returns user's primary (registration) community ID
+    fun getPrimaryCommunityId(context: Context): String? {
+        return try {
+            val id = getEncryptedPrefs(context).getString("primary_community_id", null)
+            Log.d("TokenManager", "Primary community ID: $id")
+            id
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error getting primary community ID", e)
+            null
+        }
+    }
+
+    // 🔥 Save it when loading user data (you will call this manually in Activities)
+    fun savePrimaryCommunityId(context: Context, communityId: String?) {
+        try {
+            getEncryptedPrefs(context).edit().putString("primary_community_id", communityId).apply()
+            Log.d("TokenManager", "Primary community saved: $communityId")
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error saving primary community", e)
+        }
+    }
+
     /**
      * Remove one user from the blocked list.
      */

@@ -286,23 +286,32 @@ class CommunitiesActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // ADD THESE: Separate handlers for each button
         adapter.onJoinCommunity = { community ->
 
-            // 🔥 Prevent duplicates in UI
-            if (joinedCommunityIds.contains(community.id)) {
+            val communityId = community.id
+
+            // ID missing → stop here
+            if (communityId == null) {
+                Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+                // no return needed
+            }
+            // Already joined? stop
+            else if (joinedCommunityIds.contains(communityId)) {
                 Toast.makeText(this, "Already a member", Toast.LENGTH_SHORT).show()
-                return@onJoinCommunity
+                // no return needed
             }
-
-            // 🔥 Also prevent joining primary community
-            if (community.id == TokenManager.getPrimaryCommunityId(this)) {
-                Toast.makeText(this, "This is already your primary community", Toast.LENGTH_SHORT).show()
-                return@onJoinCommunity
+            // Primary community? stop
+            else if (TokenManager.getPrimaryCommunityId(this) == communityId) {
+                Toast.makeText(this, "Already your primary community", Toast.LENGTH_SHORT).show()
+                // no return needed
             }
-
-            joinCommunity(community)
+            else {
+                // Allowed → perform join
+                joinCommunity(community)
+            }
         }
+
+
 
 
         adapter.onViewCommunity = { community ->
@@ -520,6 +529,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
 
     private fun joinCommunity(community: Community) {
+
         val communityId = community.id
 
         if (communityId.isNullOrEmpty()) {
@@ -528,12 +538,18 @@ class CommunitiesActivity : AppCompatActivity() {
             return
         }
 
-        // 🔒 Prevent duplicate join attempts (primary OR joined)
+        // 🔒 Prevent joining a community the user already joined
         if (joinedCommunityIds.contains(communityId)) {
             Toast.makeText(this, "Already a member", Toast.LENGTH_SHORT).show()
             return
         }
 
+        // 🔒 Prevent joining the primary community again
+        val primaryCommunityId = TokenManager.getPrimaryCommunityId(this)
+        if (primaryCommunityId != null && primaryCommunityId == communityId) {
+            Toast.makeText(this, "Already your primary community", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         Log.d("JOIN_COMMUNITY", "🔵 Joining community: ${community.displayName}  (ID=$communityId)")
 

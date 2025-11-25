@@ -83,7 +83,7 @@ class RegisterActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         val token = TokenManager.getToken(this) ?: return
 
-        ApiClient.apiService.getCommunities("Bearer $token")
+        ApiClient.apiService.getPublicCommunities()
             .enqueue(object : Callback<List<Community>> {
                 override fun onResponse(call: Call<List<Community>>, response: Response<List<Community>>) {
                     progressBar.visibility = View.GONE

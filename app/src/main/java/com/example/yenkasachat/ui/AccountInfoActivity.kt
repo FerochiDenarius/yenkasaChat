@@ -18,6 +18,8 @@ import com.example.yenkasachat.adapter.PostAdapter
 import com.example.yenkasachat.databinding.ActivityAccountInfoBinding
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.User
+import com.example.yenkasachat.model.UserPrimaryCommunityResponse
+import com.example.yenkasachat.model.JoinedCommunitiesResponse
 import com.example.yenkasachat.model.Community
 import com.example.yenkasachat.model.FollowResponse
 import com.example.yenkasachat.network.ApiClient
@@ -61,7 +63,10 @@ class AccountInfoActivity : AppCompatActivity() {
         setupListeners()
         loadProfileFromCache()
         fetchUserProfile()
+        loadUserCommunities()
         loadUserPosts()
+
+
     }
 
     private fun bindViews() {
@@ -241,15 +246,13 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = user.email ?: "Not provided"
         phoneView.text = user.phone ?: "Not provided"
         locationView.text = user.location ?: "No location"
-        coinsBalanceView.text = "YenkasaCoins: ${user.coinsBalance ?: 0}"
-        communityView.text = "Community: ${user.community?.name ?: "None"}"
+        coinsBalanceView.text = "YenkasaCoins: ${user.coinsBalance}"
+
+        // ✅ Correct property — your Community model uses displayName, not name
+        communityView.text = "Communities: Loading..."
         dateJoinedView.text = "Joined: ${formatDate(user.createdAt)}"
 
-        if (user.verified) {
-            iconVerified.visibility = View.VISIBLE
-        } else {
-            iconVerified.visibility = View.GONE
-        }
+        iconVerified.visibility = if (user.verified) View.VISIBLE else View.GONE
 
         Glide.with(this)
             .load(user.profileImage ?: R.drawable.default_avatar)
@@ -261,6 +264,78 @@ class AccountInfoActivity : AppCompatActivity() {
             )
             .into(imageProfile)
     }
+
+    private fun loadUserCommunities() {
+        val token = TokenManager.getToken(this) ?: return
+
+        var primaryCommunity: Community? = null
+
+        // 1️⃣ Fetch PRIMARY community
+        ApiClient.apiService.getUserPrimaryCommunity("Bearer $token")
+            .enqueue(object : Callback<UserPrimaryCommunityResponse> {
+                override fun onResponse(
+                    call: Call<UserPrimaryCommunityResponse>,
+                    response: Response<UserPrimaryCommunityResponse>
+                ) {
+                    if (response.isSuccessful && response.body()?.community != null) {
+                        primaryCommunity = response.body()!!.community
+                    }
+
+                    // Continue to fetch joined communities
+                    loadJoinedCommunitiesForAccount(primaryCommunity)
+                }
+
+                override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
+                    loadJoinedCommunitiesForAccount(primaryCommunity)
+                }
+            })
+    }
+
+    private fun loadJoinedCommunitiesForAccount(primary: Community?) {
+        val token = TokenManager.getToken(this) ?: return
+
+        ApiClient.apiService.getJoinedCommunities("Bearer $token")
+            .enqueue(object : Callback<JoinedCommunitiesResponse> {
+                override fun onResponse(
+                    call: Call<JoinedCommunitiesResponse>,
+                    response: Response<JoinedCommunitiesResponse>
+                ) {
+                    if (!response.isSuccessful || response.body() == null) {
+                        communityView.text = "Communities: None"
+                        return
+                    }
+
+                    val joined = response.body()!!.communities
+                    val finalList = mutableListOf<Community>()
+
+                    // Add PRIMARY first (if exists & not duplicated)
+                    primary?.let {
+                        if (!joined.any { c -> c.id == primary.id }) {
+                            finalList.add(primary)
+                        }
+                    }
+
+                    // Add JOINED
+                    finalList.addAll(joined)
+
+                    if (finalList.isEmpty()) {
+                        communityView.text = "Communities: None"
+                        return
+                    }
+
+                    val text = finalList.joinToString(", ") {
+                        it.displayName ?: it.name ?: "Unknown"
+                    }
+
+                    communityView.text = "Communities: $text"
+                }
+
+                override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
+                    communityView.text = "Communities: Failed to load"
+                }
+            })
+    }
+
 
     private fun loadUserPosts() {
         val token = TokenManager.getToken(this) ?: return

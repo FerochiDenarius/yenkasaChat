@@ -176,6 +176,23 @@ class LoginActivity : AppCompatActivity() {
                     val token = loginResponse?.token
                     val refreshToken = loginResponse?.refreshToken
 
+                    // --- 🔥 Save primary community for duplicate-check protection ---
+                    if (user?.community != null) {
+                        try {
+                            TokenManager.savePrimaryCommunityId(
+                                this@LoginActivity,
+                                user.community.id
+                            )
+                            Log.i("LoginActivity", "🏡 Primary community saved: ${user.community}")
+                        } catch (e: Exception) {
+                            Log.e("LoginActivity", "💥 Failed to save primary community: ${e.message}", e)
+                        }
+                    } else {
+                        Log.w("LoginActivity", "⚠️ user.community is null — no primary community to save")
+                    }
+
+
+
                     if (loginResponse != null && user != null && !user._id.isNullOrEmpty() && !token.isNullOrEmpty()) {
 
                         // 1. Save Token using TokenManager

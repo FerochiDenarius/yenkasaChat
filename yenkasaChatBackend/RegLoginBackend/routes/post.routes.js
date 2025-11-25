@@ -189,31 +189,61 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /posts/by-communities?ids=1,2,3
+/* ------------------------------------
+ * 🧩 GET POSTS FROM MULTIPLE COMMUNITIES
+ * Filters by BOTH communityId AND communityName
+ * ------------------------------------ */
 router.get('/by-communities', authMiddleware, async (req, res) => {
   try {
-    const ids = req.query.ids?.split(',') || [];
-    if (ids.length === 0) {
+    let { ids, names, page = 1, limit = 20 } = req.query;
+
+    const communityIds = ids ? ids.split(',') : [];
+    const communityNames = names ? names.split(',') : [];
+
+    if (communityIds.length === 0 && communityNames.length === 0) {
       return res.status(400).json({ error: "No communities provided" });
     }
 
-    const posts = await Post.find({
-      communityId: { $in: ids },
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const skip = (page - 1) * limit;
+
+    const filter = {
       isActive: true,
-      status: "approved"
-    })
+      status: "approved",
+      $or: [
+        { communityId: { $in: communityIds } },
+        { communityName: { $in: communityNames } }
+      ]
+    };
+
+    const posts = await Post.find(filter)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate("userId", "username profileImage verified")
       .populate("communityId", "name displayName")
       .lean();
 
-    res.json({ posts });
+    const totalPosts = await Post.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      posts,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalPosts / limit),
+        totalPosts,
+        hasMore: skip + posts.length < totalPosts
+      }
+    });
 
   } catch (err) {
-    console.error("❌ Failed to fetch multi-community posts:", err);
-    res.status(500).json({ error: "Failed to fetch posts" });
+    console.error("❌ Multi-community filter error:", err);
+    return res.status(500).json({ error: "Server error fetching posts" });
   }
 });
+
 /* 🧩 GET POSTS BY COMMUNITY */
 router.get('/community/:communityId', authMiddleware, async (req, res) => {
   try {

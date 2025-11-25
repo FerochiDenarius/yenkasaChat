@@ -58,7 +58,6 @@ class FeedFragment : Fragment() {
         setupRecyclerView()
 
         recyclerView.post { fetchCommunitiesAndFeed() }
-
         trackDailyLogin()
 
         fabCreatePost.setOnClickListener {
@@ -99,7 +98,7 @@ class FeedFragment : Fragment() {
         layoutManager = LinearLayoutManager(requireContext())
 
         adapter = PostAdapter(
-            requireContext(),  // ✅ pass context
+            requireContext(),
             posts,
             onLikeClick = { post, position ->
                 val context = requireContext()
@@ -114,83 +113,74 @@ class FeedFragment : Fragment() {
                         posts[position] = updatedPost
                         adapter.notifyItemChanged(position)
                     }
-                } else {
-                    Toast.makeText(context, "Please log in again", Toast.LENGTH_SHORT).show()
                 }
             },
             onCommentClick = { post, _ -> openComments(post) },
             onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
                 when {
-                    !post.imageUrl.isNullOrEmpty() -> {
-                        val intent = Intent(requireContext(), PostMediaActivity::class.java)
-                        intent.putExtra("MEDIA_URL", post.imageUrl)
-                        intent.putExtra("MEDIA_TYPE", "image")
-                        startActivity(intent)
-                    }
-                    !post.videoUrl.isNullOrEmpty() -> {
-                        val intent = Intent(requireContext(), PostMediaActivity::class.java)
-                        intent.putExtra("MEDIA_URL", post.videoUrl)
-                        intent.putExtra("MEDIA_TYPE", "video")
-                        startActivity(intent)
-                    }
-                    !post.audioUrl.isNullOrEmpty() -> {
-                        val intent = Intent(requireContext(), PostMediaActivity::class.java)
-                        intent.putExtra("MEDIA_URL", post.audioUrl)
-                        intent.putExtra("MEDIA_TYPE", "audio")
-                        startActivity(intent)
-                    }
-                    else -> {
-                        Toast.makeText(requireContext(), "No media available.", Toast.LENGTH_SHORT).show()
-                    }
+                    !post.imageUrl.isNullOrEmpty() -> openImage(post)
+                    !post.videoUrl.isNullOrEmpty() -> openVideo(post)
+                    !post.audioUrl.isNullOrEmpty() -> openAudio(post)
                 }
             },
-            onShareClick = { post ->
-                val shareIntent = Intent(Intent.ACTION_SEND)
-                shareIntent.type = "text/plain"
-                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
-                shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
-                startActivity(Intent.createChooser(shareIntent, "Share via"))
-            }
+            onShareClick = { post -> sharePost(post) }
         )
 
         recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter
 
-
-
-        recyclerView.layoutManager = layoutManager
-        recyclerView.adapter = adapter
-
-        // Instagram-style auto-play on scroll
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                super.onScrollStateChanged(recyclerView, newState)
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                     playVisibleVideo()
                 }
             }
 
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                // Pause videos when scrolling fast
-                if (Math.abs(dy) > 20) {
-                    adapter.pauseAllVideos()
-                }
+                if (Math.abs(dy) > 20) adapter.pauseAllVideos()
             }
         })
     }
 
+    private fun openImage(post: Post) {
+        val intent = Intent(requireContext(), PostMediaActivity::class.java)
+        intent.putExtra("MEDIA_URL", post.imageUrl)
+        intent.putExtra("MEDIA_TYPE", "image")
+        startActivity(intent)
+    }
+
+    private fun openVideo(post: Post) {
+        val intent = Intent(requireContext(), PostMediaActivity::class.java)
+        intent.putExtra("MEDIA_URL", post.videoUrl)
+        intent.putExtra("MEDIA_TYPE", "video")
+        startActivity(intent)
+    }
+
+    private fun openAudio(post: Post) {
+        val intent = Intent(requireContext(), PostMediaActivity::class.java)
+        intent.putExtra("MEDIA_URL", post.audioUrl)
+        intent.putExtra("MEDIA_TYPE", "audio")
+        startActivity(intent)
+    }
+
+    private fun sharePost(post: Post) {
+        val shareIntent = Intent(Intent.ACTION_SEND)
+        shareIntent.type = "text/plain"
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
+        shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
+        startActivity(Intent.createChooser(shareIntent, "Share via"))
+    }
+
     private fun playVisibleVideo() {
-        val firstVisible = layoutManager.findFirstVisibleItemPosition()
-        val lastVisible = layoutManager.findLastVisibleItemPosition()
+        val first = layoutManager.findFirstVisibleItemPosition()
+        val last = layoutManager.findLastVisibleItemPosition()
+        if (first == RecyclerView.NO_POSITION) return
 
-        if (firstVisible == RecyclerView.NO_POSITION) return
-
-        var mostVisiblePosition = -1
+        var mostVisible = -1
         var maxVisibleHeight = 0
 
-        for (i in firstVisible..lastVisible) {
+        for (i in first..last) {
             val view = layoutManager.findViewByPosition(i) ?: continue
             val post = posts.getOrNull(i) ?: continue
 
@@ -205,31 +195,27 @@ class FeedFragment : Fragment() {
             val visibleBottom = minOf(viewBottom, screenHeight)
             val visibleHeight = visibleBottom - visibleTop
 
-            // 🔥 Record a view for ANY media type if visible enough (>= 200px)
             if (visibleHeight > 200) {
-                adapter.recordVisibleView(post._id)
-            }
-
-            // Track MOST visible video for autoplay
-            if (!post.videoUrl.isNullOrEmpty()) {
-                if (visibleHeight > maxVisibleHeight) {
-                    maxVisibleHeight = visibleHeight
-                    mostVisiblePosition = i
+                val seconds = when {
+                    !post.videoUrl.isNullOrEmpty() -> 10
+                    !post.audioUrl.isNullOrEmpty() -> 5
+                    !post.imageUrl.isNullOrEmpty() -> 3
+                    else -> 2
                 }
+                adapter.recordVisibleView(post._id, seconds)
+            }
+
+            if (!post.videoUrl.isNullOrEmpty() && visibleHeight > maxVisibleHeight) {
+                maxVisibleHeight = visibleHeight
+                mostVisible = i
             }
         }
 
-        // 🔥 Auto-play only the most visible video
-        if (mostVisiblePosition != -1 && maxVisibleHeight > 200) {
-
-            val post = posts.getOrNull(mostVisiblePosition)
-            if (post != null) {
-                adapter.recordVisibleView(post._id)   // 🔥 call it here
-            }
-
-            adapter.playVideoAtPosition(mostVisiblePosition)
+        if (mostVisible != -1 && maxVisibleHeight > 200) {
+            val post = posts.getOrNull(mostVisible)
+            if (post != null) adapter.recordVisibleView(post._id, 10)
+            adapter.playVideoAtPosition(mostVisible)
         }
-
     }
 
     private fun fetchCommunitiesAndFeed() {
@@ -246,10 +232,7 @@ class FeedFragment : Fragment() {
                         return
                     }
 
-                    // 1️⃣ Keep the full list for UI selection
                     allCommunities = response.body()!!
-
-                    // 2️⃣ Now fetch joined + primary
                     fetchUserMembership()
                 }
 
@@ -258,6 +241,7 @@ class FeedFragment : Fragment() {
                 }
             })
     }
+
     private fun fetchUserMembership() {
         val auth = "Bearer $token"
 
@@ -267,8 +251,7 @@ class FeedFragment : Fragment() {
                     call: Call<UserPrimaryCommunityResponse>,
                     response: Response<UserPrimaryCommunityResponse>
                 ) {
-                    val primary = response.body()?.community
-                    fetchJoinedCommunities(primary)
+                    fetchJoinedCommunities(response.body()?.community)
                 }
 
                 override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
@@ -285,24 +268,18 @@ class FeedFragment : Fragment() {
                 override fun onResponse(
                     call: Call<JoinedCommunitiesResponse>,
                     response: Response<JoinedCommunitiesResponse>
-                )
-                {
+                ) {
                     if (!response.isSuccessful || response.body() == null) {
                         fallbackCommunity()
                         return
                     }
 
                     val joined = response.body()!!.communities
-
                     selectedCommunities.clear()
 
-                    // Add primary
                     primary?.let { selectedCommunities.add(it) }
-
-                    // Add joined
                     selectedCommunities.addAll(joined)
 
-                    // If none (rare), fallback to first community
                     if (selectedCommunities.isEmpty() && allCommunities.isNotEmpty()) {
                         selectedCommunities.add(allCommunities.first())
                     }
@@ -323,7 +300,6 @@ class FeedFragment : Fragment() {
         updateSelectedCommunitiesUI()
         loadFeed()
     }
-
     private fun showCommunitySelectorDialog() {
         if (allCommunities.isEmpty()) {
             Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
@@ -352,17 +328,12 @@ class FeedFragment : Fragment() {
     }
 
     private fun updateSelectedCommunitiesUI() {
-        val text = if (selectedCommunities.isEmpty())
-            "No community selected"
-        else selectedCommunities.joinToString(", ") { it.displayName ?: it.name ?: "Unknown" }
+        val text = selectedCommunities.joinToString(", ") { it.displayName ?: it.name ?: "Unknown" }
+        selectedCommunitiesText.text = if (text.isEmpty()) "No community selected" else text
 
-        selectedCommunitiesText.text = text
-
-        communityNameView.text = when {
-            selectedCommunities.isEmpty() -> "No Community"
-            selectedCommunities.size == 1 -> selectedCommunities.first().displayName
-                ?: selectedCommunities.first().name
-                ?: "Unnamed"
+        communityNameView.text = when (selectedCommunities.size) {
+            0 -> "No Community"
+            1 -> selectedCommunities.first().displayName ?: selectedCommunities.first().name ?: "Unnamed"
             else -> "Multiple Communities"
         }
     }
@@ -372,11 +343,8 @@ class FeedFragment : Fragment() {
         isLoading = true
         showLoading(true)
 
-        val communityNames = selectedCommunities.mapNotNull {
-            it.displayName ?: it.name
-        }
-
-        if (communityNames.isEmpty()) {
+        val names = selectedCommunities.mapNotNull { it.displayName ?: it.name }
+        if (names.isEmpty()) {
             posts.clear()
             adapter.updatePosts(posts)
             emptyView.visibility = View.VISIBLE
@@ -384,24 +352,22 @@ class FeedFragment : Fragment() {
             return
         }
 
-        val namesString = communityNames.joinToString(",")
+        val namesString = names.joinToString(",")
 
         ApiClient.apiService.getPostsByCommunities(
-            token = "Bearer $token",
-            communityNames = namesString,
-            page = page,
-            limit = 20
-        )
-.enqueue(object : Callback<FeedResponse> {
+            "Bearer $token",
+            namesString,
+            page,
+            20
+        ).enqueue(object : Callback<FeedResponse> {
 
             override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
                 isLoading = false
                 showLoading(false)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val feedResponse = response.body()!!
                     posts.clear()
-                    posts.addAll(feedResponse.posts)
+                    posts.addAll(response.body()!!.posts)
                     adapter.updatePosts(posts)
                     emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
                     recyclerView.post { playVisibleVideo() }
@@ -413,7 +379,7 @@ class FeedFragment : Fragment() {
             override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
                 isLoading = false
                 showLoading(false)
-                Log.e("FeedFragment", "Network failure: ${t.message}", t)
+                Log.e("FeedFragment", "Network failure: ${t.message}")
             }
         })
     }
@@ -434,7 +400,7 @@ class FeedFragment : Fragment() {
         ApiClient.apiService.trackLogin("Bearer $token").enqueue(object : Callback<TrackLoginResponse> {
             override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {}
             override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
-                Log.e("FeedFragment", "Login track failed: ${t.message}", t)
+                Log.e("FeedFragment", "Login track failed: ${t.message}")
             }
         })
     }
@@ -454,7 +420,7 @@ class FeedFragment : Fragment() {
                     recyclerView.scrollToPosition(0)
                 }
             } catch (e: Exception) {
-                Log.e("FeedFragment", "Error parsing newPost", e)
+                Log.e("FeedFragment", "Error parsing newPost")
             }
         }
 
@@ -467,26 +433,23 @@ class FeedFragment : Fragment() {
                 lifecycleScope.launch {
                     val index = posts.indexOfFirst { it._id == postId }
                     if (index >= 0) {
-                        val updated = posts[index].copy(likeCount = likeCount)
-                        posts[index] = updated
+                        posts[index] = posts[index].copy(likeCount = likeCount)
                         adapter.notifyItemChanged(index)
                     }
                 }
             } catch (e: Exception) {
-                Log.e("FeedFragment", "Error parsing likeUpdate", e)
+                Log.e("FeedFragment", "Error parsing likeUpdate")
             }
         }
     }
 
     override fun onPause() {
         super.onPause()
-        // Pause all videos when fragment is not visible
         adapter.pauseAllVideos()
     }
 
     override fun onResume() {
         super.onResume()
-        // Auto-play visible video when returning
         recyclerView.post { playVisibleVideo() }
     }
 

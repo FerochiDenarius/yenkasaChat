@@ -217,6 +217,7 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
     .skip(skip)
     .limit(limit)
     .populate("userId", "username profileImage verified")
+    .populate("communityId", "name displayName")  // ✅ FIXED: populate communityId object
     .lean();
 
   const totalPosts = await Post.countDocuments(filter);

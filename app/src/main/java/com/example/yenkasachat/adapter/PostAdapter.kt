@@ -3,19 +3,15 @@ package com.example.yenkasachat.adapter
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.RecyclerView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
@@ -36,17 +32,15 @@ class PostAdapter(
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit,
     private val onShareClick: (Post) -> Unit
-) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
+) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {      // ✅ FIXED SIGNATURE
 
     private var exoPlayer: ExoPlayer? = null
     private var currentPlayingPosition: Int = -1
     private var currentPlayerView: PlayerView? = null
     private var mediaPlayer: MediaPlayer? = null
     private val activePlayers = mutableListOf<ExoPlayer>()
+
     private val lastViewTime = mutableMapOf<String, Long>()
-
-
-
 
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -65,41 +59,40 @@ class PostAdapter(
         private val likeCount: TextView = itemView.findViewById(R.id.textLikeCount)
         private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
         private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
+
         private val playerView: PlayerView? = itemView.findViewById(R.id.playerView)
         private val btnPlayPause: ImageButton? = itemView.findViewById(R.id.btnPlayPause)
 
-
         fun bind(post: Post, position: Int) {
-            val user = post.userId
-            username.text = user.username
-            verifiedBadge.visibility = if (user.verified) View.VISIBLE else View.GONE
+
+            username.text = post.userId.username
+            verifiedBadge.visibility = if (post.userId.verified) View.VISIBLE else View.GONE
 
             Glide.with(itemView.context)
-                .load(user.profileImage)
+                .load(post.userId.profileImage)
                 .placeholder(R.drawable.ic_profile_placeholder)
-                .error(R.drawable.ic_profile_placeholder)
                 .circleCrop()
                 .into(profileImage)
 
-            val userId = user.id
-            profileImage.setOnClickListener { onUserClick(userId) }
-            username.setOnClickListener { onUserClick(userId) }
+            profileImage.setOnClickListener { onUserClick(post.userId.id) }
+            username.setOnClickListener { onUserClick(post.userId.id) }
 
             communityName.text = post.communityId?.displayName ?: "General"
-            timestamp.text = formatTimestamp(post.createdAt?.toLongOrNull())
-            postText.text = highlightMentions(post.caption ?: "", post.mentions)
+            timestamp.text = formatTimestamp(post.createdAt.toLongOrNull())
+            postText.text = post.caption ?: ""
 
             likeCount.text = "${post.likeCount} likes"
             commentCount.text = "${post.commentCount} comments"
 
-            coinsEarned.visibility = if (post.coinsEarned > 0) {
-                coinsEarned.text = "🪙 ${post.coinsEarned} coins earned"
-                View.VISIBLE
-            } else View.GONE
+            coinsEarned.visibility =
+                if (post.coinsEarned > 0) {
+                    coinsEarned.text = "🪙 ${post.coinsEarned} coins"
+                    View.VISIBLE
+                } else View.GONE
 
             updateLikeButton(post.likedByCurrentUser, btnLike)
-
             btnLike.setOnClickListener { onLikeClick(post, position) }
+
             btnComment.setOnClickListener { onCommentClick(post, position) }
             btnShare.setOnClickListener { onShareClick(post) }
 
@@ -107,8 +100,14 @@ class PostAdapter(
 
             itemView.setOnClickListener {
                 onPostClick(post)
-                recordViewAsync(itemView.context, post._id)
+                recordViewAsync(post._id)   // manual view
             }
+        }
+
+        fun updateLikeButton(isLiked: Boolean, btn: ImageButton) {
+            btn.setImageResource(
+                if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+            )
         }
 
         private fun handleMedia(post: Post, position: Int) {
@@ -125,35 +124,26 @@ class PostAdapter(
                 Glide.with(itemView.context)
                     .load(post.imageUrl)
                     .placeholder(R.drawable.placeholder_image)
-                    .error(R.drawable.placeholder_image)
                     .into(postImage)
+
+                recordVisibleView(post._id, 3)    // ⭐ reward for images
             }
 
             if (hasVideo) {
-                val videoUrl = post.videoUrl ?: return
-                if (position == currentPlayingPosition) {
-                    attachPlayerToView(playerView)
-                } else {
-                    playerView?.player = null
-                }
+                if (position == currentPlayingPosition) attachPlayerToView(playerView)
+                else playerView?.player = null
 
-                btnPlayPause?.setOnClickListener {
-                    toggleVideoPlayPause(position)
-                }
-                playerView?.setOnClickListener {
-                    toggleVideoPlayPause(position)
-                }
-
+                btnPlayPause?.setOnClickListener { toggleVideo(position) }
+                playerView?.setOnClickListener { toggleVideo(position) }
             }
 
             if (hasAudio) {
-                audioIcon.setOnClickListener {
-                    playAudio(post.audioUrl!!)
-                }
+                audioIcon.setOnClickListener { playAudio(post.audioUrl!!) }
+                recordVisibleView(post._id, 5)     // ⭐ reward for audio
             }
         }
 
-        private fun toggleVideoPlayPause(position: Int) {
+        private fun toggleVideo(position: Int) {
             val player = exoPlayer
             if (player == null) {
                 playVideoAtPosition(position)
@@ -165,13 +155,11 @@ class PostAdapter(
                 return
             }
 
-            if (player.isPlaying) {
-                player.pause()
-            } else {
-                player.play()
-            }
-
-            updatePlayPauseIcon()
+            if (player.isPlaying) player.pause() else player.play()
+            btnPlayPause?.setImageResource(
+                if (player.isPlaying) R.drawable.ic_pause_circle
+                else R.drawable.ic_play_circle
+            )
         }
 
         private fun playAudio(url: String) {
@@ -182,28 +170,15 @@ class PostAdapter(
                     prepare()
                     start()
                 }
-                Toast.makeText(itemView.context, "🎧 Playing audio", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Log.e("PostAdapter", "❌ Error playing audio: ${e.message}")
+                Log.e("PostAdapter", "Audio error: ${e.message}")
             }
-        }
-
-        private fun updatePlayPauseIcon() {
-            val playing = exoPlayer?.isPlaying == true
-            btnPlayPause?.setImageResource(
-                if (playing) R.drawable.ic_pause_circle else R.drawable.ic_play_circle
-            )
-        }
-
-        fun updateLikeButton(isLiked: Boolean, btnLike: ImageButton) {
-            btnLike.setImageResource(
-                if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-            )
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false)
+        val view =
+            LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false)
         return PostViewHolder(view)
     }
 
@@ -211,138 +186,97 @@ class PostAdapter(
         holder.bind(posts[position], position)
     }
 
-    override fun getItemCount() = posts.size
+    override fun getItemCount(): Int = posts.size
 
     fun updatePosts(newPosts: List<Post>) {
         posts = newPosts
         notifyDataSetChanged()
     }
 
-    fun playVideoAtPosition(position: Int) {
-        detachPlayerFromCurrentView()
 
-        val post = posts.getOrNull(position)
-        val videoUrl = post?.videoUrl ?: return
+    fun playVideoAtPosition(position: Int) {
+        detachPlayer()
+
+        val url = posts[position].videoUrl ?: return
 
         if (exoPlayer == null) {
-            exoPlayer = ExoPlayer.Builder(context).build().apply {   // ✅ use context directly
-                volume = 1f
-                activePlayers.add(this)
-            }
+            exoPlayer = ExoPlayer.Builder(context).build()
+            activePlayers.add(exoPlayer!!)
         }
 
-        val mediaItem = MediaItem.fromUri(Uri.parse(videoUrl))
-        exoPlayer?.apply {
-            setMediaItem(mediaItem)
+        exoPlayer!!.apply {
+            setMediaItem(MediaItem.fromUri(Uri.parse(url)))
             prepare()
-            playWhenReady = true
             play()
         }
 
         currentPlayingPosition = position
         notifyItemChanged(position)
+
+        recordVisibleView(posts[position]._id, 10)    // ⭐ reward for video
     }
 
-    fun recordVisibleView(postId: String) {
+
+    private fun attachPlayerToView(v: PlayerView?) {
+        if (v == null) return
+        currentPlayerView?.player = null
+        v.player = exoPlayer
+        currentPlayerView = v
+    }
+
+    private fun detachPlayer() {
+        currentPlayerView?.player = null
+        currentPlayerView = null
+    }
+
+    fun pauseAllVideos() {
+        activePlayers.forEach { it.pause() }
+    }
+
+
+    // ⭐⭐⭐ PUBLIC — NOW FEED FRAGMENT CAN CALL IT ⭐⭐⭐
+    fun recordVisibleView(postId: String, seconds: Int) {
         val now = System.currentTimeMillis()
-        val lastTime = lastViewTime[postId] ?: 0
+        val last = lastViewTime[postId] ?: 0
 
-        // Allow reward every 10 seconds
-        if (now - lastTime < 10_000) return
-
+        if (now - last < 8_000) return
         lastViewTime[postId] = now
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val token = TokenManager.getToken(context)
-                if (!token.isNullOrEmpty()) {
-
-                    val viewData = ViewRequest(watchDuration = 5)
-
-                    Log.d("PostAdapter", "📡 Auto-view (cooldown ok) → $postId")
-
-                    val response = ApiClient.apiService.recordView(
-                        postId = postId,
-                        token = "Bearer $token",
-                        viewData = viewData
-                    )
-
-                    if (!response.isSuccessful) {
-                        Log.w("PostAdapter", "⚠️ Auto-view failed → $postId")
-                    }
-                }
+                val token = TokenManager.getToken(context) ?: return@launch
+                ApiClient.apiService.recordView(
+                    postId,
+                    "Bearer $token",
+                    ViewRequest(watchDuration = seconds)
+                )
             } catch (e: Exception) {
-                Log.e("PostAdapter", "❌ Auto-view error: ${e.message}")
+                Log.e("PostAdapter", "Auto-view error: ${e.message}")
             }
         }
     }
 
-    private fun attachPlayerToView(playerView: PlayerView?) {
-        if (playerView == null) return
-        exoPlayer?.let { player ->
-            if (currentPlayerView != null && currentPlayerView !== playerView) {
-                currentPlayerView?.player = null
-            }
-            playerView.player = player
-            currentPlayerView = playerView
-        }
-    }
-
-    private fun detachPlayerFromCurrentView() {
-        currentPlayerView?.player = null
-        currentPlayerView = null
-    }
-    fun pauseAllVideos() {
-        try {
-            activePlayers.forEach { player -> player.pause() }
-        } catch (e: Exception) {
-            Log.e("PostAdapter", "Error pausing videos: ${e.message}")
-        }
-    }
-
-    private fun recordViewAsync(context: Context, postId: String) {
+    private fun recordViewAsync(postId: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val token = TokenManager.getToken(context)
-                if (!token.isNullOrEmpty()) {
-
-                    // Correct model instead of Map<String, Int>
-                    val viewData = ViewRequest(watchDuration = 45)
-
-                    val response = ApiClient.apiService.recordView(
-                        postId = postId,
-                        token = "Bearer $token",
-                        viewData = viewData
-                    )
-
-                    if (!response.isSuccessful) {
-                        Log.w("PostAdapter", "Failed to record view for $postId → ${response.errorBody()?.string()}")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("PostAdapter", "Error recording view: ${e.message}", e)
-            }
+                val token = TokenManager.getToken(context) ?: return@launch
+                ApiClient.apiService.recordView(
+                    postId,
+                    "Bearer $token",
+                    ViewRequest(watchDuration = 5)
+                )
+            } catch (_: Exception) {}
         }
     }
 
-    fun highlightMentions(text: String, mentions: List<String>?): CharSequence {
-        return text
-    }
-
-    fun formatTimestamp(timestamp: Long?): String {
-        if (timestamp == null) return ""
-        val date = Date(timestamp)
+    private fun formatTimestamp(ts: Long?): String {
+        if (ts == null) return ""
         val sdf = SimpleDateFormat("dd MMM • hh:mm a", Locale.getDefault())
-        return sdf.format(date)
+        return sdf.format(Date(ts))
     }
-
 
     fun releaseResources() {
         exoPlayer?.release()
         mediaPlayer?.release()
-        exoPlayer = null
-        mediaPlayer = null
-        currentPlayingPosition = -1
-        currentPlayerView = null
     }
 }

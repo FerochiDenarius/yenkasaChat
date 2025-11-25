@@ -31,6 +31,7 @@ data class RewardTransaction(
 )
 data class ViewRequest(
     val watchDuration: Int,
-    val viewType: String
+    val mediaType: String // must be EXACT name backend expects
 )
+
 

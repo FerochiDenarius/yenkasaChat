@@ -252,7 +252,7 @@ class PostAdapter(
                     "Bearer $token",
                     ViewRequest(
                         watchDuration = seconds,
-                        viewType = when {
+                        mediaType = when {
                             post?.videoUrl?.isNotEmpty() == true -> "video"
                             post?.audioUrl?.isNotEmpty() == true -> "audio"
                             post?.imageUrl?.isNotEmpty() == true -> "image"
@@ -277,7 +277,7 @@ class PostAdapter(
                     "Bearer $token",
                     ViewRequest(
                         watchDuration = 5,
-                        viewType = when {
+                        mediaType = when {
                             post?.videoUrl?.isNotEmpty() == true -> "video"
                             post?.audioUrl?.isNotEmpty() == true -> "audio"
                             post?.imageUrl?.isNotEmpty() == true -> "image"

@@ -136,7 +136,7 @@ class ViewActivity : AppCompatActivity() {
         try {
             val payload = ViewRequest(
                 watchDuration = durationSeconds,
-                viewType =
+                mediaType =
                     when {
                         !post?.videoUrl.isNullOrEmpty() -> "video"
                         !post?.audioUrl.isNullOrEmpty() -> "audio"

@@ -194,55 +194,45 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
  * Filters by BOTH communityId AND communityName
  * ------------------------------------ */
 router.get('/by-communities', authMiddleware, async (req, res) => {
-  try {
-    let { ids, names, page = 1, limit = 20 } = req.query;
+  let { names, page = 1, limit = 20 } = req.query;
 
-    const communityIds = ids ? ids.split(',') : [];
-    const communityNames = names ? names.split(',') : [];
-
-    if (communityIds.length === 0 && communityNames.length === 0) {
-      return res.status(400).json({ error: "No communities provided" });
-    }
-
-    page = parseInt(page);
-    limit = parseInt(limit);
-    const skip = (page - 1) * limit;
-
-    const filter = {
-      isActive: true,
-      status: "approved",
-      $or: [
-        { communityId: { $in: communityIds } },
-        { communityName: { $in: communityNames } }
-      ]
-    };
-
-    const posts = await Post.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("userId", "username profileImage verified")
-      .populate("communityId", "name displayName")
-      .lean();
-
-    const totalPosts = await Post.countDocuments(filter);
-
-    return res.status(200).json({
-      success: true,
-      posts,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalPosts / limit),
-        totalPosts,
-        hasMore: skip + posts.length < totalPosts
-      }
-    });
-
-  } catch (err) {
-    console.error("❌ Multi-community filter error:", err);
-    return res.status(500).json({ error: "Server error fetching posts" });
+  if (!names) {
+    return res.status(400).json({ error: "No community names provided" });
   }
+
+  const communityNames = names.split(",");
+
+  page = parseInt(page);
+  limit = parseInt(limit);
+  const skip = (page - 1) * limit;
+
+  const filter = {
+    isActive: true,
+    status: "approved",
+    communityName: { $in: communityNames }
+  };
+
+  const posts = await Post.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate("userId", "username profileImage verified")
+    .lean();
+
+  const totalPosts = await Post.countDocuments(filter);
+
+  res.json({
+    success: true,
+    posts,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
+      hasMore: skip + posts.length < totalPosts
+    }
+  });
 });
+
 
 /* 🧩 GET POSTS BY COMMUNITY */
 router.get('/community/:communityId', authMiddleware, async (req, res) => {

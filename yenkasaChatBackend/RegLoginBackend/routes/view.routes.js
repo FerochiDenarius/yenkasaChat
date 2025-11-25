@@ -8,46 +8,66 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 
-// ---------------------------------------------
-// 🎥 Reward tiers based on watch duration (seconds)
-// ---------------------------------------------
-function getRewardForDuration(seconds) {
-  if (seconds >= 120) return 20; // 2 minutes+
-  if (seconds >= 60) return 10;  // 1 minute+
-  if (seconds >= 30) return 5;   // 30s+
-  if (seconds >= 10) return 2;   // 10s+
-  return 0;                      // <10s → no reward
+
+// ======================================================
+// ⭐ NEW — Separate reward systems by media type
+// ======================================================
+
+function rewardImage(seconds) {
+  if (seconds >= 5) return 2;
+  if (seconds >= 3) return 1;
+  return 0;
 }
 
-// ---------------------------------------------
-// 👁️ Record view and reward viewer dynamically
-// ---------------------------------------------
+function rewardVideo(seconds) {
+  if (seconds >= 120) return 20;
+  if (seconds >= 60) return 10;
+  if (seconds >= 30) return 5;
+  if (seconds >= 10) return 2;
+  return 0;
+}
+
+function rewardAudio(seconds) {
+  if (seconds >= 90) return 10;
+  if (seconds >= 45) return 5;
+  if (seconds >= 20) return 2;
+  return 0;
+}
+
+
+// ======================================================
+// 👁️ Record View + Reward
+// ======================================================
 router.post('/:postId/view', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
-    const { watchDuration = 0 } = req.body;
+
+    const {
+      watchDuration = 0,
+      mediaType = "unknown"  // 👈 ANDROID MUST SEND THIS
+    } = req.body;
+
     const viewerId = req.user?.id;
 
-    console.log(`📡 Incoming view request → Post: ${postId}, Watch: ${watchDuration}s, User: ${viewerId}`);
+    console.log(`📡 View request → Post:${postId} | Duration:${watchDuration}s | Type:${mediaType} | User:${viewerId}`);
 
-    // ✅ Validate user and post
-    if (!viewerId) return res.status(401).json({ success: false, message: 'Unauthorized: Missing user ID' });
+    // Validate
+    if (!viewerId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const [post, viewer] = await Promise.all([
       Post.findById(postId),
       User.findById(viewerId)
     ]);
 
-    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
-    if (!viewer) return res.status(404).json({ success: false, message: 'Viewer not found' });
+    if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+    if (!viewer) return res.status(404).json({ success: false, message: "Viewer not found" });
 
-    // ✅ Consistent ObjectId casting
     const objectIdPost = new mongoose.Types.ObjectId(postId);
-
     const activityId = `view_${postId}_${viewerId}_${Date.now()}`;
 
-    // ✅ Record view
-    const view = await View.create({
+    // Save view
+    await View.create({
       postId: objectIdPost,
       userId: viewerId,
       username: viewer.username,
@@ -56,85 +76,85 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       viewedAt: new Date()
     });
 
-    // ✅ Determine and apply reward
-    const rewardAmount = getRewardForDuration(watchDuration);
+    // ======================================================
+    // ⭐ NEW — Choose reward function based on media type
+    // ======================================================
+    let rewardAmount = 0;
+
+    if (mediaType === "image") {
+      rewardAmount = rewardImage(watchDuration);
+    } else if (mediaType === "video") {
+      rewardAmount = rewardVideo(watchDuration);
+    } else if (mediaType === "audio") {
+      rewardAmount = rewardAudio(watchDuration);
+    }
+
     let rewardTx = null;
 
     if (rewardAmount > 0) {
-      console.log(`🎁 Reward attempt: ${rewardAmount} YKC → ${viewer.username}`);
+      console.log(`🎁 Rewarding ${rewardAmount} coins → ${viewer.username}`);
 
-      try {
-        rewardTx = await rewardService.reward(viewerId, rewardAmount, {
-          fromUserId: null,
-          type: 'REWARD_VIEWS',
-          description: `Earned ${rewardAmount} YKC for watching post ${post._id} (${watchDuration}s)`,
-          relatedPostId: post._id,
-          activityId
-        });
+      rewardTx = await rewardService.reward(viewerId, rewardAmount, {
+        fromUserId: null,
+        type: "REWARD_VIEWS",
+        description: `Earned ${rewardAmount} coins for ${mediaType} view (${watchDuration}s)`,
+        relatedPostId: post._id,
+        activityId
+      });
 
-        if (!rewardTx) {
-          console.warn('⚠️ Reward service returned null — transaction not recorded');
-        }
-
-        // ✅ Update post’s earned coins
-        post.coinsEarned = (post.coinsEarned || 0) + rewardAmount;
-        await post.save();
-      } catch (err) {
-        console.error('❌ Error applying reward:', err);
-      }
+      post.coinsEarned = (post.coinsEarned || 0) + rewardAmount;
+      await post.save();
     } else {
-      console.log('⏱️ No reward — duration too short (<10s)');
+      console.log(`⏱️ No reward for ${mediaType} — duration too short`);
     }
 
-    // ✅ Accurate total views count
+    // Count views
     const viewsCount = await View.countDocuments({ postId: objectIdPost });
 
-    // ✅ Emit socket event if available
+    // Emit live update
     if (global.io) {
-      global.io.emit('viewUpdate', {
+      global.io.emit("viewUpdate", {
         postId,
         viewsCount,
-        viewerId,
         rewardAmount,
-        timestamp: new Date(),
-        rewardTransaction: rewardTx
+        viewerId,
+        timestamp: new Date()
       });
-    } else {
-      console.warn('⚠️ global.io not initialized — skipping socket emit');
     }
 
     return res.json({
       success: true,
-      message: `View recorded (${watchDuration}s). ${rewardAmount ? `${rewardAmount} YKC rewarded.` : 'No reward (less than 10s).'}`,
+      message: "View recorded",
       viewsCount,
       rewardAmount,
       rewardTransaction: rewardTx
     });
 
   } catch (error) {
-    console.error('❌ Error recording view:', error);
-    return res.status(500).json({ success: false, message: 'Server error while recording view' });
+    console.error("❌ Error recording view:", error);
+    return res.status(500).json({ success: false, message: "Server error while recording view" });
   }
 });
 
-// ---------------------------------------------
-// 📊 Get total views for a post
-// ---------------------------------------------
+
+// ======================================================
+// 📊 Get total views
+// ======================================================
 router.get('/:postId/views', authMiddleware, async (req, res) => {
   try {
-    const { postId } = req.params;
-    const objectIdPost = new mongoose.Types.ObjectId(postId);
+    const objectIdPost = new mongoose.Types.ObjectId(req.params.postId);
     const viewsCount = await View.countDocuments({ postId: objectIdPost });
 
     res.json({
       success: true,
-      postId,
+      postId: req.params.postId,
       viewsCount,
       timestamp: new Date()
     });
+
   } catch (error) {
-    console.error('❌ Error fetching view count:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch view count' });
+    console.error("❌ Error fetching views:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch views" });
   }
 });
 

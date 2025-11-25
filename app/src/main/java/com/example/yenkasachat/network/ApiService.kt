@@ -168,10 +168,12 @@ interface ApiService {
     @GET("posts/by-communities")
     fun getPostsByCommunities(
         @Header("Authorization") token: String,
-        @Query("ids") ids: String, // comma-separated IDs
+        @Query("names") communityNames: String,   // 👈 VARIABLE NAME!!!
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Call<FeedResponse>
+
+
 
 
 
@@ -503,11 +505,13 @@ interface ApiService {
 
 //=================ViewCOUNT=================//
 
+    //=================ViewCOUNT=================//
+
     @POST("views/{postId}/view")
     suspend fun recordView(
         @Path("postId") postId: String,
         @Header("Authorization") token: String,
-        @Body viewData: Map<String, Any> // send { "watchDuration": seconds }
+        @Body viewData: ViewRequest
     ): Response<ViewResponse>
 
 
@@ -516,6 +520,7 @@ interface ApiService {
         @Path("postId") postId: String,
         @Header("Authorization") token: String
     ): Response<ViewResponse>
+
 
     // ==================== APP VERIFICATION ====================
 

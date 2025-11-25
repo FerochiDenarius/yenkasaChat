@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.ViewResponse
+import com.example.yenkasachat.model.ViewRequest
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.SocketManager
 import com.example.yenkasachat.util.TokenManager
@@ -130,27 +131,39 @@ class ViewActivity : AppCompatActivity() {
         val currentPostId = post?._id ?: return
         val rawToken = token ?: return
 
-        // ✅ ensure token format
         val authToken = if (rawToken.startsWith("Bearer")) rawToken else "Bearer $rawToken"
 
         try {
-            val payload = mapOf("watchDuration" to durationSeconds)
-            Log.d("ViewActivity", "📡 Sending view record → Post: $currentPostId | Duration: ${durationSeconds}s")
+            val payload = ViewRequest(watchDuration = durationSeconds)
 
-            val response = ApiClient.apiService.recordView(currentPostId, authToken, payload)
+            Log.d(
+                "ViewActivity",
+                "📡 Sending view record → Post: $currentPostId | Duration: ${durationSeconds}s"
+            )
+
+            val response = ApiClient.apiService.recordView(
+                postId = currentPostId,
+                token = authToken,
+                viewData = payload
+            )
 
             withContext(Dispatchers.Main) {
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.success) {
                         textViews.text = "👁️ ${body.viewsCount}"
-                        Log.d("ViewActivity", "✅ View recorded (${durationSeconds}s, Reward: ${body.rewardAmount})")
+                        Log.d(
+                            "ViewActivity",
+                            "✅ View recorded (${durationSeconds}s, Reward: ${body.rewardAmount})"
+                        )
                     } else {
                         Log.w("ViewActivity", "⚠️ View response error: ${body?.message}")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string()
-                    Log.w("ViewActivity", "⚠️ Failed to record view: $errorBody")
+                    Log.w(
+                        "ViewActivity",
+                        "⚠️ Failed to record view: ${response.errorBody()?.string()}"
+                    )
                 }
             }
         } catch (e: Exception) {

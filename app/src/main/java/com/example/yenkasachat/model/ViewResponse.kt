@@ -29,3 +29,6 @@ data class RewardTransaction(
     val activityId: String? = null,
     val createdAt: String? = null
 )
+data class ViewRequest(
+    val watchDuration: Int
+)

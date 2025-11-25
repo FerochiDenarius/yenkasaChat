@@ -19,6 +19,7 @@ import androidx.media3.ui.PlayerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.model.ViewRequest
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,9 @@ class PostAdapter(
     private var currentPlayerView: PlayerView? = null
     private var mediaPlayer: MediaPlayer? = null
     private val activePlayers = mutableListOf<ExoPlayer>()
+    private val lastViewTime = mutableMapOf<String, Long>()
+
+
 
 
 
@@ -63,6 +67,7 @@ class PostAdapter(
         private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
         private val playerView: PlayerView? = itemView.findViewById(R.id.playerView)
         private val btnPlayPause: ImageButton? = itemView.findViewById(R.id.btnPlayPause)
+
 
         fun bind(post: Post, position: Int) {
             val user = post.userId
@@ -238,6 +243,40 @@ class PostAdapter(
         notifyItemChanged(position)
     }
 
+    fun recordVisibleView(postId: String) {
+        val now = System.currentTimeMillis()
+        val lastTime = lastViewTime[postId] ?: 0
+
+        // Allow reward every 10 seconds
+        if (now - lastTime < 10_000) return
+
+        lastViewTime[postId] = now
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val token = TokenManager.getToken(context)
+                if (!token.isNullOrEmpty()) {
+
+                    val viewData = ViewRequest(watchDuration = 5)
+
+                    Log.d("PostAdapter", "📡 Auto-view (cooldown ok) → $postId")
+
+                    val response = ApiClient.apiService.recordView(
+                        postId = postId,
+                        token = "Bearer $token",
+                        viewData = viewData
+                    )
+
+                    if (!response.isSuccessful) {
+                        Log.w("PostAdapter", "⚠️ Auto-view failed → $postId")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("PostAdapter", "❌ Auto-view error: ${e.message}")
+            }
+        }
+    }
+
     private fun attachPlayerToView(playerView: PlayerView?) {
         if (playerView == null) return
         exoPlayer?.let { player ->
@@ -266,10 +305,18 @@ class PostAdapter(
             try {
                 val token = TokenManager.getToken(context)
                 if (!token.isNullOrEmpty()) {
-                    val viewData = mapOf("watchDuration" to 45) // replace with actual duration
-                    val response = ApiClient.apiService.recordView(postId, "Bearer $token", viewData)
+
+                    // Correct model instead of Map<String, Int>
+                    val viewData = ViewRequest(watchDuration = 45)
+
+                    val response = ApiClient.apiService.recordView(
+                        postId = postId,
+                        token = "Bearer $token",
+                        viewData = viewData
+                    )
+
                     if (!response.isSuccessful) {
-                        Log.w("PostAdapter", "Failed to record view for $postId")
+                        Log.w("PostAdapter", "Failed to record view for $postId → ${response.errorBody()?.string()}")
                     }
                 }
             } catch (e: Exception) {

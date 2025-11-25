@@ -187,7 +187,6 @@ class FeedFragment : Fragment() {
 
         if (firstVisible == RecyclerView.NO_POSITION) return
 
-        // Find the most visible video post
         var mostVisiblePosition = -1
         var maxVisibleHeight = 0
 
@@ -195,17 +194,24 @@ class FeedFragment : Fragment() {
             val view = layoutManager.findViewByPosition(i) ?: continue
             val post = posts.getOrNull(i) ?: continue
 
+            val location = IntArray(2)
+            view.getLocationOnScreen(location)
+
+            val viewTop = location[1]
+            val viewBottom = viewTop + view.height
+
+            val screenHeight = recyclerView.height
+            val visibleTop = maxOf(viewTop, 0)
+            val visibleBottom = minOf(viewBottom, screenHeight)
+            val visibleHeight = visibleBottom - visibleTop
+
+            // 🔥 Record a view for ANY media type if visible enough (>= 200px)
+            if (visibleHeight > 200) {
+                adapter.recordVisibleView(post._id)
+            }
+
+            // Track MOST visible video for autoplay
             if (!post.videoUrl.isNullOrEmpty()) {
-                val location = IntArray(2)
-                view.getLocationOnScreen(location)
-                val viewTop = location[1]
-                val viewBottom = viewTop + view.height
-
-                val screenHeight = recyclerView.height
-                val visibleTop = Math.max(viewTop, 0)
-                val visibleBottom = Math.min(viewBottom, screenHeight)
-                val visibleHeight = visibleBottom - visibleTop
-
                 if (visibleHeight > maxVisibleHeight) {
                     maxVisibleHeight = visibleHeight
                     mostVisiblePosition = i
@@ -213,39 +219,99 @@ class FeedFragment : Fragment() {
             }
         }
 
-        // Auto-play the most visible video
+        // 🔥 Auto-play only the most visible video
         if (mostVisiblePosition != -1 && maxVisibleHeight > 200) {
+
+            val post = posts.getOrNull(mostVisiblePosition)
+            if (post != null) {
+                adapter.recordVisibleView(post._id)   // 🔥 call it here
+            }
+
             adapter.playVideoAtPosition(mostVisiblePosition)
         }
+
     }
 
     private fun fetchCommunitiesAndFeed() {
-        ApiClient.apiService.getCommunities("Bearer $token")
+        val auth = "Bearer $token"
+
+        ApiClient.apiService.getCommunities(auth)
             .enqueue(object : Callback<List<Community>> {
                 override fun onResponse(
                     call: Call<List<Community>>,
                     response: Response<List<Community>>
                 ) {
-                    if (response.isSuccessful && response.body() != null) {
-                        allCommunities = response.body()!!
-
-                        selectedCommunities.clear()
-                        if (allCommunities.isNotEmpty()) {
-                            selectedCommunities.add(allCommunities.first())
-                        }
-
-                        updateSelectedCommunitiesUI()
-                        loadFeed()
-
-                        Log.d("FeedFragment", "✅ Loaded ${allCommunities.size} communities")
-                    } else {
-                        Log.w("FeedFragment", "⚠️ Failed to load communities")
+                    if (!response.isSuccessful || response.body() == null) {
                         fallbackCommunity()
+                        return
                     }
+
+                    // 1️⃣ Keep the full list for UI selection
+                    allCommunities = response.body()!!
+
+                    // 2️⃣ Now fetch joined + primary
+                    fetchUserMembership()
                 }
 
                 override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    Log.e("FeedFragment", "❌ Error fetching communities: ${t.message}", t)
+                    fallbackCommunity()
+                }
+            })
+    }
+    private fun fetchUserMembership() {
+        val auth = "Bearer $token"
+
+        ApiClient.apiService.getUserPrimaryCommunity(auth)
+            .enqueue(object : Callback<UserPrimaryCommunityResponse> {
+                override fun onResponse(
+                    call: Call<UserPrimaryCommunityResponse>,
+                    response: Response<UserPrimaryCommunityResponse>
+                ) {
+                    val primary = response.body()?.community
+                    fetchJoinedCommunities(primary)
+                }
+
+                override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
+                    fetchJoinedCommunities(null)
+                }
+            })
+    }
+
+    private fun fetchJoinedCommunities(primary: Community?) {
+        val auth = "Bearer $token"
+
+        ApiClient.apiService.getJoinedCommunities(auth)
+            .enqueue(object : Callback<JoinedCommunitiesResponse> {
+                override fun onResponse(
+                    call: Call<JoinedCommunitiesResponse>,
+                    response: Response<JoinedCommunitiesResponse>
+                )
+                {
+                    if (!response.isSuccessful || response.body() == null) {
+                        fallbackCommunity()
+                        return
+                    }
+
+                    val joined = response.body()!!.communities
+
+                    selectedCommunities.clear()
+
+                    // Add primary
+                    primary?.let { selectedCommunities.add(it) }
+
+                    // Add joined
+                    selectedCommunities.addAll(joined)
+
+                    // If none (rare), fallback to first community
+                    if (selectedCommunities.isEmpty() && allCommunities.isNotEmpty()) {
+                        selectedCommunities.add(allCommunities.first())
+                    }
+
+                    updateSelectedCommunitiesUI()
+                    loadFeed()
+                }
+
+                override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
                     fallbackCommunity()
                 }
             })
@@ -306,9 +372,11 @@ class FeedFragment : Fragment() {
         isLoading = true
         showLoading(true)
 
-        val communityIds = selectedCommunities.mapNotNull { it.id }
+        val communityNames = selectedCommunities.mapNotNull {
+            it.displayName ?: it.name
+        }
 
-        if (communityIds.isEmpty()) {
+        if (communityNames.isEmpty()) {
             posts.clear()
             adapter.updatePosts(posts)
             emptyView.visibility = View.VISIBLE
@@ -316,14 +384,16 @@ class FeedFragment : Fragment() {
             return
         }
 
-        val idsString = communityIds.joinToString(",")
+        val namesString = communityNames.joinToString(",")
 
         ApiClient.apiService.getPostsByCommunities(
-            "Bearer $token",
-            idsString,
-            page,
-            20
-        ).enqueue(object : Callback<FeedResponse> {
+            token = "Bearer $token",
+            communityNames = namesString,
+            page = page,
+            limit = 20
+        )
+.enqueue(object : Callback<FeedResponse> {
+
             override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
                 isLoading = false
                 showLoading(false)

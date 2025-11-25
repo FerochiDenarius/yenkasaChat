@@ -4,18 +4,18 @@ import com.google.gson.annotations.SerializedName
 
 data class Role(
     @SerializedName("_id")
-    val _id: String,
+    val _id: String? = null,
 
     @SerializedName("role")
-    val name: String,
-
+    val name: String? = null,
 
     @SerializedName("description")
     val description: String? = null,
 
     @SerializedName("permissions")
-    val permissions: Permission? = null // 👈 not a list
+    val permissions: Permission? = null
 )
+
 
 
 // ✅ Permissions model (matches backend fields)

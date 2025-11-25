@@ -92,59 +92,74 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
         logger.info(`[${requestId}] POST /profile-picture - Finished processing request by User: ${authenticatedUserId}`);
     }
 });
-
 /**
  * @route   GET /api/users/me
  * @desc    Get logged-in user's full profile (including role + permissions)
  * @access  Private
  */
 
-
 router.get('/me', authMiddleware, async (req, res) => {
   const requestId = `req_get_me_${Date.now()}`;
   const authenticatedUserId = req.user?._id || req.user?.id;
 
-  logger.info(
-    `[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`
-  );
+  logger.info(`[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`);
 
   if (!authenticatedUserId) {
     return res.status(401).json({ error: 'User authentication failed.' });
   }
 
   try {
-    // ✅ Fetch user and populate community
-const user = await User.findById(authenticatedUserId)
-  .select('-password -verificationCode -emailVerificationCode -refreshToken')
-  .populate([
-    {
-      path: 'community',
-      select: '_id name location membersCount',
-    },
-    {
-      path: 'role',
-      select: 'role',
-    },
-  ])
-  .lean();
+    // Fetch user
+    const user = await User.findById(authenticatedUserId)
+      .select('-password -verificationCode -emailVerificationCode -refreshToken')
+      .populate([
+        {
+          path: 'community',
+          select: '_id name location membersCount',
+        }
+      ])
+      .lean();
 
+    // ====================================================
+    // 📌 FIXED ROLE LOGIC — correct placement & execution
+    // ====================================================
+    let roleDoc = null;
 
-    // ✅ Normalize role name safely
-// ✅ Extract role name safely (populated or fallback)
-// ✅ Extract role name safely
-const normalizedRole = Permission.normalize(user.role?.role || user.role || 'user');
-logger.info(`[${requestId}] Role resolved: ${normalizedRole}`);
-
-    // ✅ Fetch permissions for this role
-    let rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();
-
-    // Seed defaults if permissions missing (e.g., first run)
-    if (!rolePermissions) {
-      await Permission.seedDefaults();
-      rolePermissions = await Permission.findOne({ role: normalizedRole }).lean();
+    // Case 1: user.role is an ObjectId
+    if (mongoose.isValidObjectId(user.role)) {
+      roleDoc = await Permission.findById(user.role).lean();
     }
 
-    // ✅ Construct clean response
+    // Case 2: fallback using normalized string
+    if (!roleDoc) {
+      const fallbackRole = Permission.normalize(user.role || 'user');
+      roleDoc = await Permission.findOne({ role: fallbackRole }).lean();
+    }
+
+    // Case 3: final fallback to "user"
+    if (!roleDoc) {
+      roleDoc = await Permission.findOne({ role: "user" }).lean();
+    }
+
+    // Build role section sent to frontend
+    const finalRole = {
+      _id: roleDoc._id,
+      role: roleDoc.role,
+      description: roleDoc.description || null,
+      permissions: {
+        name: roleDoc.role,
+        description: roleDoc.description || null,
+        canPost: roleDoc.canPost || false,
+        canApprovePost: roleDoc.canApprove || false,
+        canSuspendUser: roleDoc.canSuspend || false,
+        canAssignRoles: roleDoc.canAssignRoles || false,
+        canRevokeAdmin: roleDoc.canRevoke || false
+      }
+    };
+
+    // ====================================================
+    // Final returned user profile
+    // ====================================================
     const userProfile = {
       _id: user._id,
       username: user.username,
@@ -173,37 +188,19 @@ logger.info(`[${requestId}] Role resolved: ${normalizedRole}`);
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
 
-      // ✅ Include role + permissions
-role: {
-  _id: rolePermissions?._id || null,
-  role: rolePermissions?.role || normalizedRole,   // 👈 matches Android @SerializedName("role")
-  description: rolePermissions?.description || null,
-
-  permissions: {
-    name: rolePermissions?.role || normalizedRole,  // 👈 matches Permission.kt
-    description: rolePermissions?.description || null,
-    canPost: rolePermissions?.canPost || false,
-    canApprovePost: rolePermissions?.canApprove || false,
-    canSuspendUser: rolePermissions?.canSuspend || false,
-    canAssignRoles: rolePermissions?.canAssignRoles || false,
-    canRevokeAdmin: rolePermissions?.canRevoke || false
-  }
-}
-
-
+      // 🎯 FIXED — properly included role here
+      role: finalRole
     };
 
     return res.status(200).json(userProfile);
+
   } catch (err) {
-    logger.error(
-      `[${requestId}] ❌ Error fetching user profile: ${err.message}`
-    );
+    logger.error(`[${requestId}] ❌ Error fetching user profile: ${err.message}`);
     return res.status(500).json({ error: 'Failed to retrieve user profile' });
   } finally {
     logger.info(`[${requestId}] GET /me - Done processing request.`);
   }
 });
-
 
 
  /* @route   POST /api/users/toggle-follow/:targetUserId

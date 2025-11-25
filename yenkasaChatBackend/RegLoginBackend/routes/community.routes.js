@@ -220,6 +220,18 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/public/list', async (req, res) => {
+  try {
+    const communities = await Community.find({ isActive: true, isApproved: true })
+      .sort({ name: 1 })
+      .select('_id name displayName location categories');
+
+    res.json(communities);
+  } catch (err) {
+    console.error("❌ Public community fetch failed:", err);
+    res.status(500).json({ error: "Failed to fetch communities" });
+  }
+});
 
 
 // -----------------------------

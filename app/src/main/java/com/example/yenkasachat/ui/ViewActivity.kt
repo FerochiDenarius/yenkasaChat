@@ -134,7 +134,17 @@ class ViewActivity : AppCompatActivity() {
         val authToken = if (rawToken.startsWith("Bearer")) rawToken else "Bearer $rawToken"
 
         try {
-            val payload = ViewRequest(watchDuration = durationSeconds)
+            val payload = ViewRequest(
+                watchDuration = durationSeconds,
+                viewType =
+                    when {
+                        !post?.videoUrl.isNullOrEmpty() -> "video"
+                        !post?.audioUrl.isNullOrEmpty() -> "audio"
+                        !post?.imageUrl.isNullOrEmpty() -> "image"
+                        else -> "text"
+                    }
+            )
+
 
             Log.d(
                 "ViewActivity",

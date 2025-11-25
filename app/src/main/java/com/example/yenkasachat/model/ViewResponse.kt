@@ -30,5 +30,7 @@ data class RewardTransaction(
     val createdAt: String? = null
 )
 data class ViewRequest(
-    val watchDuration: Int
+    val watchDuration: Int,
+    val viewType: String
 )
+

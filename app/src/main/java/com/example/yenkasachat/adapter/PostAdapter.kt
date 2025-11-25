@@ -245,10 +245,20 @@ class PostAdapter(
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
+                val post = getPostById(postId)
+
                 ApiClient.apiService.recordView(
                     postId,
                     "Bearer $token",
-                    ViewRequest(watchDuration = seconds)
+                    ViewRequest(
+                        watchDuration = seconds,
+                        viewType = when {
+                            post?.videoUrl?.isNotEmpty() == true -> "video"
+                            post?.audioUrl?.isNotEmpty() == true -> "audio"
+                            post?.imageUrl?.isNotEmpty() == true -> "image"
+                            else -> "text"
+                        }
+                    )
                 )
             } catch (e: Exception) {
                 Log.e("PostAdapter", "Auto-view error: ${e.message}")
@@ -260,12 +270,22 @@ class PostAdapter(
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
+                val post = getPostById(postId)
+
                 ApiClient.apiService.recordView(
                     postId,
                     "Bearer $token",
-                    ViewRequest(watchDuration = 5)
+                    ViewRequest(
+                        watchDuration = 5,
+                        viewType = when {
+                            post?.videoUrl?.isNotEmpty() == true -> "video"
+                            post?.audioUrl?.isNotEmpty() == true -> "audio"
+                            post?.imageUrl?.isNotEmpty() == true -> "image"
+                            else -> "text"
+                        }
+                    )
                 )
-            } catch (_: Exception) {}
+            } catch (e: Exception) { }
         }
     }
 
@@ -273,6 +293,9 @@ class PostAdapter(
         if (ts == null) return ""
         val sdf = SimpleDateFormat("dd MMM • hh:mm a", Locale.getDefault())
         return sdf.format(Date(ts))
+    }
+    private fun getPostById(postId: String): Post? {
+        return posts.firstOrNull { it._id == postId }
     }
 
     fun releaseResources() {

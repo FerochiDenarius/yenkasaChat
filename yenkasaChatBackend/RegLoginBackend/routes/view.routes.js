@@ -73,6 +73,7 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       username: viewer.username,
       activityId,
       watchDuration,
+       mediaType, 
       viewedAt: new Date()
     });
 
@@ -81,13 +82,20 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
     // ======================================================
     let rewardAmount = 0;
 
-    if (mediaType === "image") {
-      rewardAmount = rewardImage(watchDuration);
-    } else if (mediaType === "video") {
-      rewardAmount = rewardVideo(watchDuration);
-    } else if (mediaType === "audio") {
-      rewardAmount = rewardAudio(watchDuration);
-    }
+
+// ⭐ match frontend simple rules
+if (mediaType === "image") {
+  if (watchDuration >= 3) rewardAmount = 1;
+}
+
+if (mediaType === "audio") {
+  if (watchDuration >= 5) rewardAmount = 1;
+}
+
+if (mediaType === "video") {
+  if (watchDuration >= 10) rewardAmount = 2;
+}
+
 
     let rewardTx = null;
 

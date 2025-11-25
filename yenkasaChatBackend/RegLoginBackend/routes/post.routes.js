@@ -263,6 +263,31 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /posts/by-communities?ids=1,2,3
+router.get('/by-communities', authMiddleware, async (req, res) => {
+  try {
+    const ids = req.query.ids?.split(',') || [];
+    if (ids.length === 0) {
+      return res.status(400).json({ error: "No communities provided" });
+    }
+
+    const posts = await Post.find({
+      communityId: { $in: ids },
+      isActive: true,
+      status: "approved"
+    })
+      .sort({ createdAt: -1 })
+      .populate("userId", "username profileImage verified")
+      .populate("communityId", "name displayName")
+      .lean();
+
+    res.json({ posts });
+
+  } catch (err) {
+    console.error("❌ Failed to fetch multi-community posts:", err);
+    res.status(500).json({ error: "Failed to fetch posts" });
+  }
+});
 
 /* 🕵️‍♂️ GET ALL PENDING POSTS */
 router.get('/pending', authMiddleware, async (req, res) => {

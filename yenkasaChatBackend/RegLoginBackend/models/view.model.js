@@ -29,10 +29,11 @@ const viewSchema = new mongoose.Schema(
     watchDuration: { type: Number, default: 0 },
 
     mediaType: {
-      type: String,
-      enum: ['image', 'video', 'audio'],
-      default: 'image'
-    }
+  type: String,
+  enum: ['image', 'video', 'audio', 'text', 'unknown'],
+  default: 'unknown'
+}
+
   },
   { timestamps: true }
 );

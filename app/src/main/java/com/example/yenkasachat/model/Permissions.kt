@@ -6,8 +6,9 @@ data class Role(
     @SerializedName("_id")
     val _id: String,
 
-    @SerializedName("name")
+    @SerializedName("role")
     val name: String,
+
 
     @SerializedName("description")
     val description: String? = null,

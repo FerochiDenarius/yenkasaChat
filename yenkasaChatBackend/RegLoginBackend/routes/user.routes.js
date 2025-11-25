@@ -174,17 +174,23 @@ logger.info(`[${requestId}] Role resolved: ${normalizedRole}`);
       updatedAt: user.updatedAt,
 
       // ✅ Include role + permissions
-      role: {
-        name: normalizedRole,
-        permissions: {
-          canPost: rolePermissions?.canPost || false,
-          canApprove: rolePermissions?.canApprove || false,
-          canCreateCommunity: rolePermissions?.canCreateCommunity || false,
-          canAssignRoles: rolePermissions?.canAssignRoles || false,
-          canRevoke: rolePermissions?.canRevoke || false,
-          canSuspend: rolePermissions?.canSuspend || false,
-        },
-      },
+role: {
+  _id: rolePermissions?._id || null,
+  role: rolePermissions?.role || normalizedRole,   // 👈 matches Android @SerializedName("role")
+  description: rolePermissions?.description || null,
+
+  permissions: {
+    name: rolePermissions?.role || normalizedRole,  // 👈 matches Permission.kt
+    description: rolePermissions?.description || null,
+    canPost: rolePermissions?.canPost || false,
+    canApprovePost: rolePermissions?.canApprove || false,
+    canSuspendUser: rolePermissions?.canSuspend || false,
+    canAssignRoles: rolePermissions?.canAssignRoles || false,
+    canRevokeAdmin: rolePermissions?.canRevoke || false
+  }
+}
+
+
     };
 
     return res.status(200).json(userProfile);

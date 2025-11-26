@@ -99,6 +99,11 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
  * @desc    Get logged-in user's full profile (including role + permissions)
  * @access  Private
  */
+/**
+ * @route   GET /api/users/me
+ * @desc    Get logged-in user's full profile (including role + permissions)
+ * @access  Private
+ */
 
 router.get('/me', authMiddleware, async (req, res) => {
   const requestId = `req_get_me_${Date.now()}`;
@@ -114,36 +119,38 @@ router.get('/me', authMiddleware, async (req, res) => {
     // Fetch user
     const user = await User.findById(authenticatedUserId)
       .select('-password -verificationCode -emailVerificationCode -refreshToken')
-      .populate([
-        {
-          path: 'community',
-          select: '_id name location membersCount',
-        }
-      ])
+      .populate({
+        path: 'community',
+        select: '_id name location membersCount'
+      })
       .lean();
 
-    // ====================================================
-    // 📌 FIXED ROLE LOGIC — correct placement & execution
-    // ====================================================
+
+    // ============================================
+    // Resolve real role document
+    // ============================================
     let roleDoc = null;
 
-    // Case 1: user.role is an ObjectId
+    // If user.role is an ObjectId
     if (mongoose.isValidObjectId(user.role)) {
       roleDoc = await Permission.findById(user.role).lean();
     }
 
-    // Case 2: fallback using normalized string
+    // Fallback
     if (!roleDoc) {
-      const fallbackRole = Permission.normalize(user.role || 'user');
+      const fallbackRole = Permission.normalize(user.role || "user");
       roleDoc = await Permission.findOne({ role: fallbackRole }).lean();
     }
 
-    // Case 3: final fallback to "user"
+    // Last fallback
     if (!roleDoc) {
       roleDoc = await Permission.findOne({ role: "user" }).lean();
     }
 
-    // Build role section sent to frontend
+
+    // ============================================
+    // Build final role block for frontend
+    // ============================================
     const finalRole = {
       _id: roleDoc._id,
       role: roleDoc.role,
@@ -159,9 +166,10 @@ router.get('/me', authMiddleware, async (req, res) => {
       }
     };
 
-    // ====================================================
-    // Final returned user profile
-    // ====================================================
+
+    // ============================================
+    // Build final user response
+    // ============================================
     const userProfile = {
       _id: user._id,
       username: user.username,
@@ -170,27 +178,27 @@ router.get('/me', authMiddleware, async (req, res) => {
       location: user.location || null,
       verified: user.verified || false,
       profileImage: user.profileImage || null,
-      bio: user.bio || '',
+      bio: user.bio || "",
       coinsBalance: user.coinsBalance ?? 0,
-      community: user.community
-        ? {
-            _id: user.community._id,
-            name: user.community.name,
-            location: user.community.location || null,
-            membersCount: user.community.membersCount || 0,
-          }
-        : null,
-      followersCount: user.followersCount ?? (user.followers?.length || 0),
-      followingCount: user.followingCount ?? (user.following?.length || 0),
+      community: user.community ? {
+        _id: user.community._id,
+        name: user.community.name,
+        location: user.community.location || null,
+        membersCount: user.community.membersCount || 0
+      } : null,
+      
+      followersCount: user.followersCount || 0,
+      followingCount: user.followingCount || 0,
+
       walletId: user.walletId,
       verificationPhase: user.verificationPhase,
-      verificationScore: user.verificationScore ?? 0,
+      verificationScore: user.verificationScore || 0,
       online: user.online,
       lastSeen: user.lastSeen,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
 
-      // 🎯 FIXED — properly included role here
+      // 🎯 FINALLY add the role here
       role: finalRole
     };
 

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
+
   username: {
     type: String,
     required: true,
@@ -10,12 +11,14 @@ const userSchema = new Schema({
     lowercase: true,
     index: true
   },
+
   phoneNumber: {
     type: String,
     unique: true,
     trim: true,
     sparse: true 
   },
+
   email: {
     type: String,
     unique: true,
@@ -24,6 +27,7 @@ const userSchema = new Schema({
     sparse: true,
     match: [/.+\@.+\..+/, 'Please fill a valid email address']
   },
+
   password: {
     type: String,
     required: true
@@ -31,11 +35,11 @@ const userSchema = new Schema({
 
   // 🌍 Optional location + primary community
   location: { type: String, default: '' },
-  community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', default: null },
+  community: { type: Schema.Types.ObjectId, ref: 'Community', default: null },
 
-  // 👥 Joined communities (multi-membership, max 3)
+  // 👥 Joined communities (multi-membership)
   joinedCommunities: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Community'
   }],
 
@@ -45,12 +49,24 @@ const userSchema = new Schema({
   profileImage: { type: String, default: '' },
   bio: { type: String, default: '' },
 
-  // ✅ Role as object reference to Permission schema
+  // ===============================
+  // ROLE FIELDS
+  // ===============================
+
+  // Role reference (ObjectId)
   role: {
     type: Schema.Types.ObjectId,
     ref: 'Permission',
     default: null,
   },
+
+  // Denormalized role name
+  roleName: {
+    type: String,
+    default: "user"
+  },
+
+  // ===============================
 
   // 🕓 Suspension
   suspendedUntil: { type: Date, default: null },
@@ -61,7 +77,7 @@ const userSchema = new Schema({
   followersCount: { type: Number, default: 0 },
   followingCount: { type: Number, default: 0 },
 
-  // 💰 Yenkasa Coins system
+  // 💰 Yenkasa coins
   coinsBalance: { type: Number, default: 0 },
 
   // 🪙 Wallet system
@@ -105,30 +121,23 @@ const userSchema = new Schema({
 
 }, { timestamps: true });
 
-roleName: {
-  type: String,
-  default: "user"
-},
 
-// 🧩 Helper Methods
+// ===============================
+// METHODS
+// ===============================
 
-// Get the user's local (primary) community
 userSchema.methods.localCommunityId = function() {
   return this.community;
 };
 
-// Get other joined communities (excluding the primary one)
 userSchema.methods.additionalCommunities = function() {
   return this.joinedCommunities.filter(
     c => c.toString() !== this.community?.toString()
   );
 };
 
-// Check if the user can join more communities (max 3 total)
 userSchema.methods.canJoinMoreCommunities = function() {
   return this.joinedCommunities.length < 3;
 };
 
-
-const User = mongoose.model('User', userSchema);
-module.exports = User;
+module.exports = mongoose.model('User', userSchema);

@@ -156,7 +156,7 @@ class AccountInfoActivity : AppCompatActivity() {
                         val user = response.body()!!
                         updateUI(user)
 
-                        // Save user details
+                        // ✅ Save user info
                         TokenManager.saveUserDetails(
                             this@AccountInfoActivity,
                             user._id,
@@ -168,11 +168,11 @@ class AccountInfoActivity : AppCompatActivity() {
                             user.location
                         )
 
-                        // REAL ROLE RESOLUTION:
-                        val roleName = user.role?.name ?: user.roleName ?: "user"
+                        // ✅ Handle role object
+                        val roleName = user.role?.name ?: "user"
                         val perms = user.role?.permissions
 
-                        // Permission checks
+                        // ✅ Determine permissions using UserPermissions logic
                         val canPost = UserPermissions.canPost(roleName, user.verified)
                         val canApprove = UserPermissions.canApprove(roleName)
                         val canSuspend = UserPermissions.canSuspend(roleName)
@@ -180,11 +180,9 @@ class AccountInfoActivity : AppCompatActivity() {
                         val canRevoke = UserPermissions.canRevoke(roleName)
 
                         Log.i("AccountInfoActivity", "User Role: $roleName")
-                        Log.i("AccountInfoActivity",
-                            "canPost=$canPost, canApprove=$canApprove, canSuspend=$canSuspend, canAssign=$canAssign, canRevoke=$canRevoke"
-                        )
+                        Log.i("AccountInfoActivity", "canPost=$canPost, canApprove=$canApprove, canSuspend=$canSuspend, canAssign=$canAssign, canRevoke=$canRevoke")
 
-                        // Save role flags
+                        // ✅ Save role flags locally for quick checks
                         when (roleName.lowercase()) {
                             "admin" -> {
                                 TokenManager.setAdmin(this@AccountInfoActivity, true)
@@ -208,15 +206,10 @@ class AccountInfoActivity : AppCompatActivity() {
                             }
                         }
 
-                        // Continue logic
+                        // ✅ Continue app logic
                         fetchFollowStats(user._id)
-
                     } else {
-                        Toast.makeText(
-                            this@AccountInfoActivity,
-                            "Failed to load profile",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
                     }
                 }
 

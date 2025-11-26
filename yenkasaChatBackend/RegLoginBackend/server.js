@@ -141,6 +141,7 @@ safeMount('/api/feed', './routes/feed.routes');
 safeMount('/api/communities', './routes/community.routes');
 safeMount('/api/roles', './routes/roles.routes');
 safeMount('/api/follow', './routes/follow.routes');
+safeMount('/api/post-approval', './routes/postapproval.routes');
 
 
 

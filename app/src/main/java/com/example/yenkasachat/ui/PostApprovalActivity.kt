@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostApprovalAdapter
+import com.example.yenkasachat.model.PostApprovalItem
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.PostApprovalResponse
 import com.example.yenkasachat.network.ApiClient
@@ -20,6 +21,8 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class PostApprovalActivity : AppCompatActivity() {
+
+
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
@@ -36,7 +39,7 @@ class PostApprovalActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // 1️⃣ Check permission
+        // ✔ Permission Check
         val role = TokenManager.getUserRole(this).lowercase()
         val allowed = listOf(
             "admin", "moderator",
@@ -49,21 +52,20 @@ class PostApprovalActivity : AppCompatActivity() {
             return
         }
 
-        // 2️⃣ Initialize adapter (dummy values for stats for now)
+        // ✔ Adapter (REAL DATA will be sent later)
         adapter = PostApprovalAdapter(
             posts = mutableListOf(),
             context = this,
             approveCallback = ::approvePost,
-            rejectCallback = ::rejectPost,
-            approvedPosts = 0,
-            followers = 0,
-            totalComments = 0
+            rejectCallback = ::rejectPost
         )
 
         recyclerView.adapter = adapter
 
-        // 3️⃣ Load pending posts
+        // Load posts
         loadPendingPosts()
+
+
     }
 
     private fun loadPendingPosts() {
@@ -82,10 +84,11 @@ class PostApprovalActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
 
                     if (response.isSuccessful && response.body() != null) {
-                        val pending = response.body()!!.pending
+                        val pending: List<PostApprovalItem> = response.body()!!.pending
 
                         if (pending.isNotEmpty()) {
-                            adapter.updatePosts(pending)
+                            val posts = pending.map { it.post }
+                            adapter.updatePosts(posts)
                             recyclerView.visibility = View.VISIBLE
                         } else {
                             showEmpty("No pending posts.")
@@ -100,6 +103,7 @@ class PostApprovalActivity : AppCompatActivity() {
                     showEmpty("Network error: ${t.message}")
                 }
             })
+
     }
 
     private fun approvePost(approvalId: String) {

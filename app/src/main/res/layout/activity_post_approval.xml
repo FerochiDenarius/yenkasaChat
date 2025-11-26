@@ -8,7 +8,6 @@
     android:padding="16dp"
     tools:context=".ui.PostApprovalActivity">
 
-    <!-- Progress bar while loading -->
     <ProgressBar
         android:id="@+id/progressBarApproval"
         android:layout_width="wrap_content"
@@ -18,7 +17,6 @@
         style="?android:attr/progressBarStyleLarge"
         android:visibility="gone" />
 
-    <!-- RecyclerView showing all pending posts -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewPendingPosts"
         android:layout_width="match_parent"
@@ -28,7 +26,6 @@
         android:visibility="gone"
         tools:listitem="@layout/item_post_approval" />
 
-    <!-- TextView for empty/error messages -->
     <TextView
         android:id="@+id/textViewEmpty"
         android:layout_width="match_parent"

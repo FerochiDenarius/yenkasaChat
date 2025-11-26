@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Background rectangle -->
     <item>
         <shape android:shape="rectangle">
             <solid android:color="#202020" />
@@ -8,10 +9,14 @@
         </shape>
     </item>
 
-    <item>
-        <bitmap
-            android:src="@drawable/ic_play_circle"
-            android:gravity="center" />
+    <!-- Vector-compatible item -->
+    <item android:gravity="center">
+        <inset
+            android:drawable="@drawable/ic_play_circle"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp" />
     </item>
 
 </layer-list>

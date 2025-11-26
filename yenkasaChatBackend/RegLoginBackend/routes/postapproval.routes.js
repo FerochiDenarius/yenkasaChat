@@ -22,11 +22,19 @@ router.get("/pending", authMiddleware, async (req, res) => {
   }
 
   const pending = await PostApproval.find({ status: "pending" })
+    .populate({
+      path: "post",
+      populate: [
+        { path: "userId", select: "username profileImage verified" },
+        { path: "communityId", select: "displayName name" }
+      ]
+    })
     .populate("user", "username profileImage")
     .sort({ submittedAt: -1 });
 
   res.json({ pending });
 });
+
 
 // ================================
 // APPROVE post

@@ -193,6 +193,8 @@ router.get('/me', authMiddleware, async (req, res) => {
       lastSeen: user.lastSeen,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+       // 🟩 ADD THIS LINE
+  roleName: user.roleName || roleDoc.role,
 
       // 🎯 FINALLY add the role here
       role: finalRole

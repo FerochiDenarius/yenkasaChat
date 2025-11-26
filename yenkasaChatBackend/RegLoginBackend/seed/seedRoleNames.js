@@ -1,39 +1,30 @@
 // seed/seedRoleNames.js
-const mongoose = require("mongoose");
-const path = require("path");
 
-// Load .env from project root
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
+require('dotenv').config();  // <-- SAME AS YOUR WORKING SCRIPT
+const mongoose = require('mongoose');
+const path = require('path');
 
-const User = require("../models/user.model");
-const Permission = require("../models/permissions.model");
+const User = require(path.join(__dirname, '../models/user.model.js'));
+const Permission = require(path.join(__dirname, '../models/permissions.model.js'));
 
 async function seedRoleNames() {
   try {
     console.log("🔄 Connecting to DB...");
-    console.log("MONGODB_URI:", process.env.MONGODB_URI);
-
-    if (!process.env.MONGODB_URI) {
-      throw new Error("❌ Missing MONGODB_URI in .env");
-    }
+    console.log("🌐 URI:", process.env.MONGODB_URI);
 
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ Connected to MongoDB!");
 
-    // Load all Permission docs
-    console.log("📥 Loading Permission documents...");
+    console.log("✅ Connected!");
+
+    // Load permissions
     const permissions = await Permission.find().lean();
+    const permById = new Map(permissions.map(p => [String(p._id), p.role]));
 
-    const permById = new Map();
-    permissions.forEach(p => {
-      permById.set(String(p._id), p.role);
-    });
+    console.log("🔍 Loaded permissions:", permissions.length);
 
-    console.log("🔍 Permissions loaded:", permissions.length);
-
-    // Update users
-    let updated = 0;
-    const users = await User.find().lean();
+    // Update all users
+    const users = await User.find({});
+    let count = 0;
 
     for (const user of users) {
       let roleName = "user";
@@ -42,21 +33,18 @@ async function seedRoleNames() {
         roleName = permById.get(String(user.role));
       }
 
-      // Only update if different or missing
       if (user.roleName !== roleName) {
-        await User.updateOne(
-          { _id: user._id },
-          { $set: { roleName: roleName } }
-        );
-        updated++;
+        user.roleName = roleName;
+        await user.save();
+        count++;
       }
     }
 
-    console.log(`🎉 Role name seeding complete! Updated ${updated} users.`);
+    console.log(`🎉 Updated ${count} users with roleName field`);
     process.exit(0);
 
-  } catch (error) {
-    console.error("❌ Error seeding role names:", error);
+  } catch (err) {
+    console.error("❌ Error:", err);
     process.exit(1);
   }
 }

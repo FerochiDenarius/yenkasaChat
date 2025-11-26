@@ -105,6 +105,10 @@ const userSchema = new Schema({
 
 }, { timestamps: true });
 
+roleName: {
+  type: String,
+  default: "user"
+},
 
 // 🧩 Helper Methods
 

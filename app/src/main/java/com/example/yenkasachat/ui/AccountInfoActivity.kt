@@ -48,6 +48,8 @@ class AccountInfoActivity : AppCompatActivity() {
     private lateinit var recyclerUserPosts: RecyclerView
     private lateinit var btnEditProfile: Button
     private lateinit var binding: ActivityAccountInfoBinding
+    private lateinit var textRole: TextView
+
 
 
     private lateinit var postAdapter: PostAdapter
@@ -84,6 +86,8 @@ class AccountInfoActivity : AppCompatActivity() {
         postsCountView = findViewById(R.id.textPostsCount)
         recyclerUserPosts = findViewById(R.id.recyclerUserPosts)
         btnEditProfile = findViewById(R.id.btnEditSave)
+        textRole = findViewById(R.id.textRole)
+
     }
 
 // ... (imports and other class members)
@@ -168,21 +172,25 @@ class AccountInfoActivity : AppCompatActivity() {
                             user.location
                         )
 
-                        // ✅ Handle role object
-                        val roleName = user.role?.name ?: "user"
+                        // ✅ Prefer using roleName sent directly from backend
+                        val roleName = user.roleName ?: user.role?.name ?: "user"
+
+// If backend still sends full role object, access permissions
                         val perms = user.role?.permissions
 
-                        // ✅ Determine permissions using UserPermissions logic
+                        Log.i("AccountInfoActivity", "User RoleName: $roleName")
+
+// ✅ Determine permissions using UserPermissions logic
                         val canPost = UserPermissions.canPost(roleName, user.verified)
                         val canApprove = UserPermissions.canApprove(roleName)
                         val canSuspend = UserPermissions.canSuspend(roleName)
                         val canAssign = UserPermissions.canAssignRoles(roleName)
                         val canRevoke = UserPermissions.canRevoke(roleName)
 
-                        Log.i("AccountInfoActivity", "User Role: $roleName")
+// Debug logging
                         Log.i("AccountInfoActivity", "canPost=$canPost, canApprove=$canApprove, canSuspend=$canSuspend, canAssign=$canAssign, canRevoke=$canRevoke")
 
-                        // ✅ Save role flags locally for quick checks
+// Save role flags
                         when (roleName.lowercase()) {
                             "admin" -> {
                                 TokenManager.setAdmin(this@AccountInfoActivity, true)
@@ -205,6 +213,7 @@ class AccountInfoActivity : AppCompatActivity() {
                                 TokenManager.setDeveloper(this@AccountInfoActivity, false)
                             }
                         }
+
 
                         // ✅ Continue app logic
                         fetchFollowStats(user._id)
@@ -253,6 +262,13 @@ class AccountInfoActivity : AppCompatActivity() {
         dateJoinedView.text = "Joined: ${formatDate(user.createdAt)}"
 
         iconVerified.visibility = if (user.verified) View.VISIBLE else View.GONE
+        val roleName = user.roleName ?: user.role?.name ?: "user"
+
+        val displayRole = roleName.replace("_", " ")
+            .replaceFirstChar { it.uppercase() }
+
+        textRole.text = displayRole
+
 
         Glide.with(this)
             .load(user.profileImage ?: R.drawable.default_avatar)

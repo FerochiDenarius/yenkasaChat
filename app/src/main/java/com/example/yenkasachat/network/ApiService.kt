@@ -204,14 +204,30 @@ interface ApiService {
         @Path("postId") postId: String
     ): Call<Map<String, Any>>
 
-    @POST("posts/approve/{id}")
-    fun approvePost(@Path("id") postId: String): Call<Post>
+    // =====================
+// POST APPROVAL ENDPOINTS
+// =====================
 
-    @POST("posts/reject/{id}")
-    fun rejectPost(@Path("id") postId: String): Call<Post>
+    // 1️⃣ Get all pending posts
+    @GET("postapproval/pending")
+    fun getPendingPosts(
+        @Header("Authorization") token: String
+    ): Call<PostApprovalResponse>
 
-    @GET("posts/pending")
-    fun getPendingPosts(): Call<List<Post>>
+    // 2️⃣ Approve a post
+    @PUT("postapproval/{id}/approve")
+    fun approvePost(
+        @Header("Authorization") token: String,
+        @Path("id") approvalId: String
+    ): Call<GenericResponse>
+
+    // 3️⃣ Reject a post
+    @PUT("postapproval/{id}/reject")
+    fun rejectPost(
+        @Header("Authorization") token: String,
+        @Path("id") approvalId: String
+    ): Call<GenericResponse>
+
 
 
     @PATCH("posts/{postId}/status")

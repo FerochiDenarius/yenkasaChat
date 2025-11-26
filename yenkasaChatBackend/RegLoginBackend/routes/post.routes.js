@@ -16,7 +16,6 @@ const rewardService = require('../services/reward.service');
  * 💰 REWARD CONFIGURATION
  * ------------------------------------ */
 const REWARDS = { CREATE_POST: 10, GET_LIKE: 2, GET_COMMENT: 3 };
-
 /* ------------------------------------
  * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
@@ -32,18 +31,22 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
       postType
     } = req.body;
 
-const userId = req.user.userId || req.user.id;
-const user = await User.findById(userId).populate('role');
-if (!user) return res.status(404).json({ error: 'User not found' });
+    const userId = req.user.userId || req.user.id;
+    const user = await User.findById(userId).lean();
+    if (!user) return res.status(404).json({ error: "User not found" });
 
+    const normalizedRole = user.roleName || "user";
+    const isPrivilegedUser = ["admin", "moderator", "senior_developer", "junior_developer"]
+      .includes(normalizedRole);
 
-    // Initialize post fields
-    let imageUrl = '';
-    let videoUrl = '';
-    let audioUrl = '';
-    let detectedPostType = postType || 'text';
+    let imageUrl = "";
+    let videoUrl = "";
+    let audioUrl = "";
+    let detectedPostType = postType || "text";
 
-    /* ✅ Handle media upload */
+    /* ================================
+     * MEDIA UPLOAD  
+     * ================================ */
     let file;
     if (req.files.media) file = req.files.media[0];
     else if (req.files.videoUrl) file = req.files.videoUrl[0];
@@ -53,9 +56,9 @@ if (!user) return res.status(404).json({ error: 'User not found' });
     if (file) {
       const folder = "yenkasachat/posts";
       const mime = file.mimetype;
-      const isVideo = mime.startsWith('video');
-      const isAudio = mime.startsWith('audio');
-      const resourceType = isVideo || isAudio ? 'video' : 'image';
+      const isVideo = mime.startsWith("video");
+      const isAudio = mime.startsWith("audio");
+      const resourceType = isVideo || isAudio ? "video" : "image";
 
       const uploadResult = await cloudinary.uploader.upload(file.path, {
         folder,
@@ -64,79 +67,85 @@ if (!user) return res.status(404).json({ error: 'User not found' });
 
       if (isVideo) {
         videoUrl = uploadResult.secure_url;
-        detectedPostType = 'video';
+        detectedPostType = "video";
       } else if (isAudio) {
         audioUrl = uploadResult.secure_url;
-        detectedPostType = 'audio';
+        detectedPostType = "audio";
       } else {
         imageUrl = uploadResult.secure_url;
-        detectedPostType = 'image';
+        detectedPostType = "image";
       }
     }
 
-    /* ✅ Find community (if provided) */
-  /* ✅ Ensure a community is selected */
-/* ✅ Find community (if provided) */
-let selectedCommunity = null;
-if (communityName && communityName.trim() !== "") {
-  selectedCommunity = await Community.findOne({
-    $or: [
-      { name: communityName.trim() },
-      { displayName: communityName.trim() }
-    ]
-  });
-}
+    /* ================================
+     * COMMUNITY VALIDATION
+     * ================================ */
+    if (!communityName || communityName.trim() === "") {
+      return res.status(400).json({ error: "Community selection is required" });
+    }
 
-/* ✅ Ensure a community is selected *****/
-if (!communityName || communityName.trim() === "") {
-  return res.status(400).json({ error: "Community selection is required to create a post." });
-}
+    const selectedCommunity = await Community.findOne({
+      $or: [
+        { name: communityName.trim() },
+        { displayName: communityName.trim() }
+      ]
+    });
 
-/* ✅ Validate that community actually exists */
-if (!selectedCommunity) {
-  return res.status(404).json({ error: "Selected community not found" });
-}
+    if (!selectedCommunity) {
+      return res.status(404).json({ error: "Selected community not found" });
+    }
 
+    /* ================================
+     * DETERMINE POST STATUS
+     * ================================ */
+    const postStatus = isPrivilegedUser ? "approved" : "pending";
 
-
-// ...
-
-// Normalize the role and check permissions
-const normalizedRole = Permission.normalize(user.role);
-const isPrivilegedUser = Permission.canApprove(normalizedRole);
-const postStatus = isPrivilegedUser ? "approved" : "pending";
-
-
-
-/* ✅ Create post */
-const post = new Post({
-  userId,
-  communityId: selectedCommunity._id,
-  text: text?.trim() || '',
-  imageUrl,
-  videoUrl,
-  audioUrl,
-  postType: detectedPostType,
-  tags: tags || [],
-  mentions: mentions || [],
-  location: location || '',
-  visibility: visibility || 'public',
-  communityName: selectedCommunity.displayName || selectedCommunity.name,
-  status: postStatus,
-});
-
+    /* ================================
+     * CREATE POST
+     * ================================ */
+    const post = new Post({
+      userId,
+      communityId: selectedCommunity._id,
+      text: text?.trim() || "",
+      imageUrl,
+      videoUrl,
+      audioUrl,
+      postType: detectedPostType,
+      tags: tags || [],
+      mentions: mentions || [],
+      location: location || "",
+      visibility: visibility || "public",
+      communityName: selectedCommunity.displayName || selectedCommunity.name,
+      status: postStatus,
+    });
 
     await post.save();
 
-    /* ✅ Reward user via rewardService */
+    /* ================================
+     * INSERT INTO APPROVAL QUEUE
+     * Only for verified users & normal users
+     * ================================ */
+    if (!isPrivilegedUser) {
+      await PostApproval.create({
+        post: post._id,
+        user: userId,
+        caption: post.text || "",
+        imageUrl: post.imageUrl,
+        videoUrl: post.videoUrl,
+        audioUrl: post.audioUrl
+      });
+    }
+
+    /* ================================
+     * REWARD ONLY IF POST IS APPROVED
+     * ================================ */
     if (postStatus === "approved") {
       await rewardService.reward(userId, REWARDS.CREATE_POST, {
-  type: 'REWARD_POST',  // ✅ matches schema enum
-  description: `Earned ${REWARDS.CREATE_POST} YKC for creating a post`,
-  relatedPostId: post._id,
-  activityId: `create_post_${post._id}_${userId}`,
-});
-
+        type: "REWARD_POST",
+        description: `Earned ${REWARDS.CREATE_POST} YKC for creating a post`,
+        relatedPostId: post._id,
+        activityId: `create_post_${post._id}_${userId}`,
+      });
 
       if (global.io) {
         global.io.emit("feedUpdate", {
@@ -149,8 +158,8 @@ const post = new Post({
       }
     }
 
-    /* ✅ Response */
-    res.status(201).json({ success: true, post });
+    return res.status(201).json({ success: true, post });
+
   } catch (err) {
     console.error("❌ Failed to create post:", err);
     res.status(500).json({ error: "Failed to create post", details: err.message });
@@ -311,35 +320,6 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
 
 
 
-/* 🕵️‍♂️ GET ALL PENDING POSTS */
-router.get('/pending', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
 
-// Normalize the user's role properly
-const normalizedRole = Permission.normalize(user.role);
-
-// Define which roles can approve
-const approvers = ["admin", "moderator", "junior_developer", "senior_developer"];
-
-// Check if user is allowed to approve
-if (!approvers.includes(normalizedRole)) {
-  return res.status(403).json({ error: 'Not authorized to approve posts' });
-}
-
-    
-
-    const pendingPosts = await Post.find({ status: "pending" })
-      .populate('userId', 'username profileImage verified')
-      .populate('communityId', 'name displayName')
-      .sort({ createdAt: -1 });
-
-    res.json(pendingPosts);
-  } catch (err) {
-    console.error("❌ Error fetching pending posts:", err);
-    res.status(500).json({ error: "Server error fetching pending posts" });
-  }
-});
 
 module.exports = router;

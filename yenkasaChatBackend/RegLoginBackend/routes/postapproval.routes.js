@@ -3,7 +3,7 @@ const router = express.Router();
 const PostApproval = require("../models/postapproval.model");
 const Post = require("../models/post.model");
 const User = require("../models/user.model");
-const authMiddleware = require("../middleware/auth.middleware");
+const authMiddleware = require("../middleware/auth");
 
 const ALLOWED_ROLES = ["admin", "moderator", "senior_developer", "junior_developer"];
 

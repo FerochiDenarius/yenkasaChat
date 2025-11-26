@@ -225,7 +225,6 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<Void>
 
-
     @PATCH("posts/{postId}/status")
     fun updatePostStatus(
         @Path("postId") postId: String,

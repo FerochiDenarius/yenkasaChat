@@ -12,6 +12,10 @@ data class Role(
     @SerializedName("description")
     val description: String? = null,
 
+    @SerializedName("roleName")
+    val roleName: String? = null,
+
+
     @SerializedName("permissions")
     val permissions: Permission? = null
 )

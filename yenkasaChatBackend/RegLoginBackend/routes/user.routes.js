@@ -99,24 +99,23 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
  * @desc    Get logged-in user's full profile (including role + permissions)
  * @access  Private
  */
-/**
- * @route   GET /api/users/me
- * @desc    Get logged-in user's full profile (including role + permissions)
- * @access  Private
- */
+
+const mongoose = require("mongoose");
+const Permission = require("../models/permissions.model");
+const User = require("../models/user.model");
 
 router.get('/me', authMiddleware, async (req, res) => {
   const requestId = `req_get_me_${Date.now()}`;
   const authenticatedUserId = req.user?._id || req.user?.id;
 
-  logger.info(`[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`);
+  console.log(`[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`);
 
   if (!authenticatedUserId) {
     return res.status(401).json({ error: 'User authentication failed.' });
   }
 
   try {
-    // Fetch user
+    // Fetch user document
     const user = await User.findById(authenticatedUserId)
       .select('-password -verificationCode -emailVerificationCode -refreshToken')
       .populate({
@@ -125,28 +124,30 @@ router.get('/me', authMiddleware, async (req, res) => {
       })
       .lean();
 
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     // ============================================
-    // Resolve real role document
+    // Resolve proper role object (ObjectId or fallback)
     // ============================================
     let roleDoc = null;
 
-    // If user.role is an ObjectId
+    // Case 1: user.role is ObjectId
     if (mongoose.isValidObjectId(user.role)) {
       roleDoc = await Permission.findById(user.role).lean();
     }
 
-    // Fallback
+    // Case 2: fallback via string normalization
     if (!roleDoc) {
       const fallbackRole = Permission.normalize(user.role || "user");
       roleDoc = await Permission.findOne({ role: fallbackRole }).lean();
     }
 
-    // Last fallback
+    // Case 3: final fallback
     if (!roleDoc) {
       roleDoc = await Permission.findOne({ role: "user" }).lean();
     }
-
 
     // ============================================
     // Build final role block for frontend
@@ -166,7 +167,6 @@ router.get('/me', authMiddleware, async (req, res) => {
       }
     };
 
-
     // ============================================
     // Build final user response
     // ============================================
@@ -180,37 +180,40 @@ router.get('/me', authMiddleware, async (req, res) => {
       profileImage: user.profileImage || null,
       bio: user.bio || "",
       coinsBalance: user.coinsBalance ?? 0,
-      community: user.community ? {
-        _id: user.community._id,
-        name: user.community.name,
-        location: user.community.location || null,
-        membersCount: user.community.membersCount || 0
-      } : null,
-      
-      followersCount: user.followersCount || 0,
-      followingCount: user.followingCount || 0,
+
+      community: user.community
+        ? {
+            _id: user.community._id,
+            name: user.community.name,
+            location: user.community.location || null,
+            membersCount: user.community.membersCount || 0,
+          }
+        : null,
+
+      followersCount: user.followersCount ?? (user.followers?.length || 0),
+      followingCount: user.followingCount ?? (user.following?.length || 0),
 
       walletId: user.walletId,
       verificationPhase: user.verificationPhase,
-      verificationScore: user.verificationScore || 0,
+      verificationScore: user.verificationScore ?? 0,
       online: user.online,
       lastSeen: user.lastSeen,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
 
-      // 🎯 FINALLY add the role here
-      role: finalRole
+      // 🔥 Include both complete role object AND denormalized string
+      role: finalRole,
+      roleName: user.roleName ?? finalRole.role
     };
 
     return res.status(200).json(userProfile);
 
   } catch (err) {
-    logger.error(`[${requestId}] ❌ Error fetching user profile: ${err.message}`);
+    console.error(`[${requestId}] ❌ Error fetching user profile: ${err.message}`);
     return res.status(500).json({ error: 'Failed to retrieve user profile' });
-  } finally {
-    logger.info(`[${requestId}] GET /me - Done processing request.`);
   }
 });
+
 
 
  /* @route   POST /api/users/toggle-follow/:targetUserId

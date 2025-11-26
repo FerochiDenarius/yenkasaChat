@@ -6,6 +6,8 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const { storage } = require('../config/cloudinary'); // Assuming Cloudinary setup
 const Permission = require('../models/permissions.model'); // ✅ Import permissions model
+const mongoose = require("mongoose");
+
 
 
 // --- Consistent Logger Function ---

@@ -8,6 +8,8 @@ const Community = require('../models/community.model');
 const upload = require("../utils/upload");
 const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
+const PostApproval = require("../models/postapproval.model");
+
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -32,21 +34,25 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
     } = req.body;
 
     const userId = req.user.userId || req.user.id;
+
     const user = await User.findById(userId).lean();
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const normalizedRole = user.roleName || "user";
-    const isPrivilegedUser = ["admin", "moderator", "senior_developer", "junior_developer"]
-      .includes(normalizedRole);
+    // Required for validation
+    const normalizedRole = Permission.normalize(user.roleName || user.role);
 
-    let imageUrl = "";
-    let videoUrl = "";
-    let audioUrl = "";
-    let detectedPostType = postType || "text";
+    // Permission check (only verified+ can post)
+    if (!Permission.canPost(normalizedRole, user.verified)) {
+      return res.status(403).json({ error: "You do not have permission to create posts." });
+    }
 
-    /* ================================
-     * MEDIA UPLOAD  
-     * ================================ */
+    // Initialize media fields
+    let imageUrl = '';
+    let videoUrl = '';
+    let audioUrl = '';
+    let detectedPostType = postType || 'text';
+
+    /* Handle media upload */
     let file;
     if (req.files.media) file = req.files.media[0];
     else if (req.files.videoUrl) file = req.files.videoUrl[0];
@@ -56,32 +62,32 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
     if (file) {
       const folder = "yenkasachat/posts";
       const mime = file.mimetype;
+
       const isVideo = mime.startsWith("video");
       const isAudio = mime.startsWith("audio");
+
       const resourceType = isVideo || isAudio ? "video" : "image";
 
-      const uploadResult = await cloudinary.uploader.upload(file.path, {
+      const uploadRes = await cloudinary.uploader.upload(file.path, {
         folder,
-        resource_type: resourceType,
+        resource_type: resourceType
       });
 
       if (isVideo) {
-        videoUrl = uploadResult.secure_url;
+        videoUrl = uploadRes.secure_url;
         detectedPostType = "video";
       } else if (isAudio) {
-        audioUrl = uploadResult.secure_url;
+        audioUrl = uploadRes.secure_url;
         detectedPostType = "audio";
       } else {
-        imageUrl = uploadResult.secure_url;
+        imageUrl = uploadRes.secure_url;
         detectedPostType = "image";
       }
     }
 
-    /* ================================
-     * COMMUNITY VALIDATION
-     * ================================ */
+    /* Find community */
     if (!communityName || communityName.trim() === "") {
-      return res.status(400).json({ error: "Community selection is required" });
+      return res.status(400).json({ error: "Community selection is required to create a post." });
     }
 
     const selectedCommunity = await Community.findOne({
@@ -95,15 +101,12 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
       return res.status(404).json({ error: "Selected community not found" });
     }
 
-    /* ================================
-     * DETERMINE POST STATUS
-     * ================================ */
-    const postStatus = isPrivilegedUser ? "approved" : "pending";
+    /* Determine post status */
+    const isPrivileged = Permission.canApprove(normalizedRole);
+    const postStatus = isPrivileged ? "approved" : "pending";
 
-    /* ================================
-     * CREATE POST
-     * ================================ */
-    const post = new Post({
+    /* Create post */
+    const post = await Post.create({
       userId,
       communityId: selectedCommunity._id,
       text: text?.trim() || "",
@@ -116,32 +119,23 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
       location: location || "",
       visibility: visibility || "public",
       communityName: selectedCommunity.displayName || selectedCommunity.name,
-      status: postStatus,
+      status: postStatus
     });
 
-    await post.save();
-
-    /* ================================
-     * INSERT INTO APPROVAL QUEUE
-     * Only for verified users & normal users
-     * ================================ */
-    if (!isPrivilegedUser) {
+    /* If PENDING → add to PostApproval queue */
+    if (!isPrivileged) {
       await PostApproval.create({
         post: post._id,
         user: userId,
-        caption: post.text || "",
-        imageUrl: post.imageUrl,
-        videoUrl: post.videoUrl,
-        audioUrl: post.audioUrl
+        submittedAt: new Date(),
+        status: "pending"
       });
     }
 
-    /* ================================
-     * REWARD ONLY IF POST IS APPROVED
-     * ================================ */
+    /* Reward ONLY approved posts */
     if (postStatus === "approved") {
       await rewardService.reward(userId, REWARDS.CREATE_POST, {
-        type: "REWARD_POST",
+        type: 'REWARD_POST',
         description: `Earned ${REWARDS.CREATE_POST} YKC for creating a post`,
         relatedPostId: post._id,
         activityId: `create_post_${post._id}_${userId}`,
@@ -158,7 +152,8 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
       }
     }
 
-    return res.status(201).json({ success: true, post });
+    /* Respond with created post */
+    res.status(201).json({ success: true, post });
 
   } catch (err) {
     console.error("❌ Failed to create post:", err);

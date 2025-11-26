@@ -10,8 +10,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
-import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.adapter.PostApprovalAdapter
+import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.model.PostApprovalResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
@@ -35,20 +36,20 @@ class PostApprovalActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // ✅ 1. Verify user role before proceeding
-        val userRole = TokenManager.getUserRole(this)
-        val hasApprovalPrivilege =
-            userRole == "admin" || userRole == "moderator" || userRole == "developer"
+        // 1️⃣ Check permission
+        val role = TokenManager.getUserRole(this).lowercase()
+        val allowed = listOf(
+            "admin", "moderator",
+            "senior_developer", "junior_developer"
+        )
 
-        if (!hasApprovalPrivilege) {
+        if (role !in allowed) {
             emptyText.text = "🚫 You are not authorized to approve posts."
             emptyText.visibility = View.VISIBLE
-            recyclerView.visibility = View.GONE
-            progressBar.visibility = View.GONE
             return
         }
 
-        // ✅ 2. Initialize adapter
+        // 2️⃣ Initialize adapter (dummy values for stats for now)
         adapter = PostApprovalAdapter(
             posts = mutableListOf(),
             context = this,
@@ -61,87 +62,87 @@ class PostApprovalActivity : AppCompatActivity() {
 
         recyclerView.adapter = adapter
 
-        // ✅ 3. Load pending posts
+        // 3️⃣ Load pending posts
         loadPendingPosts()
     }
 
-    // 🔹 Fetch all pending posts awaiting approval
     private fun loadPendingPosts() {
         progressBar.visibility = View.VISIBLE
         emptyText.visibility = View.GONE
         recyclerView.visibility = View.GONE
 
-        Log.d("PostApproval", "🔄 Fetching pending posts...")
+        val token = TokenManager.getToken(this)
 
-        ApiClient.apiService.getPendingPosts().enqueue(object : Callback<List<Post>> {
-            override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
-                progressBar.visibility = View.GONE
-                if (response.isSuccessful) {
-                    val posts = response.body().orEmpty()
-                    Log.d("PostApproval", "✅ Response success, count = ${posts.size}")
+        ApiClient.apiService.getPendingApprovalPosts("Bearer $token")
+            .enqueue(object : Callback<PostApprovalResponse> {
+                override fun onResponse(
+                    call: Call<PostApprovalResponse>,
+                    response: Response<PostApprovalResponse>
+                ) {
+                    progressBar.visibility = View.GONE
 
-                    if (posts.isNotEmpty()) {
-                        adapter.updatePosts(posts)
-                        recyclerView.visibility = View.VISIBLE
-                        emptyText.visibility = View.GONE
+                    if (response.isSuccessful && response.body() != null) {
+                        val pending = response.body()!!.pending
+
+                        if (pending.isNotEmpty()) {
+                            adapter.updatePosts(pending)
+                            recyclerView.visibility = View.VISIBLE
+                        } else {
+                            showEmpty("No pending posts.")
+                        }
                     } else {
-                        showEmptyMessage("No pending posts to review.")
+                        showEmpty("Failed to load pending posts.")
                     }
-                } else {
-                    Log.e(
-                        "PostApproval",
-                        "❌ Response failed: ${response.code()} ${response.message()}"
-                    )
-                    showEmptyMessage("Failed to load posts. (${response.code()})")
                 }
-            }
 
-            override fun onFailure(call: Call<List<Post>>, t: Throwable) {
-                progressBar.visibility = View.GONE
-                Log.e("PostApproval", "🚨 Network failure: ${t.message}", t)
-                showEmptyMessage("Network error: ${t.message}")
-            }
-        })
+                override fun onFailure(call: Call<PostApprovalResponse>, t: Throwable) {
+                    progressBar.visibility = View.GONE
+                    showEmpty("Network error: ${t.message}")
+                }
+            })
     }
 
-    // 🔹 Approve post
-    private fun approvePost(postId: String) {
-        ApiClient.apiService.approvePost(postId).enqueue(object : Callback<Post> {
-            override fun onResponse(call: Call<Post>, response: Response<Post>) {
-                if (response.isSuccessful) {
-                    Toast.makeText(this@PostApprovalActivity, "✅ Post approved!", Toast.LENGTH_SHORT).show()
-                    loadPendingPosts()
-                } else {
-                    Toast.makeText(this@PostApprovalActivity, "❌ Approval failed.", Toast.LENGTH_SHORT).show()
-                }
-            }
+    private fun approvePost(approvalId: String) {
+        val token = TokenManager.getToken(this)
 
-            override fun onFailure(call: Call<Post>, t: Throwable) {
-                Toast.makeText(this@PostApprovalActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+        ApiClient.apiService.approvePendingPost(approvalId, "Bearer $token")
+            .enqueue(object : Callback<Void> {
+                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(this@PostApprovalActivity, "Post Approved!", Toast.LENGTH_SHORT).show()
+                        loadPendingPosts()
+                    } else {
+                        Toast.makeText(this@PostApprovalActivity, "Approval failed.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<Void>, t: Throwable) {
+                    Toast.makeText(this@PostApprovalActivity, t.message, Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
-    // 🔹 Reject post
-    private fun rejectPost(postId: String) {
-        ApiClient.apiService.rejectPost(postId).enqueue(object : Callback<Post> {
-            override fun onResponse(call: Call<Post>, response: Response<Post>) {
-                if (response.isSuccessful) {
-                    Toast.makeText(this@PostApprovalActivity, "🚫 Post rejected.", Toast.LENGTH_SHORT).show()
-                    loadPendingPosts()
-                } else {
-                    Toast.makeText(this@PostApprovalActivity, "❌ Rejection failed.", Toast.LENGTH_SHORT).show()
-                }
-            }
+    private fun rejectPost(approvalId: String) {
+        val token = TokenManager.getToken(this)
 
-            override fun onFailure(call: Call<Post>, t: Throwable) {
-                Toast.makeText(this@PostApprovalActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+        ApiClient.apiService.rejectPendingPost(approvalId, "Bearer $token")
+            .enqueue(object : Callback<Void> {
+                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(this@PostApprovalActivity, "Post Rejected.", Toast.LENGTH_SHORT).show()
+                        loadPendingPosts()
+                    } else {
+                        Toast.makeText(this@PostApprovalActivity, "Rejection failed.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<Void>, t: Throwable) {
+                    Toast.makeText(this@PostApprovalActivity, t.message, Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
-    // 🔹 Helper to show empty or error messages
-    private fun showEmptyMessage(message: String) {
+    private fun showEmpty(message: String) {
         recyclerView.visibility = View.GONE
         emptyText.text = message
         emptyText.visibility = View.VISIBLE

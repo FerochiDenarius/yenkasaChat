@@ -14,10 +14,11 @@ data class ApproverUser(
 )
 
 data class PostApprovalResponse(
-    val pending: List<PostApprovalItem>
+    val pending: List<Post>
 )
 
 data class GenericResponse(
     val success: Boolean,
     val message: String
 )
+

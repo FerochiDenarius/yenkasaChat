@@ -208,26 +208,22 @@ interface ApiService {
 // POST APPROVAL ENDPOINTS
 // =====================
 
-    // 1️⃣ Get all pending posts
-    @GET("postapproval/pending")
-    fun getPendingPosts(
+    @GET("post-approval/pending")
+    fun getPendingApprovalPosts(
         @Header("Authorization") token: String
     ): Call<PostApprovalResponse>
 
-    // 2️⃣ Approve a post
-    @PUT("postapproval/{id}/approve")
-    fun approvePost(
-        @Header("Authorization") token: String,
-        @Path("id") approvalId: String
-    ): Call<GenericResponse>
+    @PUT("post-approval/{id}/approve")
+    fun approvePendingPost(
+        @Path("id") approvalId: String,
+        @Header("Authorization") token: String
+    ): Call<Void>
 
-    // 3️⃣ Reject a post
-    @PUT("postapproval/{id}/reject")
-    fun rejectPost(
-        @Header("Authorization") token: String,
-        @Path("id") approvalId: String
-    ): Call<GenericResponse>
-
+    @PUT("post-approval/{id}/reject")
+    fun rejectPendingPost(
+        @Path("id") approvalId: String,
+        @Header("Authorization") token: String
+    ): Call<Void>
 
 
     @PATCH("posts/{postId}/status")

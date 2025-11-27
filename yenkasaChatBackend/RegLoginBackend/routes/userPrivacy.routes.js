@@ -1,8 +1,11 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");  // <-- ADD THIS
 const auth = require("../middleware/auth");
 const UserPrivacy = require("../models/userPrivacy.model");
 const Notification = require("../models/notifications.model");
+const User = require("../models/user.model");
+
 
 // ensure privacy doc
 async function ensurePrivacy(userId) {

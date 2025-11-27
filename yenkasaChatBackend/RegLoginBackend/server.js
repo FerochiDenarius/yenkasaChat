@@ -18,6 +18,8 @@ const CoinTransaction = require('./models/cointransaction.model');
 const verificationRules = require('./config/verificationRules');
 const seedCommunities = require('./seed/seedCommunities');
 const commentRoutes = require('./routes/comments.routes');
+const multer = require("multer");
+
 
 const app = express();
 console.log("server.js: Starting application setup...");

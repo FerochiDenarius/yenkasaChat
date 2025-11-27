@@ -604,10 +604,11 @@ interface ApiService {
 // POST VISIBILITY (COMMUNITY + USERS)
 // ───────────────────────────────
 
-    @GET("community-visibility")
+    @GET("user-privacy/community-visibility")
     fun getCommunityVisibility(
         @Header("Authorization") token: String
     ): Call<List<CommunityVisibilityModel>>
+
 
     @POST("community-visibility")
     fun saveCommunityVisibility(

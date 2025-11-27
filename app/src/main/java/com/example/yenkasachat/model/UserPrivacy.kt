@@ -28,3 +28,5 @@ data class PrivacyResponse(
     val hiddenFromPostsUsers: List<String>,
     val hiddenFromCommunities: List<String>
 )
+
+

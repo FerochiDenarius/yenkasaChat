@@ -26,6 +26,9 @@ import retrofit2.Callback
 import retrofit2.Response
 import com.example.yenkasachat.model.CreateChatRoomRequest
 import com.example.yenkasachat.model.CreateChatRoomResponse
+import com.example.yenkasachat.model.BlockUserRequest
+import com.example.yenkasachat.model.ApiResponse
+
 
 
 class UserProfileActivity : AppCompatActivity() {
@@ -276,15 +279,44 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     private fun toggleBlockUser() {
-        val token = TokenManager.getToken(this) ?: return
-        val targetUserId = userId ?: return
+        val targetId = userId ?: return
 
-        // 🔄 Call the shared FeedUtils helper
-        FeedUtils.toggleBlock(this, token, targetUserId) { _, blockedUser ->
-            // ✅ Toggle UI based on local block state
-            isBlocked = if (TokenManager.isUserBlocked(this, blockedUser)) true else false
-            btnBlock.text = if (isBlocked) "Unblock" else "Block"
+        val request = BlockUserRequest(targetId)
+
+        val call = if (isBlocked) {
+            ApiClient.apiService.unblockUser(request)
+        } else {
+            ApiClient.apiService.blockUser(request)
         }
+
+        call.enqueue(object : Callback<ApiResponse> {
+            override fun onResponse(
+                call: Call<ApiResponse>,
+                response: Response<ApiResponse>
+            ) {
+                if (response.isSuccessful && response.body() != null) {
+                    val message = response.body()!!.message
+                    Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
+
+                    // Update local state
+                    if (isBlocked) {
+                        TokenManager.removeBlockedUser(this@UserProfileActivity, targetId)
+                    } else {
+                        TokenManager.addBlockedUser(this@UserProfileActivity, targetId)
+                    }
+
+                    // Update UI
+                    isBlocked = !isBlocked
+                    btnBlock.text = if (isBlocked) "Unblock" else "Block"
+                } else {
+                    Toast.makeText(this@UserProfileActivity, "Failed to update block", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun openFollowList(type: String) {

@@ -48,16 +48,19 @@ router.post("/block", auth, async (req, res) => {
         const { targetId } = req.body;
 
         const doc = await ensurePrivacy(req.user.id);
-        if (!doc.blockedUsers.includes(targetId)) {
-            doc.blockedUsers.push(targetId);
+
+        const objectId = new mongoose.Types.ObjectId(targetId);
+
+        if (!doc.blockedUsers.some(id => id.toString() === targetId)) {
+            doc.blockedUsers.push(objectId);
             await doc.save();
         }
 
-        // optional: notify user
+        // 🔔 SEND BLOCK NOTIFICATION — THIS IS WHERE IT BELONGS
         await Notification.create({
             type: "blocked",
             senderId: req.user.id,
-            receiverId: targetId,
+            receiverId: objectId,
             message: "You have been blocked",
             activityId: targetId
         });
@@ -65,9 +68,11 @@ router.post("/block", auth, async (req, res) => {
         res.json({ message: "User blocked" });
 
     } catch (err) {
+        console.error("BLOCK ROUTE ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
+
 
 // ────────────────────────────────────────────
 // UNBLOCK USER

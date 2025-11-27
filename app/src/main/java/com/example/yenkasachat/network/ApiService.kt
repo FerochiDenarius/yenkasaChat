@@ -574,10 +574,12 @@ interface ApiService {
         @Body request: BlockUserRequest
     ): Call<ApiResponse>
 
+
     @POST("user-privacy/unblock")
     fun unblockUser(
-        @Body request: UnblockUserRequest
+        @Body request: BlockUserRequest
     ): Call<ApiResponse>
+
 
     @GET("user-privacy/blocked-users")
     fun getBlockedUsers(): Call<List<BlockedUserModel>>
@@ -620,6 +622,8 @@ interface ApiService {
     fun unhideUserFromPosts(
         @Body request: BlockUserFromPostsRequest
     ): Call<ApiResponse>
+
+
 
 
 // ───────────────────────────────

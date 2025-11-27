@@ -9,6 +9,10 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.BlockedUsersAdapter
 import com.example.yenkasachat.network.ApiClient
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import com.example.yenkasachat.model.BlockedUserModel
 
 class HiddenUsersActivity : AppCompatActivity() {
 
@@ -27,15 +31,29 @@ class HiddenUsersActivity : AppCompatActivity() {
     }
 
     private fun loadHiddenUsers() {
-        lifecycleScope.launch {
-            try {
-                val res = ApiClient.apiService.getHiddenUsers()
-                if (res.isSuccessful && res.body() != null) {
-                    adapter.update(res.body()!!)
+
+        ApiClient.apiService.getHiddenUsers()
+            .enqueue(object : Callback<List<BlockedUserModel>> {
+
+                override fun onResponse(
+                    call: Call<List<BlockedUserModel>>,
+                    response: Response<List<BlockedUserModel>>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        adapter.update(response.body()!!)
+                    }
                 }
-            } catch (e: Exception) {
-                Toast.makeText(this@HiddenUsersActivity, "Failed to load", Toast.LENGTH_SHORT).show()
-            }
-        }
+
+                override fun onFailure(
+                    call: Call<List<BlockedUserModel>>,
+                    t: Throwable
+                ) {
+                    Toast.makeText(
+                        this@HiddenUsersActivity,
+                        "Failed to load",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
     }
 }

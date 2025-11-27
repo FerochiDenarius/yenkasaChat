@@ -7,7 +7,7 @@ const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const rewardService = require('../services/reward.service');
-
+const { sendNotification } = require('../services/notification.service');
 
 
 const REWARD_COMMENT = 5;          // reward to post author 
@@ -66,6 +66,18 @@ router.post('/', authMiddleware, async (req, res) => {
       activityId: `comment_${post._id}_${userId}`,
     });
 
+    // 🔔 Notify post owner about new comment
+if (post.userId._id.toString() !== userId.toString()) {
+  sendNotification({
+    type: "comment",
+    senderId: userId,
+    receiverId: post.userId._id,
+    activityId: post._id,
+    message: `${commenter.username} commented on your post`
+  });
+}
+
+
     // Reward parent comment author (if this is a reply)
     if (parentCommentId) {
       await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
@@ -82,6 +94,17 @@ router.post('/', authMiddleware, async (req, res) => {
         });
       }
     }
+
+    // 🔔 Notify parent comment owner about reply
+if (parentComment && parentComment.userId.toString() !== userId.toString()) {
+  sendNotification({
+    type: "reply",
+    senderId: userId,
+    receiverId: parentComment.userId,
+    activityId: parentComment.postId,
+    message: `${commenter.username} replied to your comment`
+  });
+}
 
     // Populate final comment for response
     const populatedComment = await Comment.findById(comment._id)
@@ -169,6 +192,19 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
           activityId: `receive_like_${commentId}_${userId}`,
         });
       }
+// 🔔 Notify comment owner about like
+if (commentOwnerId._id.toString() !== userId.toString()) {
+  sendNotification({
+    type: "comment_liked",
+    senderId: userId,
+    receiverId: commentOwnerId._id,
+    activityId: comment._id,
+    message: `${liker.username || "Someone"} liked your comment`
+  });
+}
+
+
+      
     }
 
     // --- Unlike Action ---

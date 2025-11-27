@@ -83,17 +83,31 @@ router.post("/block", auth, async (req, res) => {
 router.post("/unblock", auth, async (req, res) => {
     try {
         const { targetId } = req.body;
+        const userId = req.user.id;
 
-        const doc = await ensurePrivacy(req.user.id);
+        const doc = await ensurePrivacy(userId);
         doc.blockedUsers = doc.blockedUsers.filter(id => id != targetId);
         await doc.save();
 
-        res.json({ message: "User unblocked" });
+        const targetUser = await User.findById(targetId)
+            .select("_id username profileImage role");
+
+        res.json({
+            message: "User unblocked",
+            user: {
+                userId: targetUser._id,
+                username: targetUser.username,
+                avatar: targetUser.profileImage,
+                roleName: targetUser.role?.name ?? "user"
+            }
+        });
 
     } catch (err) {
+        console.error("UNBLOCK ROUTE ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
+
 
 // ────────────────────────────────────────────
 // GET USERS YOU BLOCKED

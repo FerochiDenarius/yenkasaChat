@@ -7,6 +7,27 @@ const CoinTransaction = require("../models/cointransaction.model");
 const CoinSupply = require("../models/coinSupply");
 const verifyToken = require("../middleware/auth");
 const rewardService = require('../services/reward.service');
+const UserPrivacy = require("../models/userPrivacy.model");
+const { sendNotification } = require("../services/notification.service");
+
+
+async function isBlocked(userA, userB) {
+  try {
+    const [privacyA, privacyB] = await Promise.all([
+      UserPrivacy.findOne({ userId: userA }).lean(),
+      UserPrivacy.findOne({ userId: userB }).lean()
+    ]);
+
+    const aBlockedB = privacyA?.blockedUsers?.includes(userB);
+    const bBlockedA = privacyB?.blockedUsers?.includes(userA);
+
+    return aBlockedB || bBlockedA;
+  } catch (err) {
+    console.error("BLOCK CHECK ERROR:", err.message);
+    return false;
+  }
+}
+
 
 
 const router = express.Router();
@@ -75,7 +96,7 @@ async function rewardCoins({ toUserId, fromUserId, relatedPostId, amount, type, 
 }
 
 /* ------------------------------------
- * 👍 LIKE / UNLIKE POST
+ * 👍 LIKE / UNLIKE POST (with block check + notification)
  * ------------------------------------ */
 router.post("/like/:postId", verifyToken, async (req, res) => {
   try {
@@ -83,20 +104,32 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const postId = req.params.postId;
-    const post = await Post.findById(postId).select("likes likeCount userId");
+    const post = await Post.findById(postId)
+      .select("likes likeCount userId")
+      .populate("userId", "username oneSignalPlayerId");
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const alreadyLiked = post.likes.some((id) => id.toString() === userId);
+    const postOwnerId = post.userId._id.toString();
+
+    // 🚫 BLOCK CHECK (liker blocked owner OR owner blocked liker)
+    if (await isBlocked(userId, postOwnerId)) {
+      return res.status(403).json({
+        message: "You cannot interact with this user due to block/privacy settings",
+      });
+    }
+
+    const alreadyLiked = post.likes.some(id => id.toString() === userId);
 
     // toggle like
     const update = alreadyLiked
       ? { $pull: { likes: userId }, $inc: { likeCount: -1 } }
       : { $addToSet: { likes: userId }, $inc: { likeCount: 1 } };
 
-    const updatedPost = await Post.findByIdAndUpdate(postId, update, { new: true }).select("likes likeCount");
+    const updatedPost = await Post.findByIdAndUpdate(postId, update, { new: true })
+      .select("likes likeCount");
 
-    const likedByUser = updatedPost.likes.some((id) => id.toString() === userId);
+    const likedByUser = updatedPost.likes.some(id => id.toString() === userId);
 
     // emit socket event
     emitFeedUpdate(req, likedByUser ? "post_liked" : "post_unliked", {
@@ -105,20 +138,56 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
       likeCount: updatedPost.likeCount,
     });
 
-    // ✅ reward the liker (not the post owner)
-  // reward the liker (not the post owner)
-if (!alreadyLiked && likedByUser) {
-  await rewardService.reward(userId, REWARD_LIKE, {
-    fromUserId: post.userId,
-    type: 'REWARD_POST_LIKE',
-    description: `Reward for liking post ${postId}`,
-    relatedPostId: postId,
-    activityId: `like_${postId}_${userId}`
-  });
-}
+    // 🎁 Reward liker
+    if (!alreadyLiked && likedByUser) {
+      await rewardService.reward(userId, REWARD_LIKE, {
+        fromUserId: postOwnerId,
+        type: "REWARD_POST_LIKE",
+        description: `Reward for liking post ${postId}`,
+        relatedPostId: postId,
+        activityId: `like_${postId}_${userId}`
+      });
+    }
 
+    // 🔔 SEND NOTIFICATION TO POST OWNER ONLY IF NOT BLOCKED
+    if (!alreadyLiked && likedByUser) {
 
-    res.status(200).json({
+      if (!(await isBlocked(userId, postOwnerId))) {
+
+        const activityId = `like_${postId}_${userId}`;
+
+        // 💾 Save in app notification system
+        await sendNotification({
+          type: "post_like",
+          senderId: userId,
+          receiverId: postOwnerId,
+          activityId,
+          message: "liked your post"
+        });
+
+        // 📲 PUSH NOTIFICATION via OneSignal
+        if (post.userId.oneSignalPlayerId) {
+          const payload = {
+            app_id: process.env.ONESIGNAL_APP_ID,
+            include_player_ids: [post.userId.oneSignalPlayerId],
+            headings: { en: "New Like" },
+            contents: { en: "Someone liked your post" },
+            data: { postId }
+          };
+
+          await fetch("https://onesignal.com/api/v1/notifications", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
+            },
+            body: JSON.stringify(payload)
+          });
+        }
+      }
+    }
+
+    return res.json({
       message: likedByUser ? "Post liked" : "Post unliked",
       likeCount: updatedPost.likeCount,
       likedByUser,
@@ -128,6 +197,7 @@ if (!alreadyLiked && likedByUser) {
     res.status(500).json({ message: "Failed to toggle like", error: err.message });
   }
 });
+
 
 
 

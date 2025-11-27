@@ -3,135 +3,172 @@ const router = express.Router();
 const Comment = require('../models/comment.model');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
-const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require('../services/notification.service');
+const UserPrivacy = require('../models/userPrivacy.model');
+
+const REWARD_COMMENT = 5;
+const REWARD_REPLY = 2;
+const REWARD_COMMENT_ACTION = 2;
+const REWARD_COMMENT_LIKE = 1;
 
 
-const REWARD_COMMENT = 5;          // reward to post author 
-const REWARD_REPLY = 2;            // reward to replies
-const REWARD_COMMENT_ACTION = 2;   // reward to user who comments
-const REWARD_COMMENT_LIKE = 1;     // reward for liking / being liked
+/* ---------------------------------------------------
+ * BLOCK CHECK helper
+ * --------------------------------------------------- */
+async function isBlocked(userA, userB) {
+  const [a, b] = await Promise.all([
+    UserPrivacy.findOne({ userId: userA }).lean(),
+    UserPrivacy.findOne({ userId: userB }).lean()
+  ]);
 
-// ✅ Add comment or reply
+  return (
+    a?.blockedUsers?.includes(userB) ||
+    b?.blockedUsers?.includes(userA)
+  );
+}
+
+
+/* ---------------------------------------------------
+ * ADD COMMENT or REPLY
+ * --------------------------------------------------- */
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { postId, text, imageUrl, parentCommentId } = req.body;
     const userId = req.user.id;
 
-    if (!postId || !text?.trim()) {
-      return res.status(400).json({ error: 'Post ID and comment text are required' });
-    }
+    if (!postId || !text?.trim())
+      return res.status(400).json({ error: "Post ID and text are required" });
 
-    const post = await Post.findById(postId).populate('userId', 'username walletId');
-    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const post = await Post.findById(postId).populate('userId', 'username oneSignalPlayerId');
+    if (!post) return res.status(404).json({ error: "Post not found" });
 
+    // BLOCK CHECK (viewer vs post owner)
+    if (await isBlocked(userId, post.userId._id.toString()))
+      return res.status(403).json({ error: "Blocked by user privacy settings" });
+
+    // Fetch Commenter
     const commenter = await User.findById(userId);
 
-    // Create the comment
-    const comment = new Comment({
+    // Create Comment
+    const comment = await Comment.create({
       postId,
       userId,
       text: text.trim(),
-      imageUrl: imageUrl || '',
-      parentCommentId: parentCommentId || null
+      imageUrl: imageUrl || "",
+      parentCommentId: parentCommentId || null,
     });
-    await comment.save();
 
-    // Reward post author (5 coins) — only if not self-comment
+    /* ---------------------------------------------------
+     * REWARD POST OWNER (comment received)
+     * --------------------------------------------------- */
     if (post.userId._id.toString() !== userId) {
       await rewardService.reward(post.userId._id, REWARD_COMMENT, {
         fromUserId: userId,
-        type: 'REWARD_COMMENT',
-        description: `Earned ${REWARD_COMMENT} YKC for receiving a comment on post ${post._id}`,
+        type: "REWARD_COMMENT",
+        description: `Earned ${REWARD_COMMENT} YKC for receiving a comment`,
         relatedPostId: post._id,
         relatedCommentId: comment._id,
         activityId: `received_comment_${post._id}_${post.userId._id}`,
       });
     }
 
-    // Increment post comment count
+    /* Update post comment count */
     post.commentCount += 1;
     await post.save();
 
-    // Reward commenter (for commenting)
+    /* ---------------------------------------------------
+     * REWARD COMMENTER
+     * --------------------------------------------------- */
     await rewardService.reward(userId, REWARD_COMMENT_ACTION, {
-      fromUserId: null,
-      type: 'REWARD_COMMENT',
-      description: `Earned ${REWARD_COMMENT_ACTION} YKC for commenting on post ${post._id}`,
+      type: "REWARD_COMMENT",
+      description: `Earned ${REWARD_COMMENT_ACTION} YKC for commenting`,
       relatedPostId: post._id,
       relatedCommentId: comment._id,
       activityId: `comment_${post._id}_${userId}`,
     });
 
-    // 🔔 Notify post owner about new comment
-if (post.userId._id.toString() !== userId.toString()) {
-  sendNotification({
-    type: "comment",
-    senderId: userId,
-    receiverId: post.userId._id,
-    activityId: post._id,
-    message: `${commenter.username} commented on your post`
-  });
-}
+    /* ---------------------------------------------------
+     * NOTIFY POST OWNER ABOUT NEW COMMENT
+     * --------------------------------------------------- */
+    if (post.userId._id.toString() !== userId) {
+      await sendNotification({
+        type: "post_comment",
+        senderId: userId,
+        receiverId: post.userId._id.toString(),
+        activityId: `comment_${comment._id}`,
+        message: `${commenter.username} commented on your post`,
+      });
+    }
 
+    /* ---------------------------------------------------
+     * REPLY LOGIC
+     * --------------------------------------------------- */
+    let parentComment = null;
 
-    // Reward parent comment author (if this is a reply)
     if (parentCommentId) {
-      await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
+      parentComment = await Comment.findById(parentCommentId).populate('userId', 'username oneSignalPlayerId');
 
-      const parentComment = await Comment.findById(parentCommentId).populate('userId', 'username walletId');
-      if (parentComment && parentComment.userId.toString() !== userId) {
-        await rewardService.reward(parentComment.userId, REWARD_REPLY, {
-          fromUserId: userId,
-          type: 'REWARD_REPLY',
-          description: `Earned ${REWARD_REPLY} YKC for receiving a reply on comment ${parentCommentId}`,
-          relatedPostId: post._id,
-          relatedCommentId: comment._id,
-          activityId: `reply_${parentCommentId}_${userId}`,
-        });
+      if (parentComment) {
+        await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
+
+        const parentOwnerId = parentComment.userId._id.toString();
+
+        // BLOCK CHECK between user replying and comment owner
+        if (!(await isBlocked(userId, parentOwnerId))) {
+          if (parentOwnerId !== userId) {
+            /* Reward parent comment owner */
+            await rewardService.reward(parentOwnerId, REWARD_REPLY, {
+              fromUserId: userId,
+              type: "REWARD_REPLY",
+              description: `Earned ${REWARD_REPLY} YKC for receiving a reply`,
+              relatedPostId: post._id,
+              relatedCommentId: comment._id,
+              activityId: `reply_${parentCommentId}_${userId}`,
+            });
+
+            /* Notify parent comment owner */
+            await sendNotification({
+              type: "comment_reply",
+              senderId: userId,
+              receiverId: parentOwnerId,
+              activityId: `reply_${comment._id}`,
+              message: `${commenter.username} replied to your comment`,
+            });
+          }
+        }
       }
     }
 
-    // 🔔 Notify parent comment owner about reply
-if (parentComment && parentComment.userId.toString() !== userId.toString()) {
-  sendNotification({
-    type: "reply",
-    senderId: userId,
-    receiverId: parentComment.userId,
-    activityId: parentComment.postId,
-    message: `${commenter.username} replied to your comment`
-  });
-}
-
-    // Populate final comment for response
+    /* Populate final comment */
     const populatedComment = await Comment.findById(comment._id)
       .populate('userId', 'username profileImage verified')
       .lean();
 
-    // Optional broadcast (if socket.io is globally defined)
-    if (typeof io !== 'undefined') {
-      io.emit('feedUpdate', {
-        type: parentCommentId ? 'newReply' : 'newComment',
+    /* Optional socket broadcast */
+    if (global.io) {
+      global.io.emit('feedUpdate', {
+        type: parentCommentId ? "newReply" : "newComment",
         postId,
         parentCommentId: parentCommentId || null,
-        comment: populatedComment
+        comment: populatedComment,
       });
     }
 
     res.status(201).json({
       success: true,
-      message: 'Comment added successfully',
-      comment: populatedComment
+      message: "Comment added",
+      comment: populatedComment,
     });
 
   } catch (err) {
-    console.error('❌ Failed to add comment:', err);
-    res.status(500).json({ error: 'Failed to add comment' });
+    console.error("❌ Comment failed:", err);
+    res.status(500).json({ error: "Failed to add comment" });
   }
 });
+
+
 
 // ✅ Get comments for a post (with pagination)
 router.get('/post/:postId', authMiddleware, async (req, res) => {
@@ -157,69 +194,87 @@ router.get('/post/:postId', authMiddleware, async (req, res) => {
 });
 
 
-// ✅ Like or unlike comment
+/* ---------------------------------------------------
+ * LIKE / UNLIKE COMMENT (FINAL MERGED VERSION)
+ * --------------------------------------------------- */
 router.post("/toggle-like", authMiddleware, async (req, res) => {
   try {
     const { commentId, like } = req.body;
     const userId = req.user.id;
 
-    const comment = await Comment.findById(commentId).populate('userId', 'username walletId');
-    if (!comment) return res.status(404).json({ success: false, message: "Comment not found" });
+    const comment = await Comment.findById(commentId).populate(
+      "userId",
+      "username oneSignalPlayerId"
+    );
 
-    const alreadyLiked = comment.isLikedBy(userId);
-    const commentOwnerId = comment.userId;
+    if (!comment)
+      return res.status(404).json({ message: "Comment not found" });
+
+    const commentOwnerId = comment.userId._id.toString();
     const liker = await User.findById(userId);
 
-    // --- Like Action ---
+    // BLOCK CHECK
+    if (await isBlocked(userId, commentOwnerId)) {
+      return res.status(403).json({
+        message: "Blocked due to privacy settings",
+      });
+    }
+
+    const alreadyLiked = comment.isLikedBy(userId);
+
+    /* ----------------------------------------------
+     * LIKE ACTION
+     * ---------------------------------------------- */
     if (like && !alreadyLiked) {
       await comment.addLike(userId);
 
-      // ✅ Reward liker (for engaging)
+      // Reward liker
       await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
-        type: 'REWARD_COMMENT_LIKE',
+        type: "REWARD_COMMENT_LIKE",
         description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
         relatedCommentId: comment._id,
         activityId: `like_comment_${commentId}_${userId}`,
       });
 
-      // ✅ Reward comment owner (for receiving a like)
-      if (commentOwnerId.toString() !== userId.toString()) {
+      // Reward comment owner
+      if (commentOwnerId !== userId) {
         await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
           fromUserId: userId,
-          type: 'REWARD_COMMENT_LIKE',
+          type: "REWARD_COMMENT_LIKE",
           description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
           relatedCommentId: comment._id,
           activityId: `receive_like_${commentId}_${userId}`,
         });
+
+        // Notification
+        await sendNotification({
+          type: "comment_liked",
+          senderId: userId,
+          receiverId: commentOwnerId,
+          activityId: `comment_like_${commentId}`,
+          message: `${liker.username || "Someone"} liked your comment`,
+        });
       }
-// 🔔 Notify comment owner about like
-if (commentOwnerId._id.toString() !== userId.toString()) {
-  sendNotification({
-    type: "comment_liked",
-    senderId: userId,
-    receiverId: commentOwnerId._id,
-    activityId: comment._id,
-    message: `${liker.username || "Someone"} liked your comment`
-  });
-}
-
-
-      
     }
 
-    // --- Unlike Action ---
-    else if (!like && alreadyLiked) {
+    /* ----------------------------------------------
+     * UNLIKE ACTION
+     * ---------------------------------------------- */
+    if (!like && alreadyLiked) {
       await comment.removeLike(userId);
-      // ❌ No deduction — we intentionally skip balance reversal
     }
 
-    res.json({ success: true, comment });
+    res.json({
+      success: true,
+      likeCount: comment.likeCount,
+      liked: like,
+    });
+
   } catch (err) {
-    console.error("❌ Error toggling like:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("❌ Toggle-like error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
-
 
 
 // ✅ Unlike comment

@@ -7,10 +7,25 @@ const { v4: uuidv4 } = require('uuid');
 const fetch = require('node-fetch');
 const rewardService = require('../services/reward.service');
 
+// Place at top
+const UserPrivacy = require("../models/userPrivacy.model");
+
+async function isBlocked(userA, userB) {
+  const [privacyA, privacyB] = await Promise.all([
+    UserPrivacy.findOne({ userId: userA }).lean(),
+    UserPrivacy.findOne({ userId: userB }).lean()
+  ]);
+
+  const aBlockedB = privacyA?.blockedUsers?.includes(userB);
+  const bBlockedA = privacyB?.blockedUsers?.includes(userA);
+
+  return aBlockedB || bBlockedA;
+}
+
+
 
 const REWARD_FOLLOW = 5;
 
-// ✅ Follow a user
 router.post('/:userId/follow', authMiddleware, async (req, res) => {
   try {
     const currentUserId = req.user.id;
@@ -20,45 +35,42 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'You cannot follow yourself' });
     }
 
+    // BLOCK CHECK (this is the ONLY new logic)
+    if (await isBlocked(currentUserId, targetUserId)) {
+      return res.status(403).json({
+        error: "Action blocked due to user privacy settings"
+      });
+    }
+
     const [currentUser, targetUser] = await Promise.all([
       User.findById(currentUserId),
       User.findById(targetUserId),
     ]);
 
-    if (!targetUser) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
-    const isAlreadyFollowing = currentUser.following.some(
-      (id) => id.toString() === targetUserId
-    );
+    const isAlreadyFollowing = currentUser.following.includes(targetUserId);
     if (isAlreadyFollowing) {
       return res.status(400).json({ error: 'Already following this user' });
     }
 
-    // ✅ Update follow lists
+    // UPDATE FOLLOW STATE
     currentUser.following.push(targetUserId);
     targetUser.followers.push(currentUserId);
-    currentUser.followingCount = (currentUser.followingCount || 0) + 1;
-    targetUser.followersCount = (targetUser.followersCount || 0) + 1;
-    currentUser.updatedAt = new Date();
-    targetUser.updatedAt = new Date();
-
+    currentUser.followingCount++;
+    targetUser.followersCount++;
     await currentUser.save();
     await targetUser.save();
 
-    // ✅ Create unique activity ID
+    // Reward system
     const activityId = `follow_${currentUserId}_${targetUserId}`;
-
-    // ✅ Attempt reward via service (handles dedupe)
     const rewardTx = await rewardService.reward(currentUserId, REWARD_FOLLOW, {
-      fromUserId: null,
-      type: 'REWARD_FOLLOW',
+      type: "REWARD_FOLLOW",
       description: `Earned ${REWARD_FOLLOW} YKC for following ${targetUser.username}`,
-      activityId,
+      activityId
     });
 
-    // ✅ Emit socket event
+    // Emit socket
     io.emit('feedUpdate', {
       type: 'newFollow',
       followerId: currentUserId,
@@ -67,23 +79,33 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       timestamp: new Date(),
     });
 
-    // ✅ Notify followed user
+    // ONLY SEND NOTIFICATION IF NOT BLOCKED
     if (targetUser.oneSignalPlayerId) {
+
       const notificationData = {
         app_id: process.env.ONESIGNAL_APP_ID,
         include_player_ids: [targetUser.oneSignalPlayerId],
         headings: { en: 'New Follower' },
         contents: { en: `${currentUser.username} started following you.` },
-        data: { followerId: currentUserId },
+        data: { followerId: currentUserId }
       };
 
       await fetch('https://onesignal.com/api/v1/notifications', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          Authorization: `Basic ${process.env.ONESIGNAL_KEY}`,
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
         },
-        body: JSON.stringify(notificationData),
+        body: JSON.stringify(notificationData)
+      });
+
+      // ALSO save this notification inside database
+      await sendNotification({
+        type: "follow",
+        senderId: currentUserId,
+        receiverId: targetUserId,
+        activityId,
+        message: `${currentUser.username} started following you.`
       });
     }
 
@@ -94,46 +116,12 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       followersCount: targetUser.followersCount,
       followingCount: currentUser.followingCount,
       coinsRewarded: rewardTx ? REWARD_FOLLOW : 0,
-      transaction: rewardTx,
       timestamp: new Date(),
     });
 
   } catch (err) {
-    console.error('❌ Failed to follow user:', err);
-    res.status(500).json({ error: 'Failed to follow user' });
-  }
-});
-
-
-// ✅ Get user's followers
-router.get('/:userId/followers', authMiddleware, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
-    const skip = (page - 1) * limit;
-
-    const user = await User.findById(userId)
-      .populate({
-        path: 'followers',
-        select: 'username profileImage bio verified followersCount followingCount',
-        options: { skip, limit: parseInt(limit) },
-      });
-
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    res.json({
-      followers: user.followers,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(user.followersCount / limit),
-        totalFollowers: user.followersCount,
-        hasMore: skip + user.followers.length < user.followersCount,
-      },
-      timestamp: new Date(),
-    });
-  } catch (err) {
-    console.error('❌ Failed to fetch followers:', err);
-    res.status(500).json({ error: 'Failed to fetch followers' });
+    console.error("❌ Failed to follow user:", err);
+    res.status(500).json({ error: "Failed to follow user" });
   }
 });
 

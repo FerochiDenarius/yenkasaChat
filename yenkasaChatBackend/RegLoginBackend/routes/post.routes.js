@@ -122,15 +122,92 @@ router.post('/', authMiddleware, upload(), async (req, res) => {
       status: postStatus
     });
 
-    /* If PENDING → add to PostApproval queue */
-    if (!isPrivileged) {
-      await PostApproval.create({
-        post: post._id,
-        user: userId,
-        submittedAt: new Date(),
-        status: "pending"
+/* If PENDING → add to PostApproval queue */
+if (!isPrivileged) {
+  await PostApproval.create({
+    post: post._id,
+    user: userId,
+    submittedAt: new Date(),
+    status: "pending"
+  });
+
+  // Notify creator their post is pending review
+  await sendNotification({
+    type: "post_under_review",
+    senderId: "system",
+    receiverId: userId,
+    activityId: `post_pending_${post._id}`,
+    message: "Your post is under review and will be approved shortly."
+  });
+
+  // Notify all approvers
+  const approvers = await User.find({
+    roleName: { $in: ["admin", "moderator", "senior_developer", "junior_developer"] }
+  }).select("_id oneSignalPlayerId username");
+
+  for (const mod of approvers) {
+    await sendNotification({
+      type: "post_pending",
+      senderId: userId,
+      receiverId: mod._id,
+      activityId: `pending_${post._id}`,
+      message: "A new post is awaiting approval."
+    });
+
+    if (mod.oneSignalPlayerId) {
+      const payload = {
+        app_id: process.env.ONESIGNAL_APP_ID,
+        include_player_ids: [mod.oneSignalPlayerId],
+        headings: { en: "Pending Post" },
+        contents: { en: "A new post requires your approval." },
+        data: { postId: post._id }
+      };
+
+      await fetch("https://onesignal.com/api/v1/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
+        },
+        body: JSON.stringify(payload)
       });
     }
+  }
+}
+
+
+const approvers = await User.find({
+  roleName: { $in: ["admin", "moderator", "senior_developer", "junior_developer"] }
+}).select("_id oneSignalPlayerId username");
+
+for (const mod of approvers) {
+  await sendNotification({
+    type: "post_pending",
+    senderId: userId,
+    receiverId: mod._id,
+    activityId: `pending_${post._id}`,
+    message: "A new post is awaiting approval."
+  });
+
+  // Push To OneSignal
+  if (mod.oneSignalPlayerId) {
+    await fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
+      },
+      body: JSON.stringify({
+        app_id: process.env.ONESIGNAL_APP_ID,
+        include_player_ids: [mod.oneSignalPlayerId],
+        headings: { en: "Pending Post" },
+        contents: { en: "A new post requires your approval." },
+        data: { postId: post._id }
+      })
+    });
+  }
+}
+
 
     /* Reward ONLY approved posts */
     if (postStatus === "approved") {

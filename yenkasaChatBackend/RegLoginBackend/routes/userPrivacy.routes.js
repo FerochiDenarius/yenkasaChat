@@ -122,39 +122,42 @@ router.get("/blocked-users", auth, async (req, res) => {
 });
 
 // ────────────────────────────────────────────
-// GET USERS WHO BLOCKED YOU
+// GET USERS WHO BLOCKED YOU  (FULL USER OBJECTS)
 // ────────────────────────────────────────────
 router.get("/who-blocked-you", auth, async (req, res) => {
     try {
-        const users = await UserPrivacy.find({
+        // Find all privacy docs where YOU appear in their blockedUsers list
+        const docs = await UserPrivacy.find({
             blockedUsers: req.user.id
-        }).select("userId");
+        }).select("userId updatedAt");
 
-        res.json(users.map(u => u.userId));
+        const ids = docs.map(d => d.userId);
 
-    } catch (err) {
-        res.status(500).json({ message: "Server error" });
-    }
-});
+        // Load full user profiles
+        const users = await User.find({ _id: { $in: ids } })
+            .select("_id username profileImage role roleName");
 
-// ────────────────────────────────────────────
-// CHECK IF BLOCKED
-// ────────────────────────────────────────────
-router.get("/is-blocked", auth, async (req, res) => {
-    try {
-        const { targetId } = req.query;
-
-        const privacyDoc = await UserPrivacy.findOne({
-            userId: targetId,
-            blockedUsers: req.user.id
+        // Merge dateBlocked
+        const result = users.map(user => {
+            const doc = docs.find(d => d.userId.toString() === user._id.toString());
+            return {
+                userId: user._id,
+                username: user.username,
+                avatar: user.profileImage,
+                roleName: user.roleName || user.role?.name || "user",
+                dateBlocked: doc?.updatedAt ?? null
+            };
         });
 
-        res.json({ blocked: !!privacyDoc });
+        res.json(result);
 
     } catch (err) {
+        console.error("ERROR /who-blocked-you:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
+
+
 
 // ────────────────────────────────────────────
 // SEND MESSAGE REQUEST

@@ -110,13 +110,23 @@ router.post("/unblock", auth, async (req, res) => {
 
 
 // ────────────────────────────────────────────
-// GET USERS YOU BLOCKED
+// GET USERS YOU BLOCKED (FULL USER OBJECTS)
 // ────────────────────────────────────────────
 router.get("/blocked-users", auth, async (req, res) => {
     try {
         const doc = await ensurePrivacy(req.user.id);
-        res.json(doc.blockedUsers);
+
+        // Populate user details based on doc.blockedUsers array
+        const blockedUsers = await User.find({
+            _id: { $in: doc.blockedUsers }
+        })
+        .select("_id username profileImage bio verified")  // tidy, safe fields
+        .lean();
+
+        res.json(blockedUsers);
+
     } catch (err) {
+        console.error("GET BLOCKED USERS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });

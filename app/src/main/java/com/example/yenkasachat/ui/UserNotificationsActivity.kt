@@ -8,6 +8,7 @@ import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.NotificationAdapter
 import com.example.yenkasachat.model.NotificationModel
 import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.model.ApiResponse
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -23,6 +24,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvNotifications)
         rv.layoutManager = LinearLayoutManager(this)
 
+        // Pass click listener → mark as read
         adapter = NotificationAdapter(mutableListOf()) { item ->
             markAsRead(item.id)
         }
@@ -42,24 +44,38 @@ class UserNotificationsActivity : AppCompatActivity() {
                 ) {
                     if (res.isSuccessful && res.body() != null) {
                         adapter.update(res.body()!!)
+                    } else {
+                        Toast.makeText(
+                            this@UserNotificationsActivity,
+                            "Failed to load notifications",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
-                    Toast.makeText(this@UserNotificationsActivity, "Failed to load", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@UserNotificationsActivity,
+                        "Network error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
 
     private fun markAsRead(id: String) {
         ApiClient.apiService.markNotificationRead(id)
-            .enqueue(object : Callback<com.example.yenkasachat.model.ApiResponse> {
+            .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(
-                    call: Call<com.example.yenkasachat.model.ApiResponse>,
-                    response: Response<com.example.yenkasachat.model.ApiResponse>
-                ) {}
+                    call: Call<ApiResponse>,
+                    response: Response<ApiResponse>
+                ) {
+                    // No need to toast — silent update
+                }
 
-                override fun onFailure(call: Call<com.example.yenkasachat.model.ApiResponse>, t: Throwable) {}
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    // Silent fail
+                }
             })
     }
 }

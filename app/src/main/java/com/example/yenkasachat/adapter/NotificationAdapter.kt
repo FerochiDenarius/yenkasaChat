@@ -49,7 +49,11 @@ class NotificationAdapter(
         notifyDataSetChanged()
     }
 
-    private fun formatTime(createdAt: String): String {
-        return createdAt.replace("T", " ").substringBefore(".")
+    private fun formatTime(timestamp: String?): String {
+        return timestamp
+            ?.replace("T", " ")
+            ?.replace("Z", "")
+            ?: "Just now"
     }
+
 }

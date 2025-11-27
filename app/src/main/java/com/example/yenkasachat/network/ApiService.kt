@@ -598,8 +598,19 @@ interface ApiService {
 // POST VISIBILITY (COMMUNITY + USERS)
 // ───────────────────────────────
 
-    @GET("user-privacy/community-visibility")
-    fun getCommunityVisibility(): Call<List<CommunityVisibilityModel>>
+    @GET("community-visibility")
+    fun getCommunityVisibility(
+        @Header("Authorization") token: String
+    ): Call<List<CommunityVisibilityModel>>
+
+    @POST("community-visibility")
+    fun saveCommunityVisibility(
+        @Header("Authorization") token: String,
+        @Body visibilityList: List<CommunityVisibilityModel>
+    ): Call<ApiResponse>
+
+
+
 
     @POST("user-privacy/block-community")
     fun blockCommunity(
@@ -653,5 +664,7 @@ interface ApiService {
     fun markNotificationRead(
         @Query("id") notificationId: String
     ): Call<ApiResponse>
+
+
 
 }

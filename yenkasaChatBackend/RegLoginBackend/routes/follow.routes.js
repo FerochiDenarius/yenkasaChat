@@ -49,7 +49,9 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
 
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
-    const isAlreadyFollowing = currentUser.following.includes(targetUserId);
+const isAlreadyFollowing = currentUser.following.some(
+  id => id.toString() === targetUserId
+);
     if (isAlreadyFollowing) {
       return res.status(400).json({ error: 'Already following this user' });
     }

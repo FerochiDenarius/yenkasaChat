@@ -36,18 +36,39 @@ router.post("/create", auth, async (req, res) => {
 // ─────────────────────────────────────────────
 router.get("/all", auth, async (req, res) => {
     try {
-        const userId = req.user.id;
+        const notifications = await Notification.find({
+            receiverId: req.user.id
+        })
+        .sort({ createdAt: -1 })
+        .populate("senderId", "username profileImage role roleName");
 
-        const notifications = await Notification.find({ receiverId: userId })
-            .sort({ createdAt: -1 });
+        const formatted = notifications.map(n => ({
+            id: n._id,
+            type: n.type,
+            message: n.message,
+            date: n.createdAt,
+            status: n.status,
 
-        return res.json(notifications);
+            sender: n.senderId
+                ? {
+                    userId: n.senderId._id,
+                    username: n.senderId.username,
+                    avatar: n.senderId.profileImage,
+                    roleName: n.senderId.roleName || n.senderId.role?.name || "user"
+                }
+                : null,
+
+            activityId: n.activityId
+        }));
+
+        res.json(formatted);
 
     } catch (err) {
-        console.error("NOTIFICATION FETCH ERROR:", err);
+        console.error("NOTIFICATIONS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
+
 
 // ─────────────────────────────────────────────
 // MARK a notification as read

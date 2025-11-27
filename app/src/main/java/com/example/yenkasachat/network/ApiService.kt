@@ -551,4 +551,102 @@ interface ApiService {
 
     @POST("/api/app-verification/check-phase-advancement")
     fun checkPhaseAdvancement(@Header("Authorization") token: String): Call<PhaseAdvancementResponse>
+
+    // ───────────────────────────────
+// USER PRIVACY
+// ───────────────────────────────
+
+    @GET("user-privacy/get")
+    fun getPrivacy(): Call<UserPrivacyModel>
+
+    @PUT("user-privacy/set-privacy")
+    fun setPrivacy(
+        @Query("privacyLevel") level: String
+    ): Call<ApiResponse>
+
+
+// ───────────────────────────────
+// USER BLOCK SYSTEM
+// ───────────────────────────────
+
+    @POST("user-privacy/block")
+    fun blockUser(
+        @Body request: BlockUserRequest
+    ): Call<ApiResponse>
+
+    @POST("user-privacy/unblock")
+    fun unblockUser(
+        @Body request: UnblockUserRequest
+    ): Call<ApiResponse>
+
+    @GET("user-privacy/blocked-users")
+    fun getBlockedUsers(): Call<List<BlockedUserModel>>
+
+    @GET("user-privacy/who-blocked-you")
+    fun getWhoBlockedYou(): Call<List<BlockedUserModel>>
+
+    @GET("user-privacy/is-blocked")
+    fun isBlocked(
+        @Query("targetId") targetId: String
+    ): Call<ApiResponse>
+
+
+// ───────────────────────────────
+// POST VISIBILITY (COMMUNITY + USERS)
+// ───────────────────────────────
+
+    @GET("user-privacy/community-visibility")
+    fun getCommunityVisibility(): Call<List<CommunityVisibilityModel>>
+
+    @POST("user-privacy/block-community")
+    fun blockCommunity(
+        @Body request: BlockCommunityRequest
+    ): Call<ApiResponse>
+
+    @POST("user-privacy/unblock-community")
+    fun unblockCommunity(
+        @Body request: BlockCommunityRequest
+    ): Call<ApiResponse>
+
+    @GET("user-privacy/hidden-users")
+    fun getHiddenUsers(): Call<List<BlockedUserModel>>
+
+    @POST("user-privacy/hide-user")
+    fun hideUserFromPosts(
+        @Body request: BlockUserFromPostsRequest
+    ): Call<ApiResponse>
+
+    @POST("user-privacy/unhide-user")
+    fun unhideUserFromPosts(
+        @Body request: BlockUserFromPostsRequest
+    ): Call<ApiResponse>
+
+
+// ───────────────────────────────
+// MESSAGE REQUESTS
+// ───────────────────────────────
+
+    @POST("user-privacy/message-request")
+    fun sendMessageRequest(
+        @Body request: MessageRequest
+    ): Call<ApiResponse>
+
+    @POST("user-privacy/approve-request")
+    fun approveMessageRequest(
+        @Query("requestId") requestId: String
+    ): Call<ApiResponse>
+
+
+// ───────────────────────────────
+// NOTIFICATIONS
+// ───────────────────────────────
+
+    @GET("notifications/all")
+    fun getNotifications(): Call<List<NotificationModel>>
+
+    @PUT("notifications/read")
+    fun markNotificationRead(
+        @Query("id") notificationId: String
+    ): Call<ApiResponse>
+
 }

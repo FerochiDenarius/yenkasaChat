@@ -1,127 +1,484 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/yenkasa_amber"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    android:padding="16dp">
+    android:padding="18dp"
+    android:clipToPadding="false"
+    android:scrollbars="none">
 
     <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
+        <!-- Header -->
         <TextView
-            android:id="@+id/menuTitle"
+            android:id="@+id/menuHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Main Menu"
-            android:textColor="#222222"
-            android:textSize="22sp"
+            android:textColor="@color/yenkasa_black"
+            android:textSize="28sp"
             android:textStyle="bold"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="18dp" />
 
-        <Button
+        <!-- Communities -->
+        <LinearLayout
             android:id="@+id/btnCommunities"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Communities" />
+            android:layout_marginBottom="10dp">
 
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_communities"
+                app:tint="@color/yenkasa_black" />
 
-        <Button
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Communities"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your community list"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Contacts -->
+        <LinearLayout
             android:id="@+id/btnContacts"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Contacts" />
+            android:layout_marginBottom="10dp">
 
-        <Button
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_contacts"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Contacts"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Manage saved contacts"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Chat Rooms -->
+        <LinearLayout
             android:id="@+id/btnChatRooms"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Chat Rooms" />
+            android:layout_marginBottom="10dp">
 
-        <Button
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_chat"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chat Rooms"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View all your chats"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Account Info -->
+        <LinearLayout
             android:id="@+id/btnAccount"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Account Info" />
+            android:layout_marginBottom="10dp">
 
-        <!-- Edit Profile Button (neutral version) -->
-        <Button
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_account"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Account Info"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your account details"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Wallet -->
+        <LinearLayout
             android:id="@+id/btnCoinWallet"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Wallet"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#D5D5D5"
-            android:textColor="#222222"/>
+            android:layout_marginBottom="10dp">
 
-        <Button
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_wallet"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wallet"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your YKC balance"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Edit Profile -->
+        <LinearLayout
             android:id="@+id/btnEditProfile"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#D5D5D5"
-            android:textColor="#222222"
-            android:text="Edit Profile" />
+            android:layout_marginBottom="10dp">
 
-        <Button
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Edit Profile"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Update your profile"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Verify Account -->
+        <LinearLayout
             android:id="@+id/btnVerifyAccount"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Verify Account" />
+            android:layout_marginBottom="10dp">
 
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_verify"
+                app:tint="@color/yenkasa_black" />
 
-        <Button
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Verify Account"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Verification options"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnAppVerification"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Yenkasa Verification"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"/>
+            android:layout_marginBottom="10dp">
 
-        <Button
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Yenkasa Verification"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Secure your identity"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Post Approvals -->
+        <LinearLayout
             android:id="@+id/btnPostApproval"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Post Approvals" />
+            android:layout_marginBottom="10dp">
 
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_approval"
+                app:tint="@color/yenkasa_black" />
 
-        <Button
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Post Approvals"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Review pending posts"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnNotifications"
+            style="@style/MenuItemStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_notifications"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Notifications"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="See your alerts"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Settings -->
+        <LinearLayout
             android:id="@+id/btnSettings"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#E0E0E0"
-            android:textColor="#222222"
-            android:text="Settings" />
+            android:layout_marginBottom="10dp">
 
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/yenkasa_black" />
 
-        <Button
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Settings"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Privacy &amp; preferences"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Logout -->
+        <LinearLayout
             android:id="@+id/btnLogout"
+            style="@style/MenuItemStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#CCCCCC"
-            android:textColor="#222222"
-            android:text="Logout" />
+            android:layout_marginTop="20dp">
+
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:src="@drawable/ic_logout"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Logout"
+                    android:textSize="15sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign out from Yenkasa"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
     </LinearLayout>
 </ScrollView>

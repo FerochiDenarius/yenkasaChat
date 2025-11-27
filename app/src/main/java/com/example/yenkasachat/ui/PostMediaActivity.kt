@@ -10,6 +10,17 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
+import com.example.yenkasachat.util.TokenManager
+import com.example.yenkasachat.network.ApiClient
+import com.example.yenkasachat.model.ViewRequest
+import com.example.yenkasachat.model.ViewResponse
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
 
 class PostMediaActivity : AppCompatActivity() {
 
@@ -60,15 +71,17 @@ class PostMediaActivity : AppCompatActivity() {
         audioCurrentTime = findViewById(R.id.audioCurrentTime)
         audioTotalTime = findViewById(R.id.audioTotalTime)
 
-        // Get Intent data
-        mediaUrl = intent.getStringExtra("mediaUrl")
-        mediaType = intent.getStringExtra("mediaType")
-        username = intent.getStringExtra("username")
-        caption = intent.getStringExtra("caption")
+        // Get Intent data (correct keys)
+        mediaUrl = intent.getStringExtra("MEDIA_URL")
+        mediaType = intent.getStringExtra("MEDIA_TYPE")
+        username = intent.getStringExtra("USERNAME")
+        caption = intent.getStringExtra("CAPTION")
 
+        // Set UI text
         textUsername.text = username ?: "Unknown User"
         textCaption.text = caption ?: ""
 
+        // Load media
         when (mediaType) {
             "image" -> showImage()
             "video" -> showVideo()
@@ -108,6 +121,8 @@ class PostMediaActivity : AppCompatActivity() {
                     videoPlayPauseBtn.setImageResource(R.drawable.ic_play)
                 } else {
                     videoView.start()
+                    rewardView()
+
                     videoPlayPauseBtn.setImageResource(R.drawable.ic_pause)
                 }
             }
@@ -136,23 +151,26 @@ class PostMediaActivity : AppCompatActivity() {
         videoView.visibility = View.GONE
         audioView.visibility = View.VISIBLE
 
-        audioPlayer = MediaPlayer().apply {
-            setDataSource(mediaUrl)
-            prepareAsync()
+        audioPlayer = MediaPlayer()
 
-            setOnPreparedListener {
-                isAudioPrepared = true
-                audioSeekBar.max = it.duration
-                audioTotalTime.text = formatTime(it.duration)
-                audioTitle.text = "Audio Ready"
-            }
+        try {
+            audioPlayer!!.setDataSource(mediaUrl)
+            audioPlayer!!.prepareAsync()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Audio load error", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-            setOnCompletionListener {
-                audioPlayBtn.visibility = View.VISIBLE
-                audioPauseBtn.visibility = View.GONE
-                audioSeekBar.progress = 0
-                audioCurrentTime.text = "0:00"
-            }
+        audioPlayer!!.setOnPreparedListener { mp ->
+            isAudioPrepared = true
+            audioSeekBar.max = mp.duration
+            audioTotalTime.text = formatTime(mp.duration)
+            audioTitle.text = "Audio"
+
+            audioPlayBtn.visibility = View.VISIBLE
+            audioPauseBtn.visibility = View.GONE
+
+            startSeekbarUpdate()
         }
 
         audioPlayBtn.setOnClickListener {
@@ -160,7 +178,6 @@ class PostMediaActivity : AppCompatActivity() {
                 audioPlayer?.start()
                 audioPlayBtn.visibility = View.GONE
                 audioPauseBtn.visibility = View.VISIBLE
-                startSeekbarUpdate()
             }
         }
 
@@ -177,6 +194,7 @@ class PostMediaActivity : AppCompatActivity() {
                     audioCurrentTime.text = formatTime(progress)
                 }
             }
+
             override fun onStartTrackingTouch(sb: SeekBar?) {}
             override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
@@ -215,5 +233,43 @@ class PostMediaActivity : AppCompatActivity() {
         videoView.stopPlayback()
         audioPlayer?.release()
         handler.removeCallbacksAndMessages(null)
+
+
     }
+
+    private fun rewardView() {
+        val postId = intent.getStringExtra("POST_ID") ?: return
+        val token = TokenManager.getToken(this) ?: return
+
+        // Determine mediaType for reward
+        val mediaType = when (mediaType?.lowercase()) {
+            "video" -> "video"
+            "audio" -> "audio"
+            "image" -> "image"
+            else -> "text"
+        }
+
+        // Launch coroutine because recordView() is suspend
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = ApiClient.apiService.recordView(
+                    postId,
+                    "Bearer $token",
+                    ViewRequest(
+                        watchDuration = 10,    // reward amount
+                        mediaType = mediaType  // ⭐ REQUIRED PARAMETER
+                    )
+                )
+
+                if (response.isSuccessful) {
+                    // reward recorded successfully (no UI update needed)
+                }
+
+            } catch (e: Exception) {
+                // ignore silently
+            }
+        }
+    }
+
+
 }

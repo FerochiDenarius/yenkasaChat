@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Clipboard -->
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#1A1A1A"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M7,3h10v18h-10z"/>
+
+    <!-- Clip top -->
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#1A1A1A"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M9,3h6v2h-6z"/>
+
+    <!-- Checkmark -->
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#1A1A1A"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M8,13l3,3l5,-6"/>
+</vector>

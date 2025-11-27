@@ -33,6 +33,22 @@ const userSchema = new Schema({
     required: true
   },
 
+  // 🌍 AFRICA-WIDE COUNTRY SUPPORT (Ghana-only active for now)
+  country: {
+    type: String,
+    enum: [
+      "Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Cameroon",
+      "Tanzania", "Ethiopia", "Rwanda", "Senegal", "Ivory Coast", "Benin",
+      "Togo", "Gambia", "Zambia", "Zimbabwe", "Botswana", "Namibia",
+      "Malawi", "Sierra Leone", "Liberia", "Burkina Faso", "Niger",
+      "Mauritius", "Morocco", "Algeria", "Tunisia", "Egypt", "Sudan",
+      "Somalia", "Mozambique", "Angola", "Mali", "Guinea", "DR Congo",
+      "Congo", "Chad", "Equatorial Guinea", "Cape Verde", "Eritrea",
+      "Lesotho", "Eswatini", "Madagascar", "Seychelles", "South Sudan"
+    ],
+    default: "Ghana"
+  },
+
   // 🌍 Optional location + primary community
   location: { type: String, default: '' },
   community: { type: Schema.Types.ObjectId, ref: 'Community', default: null },
@@ -53,14 +69,12 @@ const userSchema = new Schema({
   // ROLE FIELDS
   // ===============================
 
-  // Role reference (ObjectId)
   role: {
     type: Schema.Types.ObjectId,
     ref: 'Permission',
     default: null,
   },
 
-  // Denormalized role name
   roleName: {
     type: String,
     default: "user"
@@ -88,7 +102,7 @@ const userSchema = new Schema({
       `YKC-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
   },
 
-  // 🧾 Verification & growth
+  // 🧾 Verification
   verificationPhase: {
     type: String,
     enum: ['promotion', 'standard', 'growth'],
@@ -100,7 +114,7 @@ const userSchema = new Schema({
   // 🔒 Auth fields
   refreshToken: { type: String },
 
-  // 🕓 Online tracking
+  // 🕓 Online status
   online: { type: Boolean, default: false },
   lastSeen: { type: Date, default: Date.now },
 

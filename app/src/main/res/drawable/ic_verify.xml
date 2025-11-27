@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Badge -->
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#1A1A1A"
+        android:fillColor="@android:color/transparent"
+        android:pathData="
+            M12,2l3,2l4,1l1,4l2,3l-2,3l-1,4l-4,1l-3,2l-3,-2l-4,-1l-1,-4l-2,-3l2,-3l1,-4l4,-1z
+        "/>
+
+    <!-- Check -->
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#1A1A1A"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M8,12l3,3l5,-6"/>
+</vector>

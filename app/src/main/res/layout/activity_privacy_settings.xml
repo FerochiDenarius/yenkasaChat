@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="18dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/yenkasa_amber">
+
+    <TextView
+        android:text="Message Privacy"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/yenkasa_black"
+        android:layout_marginBottom="16dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <RadioGroup
+        android:id="@+id/privacyOptions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:id="@+id/rbEveryone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Everyone"
+            android:textSize="15sp"
+            android:textColor="@color/yenkasa_black" />
+
+        <RadioButton
+            android:id="@+id/rbApproval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Requires Approval"
+            android:textSize="15sp"
+            android:textColor="@color/yenkasa_black" />
+
+        <RadioButton
+            android:id="@+id/rbNobody"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nobody"
+            android:textSize="15sp"
+            android:textColor="@color/yenkasa_black" />
+
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btnSavePrivacy"
+        android:text="Save"
+        android:layout_marginTop="20dp"
+        android:backgroundTint="@color/yenkasa_black"
+        android:textColor="@color/yenkasa_amber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>

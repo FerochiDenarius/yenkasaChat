@@ -142,6 +142,9 @@ safeMount('/api/communities', './routes/community.routes');
 safeMount('/api/roles', './routes/roles.routes');
 safeMount('/api/follow', './routes/follow.routes');
 safeMount('/api/post-approval', './routes/postapproval.routes');
+safeMount('/api/notifications', './routes/notifications.routes');
+safeMount('/api/user-privacy', './routes/userPrivacy.routes');
+
 
 
 

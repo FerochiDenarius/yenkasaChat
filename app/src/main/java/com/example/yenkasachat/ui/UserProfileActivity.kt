@@ -24,6 +24,9 @@ import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.yenkasachat.model.CreateChatRoomRequest
+import com.example.yenkasachat.model.CreateChatRoomResponse
+
 
 class UserProfileActivity : AppCompatActivity() {
 
@@ -121,10 +124,33 @@ class UserProfileActivity : AppCompatActivity() {
         btnFollow.setOnClickListener { toggleFollowUser() }
 
         btnMessage.setOnClickListener {
-            val intent = Intent(this, ChatActivity::class.java)
-            intent.putExtra("RECIPIENT_ID", userId)
-            startActivity(intent)
+            if (userId.isNullOrEmpty()) return@setOnClickListener
+
+            val request = CreateChatRoomRequest(username = usernameView.text.toString())
+
+            ApiClient.apiService.createChatRoom(request)
+                .enqueue(object : Callback<CreateChatRoomResponse> {
+                    override fun onResponse(
+                        call: Call<CreateChatRoomResponse>,
+                        response: Response<CreateChatRoomResponse>
+                    ) {
+                        if (response.isSuccessful && response.body() != null && response.body()!!.success) {
+                            val roomId = response.body()!!.roomId
+
+                            val intent = Intent(this@UserProfileActivity, ChatActivity::class.java)
+                            intent.putExtra("roomId", roomId)
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this@UserProfileActivity, "Could not open chat", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
+                        Toast.makeText(this@UserProfileActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    }
+                })
         }
+
 
         btnBlock.setOnClickListener { toggleBlockUser() }
 

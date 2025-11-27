@@ -143,13 +143,12 @@
             <!-- Audio Placeholder -->
             <LinearLayout
                 android:id="@+id/audioIcon"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintDimensionRatio="16:9"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:visibility="gone"
@@ -171,6 +170,56 @@
                     android:textColor="@color/black"
                     android:textSize="14sp"
                     android:layout_marginTop="8dp" />
+
+                <!-- Play / Pause -->
+                <ImageButton
+                    android:id="@+id/btnAudioPlayPause"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@null"
+                    android:src="@drawable/ic_play_circle"
+                    app:tint="@color/primary"
+                    android:layout_marginTop="10dp" />
+
+                <!-- SeekBar -->
+                <SeekBar
+                    android:id="@+id/audioSeekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:max="100" />
+
+                <!-- Duration Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="6dp">
+
+                    <TextView
+                        android:id="@+id/audioCurrentTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00"
+                        android:textColor="@color/black"
+                        android:textSize="12sp" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/audioTotalTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00"
+                        android:textColor="@color/black"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
             </LinearLayout>
 
             <!-- Center Play Button -->

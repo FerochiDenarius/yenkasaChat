@@ -13,6 +13,14 @@
         <color name="transparent">#00000000</color>
 
 
+        <color name="yenkasa_amber">#FFD54F</color>
+        <color name="yenkasa_black">#1A1A1A</color>
+        <color name="yenkasa_emerald">#00674F</color>
+
+        <color name="background_light">#FFFFFF</color>
+        <color name="surface">#FFF9F2</color>
+        <color name="muted_text">#8A8A8A</color>
+        <color name="icon_tint">@color/yenkasa_black</color>
 
 
         <color name="dark_gray">#666666</color>

@@ -32,6 +32,7 @@ class PostAdapter(
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit,
     private val onShareClick: (Post) -> Unit
+
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {      // ✅ FIXED SIGNATURE
 
     private var exoPlayer: ExoPlayer? = null
@@ -41,6 +42,8 @@ class PostAdapter(
     private val activePlayers = mutableListOf<ExoPlayer>()
 
     private val lastViewTime = mutableMapOf<String, Long>()
+
+
 
 
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -60,6 +63,110 @@ class PostAdapter(
         private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
         private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
         private val viewCount: TextView = itemView.findViewById(R.id.textViewCount)
+        private val btnAudioPlayPause: ImageButton = itemView.findViewById(R.id.btnAudioPlayPause)
+        private val audioSeekbar: SeekBar = itemView.findViewById(R.id.audioSeekbar)
+        private val audioCurrent: TextView = itemView.findViewById(R.id.audioCurrentTime)
+        private val audioTotal: TextView = itemView.findViewById(R.id.audioTotalTime)
+
+        private var audioPlayer: ExoPlayer? = null
+
+        private val audioHandler = android.os.Handler()
+        private val audioUpdateRunnable = object : Runnable {
+            override fun run() {
+                audioPlayer?.let { player ->
+                    if (player.isPlaying) {
+                        val pos = player.currentPosition
+                        val dur = player.duration
+
+                        if (dur > 0) {
+                            audioSeekbar.progress = ((pos * 100) / dur).toInt()
+                        }
+
+                        audioCurrent.text = formatTime(pos)
+                    }
+                }
+                audioHandler.postDelayed(this, 300)
+            }
+        }
+
+
+
+
+        private fun setupAudioPlayer(url: String) {
+            try {
+                audioPlayer?.release()
+
+                audioHandler.removeCallbacks(audioUpdateRunnable)
+                audioPlayer?.stop()
+                audioPlayer?.release()
+                audioPlayer = null
+
+
+                audioPlayer = ExoPlayer.Builder(context).build().also { player ->
+
+                    val item = MediaItem.fromUri(Uri.parse(url))
+                    player.setMediaItem(item)
+                    player.prepare()
+
+                    // Listener with correct import + correct signature
+                    player.addListener(object : androidx.media3.common.Player.Listener {
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == androidx.media3.common.Player.STATE_READY) {
+                                val dur = player.duration
+                                audioTotal.text = formatTime(dur)
+                            }
+                        }
+                    })
+
+                    btnAudioPlayPause.setOnClickListener {
+                        if (player.isPlaying) {
+                            player.pause()
+                            btnAudioPlayPause.setImageResource(R.drawable.ic_play_circle)
+                        } else {
+                            player.play()
+                            btnAudioPlayPause.setImageResource(R.drawable.ic_pause_circle)
+                        }
+                    }
+
+                    audioSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                        override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                            if (fromUser) {
+                                val seekTo = (player.duration * progress) / 100
+                                player.seekTo(seekTo)
+                            }
+                        }
+
+                        override fun onStartTrackingTouch(sb: SeekBar?) {}
+                        override fun onStopTrackingTouch(sb: SeekBar?) {}
+                    })
+
+                    audioHandler.post(audioUpdateRunnable)
+                }
+
+            } catch (e: Exception) {
+                Log.e("PostAdapter", "Audio setup error: ${e.message}")
+            }
+        }
+
+        fun releaseAudio() {
+            try {
+                audioHandler.removeCallbacks(audioUpdateRunnable)
+
+                audioPlayer?.let { player ->
+                    try { player.stop() } catch (_: Exception) {}
+                    try { player.release() } catch (_: Exception) {}
+                }
+
+                audioPlayer = null
+
+                audioSeekbar.progress = 0
+                audioCurrent.text = "0:00"
+                audioTotal.text = "0:00"
+                btnAudioPlayPause.setImageResource(R.drawable.ic_play_circle)
+            } catch (e: Exception) {
+                Log.e("PostAdapter", "releaseAudio error: ${e.message}")
+            }
+        }
 
 
         private val playerView: PlayerView? = itemView.findViewById(R.id.playerView)
@@ -141,10 +248,14 @@ class PostAdapter(
             }
 
             if (hasAudio) {
-                audioIcon.setOnClickListener { playAudio(post.audioUrl!!) }
-                recordVisibleView(post._id, 5)     // ⭐ reward for audio
+                audioIcon.visibility = View.VISIBLE      // your whole audio UI lives here
+                setupAudioPlayer(post.audioUrl!!)
+                recordVisibleView(post._id, 5)
             }
+
+
         }
+
 
         private fun toggleVideo(position: Int) {
             val player = exoPlayer
@@ -165,19 +276,15 @@ class PostAdapter(
             )
         }
 
-        private fun playAudio(url: String) {
-            try {
-                mediaPlayer?.release()
-                mediaPlayer = MediaPlayer().apply {
-                    setDataSource(url)
-                    prepare()
-                    start()
-                }
-            } catch (e: Exception) {
-                Log.e("PostAdapter", "Audio error: ${e.message}")
-            }
-        }
     }
+    private fun formatTime(ms: Long): String {
+        val totalSec = ms / 1000
+        val min = totalSec / 60
+        val sec = totalSec % 60
+        return String.format("%d:%02d", min, sec)
+    }
+
+
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
         val view =
@@ -187,6 +294,11 @@ class PostAdapter(
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         holder.bind(posts[position], position)
+    }
+
+    override fun onViewRecycled(holder: PostViewHolder) {
+        super.onViewRecycled(holder)
+        holder.releaseAudio()
     }
 
     override fun getItemCount(): Int = posts.size
@@ -325,4 +437,5 @@ class PostAdapter(
         exoPlayer?.release()
         mediaPlayer?.release()
     }
+
 }

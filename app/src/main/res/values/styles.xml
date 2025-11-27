@@ -62,4 +62,30 @@
         <item name="android:textSize">16sp</item>
     </style>
 
+    <style name="MenuItemStyle">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">?android:selectableItemBackground</item>
+    </style>
+
+    <style name="MenuItemStyleCompact">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">?android:selectableItemBackground</item>
+    </style>
+
+    <style name="YenkasaSectionHeader">
+        <item name="android:textColor">@color/yenkasa_black</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+    </style>
+
 </resources>

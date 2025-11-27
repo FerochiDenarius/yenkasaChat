@@ -30,7 +30,7 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var textLoginLink: TextView
     private lateinit var checkTerms: CheckBox
     private lateinit var textTermsLink: TextView
-    private lateinit var spinnerCommunity: Spinner
+    private lateinit var spinnerCommunities: Spinner
     private lateinit var progressBar: ProgressBar
 
     private var selectedCommunityId: String? = null
@@ -52,7 +52,8 @@ class RegisterActivity : AppCompatActivity() {
         textLoginLink = findViewById(R.id.textLoginLink)
         checkTerms = findViewById(R.id.checkTerms)
         textTermsLink = findViewById(R.id.textTermsLink)
-        spinnerCommunity = findViewById(R.id.spinnerCommunity)
+        spinnerCommunities = findViewById(R.id.spinnerCommunities)
+
         progressBar = findViewById(R.id.progressBar)
 
         // Toggle email/phone visibility
@@ -75,43 +76,50 @@ class RegisterActivity : AppCompatActivity() {
             finish()
         }
 
+        setupCountrySpinner()
+
         fetchCommunities() // ✅ Load communities on startup
     }
 
     // ✅ Load available communities into spinner
     private fun fetchCommunities() {
         progressBar.visibility = View.VISIBLE
-        val token = TokenManager.getToken(this) ?: return
 
         ApiClient.apiService.getPublicCommunities()
             .enqueue(object : Callback<List<Community>> {
                 override fun onResponse(call: Call<List<Community>>, response: Response<List<Community>>) {
                     progressBar.visibility = View.GONE
-                    if (response.isSuccessful) {
-                        communityList = response.body().orEmpty()
-                        if (communityList.isNotEmpty()) {
-                            val adapter = ArrayAdapter(
-                                this@RegisterActivity,
-                                android.R.layout.simple_spinner_item,
-                                communityList.map { it.displayName ?: it.name ?: "Unnamed" }
-                            )
-                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                            spinnerCommunity.adapter = adapter
-                            spinnerCommunity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                                override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
-                                    selectedCommunityId = communityList[pos].id
-                                }
 
-                                override fun onNothingSelected(parent: AdapterView<*>) {
-                                    selectedCommunityId = null
-                                }
-                            }
-                        } else {
-                            Toast.makeText(this@RegisterActivity, "No communities available", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
+                    if (!response.isSuccessful || response.body().isNullOrEmpty()) {
                         Toast.makeText(this@RegisterActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+                        return
                     }
+
+                    communityList = response.body()!!
+
+                    val adapter = ArrayAdapter(
+                        this@RegisterActivity,
+                        android.R.layout.simple_spinner_item,
+                        communityList.map { it.displayName ?: it.name ?: "Unnamed" }
+                    )
+
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+                    spinnerCommunities.adapter = adapter
+
+                    spinnerCommunities.setPopupBackgroundResource(R.color.white)
+
+
+                    spinnerCommunities.onItemSelectedListener =
+                        object : AdapterView.OnItemSelectedListener {
+                            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                                selectedCommunityId = communityList[pos].id
+                            }
+
+                            override fun onNothingSelected(parent: AdapterView<*>) {
+                                selectedCommunityId = null
+                            }
+                        }
                 }
 
                 override fun onFailure(call: Call<List<Community>>, t: Throwable) {
@@ -123,6 +131,7 @@ class RegisterActivity : AppCompatActivity() {
 
     // ✅ Handle registration
     private fun handleRegister() {
+
         val email = editEmail.text.toString().trim()
         val phone = editPhone.text.toString().trim()
         val username = editUsername.text.toString().trim()
@@ -174,6 +183,7 @@ class RegisterActivity : AppCompatActivity() {
             Toast.makeText(this, "Please select a community", Toast.LENGTH_SHORT).show()
             return
         }
+        val selectedCountry = findViewById<Spinner>(R.id.spinnerCountry).selectedItem.toString()
 
         val request = RegisterRequest(
             email = if (radioEmail.isChecked) email else null,
@@ -181,8 +191,10 @@ class RegisterActivity : AppCompatActivity() {
             username = username,
             location = location,
             password = password,
-            communityId = selectedCommunityId!!
+            communityId = selectedCommunityId!!,
+            country = selectedCountry
         )
+
 
         ApiClient.authService.registerUser(request)
             .enqueue(object : Callback<LoginResponse> {
@@ -201,4 +213,22 @@ class RegisterActivity : AppCompatActivity() {
                 }
             })
     }
+
+    private fun setupCountrySpinner() {
+        val countries = listOf(
+            "Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Cameroon",
+            "Tanzania", "Ethiopia", "Rwanda", "Senegal", "Ivory Coast", "Benin"
+        )
+
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            countries
+        )
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        findViewById<Spinner>(R.id.spinnerCountry).adapter = adapter
+    }
+
 }

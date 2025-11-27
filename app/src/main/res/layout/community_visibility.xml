@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/yenkasa_amber"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/screenTitle"
+        android:text="Community Visibility"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/yenkasa_black"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvCommunityVisibility"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</LinearLayout>

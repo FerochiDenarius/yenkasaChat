@@ -54,7 +54,7 @@ class PostApprovalActivity : AppCompatActivity() {
 
         // ✔ Adapter (REAL DATA will be sent later)
         adapter = PostApprovalAdapter(
-            posts = mutableListOf(),
+            items = mutableListOf(),
             context = this,
             approveCallback = ::approvePost,
             rejectCallback = ::rejectPost
@@ -88,7 +88,7 @@ class PostApprovalActivity : AppCompatActivity() {
 
                         if (pending.isNotEmpty()) {
                             val posts = pending.map { it.post }
-                            adapter.updatePosts(posts)
+                            adapter.updateItems(pending)
                             recyclerView.visibility = View.VISIBLE
                         } else {
                             showEmpty("No pending posts.")

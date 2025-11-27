@@ -23,10 +23,10 @@ console.log("routes/auth.js - Token secrets check passed");
 const ACCESS_EXPIRES_IN = '120d';
 const REFRESH_EXPIRES_IN = '120d';
 
-// ✅ REGISTER (auto-join 1 local community)
 router.post('/register', async (req, res) => {
-  console.log("✅✅✅ /api/auth/register - ROUTE HANDLER REACHED ✅✅✅");
-  let { email, phoneNumber, username, location, password, communityId } = req.body;
+  console.log("✅ /api/auth/register - ROUTE HANDLER REACHED");
+
+  let { email, phoneNumber, username, location, password, communityId, country } = req.body;
 
   try {
     email = email ? sanitize(email.toLowerCase()) : null;
@@ -35,27 +35,44 @@ router.post('/register', async (req, res) => {
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
-    // ✅ Validate inputs
+    // 🌍 COUNTRY VALIDATION
+    const allowedCountries = [
+      "Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Cameroon",
+      "Tanzania", "Ethiopia", "Rwanda", "Senegal", "Ivory Coast", "Benin",
+      "Togo", "Gambia", "Zambia", "Zimbabwe", "Botswana", "Namibia",
+      "Malawi", "Sierra Leone", "Liberia", "Burkina Faso", "Niger",
+      "Mauritius", "Morocco", "Algeria", "Tunisia", "Egypt", "Sudan",
+      "Somalia", "Mozambique", "Angola", "Mali", "Guinea", "DR Congo",
+      "Congo", "Chad", "Equatorial Guinea", "Cape Verde", "Eritrea",
+      "Lesotho", "Eswatini", "Madagascar", "Seychelles", "South Sudan"
+    ];
+
+    country = country ? sanitize(country) : "Ghana";
+
+    if (!allowedCountries.includes(country)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid country. African countries only."
+      });
+    }
+
+    if (country !== "Ghana") {
+      return res.status(403).json({
+        success: false,
+        message: "Registration is currently available only in Ghana."
+      });
+    }
+
+    // Validate required
     if (!username || !location || !password || (!email && !phoneNumber) || !communityId) {
       return res.status(400).json({ message: 'Missing required fields (including communityId)' });
     }
 
-    // ✅ Validate community
     const community = await Community.findById(communityId);
-    if (!community) {
-      return res.status(404).json({ message: 'Community not found' });
+    if (!community || !community.isApproved) {
+      return res.status(403).json({ message: 'Community not valid or not approved' });
     }
 
-    if (!community.isApproved) {
-      return res.status(403).json({ message: 'Community not approved yet' });
-    }
-
-    // (Optional) ✅ If you have a `type` field (e.g. "local" | "interest")
-    if (community.type && community.type.toLowerCase() !== "local") {
-      return res.status(403).json({ message: 'You can only join a local community at registration' });
-    }
-
-    // ✅ Check for existing user duplicates
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
@@ -63,69 +80,28 @@ router.post('/register', async (req, res) => {
         { username },
       ],
     });
+
     if (existingUser) {
       return res.status(409).json({ message: 'User already exists' });
     }
 
-    // ✅ Create new user
-const newUser = new User({
-    username,
-    location,
-    password: hashedPassword,
-    community: communityId,         // primary community
-    joinedCommunities: [communityId], // also joined list
-    ...(email && { email }),
-    ...(phoneNumber && { phoneNumber }),
-});
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-await newUser.save();
-
-
-
-
-
-
-
-    // ✅ Add user to community members
-    if (!community.members.includes(newUser._id)) {
-      community.members.push(newUser._id);
-      await community.incrementMemberCount();
-      await community.save();
-    }
-
-    // ✅ Generate JWT tokens
-    const accessTokenValue = jwt.sign(
-      { userId: newUser._id },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: ACCESS_EXPIRES_IN }
-    );
-
-    const refreshTokenValue = jwt.sign(
-      { userId: newUser._id },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: REFRESH_EXPIRES_IN }
-    );
-
-    newUser.refreshToken = refreshTokenValue;
-    await newUser.save();
-
-    // ✅ Response
-    res.status(201).json({
-      success: true,
-      message: 'Registration successful! You have joined your local community.',
-      user: {
-        _id: newUser._id,
-        email: newUser.email,
-        phoneNumber: newUser.phoneNumber,
-        username: newUser.username,
-        location: newUser.location,
-        verified: newUser.verified,
-        joinedCommunities: newUser.joinedCommunities,
-      },
-      token: accessTokenValue,
-      refreshToken: refreshTokenValue
+    // 🌍 INCLUDE COUNTRY HERE
+    const newUser = new User({
+      username,
+      location,
+      country,
+      password: hashedPassword,
+      community: communityId,
+      joinedCommunities: [communityId],
+      ...(email && { email }),
+      ...(phoneNumber && { phoneNumber }),
     });
 
+      await newUser.save();
+
+    // END REGISTER ROUTE
   } catch (err) {
     console.error('❌ Register error:', err.message);
     if (err.code === 11000) {
@@ -133,7 +109,7 @@ await newUser.save();
     }
     res.status(500).json({ message: 'Server error during registration' });
   }
-});
+}); 
 
 
 // ✅ LOGIN

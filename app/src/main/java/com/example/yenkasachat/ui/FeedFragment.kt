@@ -130,17 +130,7 @@ class FeedFragment : Fragment() {
         recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter
 
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    playVisibleVideo()
-                }
-            }
 
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (Math.abs(dy) > 20) adapter.pauseAllVideos()
-            }
-        })
     }
 
     private fun openImage(post: Post) {
@@ -154,15 +144,23 @@ class FeedFragment : Fragment() {
         val intent = Intent(requireContext(), PostMediaActivity::class.java)
         intent.putExtra("MEDIA_URL", post.videoUrl)
         intent.putExtra("MEDIA_TYPE", "video")
+        intent.putExtra("POST_ID", post._id)
+        intent.putExtra("USERNAME", post.userId.username)
+        intent.putExtra("CAPTION", post.caption ?: "")
         startActivity(intent)
     }
+
 
     private fun openAudio(post: Post) {
         val intent = Intent(requireContext(), PostMediaActivity::class.java)
         intent.putExtra("MEDIA_URL", post.audioUrl)
         intent.putExtra("MEDIA_TYPE", "audio")
+        intent.putExtra("POST_ID", post._id)
+        intent.putExtra("USERNAME", post.userId.username)
+        intent.putExtra("CAPTION", post.caption ?: "")
         startActivity(intent)
     }
+
 
     private fun sharePost(post: Post) {
         val shareIntent = Intent(Intent.ACTION_SEND)
@@ -172,51 +170,6 @@ class FeedFragment : Fragment() {
         startActivity(Intent.createChooser(shareIntent, "Share via"))
     }
 
-    private fun playVisibleVideo() {
-        val first = layoutManager.findFirstVisibleItemPosition()
-        val last = layoutManager.findLastVisibleItemPosition()
-        if (first == RecyclerView.NO_POSITION) return
-
-        var mostVisible = -1
-        var maxVisibleHeight = 0
-
-        for (i in first..last) {
-            val view = layoutManager.findViewByPosition(i) ?: continue
-            val post = posts.getOrNull(i) ?: continue
-
-            val location = IntArray(2)
-            view.getLocationOnScreen(location)
-
-            val viewTop = location[1]
-            val viewBottom = viewTop + view.height
-
-            val screenHeight = recyclerView.height
-            val visibleTop = maxOf(viewTop, 0)
-            val visibleBottom = minOf(viewBottom, screenHeight)
-            val visibleHeight = visibleBottom - visibleTop
-
-            if (visibleHeight > 200) {
-                val seconds = when {
-                    !post.videoUrl.isNullOrEmpty() -> 10
-                    !post.audioUrl.isNullOrEmpty() -> 5
-                    !post.imageUrl.isNullOrEmpty() -> 3
-                    else -> 2
-                }
-                adapter.recordVisibleView(post._id, seconds)
-            }
-
-            if (!post.videoUrl.isNullOrEmpty() && visibleHeight > maxVisibleHeight) {
-                maxVisibleHeight = visibleHeight
-                mostVisible = i
-            }
-        }
-
-        if (mostVisible != -1 && maxVisibleHeight > 200) {
-            val post = posts.getOrNull(mostVisible)
-            if (post != null) adapter.recordVisibleView(post._id, 10)
-            adapter.playVideoAtPosition(mostVisible)
-        }
-    }
 
     private fun fetchCommunitiesAndFeed() {
         val auth = "Bearer $token"
@@ -370,7 +323,6 @@ class FeedFragment : Fragment() {
                     posts.addAll(response.body()!!.posts)
                     adapter.updatePosts(posts)
                     emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
-                    recyclerView.post { playVisibleVideo() }
                 } else {
                     Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                 }
@@ -468,7 +420,6 @@ class FeedFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        recyclerView.post { playVisibleVideo() }
     }
 
     override fun onDestroyView() {

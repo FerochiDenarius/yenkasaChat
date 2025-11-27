@@ -1,13 +1,289 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="24dp"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/yenkasa_amber"
+    android:padding="18dp"
+    android:clipToPadding="false"
+    android:scrollbars="none">
 
-    <TextView
-        android:text="Settings (Coming Soon)"
-        android:textSize="18sp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-</LinearLayout>
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <TextView
+            android:id="@+id/settingsHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            android:textColor="@color/yenkasa_black"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="20dp" />
+
+        <!-- ─────────────── PRIVACY ─────────────── -->
+        <TextView
+            android:text="Privacy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/yenkasa_black"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="10dp" />
+
+        <LinearLayout
+            android:id="@+id/itemPrivacyLevel"
+            style="@style/MenuItemStyleCompact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_privacy"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Message Privacy"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/yenkasa_black" />
+
+                <TextView
+                    android:id="@+id/privacySummaryText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Everyone can message you"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ─────────────── BLOCK MANAGEMENT ─────────────── -->
+        <TextView
+            android:text="Block Management"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/yenkasa_black"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Who You Blocked -->
+        <LinearLayout
+            android:id="@+id/itemWhoYouBlocked"
+            style="@style/MenuItemStyleCompact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_blocked"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Who You Blocked"
+                    android:textSize="14sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View users you have blocked"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Who Blocked You -->
+        <LinearLayout
+            android:id="@+id/itemWhoBlockedYou"
+            style="@style/MenuItemStyleCompact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_warning"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Who Blocked You"
+                    android:textSize="14sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View users who blocked you"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ─────────────── COMMUNITY VISIBILITY ─────────────── -->
+        <TextView
+            android:text="Post Visibility"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/yenkasa_black"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Community Visibility -->
+        <LinearLayout
+            android:id="@+id/itemCommunityVisibility"
+            style="@style/MenuItemStyleCompact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_communities"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Community Visibility"
+                    android:textSize="14sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Manage which communities can see your posts"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Blocked Communities -->
+        <LinearLayout
+            android:id="@+id/itemBlockedCommunities"
+            style="@style/MenuItemStyleCompact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_blocked"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Blocked Communities"
+                    android:textSize="14sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Communities you hid your posts from"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Users Hidden From Posts -->
+        <LinearLayout
+            android:id="@+id/itemUsersBlockedFromPosts"
+            style="@style/MenuItemStyleCompact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_hide"
+                app:tint="@color/yenkasa_black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Users Hidden From Posts"
+                    android:textSize="14sp"
+                    android:textColor="@color/yenkasa_black"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="People you prevented from seeing posts"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted_text" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

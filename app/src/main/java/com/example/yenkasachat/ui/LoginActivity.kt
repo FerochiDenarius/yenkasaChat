@@ -1,7 +1,6 @@
 package com.example.yenkasachat.ui
 
 // Keep your existing imports
-import android.content.Context
 import android.content.Intent
 import com.example.yenkasachat.network.SocketManager
 import android.os.Bundle
@@ -9,7 +8,6 @@ import android.util.Log
 import android.widget.*
 import androidx.activity.viewModels // Import for by viewModels()
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.semantics.role
 import androidx.lifecycle.Observer // Import for LiveData Observer
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.LoginRequest
@@ -26,12 +24,6 @@ import com.onesignal.OneSignal
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import org.json.JSONObject // ✅ ADD THIS IMPORT for the new functionality
 
 class LoginActivity : AppCompatActivity() {
@@ -41,9 +33,6 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var btnLogin: Button
     private lateinit var textRegisterLink: TextView
-    private lateinit var googleSignInClient: GoogleSignInClient
-    private lateinit var auth: FirebaseAuth
-    private val RC_SIGN_IN = 1001
     // Instantiate UserViewModel using the 'by viewModels()' delegate
     private val userViewModel: UserViewModel by viewModels()
 
@@ -87,20 +76,8 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, ForgotPasswordActivity::class.java))
         }
 
-        // 🔹 Google Sign-In setup
-        auth = FirebaseAuth.getInstance()
 
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id)) // from google-services.json
-            .requestEmail()
-            .build()
 
-        googleSignInClient = GoogleSignIn.getClient(this, gso)
-
-        val googleSignInButton: LinearLayout = findViewById(R.id.btnGoogleSignIn)
-        googleSignInButton.setOnClickListener {
-            signInWithGoogle()
-        }
 
 
         // 🔹 Player ID update observer
@@ -112,41 +89,7 @@ class LoginActivity : AppCompatActivity() {
             }
         })
     }
-    private fun signInWithGoogle() {
-        val signInIntent = googleSignInClient.signInIntent
-        startActivityForResult(signInIntent, RC_SIGN_IN)
-    }
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == RC_SIGN_IN) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-            try {
-                val account = task.getResult(ApiException::class.java)
-                if (account != null) {
-                    firebaseAuthWithGoogle(account.idToken!!)
-                }
-            } catch (e: ApiException) {
-                Log.e("LoginActivity", "Google sign in failed: ${e.statusCode}")
-                Toast.makeText(this, "Google sign in failed", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    private fun firebaseAuthWithGoogle(idToken: String) {
-        val credential = GoogleAuthProvider.getCredential(idToken, null)
-        auth.signInWithCredential(credential)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    val user = auth.currentUser
-                    Toast.makeText(this, "Welcome ${user?.displayName}", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                } else {
-                    Log.e("LoginActivity", "signInWithCredential:failure", task.exception)
-                    Toast.makeText(this, "Authentication Failed", Toast.LENGTH_SHORT).show()
-                }
-            }
-    }
 
     private fun handleLogin() {
         val identifier = editIdentifier.text.toString().trim()
@@ -230,8 +173,6 @@ class LoginActivity : AppCompatActivity() {
                                 }
                                 put("permissions", permissionsJson)
                             }.toString()
-
-
 
 
                             TokenManager.saveUserJson(this@LoginActivity, userJson)

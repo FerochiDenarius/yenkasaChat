@@ -143,31 +143,6 @@
             android:elevation="6dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- Google Sign-In button -->
-        <LinearLayout
-            android:id="@+id/btnGoogleSignIn"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/bg_input"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:layout_marginBottom="20dp">
-
-            <ImageView
-                android:id="@+id/icGoogle"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_google_modern"
-                android:layout_marginEnd="10dp" />
-
-            <TextView
-                android:id="@+id/textGoogle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Continue with Google"
-                android:textSize="16sp"
-                android:textColor="#444444" />
-        </LinearLayout>
 
         <!-- Register link -->
         <LinearLayout

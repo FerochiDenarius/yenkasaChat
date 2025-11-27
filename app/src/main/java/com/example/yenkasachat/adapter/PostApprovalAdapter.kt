@@ -15,9 +15,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.model.PostApprovalItem
+
 
 class PostApprovalAdapter(
-    private var posts: MutableList<Post>,
+    private var items: MutableList<PostApprovalItem>,
     private val context: Context,
     private val approveCallback: (String) -> Unit,
     private val rejectCallback: (String) -> Unit
@@ -47,7 +49,10 @@ class PostApprovalAdapter(
         val approveBtn: Button = view.findViewById(R.id.btnApprove)
         val rejectBtn: Button = view.findViewById(R.id.btnReject)
 
-        fun bind(post: Post, position: Int) {
+
+        fun bind(item: PostApprovalItem, position: Int) {
+
+            val post = item.post
 
             // --- Same Feed UI ----
             username.text = post.userId.username
@@ -63,17 +68,17 @@ class PostApprovalAdapter(
             timestamp.text = post.createdAt
             postText.text = post.caption ?: ""
 
-            // --- MEDIA EXACTLY LIKE FEED ---
             handleMedia(post, position)
 
             approveBtn.setOnClickListener {
-                approveCallback(post._id)
+                approveCallback(item._id)
             }
 
             rejectBtn.setOnClickListener {
-                rejectCallback(post._id)
+                rejectCallback(item._id)
             }
         }
+
 
         private fun handleMedia(post: Post, position: Int) {
             val hasImage = !post.imageUrl.isNullOrEmpty()
@@ -154,15 +159,16 @@ class PostApprovalAdapter(
         return ViewHolder(view)
     }
 
-    override fun getItemCount() = posts.size
+    override fun getItemCount() = items.size
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(posts[position], position)
+        holder.bind(items[position], position)
     }
 
-    fun updatePosts(list: List<Post>) {
-        posts.clear()
-        posts.addAll(list)
+
+    fun updateItems(list: List<PostApprovalItem>) {
+        items.clear()
+        items.addAll(list)
         notifyDataSetChanged()
     }
 }

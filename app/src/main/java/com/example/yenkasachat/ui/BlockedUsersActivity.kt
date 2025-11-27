@@ -14,16 +14,21 @@ import com.example.yenkasachat.network.ApiClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.yenkasachat.util.TokenManager
+
 
 class BlockedUsersActivity : AppCompatActivity() {
 
     private lateinit var adapter: BlockedUsersAdapter
     private lateinit var emptyText: TextView
     private lateinit var progress: ProgressBar
+    private var token: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_blocked_users)
+
+        token = TokenManager.getToken(this)
 
         val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvBlockedUsers)
         emptyText = findViewById(R.id.txtEmpty)
@@ -40,7 +45,7 @@ class BlockedUsersActivity : AppCompatActivity() {
         progress.visibility = View.VISIBLE
         emptyText.visibility = View.GONE
 
-        ApiClient.apiService.getBlockedUsers()
+        ApiClient.apiService.getBlockedUsers("Bearer $token")
             .enqueue(object : Callback<List<BlockedUserModel>> {
 
                 override fun onResponse(
@@ -66,19 +71,10 @@ class BlockedUsersActivity : AppCompatActivity() {
                     adapter.update(list)
                 }
 
-                override fun onFailure(
-                    call: Call<List<BlockedUserModel>>,
-                    t: Throwable
-                ) {
+                override fun onFailure(call: Call<List<BlockedUserModel>>, t: Throwable) {
                     progress.visibility = View.GONE
                     emptyText.visibility = View.VISIBLE
                     emptyText.text = "Connection error"
-
-                    Toast.makeText(
-                        this@BlockedUsersActivity,
-                        "Network error: ${t.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
             })
     }

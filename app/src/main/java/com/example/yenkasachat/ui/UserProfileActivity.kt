@@ -15,7 +15,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
-import com.example.yenkasachat.model.BlockResponse
+import com.example.yenkasachat.model.UnblockUserRequest
 import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.ProfileResponse
 import com.example.yenkasachat.model.FollowResponse
@@ -281,12 +281,10 @@ class UserProfileActivity : AppCompatActivity() {
     private fun toggleBlockUser() {
         val targetId = userId ?: return
 
-        val request = BlockUserRequest(targetId)
-
         val call = if (isBlocked) {
-            ApiClient.apiService.unblockUser(request)
+            ApiClient.apiService.unblockUser(UnblockUserRequest(targetId))
         } else {
-            ApiClient.apiService.blockUser(request)
+            ApiClient.apiService.blockUser(BlockUserRequest(targetId))
         }
 
         call.enqueue(object : Callback<ApiResponse> {
@@ -298,7 +296,6 @@ class UserProfileActivity : AppCompatActivity() {
                     val message = response.body()!!.message
                     Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
 
-                    // Update local state
                     if (isBlocked) {
                         TokenManager.removeBlockedUser(this@UserProfileActivity, targetId)
                     } else {

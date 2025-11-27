@@ -271,13 +271,54 @@ router.get("/community-visibility", auth, async (req, res) => {
     try {
         const doc = await ensurePrivacy(req.user.id);
 
-        // frontend already has community list → just send blocked
-        res.json(doc.blockedCommunities);
+        const communities = await Community.find()
+            .select("displayName name")
+            .lean();
+
+        const merged = communities.map(c => {
+            const setting = doc.visibilitySettings.find(v =>
+                v.communityId.toString() === c._id.toString()
+            );
+
+            return {
+                communityId: c._id,
+                communityName: c.displayName || c.name,
+                blockUsers: setting ? setting.blockUsers : false,
+                exceptFollowers: setting ? setting.exceptFollowers : false
+            };
+        });
+
+        res.json(merged);
 
     } catch (err) {
+        console.error("LOAD COMMUNITY VISIBILITY ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
+
+// ────────────────────────────────────────────
+// post COMMUNITY VISIBILITY LIST
+// ────────────────────────────────────────────
+
+router.post("/community-visibility", auth, async (req, res) => {
+    try {
+        const { visibility } = req.body; // array of { communityId, blockUsers, exceptFollowers }
+
+        const doc = await ensurePrivacy(req.user.id);
+
+        // overwrite existing settings
+        doc.visibilitySettings = visibility;
+
+        await doc.save();
+
+        res.json({ success: true, message: "Visibility updated" });
+
+    } catch (err) {
+        console.error("SAVE COMMUNITY VISIBILITY ERROR:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 
 // ────────────────────────────────────────────
 // HIDE USER FROM SEEING POSTS

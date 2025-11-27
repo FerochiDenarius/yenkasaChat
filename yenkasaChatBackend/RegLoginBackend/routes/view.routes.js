@@ -7,6 +7,10 @@ const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
+const { sendNotification } = require("../services/notification.service");
+
+
+
 
 
 // ======================================================
@@ -118,6 +122,59 @@ if (mediaType === "video") {
 
     // Count views
     const viewsCount = await View.countDocuments({ postId: objectIdPost });
+
+    // =======================================
+// ⭐ VIEW MILESTONE NOTIFICATIONS
+// =======================================
+const milestones = [100000, 500000, 1000000, 2000000, 3000000, 5000000, 10000000];
+
+for (const milestone of milestones) {
+  // If post reached milestone AND has not triggered before
+  if (viewsCount >= milestone && !(post.milestones || []).includes(milestone)) {
+
+    console.log(`🎉 MILESTONE HIT → ${milestone} views for post ${postId}`);
+
+    // Save milestone so it never triggers twice
+    post.milestones = post.milestones || [];
+    post.milestones.push(milestone);
+    await post.save();
+
+    // Load post owner
+    const owner = await User.findById(post.userId);
+
+    if (owner) {
+      // Send in–app notification
+      await sendNotification({
+        type: "view_milestone",
+        senderId: viewerId, // or null
+        receiverId: owner._id.toString(),
+        activityId: `view_milestone_${postId}_${milestone}`,
+        message: `Your post just hit ${milestone.toLocaleString()} views!`
+      });
+
+      // Optional: Send push notification
+      if (owner.oneSignalPlayerId) {
+        const payload = {
+          app_id: process.env.ONESIGNAL_APP_ID,
+          include_player_ids: [owner.oneSignalPlayerId],
+          headings: { en: "🎉 Post Milestone!" },
+          contents: { en: `Your post reached ${milestone.toLocaleString()} views.` },
+          data: { postId }
+        };
+
+        await fetch("https://onesignal.com/api/v1/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+    }
+  }
+}
+
 
     // Emit live update
     if (global.io) {

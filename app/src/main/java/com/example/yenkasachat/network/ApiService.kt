@@ -577,12 +577,16 @@ interface ApiService {
 
     @POST("user-privacy/unblock")
     fun unblockUser(
-        @Body request: BlockUserRequest
+        @Body request: UnblockUserRequest
     ): Call<ApiResponse>
 
 
+
     @GET("user-privacy/blocked-users")
-    fun getBlockedUsers(): Call<List<BlockedUserModel>>
+    fun getBlockedUsers(
+        @Header("Authorization") token: String
+    ): Call<List<BlockedUserModel>>
+
 
     @GET("user-privacy/who-blocked-you")
     fun getWhoBlockedYou(): Call<List<BlockedUserModel>>
@@ -591,6 +595,8 @@ interface ApiService {
     fun isBlocked(
         @Query("targetId") targetId: String
     ): Call<ApiResponse>
+
+
 
 
 

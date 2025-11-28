@@ -14,7 +14,6 @@ const postSchema = new Schema({
   communityId: {
     type: Schema.Types.ObjectId,
     ref: 'Community',
-    required: false,
     index: true
   },
 
@@ -24,14 +23,14 @@ const postSchema = new Schema({
     default: ''
   },
 
-  // Post type (text, image, video, audio, etc.)
+  // Post type
   postType: {
     type: String,
     enum: ['text', 'image', 'video', 'audio', 'poll', 'link'],
     default: 'text'
   },
 
-  // Content
+  // Caption / text
   text: {
     type: String,
     trim: true,
@@ -39,7 +38,7 @@ const postSchema = new Schema({
     default: ''
   },
 
-  // 🖼️ Media fields (only one type used per post)
+  // Media fields
   imageUrl: { type: String, default: '' },
   videoUrl: { type: String, default: '' },
   audioUrl: { type: String, default: '' },
@@ -51,19 +50,29 @@ const postSchema = new Schema({
   shareCount: { type: Number, default: 0 },
   viewCount: { type: Number, default: 0 },
 
-  // Post status and visibility
+  // Post status
   isActive: { type: Boolean, default: true },
   isPinned: { type: Boolean, default: false },
   pinnedUntil: { type: Date, default: null },
 
-  // Moderation / Approval
+  // Moderation
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+
   isReported: { type: Boolean, default: false },
   reportCount: { type: Number, default: 0 },
+
+  // NEW: Flags (Reports)
+  flags: [
+    {
+      user: { type: Schema.Types.ObjectId, ref: "User" },
+      reason: { type: String, default: '' },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
 
   // Visibility
   visibility: {
@@ -72,29 +81,27 @@ const postSchema = new Schema({
     default: 'public'
   },
 
-  // Mentions and tags
+  // Mentions + Tags
   mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   tags: [String],
 
-  // Location (optional)
+  // Location
   location: { type: String, default: '' },
 
-  // Coins earned from this post
+  // Coins earned
   coinsEarned: { type: Number, default: 0 }
 
 }, { timestamps: true });
 
-/* ------------------------------------
- * ⚡ Indexes
- * ------------------------------------ */
+
+// Indexes
 postSchema.index({ userId: 1, createdAt: -1 });
 postSchema.index({ communityId: 1, createdAt: -1 });
 postSchema.index({ createdAt: -1 });
 postSchema.index({ likeCount: -1 });
 
-/* ------------------------------------
- * ⚙️ Instance Methods
- * ------------------------------------ */
+
+// Methods
 postSchema.methods.isLikedBy = function (userId) {
   return this.likes.some(id => id.toString() === userId.toString());
 };
@@ -115,9 +122,8 @@ postSchema.methods.removeLike = async function (userId) {
   return result.modifiedCount > 0;
 };
 
-/* ------------------------------------
- * 🧠 Static Helpers
- * ------------------------------------ */
+
+// Static helpers
 postSchema.statics.findApproved = function (filter = {}) {
   return this.find({ ...filter, status: 'approved', isActive: true });
 };
@@ -126,5 +132,7 @@ postSchema.statics.findPending = function () {
   return this.find({ status: 'pending' });
 };
 
-const Post = mongoose.model('Post', postSchema);
+
+// EXPORT MODEL
+const Post = mongoose.model("Post", postSchema);
 module.exports = Post;

@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class PostAdapter(
     private val context: Context,
@@ -42,6 +43,19 @@ class PostAdapter(
     private val activePlayers = mutableListOf<ExoPlayer>()
 
     private val lastViewTime = mutableMapOf<String, Long>()
+
+    // ---------------------------------------------
+//  EXTRA CALLBACKS for (Delete / Hide / Download / Flag)
+// ---------------------------------------------
+    private var onDeleteClickListener: ((Post) -> Unit)? = null
+    private var onHideClickListener: ((Post) -> Unit)? = null
+    private var onDownloadClickListener: ((Post) -> Unit)? = null
+    private var onFlagClickListener: ((Post) -> Unit)? = null
+
+    fun setOnDeleteClickListener(listener: (Post) -> Unit) { onDeleteClickListener = listener }
+    fun setOnHideClickListener(listener: (Post) -> Unit) { onHideClickListener = listener }
+    fun setOnDownloadClickListener(listener: (Post) -> Unit) { onDownloadClickListener = listener }
+    fun setOnFlagClickListener(listener: (Post) -> Unit) { onFlagClickListener = listener }
 
 
 
@@ -89,6 +103,44 @@ class PostAdapter(
             }
         }
 
+         fun showPostOptionsBottomSheet(post: Post) {
+            val bottomSheet = BottomSheetDialog(context)
+            val view = LayoutInflater.from(context).inflate(R.layout.bottomsheet_post_options, null)
+
+            val optionDelete = view.findViewById<TextView>(R.id.optionDelete)
+            val optionHide = view.findViewById<TextView>(R.id.optionHide)
+            val optionDownload = view.findViewById<TextView>(R.id.optionDownload)
+            val optionFlag = view.findViewById<TextView>(R.id.optionFlag)
+
+            // Show delete only if the post belongs to current user
+            val currentUserId = TokenManager.getUserId(context)
+            if (post.userId.id == currentUserId) {
+                optionDelete.visibility = View.VISIBLE
+            }
+
+            optionDelete.setOnClickListener {
+                bottomSheet.dismiss()
+                onDeleteClickListener?.invoke(post)
+            }
+
+            optionHide.setOnClickListener {
+                bottomSheet.dismiss()
+                onHideClickListener?.invoke(post)
+            }
+
+            optionDownload.setOnClickListener {
+                bottomSheet.dismiss()
+                onDownloadClickListener?.invoke(post)
+            }
+
+            optionFlag.setOnClickListener {
+                bottomSheet.dismiss()
+                onFlagClickListener?.invoke(post)
+            }
+
+            bottomSheet.setContentView(view)
+            bottomSheet.show()
+        }
 
 
 
@@ -293,8 +345,16 @@ class PostAdapter(
     }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
-        holder.bind(posts[position], position)
+        val post = posts[position]
+        holder.bind(post, position)
+
+        // SHOW OPTIONS WHEN USER TAPS THE 3 DOT BUTTON
+        val btnMoreOptions = holder.itemView.findViewById<ImageButton>(R.id.btnMoreOptions)
+        btnMoreOptions.setOnClickListener {
+            holder.showPostOptionsBottomSheet(post)
+        }
     }
+
 
     override fun onViewRecycled(holder: PostViewHolder) {
         super.onViewRecycled(holder)

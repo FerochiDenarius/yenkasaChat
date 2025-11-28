@@ -130,6 +130,36 @@ class FeedFragment : Fragment() {
         recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter
 
+        // 🔥 DELETE
+        adapter.setOnDeleteClickListener { post ->
+            val token = TokenManager.getToken(requireContext()) ?: return@setOnDeleteClickListener
+            FeedUtils.deletePost(requireContext(), token, post._id) {
+                posts.remove(post)
+                adapter.updatePosts(posts)
+            }
+        }
+
+// 🔥 HIDE
+        adapter.setOnHideClickListener { post ->
+            val token = TokenManager.getToken(requireContext()) ?: return@setOnHideClickListener
+            FeedUtils.hidePost(requireContext(), token, post._id) {
+                posts.remove(post)
+                adapter.updatePosts(posts)
+            }
+        }
+
+// 🔥 DOWNLOAD
+        adapter.setOnDownloadClickListener { post ->
+            val token = TokenManager.getToken(requireContext()) ?: return@setOnDownloadClickListener
+            FeedUtils.downloadMedia(requireContext(), token, post._id)
+        }
+
+// 🔥 FLAG
+        adapter.setOnFlagClickListener { post ->
+            val token = TokenManager.getToken(requireContext()) ?: return@setOnFlagClickListener
+            FeedUtils.flagPost(requireContext(), token, post._id)
+        }
+
 
     }
 

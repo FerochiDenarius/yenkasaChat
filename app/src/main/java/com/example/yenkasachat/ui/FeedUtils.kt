@@ -65,106 +65,116 @@ object FeedUtils {
         }
     }
 
-    // 🔹 Follow / Unfollow logic
-    fun toggleFollow(
+
+
+    fun deletePost(
         context: Context,
         token: String,
-        targetUserId: String,
-        isFollowing: Boolean,
-        onComplete: (() -> Unit)? = null
+        postId: String,
+        onDeleted: (() -> Unit)? = null
     ) {
-        val call = if (isFollowing) {
-            ApiClient.apiService.unfollowUser(targetUserId, "Bearer $token")
-        } else {
-            ApiClient.apiService.followUser(targetUserId, "Bearer $token")
-        }
+        ApiClient.apiService.deletePost(postId, "Bearer $token")
+            .enqueue(object : Callback<GenericResponse> {
+                override fun onResponse(
+                    call: Call<GenericResponse>,
+                    response: Response<GenericResponse>
+                ) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        Toast.makeText(context, "Post deleted", Toast.LENGTH_SHORT).show()
+                        onDeleted?.invoke()
+                    } else {
+                        Toast.makeText(context, "Failed to delete post", Toast.LENGTH_SHORT).show()
+                    }
+                }
 
-        call.enqueue(object : Callback<FollowResponse> {
-            override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
-                if (response.isSuccessful && response.body() != null) {
-                    val body = response.body()!!
-                    Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
-                    onComplete?.invoke()
+                override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    fun hidePost(
+        context: Context,
+        token: String,
+        postId: String,
+        onHidden: (() -> Unit)? = null
+    ) {
+        ApiClient.apiService.hidePost(postId, "Bearer $token")
+            .enqueue(object : Callback<GenericResponse> {
+                override fun onResponse(
+                    call: Call<GenericResponse>,
+                    response: Response<GenericResponse>
+                ) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        Toast.makeText(context, "Post hidden", Toast.LENGTH_SHORT).show()
+                        onHidden?.invoke()
+                    } else {
+                        Toast.makeText(context, "Failed to hide post", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    fun downloadMedia(
+        context: Context,
+        token: String,
+        postId: String
+    ) {
+        ApiClient.apiService.getPostMedia(postId, "Bearer $token")
+            .enqueue(object : Callback<MediaResponse> {
+                override fun onResponse(
+                    call: Call<MediaResponse>,
+                    response: Response<MediaResponse>
+                ) {
+                    if (!response.isSuccessful || response.body() == null) {
+                        Toast.makeText(context, "Unable to get media", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+
+                    val media = response.body()!!.media
+                    val url = media.imageUrl ?: media.videoUrl ?: media.audioUrl ?: return
+
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.setDataAndType(android.net.Uri.parse(url), "*/*")
+                    context.startActivity(intent)
+                }
+
+                override fun onFailure(call: Call<MediaResponse>, t: Throwable) {
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    fun flagPost(
+        context: Context,
+        token: String,
+        postId: String,
+        reason: String = "inappropriate",
+        onFlagged: (() -> Unit)? = null
+    ) {
+        ApiClient.apiService.flagPost(
+            postId,
+            "Bearer $token",
+            FlagRequest(reason)
+        ).enqueue(object : Callback<GenericResponse> {
+            override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    Toast.makeText(context, "Reported successfully", Toast.LENGTH_SHORT).show()
+                    onFlagged?.invoke()
                 } else {
-                    Toast.makeText(context, "Failed to follow/unfollow", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Failed to report", Toast.LENGTH_SHORT).show()
                 }
             }
 
-            override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
-                Log.e("FeedUtils", "❌ Follow/unfollow failed: ${t.message}", t)
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
                 Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
-    // 🔹 Block / Unblock logic
-    fun toggleBlock(
-        context: Context,
-        token: String,
-        targetUserId: String,
-        onComplete: ((blockedBy: String, blockedUser: String) -> Unit)? = null
-    ) {
-        ApiClient.apiService.blockUser("Bearer $token", targetUserId)
-            .enqueue(object : Callback<BlockResponse> {
-                override fun onResponse(call: Call<BlockResponse>, response: Response<BlockResponse>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val body = response.body()!!
-                        Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
 
-                        // ✅ Update local encrypted list of blocked users
-                        if (body.message.contains("blocked", true)) {
-                            TokenManager.addBlockedUser(context, body.blockedUserId)
-                        } else if (body.message.contains("unblocked", true)) {
-                            TokenManager.removeBlockedUser(context, body.blockedUserId)
-                        }
-
-                        // Optional: invoke completion callback
-                        onComplete?.invoke(body.userId, body.blockedUserId)
-
-                    } else {
-                        Toast.makeText(context, "Failed to block/unblock", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                // 🔹 Delete post logic
-                fun deletePost(
-                    context: Context,
-                    token: String,
-                    postId: String,
-                    onDeleted: (() -> Unit)? = null
-                ) {
-                    Log.d("FeedUtils", "🗑️ Attempting to delete post with ID: $postId")
-
-                    ApiClient.apiService.deletePost("Bearer $token", postId)
-                        .enqueue(object : Callback<Map<String, Any>> {
-                            override fun onResponse(
-                                call: Call<Map<String, Any>>,
-                                response: Response<Map<String, Any>>
-                            ) {
-                                if (response.isSuccessful && response.body() != null) {
-                                    val message = response.body()?.get("message")?.toString() ?: "Post deleted"
-                                    Log.d("FeedUtils", "✅ Delete success: $message")
-                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                    onDeleted?.invoke()
-                                } else {
-                                    Log.w(
-                                        "FeedUtils",
-                                        "⚠️ Delete failed -> code=${response.code()}, msg=${response.message()}"
-                                    )
-                                    Toast.makeText(context, "Failed to delete post", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
-                            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                                Log.e("FeedUtils", "❌ Delete post error: ${t.message}", t)
-                                Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
-                            }
-                        })
-                }
-
-                override fun onFailure(call: Call<BlockResponse>, t: Throwable) {
-                    Log.e("FeedUtils", "❌ Block/unblock failed: ${t.message}", t)
-                    Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
-    }
 }

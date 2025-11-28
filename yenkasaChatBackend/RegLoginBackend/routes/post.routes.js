@@ -391,6 +391,132 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
 });
 
 
+// -----------------------------------------------
+// DELETE POST (OWNER ONLY)
+// -----------------------------------------------
+router.delete("/:postId", authMiddleware, async (req, res) => {
+
+  try {
+    const { postId } = req.params;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, error: "Post not found" });
+    }
+
+    // Only the owner can delete
+    if (post.userId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: "Not authorized to delete this post" });
+    }
+
+    await post.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Post deleted successfully",
+      postId
+    });
+  } catch (err) {
+    console.error("❌ Delete post error:", err);
+    res.status(500).json({ success: false, error: "Failed to delete post" });
+  }
+});
+
+
+// -----------------------------------------------
+// HIDE POST (User hides from their feed)
+// -----------------------------------------------
+// NOTE: This does NOT delete the post. Just hides for this user.
+router.post("/:postId/hide", authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    const userId = req.user.id;
+
+    // Save hidden posts inside user's hidden list (you must add hiddenPosts: [] inside User schema)
+    const User = require("../models/user.model");
+
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { hiddenPosts: postId } },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: "Post hidden successfully"
+    });
+
+  } catch (err) {
+    console.error("❌ Hide post error:", err);
+    res.status(500).json({ success: false, error: "Failed to hide post" });
+  }
+});
+
+
+// -----------------------------------------------
+// DOWNLOAD MEDIA (just returns the media URL)
+// -----------------------------------------------
+router.get("/:postId/download", authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, error: "Post not found" });
+    }
+
+    res.json({
+      success: true,
+      media: {
+        imageUrl: post.imageUrl || null,
+        videoUrl: post.videoUrl || null,
+        audioUrl: post.audioUrl || null
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Download media error:", err);
+    res.status(500).json({ success: false, error: "Failed to get media" });
+  }
+});
+
+
+// -----------------------------------------------
+// FLAG / REPORT POST
+// -----------------------------------------------
+router.post("/:postId/flag", authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { reason } = req.body;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, error: "Post not found" });
+    }
+
+    // save inside post document
+    if (!post.flags) post.flags = [];
+
+    post.flags.push({
+      user: req.user.id,
+      reason: reason || "inappropriate",
+      createdAt: new Date()
+    });
+
+    await post.save();
+
+    res.json({
+      success: true,
+      message: "Post flagged and sent to admins",
+    });
+
+  } catch (err) {
+    console.error("❌ Flag post error:", err);
+    res.status(500).json({ success: false, error: "Failed to flag post" });
+  }
+});
+
 
 
 

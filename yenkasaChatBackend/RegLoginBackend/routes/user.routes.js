@@ -388,6 +388,39 @@ router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
 });
 
 /**
+ * @route   PUT /api/users/update
+ * @desc    Update user profile fields
+ * @access  Private
+ */
+router.put('/update', authMiddleware, async (req, res) => {
+    const userId = req.user?.id;
+    const { username, email, phone, location } = req.body;
+
+    try {
+        const update = {};
+
+        if (username?.trim()) update.username = username.trim();
+        if (email?.trim()) update.email = email.trim();
+        if (phone?.trim()) update.phoneNumber = phone.trim();
+        if (location?.trim()) update.location = location.trim();
+
+        const user = await User.findByIdAndUpdate(userId, update, { new: true, runValidators: true })
+            .select('-password');
+
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        return res.json({
+            success: true,
+            message: "Profile updated successfully",
+            user
+        });
+    } catch (err) {
+        console.error("Error updating profile:", err);
+        return res.status(500).json({ error: "Error updating profile. Please try again later." });
+    }
+});
+
+/**
  * @route   PATCH /api/users/:userId/fcm-token
  * @desc    Update user's FCM token (legacy if needed)
  * @access  Private

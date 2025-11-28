@@ -198,11 +198,6 @@ interface ApiService {
     fun getMyPosts(@Header("Authorization") token: String): Call<List<Post>>
 
 
-    @DELETE("posts/{postId}")
-    fun deletePost(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<Map<String, Any>>
 
     // =====================
 // POST APPROVAL ENDPOINTS
@@ -672,6 +667,46 @@ interface ApiService {
         @Query("id") notificationId: String
     ): Call<ApiResponse>
 
+    @DELETE("posts/{postId}")
+    fun deletePost(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String
+    ): Call<GenericResponse>
+
+    @POST("posts/{postId}/hide")
+    fun hidePost(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String
+    ): Call<GenericResponse>
+
+
+    @POST("posts/{postId}/flag")
+    fun flagPost(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String,
+        @Body request: FlagRequest
+    ): Call<GenericResponse>
+
+    @GET("posts/{postId}/download")
+    fun getPostMedia(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String
+    ): Call<MediaResponse>
+
+
+    @PUT("users/update")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: UpdateProfileRequest
+    ): Response<ProfileResponse>  // <-- Response<T>
+
+
+    @Multipart
+    @POST("users/profile-picture")
+    fun uploadProfilePicture(
+        @Header("Authorization") token: String,
+        @Part profileImage: MultipartBody.Part
+    ): Call<ProfileResponse>
 
 
 }

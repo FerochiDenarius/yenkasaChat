@@ -11,6 +11,7 @@ import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.example.yenkasachat.model.UpdateProfileRequest
 import kotlinx.coroutines.*
+import retrofit2.Response
 
 class ProfileEditor(
     private val context: Context,
@@ -20,20 +21,17 @@ class ProfileEditor(
     private var saveJob: Job? = null
 
     fun attachAutoSave(editText: EditText, field: String) {
-        Log.d(TAG, "Attaching auto-save to EditText for field: $field")
 
         editText.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val value = s?.toString()?.trim()
-                Log.d(TAG, "afterTextChanged for field '$field': value = '$value'")
 
                 saveJob?.cancel()
                 saveJob = lifecycleScope.launch {
-                    delay(600) // debounce to avoid spamming server
+                    delay(600)
+
                     if (!value.isNullOrEmpty()) {
                         saveToBackend(field, value)
-                    } else {
-                        Log.d(TAG, "Value is null/empty for field '$field', not saving.")
                     }
                 }
             }
@@ -44,60 +42,38 @@ class ProfileEditor(
     }
 
     private fun saveToBackend(field: String, value: String) {
-        Log.i(TAG, "saveToBackend called for field: '$field', value: '$value'")
+        val token = TokenManager.getToken(context)
+        if (token.isNullOrEmpty()) return
 
         val requestBody = when (field.lowercase()) {
             "username" -> UpdateProfileRequest(username = value)
             "email" -> UpdateProfileRequest(email = value)
             "phone" -> UpdateProfileRequest(phone = value)
             "location" -> UpdateProfileRequest(location = value)
-            else -> {
-                Log.w(TAG, "Unknown field: $field. No request sent.")
-                return
-            }
+            else -> return
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val response = ApiClient.apiService.updateProfile(requestBody)
-                Log.d(TAG, "API response for '$field': code=${response.code()}")
-
+                val response = ApiClient.apiService.updateProfile("Bearer $token", requestBody)
                 withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        Log.i(TAG, "Field '$field' updated successfully.")
+
+                    if (response.isSuccessful && response.body() != null) {
+
                         updateTokenManager(field, value)
 
-                        // Notify activity if it wants to react to updates
                         if (context is ProfileUpdateListener) {
                             context.onProfileUpdated(field, value)
                         }
 
-                        Toast.makeText(
-                            context,
-                            "✅ $field updated ($value)",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, "✔ $field updated", Toast.LENGTH_SHORT).show()
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                        Log.e(TAG, "Failed to update $field. ${response.code()} - $errorBody")
-
-                        val userMessage = when (response.code()) {
-                            400 -> "Invalid data. Please check your input."
-                            401 -> "Session expired. Please log in again."
-                            500 -> "Server error. Try again later."
-                            else -> "Unexpected error: ${response.code()}"
-                        }
-                        Toast.makeText(context, "❌ $userMessage", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "❌ Update failed", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Network error updating $field: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        "❌ Network error: ${e.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(context, "❌ Network error", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -110,10 +86,8 @@ class ProfileEditor(
             "phone" -> TokenManager.savePhone(context, value)
             "location" -> TokenManager.saveLocation(context, value)
         }
-        Log.d(TAG, "TokenManager updated for $field: $value")
     }
 
-    // Interface for activities/fragments to listen to updates
     interface ProfileUpdateListener {
         fun onProfileUpdated(field: String, value: String)
     }

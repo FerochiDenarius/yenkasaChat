@@ -47,8 +47,8 @@ class EditProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_edit_profile)
 
         bindViews()
-        loadCurrentData()
-
+        loadCurrentData()       // cached local data
+        fetchRemoteProfile()
         // Auto-save bindings
         enableAutoSave(usernameView, "username")
         enableAutoSave(emailView, "email")
@@ -212,6 +212,52 @@ class EditProfileActivity : AppCompatActivity() {
                     "Network error",
                     Toast.LENGTH_SHORT
                 ).show()
+            }
+        }
+    }
+
+    /** Fetch the latest profile from backend */
+    private fun fetchRemoteProfile() {
+        if (token == null) return
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.apiService.getUserProfile("Bearer $token")
+
+                if (response.isSuccessful) {
+                    val user = response.body()?.user ?: return@launch
+
+                    // UPDATE UI
+                    usernameView.setText(user.username)
+                    emailView.setText(user.email)
+                    phoneView.setText(user.phone)
+                    locationView.setText(user.location)
+                    genderView.setText(user.gender)
+                    dobView.setText(user.dateOfBirth)
+
+                    Glide.with(this@EditProfileActivity)
+                        .load(user.profileImage)
+                        .placeholder(R.drawable.default_avatar)
+                        .circleCrop()
+                        .into(imageProfile)
+
+                    // SAVE LOCALLY
+                    TokenManager.savePartialUserDetails(
+                        this@EditProfileActivity,
+                        user.username,
+                        user.email,
+                        user.phone,
+                        user.location,
+                        user.gender,
+                        user.dateOfBirth
+                    )
+
+                } else {
+                    Toast.makeText(this@EditProfileActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(this@EditProfileActivity, "Network error loading profile", Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -62,16 +62,13 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<UserProfileResponse>
 
+
     @PUT("/api/users/password")
     suspend fun updatePassword(
         @Header("Authorization") token: String,
         @Body request: UpdatePasswordRequest
     ): Response<GenericSuccessResponse>
 
-
-
-    @GET("users")
-    fun getAllUsers(): Call<List<User>>
 
     @Multipart
     @POST("users/profile-picture")
@@ -86,10 +83,6 @@ interface ApiService {
         @Path("userId") userId: String,
         @Body body: Map<String, String>
     ): Call<ResponseBody>
-
-    @PATCH("users/{userId}/fcm-token")
-    fun updateFcmToken(@Path("userId") userId: String, @Body body: Map<String, String>): Call<Void>
-
 
     // ==================== CHATROOMS ====================
 
@@ -201,9 +194,6 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Call<FeedResponse>
-
-
-
 
 
     @Multipart
@@ -539,9 +529,6 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): Call<FeedResponse>
 
-
-//=================ViewCOUNT=================//
-
     //=================ViewCOUNT=================//
 
     @POST("views/{postId}/view")
@@ -620,10 +607,6 @@ interface ApiService {
         @Query("targetId") targetId: String
     ): Call<ApiResponse>
 
-
-
-
-
 // ───────────────────────────────
 // POST VISIBILITY (COMMUNITY + USERS)
 // ───────────────────────────────
@@ -639,8 +622,6 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body visibilityList: List<CommunityVisibilityModel>
     ): Call<ApiResponse>
-
-
 
 
     @POST("user-privacy/block-community")
@@ -665,9 +646,6 @@ interface ApiService {
     fun unhideUserFromPosts(
         @Body request: BlockUserFromPostsRequest
     ): Call<ApiResponse>
-
-
-
 
 // ───────────────────────────────
 // MESSAGE REQUESTS
@@ -721,9 +699,6 @@ interface ApiService {
         @Path("postId") postId: String,
         @Header("Authorization") token: String
     ): Call<MediaResponse>
-
-
-
 
 
 }

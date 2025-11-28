@@ -1,53 +1,48 @@
-// user.routes.js (assuming this is the correct filename based on content)
+// user.routes.js
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
-const Permission = require('../models/permissions.model'); // ✅ Import permissions model
+const Permission = require('../models/permissions.model');
 const mongoose = require("mongoose");
-const upload = require('../utils/upload');
-const { cloudinary } = require('../config/cloudinary');
 
-
-
-
-
-// --- Consistent Logger Function ---
-const logger = {
-    info: (message, ...args) => console.log(`[INFO] ${new Date().toISOString()} - ${message}`, ...args),
-    warn: (message, ...args) => console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...args),
-    error: (message, ...args) => console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, ...args),
-    debug: (message, ...args) => console.debug(`[DEBUG] ${new Date().toISOString()} - ${message}`, ...args)
-};
-// --- End Logger Function ---
-
+// ⬇️ CORRECT upload imports (from utils/upload.js)
 const { profileImageUpload, uploadFiles } = require('../utils/upload');
 
-/**
- * @route   GET /api/users (Assuming this router is mounted at /api/users)
- * @desc    Get all users (excluding passwords)
- * @access  Private
- */
+// ⬇️ Cloudinary import (required!)
+const { cloudinary } = require('../config/cloudinary');
+
+// --- Logger ---
+const logger = {
+    info: (m, ...a) => console.log(`[INFO] ${new Date().toISOString()} - ${m}`, ...a),
+    warn: (m, ...a) => console.warn(`[WARN] ${new Date().toISOString()} - ${m}`, ...a),
+    error: (m, ...a) => console.error(`[ERROR] ${new Date().toISOString()} - ${m}`, ...a),
+    debug: (m, ...a) => console.debug(`[DEBUG] ${new Date().toISOString()} - ${m}`, ...a)
+};
+
+// ======================================================================
+// GET ALL USERS
+// ======================================================================
 router.get('/', authMiddleware, async (req, res) => {
     const requestId = `req_get_users_${Date.now()}`;
-    const authenticatedUserId = req.user?.id || req.user?._id;
+    const userId = req.user?.id || req.user?._id;
 
-    logger.info(`[${requestId}] GET / - Request to fetch all users by User: ${authenticatedUserId}`);
+    logger.info(`[${requestId}] GET / - Fetching all users`);
 
     try {
-        // .lean() is good for performance if you don't need Mongoose model instances
         const users = await User.find().select('-password').lean();
-        logger.info(`[${requestId}] GET / - Successfully fetched ${users.length} users.`);
+        logger.info(`[${requestId}] GET / - Found ${users.length} users`);
         res.status(200).json(users);
+
     } catch (err) {
-        logger.error(`[${requestId}] GET / - ❌ Failed to fetch users. User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack });
+        logger.error(`[${requestId}] ❌ Failed to fetch users: ${err.message}`);
         res.status(500).json({ error: 'Failed to retrieve users' });
-    } finally {
-        logger.info(`[${requestId}] GET / - Finished processing request by User: ${authenticatedUserId}`);
     }
 });
 
-//**Profile pic upload  */
+// ======================================================================
+// PROFILE PICTURE UPLOAD
+// ======================================================================
 router.post('/profile-picture', authMiddleware, profileImageUpload, async (req, res) => {
     const userId = req.user?.id || req.user?._id;
 
@@ -80,465 +75,183 @@ router.post('/profile-picture', authMiddleware, profileImageUpload, async (req, 
 
     } catch (err) {
         console.error("❌ Profile picture upload error:", err);
-        return res.status(500).json({ error: "Failed to upload profile picture" });
+        res.status(500).json({ error: "Failed to upload profile picture" });
     }
 });
 
-/**
- * @route   GET /api/users/me
- * @desc    Get logged-in user's full profile (including role + permissions)
- * @access  Private
- */
-
+// ======================================================================
+// GET /me (FULL USER PROFILE)
+// ======================================================================
 router.get('/me', authMiddleware, async (req, res) => {
-  const requestId = `req_get_me_${Date.now()}`;
-  const authenticatedUserId = req.user?._id || req.user?.id;
-
-  logger.info(`[${requestId}] GET /me - Fetching profile for User: ${authenticatedUserId}`);
-
-  if (!authenticatedUserId) {
-    return res.status(401).json({ error: 'User authentication failed.' });
-  }
-
-  try {
-    // Fetch user
-    const user = await User.findById(authenticatedUserId)
-      .select('-password -verificationCode -emailVerificationCode -refreshToken')
-      .populate({
-        path: 'community',
-        select: '_id name location membersCount'
-      })
-      .lean();
-
-
-    // ============================================
-    // Resolve real role document
-    // ============================================
-    let roleDoc = null;
-
-    // If user.role is an ObjectId
-    if (mongoose.isValidObjectId(user.role)) {
-      roleDoc = await Permission.findById(user.role).lean();
-    }
-
-    // Fallback
-    if (!roleDoc) {
-      const fallbackRole = Permission.normalize(user.role || "user");
-      roleDoc = await Permission.findOne({ role: fallbackRole }).lean();
-    }
-
-    // Last fallback
-    if (!roleDoc) {
-      roleDoc = await Permission.findOne({ role: "user" }).lean();
-    }
-
-
-    // ============================================
-    // Build final role block for frontend
-    // ============================================
-    const finalRole = {
-      _id: roleDoc._id,
-      role: roleDoc.role,
-      description: roleDoc.description || null,
-      permissions: {
-        name: roleDoc.role,
-        description: roleDoc.description || null,
-        canPost: roleDoc.canPost || false,
-        canApprovePost: roleDoc.canApprove || false,
-        canSuspendUser: roleDoc.canSuspend || false,
-        canAssignRoles: roleDoc.canAssignRoles || false,
-        canRevokeAdmin: roleDoc.canRevoke || false
-      }
-    };
-
-
-    // ============================================
-    // Build final user response
-    // ============================================
-    const userProfile = {
-      _id: user._id,
-      username: user.username,
-      email: user.email || null,
-      phoneNumber: user.phoneNumber || null,
-      location: user.location || null,
-      verified: user.verified || false,
-      profileImage: user.profileImage || null,
-      bio: user.bio || "",
-      coinsBalance: user.coinsBalance ?? 0,
-      community: user.community ? {
-        _id: user.community._id,
-        name: user.community.name,
-        location: user.community.location || null,
-        membersCount: user.community.membersCount || 0
-      } : null,
-      
-      followersCount: user.followersCount || 0,
-      followingCount: user.followingCount || 0,
-
-      walletId: user.walletId,
-      verificationPhase: user.verificationPhase,
-      verificationScore: user.verificationScore || 0,
-      online: user.online,
-      lastSeen: user.lastSeen,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-       // 🟩 ADD THIS LINE
-  roleName: user.roleName || roleDoc.role,
-
-      // 🎯 FINALLY add the role here
-      role: finalRole
-    };
-
-    return res.status(200).json(userProfile);
-
-  } catch (err) {
-    logger.error(`[${requestId}] ❌ Error fetching user profile: ${err.message}`);
-    return res.status(500).json({ error: 'Failed to retrieve user profile' });
-  } finally {
-    logger.info(`[${requestId}] GET /me - Done processing request.`);
-  }
-});
-
-
- /* @route   POST /api/users/toggle-follow/:targetUserId
- * @desc    Toggle follow/unfollow another user
- * @access  Private
- */
-router.post('/toggle-follow/:targetUserId', authMiddleware, async (req, res) => {
-  const requestId = `req_toggle_follow_${Date.now()}`;
-  const authenticatedUserId = req.user?.id || req.user?._id;
-  const { targetUserId } = req.params;
-
-  logger.info(`[${requestId}] POST /toggle-follow/${targetUserId} - Request by User: ${authenticatedUserId}`);
-
-  try {
-    if (authenticatedUserId === targetUserId) {
-      return res.status(400).json({ message: "You cannot follow yourself." });
-    }
-
-    const user = await User.findById(authenticatedUserId);
-    const targetUser = await User.findById(targetUserId);
-
-    if (!user || !targetUser) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    const alreadyFollowing = user.following.some(
-      (id) => id.toString() === targetUserId
-    );
-
-    if (alreadyFollowing) {
-      // Unfollow logic
-      user.following = user.following.filter(
-        (id) => id.toString() !== targetUserId
-      );
-      targetUser.followers = targetUser.followers.filter(
-        (id) => id.toString() !== authenticatedUserId
-      );
-
-      user.followingCount = Math.max(0, (user.followingCount || 0) - 1);
-      targetUser.followersCount = Math.max(0, (targetUser.followersCount || 0) - 1);
-
-      await user.save();
-      await targetUser.save();
-
-      logger.info(`[${requestId}] Unfollowed user ${targetUserId}`);
-      return res.status(200).json({ message: "Unfollowed successfully", isFollowing: false });
-    } else {
-      // Follow logic
-      user.following.push(targetUserId);
-      targetUser.followers.push(authenticatedUserId);
-
-      user.followingCount = (user.followingCount || 0) + 1;
-      targetUser.followersCount = (targetUser.followersCount || 0) + 1;
-
-      await user.save();
-      await targetUser.save();
-
-      logger.info(`[${requestId}] Followed user ${targetUserId}`);
-      return res.status(200).json({ message: "Followed successfully", isFollowing: true });
-    }
-  } catch (err) {
-    logger.error(
-      `[${requestId}] ❌ Error toggling follow for User: ${authenticatedUserId} -> ${targetUserId}. ${err.message}`,
-      { stack: err.stack }
-    );
-    res.status(500).json({ message: "Server error while toggling follow" });
-  } finally {
-    logger.info(`[${requestId}] POST /toggle-follow/${targetUserId} - Finished`);
-  }
-});
-
-/**
- * @route   POST /api/users/fix-contacts
- * @desc    Fix user emails and phoneNumbers (lowercase, trimmed)
- * @access  Admin / Internal (No authMiddleware here, ensure this is intended and secured appropriately if exposed)
- */
-router.post('/fix-contacts', async (req, res) => {
-    const requestId = `req_fix_contacts_${Date.now()}`;
-    // Consider adding IP logging or some form of requestor identification if this is an open internal tool
-    logger.info(`[${requestId}] POST /fix-contacts - Request received to fix user contacts formatting.`);
-
-    try {
-        const result = await User.updateMany(
-            {}, // Empty filter to update all documents
-            [ // Using aggregation pipeline for updates
-                {
-                    $set: {
-                        email: { $toLower: { $trim: { input: "$email" } } },
-                        phoneNumber: { $trim: { input: "$phoneNumber" } }
-                        // Consider adding updatedAt: new Date() here as well if you want to track this kind of mass update
-                    }
-                }
-            ],
-            { upsert: false } // Ensure no new documents are created
-        );
-
-        logger.info(`[${requestId}] POST /fix-contacts - ✅ Successfully processed fix-contacts. Documents matched: ${result.matchedCount}, Documents modified: ${result.modifiedCount}`);
-        res.json({
-            success: true,
-            message: 'Fixed emails and phone numbers formatting for applicable users.',
-            matchedCount: result.matchedCount,
-            modifiedCount: result.modifiedCount,
-            acknowledged: result.acknowledged
-        });
-    } catch (err) {
-        logger.error(`[${requestId}] POST /fix-contacts - ❌ Failed to fix user contacts. Error: ${err.message}`, { stack: err.stack });
-        res.status(500).json({ error: 'Server error fixing users' });
-    } finally {
-        logger.info(`[${requestId}] POST /fix-contacts - Finished processing request.`);
-    }
-});
-
-// PATCH /api/users/:userId/player-id
-// **IMPORTANT**: This duplicates functionality likely present in other route files.
-// Choose ONE place for this logic. Assuming this is the chosen one for this logging exercise.
-router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
-    const { userId: paramUserId } = req.params;
-    const { playerId: bodyPlayerId } = req.body; // This is the OneSignal Player ID value from Android
-
-    const requestId = `req_user_playerid_${Date.now()}`;
-    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
-
-    logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Request received by Auth User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/player-id - Request Params:`, req.params);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/player-id - Request Body (payload):`, JSON.stringify(req.body));
-
-
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/player-id - CRITICAL: Authenticated User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed or User ID missing.' });
-    }
-
-    if (paramUserId !== authenticatedUserId) {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - FORBIDDEN: Auth User ${authenticatedUserId} attempting to update Player ID for target User Param ${paramUserId}.`);
-        return res.status(403).json({ error: 'Forbidden: You can only update your own player ID.' });
-    }
-
-    if (!bodyPlayerId || typeof bodyPlayerId !== 'string' || bodyPlayerId.trim() === '') {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - VALIDATION FAILED: Invalid or missing 'playerId' in request body. Provided: "${bodyPlayerId}" by Auth User: ${authenticatedUserId}`);
-        return res.status(400).json({ error: 'Invalid or missing player ID. It must be a non-empty string.' });
-    }
-
-    logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Attempting to update DB for User: ${paramUserId} with oneSignalPlayerId: '${bodyPlayerId}'`);
-
-    try {
-        const updatedUser = await User.findByIdAndUpdate(
-            paramUserId, // User ID from URL parameter (already validated against authenticated user)
-            { $set: { oneSignalPlayerId: bodyPlayerId, updatedAt: new Date() } }, // ** CRITICAL: Ensure 'oneSignalPlayerId' is the correct field in your User model **
-            { new: true, runValidators: true } // Return updated doc, run schema validations
-        );
-
-        if (!updatedUser) {
-            logger.warn(`[${requestId}] PATCH /${paramUserId}/player-id - User not found in DB with ID: ${paramUserId} for Player ID update.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - ✅ Player ID ('oneSignalPlayerId') updated successfully for User: ${updatedUser._id} to '${updatedUser.oneSignalPlayerId}'`);
-        res.status(200).json({
-            message: 'Player ID updated successfully',
-            userId: updatedUser._id,
-            oneSignalPlayerId: updatedUser.oneSignalPlayerId // Confirm the updated value
-        });
-    } catch (err) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/player-id - ❌ Error updating 'oneSignalPlayerId' for User: ${paramUserId} with value '${bodyPlayerId}'. Error: ${err.message}`, { stack: err.stack });
-        if (err.name === 'ValidationError') {
-            logger.warn(`[${requestId}] Mongoose validation error:`, err.errors);
-            return res.status(400).json({ error: 'Validation error updating Player ID.', errors: err.errors });
-        }
-        if (err.name === 'CastError') {
-             logger.warn(`[${requestId}] Mongoose cast error: ${err.path} to ${err.kind} failed for value ${err.value}`);
-            return res.status(400).json({ error: `Invalid data format for ${err.path}.` });
-        }
-        res.status(500).json({ error: 'Failed to save Player ID due to server error' });
-    } finally {
-        logger.info(`[${requestId}] PATCH /${paramUserId}/player-id - Finished processing request by Auth User: ${authenticatedUserId}`);
-    }
-});
-
-/**
- * @route   PUT /api/users/profile
- * @desc    Update user editable profile fields
- * @access  Private
- */
-router.put('/profile', authMiddleware, async (req, res) => {
+    const requestId = `req_get_me_${Date.now()}`;
     const userId = req.user?.id || req.user?._id;
 
-    const {
-        username,
-        email,
-        phoneNumber,
-        location,
-        gender,
-        dateOfBirth
-    } = req.body;
+    logger.info(`[${requestId}] GET /me - User: ${userId}`);
 
     try {
-        const update = {};
-
-        if (username?.trim()) update.username = username.trim();
-        if (email?.trim()) update.email = email.trim();
-        if (phoneNumber?.trim()) update.phoneNumber = phoneNumber.trim();
-        if (location?.trim()) update.location = location.trim();
-        if (gender?.trim()) update.gender = gender.trim();
-        if (dateOfBirth?.trim()) update.dateOfBirth = dateOfBirth.trim();
-
-        const user = await User.findByIdAndUpdate(
-            userId,
-            update,
-            { new: true, runValidators: true }
-        ).select('-password');
+        const user = await User.findById(userId)
+            .select('-password -verificationCode -emailVerificationCode -refreshToken')
+            .populate({ path: 'community', select: '_id name location membersCount' })
+            .lean();
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
-        return res.json({
-            success: true,
-            message: "Profile updated successfully",
-            user
-        });
+        let roleDoc = null;
+
+        if (mongoose.isValidObjectId(user.role)) {
+            roleDoc = await Permission.findById(user.role).lean();
+        }
+
+        if (!roleDoc) {
+            const fallback = Permission.normalize(user.role || "user");
+            roleDoc = await Permission.findOne({ role: fallback }).lean();
+        }
+
+        if (!roleDoc) {
+            roleDoc = await Permission.findOne({ role: "user" }).lean();
+        }
+
+        const finalRole = {
+            _id: roleDoc._id,
+            role: roleDoc.role,
+            description: roleDoc.description || null,
+            permissions: {
+                name: roleDoc.role,
+                description: roleDoc.description || null,
+                canPost: roleDoc.canPost || false,
+                canApprovePost: roleDoc.canApprove || false,
+                canSuspendUser: roleDoc.canSuspend || false,
+                canAssignRoles: roleDoc.canAssignRoles || false,
+                canRevokeAdmin: roleDoc.canRevoke || false
+            }
+        };
+
+        const profile = {
+            ...user,
+            roleName: user.roleName || roleDoc.role,
+            role: finalRole
+        };
+
+        res.status(200).json(profile);
 
     } catch (err) {
-        console.error("❌ Error updating profile:", err);
-        return res.status(500).json({ error: "Error updating profile. Please try again later." });
+        logger.error(`[${requestId}] ❌ Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to retrieve user profile' });
     }
 });
 
+// ======================================================================
+// TOGGLE FOLLOW
+// ======================================================================
+router.post('/toggle-follow/:targetUserId', authMiddleware, async (req, res) => {
+    const requestId = `req_toggle_follow_${Date.now()}`;
+    const myId = req.user?.id || req.user?._id;
+    const { targetUserId } = req.params;
 
-/**
- * @route   PUT /api/users/update
- * @desc    Update user profile fields
- * @access  Private
- */
-router.put('/update', authMiddleware, async (req, res) => {
-    const userId = req.user?.id;
-    const { username, email, phone, location } = req.body;
+    logger.info(`[${requestId}] Toggle follow -> ${myId} -> ${targetUserId}`);
 
     try {
-        const update = {};
+        if (myId === targetUserId) {
+            return res.status(400).json({ message: "You cannot follow yourself." });
+        }
 
-        if (username?.trim()) update.username = username.trim();
-        if (email?.trim()) update.email = email.trim();
-        if (phone?.trim()) update.phoneNumber = phone.trim();
-        if (location?.trim()) update.location = location.trim();
+        const user = await User.findById(myId);
+        const target = await User.findById(targetUserId);
 
-        const user = await User.findByIdAndUpdate(userId, update, { new: true, runValidators: true })
-            .select('-password');
+        if (!user || !target) return res.status(404).json({ message: "User not found." });
 
-        if (!user) return res.status(404).json({ error: "User not found" });
+        const already = user.following.some(id => id.toString() === targetUserId);
 
-        return res.json({
-            success: true,
-            message: "Profile updated successfully",
-            user
-        });
+        if (already) {
+            user.following = user.following.filter(id => id.toString() !== targetUserId);
+            target.followers = target.followers.filter(id => id.toString() !== myId);
+
+            user.followingCount--;
+            target.followersCount--;
+
+            await user.save();
+            await target.save();
+
+            return res.status(200).json({ message: "Unfollowed successfully", isFollowing: false });
+        }
+
+        // Follow
+        user.following.push(targetUserId);
+        target.followers.push(myId);
+        user.followingCount++;
+        target.followersCount++;
+
+        await user.save();
+        await target.save();
+
+        return res.status(200).json({ message: "Followed successfully", isFollowing: true });
+
     } catch (err) {
-        console.error("Error updating profile:", err);
-        return res.status(500).json({ error: "Error updating profile. Please try again later." });
+        logger.error(`[${requestId}] ❌ Follow toggle error: ${err.message}`);
+        res.status(500).json({ message: "Server error while toggling follow" });
     }
 });
 
-//password change route
-
-router.put('/password', authMiddleware, async (req, res) => {
-    const { oldPassword, newPassword } = req.body;
-
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const match = await bcrypt.compare(oldPassword, user.password);
-    if (!match) {
-        return res.status(400).json({ error: "Old password is incorrect" });
-    }
-
-    user.password = await bcrypt.hash(newPassword, 10);
-    await user.save();
-
-    res.json({ success: true, message: "Password updated successfully" });
-});
-
-/**
- * @route   PATCH /api/users/:userId/fcm-token
- * @desc    Update user's FCM token (legacy if needed)
- * @access  Private
- */
-router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {
-    const { userId: paramUserId } = req.params;
-    const { fcmToken } = req.body; // FCM token from request body
-
-    const requestId = `req_user_fcmtoken_${Date.now()}`;
-    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
-
-    logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - Request received by Auth User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/fcm-token - Request Params:`, req.params);
-    logger.debug(`[${requestId}] PATCH /${paramUserId}/fcm-token - Request Body (payload):`, JSON.stringify(req.body));
-
-
-    if (!authenticatedUserId) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/fcm-token - CRITICAL: Authenticated User ID not found in req.user.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
-    }
-
-    if (paramUserId !== authenticatedUserId) {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/fcm-token - FORBIDDEN: Auth User ${authenticatedUserId} attempting to update FCM token for target User Param ${paramUserId}.`);
-        return res.status(403).json({ error: 'Forbidden: You can only update your own FCM token.' });
-    }
-
-    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
-        logger.warn(`[${requestId}] PATCH /${paramUserId}/fcm-token - VALIDATION FAILED: Invalid or missing 'fcmToken' in request body. Provided: "${fcmToken}" by Auth User: ${authenticatedUserId}`);
-        return res.status(400).json({ error: 'Invalid or missing FCM token. It must be a non-empty string.' });
-    }
-
-    logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - Attempting to update DB for User: ${paramUserId} with fcmToken: '${fcmToken.substring(0, 15)}...'`); // Log truncated token
+// ======================================================================
+// FIX CONTACTS (ADMIN TOOL)
+// ======================================================================
+router.post('/fix-contacts', async (req, res) => {
+    const requestId = `req_fix_contacts_${Date.now()}`;
+    logger.info(`[${requestId}] Fixing user contacts`);
 
     try {
-        const updatedUser = await User.findByIdAndUpdate(
-            paramUserId,
-            { $set: { fcmToken: fcmToken, updatedAt: new Date() } }, // Ensure 'fcmToken' is the correct field in your User model
-            { new: true, runValidators: true }
+        const result = await User.updateMany(
+            {},
+            [{
+                $set: {
+                    email: { $toLower: { $trim: { input: "$email" } } },
+                    phoneNumber: { $trim: { input: "$phoneNumber" } }
+                }
+            }]
         );
 
-        if (!updatedUser) {
-            logger.warn(`[${requestId}] PATCH /${paramUserId}/fcm-token - User not found in DB with ID: ${paramUserId} for FCM token update.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - ✅ FCM token updated successfully for User: ${updatedUser._id}.`);
-        // Typically a 204 (No Content) is fine for updates if not returning the full object,
-        // or 200 with a success message/partial data.
-        res.status(200).json({ message: 'FCM token updated successfully', userId: updatedUser._id });
-        // Or res.sendStatus(204); if you don't need to send a body
+        res.json({
+            success: true,
+            message: 'Contacts normalized',
+            matched: result.matchedCount,
+            modified: result.modifiedCount
+        });
 
     } catch (err) {
-        logger.error(`[${requestId}] PATCH /${paramUserId}/fcm-token - ❌ Error updating FCM token for User: ${paramUserId}. Error: ${err.message}`, { stack: err.stack });
-        if (err.name === 'ValidationError') {
-            logger.warn(`[${requestId}] Mongoose validation error for FCM token:`, err.errors);
-            return res.status(400).json({ error: 'Validation error updating FCM token.', errors: err.errors });
-        }
-        res.status(500).json({ error: 'Failed to save FCM token due to server error' });
-    } finally {
-        logger.info(`[${requestId}] PATCH /${paramUserId}/fcm-token - Finished processing request by Auth User: ${authenticatedUserId}`);
+        logger.error(`[${requestId}] ❌ Fix contacts error: ${err.message}`);
+        res.status(500).json({ error: 'Server error fixing users' });
+    }
+});
+
+// ======================================================================
+// UPDATE FCM TOKEN
+// ======================================================================
+router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {
+    const requestId = `req_fcm_${Date.now()}`;
+    const paramId = req.params.userId;
+    const authId = (req.user?.id || req.user?._id)?.toString();
+    const { fcmToken } = req.body;
+
+    if (paramId !== authId) {
+        return res.status(403).json({ error: 'Forbidden: Cannot update another user.' });
+    }
+
+    try {
+        const updated = await User.findByIdAndUpdate(
+            authId,
+            { $set: { fcmToken, updatedAt: new Date() } },
+            { new: true }
+        );
+
+        if (!updated) return res.status(404).json({ error: "User not found" });
+
+        res.status(200).json({ message: 'FCM token updated', userId: updated._id });
+
+    } catch (err) {
+        logger.error(`[${requestId}] ❌ FCM error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to save FCM token' });
     }
 });
 

@@ -40,3 +40,17 @@ data class CommunitySummary(
 )
 
 
+data class UploadPictureResponse(
+    val success: Boolean,
+    val imageUrl: String?
+)
+
+data class GenericSuccessResponse(
+    val success: Boolean,
+    val message: String? = null
+)
+
+data class UserProfileResponse(
+    val success: Boolean,
+    val user: User
+)

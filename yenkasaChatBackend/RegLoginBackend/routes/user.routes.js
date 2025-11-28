@@ -45,53 +45,41 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-/**
- * @route   POST /api/users/profile-picture
- * @desc    Upload profile picture to Cloudinary and save URL
- * @access  Private
- */
 router.post('/profile-picture', authMiddleware, upload.single('profileImage'), async (req, res) => {
-    const requestId = `req_upload_pp_${Date.now()}`;
-    const authenticatedUserId = req.user?.id || req.user?._id;
-
-    logger.info(`[${requestId}] POST /profile-picture - Request by User: ${authenticatedUserId}`);
-    logger.debug(`[${requestId}] POST /profile-picture - Request file details:`, req.file); // Log file info
-    logger.debug(`[${requestId}] POST /profile-picture - Request body (non-file parts):`, req.body);
-
-
-    if (!authenticatedUserId) {
-        // Should be caught by authMiddleware, but as a safeguard
-        logger.error(`[${requestId}] POST /profile-picture - CRITICAL: User ID not found in req.user after authMiddleware.`);
-        return res.status(401).json({ error: 'User authentication failed.' });
-    }
+    const userId = req.user?.id || req.user?._id;
 
     try {
-        const user = await User.findById(authenticatedUserId);
-        if (!user) {
-            logger.warn(`[${requestId}] POST /profile-picture - User not found with ID: ${authenticatedUserId}.`);
-            return res.status(404).json({ error: 'User not found' });
-        }
-
         if (!req.file || !req.file.path) {
-            logger.warn(`[${requestId}] POST /profile-picture - No image uploaded or upload failed for User: ${authenticatedUserId}. req.file is:`, req.file);
-            return res.status(400).json({ error: 'No image uploaded or upload failed' });
+            return res.status(400).json({ error: "No image uploaded" });
         }
 
-        logger.info(`[${requestId}] POST /profile-picture - File uploaded to Cloudinary. Path: ${req.file.path}. Updating user profileImage for User: ${authenticatedUserId}`);
-        user.profileImage = req.file.path; // URL from Cloudinary storage
-        user.updatedAt = new Date();
-        await user.save();
-
-        logger.info(`[${requestId}] POST /profile-picture - ✅ Profile image URL saved successfully for User: ${authenticatedUserId}. New URL: ${user.profileImage}`);
-        res.status(200).json({
-            message: 'Profile image uploaded successfully',
-            imageUrl: user.profileImage,
+        // CLOUDINARY TRANSFORMED UPLOAD
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: "yenkasa/profile",
+            width: 400,
+            height: 400,
+            crop: "fill",
+            gravity: "face",  // Auto-detect face centering
+            quality: "auto:good",
+            fetch_format: "auto"
         });
+
+        // Save final URL
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { profileImage: result.secure_url },
+            { new: true }
+        ).select("-password");
+
+        return res.json({
+            success: true,
+            message: "Profile image updated",
+            imageUrl: user.profileImage
+        });
+
     } catch (err) {
-        logger.error(`[${requestId}] POST /profile-picture - ❌ Image upload or DB save error for User: ${authenticatedUserId}. Error: ${err.message}`, { stack: err.stack, file: req.file });
-        res.status(500).json({ error: 'Server error while uploading profile picture' });
-    } finally {
-        logger.info(`[${requestId}] POST /profile-picture - Finished processing request by User: ${authenticatedUserId}`);
+        console.error("❌ Profile picture upload error:", err);
+        return res.status(500).json({ error: "Failed to upload profile picture" });
     }
 });
 
@@ -388,6 +376,56 @@ router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
 });
 
 /**
+ * @route   PUT /api/users/profile
+ * @desc    Update user editable profile fields
+ * @access  Private
+ */
+router.put('/profile', authMiddleware, async (req, res) => {
+    const userId = req.user?.id || req.user?._id;
+
+    const {
+        username,
+        email,
+        phoneNumber,
+        location,
+        gender,
+        dateOfBirth
+    } = req.body;
+
+    try {
+        const update = {};
+
+        if (username?.trim()) update.username = username.trim();
+        if (email?.trim()) update.email = email.trim();
+        if (phoneNumber?.trim()) update.phoneNumber = phoneNumber.trim();
+        if (location?.trim()) update.location = location.trim();
+        if (gender?.trim()) update.gender = gender.trim();
+        if (dateOfBirth?.trim()) update.dateOfBirth = dateOfBirth.trim();
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            update,
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        return res.json({
+            success: true,
+            message: "Profile updated successfully",
+            user
+        });
+
+    } catch (err) {
+        console.error("❌ Error updating profile:", err);
+        return res.status(500).json({ error: "Error updating profile. Please try again later." });
+    }
+});
+
+
+/**
  * @route   PUT /api/users/update
  * @desc    Update user profile fields
  * @access  Private
@@ -418,6 +456,25 @@ router.put('/update', authMiddleware, async (req, res) => {
         console.error("Error updating profile:", err);
         return res.status(500).json({ error: "Error updating profile. Please try again later." });
     }
+});
+
+//password change route
+
+router.put('/password', authMiddleware, async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match) {
+        return res.status(400).json({ error: "Old password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ success: true, message: "Password updated successfully" });
 });
 
 /**

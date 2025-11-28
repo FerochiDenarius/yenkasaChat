@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.UpdateProfileRequest
+import com.example.yenkasachat.model.UploadPictureResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.textfield.TextInputEditText
@@ -30,25 +30,17 @@ import java.io.FileOutputStream
 class EditProfileActivity : AppCompatActivity() {
 
     private lateinit var imageProfile: ImageView
+    private lateinit var btnChangeImage: ImageView
+
     private lateinit var usernameView: TextInputEditText
     private lateinit var emailView: TextInputEditText
     private lateinit var phoneView: TextInputEditText
     private lateinit var locationView: TextInputEditText
-    private lateinit var btnSave: Button
-    private val TAG = "EditProfileActivity"
+    private lateinit var genderView: TextInputEditText
+    private lateinit var dobView: TextInputEditText
 
     private var selectedImageUri: Uri? = null
-
-    private val imagePickerLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                result.data?.data?.let { uri ->
-                    selectedImageUri = uri
-                    Glide.with(this).load(uri).circleCrop().into(imageProfile)
-                    uploadImageToServer(uri)
-                }
-            }
-        }
+    private val token by lazy { TokenManager.getToken(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,110 +49,182 @@ class EditProfileActivity : AppCompatActivity() {
         bindViews()
         loadCurrentData()
 
-        imageProfile.setOnClickListener { openImagePicker() }
-        btnSave.setOnClickListener { saveUserProfile() }
+        // Auto-save bindings
+        enableAutoSave(usernameView, "username")
+        enableAutoSave(emailView, "email")
+        enableAutoSave(phoneView, "phoneNumber")
+        enableAutoSave(locationView, "location")
+        enableAutoSave(genderView, "gender")
+        enableAutoSave(dobView, "dateOfBirth")
+
+        btnChangeImage.setOnClickListener { openImagePicker() }
     }
 
+    /** Bind XML Views */
     private fun bindViews() {
         imageProfile = findViewById(R.id.imageProfile)
+        btnChangeImage = findViewById(R.id.btnChangeImage)
+
         usernameView = findViewById(R.id.editUsername)
         emailView = findViewById(R.id.editEmail)
         phoneView = findViewById(R.id.editPhone)
         locationView = findViewById(R.id.editLocation)
-        btnSave = findViewById(R.id.btnSave)
+        genderView = findViewById(R.id.editGender)
+        dobView = findViewById(R.id.editDob)
     }
 
+    /** Load cached data */
     private fun loadCurrentData() {
         usernameView.setText(TokenManager.getUsername(this))
         emailView.setText(TokenManager.getEmail(this))
         phoneView.setText(TokenManager.getPhone(this))
         locationView.setText(TokenManager.getLocation(this))
+        genderView.setText(TokenManager.getGender(this))
+        dobView.setText(TokenManager.getDob(this))
 
-        val profileUrl = TokenManager.getProfilePicUrl(this)
         Glide.with(this)
-            .load(profileUrl ?: R.drawable.default_avatar)
+            .load(TokenManager.getProfilePicUrl(this))
+            .placeholder(R.drawable.default_avatar)
             .circleCrop()
             .into(imageProfile)
     }
 
+    /** Image Picker */
     private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_PICK).apply { type = "image/*" }
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "image/*"
         imagePickerLauncher.launch(intent)
     }
 
-    private fun saveUserProfile() {
-        lifecycleScope.launch {
-            try {
-                val request = UpdateProfileRequest(
-                    username = usernameView.text.toString().trim(),
-                    email = emailView.text.toString().trim(),
-                    phone = phoneView.text.toString().trim(),
-                    location = locationView.text.toString().trim()
-                )
+    private val imagePickerLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val uri = result.data?.data ?: return@registerForActivityResult
+                selectedImageUri = uri
 
-                val response = ApiClient.apiService.updateProfile(request)
-                if (response.isSuccessful) {
-                    Toast.makeText(this@EditProfileActivity, "Profile saved successfully!", Toast.LENGTH_SHORT).show()
+                Glide.with(this).load(uri).circleCrop().into(imageProfile)
 
-                    // Save updated info locally
-                    TokenManager.savePartialUserDetails(
-                        this@EditProfileActivity,
-                        request.username,
-                        request.email,
-                        request.phone,
-                        request.location
-                    )
-
-                    setResult(Activity.RESULT_OK)
-                    finish()
-                } else {
-                    Toast.makeText(this@EditProfileActivity, "Save failed. Please try again.", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@EditProfileActivity, "Network error: ${e.message}", Toast.LENGTH_SHORT).show()
+                uploadImageToServer(uri)
             }
         }
-    }
 
-    /** Uploads new image to backend (Cloudinary via your API) */
+    /** Upload profile picture */
     private fun uploadImageToServer(uri: Uri) {
+        if (token == null) return
+
         val file = createTempFileFromUri(uri) ?: return
         val mimeType = contentResolver.getType(uri) ?: "image/*"
+
         val requestBody = file.asRequestBody(mimeType.toMediaTypeOrNull())
         val multipart = MultipartBody.Part.createFormData("image", file.name, requestBody)
 
-        ApiClient.apiService.uploadProfilePicture(multipart)
-            .enqueue(object : Callback<Map<String, Any>> {
-                override fun onResponse(call: Call<Map<String, Any>>, response: Response<Map<String, Any>>) {
+        ApiClient.apiService.uploadProfilePicture("Bearer $token", multipart)
+            .enqueue(object : Callback<UploadPictureResponse> {
+                override fun onResponse(
+                    call: Call<UploadPictureResponse>,
+                    response: Response<UploadPictureResponse>
+                ) {
                     if (response.isSuccessful) {
-                        val imageUrl = response.body()?.get("imageUrl") as? String
+                        val imageUrl = response.body()?.imageUrl
                         if (imageUrl != null) {
                             TokenManager.saveProfilePicUrl(this@EditProfileActivity, imageUrl)
-                            Toast.makeText(this@EditProfileActivity, "Profile image updated!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(this@EditProfileActivity, "Upload succeeded but no URL returned.", Toast.LENGTH_SHORT).show()
                         }
+                        Toast.makeText(
+                            this@EditProfileActivity,
+                            "Image updated!",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(this@EditProfileActivity, "Failed to upload image.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@EditProfileActivity,
+                            "Upload failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
-                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                    Log.e(TAG, "Upload failed: ${t.message}")
-                    Toast.makeText(this@EditProfileActivity, "Upload error: ${t.message}", Toast.LENGTH_SHORT).show()
+                override fun onFailure(call: Call<UploadPictureResponse>, t: Throwable) {
+                    Toast.makeText(
+                        this@EditProfileActivity,
+                        "Upload error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
 
+    /** Auto-save on losing focus */
+    private fun enableAutoSave(view: TextInputEditText, field: String) {
+        view.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val value = view.text?.toString()?.trim() ?: return@setOnFocusChangeListener
+                if (value.isNotEmpty()) saveSingleField(field, value)
+            }
+        }
+    }
+
+    /** Save a single field to backend */
+    private fun saveSingleField(field: String, value: String) {
+        if (token == null) return
+
+        val request = UpdateProfileRequest(
+            username = if (field == "username") value else null,
+            email = if (field == "email") value else null,
+            phoneNumber = if (field == "phoneNumber") value else null,
+            location = if (field == "location") value else null,
+            gender = if (field == "gender") value else null,
+            dateOfBirth = if (field == "dateOfBirth") value else null
+        )
+
+        lifecycleScope.launch {
+            try {
+                val res = ApiClient.apiService.updateProfile("Bearer $token", request)
+
+                if (res.isSuccessful) {
+
+                    // Local save
+                    when (field) {
+                        "username" -> TokenManager.saveUsername(this@EditProfileActivity, value)
+                        "email" -> TokenManager.saveEmail(this@EditProfileActivity, value)
+                        "phoneNumber" -> TokenManager.savePhone(this@EditProfileActivity, value)
+                        "location" -> TokenManager.saveLocation(this@EditProfileActivity, value)
+                        "gender" -> TokenManager.saveGender(this@EditProfileActivity, value)
+                        "dateOfBirth" -> TokenManager.saveDob(this@EditProfileActivity, value)
+                    }
+
+                    Toast.makeText(
+                        this@EditProfileActivity,
+                        "✔ $field updated",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+                    Toast.makeText(
+                        this@EditProfileActivity,
+                        "Failed to update $field",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@EditProfileActivity,
+                    "Network error",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    /** Convert URI → Temp File */
     private fun createTempFileFromUri(uri: Uri): File? {
         return try {
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File.createTempFile("upload_", ".tmp", cacheDir)
-            FileOutputStream(tempFile).use { inputStream.copyTo(it) }
-            inputStream.close()
-            tempFile
+            val input = contentResolver.openInputStream(uri) ?: return null
+            val temp = File.createTempFile("upload_", ".tmp", cacheDir)
+            FileOutputStream(temp).use { input.copyTo(it) }
+            temp
         } catch (e: Exception) {
-            Log.e(TAG, "File creation failed: ${e.message}")
+            Log.e("EditProfile", "File error: ${e.message}")
             null
         }
     }

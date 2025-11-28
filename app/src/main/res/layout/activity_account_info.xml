@@ -240,8 +240,7 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
-            <!-- Role can also be repeated here in detailed section if needed -->
-            <!-- Optional: if you want to display again, otherwise we already added above -->
+
 
             <View
                 android:layout_width="match_parent"

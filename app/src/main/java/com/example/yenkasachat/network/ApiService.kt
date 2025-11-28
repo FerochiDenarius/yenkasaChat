@@ -41,6 +41,35 @@ interface ApiService {
 
     // ==================== USERS && USER Profile for AccountInfo====================
 
+    @Multipart
+    @PUT("/api/users/profile-picture")
+    fun uploadProfilePicture(
+        @Header("Authorization") token: String,
+        @Part image: MultipartBody.Part
+    ): Call<UploadPictureResponse>
+
+
+    @PUT("/api/users/profile")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: UpdateProfileRequest
+    ): Response<GenericSuccessResponse>
+
+
+
+    @GET("/api/users/me")
+    suspend fun getUserProfile(
+        @Header("Authorization") token: String
+    ): Response<UserProfileResponse>
+
+    @PUT("/api/users/password")
+    suspend fun updatePassword(
+        @Header("Authorization") token: String,
+        @Body request: UpdatePasswordRequest
+    ): Response<GenericSuccessResponse>
+
+
+
     @GET("users")
     fun getAllUsers(): Call<List<User>>
 
@@ -694,19 +723,7 @@ interface ApiService {
     ): Call<MediaResponse>
 
 
-    @PUT("users/update")
-    suspend fun updateProfile(
-        @Header("Authorization") token: String,
-        @Body request: UpdateProfileRequest
-    ): Response<ProfileResponse>  // <-- Response<T>
 
-
-    @Multipart
-    @POST("users/profile-picture")
-    fun uploadProfilePicture(
-        @Header("Authorization") token: String,
-        @Part profileImage: MultipartBody.Part
-    ): Call<ProfileResponse>
 
 
 }

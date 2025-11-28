@@ -34,6 +34,9 @@ object TokenManager {
     private const val COMMUNITY_ID_KEY = "community_id"
     // Logging Tag
     private const val TAG = "TokenManager"
+    private const val GENDER_KEY = "user_gender"
+    private const val DOB_KEY = "user_dob"
+
 
     // === EncryptedSharedPreferences Access ===
     private fun getEncryptedPrefs(context: Context): SharedPreferences {
@@ -89,14 +92,23 @@ object TokenManager {
     }
 
     // ✅ THIS IS THE NEW FUNCTION THAT WAS MISSING
-    fun savePartialUserDetails(context: Context, username: String?, email: String?, phone: String?, location: String?) {
-        val editor = getEncryptedPrefs(context).edit()
-        username?.let { editor.putString(USERNAME_KEY, it) }
-        email?.let { editor.putString(EMAIL_KEY, it) }
-        phone?.let { editor.putString(PHONE_KEY, it) }
-        location?.let { editor.putString(LOCATION_KEY, it) }
-        editor.apply()
-        Log.i(TAG, "Partial user details saved.")
+    fun savePartialUserDetails(
+        context: Context,
+        username: String?,
+        email: String?,
+        phone: String?,
+        location: String?,
+        gender: String?,
+        dob: String?
+    ) {
+        username?.let { saveUsername(context, it) }
+        email?.let { saveEmail(context, it) }
+        phone?.let { savePhone(context, it) }
+        location?.let { saveLocation(context, it) }
+        gender?.let { saveGender(context, it) }
+        dob?.let { saveDob(context, it) }
+
+        Log.i(TAG, "Partial user details saved (with gender & dob).")
     }
 
 
@@ -860,25 +872,46 @@ object TokenManager {
         }
     }
 
-    fun getSelectedCommunityName(context: Context): String? {
-        return getCommunityName(context)
-    }
-
-    fun getSelectedCommunityId(context: Context): String? {
-        return getCommunityId(context)
-    }
-
-    /**
-     * Clear cached transactions
-     */
-    fun clearTransactionHistory(context: Context) {
+    fun saveGender(context: Context, gender: String?) {
         try {
-            getEncryptedPrefs(context).edit().remove(TRANSACTION_HISTORY_KEY).apply()
-            Log.i(TAG, "🧹 Cleared cached transaction history")
+            getEncryptedPrefs(context).edit().putString(GENDER_KEY, gender).apply()
+            Log.i(TAG, "Gender saved: $gender")
         } catch (e: Exception) {
-            Log.e(TAG, "Error clearing transaction history", e)
+            Log.e(TAG, "Error saving gender", e)
         }
     }
+
+    fun getGender(context: Context): String? {
+        return try {
+            val gender = getEncryptedPrefs(context).getString(GENDER_KEY, null)
+            Log.d(TAG, "Retrieved Gender: $gender")
+            gender
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting gender", e)
+            null
+        }
+    }
+
+    fun saveDob(context: Context, dob: String?) {
+        try {
+            getEncryptedPrefs(context).edit().putString(DOB_KEY, dob).apply()
+            Log.i(TAG, "DOB saved: $dob")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving dob", e)
+        }
+    }
+
+    fun getDob(context: Context): String? {
+        return try {
+            val dob = getEncryptedPrefs(context).getString(DOB_KEY, null)
+            Log.d(TAG, "Retrieved DOB: $dob")
+            dob
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting dob", e)
+            null
+        }
+    }
+
 
     // === Clear All ===
 }

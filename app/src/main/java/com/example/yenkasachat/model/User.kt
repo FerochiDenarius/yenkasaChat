@@ -13,12 +13,17 @@ data class User(
     @SerializedName("email")
     val email: String? = null,
 
-    // 🔥 Backend uses phoneNumber, NOT phone
     @SerializedName("phoneNumber")
     val phone: String? = null,
 
     @SerializedName("location")
     val location: String? = null,
+
+    @SerializedName("gender")
+    val gender: String? = null,
+
+    @SerializedName("dateOfBirth")
+    val dateOfBirth: String? = null,
 
     @SerializedName("verified")
     val verified: Boolean = false,
@@ -29,7 +34,6 @@ data class User(
     @SerializedName("coinsBalance")
     val coinsBalance: Int = 0,
 
-    // 🔥 Backend now sends community AS AN OBJECT
     @SerializedName("community")
     val community: Community? = null,
 
@@ -42,11 +46,9 @@ data class User(
     @SerializedName("updatedAt")
     val updatedAt: String? = null,
 
-    // 🔥 Role is an object with name + permissions
     @SerializedName("role")
     val role: Role? = null,
 
-    // Provided separately in backend too
     @SerializedName("roleName")
     val roleName: String? = null,
 

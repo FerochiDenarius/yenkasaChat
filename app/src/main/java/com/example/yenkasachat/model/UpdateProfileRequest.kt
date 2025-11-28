@@ -3,7 +3,15 @@ package com.example.yenkasachat.model
 
 data class UpdateProfileRequest(
     val username: String? = null,
-    val email: String? = null, // Ensure this line is present
-    val phone: String? = null,
-    val location: String? = null
+    val email: String? = null,
+    val phoneNumber: String? = null,
+    val location: String? = null,
+    val gender: String? = null,
+    val dateOfBirth: String? = null
 )
+
+data class UpdatePasswordRequest(
+    val oldPassword: String,
+    val newPassword: String
+)
+

@@ -48,7 +48,7 @@ class ProfileEditor(
         val requestBody = when (field.lowercase()) {
             "username" -> UpdateProfileRequest(username = value)
             "email" -> UpdateProfileRequest(email = value)
-            "phone" -> UpdateProfileRequest(phone = value)
+            "phonenumber" -> UpdateProfileRequest(phoneNumber = value)
             "location" -> UpdateProfileRequest(location = value)
             else -> return
         }

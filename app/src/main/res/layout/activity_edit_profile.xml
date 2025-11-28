@@ -58,7 +58,7 @@
                     android:id="@+id/textName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="John Doe"
+                    android:text="Akua Ataa"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="@color/yenkasaWhite"
@@ -78,7 +78,6 @@
 
         </FrameLayout>
 
-        <!-- White Card -->
         <LinearLayout
             android:id="@+id/cardContainer"
             android:layout_width="match_parent"
@@ -103,7 +102,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:boxBackgroundMode="none"
+                app:boxBackgroundMode="none"
                 android:paddingTop="4dp"
                 android:paddingBottom="8dp">
 
@@ -131,7 +130,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:boxBackgroundMode="none"
+                app:boxBackgroundMode="none"
                 android:paddingTop="4dp"
                 android:paddingBottom="8dp">
 
@@ -159,7 +158,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:boxBackgroundMode="none"
+                app:boxBackgroundMode="none"
                 android:paddingTop="4dp"
                 android:paddingBottom="8dp">
 
@@ -187,7 +186,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:boxBackgroundMode="none"
+                app:boxBackgroundMode="none"
                 android:paddingTop="4dp"
                 android:paddingBottom="8dp">
 
@@ -214,7 +213,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:boxBackgroundMode="none"
+                app:boxBackgroundMode="none"
                 android:paddingTop="4dp"
                 android:paddingBottom="8dp">
 
@@ -241,7 +240,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:boxBackgroundMode="none"
+                app:boxBackgroundMode="none"
                 android:paddingTop="4dp"
                 android:paddingBottom="22dp">
 

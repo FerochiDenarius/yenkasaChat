@@ -1,12 +1,14 @@
 // user.routes.js (assuming this is the correct filename based on content)
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
-const { storage } = require('../config/cloudinary'); // Assuming Cloudinary setup
 const Permission = require('../models/permissions.model'); // ✅ Import permissions model
 const mongoose = require("mongoose");
+const upload = require('../utils/upload');
+const { cloudinary } = require('../config/cloudinary');
+
+
 
 
 
@@ -19,7 +21,7 @@ const logger = {
 };
 // --- End Logger Function ---
 
-const upload = multer({ storage }); // Using Cloudinary storage
+const { profileImageUpload, uploadFiles } = require('../utils/upload');
 
 /**
  * @route   GET /api/users (Assuming this router is mounted at /api/users)
@@ -45,7 +47,8 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/profile-picture', authMiddleware, upload.single('profileImage'), async (req, res) => {
+//**Profile pic upload  */
+router.post('/profile-picture', authMiddleware, profileImageUpload, async (req, res) => {
     const userId = req.user?.id || req.user?._id;
 
     try {
@@ -53,18 +56,16 @@ router.post('/profile-picture', authMiddleware, upload.single('profileImage'), a
             return res.status(400).json({ error: "No image uploaded" });
         }
 
-        // CLOUDINARY TRANSFORMED UPLOAD
         const result = await cloudinary.uploader.upload(req.file.path, {
             folder: "yenkasa/profile",
             width: 400,
             height: 400,
             crop: "fill",
-            gravity: "face",  // Auto-detect face centering
+            gravity: "face",
             quality: "auto:good",
             fetch_format: "auto"
         });
 
-        // Save final URL
         const user = await User.findByIdAndUpdate(
             userId,
             { profileImage: result.secure_url },

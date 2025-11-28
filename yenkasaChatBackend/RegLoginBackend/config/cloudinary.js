@@ -1,6 +1,7 @@
 // config/cloudinary.js
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const path = require("path");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,18 +9,18 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-console.log("Cloudinary ENV Check:");
-console.log("cloud_name:", process.env.CLOUDINARY_CLOUD_NAME);
-console.log("api_key:", process.env.CLOUDINARY_API_KEY);
-console.log("api_secret:", process.env.CLOUDINARY_API_SECRET ? "✅ present" : "❌ missing");
-
-
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: {
-    folder: 'yenkasa-profile-pictures',
-    allowed_formats: ['jpg', 'jpeg', 'png'],
-    public_id: (req, file) => `${req.user.id}-${Date.now()}`
+  params: async (req, file) => {
+    return {
+      folder: 'yenkasa/profile',
+      allowed_formats: ['jpg', 'jpeg', 'png'],
+      public_id: `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+      transformation: [
+        { width: 400, height: 400, crop: "fill", gravity: "face" },
+        { quality: "auto:good" }
+      ]
+    };
   }
 });
 

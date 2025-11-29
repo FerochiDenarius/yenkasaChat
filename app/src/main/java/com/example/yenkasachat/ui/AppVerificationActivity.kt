@@ -14,6 +14,8 @@ import com.example.yenkasachat.adapter.MetricsPagerAdapter
 import com.example.yenkasachat.model.VerificationDashboard
 import com.example.yenkasachat.model.VerificationProgressResponse
 import com.example.yenkasachat.model.PhaseAdvancementResponse
+import com.example.yenkasachat.model.TrackLoginResponse
+import com.example.yenkasachat.model.TrackAdViewResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -62,6 +64,7 @@ class AppVerificationActivity : AppCompatActivity() {
         setupTabClicks()
         setupViewPagerListener()
         loadDashboard()
+        trackLoginEvent()
 
         btnAdvance.setOnClickListener {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
@@ -218,4 +221,25 @@ class AppVerificationActivity : AppCompatActivity() {
         onBackPressedDispatcher.onBackPressed()
         return true
     }
+
+    private fun trackLoginEvent() {
+        val t = token ?: return
+
+        ApiClient.apiService.trackLogin("Bearer $t")
+            .enqueue(object : Callback<TrackLoginResponse> {
+                override fun onResponse(
+                    call: Call<TrackLoginResponse>,
+                    response: Response<TrackLoginResponse>
+                ) {
+                    // Optional: Log or ignore
+                }
+
+                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
+                    // Optional: Log or ignore
+                }
+            })
+    }
+
+
+
 }

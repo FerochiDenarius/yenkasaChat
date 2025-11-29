@@ -131,7 +131,6 @@ safeMount('/api/contacts', './routes/contacts.routes');
 safeMount('/api/messages', './routes/messages.routes');
 safeMount('/api/chatrooms', './routes/chatroom.routes');
 safeMount('/api/onesignal', './routes/onesignal');
-safeMount('/api/notifications', './routes/notifications.route');
 safeMount('/api/profile', './routes/profile');
 // ---------------------------------
 // 🧩 New API Routes

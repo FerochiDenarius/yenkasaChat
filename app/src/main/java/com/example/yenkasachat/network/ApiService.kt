@@ -276,29 +276,8 @@ interface ApiService {
     ): Call<Map<String, Any>>
 
 
-    // Get replies for a comment
-    @GET("comments/{commentId}/replies")
-    fun getReplies(
-        @Header("Authorization") token: String,
-        @Path("commentId") commentId: String,
-        @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
-    ): Call<RepliesResponse>
-
     //================= Like comment===============//
 
-    @POST("comments/{commentId}/like")
-    fun likeComment(
-        @Header("Authorization") token: String,
-        @Path("commentId") commentId: String
-    ): Call<LikeResponse>
-
-    // Unlike comment
-    @DELETE("comments/{commentId}/like")
-    fun unlikeComment(
-        @Header("Authorization") token: String,
-        @Path("commentId") commentId: String
-    ): Call<LikeResponse>
 
     @GET("comments/post/{postId}")
     fun getComments(
@@ -318,24 +297,6 @@ interface ApiService {
         @Path("postId") postId: String
     ): Call<LikeResponse>
 
-
-    @GET("posts")
-    fun getAllPosts(
-        @Header("Authorization") token: String
-    ): Call<List<Post>>
-
-    // ✅ Unlike a post
-    @DELETE("social/unlike/{postId}")
-    fun unlikePost(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<LikeResponse>
-
-    // 🗑️ Delete post
-    @DELETE("social/posts/{postId}")
-    fun deletePost(
-        @Path("postId") postId: String
-    ): Call<Map<String, Any>>
 
 
     // -----------------------------
@@ -548,31 +509,31 @@ interface ApiService {
 
 
     // ==================== APP VERIFICATION ====================
-
-    @GET("app-verification/dashboard")
+    @GET("api/app-verification/dashboard")
     fun getVerificationDashboard(
         @Header("Authorization") token: String
     ): Call<VerificationDashboard>
 
-    @POST("app-verification/track-login")
+    @POST("api/app-verification/track-login")
     fun trackLogin(
         @Header("Authorization") token: String
     ): Call<TrackLoginResponse>
 
-    @POST("app-verification/track-ad-view")
+    @POST("api/app-verification/track-ad-view")
     fun trackAdView(
         @Header("Authorization") token: String
     ): Call<TrackAdViewResponse>
 
-    @GET("app-verification/progress")
+    @GET("api/app-verification/progress")
     fun getVerificationProgress(
         @Header("Authorization") token: String
     ): Call<VerificationProgressResponse>
 
-    @POST("app-verification/check-phase-advancement")
+    @POST("api/app-verification/check-phase-advancement")
     fun checkPhaseAdvancement(
         @Header("Authorization") token: String
     ): Call<PhaseAdvancementResponse>
+
 
     // ───────────────────────────────
 // USER PRIVACY

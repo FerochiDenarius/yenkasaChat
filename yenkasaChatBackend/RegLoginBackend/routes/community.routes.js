@@ -235,31 +235,66 @@ router.get('/public/list', async (req, res) => {
 
 
 // -----------------------------
-// CREATE COMMUNITY WITH REWARD
+// CREATE COMMUNITY WITH ROLE + VERIFICATION LOGIC
 // -----------------------------
-router.post('/', authMiddleware, requireVerified, async (req, res) => {
+
+// Allowed roles that can create communities even if not verified
+const PRIVILEGED_ROLES = [
+  "admin",
+  "moderator",
+  "developer",
+  "senior_developer",
+  "junior_developer"
+];
+
+// New middleware replacing requireVerified
+const allowCommunityCreation = (req, res, next) => {
+  const user = req.user;
+
+  // Some JWT middlewares send full role doc, others send roleName.
+  // We support BOTH safely.
+  const roleName =
+    user.roleName ||
+    user.role?.role ||   // if role is populated
+    user.role ||         // fallback
+    null;
+
+  const isPrivileged = roleName && PRIVILEGED_ROLES.includes(roleName.toLowerCase());
+  const isVerified = user.verified === true;
+
+  if (isPrivileged || isVerified) {
+    return next();
+  }
+
+  return res.status(403).json({
+    error: "Insufficient permissions",
+    message: "You must be verified or have a privileged role to create a community"
+  });
+};
+
+router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
   try {
     const { name, displayName, description, location, categories } = req.body;
     const userId = req.user.id;
 
     if (!name || !displayName) {
-      return res.status(400).json({ error: 'Name and display name are required' });
+      return res.status(400).json({ error: "Name and display name are required" });
     }
 
     const existingCommunity = await Community.findOne({ name: name.toLowerCase().trim() });
     if (existingCommunity) {
-      return res.status(400).json({ error: 'Community with this name already exists' });
+      return res.status(400).json({ error: "Community with this name already exists" });
     }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     // Create community
     const community = new Community({
       name: name.toLowerCase().trim(),
       displayName: displayName.trim(),
-      description: description || '',
-      location: location || '',
+      description: description || "",
+      location: location || "",
       categories: categories || [],
       createdBy: userId,
       moderators: [userId],
@@ -267,39 +302,38 @@ router.post('/', authMiddleware, requireVerified, async (req, res) => {
     });
 
     await community.save();
-// -----------------------------
-// Reward user for community creation
-// -----------------------------
+
+    // Reward logic stays the same
     const activityId = `community_${userId}_${community._id}`;
     const tx = await reward(userId, COMMUNITY_CREATION_REWARD, {
-      type: 'REWARD_CREATE_COMMUNITY',
+      type: "REWARD_CREATE_COMMUNITY",
       description: `Earned ${COMMUNITY_CREATION_REWARD} YKC for creating community "${community.displayName}"`,
       relatedCommunityId: community._id,
-      activityId, // ensures deduplication
+      activityId
     });
 
-// ✅ Now safely respond
-res.status(201).json({
-  success: true,
-  message: 'Community created! Pending admin approval.',
-  community: {
-    id: community._id,
-    name: community.name,
-    displayName: community.displayName,
-    isApproved: community.isApproved
-  },
-  reward: {
-    coins: COMMUNITY_CREATION_REWARD,
-    transaction
-  },
-  note: 'Your community will be visible once approved by an admin'
+    return res.status(201).json({
+      success: true,
+      message: "Community created! Pending admin approval.",
+      community: {
+        id: community._id,
+        name: community.name,
+        displayName: community.displayName,
+        isApproved: community.isApproved
+      },
+      reward: {
+        coins: COMMUNITY_CREATION_REWARD,
+        transaction: tx
+      },
+      note: "Your community will be visible once approved by an admin"
+    });
+
+  } catch (err) {
+    console.error("❌ Failed to create community:", err);
+    res.status(500).json({ error: "Failed to create community" });
+  }
 });
 
-} catch (err) {
-  console.error('❌ Failed to create community:', err);
-  res.status(500).json({ error: 'Failed to create community' });
-}
-});
 
 
 // ✅ Approve community (ADMIN ONLY)

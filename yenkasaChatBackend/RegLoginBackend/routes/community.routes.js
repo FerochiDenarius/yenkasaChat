@@ -10,6 +10,8 @@ const CoinSupply = require('../models/coinSupply');
 const Permission = require('../models/permissions.model');
 const rewardService = require('../services/reward.service');
 const { getUserCommunities } = require('../helpers/community.helper');
+const allowCommunityCreation = require('../middleware/allowCommunityCreation');
+
 
 
 // Reward configuration
@@ -235,43 +237,8 @@ router.get('/public/list', async (req, res) => {
 
 
 // -----------------------------
-// CREATE COMMUNITY WITH ROLE + VERIFICATION LOGIC
+// CREATE COMMUNITY (FINAL FIXED VERSION)
 // -----------------------------
-
-// Allowed roles that can create communities even if not verified
-const PRIVILEGED_ROLES = [
-  "admin",
-  "moderator",
-  "developer",
-  "senior_developer",
-  "junior_developer"
-];
-
-// New middleware replacing requireVerified
-const allowCommunityCreation = (req, res, next) => {
-  const user = req.user;
-
-  // Some JWT middlewares send full role doc, others send roleName.
-  // We support BOTH safely.
-  const roleName =
-    user.roleName ||
-    user.role?.role ||   // if role is populated
-    user.role ||         // fallback
-    null;
-
-  const isPrivileged = roleName && PRIVILEGED_ROLES.includes(roleName.toLowerCase());
-  const isVerified = user.verified === true;
-
-  if (isPrivileged || isVerified) {
-    return next();
-  }
-
-  return res.status(403).json({
-    error: "Insufficient permissions",
-    message: "You must be verified or have a privileged role to create a community"
-  });
-};
-
 router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
   try {
     const { name, displayName, description, location, categories } = req.body;
@@ -298,7 +265,7 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       categories: categories || [],
       createdBy: userId,
       moderators: [userId],
-      isApproved: false
+      isApproved: false,
     });
 
     await community.save();
@@ -309,7 +276,7 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       type: "REWARD_CREATE_COMMUNITY",
       description: `Earned ${COMMUNITY_CREATION_REWARD} YKC for creating community "${community.displayName}"`,
       relatedCommunityId: community._id,
-      activityId
+      activityId,
     });
 
     return res.status(201).json({
@@ -319,13 +286,13 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
         id: community._id,
         name: community.name,
         displayName: community.displayName,
-        isApproved: community.isApproved
+        isApproved: community.isApproved,
       },
       reward: {
         coins: COMMUNITY_CREATION_REWARD,
-        transaction: tx
+        transaction: tx,
       },
-      note: "Your community will be visible once approved by an admin"
+      note: "Your community will be visible once approved by an admin",
     });
 
   } catch (err) {
@@ -334,37 +301,6 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
   }
 });
 
-
-
-// ✅ Approve community (ADMIN ONLY)
-router.post('/:communityId/approve', authMiddleware, async (req, res) => {
-  try {
-    // TODO: Add admin check middleware
-    const { communityId } = req.params;
-    
-    const community = await Community.findById(communityId);
-    if (!community) {
-      return res.status(404).json({ error: 'Community not found' });
-    }
-    
-    community.isApproved = true;
-    await community.save();
-    
-    res.json({
-      success: true,
-      message: 'Community approved successfully',
-      community: {
-        id: community._id,
-        name: community.name,
-        displayName: community.displayName,
-        isApproved: true
-      }
-    });
-  } catch (err) {
-    console.error('❌ Failed to approve community:', err);
-    res.status(500).json({ error: 'Failed to approve community' });
-  }
-});
 
 // ✅ Reject/Delete community (ADMIN ONLY)
 router.delete('/:communityId', authMiddleware, async (req, res) => {

@@ -198,6 +198,33 @@ exports.getProgress = async (req, res) => {
     }
 
     await appVerification.updateAccountAge(user.createdAt);
+
+    // =====================================================
+// 🔥 ROLE PROMOTION LOGIC
+// =====================================================
+const accountAgeDays = appVerification.metrics.accountAge;
+const dailyLogins = appVerification.metrics.dailyLogins;
+
+// 1️⃣ Verified → Admin (90 days + 90 daily logins)
+if (user.role === "verified") {
+  if (accountAgeDays >= 90 && dailyLogins >= 90) {
+    user.role = "admin";
+    await user.save();
+    console.log(`🌟 PROMOTION: ${user.username} → ADMIN`);
+  }
+}
+
+// 2️⃣ Admin → Moderator (162 days + 162 daily logins)
+// 162 = 90 × 1.8
+if (user.role === "admin") {
+  const required = Math.floor(90 * 1.8); // = 162
+  if (accountAgeDays >= required && dailyLogins >= required) {
+    user.role = "moderator";
+    await user.save();
+    console.log(`🚀 PROMOTION: ${user.username} → MODERATOR`);
+  }
+}
+
     const requirements = appVerification.getCurrentRequirements();
     const metrics = appVerification.metrics;
 

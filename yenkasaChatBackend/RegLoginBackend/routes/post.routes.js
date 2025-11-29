@@ -21,7 +21,7 @@ const REWARDS = { CREATE_POST: 10, GET_LIKE: 2, GET_COMMENT: 3 };
 /* ------------------------------------
  * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
-router.post('/', authMiddleware, upload(), async (req, res) => {
+  router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
   try {
     const {
       text,

@@ -27,6 +27,8 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.io.FileOutputStream
+import android.widget.TextView
+
 
 class EditProfileActivity : AppCompatActivity() {
 
@@ -39,6 +41,10 @@ class EditProfileActivity : AppCompatActivity() {
     private lateinit var locationView: TextInputEditText
     private lateinit var genderView: TextInputEditText
     private lateinit var dobView: TextInputEditText
+    private lateinit var textName: TextView
+    private lateinit var textPhone: TextView
+
+
 
     private var selectedImageUri: Uri? = null
     private val token by lazy { TokenManager.getToken(this) }
@@ -49,9 +55,10 @@ class EditProfileActivity : AppCompatActivity() {
 
         bindViews()
         loadCurrentData()
-        loadUserInfo()
-        fetchRemoteProfile()
-        // Auto-save bindings
+        loadUserInfo()          // ⭐ updates username + phone header
+        fetchRemoteProfile()    // loads full profile (bio, email, gender etc.)
+
+        // Auto-save
         enableAutoSave(usernameView, "username")
         enableAutoSave(emailView, "email")
         enableAutoSave(phoneView, "phoneNumber")
@@ -66,6 +73,9 @@ class EditProfileActivity : AppCompatActivity() {
     private fun bindViews() {
         imageProfile = findViewById(R.id.imageProfile)
         btnChangeImage = findViewById(R.id.btnChangeImage)
+        textName = findViewById(R.id.textName)
+        textPhone = findViewById(R.id.textPhone)
+
 
         usernameView = findViewById(R.id.editUsername)
         emailView = findViewById(R.id.editEmail)
@@ -169,6 +179,8 @@ class EditProfileActivity : AppCompatActivity() {
         }
     }
     private fun loadUserInfo() {
+        if (token == null) return
+
         ApiClient.apiService.getUserProfile("Bearer $token")
             .enqueue(object : Callback<User> {
                 override fun onResponse(
@@ -178,13 +190,13 @@ class EditProfileActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         val user = response.body()
                         if (user != null) {
-                            binding.textName.text = user.username
-                            binding.textPhone.text = user.phone
+                            textName.text = user.username
+                            textPhone.text = user.phone
                         }
                     }
                 }
 
-                override fun onFailure(call: Call<User>, t: Throwable) {}
+                override fun onFailure(call: Call<User>, t: Throwable) { }
             })
     }
 

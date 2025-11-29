@@ -3,6 +3,7 @@ package com.example.yenkasachat.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.yenkasachat.R
@@ -33,6 +34,10 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var spinnerCommunities: Spinner
     private lateinit var progressBar: ProgressBar
 
+    // NEW — animated card + icon + stars
+    private lateinit var registerCard: View
+    private lateinit var starContainer: FrameLayout
+
     private var selectedCommunityId: String? = null
     private var communityList: List<Community> = emptyList()
 
@@ -40,6 +45,7 @@ class RegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
 
+        // Original views
         radioEmail = findViewById(R.id.radioEmail)
         radioPhone = findViewById(R.id.radioPhone)
         editEmail = findViewById(R.id.editEmail)
@@ -53,16 +59,24 @@ class RegisterActivity : AppCompatActivity() {
         checkTerms = findViewById(R.id.checkTerms)
         textTermsLink = findViewById(R.id.textTermsLink)
         spinnerCommunities = findViewById(R.id.spinnerCommunities)
-
         progressBar = findViewById(R.id.progressBar)
 
-        // Toggle email/phone visibility
+        // NEW views for animation
+        registerCard = findViewById(R.id.registerCard)
+        starContainer = findViewById(R.id.starContainerRegister)
+
+        // 🌟 Entrance Animations (Flutter-like)
+        registerCard.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_up_fade))
+
+        // ✨ Star Sparkle
+        addStarSparkle()
+
+        // Email/phone switching
         radioEmail.setOnCheckedChangeListener { _, isChecked ->
             editEmail.visibility = if (isChecked) View.VISIBLE else View.GONE
             editPhone.visibility = if (!isChecked) View.VISIBLE else View.GONE
         }
 
-        // Open User Agreement
         textTermsLink.setOnClickListener {
             startActivity(Intent(this, UserAgreementActivity::class.java))
         }
@@ -72,16 +86,38 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         textLoginLink.setOnClickListener {
-            startActivity(Intent(this, LoginActivity::class.java))
+            // Add shared element transition back to login
+            val intent = Intent(this, LoginActivity::class.java)
+            val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
+                this,
+                androidx.core.util.Pair(findViewById(R.id.textRegisterTitle), "hero_title")
+            )
+            startActivity(intent, options.toBundle())
             finish()
         }
 
         setupCountrySpinner()
-
-        fetchCommunities() // ✅ Load communities on startup
+        fetchCommunities()
     }
 
-    // ✅ Load available communities into spinner
+    // ✨ STAR SPARKLE ANIMATION
+    private fun addStarSparkle() {
+        val sparkleAnim = AnimationUtils.loadAnimation(this, R.anim.star_sparkle)
+
+        starContainer.post {
+            for (i in 0 until starContainer.childCount) {
+                val star: View = starContainer.getChildAt(i)
+                star.startAnimation(sparkleAnim)
+            }
+        }
+    }
+
+    // ❗ SHAKE CARD ON ERROR
+    private fun shakeCard() {
+        registerCard.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake))
+    }
+
+    // ⬇️ YOUR ORIGINAL LOGIC (UNCHANGED)
     private fun fetchCommunities() {
         progressBar.visibility = View.VISIBLE
 
@@ -92,23 +128,19 @@ class RegisterActivity : AppCompatActivity() {
 
                     if (!response.isSuccessful || response.body().isNullOrEmpty()) {
                         Toast.makeText(this@RegisterActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+                        shakeCard()
                         return
                     }
 
                     communityList = response.body()!!
-
                     val adapter = ArrayAdapter(
                         this@RegisterActivity,
                         android.R.layout.simple_spinner_item,
                         communityList.map { it.displayName ?: it.name ?: "Unnamed" }
                     )
-
                     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
                     spinnerCommunities.adapter = adapter
-
                     spinnerCommunities.setPopupBackgroundResource(R.color.white)
-
 
                     spinnerCommunities.onItemSelectedListener =
                         object : AdapterView.OnItemSelectedListener {
@@ -124,14 +156,15 @@ class RegisterActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<List<Community>>, t: Throwable) {
                     progressBar.visibility = View.GONE
+                    shakeCard()
                     Toast.makeText(this@RegisterActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
-    // ✅ Handle registration
     private fun handleRegister() {
 
+        // ORIGINAL VALIDATION LOGIC
         val email = editEmail.text.toString().trim()
         val phone = editPhone.text.toString().trim()
         val username = editUsername.text.toString().trim()
@@ -141,50 +174,61 @@ class RegisterActivity : AppCompatActivity() {
 
         if (radioEmail.isChecked && email.isEmpty()) {
             editEmail.error = "Email is required"
+            shakeCard()
             return
         }
 
         if (radioPhone.isChecked && phone.isEmpty()) {
             editPhone.error = "Phone is required"
+            shakeCard()
             return
         }
 
         if (username.isEmpty()) {
             editUsername.error = "Username is required"
+            shakeCard()
             return
         }
 
         if (location.isEmpty()) {
             editLocation.error = "Location is required"
+            shakeCard()
             return
         }
 
         if (!location.contains("Ghana", ignoreCase = true)) {
             Toast.makeText(this, "Sorry, registration is only allowed for Ghanaians.", Toast.LENGTH_LONG).show()
+            shakeCard()
             return
         }
 
         if (password.length < 6) {
             editPassword.error = "Password must be at least 6 characters"
+            shakeCard()
             return
         }
 
         if (password != confirmPassword) {
             editConfirmPassword.error = "Passwords do not match"
+            shakeCard()
             return
         }
 
         if (!checkTerms.isChecked) {
             Toast.makeText(this, "You must agree to the User Agreement before continuing.", Toast.LENGTH_LONG).show()
+            shakeCard()
             return
         }
 
         if (selectedCommunityId == null) {
             Toast.makeText(this, "Please select a community", Toast.LENGTH_SHORT).show()
+            shakeCard()
             return
         }
+
         val selectedCountry = findViewById<Spinner>(R.id.spinnerCountry).selectedItem.toString()
 
+        // ORIGINAL REQUEST
         val request = RegisterRequest(
             email = if (radioEmail.isChecked) email else null,
             phone = if (radioPhone.isChecked) phone else null,
@@ -195,20 +239,33 @@ class RegisterActivity : AppCompatActivity() {
             country = selectedCountry
         )
 
+        // SHOW EMERALD LOADING BAR
+        progressBar.visibility = View.VISIBLE
+        btnRegister.isEnabled = false
 
         ApiClient.authService.registerUser(request)
             .enqueue(object : Callback<LoginResponse> {
                 override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
+                    progressBar.visibility = View.GONE
+                    btnRegister.isEnabled = true
+
                     if (response.isSuccessful && response.body() != null) {
                         Toast.makeText(this@RegisterActivity, "Registered successfully", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
+
+                        val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
+                        startActivity(intent)
                         finish()
+
                     } else {
                         Toast.makeText(this@RegisterActivity, "Registration failed", Toast.LENGTH_SHORT).show()
+                        shakeCard()
                     }
                 }
 
                 override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+                    progressBar.visibility = View.GONE
+                    btnRegister.isEnabled = true
+                    shakeCard()
                     Toast.makeText(this@RegisterActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -230,5 +287,4 @@ class RegisterActivity : AppCompatActivity() {
 
         findViewById<Spinner>(R.id.spinnerCountry).adapter = adapter
     }
-
 }

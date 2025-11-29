@@ -110,7 +110,7 @@
                     android:id="@+id/editUsername"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="kinspirion"
+                    android:text="Akua Ataa"
                     android:textColor="@color/yenkasaBlack"
                     android:textSize="16sp"
                     android:background="@null"

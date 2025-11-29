@@ -156,6 +156,27 @@
                     android:layout_height="wrap_content"
                     android:padding="12dp" />
 
+                <!-- Community Label -->
+                <TextView
+                    android:id="@+id/textCommunityLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select Community"
+                    android:textColor="#1A1A1A"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp" />
+
+                <!-- Community Spinner -->
+                <Spinner
+                    android:id="@+id/spinnerCommunities"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_spinner_field"
+                    android:spinnerMode="dropdown"
+                    android:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+
                 <!-- Location -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layoutLocation"

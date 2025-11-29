@@ -42,25 +42,26 @@ interface ApiService {
     // ==================== USERS && USER Profile for AccountInfo====================
 
     @Multipart
-    @PUT("/api/users/profile-picture")
+    @POST("users/profile-picture")
     fun uploadProfilePicture(
         @Header("Authorization") token: String,
-        @Part image: MultipartBody.Part
+        @Part profileImage: MultipartBody.Part
     ): Call<UploadPictureResponse>
 
 
-    @PUT("/api/users/profile")
+
+    @PUT("users/profile")
     suspend fun updateProfile(
         @Header("Authorization") token: String,
         @Body request: UpdateProfileRequest
     ): Response<GenericSuccessResponse>
 
 
-
-    @GET("/api/users/me")
-    suspend fun getUserProfile(
+    @GET("users/me")
+    fun getUserProfile(
         @Header("Authorization") token: String
-    ): Response<UserProfileResponse>
+    ): Call<User>
+
 
 
     @PUT("/api/users/password")

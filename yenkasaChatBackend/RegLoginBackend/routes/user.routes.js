@@ -10,7 +10,9 @@ const mongoose = require("mongoose");
 const { profileImageUpload, uploadFiles } = require('../utils/upload');
 
 // ⬇️ Cloudinary import (required!)
-const { cloudinary } = require('../config/cloudinary');
+const cloudinaryConfig = require('../config/cloudinary');
+const cloudinary = cloudinaryConfig.cloudinary;
+console.log("CLOUDINARY LOADED?", !!cloudinary);
 
 // --- Logger ---
 const logger = {

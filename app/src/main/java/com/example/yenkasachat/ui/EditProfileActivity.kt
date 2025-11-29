@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.UpdateProfileRequest
+import com.example.yenkasachat.model.User
 import com.example.yenkasachat.model.UploadPictureResponse
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
@@ -47,7 +48,8 @@ class EditProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_edit_profile)
 
         bindViews()
-        loadCurrentData()       // cached local data
+        loadCurrentData()
+        loadUserInfo()
         fetchRemoteProfile()
         // Auto-save bindings
         enableAutoSave(usernameView, "username")
@@ -116,7 +118,11 @@ class EditProfileActivity : AppCompatActivity() {
         val mimeType = contentResolver.getType(uri) ?: "image/*"
 
         val requestBody = file.asRequestBody(mimeType.toMediaTypeOrNull())
-        val multipart = MultipartBody.Part.createFormData("image", file.name, requestBody)
+        val multipart = MultipartBody.Part.createFormData(
+            "profileImage",
+            file.name,
+            requestBody
+        )
 
         ApiClient.apiService.uploadProfilePicture("Bearer $token", multipart)
             .enqueue(object : Callback<UploadPictureResponse> {
@@ -161,6 +167,25 @@ class EditProfileActivity : AppCompatActivity() {
                 if (value.isNotEmpty()) saveSingleField(field, value)
             }
         }
+    }
+    private fun loadUserInfo() {
+        ApiClient.apiService.getUserProfile("Bearer $token")
+            .enqueue(object : Callback<User> {
+                override fun onResponse(
+                    call: Call<User>,
+                    response: Response<User>
+                ) {
+                    if (response.isSuccessful) {
+                        val user = response.body()
+                        if (user != null) {
+                            binding.textName.text = user.username
+                            binding.textPhone.text = user.phone
+                        }
+                    }
+                }
+
+                override fun onFailure(call: Call<User>, t: Throwable) {}
+            })
     }
 
     /** Save a single field to backend */
@@ -217,49 +242,62 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     /** Fetch the latest profile from backend */
+    /** Fetch the latest profile from backend */
+    /** Fetch the latest profile from backend */
+    /** Fetch the latest profile from backend */
     private fun fetchRemoteProfile() {
         if (token == null) return
 
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.apiService.getUserProfile("Bearer $token")
+        ApiClient.apiService.getUserProfile("Bearer $token")
+            .enqueue(object : Callback<User> {
+                override fun onResponse(call: Call<User>, response: Response<User>) {
+                    if (response.isSuccessful && response.body() != null) {
 
-                if (response.isSuccessful) {
-                    val user = response.body()?.user ?: return@launch
+                        val user = response.body()!!  // SAME MODEL AS AccountInfoActivity
 
-                    // UPDATE UI
-                    usernameView.setText(user.username)
-                    emailView.setText(user.email)
-                    phoneView.setText(user.phone)
-                    locationView.setText(user.location)
-                    genderView.setText(user.gender)
-                    dobView.setText(user.dateOfBirth)
+                        usernameView.setText(user.username)
+                        emailView.setText(user.email)
 
-                    Glide.with(this@EditProfileActivity)
-                        .load(user.profileImage)
-                        .placeholder(R.drawable.default_avatar)
-                        .circleCrop()
-                        .into(imageProfile)
+                        val phoneValue = user.phone ?: user.phone
+                        phoneView.setText(phoneValue)
 
-                    // SAVE LOCALLY
-                    TokenManager.savePartialUserDetails(
-                        this@EditProfileActivity,
-                        user.username,
-                        user.email,
-                        user.phone,
-                        user.location,
-                        user.gender,
-                        user.dateOfBirth
-                    )
+                        locationView.setText(user.location)
+                        genderView.setText(user.gender)
+                        dobView.setText(user.dateOfBirth)
 
-                } else {
-                    Toast.makeText(this@EditProfileActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
+                        Glide.with(this@EditProfileActivity)
+                            .load(user.profileImage)
+                            .placeholder(R.drawable.default_avatar)
+                            .circleCrop()
+                            .into(imageProfile)
+
+                        TokenManager.savePartialUserDetails(
+                            this@EditProfileActivity,
+                            user.username,
+                            user.email,
+                            phoneValue,
+                            user.location,
+                            user.gender,
+                            user.dateOfBirth
+                        )
+
+                    } else {
+                        Toast.makeText(
+                            this@EditProfileActivity,
+                            "Failed to load profile",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
 
-            } catch (e: Exception) {
-                Toast.makeText(this@EditProfileActivity, "Network error loading profile", Toast.LENGTH_SHORT).show()
-            }
-        }
+                override fun onFailure(call: Call<User>, t: Throwable) {
+                    Toast.makeText(
+                        this@EditProfileActivity,
+                        "Network error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
     }
 
     /** Convert URI → Temp File */

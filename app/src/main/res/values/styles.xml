@@ -1,17 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary branding color -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorOnPrimary">@color/white</item>
 
         <!-- Backgrounds -->
         <item name="android:windowBackground">?attr/colorSurface</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
+
+        <!-- ❗ Prevent Material3/Theme from auto-tinting your button drawables -->
+        <!-- Setting colorPrimary/Secondary/Accent to transparent avoids default M3 tint fallback -->
+        <item name="colorPrimary">@android:color/transparent</item>
+        <item name="colorSecondary">@android:color/transparent</item>
+        <item name="colorAccent">@android:color/transparent</item>
+        <item name="android:colorAccent">@android:color/transparent</item>
+
+        <!-- Use the NoTintButton style for materialButtonStyle to stop automatic tinting -->
+        <item name="materialButtonStyle">@style/NoTintButton</item>
     </style>
+
+    <!-- Transparent activity theme (unchanged) -->
     <style name="Theme.TransparentActivity" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -19,7 +30,6 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
     </style>
-    <!-- In res/values/styles.xml -->
 
     <!-- Style for the new Posts, Followers, Following text -->
     <style name="ProfileStatValue" parent="Widget.AppCompat.TextView">
@@ -86,6 +96,14 @@
         <item name="android:textSize">18sp</item>
         <item name="android:layout_marginTop">20dp</item>
         <item name="android:layout_marginBottom">10dp</item>
+    </style>
+
+    <!-- ========= No-tint Button Style (prevents Material from tinting your drawables) ========= -->
+    <style name="NoTintButton" parent="Widget.Material3.Button">
+        <!-- ensure both framework & support attributes are null so tinting stops -->
+        <item name="backgroundTint">@null</item>
+        <item name="android:backgroundTint">@null</item>
+        <!-- keep default paddings/shape from Material if you want; we only remove the tint -->
     </style>
 
 </resources>

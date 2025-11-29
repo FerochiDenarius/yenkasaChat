@@ -1,87 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/swipeRefreshVerification"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:background="@color/dark_almost"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:layout_height="match_parent">
 
-    <ScrollView
+    <!-- ⭐ FIXED: MATERIAL PROGRESS INDICATOR (NO ERRORS) -->
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/progressCircle"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center"
+        android:padding="6dp"
+        android:visibility="gone"
+
+        app:indicatorSize="40dp"
+        app:trackThickness="6dp"
+        app:indicatorColor="@color/amber_300"
+        app:trackColor="@color/emerald"
+        />
+
+    <Button
+        android:id="@+id/btnAdvance"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/emerald"
+        android:text="Advance Phase"
+        android:textColor="@color/amber_300"
+        android:textStyle="bold"
+        android:padding="12dp"
+        android:visibility="gone"/>
+
+    <!-- HEADER -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/imgLogo"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@drawable/ic_yenkasa_logo"
+            android:contentDescription="logo"/>
 
         <LinearLayout
             android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal">
+            android:layout_marginStart="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
 
-            <!-- Progress bar -->
-            <ProgressBar
-                android:id="@+id/progressBarVerification"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:visibility="gone"
-                android:layout_marginBottom="12dp"/>
-
-            <!-- 🧩 New Role Banner -->
             <TextView
-                android:id="@+id/textRoleBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="🔹 Role: User"
-                android:textColor="@android:color/holo_blue_dark"
+                android:id="@+id/textTitle"
+                android:text="VERIFICATION"
+                android:textSize="26sp"
                 android:textStyle="bold"
-                android:gravity="center"
-                android:textSize="16sp"
-                android:padding="6dp"
-                android:background="@android:color/transparent"
-                android:visibility="gone"
-                android:layout_marginBottom="8dp"/>
-
-            <!-- Phase Info -->
-            <TextView
-                android:id="@+id/textPhase"
+                android:textColor="@color/amber_300"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Phase 1"
-                android:textSize="22sp"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/textTitle2"
+                android:text="DASHBOARD"
+                android:textSize="26sp"
                 android:textStyle="bold"
-                android:layout_marginTop="8dp"
-                android:textColor="@android:color/black"/>
-
-            <TextView
-                android:id="@+id/textDaysRemaining"
+                android:textColor="@color/amber_300"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Days remaining: 30"
-                android:layout_marginBottom="8dp"
-                android:textColor="@android:color/darker_gray"/>
-
-            <TextView
-                android:id="@+id/textProgress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Progress..."
-                android:textColor="@android:color/darker_gray"
-                android:layout_marginBottom="12dp"/>
-
-            <LinearLayout
-                android:id="@+id/layoutRequirements"
-                android:orientation="vertical"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:divider="?android:attr/dividerVertical"
-                android:showDividers="middle"/>
-
-            <Button
-                android:id="@+id/btnAdvancePhase"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Advance Phase"
-                android:enabled="false"
-                android:layout_marginTop="16dp"/>
+                android:layout_height="wrap_content"/>
         </LinearLayout>
-    </ScrollView>
-</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+    </LinearLayout>
+
+    <!-- OLD PROGRESSBAR (KEEP IT OR REMOVE) -->
+    <ProgressBar
+        android:id="@+id/progressBarDashboard"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:visibility="gone"
+        android:layout_gravity="center"
+        android:layout_marginTop="8dp"/>
+
+    <!-- ⭐ CUSTOM PILL SHAPED TAB BAR -->
+    <LinearLayout
+        android:id="@+id/tabContainer"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_tab_bar"
+        android:padding="6dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tabVerified"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Verified"
+            android:textColor="@color/amber_300"
+            android:textStyle="bold"
+            android:background="@drawable/bg_tab_active"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/tabAdmin"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Admin"
+            android:textColor="@color/emerald"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/tabModerator"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Moderator"
+            android:textColor="@color/emerald"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/tabTotalMetrics"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Total Metrics"
+            android:textColor="@color/emerald"
+            android:padding="8dp"/>
+    </LinearLayout>
+
+    <!-- ⭐ VIEWPAGER (4 FRAGMENTS) -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+</LinearLayout>

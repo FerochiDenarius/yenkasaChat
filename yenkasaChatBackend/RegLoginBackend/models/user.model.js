@@ -33,7 +33,7 @@ const userSchema = new Schema({
     required: true
   },
 
-  // 🌍 AFRICA-WIDE COUNTRY SUPPORT (Ghana-only active for now)
+  // 🌍 AFRICA-WIDE COUNTRY SUPPORT
   country: {
     type: String,
     enum: [
@@ -53,7 +53,7 @@ const userSchema = new Schema({
   location: { type: String, default: '' },
   community: { type: Schema.Types.ObjectId, ref: 'Community', default: null },
 
-  // 👥 Joined communities (multi-membership)
+  // 👥 Joined communities
   joinedCommunities: [{
     type: Schema.Types.ObjectId,
     ref: 'Community'
@@ -61,14 +61,28 @@ const userSchema = new Schema({
 
   verified: { type: Boolean, default: false },
 
+  // ===============================
   // 🧍‍♂️ Profile fields
+  // ===============================
   profileImage: { type: String, default: '' },
   bio: { type: String, default: '' },
+
+  // 🆕 Gender
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other', 'prefer_not_to_say', ''],
+    default: ''
+  },
+
+  // 🆕 Date of Birth
+  dateOfBirth: {
+    type: String, // "YYYY-MM-DD"
+    default: ''
+  },
 
   // ===============================
   // ROLE FIELDS
   // ===============================
-
   role: {
     type: Schema.Types.ObjectId,
     ref: 'Permission',
@@ -82,19 +96,15 @@ const userSchema = new Schema({
 
   // ===============================
 
-  // 🕓 Suspension
   suspendedUntil: { type: Date, default: null },
 
-  // 🧑‍🤝‍🧑 Social graph
   followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   followersCount: { type: Number, default: 0 },
   followingCount: { type: Number, default: 0 },
 
-  // 💰 Yenkasa coins
   coinsBalance: { type: Number, default: 0 },
 
-  // 🪙 Wallet system
   walletId: {
     type: String,
     unique: true,
@@ -102,7 +112,6 @@ const userSchema = new Schema({
       `YKC-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
   },
 
-  // 🧾 Verification
   verificationPhase: {
     type: String,
     enum: ['promotion', 'standard', 'growth'],
@@ -111,14 +120,11 @@ const userSchema = new Schema({
   verificationBanner: { type: String, default: null },
   verificationScore: { type: Number, default: 0 },
 
-  // 🔒 Auth fields
   refreshToken: { type: String },
 
-  // 🕓 Online status
   online: { type: Boolean, default: false },
   lastSeen: { type: Date, default: Date.now },
 
-  // Verification fields
   emailVerified: { type: Boolean, default: false },
   phoneVerified: { type: Boolean, default: false },
   verificationCode: String,
@@ -130,28 +136,8 @@ const userSchema = new Schema({
   passwordResetToken: String,
   passwordResetExpires: Date,
 
-  // 🔔 Push notifications
   playerId: { type: String, default: null }
 
 }, { timestamps: true });
-
-
-// ===============================
-// METHODS
-// ===============================
-
-userSchema.methods.localCommunityId = function() {
-  return this.community;
-};
-
-userSchema.methods.additionalCommunities = function() {
-  return this.joinedCommunities.filter(
-    c => c.toString() !== this.community?.toString()
-  );
-};
-
-userSchema.methods.canJoinMoreCommunities = function() {
-  return this.joinedCommunities.length < 3;
-};
 
 module.exports = mongoose.model('User', userSchema);

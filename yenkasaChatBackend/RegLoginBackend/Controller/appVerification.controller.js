@@ -1,31 +1,40 @@
 // controllers/appVerification.controller.js
-const AppVerification = require('../models/appverification.model');
-const User = require('../models/user.model');
+const AppVerification = require("../models/appverification.model");
+const User = require("../models/user.model");
 
-// ✅ Get user's verification dashboard
+// ===============================
+// GET DASHBOARD
+// ===============================
 exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId).select('verified emailVerified phoneVerified createdAt');
-    let appVerification = await AppVerification.findOne({ userId });
+    const user = await User.findById(userId).select(
+      "verified emailVerified phoneVerified createdAt role"
+    );
 
+    let appVerification = await AppVerification.findOne({ userId });
     if (!appVerification) {
       appVerification = new AppVerification({ userId });
       await appVerification.save();
     }
 
     await appVerification.updateAccountAge(user.createdAt);
+
     const requirements = appVerification.getCurrentRequirements();
     const progress = appVerification.checkRequirementsMet();
     const now = new Date();
-    const daysRemaining = Math.ceil((appVerification.phaseEndDate - now) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.ceil(
+      (appVerification.phaseEndDate - now) / (1000 * 60 * 60 * 24)
+    );
 
-    res.json({
+    return res.json({
       detailsVerification: {
         email: user.emailVerified || false,
         phone: user.phoneVerified || false,
-        basicPostingEnabled: user.verified || false
+        basicPostingEnabled: user.verified || false,
+        userRole: user.role,
       },
+
       appVerification: {
         currentPhase: appVerification.currentPhase,
         hasVerifiedBanner: appVerification.hasVerifiedBanner,
@@ -33,18 +42,20 @@ exports.getDashboard = async (req, res) => {
         phaseEndDate: appVerification.phaseEndDate,
         daysRemaining: Math.max(0, daysRemaining),
         requirements,
-        currentMetrics: appVerification.metrics,
+        currentMetrics: appVerification.metrics, // now includes ALL metrics
         progress,
-        phaseHistory: appVerification.phaseHistory
-      }
+        phaseHistory: appVerification.phaseHistory,
+      },
     });
   } catch (err) {
-    console.error('❌ Failed to fetch verification dashboard:', err);
-    res.status(500).json({ error: 'Failed to fetch verification dashboard' });
+    console.error("❌ Failed to fetch verification dashboard:", err);
+    return res.status(500).json({ error: "Failed to fetch verification dashboard" });
   }
 };
 
-// ✅ Track daily login
+// ===============================
+// TRACK LOGIN
+// ===============================
 exports.trackLogin = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -57,18 +68,20 @@ exports.trackLogin = async (req, res) => {
 
     const wasNewDay = await appVerification.trackLogin();
 
-    res.json({
+    return res.json({
       success: true,
       newDayLogged: wasNewDay,
-      dailyLogins: appVerification.metrics.dailyLogins
+      dailyLogins: appVerification.metrics.dailyLogins,
     });
   } catch (err) {
-    console.error('❌ Failed to track login:', err);
-    res.status(500).json({ error: 'Failed to track login' });
+    console.error("❌ Failed to track login:", err);
+    return res.status(500).json({ error: "Failed to track login" });
   }
 };
 
-// ✅ Track ad view
+// ===============================
+// TRACK AD VIEW
+// ===============================
 exports.trackAdView = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -81,112 +94,77 @@ exports.trackAdView = async (req, res) => {
 
     await appVerification.trackAdView();
 
-    res.json({
+    return res.json({
       success: true,
-      adsViewed: appVerification.metrics.adsViewed
+      adsViewed: appVerification.metrics.adsViewed,
     });
   } catch (err) {
-    console.error('❌ Failed to track ad view:', err);
-    res.status(500).json({ error: 'Failed to track ad view' });
+    console.error("❌ Failed to track ad view:", err);
+    return res.status(500).json({ error: "Failed to track ad view" });
   }
 };
 
-// ✅ Check and advance phase
-exports.checkPhaseAdvancement = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    let appVerification = await AppVerification.findOne({ userId });
-
-    if (!appVerification) {
-      return res.status(404).json({ error: 'Verification record not found' });
-    }
-
-    await appVerification.updateAccountAge(user.createdAt);
-    const now = new Date();
-    const phaseEnded = now >= appVerification.phaseEndDate;
-
-    if (!phaseEnded) {
-      return res.status(400).json({
-        error: 'Phase period not yet complete',
-        daysRemaining: Math.ceil((appVerification.phaseEndDate - now) / (1000 * 60 * 60 * 24))
-      });
-    }
-
-    const progress = appVerification.checkRequirementsMet();
-
-    if (progress.allMet) {
-      const advanced = await appVerification.advancePhase();
-      if (advanced) {
-        user.verificationPhase = appVerification.currentPhase === 2 ? 'standard'
-          : appVerification.currentPhase >= 4 ? 'growth'
-          : 'promotion';
-        await user.save();
-
-        return res.json({
-          success: true,
-          message: `Congratulations! You've advanced to Phase ${appVerification.currentPhase}!`,
-          newPhase: appVerification.currentPhase,
-          hasVerifiedBanner: true,
-          nextRequirements: appVerification.getCurrentRequirements()
-        });
-      } else {
-        return res.json({
-          success: true,
-          message: 'You have completed all verification phases!',
-          phase: appVerification.currentPhase
-        });
-      }
-    } else {
-      return res.status(400).json({
-        error: 'Requirements not met for phase advancement',
-        progress,
-        requirements: appVerification.getCurrentRequirements()
-      });
-    }
-  } catch (err) {
-    console.error('❌ Failed to check phase advancement:', err);
-    res.status(500).json({ error: 'Failed to check phase advancement' });
-  }
-};
-
-// ✅ Update metrics
+// ===============================
+// UPDATE METRIC (comment/follower/like)
+// ===============================
 exports.updateMetrics = async (req, res) => {
   try {
     const userId = req.user.id;
     const { type, value } = req.body;
-    let appVerification = await AppVerification.findOne({ userId });
 
+    let appVerification = await AppVerification.findOne({ userId });
     if (!appVerification) {
       appVerification = new AppVerification({ userId });
       await appVerification.save();
     }
 
     switch (type) {
-      case 'comment':
+      case "comment":
         appVerification.metrics.totalComments += 1;
         break;
-      case 'follower':
-        appVerification.metrics.totalFollowers += (value || 1);
+
+      case "follower":
+        appVerification.metrics.totalFollowers += value || 1;
         break;
-      case 'maxLikes':
+
+      case "maxLikes":
         if (value > appVerification.metrics.maxLikesOnPost) {
           appVerification.metrics.maxLikesOnPost = value;
         }
         break;
+
+      // NEW — FULL METRICS SUPPORT
+      case "postCreated":
+        appVerification.metrics.postsCreated += 1;
+        break;
+
+      case "viewReceived":
+        appVerification.metrics.viewsReceived += 1;
+        break;
+
+      case "replyReceived":
+        appVerification.metrics.repliesReceived += 1;
+        break;
+
       default:
-        return res.status(400).json({ error: 'Invalid metric type' });
+        return res.status(400).json({ error: "Invalid metric type" });
     }
 
     await appVerification.save();
-    res.json({ success: true, metrics: appVerification.metrics });
+
+    return res.json({
+      success: true,
+      metrics: appVerification.metrics,
+    });
   } catch (err) {
-    console.error('❌ Failed to update metrics:', err);
-    res.status(500).json({ error: 'Failed to update metrics' });
+    console.error("❌ Failed to update metrics:", err);
+    return res.status(500).json({ error: "Failed to update metrics" });
   }
 };
 
-// ✅ Get verification progress percentage
+// ===============================
+// GET PROGRESS SUMMARY
+// ===============================
 exports.getProgress = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -199,32 +177,6 @@ exports.getProgress = async (req, res) => {
 
     await appVerification.updateAccountAge(user.createdAt);
 
-    // =====================================================
-// 🔥 ROLE PROMOTION LOGIC
-// =====================================================
-const accountAgeDays = appVerification.metrics.accountAge;
-const dailyLogins = appVerification.metrics.dailyLogins;
-
-// 1️⃣ Verified → Admin (90 days + 90 daily logins)
-if (user.role === "verified") {
-  if (accountAgeDays >= 90 && dailyLogins >= 90) {
-    user.role = "admin";
-    await user.save();
-    console.log(`🌟 PROMOTION: ${user.username} → ADMIN`);
-  }
-}
-
-// 2️⃣ Admin → Moderator (162 days + 162 daily logins)
-// 162 = 90 × 1.8
-if (user.role === "admin") {
-  const required = Math.floor(90 * 1.8); // = 162
-  if (accountAgeDays >= required && dailyLogins >= required) {
-    user.role = "moderator";
-    await user.save();
-    console.log(`🚀 PROMOTION: ${user.username} → MODERATOR`);
-  }
-}
-
     const requirements = appVerification.getCurrentRequirements();
     const metrics = appVerification.metrics;
 
@@ -234,20 +186,21 @@ if (user.role === "admin") {
       followers: Math.min(100, (metrics.totalFollowers / requirements.followers) * 100),
       maxLikes: Math.min(100, (metrics.maxLikesOnPost / requirements.maxLikes) * 100),
       dailyLogins: Math.min(100, (metrics.dailyLogins / requirements.dailyLogins) * 100),
-      adsViewed: Math.min(100, (metrics.adsViewed / requirements.adsViewed) * 100)
+      adsViewed: Math.min(100, (metrics.adsViewed / requirements.adsViewed) * 100),
     };
 
-    const overallProgress = Object.values(percentages).reduce((a, b) => a + b, 0) / 6;
+    const overallProgress =
+      Object.values(percentages).reduce((a, b) => a + b, 0) / Object.keys(percentages).length;
 
-    res.json({
+    return res.json({
       phase: appVerification.currentPhase,
       overallProgress: Math.round(overallProgress),
       detailedProgress: percentages,
       requirements,
-      currentMetrics: metrics
+      currentMetrics: metrics,
     });
   } catch (err) {
-    console.error('❌ Failed to fetch progress:', err);
-    res.status(500).json({ error: 'Failed to fetch progress' });
+    console.error("❌ Failed to fetch progress:", err);
+    return res.status(500).json({ error: "Failed to fetch progress" });
   }
 };

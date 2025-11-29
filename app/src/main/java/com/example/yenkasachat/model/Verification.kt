@@ -1,31 +1,56 @@
-// app/src/main/java/com/example/yenkasachat/model/Verification.kt
 package com.example.yenkasachat.model
 
+// ===============================
+// MAIN DASHBOARD RESPONSE MODEL
+// ===============================
 data class VerificationDashboard(
     val detailsVerification: DetailsVerification,
     val appVerification: AppVerification,
-    val userRole: String? = null, // ✅ Added: Role information (admin, moderator, developer, user)
-    val developerOverride: Boolean? = false // ✅ Added: Developer bypass flag for UI logic
+
+    // Explicit role (fallback from backend)
+    val userRole: String? = null,
+
+    // Developer bypass flag
+    val developerOverride: Boolean? = false,
+
+    // NEW — full user performance metrics (optional)
+    val performanceMetrics: UserPerformanceMetrics? = null
 )
 
+
+// ===============================
+// DETAILS VERIFICATION
+// ===============================
 data class DetailsVerification(
     val email: Boolean,
     val phone: Boolean,
-    val basicPostingEnabled: Boolean
+    val basicPostingEnabled: Boolean,
+
+    // NEW: backend includes the user's role
+    val userRole: String? = null
 )
 
+
+// ===============================
+// APP VERIFICATION CORE
+// ===============================
 data class AppVerification(
     val currentPhase: Int,
     val hasVerifiedBanner: Boolean,
-    val phaseStartDate: String,
-    val phaseEndDate: String,
+    val phaseStartDate: String? = null,
+    val phaseEndDate: String? = null,
     val daysRemaining: Int,
+
     val requirements: VerificationRequirements,
     val currentMetrics: VerificationMetrics,
     val progress: VerificationProgress,
     val phaseHistory: List<PhaseHistory>
 )
 
+
+// ===============================
+// REQUIREMENTS MODEL
+// ===============================
 data class VerificationRequirements(
     val accountAge: Int,
     val comments: Int,
@@ -33,18 +58,41 @@ data class VerificationRequirements(
     val maxLikes: Int,
     val dailyLogins: Int,
     val adsViewed: Int,
-    val roleMultiplier: Float? = 1.0f // ✅ Added: Used if backend scales requirements (e.g., moderator ×1.8)
+
+    // Optional scalability for moderator/admin/developer
+    val roleMultiplier: Float? = 1.0f
 )
 
+
+// ===============================
+// UPDATED METRICS (BACKEND V2)
+// ===============================
 data class VerificationMetrics(
+
+    // --- Original metrics ---
     val accountAge: Int,
     val totalComments: Int,
     val totalFollowers: Int,
     val maxLikesOnPost: Int,
     val dailyLogins: Int,
-    val adsViewed: Int
+    val adsViewed: Int,
+
+    // --- NEW BE metrics ---
+    val postsCreated: Int? = 0,
+    val viewsReceived: Int? = 0,
+    val repliesReceived: Int? = 0,
+
+    // --- Performance metrics from getUserPerformanceMetrics ---
+    val likesReceived: Int? = 0,
+    val commentsReceived: Int? = 0,
+    val commentLikesReceived: Int? = 0,
+    val totalShares: Int? = 0
 )
 
+
+// ===============================
+// PROGRESS MODEL
+// ===============================
 data class VerificationProgress(
     val accountAge: Boolean,
     val comments: Boolean,
@@ -52,26 +100,59 @@ data class VerificationProgress(
     val maxLikes: Boolean,
     val dailyLogins: Boolean,
     val adsViewed: Boolean,
+
+    // Whether all requirements have been completed
     val allMet: Boolean
 )
 
-data class PhaseHistory(
-    val phase: Int,
-    val achievedAt: String,
-    val bannerAwarded: Boolean
+
+// ===============================
+// USER PERFORMANCE METRICS
+// ===============================
+data class UserPerformanceMetrics(
+    val followers: Int = 0,
+    val postsCreated: Int = 0,
+    val likesReceived: Int = 0,
+    val viewsReceived: Int = 0,
+    val commentsReceived: Int = 0,
+    val repliesReceived: Int = 0,
+    val commentLikesReceived: Int = 0,
+    val totalShares: Int = 0
 )
 
+
+// ===============================
+// PHASE HISTORY ITEM
+// ===============================
+data class PhaseHistory(
+    val phase: Int,
+    val startedAt: String? = null,
+    val endedAt: String? = null,
+    val completed: Boolean = false
+)
+
+// ===============================
+// TRACK LOGIN RESPONSE
+// ===============================
 data class TrackLoginResponse(
     val success: Boolean,
     val newDayLogged: Boolean,
     val dailyLogins: Int
 )
 
+
+// ===============================
+// TRACK AD VIEW RESPONSE
+// ===============================
 data class TrackAdViewResponse(
     val success: Boolean,
     val adsViewed: Int
 )
 
+
+// ===============================
+// VERIFICATION PROGRESS RESPONSE
+// ===============================
 data class VerificationProgressResponse(
     val phase: Int,
     val overallProgress: Int,
@@ -89,6 +170,10 @@ data class DetailedProgress(
     val adsViewed: Float
 )
 
+
+// ===============================
+// PHASE ADVANCEMENT RESPONSE
+// ===============================
 data class PhaseAdvancementResponse(
     val success: Boolean,
     val message: String,
@@ -97,12 +182,4 @@ data class PhaseAdvancementResponse(
     val nextRequirements: VerificationRequirements? = null,
     val error: String? = null,
     val daysRemaining: Int? = null
-)
-
-// ✅ Added optional role-based verification model (non-breaking)
-data class RoleVerificationProfile(
-    val roleName: String,
-    val baseRequirements: VerificationRequirements,
-    val effectiveRequirements: VerificationRequirements,
-    val canBypassRules: Boolean = false
 )

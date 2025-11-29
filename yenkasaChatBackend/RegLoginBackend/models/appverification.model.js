@@ -1,192 +1,184 @@
-// models/appverification.model.js - PHASED VERIFICATION SYSTEM
-const mongoose = require('mongoose');
+// models/appverification.model.js
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const appVerificationSchema = new Schema({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    unique: true,
-    index: true
-  },
-  
-  // Current verification phase (1-6)
-  currentPhase: {
-    type: Number,
-    default: 1,
-    min: 1,
-    max: 6
-  },
-  
-  // Phase start date
-  phaseStartDate: {
-    type: Date,
-    default: Date.now
-  },
-  
-  // Phase end date (30 days from start)
-  phaseEndDate: {
-    type: Date,
-    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-  },
-  
-  // Verification banner status
-  hasVerifiedBanner: {
-    type: Boolean,
-    default: false
-  },
-  
-  // Progress metrics
-  metrics: {
-    // Account age in days
-    accountAge: {
-      type: Number,
-      default: 0
+const appVerificationSchema = new Schema(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+      index: true,
     },
-    
-    // Total comments made
-    totalComments: {
-      type: Number,
-      default: 0
-    },
-    
-    // Total followers
-    totalFollowers: {
-      type: Number,
-      default: 0
-    },
-    
-    // Maximum likes received on a single post
-    maxLikesOnPost: {
-      type: Number,
-      default: 0
-    },
-    
-    // Daily login count (for current phase)
-    dailyLogins: {
-      type: Number,
-      default: 0
-    },
-    
-    // Ads viewed count (for current phase)
-    adsViewed: {
-      type: Number,
-      default: 0
-    }
-  },
-  
-  // Phase history
-  phaseHistory: [{
-    phase: Number,
-    achievedAt: Date,
-    bannerAwarded: Boolean
-  }],
-  
-  // Last login date (to track daily logins)
-  lastLoginDate: {
-    type: Date,
-    default: null
-  },
-  
-  // Verification status
-  isActivelyVerifying: {
-    type: Boolean,
-    default: true
-  }
-  
-}, { timestamps: true });
 
-// Calculate phase multiplier
-appVerificationSchema.methods.getPhaseMultiplier = function() {
+    // ------------------------------
+    // VERIFICATION PHASE SYSTEM
+    // ------------------------------
+    currentPhase: { type: Number, default: 1, min: 1, max: 6 },
+
+    phaseStartDate: { type: Date, default: Date.now },
+    phaseEndDate: {
+      type: Date,
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+
+    hasVerifiedBanner: { type: Boolean, default: false },
+
+    // ------------------------------
+    // PHASE METRICS (Existing)
+    // ------------------------------
+    metrics: {
+      // Existing
+      accountAge: { type: Number, default: 0 }, // days
+      totalComments: { type: Number, default: 0 }, // user-made comments
+      totalFollowers: { type: Number, default: 0 },
+      maxLikesOnPost: { type: Number, default: 0 },
+      dailyLogins: { type: Number, default: 0 },
+      adsViewed: { type: Number, default: 0 },
+
+      // ------------------------------
+      // NEW — STORED PERFORMANCE METRICS
+      // ------------------------------
+
+      // Posts created
+      postsCreated: { type: Number, default: 0 },
+
+      // Total likes received (sum across all posts)
+      totalLikesReceived: { type: Number, default: 0 },
+
+      // Total views received on posts
+      totalViewsReceived: { type: Number, default: 0 },
+
+      // Total comments received on posts
+      totalCommentsReceived: { type: Number, default: 0 },
+
+      // Total replies received (comments on comments)
+      totalRepliesReceived: { type: Number, default: 0 },
+
+      // Likes received on comments
+      commentLikesReceived: { type: Number, default: 0 },
+
+      // Post shares (future expansion)
+      totalShares: { type: Number, default: 0 },
+    },
+
+    // ------------------------------
+    // HISTORY
+    // ------------------------------
+    phaseHistory: [
+      {
+        phase: Number,
+        achievedAt: Date,
+        bannerAwarded: Boolean,
+      },
+    ],
+
+    // ------------------------------
+    // LOGIN + VERIFICATION STATUS
+    // ------------------------------
+    lastLoginDate: { type: Date, default: null },
+    isActivelyVerifying: { type: Boolean, default: true },
+  },
+
+  { timestamps: true }
+);
+
+
+
+// ========================================================================
+// EXISTING METHODS (unchanged but now act on expanded metrics)
+// ========================================================================
+
+// PHASE MULTIPLIER
+appVerificationSchema.methods.getPhaseMultiplier = function () {
   const multipliers = {
     1: 1.0,
     2: 1.5,
     3: 3.0,
     4: 4.5,
     5: 6.0,
-    6: 7.5
+    6: 7.5,
   };
   return multipliers[this.currentPhase] || 1.0;
 };
 
-// Get requirements for current phase
-appVerificationSchema.methods.getCurrentRequirements = function() {
-  const baseRequirements = {
-    accountAge: 21, // 3 weeks in days
+// REQUIREMENTS
+appVerificationSchema.methods.getCurrentRequirements = function () {
+  const base = {
+    accountAge: 21,
     comments: 30,
     followers: 100,
     maxLikes: 30,
     dailyLogins: 30,
-    adsViewed: 100
+    adsViewed: 100,
   };
-  
-  const multiplier = this.getPhaseMultiplier();
-  
+
+  const mult = this.getPhaseMultiplier();
+
   return {
-    accountAge: baseRequirements.accountAge,
-    comments: Math.floor(baseRequirements.comments * multiplier),
-    followers: Math.floor(baseRequirements.followers * multiplier),
-    maxLikes: Math.floor(baseRequirements.maxLikes * multiplier),
-    dailyLogins: Math.floor(baseRequirements.dailyLogins * multiplier),
-    adsViewed: Math.floor(baseRequirements.adsViewed * multiplier)
+    accountAge: base.accountAge,
+    comments: Math.floor(base.comments * mult),
+    followers: Math.floor(base.followers * mult),
+    maxLikes: Math.floor(base.maxLikes * mult),
+    dailyLogins: Math.floor(base.dailyLogins * mult),
+    adsViewed: Math.floor(base.adsViewed * mult),
   };
 };
 
-// Check if all requirements are met
-appVerificationSchema.methods.checkRequirementsMet = function() {
-  const requirements = this.getCurrentRequirements();
-  const metrics = this.metrics;
-  
+// CHECK REQUIREMENTS
+appVerificationSchema.methods.checkRequirementsMet = function () {
+  const req = this.getCurrentRequirements();
+  const m = this.metrics;
+
   return {
-    accountAge: metrics.accountAge >= requirements.accountAge,
-    comments: metrics.totalComments >= requirements.comments,
-    followers: metrics.totalFollowers >= requirements.followers,
-    maxLikes: metrics.maxLikesOnPost >= requirements.maxLikes,
-    dailyLogins: metrics.dailyLogins >= requirements.dailyLogins,
-    adsViewed: metrics.adsViewed >= requirements.adsViewed,
-    allMet: 
-      metrics.accountAge >= requirements.accountAge &&
-      metrics.totalComments >= requirements.comments &&
-      metrics.totalFollowers >= requirements.followers &&
-      metrics.maxLikesOnPost >= requirements.maxLikes &&
-      metrics.dailyLogins >= requirements.dailyLogins &&
-      metrics.adsViewed >= requirements.adsViewed
+    accountAge: m.accountAge >= req.accountAge,
+    comments: m.totalComments >= req.comments,
+    followers: m.totalFollowers >= req.followers,
+    maxLikes: m.maxLikesOnPost >= req.maxLikes,
+    dailyLogins: m.dailyLogins >= req.dailyLogins,
+    adsViewed: m.adsViewed >= req.adsViewed,
+    allMet:
+      m.accountAge >= req.accountAge &&
+      m.totalComments >= req.comments &&
+      m.totalFollowers >= req.followers &&
+      m.maxLikesOnPost >= req.maxLikes &&
+      m.dailyLogins >= req.dailyLogins &&
+      m.adsViewed >= req.adsViewed,
   };
 };
 
-// Advance to next phase
-appVerificationSchema.methods.advancePhase = async function() {
+// ADVANCE PHASE
+appVerificationSchema.methods.advancePhase = async function () {
   if (this.currentPhase < 6) {
-    // Record achievement
     this.phaseHistory.push({
       phase: this.currentPhase,
       achievedAt: new Date(),
-      bannerAwarded: true
+      bannerAwarded: true,
     });
-    
-    // Move to next phase
+
     this.currentPhase += 1;
     this.hasVerifiedBanner = true;
     this.phaseStartDate = new Date();
     this.phaseEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    
-    // Reset monthly metrics
+
+    // Reset only phase-specific metrics
     this.metrics.dailyLogins = 0;
     this.metrics.adsViewed = 0;
-    
+
     await this.save();
     return true;
   }
-  return false; // Already at max phase
+  return false;
 };
 
-// Track daily login
-appVerificationSchema.methods.trackLogin = async function() {
+// TRACK LOGIN
+appVerificationSchema.methods.trackLogin = async function () {
   const today = new Date().setHours(0, 0, 0, 0);
-  const lastLogin = this.lastLoginDate ? this.lastLoginDate.setHours(0, 0, 0, 0) : null;
-  
-  // Only count if it's a different day
+  const lastLogin = this.lastLoginDate
+    ? this.lastLoginDate.setHours(0, 0, 0, 0)
+    : null;
+
   if (!lastLogin || today !== lastLogin) {
     this.metrics.dailyLogins += 1;
     this.lastLoginDate = new Date();
@@ -196,20 +188,20 @@ appVerificationSchema.methods.trackLogin = async function() {
   return false;
 };
 
-// Track ad view
-appVerificationSchema.methods.trackAdView = async function() {
+// TRACK AD
+appVerificationSchema.methods.trackAdView = async function () {
   this.metrics.adsViewed += 1;
   await this.save();
 };
 
-// Update account age
-appVerificationSchema.methods.updateAccountAge = async function(userCreatedAt) {
+// UPDATE ACCOUNT AGE
+appVerificationSchema.methods.updateAccountAge = async function (createdAt) {
   const now = new Date();
-  const created = new Date(userCreatedAt);
-  const ageInDays = Math.floor((now - created) / (1000 * 60 * 60 * 24));
-  this.metrics.accountAge = ageInDays;
+  const created = new Date(createdAt);
+  this.metrics.accountAge = Math.floor(
+    (now - created) / (1000 * 60 * 60 * 24)
+  );
   await this.save();
 };
 
-const AppVerification = mongoose.model('AppVerification', appVerificationSchema);
-module.exports = AppVerification;
+module.exports = mongoose.model("AppVerification", appVerificationSchema);

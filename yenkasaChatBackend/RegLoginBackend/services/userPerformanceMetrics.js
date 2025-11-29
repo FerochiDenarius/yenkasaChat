@@ -1,4 +1,3 @@
-// services/userPerformanceMetrics.js
 const Post = require('../models/post.model');
 const Comment = require('../models/comment.model');
 const Follow = require('../models/follow.model');
@@ -6,22 +5,21 @@ const View = require('../models/view.model');
 
 module.exports.getUserPerformanceMetrics = async function(userId) {
   try {
-    // 1️⃣ Followers Count
+    // Followers Count
     const followers = await Follow.getFollowersCount(userId);
 
-    // 2️⃣ Posts Created
+    // Posts Created
     const postsCreated = await Post.countDocuments({ userId });
 
-    // 3️⃣ Likes Received on Posts
+    // Likes Received on Posts
     const likesAgg = await Post.aggregate([
       { $match: { userId } },
       { $group: { _id: null, total: { $sum: "$likeCount" }}}
     ]);
     const likesReceived = likesAgg[0]?.total || 0;
 
-    // 4️⃣ Views Received on Posts
+    // Views Received on Posts
     const viewsAgg = await View.aggregate([
-      { $match: { userId } }, // viewer ID is userId
       { $lookup: {
           from: "posts",
           localField: "postId",
@@ -34,7 +32,7 @@ module.exports.getUserPerformanceMetrics = async function(userId) {
     ]);
     const viewsReceived = viewsAgg[0]?.total || 0;
 
-    // 5️⃣ Comments Received on User’s Posts
+    // Comments RECEIVED on Posts
     const commentsReceivedAgg = await Comment.aggregate([
       { $lookup: {
           from: "posts",
@@ -48,11 +46,26 @@ module.exports.getUserPerformanceMetrics = async function(userId) {
     ]);
     const commentsReceived = commentsReceivedAgg[0]?.total || 0;
 
-    // 6️⃣ Replies Received (comments on comments)
+    // Replies RECEIVED (comments on comments)
     const repliesReceived = await Comment.countDocuments({
       parentCommentId: { $ne: null },
-      userId: { $ne: userId }  // replies from other users
+      userId: { $ne: userId }
     });
+
+    // Likes RECEIVED on Comments
+    const commentLikesAgg = await Comment.aggregate([
+      { $match: { userId } },
+      { $group: { _id: null, total: { $sum: "$likeCount" }}}
+    ]);
+    const commentLikesReceived = commentLikesAgg[0]?.total || 0;
+
+    // Shares (if exists)
+    // NOTE: Add this only if post schema has shareCount
+    const shareAgg = await Post.aggregate([
+      { $match: { userId } },
+      { $group: { _id: null, total: { $sum: "$shareCount" }}}
+    ]).catch(() => []);
+    const totalShares = shareAgg[0]?.total || 0;
 
     return {
       followers,
@@ -60,7 +73,9 @@ module.exports.getUserPerformanceMetrics = async function(userId) {
       likesReceived,
       viewsReceived,
       commentsReceived,
-      repliesReceived
+      repliesReceived,
+      commentLikesReceived,
+      totalShares
     };
 
   } catch (err) {
@@ -71,7 +86,9 @@ module.exports.getUserPerformanceMetrics = async function(userId) {
       likesReceived: 0,
       viewsReceived: 0,
       commentsReceived: 0,
-      repliesReceived: 0
+      repliesReceived: 0,
+      commentLikesReceived: 0,
+      totalShares: 0
     };
   }
 };

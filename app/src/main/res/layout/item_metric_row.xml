@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:layout_marginBottom="20dp"
+    android:background="@drawable/bg_metric_item"
+    android:elevation="6dp">
+
+    <!-- ICON -->
+    <FrameLayout
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/bg_icon_circle">
+
+        <ImageView
+            android:id="@+id/iconMetric"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            app:tint="@android:color/white"
+            android:src="@drawable/ic_metric_placeholder" />
+    </FrameLayout>
+
+    <!-- TEXT -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="14dp">
+
+        <TextView
+            android:id="@+id/textMetricValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="32.5k"
+            android:textStyle="bold"
+            android:textColor="@color/dark_almost"
+            android:textSize="22sp"/>
+
+        <TextView
+            android:id="@+id/textMetricLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Number of people liked this post"
+            android:textColor="#4A4A4A"
+            android:textSize="14sp"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+
+</LinearLayout>

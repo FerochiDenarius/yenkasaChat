@@ -27,12 +27,13 @@
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
-        android:icon="@mipmap/yc"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="YenkasaChat"
-        android:roundIcon="@mipmap/yc"
         android:supportsRtl="true"
         android:theme="@style/Theme.YenkasaChat"
         android:networkSecurityConfig="@xml/network_security_config">
+
 
         <service
             android:name="com.pusher.pushnotifications.fcm.MessagingService"

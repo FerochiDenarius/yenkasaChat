@@ -10,139 +10,118 @@ const SUPPLY_ID = 'YENKASA_SUPPLY';
 
 async function reward(toUserId, amount, opts = {}) {
   try {
-    console.log('⚙️ [RewardService] Starting reward...', { toUserId, amount, opts });
+    console.log('⚙️ [Reward] Begin →', { toUserId, amount, opts });
 
     if (!toUserId || !amount || Number(amount) <= 0) {
-      console.warn('⚠️ reward: invalid args', { toUserId, amount });
+      console.warn('⚠️ Invalid reward params', { toUserId, amount });
       return null;
     }
 
-    const {
-      fromUserId = null,
-      type = 'BONUS',
-      description = '',
-      relatedPostId = null,
-      relatedCommentId = null,
-      activityId = null,
-      skipSupplyCheck = false
-    } = opts;
+    // Always generate fallback activityId
+    let activityId = opts.activityId || uuidv4();
 
-    // 1️⃣ Dedupe check
-    if (activityId) {
-      const existing = await CoinTransaction.findOne({ activityId });
-      if (existing) {
-        console.log(`⚠️ [RewardService] Skipped duplicate reward — activityId: ${activityId}`);
-        return null;
-      }
+    // Dedupe check
+    const existing = await CoinTransaction.findOne({ activityId });
+    if (existing) {
+      console.log(`⚠️ Skipped duplicate reward: ${activityId}`);
+      return existing;
     }
 
-    // 2️⃣ Supply check
-    if (!skipSupplyCheck) {
-      await CoinSupply.findByIdAndUpdate(
-        SUPPLY_ID,
-        { $setOnInsert: { totalMinted: 0 } },
-        { upsert: true }
-      );
+    // Ensure supply bucket exists
+    await CoinSupply.findByIdAndUpdate(
+      SUPPLY_ID,
+      { $setOnInsert: { totalMinted: 0 } },
+      { upsert: true }
+    );
 
-      const supplyUpdate = await CoinSupply.findOneAndUpdate(
-        { _id: SUPPLY_ID, totalMinted: { $lte: MAX_SUPPLY - amount } },
-        { $inc: { totalMinted: amount } },
-        { new: true }
-      );
+    // Ensure minting allowed
+    const supply = await CoinSupply.findOneAndUpdate(
+      { _id: SUPPLY_ID, totalMinted: { $lte: MAX_SUPPLY - amount } },
+      { $inc: { totalMinted: amount } },
+      { new: true }
+    );
 
-      if (!supplyUpdate) {
-        console.warn('⚠️ [RewardService] Aborted — insufficient supply');
-        return null;
-      }
-      console.log(`💰 [RewardService] Supply OK → ${amount} minted`);
+    if (!supply) {
+      console.warn('⚠️ Supply exceeded');
+      return null;
     }
 
-    // 3️⃣ Load users
-    const toUser = await User.findById(toUserId).select('username walletId coinsBalance');
+    // Load user
+    const toUser = await User.findById(toUserId).select('username walletId coinsBalance createdAt');
     if (!toUser) {
-      console.warn('⚠️ [RewardService] Aborted — recipient not found', toUserId);
+      console.warn('⚠️ Reward aborted → missing user', toUserId);
       return null;
     }
-    const fromUser = fromUserId ? await User.findById(fromUserId).select('username walletId') : null;
 
-    // 4️⃣ Apply balance update
-    const toBefore = Number(toUser.coinsBalance || 0);
-    toUser.coinsBalance = toBefore + Number(amount);
+    // Determine balances
+    const before = Number(toUser.coinsBalance || 0);
+    const after = before + Number(amount);
+
+    // Apply balance update
+    toUser.coinsBalance = after;
     await toUser.save();
-    console.log(`💸 [RewardService] Updated balance for ${toUser.username}: ${toBefore} → ${toUser.coinsBalance}`);
 
-    // 5️⃣ Create transaction record
-const tx = await CoinTransaction.create({
-  transactionId: uuidv4(),
-  fromUserId: fromUser ? fromUser._id : null,
-  toUserId: toUser._id,
-  fromUsername: fromUser ? fromUser.username : 'System',
-  toUsername: toUser.username,
-  fromWalletId: fromUser ? fromUser.walletId : null,
-  toWalletId: toUser.walletId,
-  amount: Number(amount),
-  type,
-  description: description || `Reward: ${type}`,
-  relatedPostId: relatedPostId || null,
-  relatedCommentId: relatedCommentId || null,
-  activityId: activityId || null,
-  toUserBalanceBefore: toBefore,
-  toUserBalanceAfter: toUser.coinsBalance,
-  status: 'completed',
-});
+    console.log(`💰 Reward applied → User=${toUser.username} | Before=${before} After=${after}`);
 
-console.log(`✅ [RewardService] Transaction complete: ${tx.transactionId} | ${type} | +${amount} → ${toUser.username}`);
+    // Create transaction ALWAYS
+    const tx = await CoinTransaction.create({
+      transactionId: uuidv4(),
+      activityId,
+      type: opts.type || "BONUS",
+      amount: Number(amount),
+      description: opts.description || `Reward granted (${amount})`,
+      toUserId,
+      toUsername: toUser.username,
+      toWalletId: toUser.walletId,
+      fromUserId: opts.fromUserId || null,
+      relatedPostId: opts.relatedPostId || null,
+      relatedCommentId: opts.relatedCommentId || null,
+      toUserBalanceBefore: before,
+      toUserBalanceAfter: after,
+      status: 'completed'
+    });
 
-// 6️⃣ Update verification metrics automatically
-try {
-  const AppVerification = require('../models/appverification.model');
-  const appVer = await AppVerification.findOne({ userId: toUserId });
-  if (appVer) {
-    switch (tx.type) {
-      case 'REWARD_COMMENT':
-      case 'REWARD_COMMENT_LIKE':
-        appVer.metrics.totalComments += 1;
-        break;
+    console.log(`✅ Reward Transaction Saved → ${tx.transactionId}`);
 
-      case 'REWARD_FOLLOW':
-        appVer.metrics.totalFollowers += (opts.value || 1);
-        break;
+    // Auto-update metrics
+    try {
+      const AppVerification = require('../models/appverification.model');
+      const ver = await AppVerification.findOne({ userId: toUserId });
 
-      case 'REWARD_POST_LIKE':
-        if (opts.value && opts.value > appVer.metrics.maxLikesOnPost) {
-          appVer.metrics.maxLikesOnPost = opts.value;
+      if (ver) {
+        switch (tx.type) {
+          case "REWARD_COMMENT":
+            ver.metrics.totalComments += 1;
+            break;
+
+          case "REWARD_COMMENT_LIKE":
+            ver.metrics.totalComments += 0.1; // example
+            break;
+
+          case "REWARD_POST_LIKE":
+            ver.metrics.maxLikesOnPost = Math.max(ver.metrics.maxLikesOnPost, 1);
+            break;
+
+          case "REWARD_DAILY_LOGIN":
+            await ver.trackLogin();
+            break;
+
+          case "REWARD_VIEWS":
+            await ver.trackAdView();
+            break;
         }
-        break;
-
-      case 'REWARD_DAILY_LOGIN':
-        await appVer.trackLogin();
-        break;
-
-      case 'REWARD_VIEWS':
-        await appVer.trackAdView();
-        break;
-
-      case 'REWARD_ACCOUNT_AGE':
-      case 'REWARD_VERIFICATION':
-        await appVer.updateAccountAge(toUser.createdAt);
-        break;
+        await ver.save();
+      }
+    } catch (err) {
+      console.error("⚠️ Metrics update failed:", err.message);
     }
 
-    await appVer.save();
-    console.log(`📝 [AppVerification] Metrics updated for user ${toUser.username} (${tx.type})`);
-  }
-} catch (err) {
-  console.error('❌ [AppVerification] Failed to update metrics:', err);
-}
-
-return tx;
+    return tx;
 
   } catch (err) {
-    console.error('❌ [RewardService] Error:', err);
+    console.error("❌ [Reward Error]:", err);
     return null;
   }
 }
 
-module.exports = {
-  reward
-};
+module.exports = { reward };

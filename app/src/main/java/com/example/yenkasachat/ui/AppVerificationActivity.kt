@@ -142,7 +142,7 @@ class AppVerificationActivity : AppCompatActivity() {
         }
 
         // 2️⃣ FETCH FRESH DASHBOARD
-        ApiClient.apiService.getDashboard()
+        ApiClient.apiService.getDashboard("Bearer ${TokenManager.getToken(this)}")
             .enqueue(object : Callback<VerificationDashboard> {
                 override fun onResponse(
                     call: Call<VerificationDashboard>,
@@ -187,7 +187,7 @@ class AppVerificationActivity : AppCompatActivity() {
     // -------------------------------------------------------------
 
     private fun loadProgress() {
-        ApiClient.apiService.getProgress()
+        ApiClient.apiService.getProgress("Bearer ${TokenManager.getToken(this)}")
             .enqueue(object : Callback<VerificationProgressResponse> {
                 override fun onResponse(
                     call: Call<VerificationProgressResponse>,
@@ -212,7 +212,7 @@ class AppVerificationActivity : AppCompatActivity() {
     // -------------------------------------------------------------
 
     private fun checkPhaseAdvancement() {
-        ApiClient.apiService.checkPhase()
+        ApiClient.apiService.checkPhase("Bearer ${TokenManager.getToken(this)}")
             .enqueue(object : Callback<PhaseAdvancementResponse> {
                 override fun onResponse(
                     call: Call<PhaseAdvancementResponse>,
@@ -234,7 +234,7 @@ class AppVerificationActivity : AppCompatActivity() {
     // -------------------------------------------------------------
 
     private fun trackLoginEvent() {
-        ApiClient.apiService.trackLogin()
+        ApiClient.apiService.trackLogin("Bearer ${TokenManager.getToken(this)}")
             .enqueue(object : Callback<TrackLoginResponse> {
                 override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {}
                 override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {}

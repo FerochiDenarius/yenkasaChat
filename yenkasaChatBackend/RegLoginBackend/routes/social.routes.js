@@ -117,7 +117,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
       return res.status(403).json({
         message: "You cannot interact with this user due to block/privacy settings",
       });
-    }
+    
 
     const alreadyLiked = post.likes.some(id => id.toString() === userId);
 
@@ -139,14 +139,15 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     });
 
     // 🎁 Reward liker
-    if (!alreadyLiked && likedByUser) {
-      await rewardService.reward(userId, REWARD_LIKE, {
-        fromUserId: postOwnerId,
-        type: "REWARD_POST_LIKE",
-        description: `Reward for liking post ${postId}`,
-        relatedPostId: postId,
-        activityId: `like_${postId}_${userId}`
-      });
+await rewardService.reward(userId, REWARD_LIKE, {
+  fromUserId: postOwnerId,
+  type: "REWARD_POST_LIKE",
+  description: `Earned ${REWARD_LIKE} YKC for liking post`,
+  relatedPostId: postId,
+  activityId: `post_like_${postId}_${userId}` // 🔥 CORRECT PATTERN
+});
+
+
     }
 
     // 🔔 SEND NOTIFICATION TO POST OWNER ONLY IF NOT BLOCKED

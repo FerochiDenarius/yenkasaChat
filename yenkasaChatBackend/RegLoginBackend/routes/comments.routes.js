@@ -229,22 +229,23 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
       await comment.addLike(userId);
 
       // Reward liker
-      await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
-        type: "REWARD_COMMENT_LIKE",
-        description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
-        relatedCommentId: comment._id,
-        activityId: `like_comment_${commentId}_${userId}`,
-      });
+    await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
+  type: "REWARD_COMMENT_LIKE",
+  description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
+  relatedCommentId: comment._id,
+  activityId: `comment_like_${commentId}_${userId}` // 🔥 CLEAN, NO COLLISION
+});
+
 
       // Reward comment owner
-      if (commentOwnerId !== userId) {
-        await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
-          fromUserId: userId,
-          type: "REWARD_COMMENT_LIKE",
-          description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
-          relatedCommentId: comment._id,
-          activityId: `receive_like_${commentId}_${userId}`,
-        });
+     await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
+  fromUserId: userId,
+  type: "REWARD_COMMENT_LIKE",
+  description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
+  relatedCommentId: comment._id,
+  activityId: `comment_like_received_${commentId}_${commentOwnerId}_${userId}` 
+});
+
 
         // Notification
         await sendNotification({
@@ -255,7 +256,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
           message: `${liker.username || "Someone"} liked your comment`,
         });
       }
-    }
+    
 
     /* ----------------------------------------------
      * UNLIKE ACTION

@@ -26,8 +26,12 @@ async function isBlocked(userA, userB) {
 
 const REWARD_FOLLOW = 5;
 
+//followc a user.
+
 router.post('/:userId/follow', authMiddleware, async (req, res) => {
   try {
+    const io = req.app.get("io"); // ⭐ FIX HERE
+
     const currentUserId = req.user.id;
     const targetUserId = req.params.userId;
 
@@ -35,11 +39,8 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'You cannot follow yourself' });
     }
 
-    // BLOCK CHECK (this is the ONLY new logic)
     if (await isBlocked(currentUserId, targetUserId)) {
-      return res.status(403).json({
-        error: "Action blocked due to user privacy settings"
-      });
+      return res.status(403).json({ error: "Action blocked due to user privacy settings" });
     }
 
     const [currentUser, targetUser] = await Promise.all([
@@ -49,83 +50,30 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
 
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
-const isAlreadyFollowing = currentUser.following.some(
-  id => id.toString() === targetUserId
-);
+    const isAlreadyFollowing = currentUser.following?.some(
+      id => id.toString() === targetUserId
+    ) || false;
+
     if (isAlreadyFollowing) {
       return res.status(400).json({ error: 'Already following this user' });
     }
 
-    // UPDATE FOLLOW STATE
+    // SAVE FOLLOW
     currentUser.following.push(targetUserId);
     targetUser.followers.push(currentUserId);
     currentUser.followingCount++;
     targetUser.followersCount++;
+
     await currentUser.save();
     await targetUser.save();
 
-    // Reward system
-    const activityId = `follow_${currentUserId}_${targetUserId}`;
-    const rewardTx = await rewardService.reward(currentUserId, REWARD_FOLLOW, {
-      type: "REWARD_FOLLOW",
-      description: `Earned ${REWARD_FOLLOW} YKC for following ${targetUser.username}`,
-      activityId
-    });
-
-    // Emit socket
-    io.emit('feedUpdate', {
-      type: 'newFollow',
-      followerId: currentUserId,
-      followedId: targetUserId,
-      reward: rewardTx,
-      timestamp: new Date(),
-    });
-
-    // ONLY SEND NOTIFICATION IF NOT BLOCKED
-    if (targetUser.oneSignalPlayerId) {
-
-      const notificationData = {
-        app_id: process.env.ONESIGNAL_APP_ID,
-        include_player_ids: [targetUser.oneSignalPlayerId],
-        headings: { en: 'New Follower' },
-        contents: { en: `${currentUser.username} started following you.` },
-        data: { followerId: currentUserId }
-      };
-
-      await fetch('https://onesignal.com/api/v1/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
-        },
-        body: JSON.stringify(notificationData)
-      });
-
-      // ALSO save this notification inside database
-      await sendNotification({
-        type: "follow",
-        senderId: currentUserId,
-        receiverId: targetUserId,
-        activityId,
-        message: `${currentUser.username} started following you.`
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: `You are now following ${targetUser.username}`,
-      isFollowing: true,
-      followersCount: targetUser.followersCount,
-      followingCount: currentUser.followingCount,
-      coinsRewarded: rewardTx ? REWARD_FOLLOW : 0,
-      timestamp: new Date(),
-    });
-
-  } catch (err) {
+     } catch (err) {
     console.error("❌ Failed to follow user:", err);
-    res.status(500).json({ error: "Failed to follow user" });
+    return res.status(500).json({ error: "Failed to follow user" });
   }
-});
+
+  });
+
 
 // ✅ Get user's following
 router.get('/:userId/following', authMiddleware, async (req, res) => {

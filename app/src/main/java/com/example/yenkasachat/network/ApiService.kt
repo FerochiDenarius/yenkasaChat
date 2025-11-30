@@ -507,21 +507,33 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<ViewResponse>
 
+    //verifications calls
 
     @GET("app-verification/dashboard")
-    fun getDashboard(): Call<VerificationDashboard>
+    fun getDashboard(
+        @Header("Authorization") token: String
+    ): Call<VerificationDashboard>
 
     @POST("app-verification/track-login")
-    fun trackLogin(): Call<TrackLoginResponse>
+    fun trackLogin(
+        @Header("Authorization") token: String
+    ): Call<TrackLoginResponse>
 
     @POST("app-verification/track-ad")
-    fun trackAdView(): Call<TrackAdViewResponse>
+    fun trackAdView(
+        @Header("Authorization") token: String
+    ): Call<TrackAdViewResponse>
 
     @GET("app-verification/progress")
-    fun getProgress(): Call<VerificationProgressResponse>
+    fun getProgress(
+        @Header("Authorization") token: String
+    ): Call<VerificationProgressResponse>
 
     @POST("app-verification/check-phase")
-    fun checkPhase(): Call<PhaseAdvancementResponse>
+    fun checkPhase(
+        @Header("Authorization") token: String
+    ): Call<PhaseAdvancementResponse>
+
     // ───────────────────────────────
 // USER PRIVACY
 // ───────────────────────────────
@@ -658,6 +670,8 @@ interface ApiService {
         @Path("postId") postId: String,
         @Header("Authorization") token: String
     ): Call<MediaResponse>
+
+
 
 
 }

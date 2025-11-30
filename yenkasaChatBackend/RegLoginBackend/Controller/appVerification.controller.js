@@ -1,6 +1,8 @@
 // controllers/appVerification.controller.js
 const AppVerification = require("../models/appverification.model");
 const User = require("../models/user.model");
+const auth = require('../middleware/auth');
+
 
 // ===============================
 // GET DASHBOARD
@@ -205,4 +207,28 @@ exports.getProgress = async (req, res) => {
   }
 };
 
-module.exports = router;
+exports.checkPhaseAdvancement = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    let appVerification = await AppVerification.findOne({ userId });
+    if (!appVerification) {
+      appVerification = new AppVerification({ userId });
+      await appVerification.save();
+    }
+
+    const result = await appVerification.checkPhaseAdvancement(); // if your model has this
+    return res.json({
+      success: true,
+      message: "Phase advancement processed",
+      result
+    });
+
+  } catch (err) {
+    console.error("❌ Failed to check phase advancement:", err);
+    return res.status(500).json({ error: "Failed to check phase advancement" });
+  }
+};
+
+
+

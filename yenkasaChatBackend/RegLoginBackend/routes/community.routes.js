@@ -102,7 +102,6 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const { communityId } = req.params;
 
-    // Fetch community
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
@@ -112,25 +111,19 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'This community is pending approval' });
     }
 
-    // Fetch user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Already joined?
-   // Already joined?
-if (user.joinedCommunities.includes(communityId)) {
-  return res.status(400).json({ error: 'Already a member of this community' });
-}
+    if (user.joinedCommunities.includes(communityId)) {
+      return res.status(400).json({ error: 'Already a member of this community' });
+    }
 
-// Already primary?
-if (user.community?.toString() === communityId) {
-  return res.status(400).json({ error: 'This is already your primary community' });
-}
+    if (user.community?.toString() === communityId) {
+      return res.status(400).json({ error: 'This is already your primary community' });
+    }
 
-
-    // Limit: 2 communities
     if (user.joinedCommunities.length >= 2) {
       return res.status(403).json({
         error: 'You can only join up to 2 communities',
@@ -139,11 +132,10 @@ if (user.community?.toString() === communityId) {
     }
 
     // ---- UPDATE USER ----
-  if (!user.joinedCommunities.includes(communityId)) {
-    user.joinedCommunities.push(communityId);
-}
-
-await user.save();
+    if (!user.joinedCommunities.includes(communityId)) {
+      user.joinedCommunities.push(communityId);
+    }
+    await user.save();
 
     // ---- UPDATE COMMUNITY ----
     if (!community.members.includes(userId)) {
@@ -152,6 +144,16 @@ await user.save();
       community.markModified('members');
       await community.save();
     }
+
+    // ⭐ Reward user 5 YKC for joining
+    const activityId = `join_community_${userId}_${communityId}_${Date.now()}`;
+
+    const rewardTx = await rewardService.reward(userId, 5, {
+      type: "REWARD_JOIN_COMMUNITY",
+      description: `Joined community: ${community.displayName}`,
+      relatedCommunityId: communityId,
+      activityId,
+    });
 
     return res.json({
       success: true,
@@ -162,7 +164,11 @@ await user.save();
         displayName: community.displayName,
         memberCount: community.memberCount
       },
-      joinedCommunities: user.joinedCommunities
+      joinedCommunities: user.joinedCommunities,
+      reward: {
+        coins: 5,
+        transaction: rewardTx
+      }
     });
 
   } catch (err) {
@@ -170,6 +176,7 @@ await user.save();
     res.status(500).json({ error: 'Failed to join community' });
   }
 });
+
 // LEAVE COMMUNITY
 router.post('/:id/leave', authMiddleware, async (req, res) => {
   try {
@@ -208,12 +215,16 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
 
     await user.save();
 
+    // ⭐ ADD ACTIVITY ID (no reward)
+    const activityId = `leave_community_${userId}_${communityId}_${Date.now()}`;
+
     return res.json({
       success: true,
       message: 'Left community successfully',
       communityId,
       memberCount: community.memberCount,
-      joinedCommunities: user.joinedCommunities
+      joinedCommunities: user.joinedCommunities,
+      activityId // 👉 included in response
     });
 
   } catch (err) {
@@ -222,18 +233,6 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/public/list', async (req, res) => {
-  try {
-    const communities = await Community.find({ isActive: true, isApproved: true })
-      .sort({ name: 1 })
-      .select('_id name displayName location categories');
-
-    res.json(communities);
-  } catch (err) {
-    console.error("❌ Public community fetch failed:", err);
-    res.status(500).json({ error: "Failed to fetch communities" });
-  }
-});
 
 
 // -----------------------------
@@ -303,32 +302,90 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
   }
 });
 
-// ✅ Reject/Delete community (ADMIN ONLY)
-router.delete('/:communityId', authMiddleware, async (req, res) => {
+// ✅ Approve community (ADMIN ONLY)
+router.post('/:communityId/approve', authMiddleware, async (req, res) => {
   try {
-    // TODO: Add admin check middleware
+    const adminId = req.user.id;
     const { communityId } = req.params;
-    const { reason } = req.body;
-    
+
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
-    
-    // Soft delete - just mark as inactive
+
+    // Prevent double approvals
+    if (community.isApproved) {
+      return res.status(400).json({ error: 'Community already approved' });
+    }
+
+    community.isApproved = true;
+    await community.save();
+
+    // ⭐ Reward community creator (10 YKC)
+    const activityId = `approve_community_${adminId}_${communityId}_${Date.now()}`;
+
+    const rewardTx = await rewardService.reward(community.createdBy, 10, {
+      type: "REWARD_COMMUNITY_APPROVED",
+      description: `Your community '${community.displayName}' was approved`,
+      relatedCommunityId: communityId,
+      activityId,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Community approved successfully',
+      community: {
+        id: community._id,
+        name: community.name,
+        displayName: community.displayName,
+        isApproved: true
+      },
+      reward: {
+        coins: 10,
+        transaction: rewardTx
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Failed to approve community:', err);
+    res.status(500).json({ error: 'Failed to approve community' });
+  }
+});
+
+
+// ✅ Reject/Delete community (ADMIN ONLY)
+router.delete('/:communityId', authMiddleware, async (req, res) => {
+  try {
+    // TODO: Add admin check middleware
+    const adminId = req.user.id;
+    const { communityId } = req.params;
+    const { reason } = req.body;
+
+    const community = await Community.findById(communityId);
+    if (!community) {
+      return res.status(404).json({ error: 'Community not found' });
+    }
+
+    // Soft delete - mark inactive
     community.isActive = false;
     await community.save();
-    
-    res.json({
+
+    // ⭐ Add activity ID for metrics tracking
+    const activityId = `delete_community_${adminId}_${communityId}_${Date.now()}`;
+
+    return res.json({
       success: true,
       message: 'Community deleted successfully',
-      reason: reason || 'No reason provided'
+      reason: reason || 'No reason provided',
+      activityId // ← added here
     });
+
   } catch (err) {
     console.error('❌ Failed to delete community:', err);
     res.status(500).json({ error: 'Failed to delete community' });
   }
 });
+
 
 // ✅ Get communities the user has joined
 // ✅ Get communities the user has joined

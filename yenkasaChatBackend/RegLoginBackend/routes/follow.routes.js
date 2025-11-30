@@ -1,64 +1,62 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user.model');
-const CoinTransaction = require('../models/cointransaction.model');
 const authMiddleware = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
-const fetch = require('node-fetch');
 const rewardService = require('../services/reward.service');
-
-// Place at top
+const { sendNotification } = require('../services/notification.service');
 const UserPrivacy = require("../models/userPrivacy.model");
 
+const REWARD_FOLLOW = 5;
+
+/* ---------------------------------------------------
+ * BLOCK CHECK
+ * --------------------------------------------------- */
 async function isBlocked(userA, userB) {
   const [privacyA, privacyB] = await Promise.all([
     UserPrivacy.findOne({ userId: userA }).lean(),
     UserPrivacy.findOne({ userId: userB }).lean()
   ]);
 
-  const aBlockedB = privacyA?.blockedUsers?.includes(userB);
-  const bBlockedA = privacyB?.blockedUsers?.includes(userA);
-
-  return aBlockedB || bBlockedA;
+  return (
+    privacyA?.blockedUsers?.includes(userB) ||
+    privacyB?.blockedUsers?.includes(userA)
+  );
 }
 
 
-
-const REWARD_FOLLOW = 5;
-
-//followc a user.
-
+/* ---------------------------------------------------
+ * FOLLOW A USER
+ * --------------------------------------------------- */
 router.post('/:userId/follow', authMiddleware, async (req, res) => {
   try {
-    const io = req.app.get("io"); // ⭐ FIX HERE
-
+    const io = req.app.get("io");
     const currentUserId = req.user.id;
     const targetUserId = req.params.userId;
 
-    if (currentUserId === targetUserId) {
-      return res.status(400).json({ error: 'You cannot follow yourself' });
-    }
+    if (currentUserId === targetUserId)
+      return res.status(400).json({ error: "You cannot follow yourself" });
 
+    // privacy block check
     if (await isBlocked(currentUserId, targetUserId)) {
-      return res.status(403).json({ error: "Action blocked due to user privacy settings" });
+      return res.status(403).json({
+        error: "Action blocked due to user privacy settings"
+      });
     }
 
     const [currentUser, targetUser] = await Promise.all([
       User.findById(currentUserId),
-      User.findById(targetUserId),
+      User.findById(targetUserId)
     ]);
 
-    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+    if (!targetUser)
+      return res.status(404).json({ error: "User not found" });
 
-    const isAlreadyFollowing = currentUser.following?.some(
-      id => id.toString() === targetUserId
-    ) || false;
+    // already following?
+    const already = currentUser.following?.some(id => id.toString() === targetUserId);
+    if (already)
+      return res.status(400).json({ error: "Already following this user" });
 
-    if (isAlreadyFollowing) {
-      return res.status(400).json({ error: 'Already following this user' });
-    }
-
-    // SAVE FOLLOW
+    // Save follow state
     currentUser.following.push(targetUserId);
     targetUser.followers.push(currentUserId);
     currentUser.followingCount++;
@@ -67,79 +65,129 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
     await currentUser.save();
     await targetUser.save();
 
-     } catch (err) {
-    console.error("❌ Failed to follow user:", err);
+    /* ---------------------------------------------------
+     * REWARD FOLLOWER (the user who clicks follow)
+     * --------------------------------------------------- */
+    const activityId = `follow_${currentUserId}_${targetUserId}_${Date.now()}`;
+
+    const rewardTx = await rewardService.reward(currentUserId, REWARD_FOLLOW, {
+      type: "REWARD_FOLLOW",
+      description: `Followed ${targetUser.username}`,
+      relatedUserId: targetUserId,
+      activityId
+    });
+
+    /* ---------------------------------------------------
+     * NOTIFICATION TO FOLLOWED USER (if not blocked)
+     * --------------------------------------------------- */
+    if (!(await isBlocked(targetUserId, currentUserId))) {
+      await sendNotification({
+        type: "follow",
+        senderId: currentUserId,
+        receiverId: targetUserId,
+        activityId: `follow_notify_${currentUserId}_${targetUserId}`,
+        message: `${currentUser.username} started following you.`
+      });
+    }
+
+    /* ---------------------------------------------------
+     * SOCKET UPDATE
+     * --------------------------------------------------- */
+    if (io) {
+      io.emit("feedUpdate", {
+        type: "newFollow",
+        followerId: currentUserId,
+        followedId: targetUserId,
+        reward: rewardTx,
+        timestamp: new Date(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `You are now following ${targetUser.username}`,
+      isFollowing: true,
+      followersCount: targetUser.followersCount,
+      followingCount: currentUser.followingCount,
+      coinsRewarded: rewardTx ? REWARD_FOLLOW : 0,
+      timestamp: new Date(),
+    });
+
+  } catch (err) {
+    console.error("❌ Follow error:", err);
     return res.status(500).json({ error: "Failed to follow user" });
   }
+});
 
-  });
 
 
-// ✅ Get user's following
+/* ---------------------------------------------------
+ * GET USER'S FOLLOWING LIST
+ * --------------------------------------------------- */
 router.get('/:userId/following', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 50 } = req.query;
-    const skip = (page - 1) * limit;
+
+    const skip = (page - 1) * Number(limit);
 
     const user = await User.findById(userId)
       .populate({
-        path: 'following',
-        select: 'username profileImage bio verified followersCount followingCount',
-        options: { skip, limit: parseInt(limit) },
+        path: "following",
+        select: "username profileImage bio verified followersCount followingCount",
+        options: { skip, limit: Number(limit) }
       });
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    res.json({
+    return res.json({
       following: user.following,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(user.followingCount / limit),
+        currentPage: Number(page),
+        totalPages: Math.ceil((user.followingCount || 0) / limit),
         totalFollowing: user.followingCount,
-        hasMore: skip + user.following.length < user.followingCount,
+        hasMore: skip + user.following.length < user.followingCount
       },
       timestamp: new Date(),
     });
+
   } catch (err) {
-    console.error('❌ Failed to fetch following:', err);
-    res.status(500).json({ error: 'Failed to fetch following' });
+    console.error("❌ fetch following error:", err);
+    return res.status(500).json({ error: "Failed to fetch following" });
   }
 });
 
-// ✅ Unfollow a user
+
+
+/* ---------------------------------------------------
+ * UNFOLLOW
+ * --------------------------------------------------- */
 router.post('/:userId/unfollow', authMiddleware, async (req, res) => {
   try {
     const currentUserId = req.user.id;
     const targetUserId = req.params.userId;
 
-    if (currentUserId === targetUserId) {
-      return res.status(400).json({ error: 'You cannot unfollow yourself' });
-    }
+    if (currentUserId === targetUserId)
+      return res.status(400).json({ error: "You cannot unfollow yourself" });
 
     const [currentUser, targetUser] = await Promise.all([
       User.findById(currentUserId),
-      User.findById(targetUserId),
+      User.findById(targetUserId)
     ]);
 
-    if (!targetUser) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!targetUser)
+      return res.status(404).json({ error: "User not found" });
 
     const isFollowing = currentUser.following.some(
-      (id) => id.toString() === targetUserId
+      id => id.toString() === targetUserId
     );
-    if (!isFollowing) {
-      return res.status(400).json({ error: 'You are not following this user' });
-    }
 
-    // ✅ Remove follow relationships
-    currentUser.following = currentUser.following.filter(
-      (id) => id.toString() !== targetUserId
-    );
-    targetUser.followers = targetUser.followers.filter(
-      (id) => id.toString() !== currentUserId
-    );
+    if (!isFollowing)
+      return res.status(400).json({ error: "You are not following this user" });
+
+    // Remove follow relation
+    currentUser.following = currentUser.following.filter(id => id.toString() !== targetUserId);
+    targetUser.followers = targetUser.followers.filter(id => id.toString() !== currentUserId);
 
     currentUser.followingCount = Math.max((currentUser.followingCount || 1) - 1, 0);
     targetUser.followersCount = Math.max((targetUser.followersCount || 1) - 1, 0);
@@ -154,38 +202,42 @@ router.post('/:userId/unfollow', authMiddleware, async (req, res) => {
       followersCount: targetUser.followersCount,
       followingCount: currentUser.followingCount,
     });
+
   } catch (err) {
-    console.error('❌ Unfollow error:', err);
-    res.status(500).json({ error: 'Server error' });
+    console.error("❌ Unfollow error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
-// ✅ Get follow stats for a user
+
+
+/* ---------------------------------------------------
+ * FOLLOW STATS
+ * --------------------------------------------------- */
 router.get('/:userId/follow-stats', authMiddleware, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId;
     const currentUserId = req.user.id;
 
     const user = await User.findById(userId).select(
-      'followersCount followingCount followers updatedAt createdAt'
+      "followersCount followingCount followers createdAt updatedAt"
     );
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isFollowedByCurrentUser = user.followers.some(
-      id => id.toString() === currentUserId
-    );
+    const isFollowedByCurrentUser = user.followers.some(id => id.toString() === currentUserId);
 
-    res.json({
+    return res.json({
       followersCount: user.followersCount,
       followingCount: user.followingCount,
       isFollowedByCurrentUser,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      updatedAt: user.updatedAt
     });
+
   } catch (err) {
-    console.error('❌ Failed to fetch follow stats:', err);
-    res.status(500).json({ error: 'Failed to fetch follow stats' });
+    console.error("❌ Follow stats error:", err);
+    return res.status(500).json({ error: "Failed to fetch follow stats" });
   }
 });
 

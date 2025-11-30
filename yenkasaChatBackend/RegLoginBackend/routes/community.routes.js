@@ -248,6 +248,7 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       return res.status(400).json({ error: "Name and display name are required" });
     }
 
+    // Ensure unique community name
     const existingCommunity = await Community.findOne({ name: name.toLowerCase().trim() });
     if (existingCommunity) {
       return res.status(400).json({ error: "Community with this name already exists" });
@@ -256,8 +257,8 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Create community
-    const community = new Community({
+    // Create new community
+    const community = await Community.create({
       name: name.toLowerCase().trim(),
       displayName: displayName.trim(),
       description: description || "",
@@ -265,16 +266,17 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       categories: categories || [],
       createdBy: userId,
       moderators: [userId],
-      isApproved: false,
+      isApproved: false, // pending admin approval
     });
 
-    await community.save();
+    // ---------------------------------------------
+    // ⭐ FIXED — Use rewardService + unique activityId
+    // ---------------------------------------------
+    const activityId = `create_community_${userId}_${community._id}_${Date.now()}`;
 
-    // Reward logic stays the same
-    const activityId = `community_${userId}_${community._id}`;
-    const tx = await reward(userId, COMMUNITY_CREATION_REWARD, {
+    const tx = await rewardService.reward(userId, COMMUNITY_CREATION_REWARD, {
       type: "REWARD_CREATE_COMMUNITY",
-      description: `Earned ${COMMUNITY_CREATION_REWARD} YKC for creating community "${community.displayName}"`,
+      description: `Created community: ${community.displayName}`,
       relatedCommunityId: community._id,
       activityId,
     });
@@ -297,10 +299,9 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Failed to create community:", err);
-    res.status(500).json({ error: "Failed to create community" });
+    return res.status(500).json({ error: "Failed to create community" });
   }
 });
-
 
 // ✅ Reject/Delete community (ADMIN ONLY)
 router.delete('/:communityId', authMiddleware, async (req, res) => {

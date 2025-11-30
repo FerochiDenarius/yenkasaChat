@@ -195,7 +195,7 @@ router.get('/post/:postId', authMiddleware, async (req, res) => {
 
 
 /* ---------------------------------------------------
- * LIKE / UNLIKE COMMENT (FINAL MERGED VERSION)
+ * LIKE / UNLIKE COMMENT
  * --------------------------------------------------- */
 router.post("/toggle-like", authMiddleware, async (req, res) => {
   try {
@@ -213,7 +213,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
     const commentOwnerId = comment.userId._id.toString();
     const liker = await User.findById(userId);
 
-    // BLOCK CHECK
+    // PRIVACY CHECK
     if (await isBlocked(userId, commentOwnerId)) {
       return res.status(403).json({
         message: "Blocked due to privacy settings",
@@ -223,52 +223,71 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
     const alreadyLiked = comment.isLikedBy(userId);
 
     /* ----------------------------------------------
-     * LIKE ACTION
+     * LIKE
      * ---------------------------------------------- */
     if (like && !alreadyLiked) {
       await comment.addLike(userId);
 
-      // Reward liker
-    await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
-  type: "REWARD_COMMENT_LIKE",
-  description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
-  relatedCommentId: comment._id,
-  activityId: `comment_like_${commentId}_${userId}` // 🔥 CLEAN, NO COLLISION
-});
+      // Reload updated likeCount
+      const updated = await Comment.findById(commentId).select("likeCount");
 
+      // Reward liker
+      await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
+        type: "REWARD_COMMENT_LIKE",
+        description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
+        relatedCommentId: comment._id,
+        activityId: `comment_like_${commentId}_${userId}_${Date.now()}`, 
+      });
 
       // Reward comment owner
-     await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
-  fromUserId: userId,
-  type: "REWARD_COMMENT_LIKE",
-  description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
-  relatedCommentId: comment._id,
-  activityId: `comment_like_received_${commentId}_${commentOwnerId}_${userId}` 
-});
-
-
-        // Notification
-        await sendNotification({
-          type: "comment_liked",
-          senderId: userId,
-          receiverId: commentOwnerId,
-          activityId: `comment_like_${commentId}`,
-          message: `${liker.username || "Someone"} liked your comment`,
+      if (commentOwnerId !== userId) {
+        await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
+          fromUserId: userId,
+          type: "REWARD_COMMENT_LIKE",
+          description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
+          relatedCommentId: comment._id,
+          activityId: `comment_like_received_${commentId}_${userId}_${Date.now()}`,
         });
       }
-    
+
+      // Notify comment owner
+      await sendNotification({
+        type: "comment_liked",
+        senderId: userId,
+        receiverId: commentOwnerId,
+        activityId: `comment_like_notify_${commentId}_${userId}`,
+        message: `${liker.username} liked your comment`,
+      });
+
+      return res.json({
+        success: true,
+        likeCount: updated.likeCount,
+        liked: true,
+      });
+    }
 
     /* ----------------------------------------------
-     * UNLIKE ACTION
+     * UNLIKE
      * ---------------------------------------------- */
     if (!like && alreadyLiked) {
       await comment.removeLike(userId);
+
+      const updated = await Comment.findById(commentId).select("likeCount");
+
+      return res.json({
+        success: true,
+        likeCount: updated.likeCount,
+        liked: false,
+      });
     }
 
-    res.json({
+    // No change
+    const updated = await Comment.findById(commentId).select("likeCount");
+
+    return res.json({
       success: true,
-      likeCount: comment.likeCount,
-      liked: like,
+      likeCount: updated.likeCount,
+      liked: alreadyLiked,
     });
 
   } catch (err) {
@@ -276,6 +295,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 
 // ✅ Unlike comment

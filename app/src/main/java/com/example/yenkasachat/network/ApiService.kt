@@ -508,33 +508,20 @@ interface ApiService {
     ): Response<ViewResponse>
 
 
-    // ==================== APP VERIFICATION ====================
-    @GET("api/app-verification/dashboard")
-    fun getVerificationDashboard(
-        @Header("Authorization") token: String
-    ): Call<VerificationDashboard>
+    @GET("app-verification/dashboard")
+    fun getDashboard(): Call<VerificationDashboard>
 
-    @POST("api/app-verification/track-login")
-    fun trackLogin(
-        @Header("Authorization") token: String
-    ): Call<TrackLoginResponse>
+    @POST("app-verification/track-login")
+    fun trackLogin(): Call<TrackLoginResponse>
 
-    @POST("api/app-verification/track-ad-view")
-    fun trackAdView(
-        @Header("Authorization") token: String
-    ): Call<TrackAdViewResponse>
+    @POST("app-verification/track-ad")
+    fun trackAdView(): Call<TrackAdViewResponse>
 
-    @GET("api/app-verification/progress")
-    fun getVerificationProgress(
-        @Header("Authorization") token: String
-    ): Call<VerificationProgressResponse>
+    @GET("app-verification/progress")
+    fun getProgress(): Call<VerificationProgressResponse>
 
-    @POST("api/app-verification/check-phase-advancement")
-    fun checkPhaseAdvancement(
-        @Header("Authorization") token: String
-    ): Call<PhaseAdvancementResponse>
-
-
+    @POST("app-verification/check-phase")
+    fun checkPhase(): Call<PhaseAdvancementResponse>
     // ───────────────────────────────
 // USER PRIVACY
 // ───────────────────────────────

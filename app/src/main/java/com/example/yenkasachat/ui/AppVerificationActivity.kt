@@ -11,11 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.viewpager2.widget.ViewPager2
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.MetricsPagerAdapter
-import com.example.yenkasachat.model.VerificationDashboard
-import com.example.yenkasachat.model.VerificationProgressResponse
-import com.example.yenkasachat.model.PhaseAdvancementResponse
-import com.example.yenkasachat.model.TrackLoginResponse
-import com.example.yenkasachat.model.TrackAdViewResponse
+import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -36,7 +32,6 @@ class AppVerificationActivity : AppCompatActivity() {
 
     private lateinit var btnAdvance: Button
 
-    private var token: String? = null
     private var dashboardData: VerificationDashboard? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,9 +53,6 @@ class AppVerificationActivity : AppCompatActivity() {
 
         btnAdvance = findViewById(R.id.btnAdvance)
 
-        // ⭐️ USE TOKEN MANAGER NOT SHAREDPREFS
-        token = TokenManager.getToken(this)
-
         setupTabClicks()
         setupViewPagerListener()
         loadDashboard()
@@ -71,6 +63,10 @@ class AppVerificationActivity : AppCompatActivity() {
             checkPhaseAdvancement()
         }
     }
+
+    // -------------------------------------------------------------
+    // TAB SYSTEM
+    // -------------------------------------------------------------
 
     private fun setupTabClicks() {
         tabVerified.setOnClickListener { viewPager.currentItem = 0; highlightTab(0) }
@@ -98,11 +94,8 @@ class AppVerificationActivity : AppCompatActivity() {
         }
     }
 
-
-
     private fun resetTabStyles() {
         val emerald = ContextCompat.getColor(this, R.color.emerald)
-
         listOf(tabVerified, tabAdmin, tabModerator, tabTotal).forEach { tab ->
             tab.background = null
             tab.setTextColor(emerald)
@@ -127,12 +120,29 @@ class AppVerificationActivity : AppCompatActivity() {
         tab.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
+    // -------------------------------------------------------------
+    // DASHBOARD LOADING + CACHE FIXED
+    // -------------------------------------------------------------
+
     private fun loadDashboard() {
         showLoading(true)
 
-        val t = token ?: return
+        // 1️⃣ LOAD CACHED DASHBOARD FIRST
+        TokenManager.getDashboardCache(this)?.let { cachedJson ->
+            try {
+                val cached = com.google.gson.Gson().fromJson(cachedJson, VerificationDashboard::class.java)
+                if (cached != null) {
+                    dashboardData = cached
+                    setupViewPager()
+                    highlightTab(0)
+                    updateAdvancePhaseButton()
+                    loadProgress()
+                }
+            } catch (_: Exception) {}
+        }
 
-        ApiClient.apiService.getVerificationDashboard("Bearer $t")
+        // 2️⃣ FETCH FRESH DASHBOARD
+        ApiClient.apiService.getDashboard()
             .enqueue(object : Callback<VerificationDashboard> {
                 override fun onResponse(
                     call: Call<VerificationDashboard>,
@@ -140,11 +150,13 @@ class AppVerificationActivity : AppCompatActivity() {
                 ) {
                     showLoading(false)
 
-                    val body = response.body()
-                    if (body == null) {
-                        Toast.makeText(this@AppVerificationActivity, "Failed to load dashboard", Toast.LENGTH_SHORT).show()
-                        return
-                    }
+                    val body = response.body() ?: return
+
+                    // Save to cache
+                    TokenManager.saveDashboardCache(
+                        this@AppVerificationActivity,
+                        com.google.gson.Gson().toJson(body)
+                    )
 
                     dashboardData = body
                     setupViewPager()
@@ -160,26 +172,30 @@ class AppVerificationActivity : AppCompatActivity() {
             })
     }
 
+    // -------------------------------------------------------------
+    // VIEWPAGER SETUP
+    // -------------------------------------------------------------
+
     private fun setupViewPager() {
         val data = dashboardData ?: return
         viewPager.adapter = MetricsPagerAdapter(this, data)
         viewPager.offscreenPageLimit = 4
     }
 
-    private fun loadProgress() {
-        val t = token ?: return
+    // -------------------------------------------------------------
+    // PROGRESS LOADING
+    // -------------------------------------------------------------
 
-        ApiClient.apiService.getVerificationProgress("Bearer $t")
+    private fun loadProgress() {
+        ApiClient.apiService.getProgress()
             .enqueue(object : Callback<VerificationProgressResponse> {
                 override fun onResponse(
                     call: Call<VerificationProgressResponse>,
                     response: Response<VerificationProgressResponse>
                 ) {
                     val res = response.body() ?: return
-                    val p = res.overallProgress
-
                     progressCircle.visibility = View.VISIBLE
-                    progressCircle.setProgressCompat(p, true)
+                    progressCircle.setProgressCompat(res.overallProgress, true)
                 }
 
                 override fun onFailure(call: Call<VerificationProgressResponse>, t: Throwable) {}
@@ -191,19 +207,19 @@ class AppVerificationActivity : AppCompatActivity() {
         btnAdvance.visibility = if (met) View.VISIBLE else View.GONE
     }
 
-    private fun checkPhaseAdvancement() {
-        val t = token ?: return
+    // -------------------------------------------------------------
+    // ADVANCE PHASE
+    // -------------------------------------------------------------
 
-        ApiClient.apiService.checkPhaseAdvancement("Bearer $t")
+    private fun checkPhaseAdvancement() {
+        ApiClient.apiService.checkPhase()
             .enqueue(object : Callback<PhaseAdvancementResponse> {
                 override fun onResponse(
                     call: Call<PhaseAdvancementResponse>,
                     response: Response<PhaseAdvancementResponse>
                 ) {
                     val res = response.body() ?: return
-
                     Toast.makeText(this@AppVerificationActivity, res.message, Toast.LENGTH_LONG).show()
-
                     loadDashboard()
                 }
 
@@ -213,6 +229,20 @@ class AppVerificationActivity : AppCompatActivity() {
             })
     }
 
+    // -------------------------------------------------------------
+    // LOGIN TRACKING
+    // -------------------------------------------------------------
+
+    private fun trackLoginEvent() {
+        ApiClient.apiService.trackLogin()
+            .enqueue(object : Callback<TrackLoginResponse> {
+                override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {}
+                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {}
+            })
+    }
+
+    // -------------------------------------------------------------
+
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE
     }
@@ -221,25 +251,4 @@ class AppVerificationActivity : AppCompatActivity() {
         onBackPressedDispatcher.onBackPressed()
         return true
     }
-
-    private fun trackLoginEvent() {
-        val t = token ?: return
-
-        ApiClient.apiService.trackLogin("Bearer $t")
-            .enqueue(object : Callback<TrackLoginResponse> {
-                override fun onResponse(
-                    call: Call<TrackLoginResponse>,
-                    response: Response<TrackLoginResponse>
-                ) {
-                    // Optional: Log or ignore
-                }
-
-                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
-                    // Optional: Log or ignore
-                }
-            })
-    }
-
-
-
 }

@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 
 class MetricsAdapter(
-    private val list: List<Triple<Int, String, String>>
+    private var list: List<Triple<Int, String, String>>
 ) : RecyclerView.Adapter<MetricsAdapter.MetricViewHolder>() {
 
     class MetricViewHolder(v: View) : RecyclerView.ViewHolder(v) {
@@ -26,11 +26,16 @@ class MetricsAdapter(
 
     override fun onBindViewHolder(holder: MetricViewHolder, position: Int) {
         val (iconRes, value, label) = list[position]
-
         holder.icon.setImageResource(iconRes)
         holder.value.text = value
         holder.label.text = label
     }
 
     override fun getItemCount(): Int = list.size
+
+    // ⭐ This is the missing piece: dynamic updating
+    fun update(newList: List<Triple<Int, String, String>>) {
+        list = newList
+        notifyDataSetChanged()
+    }
 }

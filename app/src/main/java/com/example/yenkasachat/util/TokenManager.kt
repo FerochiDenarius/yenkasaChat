@@ -36,6 +36,8 @@ object TokenManager {
     private const val TAG = "TokenManager"
     private const val GENDER_KEY = "user_gender"
     private const val DOB_KEY = "user_dob"
+    private const val DASHBOARD_CACHE_KEY = "verification_dashboard_json"
+
 
 
     // === EncryptedSharedPreferences Access ===
@@ -909,6 +911,36 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting dob", e)
             null
+        }
+    }
+
+
+    fun saveDashboardCache(context: Context, json: String) {
+        try {
+            getEncryptedPrefs(context).edit()
+                .putString(DASHBOARD_CACHE_KEY, json)
+                .apply()
+            Log.i("TokenManager", "📦 Dashboard cached.")
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error saving dashboard cache", e)
+        }
+    }
+
+    fun getDashboardCache(context: Context): String? {
+        return try {
+            getEncryptedPrefs(context).getString(DASHBOARD_CACHE_KEY, null)
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error reading dashboard cache", e)
+            null
+        }
+    }
+
+    fun clearDashboardCache(context: Context) {
+        try {
+            getEncryptedPrefs(context).edit().remove(DASHBOARD_CACHE_KEY).apply()
+            Log.i("TokenManager", "🧹 Dashboard cache cleared.")
+        } catch (e: Exception) {
+            Log.e("TokenManager", "Error clearing dashboard cache", e)
         }
     }
 

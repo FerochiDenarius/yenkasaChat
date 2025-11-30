@@ -1,4 +1,3 @@
-// models/appverification.model.js
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -26,11 +25,11 @@ const appVerificationSchema = new Schema(
     hasVerifiedBanner: { type: Boolean, default: false },
 
     // ------------------------------
-    // PHASE METRICS (Existing)
+    // METRICS
     // ------------------------------
     metrics: {
-      // Existing
-      accountAge: { type: Number, default: 0 }, // days
+      // EXISTING (UNCHANGED)
+      accountAge: { type: Number, default: 0 },
       totalComments: { type: Number, default: 0 }, // user-made comments
       totalFollowers: { type: Number, default: 0 },
       maxLikesOnPost: { type: Number, default: 0 },
@@ -38,29 +37,41 @@ const appVerificationSchema = new Schema(
       adsViewed: { type: Number, default: 0 },
 
       // ------------------------------
-      // NEW — STORED PERFORMANCE METRICS
+      // NEW — STORED PERFORMANCE METRICS (ADDED ONLY)
       // ------------------------------
 
       // Posts created
       postsCreated: { type: Number, default: 0 },
 
-      // Total likes received (sum across all posts)
+      // Alias for frontend (post count)
+      totalPostCount: { type: Number, default: 0 },
+
+      // Following count
+      totalFollowing: { type: Number, default: 0 },
+
+      // Total likes received on all posts
       totalLikesReceived: { type: Number, default: 0 },
 
-      // Total views received on posts
+      // Total views received on all posts
       totalViewsReceived: { type: Number, default: 0 },
+
+      // Additional alias for UI needs
+      totalViewsCount: { type: Number, default: 0 },
 
       // Total comments received on posts
       totalCommentsReceived: { type: Number, default: 0 },
 
-      // Total replies received (comments on comments)
+      // Replies on comments under posts
       totalRepliesReceived: { type: Number, default: 0 },
 
-      // Likes received on comments
+      // Likes on comments under posts
       commentLikesReceived: { type: Number, default: 0 },
 
-      // Post shares (future expansion)
+      // Post shares
       totalShares: { type: Number, default: 0 },
+
+      // Alias for clarity
+      totalCommentsMade: { type: Number, default: 0 },
     },
 
     // ------------------------------
@@ -84,10 +95,8 @@ const appVerificationSchema = new Schema(
   { timestamps: true }
 );
 
-
-
 // ========================================================================
-// EXISTING METHODS (unchanged but now act on expanded metrics)
+// EXISTING METHODS (UNCHANGED – NOTHING REMOVED)
 // ========================================================================
 
 // PHASE MULTIPLIER

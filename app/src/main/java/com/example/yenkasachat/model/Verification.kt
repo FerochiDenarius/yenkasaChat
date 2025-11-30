@@ -69,7 +69,7 @@ data class VerificationRequirements(
 // ===============================
 data class VerificationMetrics(
 
-    // --- Original metrics ---
+    // --- Core backend metrics ---
     val accountAge: Int,
     val totalComments: Int,
     val totalFollowers: Int,
@@ -77,16 +77,20 @@ data class VerificationMetrics(
     val dailyLogins: Int,
     val adsViewed: Int,
 
-    // --- NEW BE metrics ---
-    val postsCreated: Int? = 0,
-    val viewsReceived: Int? = 0,
-    val repliesReceived: Int? = 0,
+    // --- Performance metrics ---
+    val postsCreated: Int = 0,
+    val totalViewsReceived: Int = 0,
+    val totalRepliesReceived: Int = 0,
+    val totalLikesReceived: Int = 0,
+    val totalCommentsReceived: Int = 0,
+    val commentLikesReceived: Int = 0,
+    val totalShares: Int = 0,
 
-    // --- Performance metrics from getUserPerformanceMetrics ---
-    val likesReceived: Int? = 0,
-    val commentsReceived: Int? = 0,
-    val commentLikesReceived: Int? = 0,
-    val totalShares: Int? = 0
+    // --- EXTRA ADMIN METRICS (matching backend) ---
+    val totalFollowing: Int = 0,
+    val totalPostCount: Int = 0,
+    val totalViewsCount: Int = 0,
+    val totalCommentsMade: Int = 0
 )
 
 

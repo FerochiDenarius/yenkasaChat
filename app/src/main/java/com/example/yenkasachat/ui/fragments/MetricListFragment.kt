@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.VerificationDashboard
 import com.example.yenkasachat.ui.metrics.MetricsAdapter
-
+import com.google.gson.Gson
 
 abstract class MetricListFragment : Fragment() {
 
@@ -20,12 +20,15 @@ abstract class MetricListFragment : Fragment() {
     private lateinit var recycler: RecyclerView
     private lateinit var imgBadge: ImageView
 
+    // ⭐ Keep ONE adapter instance (fixes update flickering and resets)
+    private lateinit var adapter: MetricsAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val json = arguments?.getString("data")
         dashboard = if (!json.isNullOrEmpty()) {
-            com.google.gson.Gson().fromJson(json, VerificationDashboard::class.java)
+            Gson().fromJson(json, VerificationDashboard::class.java)
         } else null
     }
 
@@ -40,6 +43,10 @@ abstract class MetricListFragment : Fragment() {
         imgBadge = v.findViewById(R.id.imgBadge)
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
+
+        // ⭐ Initialize empty adapter (we will update it later)
+        adapter = MetricsAdapter(emptyList())
+        recycler.adapter = adapter
 
         return v
     }
@@ -61,7 +68,8 @@ abstract class MetricListFragment : Fragment() {
             .start()
     }
 
+    // ⭐ Updated: now properly updates adapter instead of replacing it
     protected fun applyMetrics(list: List<Triple<Int, String, String>>) {
-        recycler.adapter = MetricsAdapter(list)
+        adapter.update(list)
     }
 }

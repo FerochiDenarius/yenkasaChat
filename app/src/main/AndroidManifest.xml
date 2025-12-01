@@ -48,11 +48,7 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCQvcE4AW1KseUVC9_OZtiA4tlOo9sgdk0" />
-        <meta-data
-            android:name="com.onesignal.NotificationServiceExtension"
-            android:value="com.example.yenkasachat.notifications.IncomingCallExtenderService" />
 
-        <!-- OneSignal App ID -->
         <meta-data
             android:name="onesignal_app_id"
             android:value="165df9e6-a0ea-4a37-a40a-110af7e28ad2" />
@@ -138,7 +134,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Video Call Activity -->
         <activity
             android:name=".webrtc.VideoCallActivity"
             android:screenOrientation="portrait"

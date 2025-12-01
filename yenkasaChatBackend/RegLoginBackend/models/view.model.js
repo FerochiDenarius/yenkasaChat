@@ -26,7 +26,7 @@ const viewSchema = new mongoose.Schema(
       default: Date.now
     },
 
-    viewCount: {
+    viewsCount: {
   type: Number,
   default: 0
 },

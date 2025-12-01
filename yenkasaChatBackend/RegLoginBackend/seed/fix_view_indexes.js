@@ -20,9 +20,9 @@ async function fixViewIndexes() {
     console.log("✅ Connected to MongoDB!");
 
     // --------------------------------------------------------
-    // 1️⃣ DELETE all broken documents where activityId is null or missing
+    // 1️⃣ REMOVE invalid View entries that break indexes
     // --------------------------------------------------------
-    console.log("🗑️ Removing invalid view documents (activityId: null or missing)…");
+    console.log("🗑️ Removing invalid view documents (activityId missing)…");
 
     const deleteResult = await View.deleteMany({
       $or: [
@@ -35,7 +35,43 @@ async function fixViewIndexes() {
     console.log(`✔ Removed ${deleteResult.deletedCount} invalid view records`);
 
     // --------------------------------------------------------
-    // 2️⃣ DROP old wrong index if it exists
+    // 2️⃣ MIGRATION: Rename viewCount → viewsCount
+    // --------------------------------------------------------
+    console.log("🔄 Migrating field 'viewCount' → 'viewsCount'...");
+
+    const renameResult = await View.updateMany(
+      { viewCount: { $exists: true } },
+      { $rename: { viewCount: "viewsCount" } }
+    );
+
+    console.log(`✔ Renamed ${renameResult.modifiedCount} documents`);
+
+    // --------------------------------------------------------
+    // 3️⃣ Ensure viewsCount exists on all documents
+    // --------------------------------------------------------
+    console.log("🔧 Ensuring 'viewsCount' exists on all documents...");
+
+    const addMissing = await View.updateMany(
+      { viewsCount: { $exists: false } },
+      { $set: { viewsCount: 0 } }
+    );
+
+    console.log(`✔ Added missing viewsCount to ${addMissing.modifiedCount} docs`);
+
+    // --------------------------------------------------------
+    // 4️⃣ Remove leftover viewCount field (cleanup)
+    // --------------------------------------------------------
+    console.log("🧹 Cleaning leftover 'viewCount' fields…");
+
+    const cleanup = await View.updateMany(
+      { viewCount: { $exists: true } },
+      { $unset: { viewCount: "" } }
+    );
+
+    console.log(`✔ Cleaned ${cleanup.modifiedCount} leftover viewCount fields`);
+
+    // --------------------------------------------------------
+    // 5️⃣ DROP old wrong index
     // --------------------------------------------------------
     console.log("🔧 Dropping old index if it exists…");
 
@@ -47,7 +83,7 @@ async function fixViewIndexes() {
     }
 
     // --------------------------------------------------------
-    // 3️⃣ CREATE correct unique index on activityId
+    // 6️⃣ CREATE correct unique index on activityId
     // --------------------------------------------------------
     console.log("⚙️ Creating new unique index on activityId…");
 
@@ -56,11 +92,11 @@ async function fixViewIndexes() {
       { unique: true }
     );
 
-    console.log("🎉 FIX COMPLETE — view indexes repaired successfully!");
+    console.log("🎉 FIX COMPLETE — view model + indexes migrated successfully!");
     process.exit();
 
   } catch (error) {
-    console.error("❌ Error fixing indexes:", error);
+    console.error("❌ Error fixing views:", error);
     process.exit(1);
   }
 }

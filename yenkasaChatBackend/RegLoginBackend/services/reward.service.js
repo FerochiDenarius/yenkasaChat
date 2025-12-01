@@ -1,4 +1,3 @@
-// services/reward.service.js
 const CoinTransaction = require('../models/cointransaction.model');
 const User = require('../models/user.model');
 const Post = require('../models/post.model');
@@ -17,53 +16,59 @@ async function reward(toUserId, amount, opts = {}) {
       return null;
     }
 
-    // Always generate fallback activityId
-    let activityId = opts.activityId || uuidv4();
+    /* ---------------------------------------------------
+     * ALWAYS generate fresh unique activityId
+     * --------------------------------------------------- */
+    let activityId = opts.activityId && opts.activityId !== "null"
+      ? opts.activityId
+      : uuidv4();
 
-    // Dedupe check
-    const existing = await CoinTransaction.findOne({ activityId });
-    if (existing) {
-      console.log(`⚠️ Skipped duplicate reward: ${activityId}`);
-      return existing;
-    }
-
-    // Ensure supply bucket exists
+    /* ---------------------------------------------------
+     * Ensure supply bucket exists
+     * --------------------------------------------------- */
     await CoinSupply.findByIdAndUpdate(
       SUPPLY_ID,
       { $setOnInsert: { totalMinted: 0 } },
       { upsert: true }
     );
 
-    // Ensure minting allowed
+    /* ---------------------------------------------------
+     * Mint supply (do NOT reject silently)
+     * --------------------------------------------------- */
     const supply = await CoinSupply.findOneAndUpdate(
-      { _id: SUPPLY_ID, totalMinted: { $lte: MAX_SUPPLY - amount } },
+      { _id: SUPPLY_ID },
       { $inc: { totalMinted: amount } },
       { new: true }
     );
 
     if (!supply) {
-      console.warn('⚠️ Supply exceeded');
+      console.error("❌ FAILED TO UPDATE SUPPLY: supply=null");
       return null;
     }
 
-    // Load user
-    const toUser = await User.findById(toUserId).select('username walletId coinsBalance createdAt');
+    /* ---------------------------------------------------
+     * Load user
+     * --------------------------------------------------- */
+    const toUser = await User.findById(toUserId).select('username walletId coinsBalance');
     if (!toUser) {
-      console.warn('⚠️ Reward aborted → missing user', toUserId);
+      console.error("❌ Reward aborted → User not found:", toUserId);
       return null;
     }
 
-    // Determine balances
+    /* ---------------------------------------------------
+     * Update balance
+     * --------------------------------------------------- */
     const before = Number(toUser.coinsBalance || 0);
     const after = before + Number(amount);
 
-    // Apply balance update
     toUser.coinsBalance = after;
     await toUser.save();
 
     console.log(`💰 Reward applied → User=${toUser.username} | Before=${before} After=${after}`);
 
-    // Create transaction ALWAYS
+    /* ---------------------------------------------------
+     * ALWAYS Save transaction (no dedupe skip)
+     * --------------------------------------------------- */
     const tx = await CoinTransaction.create({
       transactionId: uuidv4(),
       activityId,
@@ -74,6 +79,8 @@ async function reward(toUserId, amount, opts = {}) {
       toUsername: toUser.username,
       toWalletId: toUser.walletId,
       fromUserId: opts.fromUserId || null,
+      fromUsername: opts.fromUsername || '',
+      fromWalletId: opts.fromWalletId || '',
       relatedPostId: opts.relatedPostId || null,
       relatedCommentId: opts.relatedCommentId || null,
       toUserBalanceBefore: before,
@@ -81,9 +88,11 @@ async function reward(toUserId, amount, opts = {}) {
       status: 'completed'
     });
 
-    console.log(`✅ Reward Transaction Saved → ${tx.transactionId}`);
+    console.log(`✅ Reward Transaction Saved → TXID=${tx.transactionId}`);
 
-    // Auto-update metrics
+    /* ---------------------------------------------------
+     * Update verification metrics safely
+     * --------------------------------------------------- */
     try {
       const AppVerification = require('../models/appverification.model');
       const ver = await AppVerification.findOne({ userId: toUserId });
@@ -93,23 +102,20 @@ async function reward(toUserId, amount, opts = {}) {
           case "REWARD_COMMENT":
             ver.metrics.totalComments += 1;
             break;
-
           case "REWARD_COMMENT_LIKE":
-            ver.metrics.totalComments += 0.1; // example
+            ver.metrics.totalComments += 0.1;
             break;
-
           case "REWARD_POST_LIKE":
             ver.metrics.maxLikesOnPost = Math.max(ver.metrics.maxLikesOnPost, 1);
             break;
-
           case "REWARD_DAILY_LOGIN":
             await ver.trackLogin();
             break;
-
           case "REWARD_VIEWS":
             await ver.trackAdView();
             break;
         }
+
         await ver.save();
       }
     } catch (err) {

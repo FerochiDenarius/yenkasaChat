@@ -28,22 +28,36 @@ const coinTransactionSchema = new Schema({
   // 🎯 Transaction category
   type: {
     type: String,
-    enum: [
-      'REWARD_POST',
-      'REWARD_POST_LIKE',
-      'REWARD_COMMENT',
-      'REWARD_COMMENT_LIKE',
-      'REWARD_FOLLOW',
-      'REWARD_VIEWS',
-      'REWARD_VERIFICATION',
-      'REWARD_ACCOUNT_AGE',
-      'REWARD_DAILY_LOGIN',
-      'TRANSFER',
-      'PURCHASE',
-      'REFUND',
-      'BONUS',
-      'ADMIN_ADJUSTMENT'
-    ],
+enum: [
+  "REWARD_POST",
+  "REWARD_POST_LIKE",
+  "REWARD_COMMENT",
+  "REWARD_COMMENT_LIKE",
+  "REWARD_REPLY",
+  "REWARD_FOLLOW",
+
+  // VIEWS
+  "REWARD_VIEWS",              // ad views
+  "REWARD_POST_VIEW",          // user viewing post
+  "REWARD_POST_VIEW_RECEIVED", // owner receives a view
+  "REWARD_MILESTONE",          // hitting 100k, 1M views
+
+  // COMMUNITY
+  "REWARD_CREATE_COMMUNITY",
+
+  // SYSTEM
+  "REWARD_VERIFICATION",
+  "REWARD_ACCOUNT_AGE",
+  "REWARD_DAILY_LOGIN",
+
+  // Generic
+  "TRANSFER",
+  "PURCHASE",
+  "REFUND",
+  "BONUS",
+  "ADMIN_ADJUSTMENT"
+],
+
     required: true
   },
 

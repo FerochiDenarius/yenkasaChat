@@ -26,6 +26,12 @@ const viewSchema = new mongoose.Schema(
       default: Date.now
     },
 
+    viewCount: {
+  type: Number,
+  default: 0
+},
+
+
     watchDuration: { type: Number, default: 0 },
 
     mediaType: {

@@ -81,6 +81,9 @@ class PostAdapter(
         private val audioSeekbar: SeekBar = itemView.findViewById(R.id.audioSeekbar)
         private val audioCurrent: TextView = itemView.findViewById(R.id.audioCurrentTime)
         private val audioTotal: TextView = itemView.findViewById(R.id.audioTotalTime)
+        private val imageVideoThumbnail: ImageView = itemView.findViewById(R.id.imageVideoThumbnail)
+        private val btnVideoPlay: ImageButton = itemView.findViewById(R.id.btnVideoPlay)
+
 
         private var audioPlayer: ExoPlayer? = null
 
@@ -263,6 +266,8 @@ class PostAdapter(
             itemView.setOnClickListener {
                 onPostClick(post)
                 recordViewAsync(post._id)   // manual view
+
+
             }
         }
 
@@ -298,6 +303,40 @@ class PostAdapter(
                 btnPlayPause?.setOnClickListener { toggleVideo(position) }
                 playerView?.setOnClickListener { toggleVideo(position) }
             }
+
+            // --- VIDEO THUMBNAIL ---
+            if (!post.videoUrl.isNullOrEmpty()) {
+
+                imageVideoThumbnail.visibility = View.VISIBLE
+                btnVideoPlay.visibility = View.VISIBLE
+
+                Glide.with(itemView.context)
+                    .load(post.videoUrl)
+                    .frame(1_000_000)                 // get frame at 1 sec
+                    .into(imageVideoThumbnail)
+
+                btnVideoPlay.setOnClickListener {
+                    imageVideoThumbnail.visibility = View.GONE
+                    btnVideoPlay.visibility = View.GONE
+
+                    if (exoPlayer == null) {
+                        exoPlayer = ExoPlayer.Builder(context).build()
+                        activePlayers.add(exoPlayer!!)
+                    }
+
+                    playerView?.player = exoPlayer
+
+                    exoPlayer!!.apply {
+                        setMediaItem(MediaItem.fromUri(post.videoUrl!!))
+                        prepare()
+                        play()
+                    }
+                }
+            } else {
+                imageVideoThumbnail.visibility = View.GONE
+                btnVideoPlay.visibility = View.GONE
+            }
+
 
             if (hasAudio) {
                 audioIcon.visibility = View.VISIBLE      // your whole audio UI lives here

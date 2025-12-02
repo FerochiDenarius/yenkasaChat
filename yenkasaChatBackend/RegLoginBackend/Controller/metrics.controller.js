@@ -6,7 +6,8 @@ const View = require('../models/view.model');        // optional: views collecti
 const User = require('../models/user.model');        // users collection
 
 // Helper: convert string id to ObjectId
-const toId = id => mongoose.Types.ObjectId(id);
+const { ObjectId } = require("mongoose").Types;
+const toId = (id) => new ObjectId(id);
 
 // GET /api/users/:userId/performance-metrics
 // GET /api/metrics/:userId/performance-metrics

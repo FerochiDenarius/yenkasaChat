@@ -70,6 +70,8 @@ class CreateCommunityActivity : AppCompatActivity() {
         switchActive = findViewById(R.id.switchActive)
         switchApproved = findViewById(R.id.switchApproved)
         btnCreateCommunity = findViewById(R.id.btnCreateCommunity)
+        switchActive = findViewById(R.id.switchActive)
+
     }
 
     private fun setupListeners() {

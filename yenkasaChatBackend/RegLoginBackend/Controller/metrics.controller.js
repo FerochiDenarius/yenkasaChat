@@ -4,6 +4,8 @@ const Post = require('../models/post.model');        // posts collection
 const Comment = require('../models/comment.model');  // comments collection
 const View = require('../models/view.model');        // optional: views collection (if exists)
 const User = require('../models/user.model');        // users collection
+const Follow = require('../models/follow.model');
+
 
 // Helper: convert string id to ObjectId
 const { ObjectId } = require("mongoose").Types;

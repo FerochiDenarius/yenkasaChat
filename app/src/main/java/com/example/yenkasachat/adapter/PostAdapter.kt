@@ -21,6 +21,8 @@ import com.example.yenkasachat.util.TokenManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import java.text.SimpleDateFormat
 import java.util.*
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -283,8 +285,8 @@ class PostAdapter(
             val hasAudio = !post.audioUrl.isNullOrEmpty()
 
             postImage.visibility = if (hasImage) View.VISIBLE else View.GONE
-            playerView?.visibility = if (hasVideo) View.VISIBLE else View.GONE
-            btnPlayPause?.visibility = if (hasVideo) View.VISIBLE else View.GONE
+            playerView?.visibility = View.GONE
+            btnPlayPause?.visibility = View.GONE
             audioIcon.visibility = if (hasAudio) View.VISIBLE else View.GONE
 
             if (hasImage) {
@@ -305,37 +307,28 @@ class PostAdapter(
             }
 
             // --- VIDEO THUMBNAIL ---
+// --- VIDEO THUMBNAIL ---
             if (!post.videoUrl.isNullOrEmpty()) {
 
                 imageVideoThumbnail.visibility = View.VISIBLE
                 btnVideoPlay.visibility = View.VISIBLE
 
                 Glide.with(itemView.context)
+                    .asBitmap()
                     .load(post.videoUrl)
-                    .frame(1_000_000)                 // get frame at 1 sec
+                    .apply(
+                        RequestOptions()
+                            .frame(2_000_000)  // 1 second
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    )
+                    .placeholder(R.drawable.video_placeholder)
+                    .error(R.drawable.video_placeholder)
                     .into(imageVideoThumbnail)
-
-                btnVideoPlay.setOnClickListener {
-                    imageVideoThumbnail.visibility = View.GONE
-                    btnVideoPlay.visibility = View.GONE
-
-                    if (exoPlayer == null) {
-                        exoPlayer = ExoPlayer.Builder(context).build()
-                        activePlayers.add(exoPlayer!!)
-                    }
-
-                    playerView?.player = exoPlayer
-
-                    exoPlayer!!.apply {
-                        setMediaItem(MediaItem.fromUri(post.videoUrl!!))
-                        prepare()
-                        play()
-                    }
-                }
             } else {
                 imageVideoThumbnail.visibility = View.GONE
                 btnVideoPlay.visibility = View.GONE
             }
+
 
 
             if (hasAudio) {

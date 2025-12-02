@@ -105,71 +105,100 @@ async function reward(toUserId, amount, opts = {}) {
   const ver = await AppVerification.findOne({ userId: toUserId });
 
   if (ver) {
-    switch (tx.type) {
+   switch (tx.type) {
 
-      // 📝 COMMENTS
-      case "REWARD_COMMENT":
-        ver.metrics.totalComments += 1;
-        break;
+  // ============================
+  // USER ACTIONS – Comments MADE
+  // ============================
+  case "REWARD_COMMENT":
+    ver.metrics.totalComments += 1;       // user-made comments
+    ver.metrics.totalCommentsMade += 1;   // matches backend alias
+    break;
 
-      case "REWARD_COMMENT_LIKE":
-        ver.metrics.totalComments += 0.1;
-        break;
+  case "REWARD_REPLY":
+    ver.metrics.totalComments += 1;
+    ver.metrics.totalRepliesReceived += 1;  // reply RECEIVED under user's post
+    break;
 
-      case "REWARD_REPLY":
-        ver.metrics.totalComments += 1;
-        break;
+  // ============================
+  // COMMENT LIKES RECEIVED
+  // ============================
+  case "REWARD_COMMENT_LIKE":
+    ver.metrics.commentLikesReceived += 1;
+    break;
 
-      // ❤️ POST LIKES
-      case "REWARD_POST_LIKE":
-        ver.metrics.maxLikesOnPost = Math.max(
-          ver.metrics.maxLikesOnPost,
-          1
-        );
-        break;
+  // ============================
+  // POST LIKES RECEIVED
+  // ============================
+  case "REWARD_POST_LIKE":
+    ver.metrics.totalLikesReceived += 1;
+    ver.metrics.maxLikesOnPost = Math.max(
+      ver.metrics.maxLikesOnPost,
+      1
+    );
+    break;
 
-      // ➕ NEW FOLLOWERS
-      case "REWARD_FOLLOW":
-        ver.metrics.totalFollowers += 1;
-        break;
+  // ============================
+  // POST VIEWS RECEIVED
+  // ============================
+  case "REWARD_POST_VIEW_RECEIVED":
+    ver.metrics.totalViewsReceived += 1;
+    ver.metrics.totalViewsCount += 1; // optional alias
+    break;
 
-      // 👁️ POST VIEW RECEIVED (ONLY FOR OWNER)
-      case "REWARD_POST_VIEW_RECEIVED":
-        ver.metrics.viewsReceived += 1;
-        break;
+  // viewer views a post – no metric impact
+  case "REWARD_POST_VIEW":
+    break;
 
-      // 👁️ POST VIEW (viewer) → no metric impact, but must exist
-      case "REWARD_POST_VIEW":
-        break;
+  // ============================
+  // AD VIEWS
+  // ============================
+  case "REWARD_VIEWS":
+    ver.metrics.adsViewed += 1;
+    break;
 
-      // 🎥 AD VIEW
-      case "REWARD_VIEWS":
-        ver.metrics.adsViewed += 1;
-        break;
+  // ============================
+  // MILESTONES (popular posts)
+  // ============================
+  case "REWARD_MILESTONE":
+    ver.metrics.highEngagementPosts = 
+      (ver.metrics.highEngagementPosts || 0) + 1;
+    break;
 
-      // 🎯 MILESTONE HITS
-      case "REWARD_MILESTONE":
-        ver.metrics.highEngagementPosts += 1;
-        break;
+  // ============================
+  // FOLLOWER GROWTH
+  // ============================
+  case "REWARD_FOLLOW":
+    ver.metrics.totalFollowers += 1;
+    break;
 
-      // 🌐 COMMUNITY CREATION
-      case "REWARD_CREATE_COMMUNITY":
-        ver.metrics.communitiesCreated += 1;
-        break;
+  // ============================
+  // POSTS CREATED
+  // ============================
+  case "REWARD_POST":
+    ver.metrics.postsCreated += 1;
+    ver.metrics.totalPostCount += 1; 
+    break;
 
-      // 📝 POST CREATION (if you track it)
-      case "REWARD_POST":
-        if (ver.metrics.totalPosts !== undefined)
-          ver.metrics.totalPosts += 1;
-        break;
+  // ============================
+  // COMMUNITY CREATION
+  // ============================
+  case "REWARD_CREATE_COMMUNITY":
+    if (!ver.metrics.totalCommunitiesCreated)
+       ver.metrics.totalCommunitiesCreated = 0;
 
-      // 📅 DAILY LOGIN
-      case "REWARD_DAILY_LOGIN":
-        await ver.trackLogin();
-        break;
+    ver.metrics.totalCommunitiesCreated += 1;
+    break;
 
-      // Other reward types do not affect metrics
-    }
+  // ============================
+  // DAILY LOGIN
+  // ============================
+  case "REWARD_DAILY_LOGIN":
+    await ver.trackLogin();
+    break;
+
+}
+
 
     await ver.save();
   }

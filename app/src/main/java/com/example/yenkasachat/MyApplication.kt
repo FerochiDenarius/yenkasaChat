@@ -18,6 +18,11 @@ import com.onesignal.OSSubscriptionStateChanges
 import com.onesignal.OneSignal
 import java.util.HashMap
 import com.jakewharton.threetenabp.AndroidThreeTen
+import android.media.AudioAttributes
+import android.net.Uri
+import androidx.core.app.NotificationCompat
+
+
 
 class MyApplication : Application(), OSSubscriptionObserver {
 
@@ -26,8 +31,17 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
     // Define your channel ID as a constant for clarity
     companion object {
-        const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_new_messages_channel" // <<< YOUR CHANNEL ID
+        const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_new_messages_channel"
+
+        val notificationSounds = mapOf(
+            "sound_default" to R.raw.sound_default,
+            "sound_chime" to R.raw.sound_chime,
+            "sound_bell" to R.raw.sound_bell,
+            "sound_soft" to R.raw.sound_soft,
+            "sound_alert" to R.raw.sound_alert
+        )
     }
+
 
     override fun onCreate() {
         super.onCreate()
@@ -76,12 +90,31 @@ class MyApplication : Application(), OSSubscriptionObserver {
         Log.d(ONE_SIGNAL_TAG, "OSSubscriptionObserver added.")
 
 
-        OneSignal.setNotificationWillShowInForegroundHandler { notificationReceivedEvent ->
-            val notification = notificationReceivedEvent.notification
-            Log.d(ONE_SIGNAL_TAG, "[FG] Notification Will Show: ${notification.notificationId} Title: ${notification.title} Body: ${notification.body}")
-            // Consider completing the event if you want OneSignal to display it.
-            // If you have your own custom display logic, that's fine too.
-            notificationReceivedEvent.complete(notification) // Or complete(null) to suppress
+        OneSignal.setNotificationWillShowInForegroundHandler { event ->
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+
+            val rawRes = resources.getIdentifier(selectedId, "raw", packageName)
+            val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
+
+            val notif = event.notification
+            val title = notif.title ?: "Notification"
+            val body = notif.body ?: ""
+
+            // ❗ Stop OneSignal from showing its notification
+            event.complete(null)
+
+            // 🔔 Build our own custom notification with user-selected sound
+            val builder = NotificationCompat.Builder(this, NEW_CHAT_MESSAGES_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_bell)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setSound(soundUri)
+
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(System.currentTimeMillis().toInt(), builder.build())
         }
 
         OneSignal.setNotificationOpenedHandler { result ->
@@ -120,21 +153,32 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val chatMessagesChannelName = "New Chat Messages"
-            val chatMessagesChannelDescription = "Notifications for new chat messages."
-            val importance = NotificationManager.IMPORTANCE_HIGH
 
-            val chatChannel = NotificationChannel(
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+            val soundRes = notificationSounds[selectedId] ?: R.raw.sound_default
+
+            val soundUri = Uri.parse("android.resource://$packageName/$soundRes")
+
+            val audioAttrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            val channel = NotificationChannel(
                 NEW_CHAT_MESSAGES_CHANNEL_ID,
-                chatMessagesChannelName,
-                importance
+                "Yenkasa Notifications",
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = chatMessagesChannelDescription
+                description = "Notifications for Yenkasa activities"
+                enableLights(true)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 200, 150, 200)
+                setSound(soundUri, audioAttrs)   // 🔥 apply user-selected sound
             }
 
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(chatChannel)
-            Log.i("MyApplication", "Notification channel '${chatChannel.id}' created successfully.")
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
         }
     }
 
@@ -188,4 +232,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         }
         Log.i(ONE_SIGNAL_TAG, "--- Finished processing OSSubscriptionState change ---")
     }
+
+
 }

@@ -3,7 +3,7 @@
     android:id="@+id/createTransactionRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/surface_card_dark">
 
     <!-- Scrollable content -->
     <ScrollView
@@ -39,15 +39,15 @@
                     android:layout_weight="1"
                     android:text="USER_WALLET_ID"
                     android:textSize="16sp"
-                    android:textColor="@color/black" />
+                    android:textColor="@color/background_light" />
 
                 <Button
                     android:id="@+id/btnCopyWalletId"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Copy"
-                    android:backgroundTint="@color/blue"
-                    android:textColor="@color/white" />
+                    android:backgroundTint="@color/yellowAccent"
+                    android:textColor="@color/yenkasaBlack" />
             </LinearLayout>
 
             <TextView
@@ -64,7 +64,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Recipient Wallet ID"
                 android:padding="12dp"
-                android:background="@drawable/bg_edittext"
+                android:background="@drawable/yenkasa_gradient"
                 android:layout_marginBottom="16dp" />
 
             <EditText
@@ -74,7 +74,7 @@
                 android:hint="Amount"
                 android:inputType="numberDecimal"
                 android:padding="12dp"
-                android:background="@drawable/bg_edittext"
+                android:background="@drawable/yenkasa_gradient"
                 android:layout_marginBottom="24dp" />
 
             <Button
@@ -82,8 +82,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Send Coins"
-                android:backgroundTint="@color/green"
-                android:textColor="@color/white" />
+                android:backgroundTint="@drawable/btn_login_gold"
+                android:textColor="@color/amber_300" />
         </LinearLayout>
     </ScrollView>
 

@@ -12,6 +12,15 @@ import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.ApiService
 import kotlinx.coroutines.launch
 import com.example.yenkasachat.model.UserPrivacyModel
+import android.widget.Switch
+import androidx.appcompat.widget.SwitchCompat
+import androidx.appcompat.app.AlertDialog
+import android.media.MediaPlayer
+
+
+
+
+
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -27,6 +36,18 @@ class SettingsActivity : AppCompatActivity() {
 
     private val api: ApiService by lazy { ApiClient.apiService }
     private val TAG = "SettingsActivity"
+    private lateinit var itemNotificationSound: LinearLayout
+    private lateinit var itemNotificationToggle: LinearLayout
+    private lateinit var txtSoundCurrent: TextView
+    private lateinit var switchNotifications: Switch
+
+    private val soundOptions = listOf(
+        "sound_default" to "Default",
+        "sound_chime" to "Chime",
+        "sound_bell" to "Bell",
+        "sound_soft" to "Soft",
+        "sound_alert" to "Alert"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +58,7 @@ class SettingsActivity : AppCompatActivity() {
         loadPrivacySummary()
     }
 
+
     private fun bindViews() {
         itemPrivacyLevel = findViewById(R.id.itemPrivacyLevel)
         itemWhoYouBlocked = findViewById(R.id.itemWhoYouBlocked)
@@ -46,6 +68,18 @@ class SettingsActivity : AppCompatActivity() {
         itemUsersBlockedFromPosts = findViewById(R.id.itemUsersBlockedFromPosts)
 
         privacySummaryText = findViewById(R.id.privacySummaryText)
+        itemNotificationSound = findViewById(R.id.itemNotificationSound)
+        itemNotificationToggle = findViewById(R.id.itemNotificationToggle)
+        txtSoundCurrent = findViewById(R.id.txtSoundCurrent)
+        switchNotifications = findViewById(R.id.switchNotifications)
+
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val savedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+
+        val savedLabel = soundOptions.firstOrNull { it.first == savedId }?.second ?: "Default"
+        txtSoundCurrent.text = savedLabel
+
+
     }
 
     private fun setClickListeners() {
@@ -79,6 +113,11 @@ class SettingsActivity : AppCompatActivity() {
         itemUsersBlockedFromPosts.setOnClickListener {
             startActivity(Intent(this, HiddenUsersActivity::class.java))
         }
+
+        itemNotificationSound.setOnClickListener {
+            showSoundPickerDialog()
+        }
+
     }
 
     private fun loadPrivacySummary() {
@@ -101,4 +140,30 @@ class SettingsActivity : AppCompatActivity() {
             }
         })
     }
+
+    private fun showSoundPickerDialog() {
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+
+        val labels = soundOptions.map { it.second }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Select Notification Sound")
+            .setItems(labels) { _, which ->
+
+                val selectedId = soundOptions[which].first
+                val selectedLabel = soundOptions[which].second
+
+                // Save selection
+                prefs.edit().putString("notification_sound", selectedId).apply()
+
+                // Update UI label
+                txtSoundCurrent.text = selectedLabel
+
+                // Preview sound
+                val resId = resources.getIdentifier(selectedId, "raw", packageName)
+                MediaPlayer.create(this, resId).start()
+            }
+            .show()
+    }
+
 }

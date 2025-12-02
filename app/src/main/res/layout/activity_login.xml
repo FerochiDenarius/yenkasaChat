@@ -122,16 +122,17 @@
                     android:layout_gravity="end" />
 
                 <!-- Login button -->
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btnLogin"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:text="LOG IN"
                     android:textColor="#0E1A12"
-                    android:textSize="18sp"
                     android:textStyle="bold"
+                    android:textSize="18sp"
                     android:background="@drawable/btn_login_gold"
-                    android:layout_marginTop="28dp"/>
+                    android:backgroundTint="@null" />
+
 
 
                 <!-- Loading Bar -->

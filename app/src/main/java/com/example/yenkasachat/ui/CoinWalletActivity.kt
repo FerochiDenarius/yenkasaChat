@@ -1,25 +1,29 @@
 package com.example.yenkasachat.ui
 
-import android.content.Intent
+import android.app.NotificationManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.yenkasachat.MyApplication
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.TransactionAdapter
 import com.example.yenkasachat.model.TransactionUiModel
 import com.example.yenkasachat.model.CoinTransactionResponse
 import com.example.yenkasachat.model.CoinBalanceResponse
-import com.example.yenkasachat.model.User
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import android.content.Intent
+
 
 class CoinWalletActivity : AppCompatActivity() {
 
@@ -29,8 +33,11 @@ class CoinWalletActivity : AppCompatActivity() {
     private lateinit var btnTransaction: Button
     private lateinit var recyclerViewTransactions: RecyclerView
     private lateinit var transactionAdapter: TransactionAdapter
+
     private val transactionList = mutableListOf<TransactionUiModel>()
 
+    // Track old transaction list to detect NEW rewards
+    private var previousList: List<TransactionUiModel> = emptyList()
 
     private val TAG = "CoinWalletActivity"
 
@@ -38,7 +45,7 @@ class CoinWalletActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_coin_wallet)
 
-        // Initialize UI
+        // UI
         tvTitle = findViewById(R.id.tvTitle)
         tvBalanceLabel = findViewById(R.id.tvBalanceLabel)
         tvBalance = findViewById(R.id.tvBalance)
@@ -48,105 +55,140 @@ class CoinWalletActivity : AppCompatActivity() {
         tvTitle.text = "Coin Wallet"
         tvBalanceLabel.text = "Current Balance"
 
-        // Set RecyclerView
+        // RecyclerView
         transactionAdapter = TransactionAdapter(transactionList)
         recyclerViewTransactions.apply {
             layoutManager = LinearLayoutManager(this@CoinWalletActivity)
             adapter = transactionAdapter
         }
 
-        // Navigate to CreateTransactionActivity when button clicked
         btnTransaction.setOnClickListener {
-            val intent = Intent(this, CreateTransactionActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, CreateTransactionActivity::class.java))
         }
 
-        // Load balance & transactions
         loadWalletData()
     }
 
     private fun loadWalletData() {
         val token = TokenManager.getToken(this) ?: return
 
-        // ✅ Load wallet balance from backend
+        // Load balance
         ApiClient.apiService.getCoinBalance("Bearer $token")
             .enqueue(object : Callback<CoinBalanceResponse> {
                 override fun onResponse(call: Call<CoinBalanceResponse>, response: Response<CoinBalanceResponse>) {
                     if (response.isSuccessful && response.body() != null) {
-                        val data = response.body()!!
-                        tvBalance.text = "YenkasaCoins: ${data.balance}"
-                        Log.d(TAG, "✅ Wallet loaded: ${data.balance} coins (Wallet ID: ${data.walletId})")
+                        tvBalance.text = "YenkasaCoins: ${response.body()!!.balance}"
                     } else {
                         tvBalance.text = "YenkasaCoins: 0"
-                        Log.e(TAG, "⚠️ Failed to load wallet balance. Code: ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
                     tvBalance.text = "YenkasaCoins: 0"
-                    Log.e(TAG, "❌ Failed to load coin balance: ${t.message}")
                 }
             })
 
-        // ✅ Load cached transaction history first (only ones with activityId)
-        val cached = TokenManager.getTransactionHistory(this@CoinWalletActivity)
+        // Load cached transactions
+        val cached = TokenManager.getTransactionHistory(this)
             .filter { !it.activityId.isNullOrEmpty() }
 
         if (cached.isNotEmpty()) {
             transactionList.clear()
             transactionList.addAll(cached)
             transactionAdapter.notifyDataSetChanged()
-            Log.d(TAG, "📦 Loaded ${cached.size} cached transactions")
+            previousList = cached // STORE previous list baseline
         }
 
-        // ✅ Fetch latest transaction history from backend
+        // Fetch latest from server
         ApiClient.apiService.getCoinTransactionHistory("Bearer $token")
             .enqueue(object : Callback<CoinTransactionResponse> {
                 override fun onResponse(
                     call: Call<CoinTransactionResponse>,
                     response: Response<CoinTransactionResponse>
                 ) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val transactions = response.body()!!.transactions
-                            .filter { !it.activityId.isNullOrEmpty() }
-                            .map {
-                                TransactionUiModel(
-                                    transactionId = it.transactionId,
-                                    amount = it.amount,
-                                    from = it.fromWalletId ?: "",
-                                    to = it.toWalletId ?: "",
-                                    newBalance = 0,
-                                    senderUsername = it.fromUsername,
-                                    recipientUsername = it.toUsername,
-                                    description = it.description,
-                                    type = it.type,
-                                    createdAt = it.createdAt,
-                                    activityId = it.activityId
-                                )
-                            }
-
-                        transactionList.clear()
-                        transactionList.addAll(transactions)
-                        transactionAdapter.notifyDataSetChanged()
-
-                        TokenManager.saveTransactionHistory(this@CoinWalletActivity, transactions)
-                        Log.d(TAG, "✅ Fetched ${transactions.size} transactions from server")
-                    } else {
+                    if (!response.isSuccessful || response.body() == null) {
                         Toast.makeText(this@CoinWalletActivity, "Failed to load transactions", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "⚠️ Failed to load transactions. Code: ${response.code()}")
+                        return
                     }
+
+                    val latest = response.body()!!.transactions
+                        .filter { !it.activityId.isNullOrEmpty() }
+                        .map {
+                            TransactionUiModel(
+                                transactionId = it.transactionId,
+                                amount = it.amount,
+                                from = it.fromWalletId ?: "",
+                                to = it.toWalletId ?: "",
+                                newBalance = 0,
+                                senderUsername = it.fromUsername,
+                                recipientUsername = it.toUsername,
+                                description = it.description,
+                                type = it.type,
+                                createdAt = it.createdAt,
+                                activityId = it.activityId
+                            )
+                        }
+
+                    // Detect new rewards
+                    val newItems = latest.filter { newTx ->
+                        previousList.none { oldTx -> oldTx.transactionId == newTx.transactionId }
+                    }
+
+                    // Trigger sound notification for each reward
+                    if (newItems.isNotEmpty()) {
+                        newItems.forEach { tx ->
+                            triggerRewardNotification(tx)
+                        }
+                    }
+
+                    // Update UI
+                    transactionList.clear()
+                    transactionList.addAll(latest)
+                    transactionAdapter.notifyDataSetChanged()
+
+                    // Save to local cache
+                    TokenManager.saveTransactionHistory(this@CoinWalletActivity, latest)
+
+                    // Update previous list
+                    previousList = latest
                 }
 
                 override fun onFailure(call: Call<CoinTransactionResponse>, t: Throwable) {
-                    Toast.makeText(this@CoinWalletActivity, "Failed to load transactions — showing cached data", Toast.LENGTH_SHORT).show()
-                    Log.e(TAG, "❌ Transaction fetch error: ${t.message}")
+                    Toast.makeText(this@CoinWalletActivity, "Failed to load transactions", Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
+
+    // 🔥 Play sound + show notification for rewards
+    private fun triggerRewardNotification(tx: TransactionUiModel) {
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val selectedSound = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+
+        val rawRes = resources.getIdentifier(selectedSound, "raw", packageName)
+        val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
+
+        val title = "Reward Earned!"
+        val body = tx.description ?: "You received ${tx.amount} YKC"
+
+        val builder = NotificationCompat.Builder(
+            this,
+            MyApplication.NEW_CHAT_MESSAGES_CHANNEL_ID
+        )
+            .setSmallIcon(R.drawable.ic_coin)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setSound(soundUri)
+
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(System.currentTimeMillis().toInt(), builder.build())
+    }
+
+
     override fun onResume() {
         super.onResume()
-        // Refresh balance & transactions when returning from sending/receiving coins
         loadWalletData()
     }
 }

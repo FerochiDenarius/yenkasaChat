@@ -5,7 +5,7 @@
     android:id="@+id/chatRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/chat_background">
+    android:background="@drawable/yenkasa_gradient">
 
     <!-- Main layout with messages and input -->
     <LinearLayout
@@ -18,7 +18,7 @@
             android:id="@+id/receiverHeaderLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
+            android:background="@color/yenkasa_amber"
             android:paddingHorizontal="8dp"
             android:paddingVertical="6dp"
             android:elevation="4dp">
@@ -167,7 +167,7 @@
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/buttonCancelReply"
                 android:textStyle="bold"
-                android:textColor="?attr/colorPrimary"
+                android:textColor="@color/yellowAccent"
                 tools:text="Replying to John Doe" />
 
             <TextView

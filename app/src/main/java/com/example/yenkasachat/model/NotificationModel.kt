@@ -10,3 +10,8 @@ data class NotificationModel(
     val status: String, // "unread" or "read"
     val createdAt: String
 )
+data class NotificationSound(
+    val id: String,
+    val title: String,
+    val rawResId: Int
+)

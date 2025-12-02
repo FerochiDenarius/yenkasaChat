@@ -94,33 +94,90 @@ async function reward(toUserId, amount, opts = {}) {
      * Update verification metrics safely
      * --------------------------------------------------- */
     try {
-      const AppVerification = require('../models/appverification.model');
-      const ver = await AppVerification.findOne({ userId: toUserId });
+   // --------------------------------------
+// 🔧 UPDATE VERIFICATION METRICS
+// --------------------------------------
+/* ---------------------------------------------------
+ * Update verification metrics safely
+ * --------------------------------------------------- */
 
-      if (ver) {
-        switch (tx.type) {
-          case "REWARD_COMMENT":
-            ver.metrics.totalComments += 1;
-            break;
-          case "REWARD_COMMENT_LIKE":
-            ver.metrics.totalComments += 0.1;
-            break;
-          case "REWARD_POST_LIKE":
-            ver.metrics.maxLikesOnPost = Math.max(ver.metrics.maxLikesOnPost, 1);
-            break;
-          case "REWARD_DAILY_LOGIN":
-            await ver.trackLogin();
-            break;
-          case "REWARD_VIEWS":
-            await ver.trackAdView();
-            break;
-        }
+  const AppVerification = require('../models/appverification.model');
+  const ver = await AppVerification.findOne({ userId: toUserId });
 
-        await ver.save();
-      }
-    } catch (err) {
-      console.error("⚠️ Metrics update failed:", err.message);
+  if (ver) {
+    switch (tx.type) {
+
+      // 📝 COMMENTS
+      case "REWARD_COMMENT":
+        ver.metrics.totalComments += 1;
+        break;
+
+      case "REWARD_COMMENT_LIKE":
+        ver.metrics.totalComments += 0.1;
+        break;
+
+      case "REWARD_REPLY":
+        ver.metrics.totalComments += 1;
+        break;
+
+      // ❤️ POST LIKES
+      case "REWARD_POST_LIKE":
+        ver.metrics.maxLikesOnPost = Math.max(
+          ver.metrics.maxLikesOnPost,
+          1
+        );
+        break;
+
+      // ➕ NEW FOLLOWERS
+      case "REWARD_FOLLOW":
+        ver.metrics.totalFollowers += 1;
+        break;
+
+      // 👁️ POST VIEW RECEIVED (ONLY FOR OWNER)
+      case "REWARD_POST_VIEW_RECEIVED":
+        ver.metrics.viewsReceived += 1;
+        break;
+
+      // 👁️ POST VIEW (viewer) → no metric impact, but must exist
+      case "REWARD_POST_VIEW":
+        break;
+
+      // 🎥 AD VIEW
+      case "REWARD_VIEWS":
+        ver.metrics.adsViewed += 1;
+        break;
+
+      // 🎯 MILESTONE HITS
+      case "REWARD_MILESTONE":
+        ver.metrics.highEngagementPosts += 1;
+        break;
+
+      // 🌐 COMMUNITY CREATION
+      case "REWARD_CREATE_COMMUNITY":
+        ver.metrics.communitiesCreated += 1;
+        break;
+
+      // 📝 POST CREATION (if you track it)
+      case "REWARD_POST":
+        if (ver.metrics.totalPosts !== undefined)
+          ver.metrics.totalPosts += 1;
+        break;
+
+      // 📅 DAILY LOGIN
+      case "REWARD_DAILY_LOGIN":
+        await ver.trackLogin();
+        break;
+
+      // Other reward types do not affect metrics
     }
+
+    await ver.save();
+  }
+
+} catch (err) {
+  console.error("⚠️ Metrics update failed:", err.message);
+}
+
 
     return tx;
 

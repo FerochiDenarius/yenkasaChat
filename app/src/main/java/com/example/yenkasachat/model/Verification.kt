@@ -69,29 +69,33 @@ data class VerificationRequirements(
 // ===============================
 data class VerificationMetrics(
 
-    // --- Core backend metrics ---
-    val accountAge: Int,
-    val totalComments: Int,
-    val totalFollowers: Int,
-    val maxLikesOnPost: Int,
-    val dailyLogins: Int,
-    val adsViewed: Int,
+    // ----- CORE -----
+    var accountAge: Int,
+    var totalComments: Int,
+    var totalFollowers: Int,
+    var maxLikesOnPost: Int,
+    var dailyLogins: Int,
+    var adsViewed: Int,
 
-    // --- Performance metrics ---
-    val postsCreated: Int = 0,
-    val totalViewsReceived: Int = 0,
-    val totalRepliesReceived: Int = 0,
-    val totalLikesReceived: Int = 0,
-    val totalCommentsReceived: Int = 0,
-    val commentLikesReceived: Int = 0,
-    val totalShares: Int = 0,
+    // ----- RECEIVED METRICS -----
+    var postsCreated: Int = 0,
+    var totalViewsReceived: Int = 0,
+    var totalRepliesReceived: Int = 0,
+    var totalLikesReceived: Int = 0,
+    var totalCommentsReceived: Int = 0,
+    var commentLikesReceived: Int = 0,
+    var totalShares: Int = 0,
 
-    // --- EXTRA ADMIN METRICS (matching backend) ---
-    val totalFollowing: Int = 0,
-    val totalPostCount: Int = 0,
-    val totalViewsCount: Int = 0,
-    val totalCommentsMade: Int = 0
+    // ----- SOCIAL -----
+    var totalFollowing: Int = 0,
+
+    // ----- ACTIVITY METRICS (added as vars) -----
+    var totalPostCount: Int = 0,
+    var totalViewsCount: Int = 0,
+    var totalLikesCount: Int = 0,       // <--- Missing one (FIXED)
+    var totalCommentsMade: Int = 0
 )
+
 
 
 // ===============================
@@ -186,4 +190,31 @@ data class PhaseAdvancementResponse(
     val nextRequirements: VerificationRequirements? = null,
     val error: String? = null,
     val daysRemaining: Int? = null
+)
+
+
+data class UserPerformanceMetricsResponse(
+    val success: Boolean,
+    val performanceMetrics: PerformanceTotals
+)
+
+data class PerformanceTotals(
+    // ----- RECEIVED METRICS -----
+    val totalViewsReceived: Int = 0,
+    val totalLikesReceived: Int = 0,
+    val totalCommentsReceived: Int = 0,
+    val totalRepliesReceived: Int = 0,
+    val commentLikesReceived: Int = 0,
+    val totalShares: Int = 0,
+
+    // ----- ACTIVITY METRICS -----
+    val postsCreated: Int = 0,
+    val totalPostCount: Int = 0,
+    val totalViewsCount: Int = 0,
+    val totalLikesCount: Int = 0,
+    val totalCommentsMade: Int = 0,
+
+    // ----- SOCIAL -----
+    val totalFollowers: Int = 0,
+    val totalFollowing: Int = 0
 )

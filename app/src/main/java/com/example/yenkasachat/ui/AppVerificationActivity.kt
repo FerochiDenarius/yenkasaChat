@@ -15,6 +15,8 @@ import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.util.TokenManager
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.example.yenkasachat.model.UserPerformanceMetricsResponse
+import com.example.yenkasachat.model.PerformanceTotals
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -57,6 +59,7 @@ class AppVerificationActivity : AppCompatActivity() {
         setupViewPagerListener()
         loadDashboard()
         trackLoginEvent()
+
 
         btnAdvance.setOnClickListener {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
@@ -135,6 +138,7 @@ class AppVerificationActivity : AppCompatActivity() {
                     dashboardData = cached
                     setupViewPager()
                     highlightTab(0)
+                    loadPerformanceMetrics()
                     updateAdvancePhaseButton()
                     loadProgress()
                 }
@@ -242,6 +246,46 @@ class AppVerificationActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------
+    private fun loadPerformanceMetrics() {
+        val userId = TokenManager.getUserId(this) ?: return
+
+        ApiClient.apiService.getPerformanceMetrics(
+            userId,
+            "Bearer ${TokenManager.getToken(this)}"
+        ).enqueue(object : Callback<UserPerformanceMetricsResponse> {
+
+            override fun onResponse(
+                call: Call<UserPerformanceMetricsResponse>,
+                response: Response<UserPerformanceMetricsResponse>
+            ) {
+                val totals = response.body()?.performanceMetrics ?: return
+                val m = dashboardData?.appVerification?.currentMetrics ?: return
+
+                // ----- RECEIVED METRICS -----
+                m.totalViewsReceived = totals.totalViewsReceived
+                m.totalLikesReceived = totals.totalLikesReceived
+                m.totalCommentsReceived = totals.totalCommentsReceived
+                m.totalRepliesReceived = totals.totalRepliesReceived
+                m.commentLikesReceived = totals.commentLikesReceived
+                m.totalShares = totals.totalShares
+
+                // ----- ACTIVITY -----
+                m.postsCreated = totals.postsCreated
+                m.totalPostCount = totals.totalPostCount
+                m.totalViewsCount = totals.totalViewsCount
+                m.totalLikesCount = totals.totalLikesCount
+                m.totalCommentsMade = totals.totalCommentsMade
+
+                // ----- SOCIAL -----
+                m.totalFollowers = totals.totalFollowers
+                m.totalFollowing = totals.totalFollowing
+
+                setupViewPager()
+            }
+
+            override fun onFailure(call: Call<UserPerformanceMetricsResponse>, t: Throwable) {}
+        })
+    }
 
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE

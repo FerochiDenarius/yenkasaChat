@@ -15,5 +15,6 @@
         <!-- Do NOT include textButtonStyle here unless you're defining it yourself -->
     </style>
 
+
     <style name="Theme.YenkasaChat" parent="Base.Theme.YenkasaChat" />
 </resources>

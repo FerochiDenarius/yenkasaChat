@@ -534,6 +534,14 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<PhaseAdvancementResponse>
 
+    // GET /api/metrics/:userId/performance-metrics
+    @GET("metrics/{userId}/performance-metrics")
+    fun getPerformanceMetrics(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String
+    ): Call<UserPerformanceMetricsResponse>
+
+
     // ───────────────────────────────
 // USER PRIVACY
 // ───────────────────────────────

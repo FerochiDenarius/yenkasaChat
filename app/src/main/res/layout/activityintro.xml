@@ -1,64 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="#FFD54F"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.IntroActivity">
+    android:background="#FFD54F">
 
-    <!-- Glow background effect behind logo -->
-    <View
-        android:layout_width="260dp"
-        android:layout_height="260dp"
-        android:background="@drawable/ic_yenkasa_foreground"
-        android:layout_gravity="center"/>
-
-    <!-- Yenkasa Logo -->
+    <!-- Logo -->
     <ImageView
-        android:id="@+id/introLogo"
-        android:layout_width="180dp"
-        android:layout_height="180dp"
+        android:id="@+id/ivLogo"
+        android:layout_width="110dp"
+        android:layout_height="110dp"
         android:src="@drawable/ic_logo_emblem"
-        android:layout_marginTop="-240dp"
-        android:layout_marginBottom="20dp"
-        android:contentDescription="Yenkasa Africa Logo" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_margin="32dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- App Title -->
+    <!-- Title -->
     <TextView
-        android:id="@+id/textAppName"
+        android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Yenkasa Africa"
+        android:textColor="#1A1A1A"
         android:textSize="30sp"
         android:textStyle="bold"
-        android:textColor="#1A1A1A"
-        android:layout_marginBottom="6dp"
-        android:fontFamily="sans-serif-medium" />
+        app:layout_constraintTop_toBottomOf="@id/ivLogo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_margin="12dp"/>
 
-    <!-- Tagline reflecting community awareness -->
+    <!-- Tagline -->
     <TextView
-        android:id="@+id/textTagline"
+        android:id="@+id/tvTagline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="See what's happening in your community."
-        android:textSize="17sp"
         android:textColor="#1A1A1A"
-        android:layout_marginBottom="40dp"
-        android:alpha="0.8" />
+        android:textSize="18sp"
+        android:alpha="0.9"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_margin="6dp"/>
 
-    <!-- Get Started Button -->
+    <!-- Illustration -->
+    <ImageView
+        android:id="@+id/ivIllustration"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/intro_mockup_community_full"
+        android:adjustViewBounds="true"
+        app:layout_constraintTop_toBottomOf="@id/tvTagline"
+        app:layout_constraintBottom_toTopOf="@id/btnGetStarted"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_margin="18dp"
+        app:layout_constraintBottom_margin="24dp"/>
+
+    <!-- Rounded Button -->
     <Button
-        android:id="@+id/buttonGetStarted"
-        android:layout_width="260dp"
-        android:layout_height="54dp"
-        android:backgroundTint="#1A7F2E"
+        android:id="@+id/btnGetStarted"
+        android:layout_width="0dp"
+        android:layout_height="58dp"
         android:text="Get Started"
+        android:textSize="18sp"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:elevation="6dp"
-        android:fontFamily="sans-serif-medium" />
+        android:background="@drawable/btn_get_started"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="40dp"
+        android:layout_marginEnd="40dp"
+        android:layout_marginBottom="36dp"/>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,14 +1,16 @@
 // services/verificationScheduler.js
-const cron = require('node-cron');
-const User = require('../models/user.model');
-const AppVerification = require('../models/appverification.model');
-const getUserMetrics = require('./userPerformanceMetrics').getUserPerformanceMetrics;
+const cron = require("node-cron");
+const User = require("../models/user.model");
+const AppVerification = require("../models/appverification.model");
+const getUserMetrics =
+  require("./userPerformanceMetrics").getUserPerformanceMetrics;
+const { reward } = require("./reward.service");
 
 console.log("🕒 Yenkasa Verification Scheduler Initialized...");
 
 // Promotion thresholds
 const ADMIN_DAYS = 90;
-const MOD_DAYS = Math.floor(ADMIN_DAYS * 1.8);  // 162
+const MOD_DAYS = Math.floor(ADMIN_DAYS * 1.8); // 162
 
 /**
  * CRON: runs daily at midnight (Africa/Accra)
@@ -39,28 +41,44 @@ cron.schedule(
         }
 
         // ==========================================================
-        // 1️⃣ UPDATE ACCOUNT AGE & DAILY LOGIN TRACKING
+        // 1️⃣ UPDATE ACCOUNT AGE (DAILY)
         // ==========================================================
         await appVer.updateAccountAge(user.createdAt);
-        // (dailyLogins incremented by TrackLogin API – not scheduler)
+
+        // DAILY ACCOUNT AGE REWARD — Always 10 coins for all roles
+        await reward(user._id, 10, {
+          type: "REWARD_ACCOUNT_AGE",
+          description: "Daily account age reward (+10)",
+        });
 
         // ==========================================================
-        // 2️⃣ UPDATE FULL PERFORMANCE METRICS
+        // 2️⃣ UPDATE FULL PERFORMANCE METRICS (Lifetime Calculations)
         // ==========================================================
         const lifetime = await getUserMetrics(user._id);
 
+        // FIXED FIELD ALIGNMENT WITH BACKEND SCHEMA
+        appVer.metrics.postsCreated = lifetime.postsCreated; // correct
+        appVer.metrics.totalPostCount = lifetime.postsCreated;
+
         appVer.metrics.totalFollowers = lifetime.followers;
-        appVer.metrics.totalComments = lifetime.commentsReceived;
-        appVer.metrics.maxLikesOnPost = lifetime.likesReceived;
-        appVer.metrics.adsViewed = appVer.metrics.adsViewed; // already tracked
-        appVer.metrics.viewsReceived = lifetime.viewsReceived;
-        appVer.metrics.postsCreated = lifetime.postsCreated;
-        appVer.metrics.repliesReceived = lifetime.repliesReceived;
+
+        appVer.metrics.totalLikesReceived = lifetime.likesReceived;
+        appVer.metrics.maxLikesOnPost = lifetime.maxLikesOnPost;
+
+        appVer.metrics.totalViewsReceived = lifetime.viewsReceived;
+        appVer.metrics.totalViewsCount = lifetime.viewsReceived;
+
+        appVer.metrics.totalCommentsReceived = lifetime.commentsReceived;
+        appVer.metrics.totalRepliesReceived = lifetime.repliesReceived;
+        appVer.metrics.commentLikesReceived = lifetime.commentLikesReceived;
+
+        appVer.metrics.totalComments = lifetime.commentsMade; // user-made comments
+        appVer.metrics.totalCommentsMade = lifetime.commentsMade;
 
         await appVer.save();
 
         // ==========================================================
-        // 3️⃣ PHASE ADVANCEMENT (if requirements met)
+        // 3️⃣ PHASE ADVANCEMENT
         // ==========================================================
         const progress = appVer.checkRequirementsMet();
         const now = new Date();
@@ -73,7 +91,27 @@ cron.schedule(
         if (canAdvance) {
           await appVer.advancePhase();
           advancedPhases++;
-          console.log(`🎉 ${user.username} advanced to Phase ${appVer.currentPhase}`);
+
+          console.log(
+            `🎉 ${user.username} advanced to Phase ${appVer.currentPhase}`
+          );
+
+          // ⭐ VERIFICATION COMPLETION REWARD (PHASE 6)
+          if (appVer.currentPhase === 6) {
+            let verifyReward = 100;
+
+            if (user.role === "admin") verifyReward = 300;
+            if (user.role === "moderator") verifyReward = 500;
+
+            await reward(user._id, verifyReward, {
+              type: "REWARD_VERIFICATION",
+              description: `Verification completed (+${verifyReward})`,
+            });
+
+            console.log(
+              `💎 Awarded ${verifyReward} coins to ${user.username} for verification completion`
+            );
+          }
         }
 
         // ==========================================================

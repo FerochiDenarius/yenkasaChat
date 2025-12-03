@@ -136,7 +136,7 @@ if (!isPrivileged) {
   // Notify creator their post is pending review
   await sendNotification({
     type: "post_under_review",
-    senderId: "system",
+senderId: SYSTEM_USER_ID,
     receiverId: userId,
     activityId: `post_pending_${post._id}`,
     message: "Your post is under review and will be approved shortly."

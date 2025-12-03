@@ -10,6 +10,9 @@ const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
 const PostApproval = require("../models/postapproval.model");
 const { sendNotification } = require("../services/notification.service");
+// System-generated notifications
+const SYSTEM_USER_ID = "000000000000000000000000";
+
 
 
 

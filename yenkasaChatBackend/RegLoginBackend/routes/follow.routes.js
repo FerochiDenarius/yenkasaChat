@@ -11,7 +11,8 @@ const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require('../services/notification.service');
 
-const REWARD_FOLLOW = 5;
+const REWARD_FOLLOW = 10;  // follower gets 10 coins
+const REWARD_FOLLOW_RECEIVED = 5; // followed user gets 5 coins
 
 /* ---------------------------------------------------
  * Block check helper
@@ -82,6 +83,17 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       relatedUserId: targetId,
       activityId
     });
+
+    /* ---------------------------------------------------
+ * REWARD USER WHO IS FOLLOWED
+ * --------------------------------------------------- */
+const rewardReceivedTx = await rewardService.reward(targetId, REWARD_FOLLOW_RECEIVED, {
+  type: "REWARD_FOLLOW_RECEIVED",
+  description: `${followerUser.username} followed you`,
+  relatedUserId: followerId,
+  activityId: `${activityId}_received`
+});
+
 
     /* ---------------------------------------------------
      * SEND NOTIFICATION (if allowed)

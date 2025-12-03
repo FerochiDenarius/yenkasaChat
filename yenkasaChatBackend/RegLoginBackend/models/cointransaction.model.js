@@ -29,18 +29,26 @@ const coinTransactionSchema = new Schema({
   type: {
     type: String,
 enum: [
+  // POST REWARDS
   "REWARD_POST",
+  "REWARD_POST_APPROVED",   // ★ NEW → for approved posts
+  "REWARD_POST_REJECTED",   // ★ NEW → for rejected posts
   "REWARD_POST_LIKE",
+
+  // COMMENT SYSTEM
   "REWARD_COMMENT",
   "REWARD_COMMENT_LIKE",
   "REWARD_REPLY",
+
+  // FOLLOWERS
   "REWARD_FOLLOW",
+   "REWARD_FOLLOW_RECEIVED", 
 
   // VIEWS
   "REWARD_VIEWS",              // ad views
   "REWARD_POST_VIEW",          // user viewing post
   "REWARD_POST_VIEW_RECEIVED", // owner receives a view
-  "REWARD_MILESTONE",          // hitting 100k, 1M views
+  "REWARD_MILESTONE",          // high engagement reward
 
   // COMMUNITY
   "REWARD_CREATE_COMMUNITY",
@@ -50,13 +58,14 @@ enum: [
   "REWARD_ACCOUNT_AGE",
   "REWARD_DAILY_LOGIN",
 
-  // Generic
+  // Generic / Other
   "TRANSFER",
   "PURCHASE",
   "REFUND",
   "BONUS",
   "ADMIN_ADJUSTMENT"
 ],
+
 
     required: true
   },

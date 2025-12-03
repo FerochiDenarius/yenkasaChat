@@ -318,7 +318,7 @@ class PostAdapter(
                     .load(post.videoUrl)
                     .apply(
                         RequestOptions()
-                            .frame(2_000_000)  // 1 second
+                            .frame(4_000_000)  // 1 second
                             .diskCacheStrategy(DiskCacheStrategy.ALL)
                     )
                     .placeholder(R.drawable.video_placeholder)
@@ -329,6 +329,30 @@ class PostAdapter(
                 btnVideoPlay.visibility = View.GONE
             }
 
+            btnVideoPlay.setOnClickListener {
+                imageVideoThumbnail.visibility = View.GONE
+                btnVideoPlay.visibility = View.GONE
+
+                // SHOW PLAYER VIEW (this was missing)
+                playerView?.visibility = View.VISIBLE
+                btnPlayPause?.visibility = View.VISIBLE
+
+                if (exoPlayer == null) {
+                    exoPlayer = ExoPlayer.Builder(context).build()
+                    activePlayers.add(exoPlayer!!)
+                }
+
+                playerView?.player = exoPlayer
+
+                exoPlayer!!.apply {
+                    setMediaItem(MediaItem.fromUri(post.videoUrl!!))
+                    prepare()
+                    play()
+                }
+
+                // update tracking
+                currentPlayingPosition = position
+            }
 
 
             if (hasAudio) {

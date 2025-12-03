@@ -9,6 +9,8 @@ const { uploadFiles } = require('../utils/upload');
 const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
 const PostApproval = require("../models/postapproval.model");
+const { sendNotification } = require("../services/notification.service");
+
 
 
 // 🧩 import your centralized rewardService

@@ -50,6 +50,21 @@ const postSchema = new Schema({
   shareCount: { type: Number, default: 0 },
   viewCount: { type: Number, default: 0 },
 
+  // ⭐ NEW: Foreign object references
+  comments: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Comment'
+  }],
+
+  views: [{
+    type: Schema.Types.ObjectId,
+    ref: 'View'
+  }],
+
+  // Prepare for future likes/shares as objects:
+  // likes: [{ type: Schema.Types.ObjectId, ref: "Like" }],
+  // shares: [{ type: Schema.Types.ObjectId, ref: "Share" }],
+
   // Post status
   isActive: { type: Boolean, default: true },
   isPinned: { type: Boolean, default: false },

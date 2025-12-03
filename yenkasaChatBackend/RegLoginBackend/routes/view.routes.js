@@ -38,7 +38,6 @@ function rewardAudio(seconds) {
   return 0;
 }
 
-
 router.post('/:postId/view', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
@@ -48,6 +47,9 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
     if (!viewerId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
+    // ---------------------------------------------------------------------
+    // LOAD REQUIRED DATA
+    // ---------------------------------------------------------------------
     const [post, viewer] = await Promise.all([
       Post.findById(postId),
       User.findById(viewerId)
@@ -56,10 +58,16 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
     if (!post) return res.status(404).json({ success: false, message: "Post not found" });
     if (!viewer) return res.status(404).json({ success: false, message: "Viewer not found" });
 
+    const ownerId = post.userId.toString();
+
+    // ---------------------------------------------------------------------
     // FIX ⭐ deterministic activityId — prevents reward duplicates
+    // ---------------------------------------------------------------------
     const activityId = `view_${postId}_${viewerId}`;
 
-    // FIX ⭐ Upsert view record + increment viewsCount
+    // ---------------------------------------------------------------------
+    // UPSERT VIEW RECORD  (kept from your old logic)
+    // ---------------------------------------------------------------------
     const view = await View.findOneAndUpdate(
       { activityId },
       {
@@ -68,17 +76,35 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
           userId: viewerId,
           username: viewer.username,
           mediaType,
-          viewedAt: new Date(),
+          viewedAt: new Date()
         },
         $inc: { viewsCount: 1, watchDuration }
       },
       { upsert: true, new: true }
     );
 
-    // FIX ⭐ Increment post viewCount
-    await Post.findByIdAndUpdate(postId, { $inc: { viewCount: 1 } });
+    // ---------------------------------------------------------------------
+    // FOREIGN REFERENCE → add viewObject to Post.views[]
+    // ---------------------------------------------------------------------
+    await Post.findByIdAndUpdate(postId, {
+      $addToSet: { views: view._id }
+    });
 
-    // ⭐ Reward calculation
+    // ---------------------------------------------------------------------
+    // RECALCULATE TRUE VIEW COUNT
+    // ---------------------------------------------------------------------
+    const viewsCount = await View.countDocuments({ postId });
+
+    // ---------------------------------------------------------------------
+    // SYNC LEGACY FIELD FOR ANDROID (viewCount)
+    // ---------------------------------------------------------------------
+    await Post.findByIdAndUpdate(postId, {
+      viewCount: viewsCount
+    });
+
+    // ---------------------------------------------------------------------
+    // ⭐ REWARD LOGIC
+    // ---------------------------------------------------------------------
     let rewardAmount = 0;
 
     if (mediaType === "image" && watchDuration >= 3) rewardAmount = 1;
@@ -87,7 +113,7 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
 
     let rewardTx = null;
 
-    // ⭐ Correct viewer reward logic
+    // Viewer’s reward
     if (rewardAmount > 0) {
       rewardTx = await rewardService.reward(viewerId, rewardAmount, {
         type: "REWARD_POST_VIEW",
@@ -97,11 +123,11 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       });
     }
 
-    // ⭐ Reward the post owner
-    const ownerActivityId = `view_received_${postId}_${viewerId}`;
+    // Owner reward (only if viewer != owner)
+    if (viewerId !== ownerId) {
+      const ownerActivityId = `view_received_${postId}_${viewerId}`;
 
-    if (post.userId.toString() !== viewerId) {
-      await rewardService.reward(post.userId, 1, {
+      await rewardService.reward(ownerId, 1, {
         type: "REWARD_POST_VIEW",
         description: "Earned 1 YKC for receiving a view",
         relatedPostId: postId,
@@ -109,12 +135,9 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       });
     }
 
-    // ⭐ Recalculate total views
-    const viewsCount = await View.countDocuments({ postId });
-
-    // ----------------------------------------------------------
-    // ⭐⭐ MILESTONE BLOCK — PUT IT RIGHT HERE ⭐⭐
-    // ----------------------------------------------------------
+    // ---------------------------------------------------------------------
+    // ⭐⭐ MILESTONE BLOCK (REINSERTED CORRECTLY)
+    // ---------------------------------------------------------------------
     const milestones = [
       100000, 500000, 1000000,
       2000000, 3000000, 5000000,
@@ -130,8 +153,9 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
         post.milestones.push(milestone);
         await post.save();
 
-        const owner = await User.findById(post.userId);
+        const owner = await User.findById(ownerId);
 
+        // SEND IN-APP NOTIFICATION
         if (owner) {
           await sendNotification({
             type: "view_milestone",
@@ -141,7 +165,7 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
             message: `Your post just hit ${milestone.toLocaleString()} views!`
           });
 
-          // send push notification
+          // PUSH NOTIFICATION
           if (owner.oneSignalPlayerId) {
             const payload = {
               app_id: process.env.ONESIGNAL_APP_ID,
@@ -163,10 +187,10 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
         }
       }
     }
-    // ----------------------------------------------------------
 
-
-    // ⭐ Emit live update
+    // ---------------------------------------------------------------------
+    // ⭐ SOCKET → REAL-TIME UPDATE
+    // ---------------------------------------------------------------------
     if (global.io) {
       global.io.emit("viewUpdate", {
         postId,
@@ -177,6 +201,9 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
       });
     }
 
+    // ---------------------------------------------------------------------
+    // FINAL RESPONSE
+    // ---------------------------------------------------------------------
     return res.json({
       success: true,
       message: "View recorded",
@@ -190,6 +217,7 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error while recording view" });
   }
 });
+
 
 
 // ======================================================

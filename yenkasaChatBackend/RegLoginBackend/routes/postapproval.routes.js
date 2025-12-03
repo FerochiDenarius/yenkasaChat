@@ -122,13 +122,23 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
         message: "Your post has been approved!"
       });
 
-      // ⭐ Reward owner 10 YKC
-      await rewardService.reward(owner._id, 10, {
-        type: "REWARD_POST_APPROVED",
-        description: "You earned 10 YKC for your post approval",
-        relatedPostId: post._id,
-        activityId
-      });
+    // ⭐ Reward post owner (their content got approved)
+await rewardService.reward(owner._id, 10, {
+  type: "REWARD_POST_APPROVED",
+  description: "Your post was approved and you earned 10 YKC!",
+  relatedPostId: post._id,
+  activityId
+});
+
+// ⭐ Reward the APPROVER (their work)
+await rewardService.reward(owner._id, 10, {
+  type: "REWARD_POST_APPROVED",
+  description: "You earned 10 YKC for your post approval",
+  relatedPostId: post._id,
+  activityId
+});
+
+
 
       // 📱 Push notification
       if (owner.oneSignalPlayerId) {
@@ -197,13 +207,14 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
         message: "Your post has been rejected."
       });
 
-      // ⭐ Reward user 10 YKC
-      await rewardService.reward(owner._id, 10, {
-        type: "REWARD_POST_REJECTED",
-        description: "You earned 10 YKC for submitting a post (rejected)",
-        relatedPostId: post._id,
-        activityId
-      });
+     // ⭐ Reward the moderator/admin who performed the rejection
+await rewardService.reward(approver._id, 10, {
+  type: "REWARD_POST_REJECTED",
+  description: `You rejected a post by ${owner.username}`,
+  relatedPostId: post._id,
+  activityId
+});
+
 
       // 📱 Push notification
       if (owner.oneSignalPlayerId) {

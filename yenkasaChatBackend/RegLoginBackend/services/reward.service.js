@@ -3,6 +3,8 @@ const User = require('../models/user.model');
 const Post = require('../models/post.model');
 const CoinSupply = require('../models/coinSupply');
 const { v4: uuidv4 } = require('uuid');
+const { SYSTEM_USER_ID, SYSTEM_USERNAME, SYSTEM_WALLET_ID } = require('../config/system');
+
 
 const MAX_SUPPLY = 100_000_000;
 const SUPPLY_ID = 'YENKASA_SUPPLY';
@@ -66,27 +68,33 @@ async function reward(toUserId, amount, opts = {}) {
 
     console.log(`💰 Reward applied → User=${toUser.username} | Before=${before} After=${after}`);
 
-    /* ---------------------------------------------------
-     * ALWAYS Save transaction (no dedupe skip)
-     * --------------------------------------------------- */
-    const tx = await CoinTransaction.create({
-      transactionId: uuidv4(),
-      activityId,
-      type: opts.type || "BONUS",
-      amount: Number(amount),
-      description: opts.description || `Reward granted (${amount})`,
-      toUserId,
-      toUsername: toUser.username,
-      toWalletId: toUser.walletId,
-      fromUserId: opts.fromUserId || null,
-      fromUsername: opts.fromUsername || '',
-      fromWalletId: opts.fromWalletId || '',
-      relatedPostId: opts.relatedPostId || null,
-      relatedCommentId: opts.relatedCommentId || null,
-      toUserBalanceBefore: before,
-      toUserBalanceAfter: after,
-      status: 'completed'
-    });
+/* ---------------------------------------------------
+ * ALWAYS Save transaction (no dedupe skip)
+ * --------------------------------------------------- */
+const tx = await CoinTransaction.create({
+  transactionId: uuidv4(),
+  activityId,
+  type: opts.type || "BONUS",
+  amount: Number(amount),
+  description: opts.description || `Reward granted (${amount})`,
+
+  // 🌟 SYSTEM USER sends all rewards now
+  fromUserId: SYSTEM_USER_ID,
+  fromUsername: SYSTEM_USERNAME,
+  fromWalletId: SYSTEM_WALLET_ID,
+
+  // Recipient
+  toUserId,
+  toUsername: toUser.username,
+  toWalletId: toUser.walletId,
+
+  relatedPostId: opts.relatedPostId || null,
+  relatedCommentId: opts.relatedCommentId || null,
+  toUserBalanceBefore: before,
+  toUserBalanceAfter: after,
+  status: 'completed'
+});
+
 
     console.log(`✅ Reward Transaction Saved → TXID=${tx.transactionId}`);
 

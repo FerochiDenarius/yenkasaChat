@@ -105,11 +105,22 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
     // ---------------------------------------------------------------------
     // ⭐ REWARD LOGIC
     // ---------------------------------------------------------------------
-    let rewardAmount = 0;
+let rewardAmount = 0;
 
-    if (mediaType === "image" && watchDuration >= 3) rewardAmount = 1;
-    if (mediaType === "audio" && watchDuration >= 5) rewardAmount = 1;
-    if (mediaType === "video" && watchDuration >= 10) rewardAmount = 2;
+switch (mediaType) {
+  case "image":
+    rewardAmount = rewardImage(watchDuration);
+    break;
+  case "video":
+    rewardAmount = rewardVideo(watchDuration);
+    break;
+  case "audio":
+    rewardAmount = rewardAudio(watchDuration);
+    break;
+  default:
+    rewardAmount = 0;
+}
+
 
     let rewardTx = null;
 

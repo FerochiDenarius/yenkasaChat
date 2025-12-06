@@ -86,8 +86,14 @@ class CommentsActivity : AppCompatActivity() {
             // This MUST exist
             override fun onLike(comment: Comment, isLiked: Boolean, position: Int) {
                 toggleCommentLike(comment, isLiked, position)
+
             }
 
+            override fun onUserClicked(userId: String) {
+                val intent = Intent(this@CommentsActivity, UserProfileActivity::class.java)
+                intent.putExtra("USER_ID", userId)
+                startActivity(intent)
+            }
             // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
                 editComment.setText("@${comment.user?.username ?: ""} ")

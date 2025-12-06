@@ -25,7 +25,10 @@ class CommentAdapter(
         fun onReply(comment: Comment)
         fun onEdit(comment: Comment)
         fun onDelete(comment: Comment)
-        fun onLike(comment: Comment, isLiked: Boolean, position: Int)    }
+        fun onLike(comment: Comment, isLiked: Boolean, position: Int)
+        fun onUserClicked(userId: String)
+
+    }
 
     inner class CommentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageUser: ImageView = itemView.findViewById(R.id.imageUser)
@@ -57,6 +60,18 @@ class CommentAdapter(
         holder.textComment.text = comment.text ?: ""
         holder.textTimestamp.text = comment.createdAt?.let { formatDate(it) } ?: ""
 
+        // ==========================
+// ⭐ USER PROFILE CLICKS
+// ==========================
+        holder.textUsername.setOnClickListener {
+            listener.onUserClicked(comment.user._id)
+        }
+
+        holder.imageUser.setOnClickListener {
+            listener.onUserClicked(comment.user._id)
+        }
+
+
         // Profile image
         val profileUrl = comment.user?.profileImage
         if (!profileUrl.isNullOrBlank()) {
@@ -72,6 +87,7 @@ class CommentAdapter(
         } else {
             holder.imageUser.setImageResource(R.drawable.ic_user_placeholder)
         }
+
 
         // ✅ Likes display
         val isLiked = comment.likes?.contains(currentUserId) == true

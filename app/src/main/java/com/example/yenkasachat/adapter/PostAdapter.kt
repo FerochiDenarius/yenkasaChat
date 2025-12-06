@@ -1,8 +1,8 @@
 package com.example.yenkasachat.adapter
 
 import android.content.Context
-import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +11,7 @@ import android.widget.*
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.media3.common.Player
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -26,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.concurrent.scheduleAtFixedRate
 
 class PostAdapter(
     private val context: Context,
@@ -37,16 +39,19 @@ class PostAdapter(
     private val onShareClick: (Post) -> Unit
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
+    // Single ExoPlayer for all video playback
     private var exoPlayer: ExoPlayer? = null
     private var currentPlayingPosition: Int = -1
     private var currentPlayerView: PlayerView? = null
-    private var mediaPlayer: MediaPlayer? = null
-    private val activePlayers = mutableListOf<ExoPlayer>()
+
     private val lastViewTime = mutableMapOf<String, Long>()
     private var videoTimer: Timer? = null
     private var videoSeconds = 0
 
-    // Extra Callbacks
+    // Prevent double-prep/tap races
+    private var isPreparing = false
+
+    // Optional external callbacks
     private var onDeleteClickListener: ((Post) -> Unit)? = null
     private var onHideClickListener: ((Post) -> Unit)? = null
     private var onDownloadClickListener: ((Post) -> Unit)? = null
@@ -57,38 +62,50 @@ class PostAdapter(
     fun setOnDownloadClickListener(listener: (Post) -> Unit) { onDownloadClickListener = listener }
     fun setOnFlagClickListener(listener: (Post) -> Unit) { onFlagClickListener = listener }
 
-    inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class PostViewHolder(val itemRoot: View) : RecyclerView.ViewHolder(itemRoot) {
+        // Header
+        val profileImage: ImageView = itemRoot.findViewById(R.id.imageProfilePost)
+        val username: TextView = itemRoot.findViewById(R.id.textUsernamePost)
+        val verifiedBadge: ImageView = itemRoot.findViewById(R.id.imageVerifiedBadge)
+        val timestamp: TextView = itemRoot.findViewById(R.id.textTimestampPost)
+        val communityName: TextView = itemRoot.findViewById(R.id.textCommunityName)
+        val postText: TextView = itemRoot.findViewById(R.id.textPostContent)
 
-        private val profileImage: ImageView = itemView.findViewById(R.id.imageProfilePost)
-        private val username: TextView = itemView.findViewById(R.id.textUsernamePost)
-        private val verifiedBadge: ImageView = itemView.findViewById(R.id.imageVerifiedBadge)
-        private val timestamp: TextView = itemView.findViewById(R.id.textTimestampPost)
-        private val communityName: TextView = itemView.findViewById(R.id.textCommunityName)
-        private val postText: TextView = itemView.findViewById(R.id.textPostContent)
-        private val postImage: ImageView = itemView.findViewById(R.id.imagePostContent)
-        private val audioIcon: LinearLayout = itemView.findViewById(R.id.audioIcon)
-        private val btnLike: ImageButton = itemView.findViewById(R.id.btnLike)
-        private val btnComment: ImageButton = itemView.findViewById(R.id.btnComment)
-        private val btnShare: ImageButton = itemView.findViewById(R.id.btnShare)
-        private val likeCount: TextView = itemView.findViewById(R.id.textLikeCount)
-        private val commentCount: TextView = itemView.findViewById(R.id.textCommentCount)
-        private val coinsEarned: TextView = itemView.findViewById(R.id.textCoinsEarned)
-        private val viewCount: TextView = itemView.findViewById(R.id.textViewCount)
+        // Engagement
+        val btnLike: ImageButton = itemRoot.findViewById(R.id.btnLike)
+        val btnComment: ImageButton = itemRoot.findViewById(R.id.btnComment)
+        val btnShare: ImageButton = itemRoot.findViewById(R.id.btnShare)
+        val likeCount: TextView = itemRoot.findViewById(R.id.textLikeCount)
+        val commentCount: TextView = itemRoot.findViewById(R.id.textCommentCount)
+        val coinsEarned: TextView = itemRoot.findViewById(R.id.textCoinsEarned)
+        val viewCount: TextView = itemRoot.findViewById(R.id.textViewCount)
 
-        // Audio
-        private val btnAudioPlayPause: ImageButton = itemView.findViewById(R.id.btnAudioPlayPause)
-        private val audioSeekbar: SeekBar = itemView.findViewById(R.id.audioSeekbar)
-        private val audioCurrent: TextView = itemView.findViewById(R.id.audioCurrentTime)
-        private val audioTotal: TextView = itemView.findViewById(R.id.audioTotalTime)
+        // IMAGE
+        val postImage: ImageView = itemRoot.findViewById(R.id.imagePostContent)
+
+        // VIDEO
+        val playerView: PlayerView? = itemRoot.findViewById(R.id.playerView)
+        val imageVideoThumbnail: ImageView = itemRoot.findViewById(R.id.imageVideoThumbnail)
+        val btnVideoPlay: ImageButton = itemRoot.findViewById(R.id.btnVideoPlay)
+        val btnPlayPause: ImageButton? = itemRoot.findViewById(R.id.btnPlayPause)
+
+        // AUDIO
+        val audioIcon: LinearLayout = itemRoot.findViewById(R.id.audioIcon)
+        val btnAudioPlayPause: ImageButton = itemRoot.findViewById(R.id.btnAudioPlayPause)
+        val audioSeekbar: SeekBar = itemRoot.findViewById(R.id.audioSeekbar)
+        val audioCurrent: TextView = itemRoot.findViewById(R.id.audioCurrentTime)
+        val audioTotal: TextView = itemRoot.findViewById(R.id.audioTotalTime)
+
+        // Per-item audio player (ExoPlayer instance) to avoid conflicts with video player
         private var audioPlayer: ExoPlayer? = null
-        private val audioHandler = android.os.Handler()
-        private val audioUpdateRunnable = object : Runnable {
+        private val audioHandler = Handler()
+        private val audioUpdateRunnable = object: Runnable {
             override fun run() {
                 audioPlayer?.let { player ->
-                    if (player.isPlaying) {
-                        val pos = player.currentPosition
-                        val dur = player.duration
-                        if (dur > 0) audioSeekbar.progress = ((pos * 100) / dur).toInt()
+                    val pos = player.currentPosition
+                    val dur = player.duration
+                    if (dur > 0) {
+                        audioSeekbar.progress = ((pos * 100) / dur).toInt()
                         audioCurrent.text = formatTime(pos)
                     }
                 }
@@ -96,147 +113,60 @@ class PostAdapter(
             }
         }
 
-        // Video
-        private val playerView: PlayerView? = itemView.findViewById(R.id.playerView)
-        private val btnPlayPause: ImageButton? = itemView.findViewById(R.id.btnPlayPause)
-        private val imageVideoThumbnail: ImageView = itemView.findViewById(R.id.imageVideoThumbnail)
-        private val btnVideoPlay: ImageButton = itemView.findViewById(R.id.btnVideoPlay)
-
-        fun bind(post: Post, position: Int) {
-            username.text = post.userId.username
-            verifiedBadge.visibility = if (post.userId.verified) View.VISIBLE else View.GONE
-
-            Glide.with(itemView.context)
-                .load(post.userId.profileImage)
-                .placeholder(R.drawable.ic_profile_placeholder)
-                .circleCrop()
-                .into(profileImage)
-
-            profileImage.setOnClickListener { onUserClick(post.userId.id) }
-            username.setOnClickListener { onUserClick(post.userId.id) }
-
-            communityName.text = post.communityId?.displayName ?: "General"
-            timestamp.text = formatTimestamp(post.createdAt.toLongOrNull())
-            postText.text = post.caption ?: ""
-            likeCount.text = "${post.likeCount} likes"
-            commentCount.text = "${post.commentCount} comments"
-            viewCount.text = "👁 ${post.viewCount}"
-
-            coinsEarned.visibility = if (post.coinsEarned > 0) {
-                coinsEarned.text = "🪙 ${post.coinsEarned} coins"
-                View.VISIBLE
-            } else View.GONE
-
-            updateLikeButton(post.likedByCurrentUser, btnLike)
-            btnLike.setOnClickListener { onLikeClick(post, position) }
-            btnComment.setOnClickListener { onCommentClick(post, position) }
-            btnShare.setOnClickListener { onShareClick(post) }
-
-            handleMedia(post, position)
-
-            itemView.setOnClickListener {
-                onPostClick(post)
-                recordViewAsync(post._id)
-            }
-        }
-
-        private fun handleMedia(post: Post, position: Int) {
-            val hasImage = !post.imageUrl.isNullOrEmpty()
-            val hasVideo = !post.videoUrl.isNullOrEmpty()
-            val hasAudio = !post.audioUrl.isNullOrEmpty()
-
-            postImage.visibility = if (hasImage) View.VISIBLE else View.GONE
+        // Reset all media UI to hidden (called before bind)
+        fun resetMediaUi() {
+            postImage.visibility = View.GONE
             playerView?.visibility = View.GONE
+            imageVideoThumbnail.visibility = View.GONE
+            btnVideoPlay.visibility = View.GONE
             btnPlayPause?.visibility = View.GONE
-            audioIcon.visibility = if (hasAudio) View.VISIBLE else View.GONE
-
-            if (hasImage) {
-                Glide.with(itemView.context)
-                    .load(post.imageUrl)
-                    .placeholder(R.drawable.placeholder_image)
-                    .into(postImage)
-                recordVisibleView(post._id, 3)
-            }
-
-            if (hasVideo) {
-                setupVideo(post, position)
-            }
-
-            if (hasAudio) {
-                audioIcon.visibility = View.VISIBLE
-                setupAudioPlayer(post.audioUrl!!)
-                recordVisibleView(post._id, 5)
-            }
+            audioIcon.visibility = View.GONE
         }
 
-        private fun setupVideo(post: Post, position: Int) {
-            imageVideoThumbnail.visibility = View.VISIBLE
-            btnVideoPlay.visibility = View.VISIBLE
-
-            Glide.with(itemView.context)
-                .asBitmap()
-                .load(post.videoUrl)
-                .apply(RequestOptions().frame(4_000_000).diskCacheStrategy(DiskCacheStrategy.ALL))
-                .placeholder(R.drawable.video_placeholder)
-                .into(imageVideoThumbnail)
-
-            btnVideoPlay.setOnClickListener {
-                imageVideoThumbnail.visibility = View.GONE
-                btnVideoPlay.visibility = View.GONE
-                playerView?.visibility = View.VISIBLE
-                btnPlayPause?.visibility = View.VISIBLE
-
-                if (exoPlayer == null) {
-                    exoPlayer = ExoPlayer.Builder(context).build()
-                    activePlayers.add(exoPlayer!!)
-                }
-
-                playerView?.player = exoPlayer
-                exoPlayer!!.apply {
-                    setMediaItem(MediaItem.fromUri(post.videoUrl!!))
-                    prepare()
-                    play()
-                }
-
-                startVideoTimer(post)
-                currentPlayingPosition = position
+        // Release audio player when view is recycled
+        fun releaseAudio() {
+            audioHandler.removeCallbacks(audioUpdateRunnable)
+            audioPlayer?.let {
+                try { it.pause() } catch (_: Exception) {}
+                try { it.release() } catch (_: Exception) {}
             }
-
-            btnPlayPause?.setOnClickListener { toggleVideo(position) }
+            audioPlayer = null
+            audioSeekbar.progress = 0
+            audioCurrent.text = "0:00"
+            audioTotal.text = "0:00"
+            btnAudioPlayPause.setImageResource(R.drawable.ic_play_circle)
         }
 
-        private fun toggleVideo(position: Int) {
-            val player = exoPlayer ?: return playVideoAtPosition(position)
-            if (position != currentPlayingPosition) {
-                playVideoAtPosition(position)
-                return
-            }
-
-            if (player.isPlaying) {
-                player.pause()
-                videoTimer?.cancel()
-            } else {
-                player.play()
-                startVideoTimer(posts[position])
-            }
-
-            btnPlayPause?.setImageResource(
-                if (player.isPlaying) R.drawable.ic_pause_circle else R.drawable.ic_play_circle
-            )
-        }
-
-        private fun setupAudioPlayer(url: String) {
+        // Release video player reference from this ViewHolder.
+        // IMPORTANT: we only detach the PlayerView if it's not the active view.
+        fun safeDetachPlayerView() {
             try {
-                audioPlayer?.release()
-                audioHandler.removeCallbacks(audioUpdateRunnable)
-                audioPlayer = ExoPlayer.Builder(context).build().also { player ->
+                if (playerView?.player === exoPlayer) {
+                    // If this holder is not the active playing position, detach.
+                    if (adapterPosition != currentPlayingPosition) {
+                        playerView?.player = null
+                    } // else: keep the player attached (user asked playback to continue)
+                } else {
+                    // Not attached to global player, safe to null
+                    playerView?.player = null
+                }
+            } catch (_: Exception) {}
+        }
+
+        // Setup audio player for this ViewHolder
+        fun setupAudio(url: String) {
+            releaseAudio()
+            try {
+                audioPlayer = ExoPlayer.Builder(itemRoot.context).build().also { player ->
                     val item = MediaItem.fromUri(Uri.parse(url))
                     player.setMediaItem(item)
                     player.prepare()
-                    player.addListener(object : androidx.media3.common.Player.Listener {
+                    player.addListener(object: Player.Listener {
                         override fun onPlaybackStateChanged(state: Int) {
-                            if (state == androidx.media3.common.Player.STATE_READY)
-                                audioTotal.text = formatTime(player.duration)
+                            if (state == Player.STATE_READY) {
+                                val dur = player.duration
+                                if (dur > 0) audioTotal.text = formatTime(dur)
+                            }
                         }
                     })
                     btnAudioPlayPause.setOnClickListener {
@@ -248,97 +178,74 @@ class PostAdapter(
                             btnAudioPlayPause.setImageResource(R.drawable.ic_pause_circle)
                         }
                     }
-                    audioSeekbar.setOnSeekBarChangeListener(object :
-                        SeekBar.OnSeekBarChangeListener {
+                    audioSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                         override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                            if (fromUser) {
+                            if (fromUser && player.duration > 0) {
                                 val seekTo = (player.duration * progress) / 100
                                 player.seekTo(seekTo)
                             }
                         }
-
                         override fun onStartTrackingTouch(sb: SeekBar?) {}
                         override fun onStopTrackingTouch(sb: SeekBar?) {}
                     })
                     audioHandler.post(audioUpdateRunnable)
                 }
             } catch (e: Exception) {
-                Log.e("PostAdapter", "Audio setup error: ${e.message}")
+                Log.e("PostAdapter", "setupAudio error: ${e.message}")
             }
         }
 
-        fun releaseAudio() {
-            audioHandler.removeCallbacks(audioUpdateRunnable)
-            audioPlayer?.apply {
-                try { stop() } catch (_: Exception) {}
-                try { release() } catch (_: Exception) {}
+        // Setup video thumbnail and play button; actual video playback handled by adapter when needed
+        fun prepareVideoUi(videoUrl: String?, position: Int) {
+            imageVideoThumbnail.visibility = View.VISIBLE
+            btnVideoPlay.visibility = View.VISIBLE
+            playerView?.visibility = View.GONE
+            btnPlayPause?.visibility = View.GONE
+
+            // load thumbnail (frame extraction)
+            try {
+                Glide.with(itemRoot.context)
+                    .asBitmap()
+                    .load(videoUrl)
+                    .apply(RequestOptions().frame(4_000_000).diskCacheStrategy(DiskCacheStrategy.ALL))
+                    .placeholder(R.drawable.video_placeholder)
+                    .into(imageVideoThumbnail)
+            } catch (_: Exception) {}
+
+            btnVideoPlay.setOnClickListener {
+                // prevent double clicks while preparing
+                if (isPreparing) return@setOnClickListener
+
+                // Hide thumbnail UI, show player
+                imageVideoThumbnail.visibility = View.GONE
+                btnVideoPlay.visibility = View.GONE
+                playerView?.visibility = View.VISIBLE
+                btnPlayPause?.visibility = View.VISIBLE
+
+                // Delay until PlayerView has a surface
+                playerView?.post {
+                    playVideoRequested(position)
+                }
             }
-            audioPlayer = null
-            audioSeekbar.progress = 0
-            audioCurrent.text = "0:00"
-            audioTotal.text = "0:00"
-            btnAudioPlayPause.setImageResource(R.drawable.ic_play_circle)
+
+            btnPlayPause?.setOnClickListener {
+                toggleRequested(position)
+            }
         }
 
-        fun updateLikeButton(isLiked: Boolean, btn: ImageButton) {
-            btn.setImageResource(
-                if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-            )
+        // Methods that call adapter functions (adapter controls single exoPlayer)
+        private fun playVideoRequested(position: Int) {
+            this@PostAdapter.playVideoAtPosition(position, this)
         }
 
-        fun showPostOptionsBottomSheet(post: Post) {
-            val bottomSheet = BottomSheetDialog(context)
-            val view = LayoutInflater.from(context).inflate(R.layout.bottomsheet_post_options, null)
-
-            val optionDelete = view.findViewById<TextView>(R.id.optionDelete)
-            val optionHide = view.findViewById<TextView>(R.id.optionHide)
-            val optionDownload = view.findViewById<TextView>(R.id.optionDownload)
-            val optionFlag = view.findViewById<TextView>(R.id.optionFlag)
-
-            // Show delete only if the post belongs to current user
-            val currentUserId = TokenManager.getUserId(context)
-            if (post.userId.id == currentUserId) {
-                optionDelete.visibility = View.VISIBLE
-            } else {
-                optionDelete.visibility = View.GONE
-            }
-
-            optionDelete.setOnClickListener {
-                bottomSheet.dismiss()
-                onDeleteClickListener?.invoke(post)
-            }
-
-            optionHide.setOnClickListener {
-                bottomSheet.dismiss()
-                onHideClickListener?.invoke(post)
-            }
-
-            optionDownload.setOnClickListener {
-                bottomSheet.dismiss()
-                onDownloadClickListener?.invoke(post)
-            }
-
-            optionFlag.setOnClickListener {
-                bottomSheet.dismiss()
-                onFlagClickListener?.invoke(post)
-            }
-
-            bottomSheet.setContentView(view)
-            bottomSheet.show()
+        private fun toggleRequested(position: Int) {
+            this@PostAdapter.toggleVideoAtPosition(position)
         }
-
     }
 
-    // Utility functions
-    private fun formatTime(ms: Long): String {
-        val totalSec = ms / 1000
-        return String.format("%d:%02d", totalSec / 60, totalSec % 60)
-    }
-
-    private fun formatTimestamp(ts: Long?): String {
-        if (ts == null) return ""
-        return SimpleDateFormat("dd MMM • hh:mm a", Locale.getDefault()).format(Date(ts))
-    }
+    // ----------------------
+    // Adapter lifecycle
+    // ----------------------
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_post, parent, false)
@@ -346,64 +253,218 @@ class PostAdapter(
     }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
+        holder.resetMediaUi()
         val post = posts[position]
-        holder.bind(post, position)
-        val btnMoreOptions = holder.itemView.findViewById<ImageButton>(R.id.btnMoreOptions)
+
+        // Header + engagement bind
+        holder.username.text = post.userId.username
+        holder.verifiedBadge.visibility = if (post.userId.verified) View.VISIBLE else View.GONE
+
+        Glide.with(holder.itemRoot.context)
+            .load(post.userId.profileImage)
+            .placeholder(R.drawable.ic_profile_placeholder)
+            .circleCrop()
+            .into(holder.profileImage)
+
+        holder.profileImage.setOnClickListener { onUserClick(post.userId.id) }
+        holder.username.setOnClickListener { onUserClick(post.userId.id) }
+
+        holder.communityName.text = post.communityId?.displayName ?: "General"
+        holder.timestamp.text = formatTimestamp(post.createdAt.toLongOrNull())
+        holder.postText.text = post.caption ?: ""
+        holder.likeCount.text = "${post.likeCount} likes"
+        holder.commentCount.text = "${post.commentCount} comments"
+        holder.viewCount.text = "👁 ${post.viewCount}"
+
+        holder.coinsEarned.visibility = if (post.coinsEarned > 0) {
+            holder.coinsEarned.text = "🪙 ${post.coinsEarned} coins"
+            View.VISIBLE
+        } else View.GONE
+
+        holder.updateLikeButton(post.likedByCurrentUser, holder.btnLike)
+        holder.btnLike.setOnClickListener { onLikeClick(post, position) }
+        holder.btnComment.setOnClickListener { onCommentClick(post, position) }
+        holder.btnShare.setOnClickListener { onShareClick(post) }
+
+        // Media
+        val hasImage = !post.imageUrl.isNullOrEmpty()
+        val hasVideo = !post.videoUrl.isNullOrEmpty()
+        val hasAudio = !post.audioUrl.isNullOrEmpty()
+
+        if (hasImage) {
+            holder.postImage.visibility = View.VISIBLE
+            Glide.with(holder.itemRoot.context)
+                .load(post.imageUrl)
+                .placeholder(R.drawable.placeholder_image)
+                .into(holder.postImage)
+            recordVisibleView(post._id, 3)
+        }
+
+        if (hasVideo) {
+            holder.prepareVideoUi(post.videoUrl, position)
+
+            // If this position is currently playing, attach player view immediately
+            if (position == currentPlayingPosition) {
+                // ensure playerView is attached to the global player
+                holder.playerView?.post {
+                    attachPlayerToView(holder.playerView)
+                    holder.playerView?.visibility = View.VISIBLE
+                    holder.btnPlayPause?.visibility = View.VISIBLE
+                }
+            }
+        }
+
+        if (hasAudio) {
+            holder.audioIcon.visibility = View.VISIBLE
+            holder.setupAudio(post.audioUrl!!)
+            recordVisibleView(post._id, 5)
+        }
+
+        holder.itemRoot.setOnClickListener {
+            onPostClick(post)
+            recordViewAsync(post._id)
+        }
+
+        val btnMoreOptions = holder.itemRoot.findViewById<ImageButton>(R.id.btnMoreOptions)
         btnMoreOptions.setOnClickListener { holder.showPostOptionsBottomSheet(post) }
     }
 
     override fun getItemCount(): Int = posts.size
 
-    override fun onViewRecycled(holder: PostViewHolder) {
-        super.onViewRecycled(holder)
+
+    override fun onViewDetachedFromWindow(holder: PostViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+        // Don't stop video playback here. Only detach player view if not active.
+        holder.safeDetachPlayerView()
         holder.releaseAudio()
     }
 
-    fun updatePosts(newPosts: List<Post>) {
-        posts = newPosts
-        notifyDataSetChanged()
+    override fun onViewRecycled(holder: PostViewHolder) {
+        super.onViewRecycled(holder)
+        holder.releaseAudio()
+        // If not active playing item, fully detach
+        holder.safeDetachPlayerView()
     }
 
-    fun playVideoAtPosition(position: Int) {
-        detachPlayer()
-        val url = posts[position].videoUrl ?: return
+
+    private fun ensurePlayer() {
         if (exoPlayer == null) {
-            exoPlayer = ExoPlayer.Builder(context).build()
-            activePlayers.add(exoPlayer!!)
-            startVideoTimer(posts[position])
+            exoPlayer = ExoPlayer.Builder(context).build().also { player ->
+                player.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        try {
+                            if (state == Player.STATE_ENDED) {
+                                videoTimer?.cancel()
+                                // optionally reset UI / thumbnail show if needed
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        // If playing changed, you could update UI for btnPlayPause via notifyItemChanged
+                    }
+                })
+            }
         }
-        exoPlayer!!.apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse(url)))
-            prepare()
-            play()
-        }
-        currentPlayingPosition = position
-        notifyItemChanged(position)
-        recordVisibleView(posts[position]._id, 10)
     }
 
+    // Called by holder when user asked to play video for a holder
+    private fun playVideoAtPosition(position: Int, holder: PostViewHolder) {
+        val url = posts.getOrNull(position)?.videoUrl ?: return
+
+        // prevent rapid double-taps
+        if (isPreparing) return
+        isPreparing = true
+
+        ensurePlayer()
+
+        if (currentPlayingPosition != -1 && currentPlayingPosition != position) {
+
+            detachPlayer()
+        }
+
+        holder.playerView?.post {
+            try {
+                attachPlayerToView(holder.playerView)
+
+                exoPlayer?.let { player ->
+                    player.stop() // ensure no leftover
+                    player.clearMediaItems()
+                    player.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+                    player.prepare()
+                    player.play()
+                }
+
+                currentPlayingPosition = position
+                startVideoTimer(posts[position])
+                recordVisibleView(posts[position]._id, 10)
+            } catch (e: Exception) {
+                Log.e("PostAdapter", "playVideoAtPosition error: ${e.message}")
+            } finally {
+                isPreparing = false
+            }
+        } ?: run {
+            isPreparing = false
+        }
+    }
+
+    private fun toggleVideoAtPosition(position: Int) {
+        if (position != currentPlayingPosition) return
+        val player = exoPlayer ?: return
+
+        if (player.isPlaying) {
+            player.pause()
+            videoTimer?.cancel()
+        } else {
+            player.play()
+            posts.getOrNull(position)?.let { startVideoTimer(it) }
+        }
+    }
+
+    private fun stopPlaybackInternal() {
+        try {
+            exoPlayer?.pause()
+            exoPlayer?.stop()
+            exoPlayer?.clearMediaItems()
+        } catch (_: Exception) {}
+        videoTimer?.cancel()
+        currentPlayingPosition = -1
+        detachPlayer()
+    }
+
+    private fun stopPlayback() {
+        stopPlaybackInternal()
+    }
+
+    // Attach/detach helpers
     private fun attachPlayerToView(v: PlayerView?) {
-        currentPlayerView?.player = null
-        v?.player = exoPlayer
-        currentPlayerView = v
+        // detach current playerView reference (but don't stop player)
+        try {
+            if (currentPlayerView !== v) {
+                currentPlayerView?.player = null
+                v?.player = exoPlayer
+                currentPlayerView = v
+            }
+        } catch (_: Exception) {}
     }
 
     private fun detachPlayer() {
-        currentPlayerView?.player = null
-        currentPlayerView = null
+        try {
+            currentPlayerView?.player = null
+            currentPlayerView = null
+        } catch (_: Exception) {}
     }
 
+    // Video reward timer (unchanged)
     private fun startVideoTimer(post: Post) {
         videoTimer?.cancel()
         videoSeconds = 0
         videoTimer = Timer()
-        videoTimer?.scheduleAtFixedRate(object : TimerTask() {
-            override fun run() {
-                videoSeconds++
-                if (videoSeconds == 5 || videoSeconds == 10 || videoSeconds == 30)
-                    sendVideoReward(post, videoSeconds)
+        videoTimer?.scheduleAtFixedRate(1000, 1000) {
+            videoSeconds++
+            if (videoSeconds == 5 || videoSeconds == 10 || videoSeconds == 30) {
+                sendVideoReward(post, videoSeconds)
             }
-        }, 1000, 1000)
+        }
     }
 
     private fun sendVideoReward(post: Post, seconds: Int) {
@@ -430,19 +491,27 @@ class PostAdapter(
         }
     }
 
+    fun updatePosts(newPosts: List<Post>) {
+        posts = newPosts
+        notifyDataSetChanged()
+    }
+
     fun pauseAllVideos() {
-        activePlayers.forEach { it.pause() }
+        try {
+            exoPlayer?.pause()
+        } catch (_: Exception) {}
         videoTimer?.cancel()
     }
 
     fun releaseResources() {
-        exoPlayer?.release()
-        mediaPlayer?.release()
+        try {
+            exoPlayer?.release()
+            exoPlayer = null
+        } catch (_: Exception) {}
+        videoTimer?.cancel()
     }
 
-    private fun getPostById(postId: String): Post? = posts.firstOrNull { it._id == postId }
-
-    // View tracking
+    // View tracking used previously
     fun recordVisibleView(postId: String, seconds: Int) {
         val now = System.currentTimeMillis()
         if (now - (lastViewTime[postId] ?: 0) < 8000) return
@@ -450,18 +519,16 @@ class PostAdapter(
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
-                val post = getPostById(postId)
+                val post = posts.firstOrNull { it._id == postId }
                 val response = ApiClient.apiService.recordView(
                     postId, "Bearer $token",
-                    ViewRequest(
-                        seconds,
+                    ViewRequest(seconds,
                         when {
                             post?.videoUrl?.isNotEmpty() == true -> "video"
                             post?.audioUrl?.isNotEmpty() == true -> "audio"
                             post?.imageUrl?.isNotEmpty() == true -> "image"
                             else -> "text"
-                        }
-                    )
+                        })
                 )
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
@@ -479,23 +546,20 @@ class PostAdapter(
         }
     }
 
-
     private fun recordViewAsync(postId: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
-                val post = getPostById(postId)
+                val post = posts.firstOrNull { it._id == postId }
                 val response = ApiClient.apiService.recordView(
                     postId, "Bearer $token",
-                    ViewRequest(
-                        5,
+                    ViewRequest(5,
                         when {
                             post?.videoUrl?.isNotEmpty() == true -> "video"
                             post?.audioUrl?.isNotEmpty() == true -> "audio"
                             post?.imageUrl?.isNotEmpty() == true -> "image"
                             else -> "text"
-                        }
-                    )
+                        })
                 )
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
@@ -509,5 +573,52 @@ class PostAdapter(
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    // Helpers for ViewHolder (small extension function)
+    private fun PostViewHolder.updateLikeButton(isLiked: Boolean, btn: ImageButton) {
+        btn.setImageResource(if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
+    }
+
+    private fun formatTime(ms: Long): String {
+        val totalSec = ms / 1000
+        return String.format("%d:%02d", totalSec / 60, totalSec % 60)
+    }
+
+    private fun formatTimestamp(ts: Long?): String {
+        if (ts == null) return ""
+        return SimpleDateFormat("dd MMM • hh:mm a", Locale.getDefault()).format(Date(ts))
+    }
+
+    private fun PostViewHolder.showPostOptionsBottomSheet(post: Post) {
+        val bottomSheet = BottomSheetDialog(context)
+        val view = LayoutInflater.from(context).inflate(R.layout.bottomsheet_post_options, null)
+
+        val optionDelete = view.findViewById<TextView>(R.id.optionDelete)
+        val optionHide = view.findViewById<TextView>(R.id.optionHide)
+        val optionDownload = view.findViewById<TextView>(R.id.optionDownload)
+        val optionFlag = view.findViewById<TextView>(R.id.optionFlag)
+
+        val currentUserId = TokenManager.getUserId(context)
+        optionDelete.visibility = if (post.userId.id == currentUserId) View.VISIBLE else View.GONE
+
+        optionDelete.setOnClickListener {
+            bottomSheet.dismiss()
+            onDeleteClickListener?.invoke(post)
+        }
+        optionHide.setOnClickListener {
+            bottomSheet.dismiss()
+            onHideClickListener?.invoke(post)
+        }
+        optionDownload.setOnClickListener {
+            bottomSheet.dismiss()
+            onDownloadClickListener?.invoke(post)
+        }
+        optionFlag.setOnClickListener {
+            bottomSheet.dismiss()
+            onFlagClickListener?.invoke(post)
+        }
+        bottomSheet.setContentView(view)
+        bottomSheet.show()
     }
 }

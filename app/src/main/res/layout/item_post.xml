@@ -148,7 +148,7 @@
                 app:layout_constraintDimensionRatio="9:16"
                 app:use_controller="true"
                 app:controller_layout_id="@layout/custom_exo_controls"
-                app:resize_mode="zoom"
+                app:resize_mode="fill"
                 android:visibility="gone"
                 android:background="@android:color/black" />
 

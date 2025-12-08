@@ -38,6 +38,19 @@ const requireVerified = (req, res, next) => {
   next();
 };
 
+router.get('/public', async (req, res) => {
+  try {
+    const communities = await Community.find({ isApproved: true })
+      .select('id _id name displayName');
+
+    res.json(communities);
+  } catch (err) {
+    console.error('Community fetch error:', err);
+    res.status(500).json({ message: 'Server error loading communities' });
+  }
+});
+
+
 // ✅ Get all communities (PUBLIC)
 router.get('/', async (req, res) => {
   try {

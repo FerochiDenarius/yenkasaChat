@@ -398,6 +398,10 @@ interface ApiService {
         @Query("order") order: String? = "desc"
     ): Call<List<Community>>
 
+    @GET("communities/public")
+    fun getPublicCommunities(): Call<List<Community>>
+
+
 
     // ✅ Create a new community
     @POST("communities")
@@ -434,8 +438,6 @@ interface ApiService {
     @GET("user/all-communities")
     fun getAllUserCommunities(@Header("Authorization") token: String): Call<JoinedCommunitiesResponse>
 
-    @GET("communities/public/list")
-    fun getPublicCommunities(): Call<List<Community>>
 
 
     @POST("communities/{communityId}/join")

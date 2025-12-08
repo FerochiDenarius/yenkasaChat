@@ -123,29 +123,58 @@ class RegisterActivity : AppCompatActivity() {
 
         ApiClient.apiService.getPublicCommunities()
             .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(call: Call<List<Community>>, response: Response<List<Community>>) {
+                override fun onResponse(
+                    call: Call<List<Community>>,
+                    response: Response<List<Community>>
+                ) {
                     progressBar.visibility = View.GONE
 
-                    if (!response.isSuccessful || response.body().isNullOrEmpty()) {
-                        Toast.makeText(this@RegisterActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+                    if (!response.isSuccessful) {
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "Failed to load communities (Server ${response.code()})",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         shakeCard()
                         return
                     }
 
-                    communityList = response.body()!!
+                    val communities = response.body()
+
+                    if (communities.isNullOrEmpty()) {
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "No approved communities found",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        shakeCard()
+                        return
+                    }
+
+                    // Save list
+                    communityList = communities
+
                     val adapter = ArrayAdapter(
                         this@RegisterActivity,
                         android.R.layout.simple_spinner_item,
-                        communityList.map { it.displayName ?: it.name ?: "Unnamed" }
+                        communities.map { it.displayName ?: it.name ?: "Unnamed" }
                     )
+
                     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                     spinnerCommunities.adapter = adapter
                     spinnerCommunities.setPopupBackgroundResource(R.color.white)
 
                     spinnerCommunities.onItemSelectedListener =
                         object : AdapterView.OnItemSelectedListener {
-                            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
-                                selectedCommunityId = communityList[pos].id
+                            override fun onItemSelected(
+                                parent: AdapterView<*>,
+                                view: View?,
+                                position: Int,
+                                id: Long
+                            ) {
+                                // NOTE: Community model may use id or _id
+                                selectedCommunityId = communityList[position].id
+                                    ?: communityList[position].id
                             }
 
                             override fun onNothingSelected(parent: AdapterView<*>) {
@@ -157,7 +186,11 @@ class RegisterActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<List<Community>>, t: Throwable) {
                     progressBar.visibility = View.GONE
                     shakeCard()
-                    Toast.makeText(this@RegisterActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@RegisterActivity,
+                        "Error loading communities: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }

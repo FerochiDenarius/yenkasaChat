@@ -1,105 +1,104 @@
-const mongoose = require("mongoose");
+// models/appverification.model.js - VERIFIED & MATCHED TO ANDROID MODEL
+const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+// ------------------------------
+// PHASE HISTORY ITEM (MATCH FRONTEND)
+// ------------------------------
+const PhaseHistorySchema = new Schema({
+  phase: { type: Number, required: true },
+  startedAt: { type: Date, default: null },
+  endedAt: { type: Date, default: null },
+  completed: { type: Boolean, default: false }
+});
+
+// ------------------------------
+// MAIN SCHEMA
+// ------------------------------
 const appVerificationSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       unique: true,
-      index: true,
+      index: true
     },
 
-    // ------------------------------
-    // VERIFICATION PHASE SYSTEM
-    // ------------------------------
-    currentPhase: { type: Number, default: 1, min: 1, max: 6 },
+    currentPhase: {
+      type: Number,
+      default: 1,
+      min: 1,
+      max: 6
+    },
 
-    phaseStartDate: { type: Date, default: Date.now },
+    phaseStartDate: {
+      type: Date,
+      default: Date.now
+    },
+
     phaseEndDate: {
       type: Date,
-      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
 
-    hasVerifiedBanner: { type: Boolean, default: false },
+    hasVerifiedBanner: {
+      type: Boolean,
+      default: false
+    },
 
     // ------------------------------
-    // METRICS
+    // METRICS - MATCH ANDROID EXACTLY
     // ------------------------------
     metrics: {
-      // EXISTING (UNCHANGED)
+      // CORE
       accountAge: { type: Number, default: 0 },
-      totalComments: { type: Number, default: 0 }, // user-made comments
+      totalComments: { type: Number, default: 0 },
       totalFollowers: { type: Number, default: 0 },
       maxLikesOnPost: { type: Number, default: 0 },
       dailyLogins: { type: Number, default: 0 },
       adsViewed: { type: Number, default: 0 },
 
-      // ------------------------------
-      // NEW — STORED PERFORMANCE METRICS (ADDED ONLY)
-      // ------------------------------
-
-      // Posts created
+      // RECEIVED METRICS (ANDROID EXPECTS THESE)
       postsCreated: { type: Number, default: 0 },
-
-      // Alias for frontend (post count)
-      totalPostCount: { type: Number, default: 0 },
-
-      // Following count
-      totalFollowing: { type: Number, default: 0 },
-
-      // Total likes received on all posts
-      totalLikesReceived: { type: Number, default: 0 },
-
-      // Total views received on all posts
       totalViewsReceived: { type: Number, default: 0 },
-
-      // Additional alias for UI needs
-      totalViewsCount: { type: Number, default: 0 },
-
-      // Total comments received on posts
-      totalCommentsReceived: { type: Number, default: 0 },
-
-      // Replies on comments under posts
       totalRepliesReceived: { type: Number, default: 0 },
-
-      // Likes on comments under posts
+      totalLikesReceived: { type: Number, default: 0 },
+      totalCommentsReceived: { type: Number, default: 0 },
       commentLikesReceived: { type: Number, default: 0 },
-
-      // Post shares
       totalShares: { type: Number, default: 0 },
 
-      // Alias for clarity
-      totalCommentsMade: { type: Number, default: 0 },
+      // SOCIAL
+      totalFollowing: { type: Number, default: 0 },
+
+      // ACTIVITY METRICS
+      totalPostCount: { type: Number, default: 0 },
+      totalViewsCount: { type: Number, default: 0 },
+      totalLikesCount: { type: Number, default: 0 },
+      totalCommentsMade: { type: Number, default: 0 }
     },
 
     // ------------------------------
-    // HISTORY
+    // PHASE HISTORY (MATCH ANDROID)
     // ------------------------------
-    phaseHistory: [
-      {
-        phase: Number,
-        achievedAt: Date,
-        bannerAwarded: Boolean,
-      },
-    ],
+    phaseHistory: [PhaseHistorySchema],
 
-    // ------------------------------
-    // LOGIN + VERIFICATION STATUS
-    // ------------------------------
-    lastLoginDate: { type: Date, default: null },
-    isActivelyVerifying: { type: Boolean, default: true },
+    lastLoginDate: {
+      type: Date,
+      default: null
+    },
+
+    isActivelyVerifying: {
+      type: Boolean,
+      default: true
+    }
   },
-
   { timestamps: true }
 );
 
-// ========================================================================
-// EXISTING METHODS (UNCHANGED – NOTHING REMOVED)
-// ========================================================================
-
-// PHASE MULTIPLIER
+// ------------------------------
+// METHODS
+// ------------------------------
 appVerificationSchema.methods.getPhaseMultiplier = function () {
   const multipliers = {
     1: 1.0,
@@ -107,12 +106,11 @@ appVerificationSchema.methods.getPhaseMultiplier = function () {
     3: 3.0,
     4: 4.5,
     5: 6.0,
-    6: 7.5,
+    6: 7.5
   };
   return multipliers[this.currentPhase] || 1.0;
 };
 
-// REQUIREMENTS
 appVerificationSchema.methods.getCurrentRequirements = function () {
   const base = {
     accountAge: 21,
@@ -120,22 +118,21 @@ appVerificationSchema.methods.getCurrentRequirements = function () {
     followers: 100,
     maxLikes: 30,
     dailyLogins: 30,
-    adsViewed: 100,
+    adsViewed: 100
   };
 
-  const mult = this.getPhaseMultiplier();
+  const m = this.getPhaseMultiplier();
 
   return {
     accountAge: base.accountAge,
-    comments: Math.floor(base.comments * mult),
-    followers: Math.floor(base.followers * mult),
-    maxLikes: Math.floor(base.maxLikes * mult),
-    dailyLogins: Math.floor(base.dailyLogins * mult),
-    adsViewed: Math.floor(base.adsViewed * mult),
+    comments: Math.floor(base.comments * m),
+    followers: Math.floor(base.followers * m),
+    maxLikes: Math.floor(base.maxLikes * m),
+    dailyLogins: Math.floor(base.dailyLogins * m),
+    adsViewed: Math.floor(base.adsViewed * m)
   };
 };
 
-// CHECK REQUIREMENTS
 appVerificationSchema.methods.checkRequirementsMet = function () {
   const req = this.getCurrentRequirements();
   const m = this.metrics;
@@ -153,42 +150,15 @@ appVerificationSchema.methods.checkRequirementsMet = function () {
       m.totalFollowers >= req.followers &&
       m.maxLikesOnPost >= req.maxLikes &&
       m.dailyLogins >= req.dailyLogins &&
-      m.adsViewed >= req.adsViewed,
+      m.adsViewed >= req.adsViewed
   };
 };
 
-// ADVANCE PHASE
-appVerificationSchema.methods.advancePhase = async function () {
-  if (this.currentPhase < 6) {
-    this.phaseHistory.push({
-      phase: this.currentPhase,
-      achievedAt: new Date(),
-      bannerAwarded: true,
-    });
-
-    this.currentPhase += 1;
-    this.hasVerifiedBanner = true;
-    this.phaseStartDate = new Date();
-    this.phaseEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    // Reset only phase-specific metrics
-    this.metrics.dailyLogins = 0;
-    this.metrics.adsViewed = 0;
-
-    await this.save();
-    return true;
-  }
-  return false;
-};
-
-// TRACK LOGIN
 appVerificationSchema.methods.trackLogin = async function () {
   const today = new Date().setHours(0, 0, 0, 0);
-  const lastLogin = this.lastLoginDate
-    ? this.lastLoginDate.setHours(0, 0, 0, 0)
-    : null;
+  const last = this.lastLoginDate ? this.lastLoginDate.setHours(0, 0, 0, 0) : null;
 
-  if (!lastLogin || today !== lastLogin) {
+  if (!last || today !== last) {
     this.metrics.dailyLogins += 1;
     this.lastLoginDate = new Date();
     await this.save();
@@ -197,19 +167,14 @@ appVerificationSchema.methods.trackLogin = async function () {
   return false;
 };
 
-// TRACK AD
 appVerificationSchema.methods.trackAdView = async function () {
   this.metrics.adsViewed += 1;
   await this.save();
 };
 
-// UPDATE ACCOUNT AGE
 appVerificationSchema.methods.updateAccountAge = async function (createdAt) {
-  const now = new Date();
-  const created = new Date(createdAt);
-  this.metrics.accountAge = Math.floor(
-    (now - created) / (1000 * 60 * 60 * 24)
-  );
+  const age = Math.floor((Date.now() - new Date(createdAt)) / (1000 * 60 * 60 * 24));
+  this.metrics.accountAge = age;
   await this.save();
 };
 

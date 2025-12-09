@@ -650,10 +650,14 @@ interface ApiService {
     @GET("notifications/all")
     fun getNotifications(): Call<List<NotificationModel>>
 
-    @PUT("notifications/read")
+    // ApiService.kt
+    @PUT("notifications/{id}/read")
     fun markNotificationRead(
-        @Query("id") notificationId: String
+        @Header("Authorization") auth: String,
+        @Path("id") id: String
     ): Call<ApiResponse>
+
+
 
     @DELETE("posts/{postId}")
     fun deletePost(

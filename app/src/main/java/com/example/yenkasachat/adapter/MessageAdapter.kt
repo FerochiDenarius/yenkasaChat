@@ -119,26 +119,35 @@ class MessageAdapter(private val currentUserId: String) :
             val context = itemView.context
 
             // ---------------- Reply Preview ----------------
+// --- WhatsApp-style Reply Bubble ---
             if (message.repliedTo != null && replyLayout != null) {
-                replyLayout.visibility = View.VISIBLE
-                repliedToName?.text =
-                    if (message.repliedTo.senderId == currentUserId) "You"
-                    else message.repliedTo.sender?.username ?: "Someone"
 
-                val replyContent = when {
+                replyLayout.visibility = View.VISIBLE
+
+                // Show sender name ("You" or actual name)
+                repliedToName?.text = if (message.repliedTo.senderId == currentUserId)
+                    "You"
+                else
+                    message.repliedTo.sender?.username ?: "Unknown"
+
+                // Show EXACT content of the replied message (WhatsApp behavior)
+                val replyMessage = when {
                     !message.repliedTo.text.isNullOrBlank() -> message.repliedTo.text
-                    !message.repliedTo.imageUrl.isNullOrBlank() -> "📷 Image"
+                    !message.repliedTo.imageUrl.isNullOrBlank() -> "📷 Photo"
                     !message.repliedTo.videoUrl.isNullOrBlank() -> "🎥 Video"
                     !message.repliedTo.audioUrl.isNullOrBlank() -> "🎵 Audio"
                     !message.repliedTo.fileUrl.isNullOrBlank() -> "📄 File"
                     message.repliedTo.location != null -> "📍 Location"
                     !message.repliedTo.contactInfo.isNullOrBlank() -> "👤 Contact"
-                    else -> "Message"
+                    else -> "(Unsupported message type)"
                 }
-                repliedToMessage?.text = replyContent
+
+                repliedToMessage?.text = replyMessage
+
             } else {
                 replyLayout?.visibility = View.GONE
             }
+
 
             // ---------------- Text ----------------
             messageText.visibility = if (!message.text.isNullOrBlank()) {

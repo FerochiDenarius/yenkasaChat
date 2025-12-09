@@ -6,6 +6,8 @@ import android.app.NotificationManager // Added
 import android.content.Context
 import android.os.Build // Added
 import android.util.Log
+import io.socket.client.IO
+import io.socket.client.Socket
 import com.example.yenkasachat.notifications.IncomingCallService
 import com.pusher.pushnotifications.PushNotifications
 import com.cloudinary.android.MediaManager
@@ -32,6 +34,10 @@ class MyApplication : Application(), OSSubscriptionObserver {
     // Define your channel ID as a constant for clarity
     companion object {
         const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_new_messages_channel"
+
+        private lateinit var mSocket: Socket
+
+        fun getSocket(): Socket = mSocket
 
         val notificationSounds = mapOf(
             "sound_default" to R.raw.sound_default,
@@ -148,6 +154,25 @@ class MyApplication : Application(), OSSubscriptionObserver {
         Log.d("MyApplication", "MediaManager initialized.")
 
         Log.d("MyApplication", "Application onCreate finished.")
+
+
+        try {
+            val options = IO.Options().apply {
+                reconnection = true
+                reconnectionAttempts = Int.MAX_VALUE
+                reconnectionDelay = 1000
+                timeout = 20000
+            }
+
+            // ⚠️ IMPORTANT: update URL to your backend
+            mSocket = IO.socket("https://yenkasa.onrender.com", options)
+
+            mSocket.connect()
+            Log.d("MyApplication", "Socket.IO connected.")
+        } catch (e: Exception) {
+            Log.e("MyApplication", "Socket initialization failed: ${e.message}")
+        }
+
     }
 
 

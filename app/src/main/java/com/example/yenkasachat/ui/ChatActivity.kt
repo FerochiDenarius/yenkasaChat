@@ -282,15 +282,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             val text = messageInput.text.toString().trim()
             if (text.isNotEmpty()) {
                 val messageData = mutableMapOf<String, Any>("text" to text)
-                replyingToMessage?.let { message ->
-                    message.id?.let { repliedToId ->
-                        messageData["repliedTo"] = repliedToId
-                    }
+
+                replyingToMessage?.id?.let { repliedToId ->
+                    messageData["repliedTo"] = repliedToId
                 }
+
                 chatMessageHandler.sendMessage(messageData)
                 messageInput.setText("")
                 clearReplyingTo()
                 hideKeyboard()
+                Log.d("ChatActivity", "Sending reply → repliedTo=$replyingToMessage")
+
             }
         }
 

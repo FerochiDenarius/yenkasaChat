@@ -6,10 +6,13 @@ const messageSchema = new mongoose.Schema({
     required: true,
     ref: 'ChatRoom'
   },
-  senderId: {
-    type: String, // ✅ still String for compatibility with your current setup
-    required: true
-  },
+  
+senderId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+  required: true
+},
+
   text: {
     type: String,
     required: false

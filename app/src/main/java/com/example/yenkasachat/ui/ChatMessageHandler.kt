@@ -47,6 +47,16 @@ class ChatMessageHandler(
         messageMap["videoUrl"] = data["videoUrl"]
         messageMap["fileUrl"] = data["fileUrl"]
 
+        // ✅ FIX: Add repliedTo if present
+        val repliedTo = data["repliedTo"]
+        if (repliedTo != null) {
+            messageMap["repliedTo"] = repliedTo
+            Log.d("ChatMessageHandler", "📌 Attached repliedTo message ID: $repliedTo")
+        } else {
+            Log.d("ChatMessageHandler", "No repliedTo attached")
+        }
+
+
         // ✅ Always include OneSignal Player ID
         val playerId = com.onesignal.OneSignal.getDeviceState()?.userId
         if (!playerId.isNullOrBlank()) {

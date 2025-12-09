@@ -60,7 +60,10 @@ exports.getUserPerformanceMetrics = async (req, res) => {
     // ==============================
 
     // Views user has made
-    const totalViewsCount = await View.countDocuments({ userId: objectId });
+let totalViewsCount = 0;
+try {
+  totalViewsCount = await View.countDocuments({ userId: objectId });
+} catch (_) {}
 
     // Comments user made
     const totalCommentsMade = await Comment.countDocuments({ userId: objectId });

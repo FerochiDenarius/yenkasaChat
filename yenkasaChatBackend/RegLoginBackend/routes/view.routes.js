@@ -63,25 +63,25 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
     // ---------------------------------------------------------------------
     // FIX ⭐ deterministic activityId — prevents reward duplicates
     // ---------------------------------------------------------------------
-    const activityId = `view_${postId}_${viewerId}`;
+const activityId = new mongoose.Types.ObjectId().toString();
 
     // ---------------------------------------------------------------------
     // UPSERT VIEW RECORD  (kept from your old logic)
     // ---------------------------------------------------------------------
-    const view = await View.findOneAndUpdate(
-      { activityId },
-      {
-        $setOnInsert: {
-          postId,
-          userId: viewerId,
-          username: viewer.username,
-          mediaType,
-          viewedAt: new Date()
-        },
-        $inc: { viewsCount: 1, watchDuration }
-      },
-      { upsert: true, new: true }
-    );
+// ---------------------------------------------------------------------
+// CREATE NEW VIEW RECORD (Option A — every view counts)
+// ---------------------------------------------------------------------
+const view = await View.create({
+  activityId: new mongoose.Types.ObjectId().toString(),
+  postId,
+  userId: viewerId,
+  username: viewer.username,
+  mediaType,
+  viewedAt: new Date(),
+  watchDuration,
+  viewsCount: 1
+});
+
 
     // ---------------------------------------------------------------------
     // FOREIGN REFERENCE → add viewObject to Post.views[]

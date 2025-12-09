@@ -60,19 +60,16 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
 
     const ownerId = post.userId.toString();
 
-    // ---------------------------------------------------------------------
-    // FIX ⭐ deterministic activityId — prevents reward duplicates
-    // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Single activityId used for View record + Reward entry
+// ---------------------------------------------------------------------
 const activityId = new mongoose.Types.ObjectId().toString();
 
-    // ---------------------------------------------------------------------
-    // UPSERT VIEW RECORD  (kept from your old logic)
-    // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 // CREATE NEW VIEW RECORD (Option A — every view counts)
 // ---------------------------------------------------------------------
 const view = await View.create({
-  activityId: new mongoose.Types.ObjectId().toString(),
+  activityId,
   postId,
   userId: viewerId,
   username: viewer.username,
@@ -81,6 +78,7 @@ const view = await View.create({
   watchDuration,
   viewsCount: 1
 });
+
 
 
     // ---------------------------------------------------------------------
@@ -136,7 +134,7 @@ switch (mediaType) {
 
     // Owner reward (only if viewer != owner)
     if (viewerId !== ownerId) {
-      const ownerActivityId = `view_received_${postId}_${viewerId}`;
+const ownerActivityId = `owner_${activityId}`;
 
       await rewardService.reward(ownerId, 1, {
         type: "REWARD_POST_VIEW",

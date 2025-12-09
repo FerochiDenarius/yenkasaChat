@@ -4,17 +4,42 @@ const User = require("../models/user.model");
 const auth = require('../middleware/auth');
 
 
+// ensure all metrics are integers
+function sanitizeMetrics(metrics) {
+  const out = { ...metrics };
+  for (const k of Object.keys(out)) {
+    if (typeof out[k] === "number") {
+      out[k] = Math.floor(out[k]);
+    } else if (out[k] == null) {
+      out[k] = 0;
+    }
+  }
+  return out;
+}
+
+// normalize phase history for frontend
+function formatPhaseHistory(history) {
+  return history.map(item => ({
+    phase: item.phase,
+    startedAt: item.startedAt ? item.startedAt.toISOString() : null,
+    endedAt: item.endedAt ? item.endedAt.toISOString() : null,
+    completed: item.completed ?? false
+  }));
+}
+
 // ===============================
 // GET DASHBOARD
 // ===============================
 exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user.id;
+
     const user = await User.findById(userId).select(
       "verified emailVerified phoneVerified createdAt role"
     );
 
     let appVerification = await AppVerification.findOne({ userId });
+
     if (!appVerification) {
       appVerification = new AppVerification({ userId });
       await appVerification.save();
@@ -25,8 +50,10 @@ exports.getDashboard = async (req, res) => {
     const requirements = appVerification.getCurrentRequirements();
     const progress = appVerification.checkRequirementsMet();
     const now = new Date();
-    const daysRemaining = Math.ceil(
-      (appVerification.phaseEndDate - now) / (1000 * 60 * 60 * 24)
+
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((appVerification.phaseEndDate - now) / (1000 * 60 * 60 * 24))
     );
 
     return res.json({
@@ -34,21 +61,22 @@ exports.getDashboard = async (req, res) => {
         email: user.emailVerified || false,
         phone: user.phoneVerified || false,
         basicPostingEnabled: user.verified || false,
-        userRole: user.role,
+        userRole: user.role
       },
 
       appVerification: {
         currentPhase: appVerification.currentPhase,
         hasVerifiedBanner: appVerification.hasVerifiedBanner,
-        phaseStartDate: appVerification.phaseStartDate,
-        phaseEndDate: appVerification.phaseEndDate,
-        daysRemaining: Math.max(0, daysRemaining),
+        phaseStartDate: appVerification.phaseStartDate?.toISOString(),
+        phaseEndDate: appVerification.phaseEndDate?.toISOString(),
+        daysRemaining,
         requirements,
-        currentMetrics: appVerification.metrics, // now includes ALL metrics
+        currentMetrics: sanitizeMetrics(appVerification.metrics),
         progress,
-        phaseHistory: appVerification.phaseHistory,
-      },
+        phaseHistory: formatPhaseHistory(appVerification.phaseHistory)
+      }
     });
+
   } catch (err) {
     console.error("❌ Failed to fetch verification dashboard:", err);
     return res.status(500).json({ error: "Failed to fetch verification dashboard" });
@@ -75,6 +103,7 @@ exports.trackLogin = async (req, res) => {
       newDayLogged: wasNewDay,
       dailyLogins: appVerification.metrics.dailyLogins,
     });
+
   } catch (err) {
     console.error("❌ Failed to track login:", err);
     return res.status(500).json({ error: "Failed to track login" });
@@ -87,8 +116,8 @@ exports.trackLogin = async (req, res) => {
 exports.trackAdView = async (req, res) => {
   try {
     const userId = req.user.id;
-    let appVerification = await AppVerification.findOne({ userId });
 
+    let appVerification = await AppVerification.findOne({ userId });
     if (!appVerification) {
       appVerification = new AppVerification({ userId });
       await appVerification.save();
@@ -98,8 +127,9 @@ exports.trackAdView = async (req, res) => {
 
     return res.json({
       success: true,
-      adsViewed: appVerification.metrics.adsViewed,
+      adsViewed: appVerification.metrics.adsViewed
     });
+
   } catch (err) {
     console.error("❌ Failed to track ad view:", err);
     return res.status(500).json({ error: "Failed to track ad view" });
@@ -107,7 +137,7 @@ exports.trackAdView = async (req, res) => {
 };
 
 // ===============================
-// UPDATE METRIC (comment/follower/like)
+// UPDATE METRICS
 // ===============================
 exports.updateMetrics = async (req, res) => {
   try {
@@ -120,44 +150,66 @@ exports.updateMetrics = async (req, res) => {
       await appVerification.save();
     }
 
+    const m = appVerification.metrics;
+
     switch (type) {
+
       case "comment":
-        appVerification.metrics.totalComments += 1;
+        m.totalComments += 1;
+        m.totalCommentsMade += 1;
         break;
 
       case "follower":
-        appVerification.metrics.totalFollowers += value || 1;
+        m.totalFollowers += value || 1;
         break;
 
       case "maxLikes":
-        if (value > appVerification.metrics.maxLikesOnPost) {
-          appVerification.metrics.maxLikesOnPost = value;
+        if (value > m.maxLikesOnPost) {
+          m.maxLikesOnPost = value;
         }
+        m.totalLikesCount += value || 0;
         break;
 
-      // NEW — FULL METRICS SUPPORT
       case "postCreated":
-        appVerification.metrics.postsCreated += 1;
+        m.postsCreated += 1;
+        m.totalPostCount += 1;
         break;
 
       case "viewReceived":
-        appVerification.metrics.viewsReceived += 1;
+        m.totalViewsReceived += 1;
+        m.totalViewsCount += 1;
         break;
 
       case "replyReceived":
-        appVerification.metrics.repliesReceived += 1;
+        m.totalRepliesReceived += 1;
+        break;
+
+      case "commentReceived":
+        m.totalCommentsReceived += 1;
+        break;
+
+      case "likeOnComment":
+        m.commentLikesReceived += 1;
+        m.totalLikesCount += 1;
+        break;
+
+      case "share":
+        m.totalShares += 1;
         break;
 
       default:
         return res.status(400).json({ error: "Invalid metric type" });
     }
 
+    // sanitize + save
+    appVerification.metrics = sanitizeMetrics(m);
     await appVerification.save();
 
     return res.json({
       success: true,
-      metrics: appVerification.metrics,
+      metrics: sanitizeMetrics(appVerification.metrics),
     });
+
   } catch (err) {
     console.error("❌ Failed to update metrics:", err);
     return res.status(500).json({ error: "Failed to update metrics" });
@@ -170,6 +222,7 @@ exports.updateMetrics = async (req, res) => {
 exports.getProgress = async (req, res) => {
   try {
     const userId = req.user.id;
+
     const user = await User.findById(userId);
     const appVerification = await AppVerification.findOne({ userId });
 
@@ -179,34 +232,47 @@ exports.getProgress = async (req, res) => {
 
     await appVerification.updateAccountAge(user.createdAt);
 
-    const requirements = appVerification.getCurrentRequirements();
-    const metrics = appVerification.metrics;
+    const reqs = appVerification.getCurrentRequirements();
+    const metrics = sanitizeMetrics(appVerification.metrics);
 
-    const percentages = {
-      accountAge: Math.min(100, (metrics.accountAge / requirements.accountAge) * 100),
-      comments: Math.min(100, (metrics.totalComments / requirements.comments) * 100),
-      followers: Math.min(100, (metrics.totalFollowers / requirements.followers) * 100),
-      maxLikes: Math.min(100, (metrics.maxLikesOnPost / requirements.maxLikes) * 100),
-      dailyLogins: Math.min(100, (metrics.dailyLogins / requirements.dailyLogins) * 100),
-      adsViewed: Math.min(100, (metrics.adsViewed / requirements.adsViewed) * 100),
+    function pct(value, reqValue) {
+      return reqValue === 0 ? 0 : Math.min(100, (value / reqValue) * 100);
+    }
+
+    const detailed = {
+      accountAge: pct(metrics.accountAge, reqs.accountAge),
+      comments: pct(metrics.totalComments, reqs.comments),
+      followers: pct(metrics.totalFollowers, reqs.followers),
+      maxLikes: pct(metrics.maxLikesOnPost, reqs.maxLikes),
+      dailyLogins: pct(metrics.dailyLogins, reqs.dailyLogins),
+      adsViewed: pct(metrics.adsViewed, reqs.adsViewed),
     };
 
-    const overallProgress =
-      Object.values(percentages).reduce((a, b) => a + b, 0) / Object.keys(percentages).length;
+    const avg =
+      (detailed.accountAge +
+        detailed.comments +
+        detailed.followers +
+        detailed.maxLikes +
+        detailed.dailyLogins +
+        detailed.adsViewed) / 6;
 
     return res.json({
       phase: appVerification.currentPhase,
-      overallProgress: Math.round(overallProgress),
-      detailedProgress: percentages,
-      requirements,
+      overallProgress: Math.round(avg),
+      detailedProgress: detailed,
+      requirements: reqs,
       currentMetrics: metrics,
     });
+
   } catch (err) {
     console.error("❌ Failed to fetch progress:", err);
     return res.status(500).json({ error: "Failed to fetch progress" });
   }
 };
 
+// ===============================
+// CHECK PHASE ADVANCEMENT
+// ===============================
 exports.checkPhaseAdvancement = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -217,7 +283,8 @@ exports.checkPhaseAdvancement = async (req, res) => {
       await appVerification.save();
     }
 
-    const result = await appVerification.checkPhaseAdvancement(); // if your model has this
+    const result = await appVerification.checkPhaseAdvancement();
+
     return res.json({
       success: true,
       message: "Phase advancement processed",
@@ -229,6 +296,3 @@ exports.checkPhaseAdvancement = async (req, res) => {
     return res.status(500).json({ error: "Failed to check phase advancement" });
   }
 };
-
-
-

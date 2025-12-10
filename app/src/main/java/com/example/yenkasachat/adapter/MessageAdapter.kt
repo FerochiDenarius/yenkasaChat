@@ -19,8 +19,15 @@ import com.example.yenkasachat.ui.ImagePreviewActivity
 import com.example.yenkasachat.ui.LocationPreviewActivity
 import java.text.SimpleDateFormat
 import java.util.*
+import android.text.TextUtils
 
-class MessageAdapter(private val currentUserId: String) :
+
+class MessageAdapter(
+    private val currentUserId: String,
+    private val receiverName: String
+)
+
+:
     ListAdapter<ChatMessage, RecyclerView.ViewHolder>(DiffCallback()) {
 
     interface OnMessageLongClickListener {
@@ -76,7 +83,7 @@ class MessageAdapter(private val currentUserId: String) :
     // ------------------------------------------------------------
     // Base ViewHolder
     // ------------------------------------------------------------
-    abstract class BaseMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner abstract class BaseMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         protected val messageText: TextView = itemView.findViewById(R.id.textMessage)
         protected val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
         protected val messageImage: ImageView = itemView.findViewById(R.id.imageMessage)
@@ -119,34 +126,51 @@ class MessageAdapter(private val currentUserId: String) :
             val context = itemView.context
 
             // ---------------- Reply Preview ----------------
-// --- WhatsApp-style Reply Bubble ---
             if (message.repliedTo != null && replyLayout != null) {
 
+                val replied = message.repliedTo!!
                 replyLayout.visibility = View.VISIBLE
 
-                // Show sender name ("You" or actual name)
-                repliedToName?.text = if (message.repliedTo.senderId == currentUserId)
-                    "You"
-                else
-                    message.repliedTo.sender?.username ?: "Unknown"
+                val senderName =
+                    when {
+                        replied.senderId == currentUserId -> "You"
+                        replied.sender?.username?.isNotBlank() == true -> replied.sender!!.username!!
+                        receiverName.isNotBlank() -> receiverName
+                        else -> ""
+                    }
 
-                // Show EXACT content of the replied message (WhatsApp behavior)
-                val replyMessage = when {
-                    !message.repliedTo.text.isNullOrBlank() -> message.repliedTo.text
-                    !message.repliedTo.imageUrl.isNullOrBlank() -> "📷 Photo"
-                    !message.repliedTo.videoUrl.isNullOrBlank() -> "🎥 Video"
-                    !message.repliedTo.audioUrl.isNullOrBlank() -> "🎵 Audio"
-                    !message.repliedTo.fileUrl.isNullOrBlank() -> "📄 File"
-                    message.repliedTo.location != null -> "📍 Location"
-                    !message.repliedTo.contactInfo.isNullOrBlank() -> "👤 Contact"
-                    else -> "(Unsupported message type)"
+
+                repliedToName?.text = senderName
+
+                val replyText = when {
+                    !replied.text.isNullOrBlank() -> replied.text!!
+                    !replied.imageUrl.isNullOrBlank() -> "📷 Photo"
+                    !replied.videoUrl.isNullOrBlank() -> "🎥 Video"
+                    !replied.audioUrl.isNullOrBlank() -> "🎵 Audio"
+                    !replied.fileUrl.isNullOrBlank() -> "📄 File"
+                    replied.location != null -> "📍 Location"
+                    !replied.contactInfo.isNullOrBlank() -> "👤 Contact"
+                    else -> "(message)"
                 }
 
-                repliedToMessage?.text = replyMessage
+                repliedToMessage?.apply {
+                    text = replyText
+                    minWidth = dpToPx(context, 180)
+                    maxWidth = dpToPx(context, 260)
+                    minLines = 1
+                    maxLines = 3
+                    ellipsize = TextUtils.TruncateAt.END
+                    visibility = View.VISIBLE
+                }
 
             } else {
                 replyLayout?.visibility = View.GONE
             }
+
+
+
+
+
 
 
             // ---------------- Text ----------------
@@ -300,6 +324,19 @@ class MessageAdapter(private val currentUserId: String) :
             }
         }
 
+        private fun dpToPx(ctx: android.content.Context, dp: Int): Int {
+            return (dp * ctx.resources.displayMetrics.density).toInt()
+        }
+
+        private fun resolveSenderName(message: ChatMessage, currentUserId: String, receiverName: String): String {
+            return when {
+                message.senderId == currentUserId -> "You"
+                !receiverName.isNullOrBlank() -> receiverName
+                message.sender?.username?.isNotBlank() == true -> message.sender!!.username!!
+                else -> ""
+            }
+        }
+
         protected fun formatTime(milliseconds: Int): String {
             if (milliseconds < 0) return "00:00"
             val totalSeconds = milliseconds / 1000
@@ -322,10 +359,11 @@ class MessageAdapter(private val currentUserId: String) :
         }
     }
 
+
     // ------------------------------------------------------------
     // Sent / Received ViewHolders
     // ------------------------------------------------------------
-    class SentMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView) {
+   inner class SentMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView) {
         private val statusText: TextView = itemView.findViewById(R.id.textStatus)
         override fun bind(message: ChatMessage, currentUserId: String) {
             super.bind(message, currentUserId)
@@ -333,7 +371,7 @@ class MessageAdapter(private val currentUserId: String) :
         }
     }
 
-    class ReceivedMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
+    inner class ReceivedMessageViewHolder(itemView: View) : BaseMessageViewHolder(itemView)
 
     // ------------------------------------------------------------
     // Diff Callback

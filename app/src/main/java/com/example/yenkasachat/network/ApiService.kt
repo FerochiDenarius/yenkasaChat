@@ -650,12 +650,12 @@ interface ApiService {
     @GET("notifications/all")
     fun getNotifications(): Call<List<NotificationModel>>
 
-    // ApiService.kt
     @PUT("notifications/{id}/read")
     fun markNotificationRead(
-        @Header("Authorization") auth: String,
-        @Path("id") id: String
+        @Path("id") id: String,
+        @Header("Authorization") auth: String
     ): Call<ApiResponse>
+
 
 
 

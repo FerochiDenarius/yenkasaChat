@@ -21,6 +21,9 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import android.content.Intent
+import android.util.Log
+
 
 class UserNotificationsActivity : AppCompatActivity() {
 
@@ -128,19 +131,52 @@ class UserNotificationsActivity : AppCompatActivity() {
     // ============================================================
     private fun handleNotificationClick(item: NotificationModel) {
 
-        markAsRead(item.id)
+        // Remove visually & mark backend as read
         adapter.removeById(item.id)
+        markAsRead(item.id)
 
-        val url = when (item.type.lowercase()) {
-            "post_approved" -> "/post/approval/${item.postId}"
-            "comment" -> "/post/${item.postId}?openComments=true"
-            "like", "post_liked" -> "/post/${item.postId}"
-            "follow" -> "/profile/${item.senderId}"
-            else -> null
-        }
+        // Navigate correctly
+        navigateFromNotification(item)
+    }
 
-        if (url != null) {
-            Toast.makeText(this, "Navigate to: $url", Toast.LENGTH_SHORT).show()
+
+    private fun navigateFromNotification(item: NotificationModel) {
+
+        when (item.type?.lowercase()) {
+
+            // USER PROFILE
+            "follow", "new_follower", "profile_view", "user" -> {
+                val intent = Intent(this, UserProfileActivity::class.java)
+                intent.putExtra("USER_ID", item.targetId)
+                startActivity(intent)
+            }
+
+            // POST → open comments
+            "post_like", "post_comment", "post_reply", "post" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", item.targetId)
+                startActivity(intent)
+            }
+
+            // COMMENT → open post comments + expand
+            "comment_like", "comment_reply", "comment" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", item.postId ?: item.targetId)
+                intent.putExtra("openComments", true)
+                startActivity(intent)
+            }
+
+            // ADMIN APPROVAL
+            "approval" -> {
+                Toast.makeText(this, "Approval ID: ${item.targetId}", Toast.LENGTH_SHORT).show()
+            }
+
+            // FALLBACK URL
+            else -> {
+                item.targetUrl?.let { url ->
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } ?: Toast.makeText(this, "No navigation target", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -148,28 +184,20 @@ class UserNotificationsActivity : AppCompatActivity() {
     // MARK AS READ
     // ============================================================
     private fun markAsRead(id: String) {
-
-        // Get token normally used by ApiClient's interceptor
         val token = TokenManager.getToken(applicationContext)
 
         ApiClient.apiService
-            .markNotificationRead(id, "Bearer $token")   // <── pass header explicitly
+            .markNotificationRead(id, "Bearer $token")
             .enqueue(object : Callback<ApiResponse> {
 
-                override fun onResponse(
-                    call: Call<ApiResponse>,
-                    response: Response<ApiResponse>
-                ) {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     if (!response.isSuccessful) {
-                        // rollback or log
-                        return
+                        Log.e("NOTIF", "Failed to mark read: ${response.code()}")
                     }
-
-                    // API success — notification is read on backend
                 }
 
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                    // rollback or log
+                    Log.e("NOTIF", "Error marking read: ${t.message}")
                 }
             })
     }

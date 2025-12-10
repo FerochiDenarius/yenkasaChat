@@ -133,7 +133,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        messageAdapter = MessageAdapter(senderId)
+        messageAdapter = MessageAdapter(
+            currentUserId = senderId,
+            receiverName = textViewReceiverName.text.toString()
+        )
         messageAdapter.setOnMessageLongClickListener(this)
 
         // ✅ Ensure non-null roomId and proper initialization

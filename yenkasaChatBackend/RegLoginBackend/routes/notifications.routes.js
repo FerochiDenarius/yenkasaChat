@@ -115,35 +115,42 @@ router.get("/all", auth, async (req, res) => {
   }
 });
 
-// MARK a single notification as read -> PUT /api/notifications/:id/read
+// MARK a single notification as read -> DELETE /api/notifications/:id/read
 router.put("/:id/read", auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const notification = await Notification.findOneAndUpdate(
-      { _id: id, receiverId: req.user.id },
-      { status: "read", readAt: new Date() },
-      { new: true }
-    );
 
-    if (!notification) return res.status(404).json({ message: "Notification not found" });
+    // delete the notification
+    const notification = await Notification.findOneAndDelete({
+      _id: id,
+      receiverId: req.user.id
+    });
 
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    // socket payload (similar to old formatted)
     const formatted = {
-      id: notification._id.toString(),
-      status: notification.status,
-      readAt: notification.readAt ? notification.readAt.toISOString() : null
+      id: id,
+      status: "read",
+      readAt: new Date().toISOString(),
+      deleted: true
     };
 
-    // emit socket event so other clients can update
+    // emit socket event so other clients update UI
     if (global.io) {
       global.io.to(req.user.id).emit("notificationRead", formatted);
     }
 
     return res.json(formatted);
+
   } catch (err) {
     console.error("NOTIFICATION READ ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // MARK ALL notifications as read
 router.put("/read-all", auth, async (req, res) => {

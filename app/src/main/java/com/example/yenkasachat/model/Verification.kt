@@ -69,32 +69,35 @@ data class VerificationRequirements(
 // ===============================
 data class VerificationMetrics(
 
-    // ----- CORE -----
-    var accountAge: Int,
-    var totalComments: Int,
-    var totalFollowers: Int,
-    var maxLikesOnPost: Int,
-    var dailyLogins: Int,
-    var adsViewed: Int,
+    var accountAge: Int = 0,
 
-    // ----- RECEIVED METRICS -----
-    var postsCreated: Int = 0,
-    var totalViewsReceived: Int = 0,
-    var totalRepliesReceived: Int = 0,
-    var totalLikesReceived: Int = 0,
-    var totalCommentsReceived: Int = 0,
-    var commentLikesReceived: Int = 0,
-    var totalShares: Int = 0,
+    var totalComments: Int = 0,
+    var totalCommentsMade: Int = 0,
 
-    // ----- SOCIAL -----
+    var totalFollowers: Int = 0,
     var totalFollowing: Int = 0,
 
-    // ----- ACTIVITY METRICS (added as vars) -----
+    var maxLikesOnPost: Int = 0,
+    var totalLikesCount: Int = 0,
+    var commentLikesReceived: Int = 0,
+
+    var dailyLogins: Int = 0,
+    var adsViewed: Int = 0,
+
+    var postsCreated: Int = 0,
     var totalPostCount: Int = 0,
+
+    var totalViewsReceived: Int = 0,
     var totalViewsCount: Int = 0,
-    var totalLikesCount: Int = 0,       // <--- Missing one (FIXED)
-    var totalCommentsMade: Int = 0
+
+    var totalRepliesReceived: Int = 0,
+    var totalCommentsReceived: Int = 0,
+
+    var totalShares: Int = 0,
+    var totalLikesReceived : Int =0
 )
+
+
 
 
 

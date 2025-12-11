@@ -55,13 +55,19 @@ router.post('/register', async (req, res) => {
         message: "Invalid country. African countries only."
       });
     }
+    
+// Normalize country
+country = country ? sanitize(country) : "Ghana";
+country = country.trim().toLowerCase();
 
-    if (country !== "Ghana") {
-      return res.status(403).json({
-        success: false,
-        message: "Registration is currently available only in Ghana."
-      });
-    }
+// Allow only Ghana
+if (country !== "ghana") {
+  return res.status(403).json({
+    success: false,
+    message: "Registration is currently available only in Ghana."
+  });
+}
+
 
     // Validate required
     if (!username || !location || !password || (!email && !phoneNumber) || !communityId) {

@@ -73,42 +73,42 @@ class BlockedUsersAdapter(
 
     private fun unblockUser(userId: String, holder: ViewHolder) {
 
-        ApiClient.apiService.unblockUser(UnblockUserRequest(userId))
-            .enqueue(object : Callback<ApiResponse> {
-                override fun onResponse(
-                    call: Call<ApiResponse>,
-                    response: Response<ApiResponse>
-                ) {
-                    if (response.isSuccessful) {
+        ApiClient.apiService.unblockUser(
+            UnblockUserRequest(targetId = userId)
+        ).enqueue(object : Callback<ApiResponse> {
 
-                        val pos = holder.bindingAdapterPosition
-                        if (pos != RecyclerView.NO_POSITION) {
-                            items.removeAt(pos)
-                            notifyItemRemoved(pos)
-                        }
+            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                if (response.isSuccessful) {
 
-                        Toast.makeText(
-                            holder.itemView.context,
-                            "User unblocked",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(
-                            holder.itemView.context,
-                            "Failed to unblock",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    val pos = holder.bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        items.removeAt(pos)
+                        notifyItemRemoved(pos)
                     }
-                }
 
-                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                     Toast.makeText(
                         holder.itemView.context,
-                        "Network error: ${t.message}",
+                        "User unblocked",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+                    Toast.makeText(
+                        holder.itemView.context,
+                        "Failed to unblock",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-            })
+            }
+
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                Toast.makeText(
+                    holder.itemView.context,
+                    "Network error: ${t.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
     }
 
     fun update(list: List<BlockedUserModel>) {

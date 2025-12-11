@@ -521,20 +521,16 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<TrackLoginResponse>
 
-    @POST("app-verification/track-ad")
-    fun trackAdView(
-        @Header("Authorization") token: String
-    ): Call<TrackAdViewResponse>
+    @POST("app-verification/track-ad-view")
+    fun trackAdView(@Header("Authorization") auth: String): Call<TrackAdViewResponse>
 
     @GET("app-verification/progress")
     fun getProgress(
         @Header("Authorization") token: String
     ): Call<VerificationProgressResponse>
 
-    @POST("app-verification/check-phase")
-    fun checkPhase(
-        @Header("Authorization") token: String
-    ): Call<PhaseAdvancementResponse>
+    @POST("app-verification/check-phase-advancement")
+    fun checkPhaseAdvancement(@Header("Authorization") auth: String): Call<PhaseAdvancementResponse>
 
     // GET /api/metrics/:userId/performance-metrics
     @GET("metrics/{userId}/performance-metrics")

@@ -67,6 +67,9 @@ class AppVerificationActivity : AppCompatActivity() {
         }
     }
 
+    // Helper to build auth header consistently
+    private fun authHeader(): String = "Bearer ${TokenManager.getToken(this)}"
+
     // -------------------------------------------------------------
     // TAB SYSTEM
     // -------------------------------------------------------------
@@ -130,7 +133,7 @@ class AppVerificationActivity : AppCompatActivity() {
     private fun loadDashboard() {
         showLoading(true)
 
-        // 1️⃣ LOAD CACHED DASHBOARD FIRST
+        // 1️⃣ LOAD CACHED DASHBOARD FIRST (robust: clear invalid cache)
         TokenManager.getDashboardCache(this)?.let { cachedJson ->
             try {
                 val cached = com.google.gson.Gson().fromJson(cachedJson, VerificationDashboard::class.java)
@@ -142,11 +145,15 @@ class AppVerificationActivity : AppCompatActivity() {
                     updateAdvancePhaseButton()
                     loadProgress()
                 }
-            } catch (_: Exception) {}
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                // clear bad cache to avoid repeated parsing errors
+                TokenManager.saveDashboardCache(this, "")
+            }
         }
 
-        // 2️⃣ FETCH FRESH DASHBOARD
-        ApiClient.apiService.getDashboard("Bearer ${TokenManager.getToken(this)}")
+        // 2️⃣ FETCH FRESH DASHBOARD (endpoint: GET /app-verification/dashboard)
+        ApiClient.apiService.getDashboard(authHeader())
             .enqueue(object : Callback<VerificationDashboard> {
                 override fun onResponse(
                     call: Call<VerificationDashboard>,
@@ -154,7 +161,15 @@ class AppVerificationActivity : AppCompatActivity() {
                 ) {
                     showLoading(false)
 
-                    val body = response.body() ?: return
+                    if (!response.isSuccessful) {
+                        Toast.makeText(this@AppVerificationActivity, "Failed to load dashboard: ${response.code()}", Toast.LENGTH_LONG).show()
+                        return
+                    }
+
+                    val body = response.body() ?: run {
+                        Toast.makeText(this@AppVerificationActivity, "Empty dashboard response", Toast.LENGTH_SHORT).show()
+                        return
+                    }
 
                     // Save to cache
                     TokenManager.saveDashboardCache(
@@ -165,13 +180,14 @@ class AppVerificationActivity : AppCompatActivity() {
                     dashboardData = body
                     setupViewPager()
                     highlightTab(0)
+                    loadPerformanceMetrics()
                     updateAdvancePhaseButton()
                     loadProgress()
                 }
 
                 override fun onFailure(call: Call<VerificationDashboard>, t: Throwable) {
                     showLoading(false)
-                    Toast.makeText(this@AppVerificationActivity, t.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AppVerificationActivity, "Network error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -191,18 +207,25 @@ class AppVerificationActivity : AppCompatActivity() {
     // -------------------------------------------------------------
 
     private fun loadProgress() {
-        ApiClient.apiService.getProgress("Bearer ${TokenManager.getToken(this)}")
+        ApiClient.apiService.getProgress(authHeader())
             .enqueue(object : Callback<VerificationProgressResponse> {
                 override fun onResponse(
                     call: Call<VerificationProgressResponse>,
                     response: Response<VerificationProgressResponse>
                 ) {
+                    if (!response.isSuccessful) {
+                        // keep UI stable
+                        return
+                    }
                     val res = response.body() ?: return
                     progressCircle.visibility = View.VISIBLE
                     progressCircle.setProgressCompat(res.overallProgress, true)
                 }
 
-                override fun onFailure(call: Call<VerificationProgressResponse>, t: Throwable) {}
+                override fun onFailure(call: Call<VerificationProgressResponse>, t: Throwable) {
+                    // no crash: optionally log
+                    t.printStackTrace()
+                }
             })
     }
 
@@ -214,21 +237,29 @@ class AppVerificationActivity : AppCompatActivity() {
     // -------------------------------------------------------------
     // ADVANCE PHASE
     // -------------------------------------------------------------
-
+    // NOTE: backend route is POST /app-verification/check-phase-advancement (router)
+    // so client must call checkPhaseAdvancement() — not checkPhase().
     private fun checkPhaseAdvancement() {
-        ApiClient.apiService.checkPhase("Bearer ${TokenManager.getToken(this)}")
+        ApiClient.apiService.checkPhaseAdvancement(authHeader())
             .enqueue(object : Callback<PhaseAdvancementResponse> {
                 override fun onResponse(
                     call: Call<PhaseAdvancementResponse>,
                     response: Response<PhaseAdvancementResponse>
                 ) {
-                    val res = response.body() ?: return
+                    if (!response.isSuccessful) {
+                        Toast.makeText(this@AppVerificationActivity, "Server error: ${response.code()}", Toast.LENGTH_LONG).show()
+                        return
+                    }
+                    val res = response.body() ?: run {
+                        Toast.makeText(this@AppVerificationActivity, "Empty response", Toast.LENGTH_SHORT).show()
+                        return
+                    }
                     Toast.makeText(this@AppVerificationActivity, res.message, Toast.LENGTH_LONG).show()
                     loadDashboard()
                 }
 
                 override fun onFailure(call: Call<PhaseAdvancementResponse>, t: Throwable) {
-                    Toast.makeText(this@AppVerificationActivity, t.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AppVerificationActivity, "Network error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -236,32 +267,42 @@ class AppVerificationActivity : AppCompatActivity() {
     // -------------------------------------------------------------
     // LOGIN TRACKING
     // -------------------------------------------------------------
-
     private fun trackLoginEvent() {
-        ApiClient.apiService.trackLogin("Bearer ${TokenManager.getToken(this)}")
+        ApiClient.apiService.trackLogin(authHeader())
             .enqueue(object : Callback<TrackLoginResponse> {
-                override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {}
-                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {}
+                override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {
+                    // nothing to show, but fail-safe handle non-200
+                    if (!response.isSuccessful) {
+                        // optionally log
+                    }
+                }
+                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
+                    t.printStackTrace()
+                }
             })
     }
 
+    // -------------------------------------------------------------
+    // PERFORMANCE METRICS (keeps using your existing API method name)
     // -------------------------------------------------------------
     private fun loadPerformanceMetrics() {
         val userId = TokenManager.getUserId(this) ?: return
 
         ApiClient.apiService.getPerformanceMetrics(
             userId,
-            "Bearer ${TokenManager.getToken(this)}"
+            authHeader()
         ).enqueue(object : Callback<UserPerformanceMetricsResponse> {
 
             override fun onResponse(
                 call: Call<UserPerformanceMetricsResponse>,
                 response: Response<UserPerformanceMetricsResponse>
             ) {
+                if (!response.isSuccessful) return
                 val totals = response.body()?.performanceMetrics ?: return
                 val m = dashboardData?.appVerification?.currentMetrics ?: return
 
                 // ----- RECEIVED METRICS -----
+                // NOTE: VerificationMetrics uses var fields, so assignments are OK.
                 m.totalViewsReceived = totals.totalViewsReceived
                 m.totalLikesReceived = totals.totalLikesReceived
                 m.totalCommentsReceived = totals.totalCommentsReceived
@@ -273,6 +314,7 @@ class AppVerificationActivity : AppCompatActivity() {
                 m.postsCreated = totals.postsCreated
                 m.totalPostCount = totals.totalPostCount
                 m.totalViewsCount = totals.totalViewsCount
+                // If your model expects totalLikesCount, set it (backend provides it)
                 m.totalLikesCount = totals.totalLikesCount
                 m.totalCommentsMade = totals.totalCommentsMade
 
@@ -280,10 +322,13 @@ class AppVerificationActivity : AppCompatActivity() {
                 m.totalFollowers = totals.totalFollowers
                 m.totalFollowing = totals.totalFollowing
 
+                // refresh the view pager with updated metrics
                 setupViewPager()
             }
 
-            override fun onFailure(call: Call<UserPerformanceMetricsResponse>, t: Throwable) {}
+            override fun onFailure(call: Call<UserPerformanceMetricsResponse>, t: Throwable) {
+                t.printStackTrace()
+            }
         })
     }
 

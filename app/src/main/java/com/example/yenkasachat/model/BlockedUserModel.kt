@@ -29,6 +29,7 @@ data class BlockUserRequest(
 )
 
 data class UnblockUserRequest(
+    @SerializedName("blockedUserId")
     val targetId: String
 )
 

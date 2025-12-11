@@ -41,6 +41,7 @@ class BlockedUsersActivity : AppCompatActivity() {
         loadBlockedUsers()
     }
 
+
     private fun loadBlockedUsers() {
         progress.visibility = View.VISIBLE
         emptyText.visibility = View.GONE

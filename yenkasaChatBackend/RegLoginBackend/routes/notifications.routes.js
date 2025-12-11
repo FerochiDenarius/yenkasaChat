@@ -180,8 +180,9 @@ router.get("/all", auth, async (req, res) => {
       senderId: n.senderId ? n.senderId._id.toString() : null,
       receiverId: n.receiverId ? n.receiverId.toString() : null,
       message: n.message,
-      postId: n.activityId || null,         // backward compatible with Android model
-      activityId: n.activityId || null,
+ postId: n.targetType === "post" ? n.targetId : null,
+commentId: n.targetType === "comment" ? n.targetId : null,
+activityId: n.activityId,
       status: n.status,
       createdAt: n.createdAt ? n.createdAt.toISOString() : null,
       readAt: n.readAt ? n.readAt.toISOString() : null,

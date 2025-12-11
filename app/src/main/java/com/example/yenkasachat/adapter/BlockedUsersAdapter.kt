@@ -67,11 +67,12 @@ class BlockedUsersAdapter(
 
         // UNBLOCK ICON click
         holder.iconUnblock.setOnClickListener {
-            unblockUser(user.userId, position, holder)
+            unblockUser(user.userId, holder)
         }
     }
 
-    private fun unblockUser(userId: String, position: Int, holder: ViewHolder) {
+    private fun unblockUser(userId: String, holder: ViewHolder) {
+
         ApiClient.apiService.unblockUser(UnblockUserRequest(userId))
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(
@@ -79,8 +80,13 @@ class BlockedUsersAdapter(
                     response: Response<ApiResponse>
                 ) {
                     if (response.isSuccessful) {
-                        items.removeAt(position)
-                        notifyItemRemoved(position)
+
+                        val pos = holder.bindingAdapterPosition
+                        if (pos != RecyclerView.NO_POSITION) {
+                            items.removeAt(pos)
+                            notifyItemRemoved(pos)
+                        }
+
                         Toast.makeText(
                             holder.itemView.context,
                             "User unblocked",

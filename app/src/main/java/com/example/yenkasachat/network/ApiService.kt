@@ -23,6 +23,7 @@ interface ApiService {
 
     // ==================== AUTH ====================
 
+
     @POST("login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
@@ -299,14 +300,7 @@ interface ApiService {
 
 
 
-    // -----------------------------
-    // 👁️‍🗨️ ADD VIEW
-    // -----------------------------
-    @POST("feed/{postId}/view")
-    fun addView(
-        @Header("Authorization") token: String,
-        @Path("postId") postId: String
-    ): Call<ViewResponse>
+
 
 
     // -----------------------------

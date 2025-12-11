@@ -41,7 +41,20 @@ router.post('/register', async (req, res) => {
     console.log("✨ After sanitize:", { email, phoneNumber, username, location, password, communityId, country });
 
     // 🌍 COUNTRY VALIDATION
-    const allowedCountries = [ /* ... */ ];
+const allowedCountries = [
+  "Ghana",
+  "Nigeria",
+  "Kenya",
+  "South Africa",
+  "Uganda",
+  "Cameroon",
+  "Tanzania",
+  "Ethiopia",
+  "Rwanda",
+  "Senegal",
+  "Ivory Coast",
+  "Benin"
+];
 
     country = country ? sanitize(country) : "Ghana";
     console.log("🌍 Normalized country (raw):", country);

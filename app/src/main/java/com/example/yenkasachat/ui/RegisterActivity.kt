@@ -229,11 +229,6 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        if (!location.contains("Ghana", ignoreCase = true)) {
-            Toast.makeText(this, "Sorry, registration is only allowed for Ghanaians.", Toast.LENGTH_LONG).show()
-            shakeCard()
-            return
-        }
 
         if (password.length < 6) {
             editPassword.error = "Password must be at least 6 characters"
@@ -260,6 +255,15 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         val selectedCountry = findViewById<Spinner>(R.id.spinnerCountry).selectedItem.toString()
+
+        if (!selectedCountry.equals("Ghana", ignoreCase = true)) {
+            Toast.makeText(this, "Registration is only allowed for Ghanaians.", Toast.LENGTH_LONG).show()
+            shakeCard()
+            return
+        }
+
+
+
 
         // ORIGINAL REQUEST
         val request = RegisterRequest(

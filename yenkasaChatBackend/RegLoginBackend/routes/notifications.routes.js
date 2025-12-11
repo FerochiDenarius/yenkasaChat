@@ -22,62 +22,111 @@ function computeTarget(notification) {
   return null;
 }
 
-// CREATE a new notification (no change besides optionally accepting targetType/targetId)
+// CREATE a new notification
 router.post("/create", auth, async (req, res) => {
   try {
-    const { type, senderId, receiverId, activityId, message, targetType, targetId } = req.body;
+    const { type, senderId, receiverId, activityId, message } = req.body;
+
     if (!type || !senderId || !receiverId || !message) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // ------------------------------------
+    // AUTO-RESOLVE targetType + targetId
+    // ------------------------------------
+    let targetType = null;
+    let targetId = null;
+
+    switch (type) {
+      // Likes on a post → open the post
+      case "post_like":
+      case "post_comment":
+      case "post_view":
+      case "post_mention":
+        targetType = "post";
+        targetId = activityId; // this MUST be the postId
+        break;
+
+      // Likes or replies on a comment → open post but show comment section
+      case "comment_like":
+      case "comment_reply":
+        targetType = "comment";
+        
+        // activityId in these notifications MUST be the commentId
+        targetId = activityId;  
+        break;
+
+      // Follow → open the user's profile
+      case "follow":
+      case "new_follower":
+        targetType = "profile";
+        targetId = senderId; // sender is the follower
+        break;
+
+      // Default fallback
+      default:
+        targetType = null;
+        targetId = null;
+        break;
+    }
+
+    // ------------------------------------
+    // CREATE NOTIFICATION
+    // ------------------------------------
     const notif = await Notification.create({
       type,
       senderId,
       receiverId,
       activityId,
       message,
-      targetType: targetType || null,
-      targetId: targetId || null,
+      targetType,
+      targetId,
       targetUrl: null
     });
 
-    // populate sender for convenience
-    const payload = await Notification.findById(notif._id).populate("senderId", "username profileImage role roleName");
+    // Re-fetch with sender populated
+    const payload = await Notification.findById(notif._id)
+      .populate("senderId", "username profileImage role roleName");
 
-    // compute targetUrl
     const formatted = {
       id: payload._id.toString(),
       type: payload.type,
       message: payload.message,
-      postId: payload.activityId || null,
+      postId: payload.targetType === "post" ? payload.targetId : null,
+      commentId: payload.targetType === "comment" ? payload.targetId : null,
       activityId: payload.activityId || null,
       status: payload.status,
       createdAt: payload.createdAt ? payload.createdAt.toISOString() : null,
-      senderId: payload.senderId ? payload.senderId._id.toString() : null,
+
+      senderId: payload.senderId?._id?.toString() ?? null,
       sender: payload.senderId ? {
         userId: payload.senderId._id.toString(),
         username: payload.senderId.username,
         avatar: payload.senderId.profileImage,
         roleName: payload.senderId.roleName || payload.senderId.role?.name || "user"
       } : null,
-      targetType: payload.targetType || null,
-      targetId: payload.targetId || null,
+
+      targetType: payload.targetType,
+      targetId: payload.targetId,
       targetUrl: computeTarget(payload)
     };
 
-    // Emit via socket if receiver is connected
+    // ------------------------------------
+    // SOCKET EVENTS
+    // ------------------------------------
     if (global.io) {
       global.io.to(payload.receiverId.toString()).emit("notificationCreated", formatted);
-      // also emit to general 'notifications' channel if desired
       global.io.emit("newNotification", formatted);
     }
 
     return res.status(201).json(formatted);
+
   } catch (err) {
     console.error("NOTIFICATION CREATE ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // GET all notifications for logged-in user (returns array matching Android model)
 router.get("/all", auth, async (req, res) => {

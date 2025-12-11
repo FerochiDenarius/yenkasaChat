@@ -22,7 +22,6 @@ function computeTarget(notification) {
   return null;
 }
 
-// CREATE a new notification
 router.post("/create", auth, async (req, res) => {
   try {
     const { type, senderId, receiverId, activityId, message } = req.body;
@@ -38,36 +37,74 @@ router.post("/create", auth, async (req, res) => {
     let targetId = null;
 
     switch (type) {
-      // Likes on a post → open the post
+
+      // ------------------------------------------------
+      // POST EVENTS
+      // ------------------------------------------------
       case "post_like":
       case "post_comment":
-      case "post_view":
+      case "post_reply":
       case "post_mention":
+      case "post_under_review":
+      case "post_pending":
+      case "post_approved":
+      case "post_view":
+      case "view_milestone":
         targetType = "post";
-        targetId = activityId; // this MUST be the postId
+        targetId = activityId;  // ALWAYS the postId
         break;
 
-      // Likes or replies on a comment → open post but show comment section
+      // ------------------------------------------------
+      // COMMENT EVENTS
+      // ------------------------------------------------
       case "comment_like":
       case "comment_reply":
         targetType = "comment";
-        
-        // activityId in these notifications MUST be the commentId
-        targetId = activityId;  
+        targetId = activityId; // ALWAYS the commentId
         break;
 
-      // Follow → open the user's profile
+      // ------------------------------------------------
+      // FOLLOW EVENTS
+      // ------------------------------------------------
       case "follow":
       case "new_follower":
+      case "follow_request":
+      case "follow_accepted":
         targetType = "profile";
-        targetId = senderId; // sender is the follower
+        targetId = senderId; // open follower profile
         break;
 
-      // Default fallback
+      // ------------------------------------------------
+      // BLOCK EVENTS
+      // ------------------------------------------------
+      case "blocked":
+      case "unblocked":
+        targetType = "profile";
+        targetId = senderId; // open blocker/unblocker profile
+        break;
+
+      // ------------------------------------------------
+      // SYSTEM EVENTS
+      // ------------------------------------------------
+      case "system_block":
+      case "system_unblock":
+      case "system_warning":
+        targetType = "system";
+        targetId = null;
+        break;
+
+      // ------------------------------------------------
+      // MESSAGE REQUESTS
+      // ------------------------------------------------
+      case "message_request":
+      case "message_request_approved":
+        targetType = "profile";
+        targetId = senderId; // open requester
+        break;
+
       default:
         targetType = null;
         targetId = null;
-        break;
     }
 
     // ------------------------------------
@@ -84,46 +121,48 @@ router.post("/create", auth, async (req, res) => {
       targetUrl: null
     });
 
-    // Re-fetch with sender populated
+    // Populate sender
     const payload = await Notification.findById(notif._id)
       .populate("senderId", "username profileImage role roleName");
 
+    // Format for frontend
     const formatted = {
       id: payload._id.toString(),
       type: payload.type,
       message: payload.message,
+
       postId: payload.targetType === "post" ? payload.targetId : null,
       commentId: payload.targetType === "comment" ? payload.targetId : null,
-      activityId: payload.activityId || null,
+
+      activityId: payload.activityId,
       status: payload.status,
-      createdAt: payload.createdAt ? payload.createdAt.toISOString() : null,
+      createdAt: payload.createdAt?.toISOString() ?? null,
 
       senderId: payload.senderId?._id?.toString() ?? null,
-      sender: payload.senderId ? {
-        userId: payload.senderId._id.toString(),
-        username: payload.senderId.username,
-        avatar: payload.senderId.profileImage,
-        roleName: payload.senderId.roleName || payload.senderId.role?.name || "user"
-      } : null,
+      sender: payload.senderId
+        ? {
+            userId: payload.senderId._id.toString(),
+            username: payload.senderId.username,
+            avatar: payload.senderId.profileImage,
+            roleName: payload.senderId.roleName || payload.senderId.role?.name || "user"
+          }
+        : null,
 
       targetType: payload.targetType,
       targetId: payload.targetId,
       targetUrl: computeTarget(payload)
     };
 
-    // ------------------------------------
-    // SOCKET EVENTS
-    // ------------------------------------
+    // SOCKET
     if (global.io) {
       global.io.to(payload.receiverId.toString()).emit("notificationCreated", formatted);
-      global.io.emit("newNotification", formatted);
     }
 
     return res.status(201).json(formatted);
 
   } catch (err) {
     console.error("NOTIFICATION CREATE ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 

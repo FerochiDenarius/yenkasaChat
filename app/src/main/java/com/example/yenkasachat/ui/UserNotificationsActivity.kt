@@ -142,40 +142,161 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private fun navigateFromNotification(item: NotificationModel) {
 
-        when (item.type?.lowercase()) {
+        val type = item.type?.lowercase()
+        val targetType = item.targetType?.lowercase()
+        val targetId = item.targetId
+        val postId = item.postId ?: item.activityId
 
-            // USER PROFILE
-            "follow", "new_follower", "profile_view", "user" -> {
+        // ------------------------------------------------------
+        // PRIMARY ROUTING USING targetType
+        // ------------------------------------------------------
+        when (targetType) {
+
+            // ------------------------------------------------------
+            // PROFILE NOTIFICATIONS (follow, blocked, profile_view)
+            // ------------------------------------------------------
+            "profile" -> {
                 val intent = Intent(this, UserProfileActivity::class.java)
-                intent.putExtra("USER_ID", item.targetId)
+                intent.putExtra("USER_ID", targetId)
                 startActivity(intent)
+                return
             }
 
-            // POST → open comments
-            "post_like", "post_comment", "post_reply", "post" -> {
+            // ------------------------------------------------------
+            // POST NOTIFICATIONS (post_like, post_comment, post_reply)
+            // ------------------------------------------------------
+            "post" -> {
                 val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", item.targetId)
+                intent.putExtra("POST_ID", targetId ?: postId)
                 startActivity(intent)
+                return
             }
 
-            // COMMENT → open post comments + expand
-            "comment_like", "comment_reply", "comment" -> {
+            // ------------------------------------------------------
+            // COMMENT NOTIFICATIONS (comment_like, comment_reply)
+            // ------------------------------------------------------
+            "comment" -> {
                 val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", item.postId ?: item.targetId)
+                intent.putExtra("POST_ID", postId)
                 intent.putExtra("openComments", true)
                 startActivity(intent)
+                return
             }
 
-            // ADMIN APPROVAL
-            "approval" -> {
-                Toast.makeText(this, "Approval ID: ${item.targetId}", Toast.LENGTH_SHORT).show()
+            // ------------------------------------------------------
+            // SYSTEM NOTIFICATIONS (system_block, system_unblock)
+            // ------------------------------------------------------
+            "system" -> {
+                when (type) {
+                    "system_block" ->
+                        Toast.makeText(this, "Your account has been restricted.", Toast.LENGTH_LONG).show()
+
+                    "system_unblock" ->
+                        Toast.makeText(this, "Your restrictions have been removed.", Toast.LENGTH_LONG).show()
+
+                    else ->
+                        Toast.makeText(this, item.message ?: "System notification", Toast.LENGTH_SHORT).show()
+                }
+                return
+            }
+        }
+
+        // ------------------------------------------------------
+        // SECONDARY ROUTING USING type (full explicit mapping)
+        // ------------------------------------------------------
+        when (type) {
+
+            // ------------------------------------------------------
+            // FOLLOW NOTIFICATIONS
+            // ------------------------------------------------------
+            "follow", "new_follower", "follow_request", "follow_accepted" -> {
+                val intent = Intent(this, UserProfileActivity::class.java)
+                intent.putExtra("USER_ID", targetId)
+                startActivity(intent)
+                return
             }
 
-            // FALLBACK URL
+            // ------------------------------------------------------
+            // POST LIKES
+            // ------------------------------------------------------
+            "post_like" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", postId)
+                startActivity(intent)
+                return
+            }
+
+            // ------------------------------------------------------
+            // POST COMMENTS
+            // ------------------------------------------------------
+            "post_comment" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", postId)
+                startActivity(intent)
+                return
+            }
+
+            // ------------------------------------------------------
+            // COMMENT REPLIES
+            // ------------------------------------------------------
+            "comment_reply" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", postId)
+                intent.putExtra("openComments", true)
+                startActivity(intent)
+                return
+            }
+
+            // ------------------------------------------------------
+            // COMMENT LIKES
+            // ------------------------------------------------------
+            "comment_like" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", postId)
+                intent.putExtra("openComments", true)
+                startActivity(intent)
+                return
+            }
+
+            // ------------------------------------------------------
+            // USER BLOCK NOTIFICATIONS
+            // ------------------------------------------------------
+            "blocked" -> {
+                val intent = Intent(this, UserProfileActivity::class.java)
+                intent.putExtra("USER_ID", targetId)   // open blocker profile
+                startActivity(intent)
+                return
+            }
+
+            "unblocked" -> {
+                val intent = Intent(this, UserProfileActivity::class.java)
+                intent.putExtra("USER_ID", targetId)
+                startActivity(intent)
+                return
+            }
+
+            // ------------------------------------------------------
+            // POST APPROVAL OR REVIEW
+            // ------------------------------------------------------
+            "post_under_review" -> {
+                Toast.makeText(this, item.message ?: "Your post is under review", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            "post_approved" -> {
+                val intent = Intent(this, CommentsActivity::class.java)
+                intent.putExtra("POST_ID", targetId)
+                startActivity(intent)
+                return
+            }
+
+            // ------------------------------------------------------
+            // FALLBACK
+            // ------------------------------------------------------
             else -> {
                 item.targetUrl?.let { url ->
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                } ?: Toast.makeText(this, "No navigation target", Toast.LENGTH_SHORT).show()
+                } ?: Toast.makeText(this, "No navigation available", Toast.LENGTH_SHORT).show()
             }
         }
     }

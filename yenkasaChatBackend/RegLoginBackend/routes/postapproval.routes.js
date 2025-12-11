@@ -54,7 +54,9 @@ router.get("/pending", authMiddleware, async (req, res) => {
           senderId: item.user,
           receiverId: moderator._id,
           activityId: `pending_${item._id}`,
-          message: "A new post is awaiting approval."
+          message: "A new post is awaiting approval.",
+           targetType: "post",
+            targetId: item.post._id.toString()
         });
 
         if (moderator.oneSignalPlayerId) {
@@ -121,7 +123,9 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
         activityId,
         message: "Your post has been approved!",
           targetType: "post",
-          targetId: post._id.toString()
+          targetId: post._id.toString(),
+            targetType: "post",
+            targetId: post._id.toString()
 
       });
 
@@ -207,7 +211,9 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
         senderId: approver._id,
         receiverId: owner._id,
         activityId,
-        message: "Your post has been rejected."
+        message: "Your post has been rejected.",
+          targetType: "post",
+          targetId: post._id.toString()
       });
 
      // ⭐ Reward the moderator/admin who performed the rejection

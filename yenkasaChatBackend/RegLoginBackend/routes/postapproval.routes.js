@@ -119,7 +119,10 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
         senderId: approver._id,
         receiverId: owner._id,
         activityId,
-        message: "Your post has been approved!"
+        message: "Your post has been approved!",
+          targetType: "post",
+          targetId: post._id.toString()
+
       });
 
     // ⭐ Reward post owner (their content got approved)

@@ -12,12 +12,30 @@ const PostApproval = require("../models/postapproval.model");
 const { sendNotification } = require("../services/notification.service");
 const { SYSTEM_USER_ID } = require('../config/system');
 
-
-
-
-
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
+
+const UserPrivacy = require("../models/userPrivacy.model");
+
+/* ---------------------------------------------------
+ * ONE-WAY BLOCK CHECK (Instagram style)
+ * userA = viewer or actor
+ * userB = owner of content
+ * --------------------------------------------------- */
+async function isBlocked(userA, userB) {
+  const viewerPrivacy = await UserPrivacy.findOne({ userId: userA }).lean();
+  if (viewerPrivacy?.blockedUsers?.includes(userB)) {
+    return true;
+  }
+
+  const ownerPrivacy = await UserPrivacy.findOne({ userId: userB }).lean();
+  if (ownerPrivacy?.blockedUsers?.includes(userA)) {
+    return true;
+  }
+
+  return false;
+}
+
 
 /* ------------------------------------
  * 💰 REWARD CONFIGURATION
@@ -243,10 +261,26 @@ for (const mod of approvers) {
   }
 });
 
-/* 👤 USER POSTS */
+/* 👤 USER POSTS (with ONE-WAY block enforcement) */
 router.get('/user/:userId', authMiddleware, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params;        // profile owner
+    const viewerId = req.user.id;         // person viewing the profile
+
+    // Load privacy records
+    const viewerPrivacy = await UserPrivacy.findOne({ userId: viewerId }).lean();
+    const ownerPrivacy = await UserPrivacy.findOne({ userId }).lean();
+
+    // If viewer BLOCKED owner → viewer cannot view their posts
+    if (viewerPrivacy?.blockedUsers?.includes(userId)) {
+      return res.status(403).json({ error: "You cannot view this user's posts (blocked)." });
+    }
+
+    // If owner BLOCKED viewer → viewer cannot view their posts
+    if (ownerPrivacy?.blockedUsers?.includes(viewerId)) {
+      return res.status(403).json({ error: "You cannot view this user's posts (you are blocked)." });
+    }
+
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
 
@@ -269,11 +303,13 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
         hasMore: skip + posts.length < totalPosts
       }
     });
+
   } catch (err) {
     console.error('❌ Failed to fetch user posts:', err);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 });
+
 
 /* ------------------------------------
  * 🧩 GET POSTS FROM MULTIPLE COMMUNITIES
@@ -320,11 +356,12 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
   });
 });
 
-
-/* 🧩 GET POSTS BY COMMUNITY */
+/* 🧩 GET POSTS BY COMMUNITY (with ONE-WAY block enforcement) */
 router.get('/community/:communityId', authMiddleware, async (req, res) => {
   try {
     const { communityId } = req.params;
+    const viewerId = req.user.id;
+
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
 
@@ -332,11 +369,23 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
     const community = await Community.findById(communityId);
     if (!community) return res.status(404).json({ error: 'Community not found' });
 
-    // Find posts for this community
+    // Load privacy
+    const viewerPrivacy = await UserPrivacy.findOne({ userId: viewerId }).lean();
+
+    const iBlocked = viewerPrivacy?.blockedUsers?.map(id => id.toString()) || [];
+
+    const blockedMeDocs = await UserPrivacy.find({ blockedUsers: viewerId }).lean();
+    const blockedMe = blockedMeDocs.map(doc => doc.userId.toString());
+
+    // People the viewer cannot see
+    const blockedUserIds = [...new Set([...iBlocked, ...blockedMe])];
+
+    // Find posts for this community EXCEPT blocked users
     const posts = await Post.find({
       communityId,
       isActive: true,
-      status: 'approved'
+      status: 'approved',
+      userId: { $nin: blockedUserIds } // 🔥 BLOCK ENFORCEMENT HERE
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -348,7 +397,8 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
     const totalPosts = await Post.countDocuments({
       communityId,
       isActive: true,
-      status: 'approved'
+      status: 'approved',
+      userId: { $nin: blockedUserIds } // 🔥 Ensure pagination matches
     });
 
     res.json({
@@ -365,11 +415,13 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
         hasMore: skip + posts.length < totalPosts
       }
     });
+
   } catch (err) {
     console.error('❌ Failed to fetch community posts:', err);
     res.status(500).json({ error: 'Failed to fetch community posts' });
   }
 });
+
 
 router.get('/community-name/:name', authMiddleware, async (req, res) => {
   try {

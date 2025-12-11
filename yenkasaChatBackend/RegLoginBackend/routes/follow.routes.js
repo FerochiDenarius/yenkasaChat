@@ -104,7 +104,9 @@ const rewardReceivedTx = await rewardService.reward(targetId, REWARD_FOLLOW_RECE
         senderId: followerId,
         receiverId: targetId,
         activityId,
-        message: `${followerUser.username} started following you.`
+        message: `${followerUser.username} started following you.`,
+         targetType: "profile",
+  targetId: followerId  
       });
     }
 

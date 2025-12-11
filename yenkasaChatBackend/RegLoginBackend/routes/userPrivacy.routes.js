@@ -44,31 +44,45 @@ router.put("/set-privacy", auth, async (req, res) => {
 });
 
 // ────────────────────────────────────────────
-// BLOCK USER
+// BLOCK USER (FINAL VERSION)
 // ────────────────────────────────────────────
 router.post("/block", auth, async (req, res) => {
     try {
         const { targetId } = req.body;
+        const userId = req.user.id;
 
-        const doc = await ensurePrivacy(req.user.id);
-
-        const objectId = new mongoose.Types.ObjectId(targetId);
-
-        if (!doc.blockedUsers.some(id => id.toString() === targetId)) {
-            doc.blockedUsers.push(objectId);
-            await doc.save();
+        if (!targetId) {
+            return res.status(400).json({ message: "targetId is required" });
         }
 
-        // 🔔 SEND BLOCK NOTIFICATION — THIS IS WHERE IT BELONGS
+        // ❌ Cannot block yourself
+        if (targetId === userId) {
+            return res.status(400).json({ message: "You cannot block yourself" });
+        }
+
+        const doc = await ensurePrivacy(userId);
+
+        const alreadyBlocked = doc.blockedUsers.some(id => id.toString() === targetId);
+        if (alreadyBlocked) {
+            return res.status(400).json({ message: "User is already blocked" });
+        }
+
+        // Add to block list
+        doc.blockedUsers.push(targetId);
+        await doc.save();
+
+        // 🔔 BLOCK NOTIFICATION
         await Notification.create({
             type: "blocked",
-            senderId: req.user.id,
-            receiverId: objectId,
-            message: "You have been blocked",
-            activityId: targetId
+            senderId: userId,
+            receiverId: targetId,
+            message: "has blocked you",
+            activityId: `block_${userId}_${targetId}_${Date.now()}`,
+            targetType: "profile",
+            targetId: userId     // open the blocker’s profile
         });
 
-        res.json({ message: "User blocked" });
+        return res.json({ success: true, message: "User blocked" });
 
     } catch (err) {
         console.error("BLOCK ROUTE ERROR:", err);
@@ -78,21 +92,46 @@ router.post("/block", auth, async (req, res) => {
 
 
 // ────────────────────────────────────────────
-// UNBLOCK USER
+// UNBLOCK USER (FIXED & UPGRADED)
 // ────────────────────────────────────────────
 router.post("/unblock", auth, async (req, res) => {
     try {
         const { targetId } = req.body;
         const userId = req.user.id;
 
+        if (!targetId) {
+            return res.status(400).json({ message: "targetId is required" });
+        }
+
         const doc = await ensurePrivacy(userId);
-        doc.blockedUsers = doc.blockedUsers.filter(id => id != targetId);
+
+        // Check if already unblocked
+        const wasBlocked = doc.blockedUsers.some(id => id.toString() === targetId);
+
+        if (!wasBlocked) {
+            return res.status(400).json({ message: "User is not blocked" });
+        }
+
+        // Remove from blocked list
+        doc.blockedUsers = doc.blockedUsers.filter(id => id.toString() !== targetId);
         await doc.save();
 
         const targetUser = await User.findById(targetId)
             .select("_id username profileImage role");
 
-        res.json({
+        // 🔔 SEND UNBLOCK NOTIFICATION
+        await Notification.create({
+            type: "unblocked",
+            senderId: userId,               // the one doing the unblock
+            receiverId: targetId,           // the one being unblocked
+            message: "has unblocked you",
+            activityId: `unblock_${userId}_${targetId}_${Date.now()}`,
+            targetType: "profile",
+            targetId: userId                // open the unblocker’s profile
+        });
+
+        return res.json({
+            success: true,
             message: "User unblocked",
             user: {
                 userId: targetUser._id,
@@ -104,9 +143,10 @@ router.post("/unblock", auth, async (req, res) => {
 
     } catch (err) {
         console.error("UNBLOCK ROUTE ERROR:", err);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: "Server error" });
     }
 });
+
 
 
 // ────────────────────────────────────────────
@@ -192,7 +232,9 @@ router.post("/message-request", auth, async (req, res) => {
             senderId: req.user.id,
             receiverId,
             message: "wants to message you",
-            activityId: req.user.id
+            activityId: req.user.id,
+             targetType: "profile",
+             targetId: req.user.id
         });
 
         res.json({ allowed: false, message: "Request sent" });
@@ -216,7 +258,10 @@ router.post("/approve-request", auth, async (req, res) => {
             senderId: req.user.id,
             receiverId: senderId,
             message: "approved your message request",
-            activityId: senderId
+            activityId: senderId,
+             targetType: "profile",
+            targetId: senderId
+            
         });
 
         res.json({ message: "Approved" });

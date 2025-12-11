@@ -171,7 +171,9 @@ const ownerActivityId = `owner_${activityId}`;
             senderId: viewerId,
             receiverId: owner._id.toString(),
             activityId: `view_milestone_${postId}_${milestone}`,
-            message: `Your post just hit ${milestone.toLocaleString()} views!`
+            message: `Your post just hit ${milestone.toLocaleString()} views!`,
+            targetType: "post",
+            targetId: postId
           });
 
           // PUSH NOTIFICATION

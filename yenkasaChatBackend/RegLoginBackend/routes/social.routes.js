@@ -159,7 +159,9 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
           senderId: userId,
           receiverId: postOwnerId,
           activityId: `post_like_notify_${postId}_${userId}`,
-          message: "liked your post"
+          message: "liked your post",
+           targetType: "post",
+           targetId: postId
         });
       }
     }

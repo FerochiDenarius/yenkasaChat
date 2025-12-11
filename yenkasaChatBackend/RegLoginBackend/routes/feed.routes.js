@@ -3,6 +3,22 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
 const Post = require("../models/post.model");
+const UserPrivacy = require("../models/userPrivacy.model");
+
+/* ---------------------------------------------------
+ * Helper: Get ALL users that viewer cannot see
+ * --------------------------------------------------- */
+async function getBlockedUserIds(viewerId) {
+  const myPrivacy = await UserPrivacy.findOne({ userId: viewerId }).lean();
+  
+  const iBlocked = myPrivacy?.blockedUsers?.map(id => id.toString()) || [];
+
+  const blockedMeDocs = await UserPrivacy.find({ blockedUsers: viewerId }).lean();
+  const blockedMe = blockedMeDocs.map(doc => doc.userId.toString());
+
+  return [...new Set([...iBlocked, ...blockedMe])]; // merged unique
+}
+
 
 // ✅ Existing feed fetching logic (unchanged)
 router.get("/", auth, async (req, res) => {

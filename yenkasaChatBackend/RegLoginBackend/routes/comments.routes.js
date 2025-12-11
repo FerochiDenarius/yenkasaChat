@@ -60,107 +60,76 @@ router.post('/', authMiddleware, async (req, res) => {
       parentCommentId: parentCommentId || null,
     });
 
-    /* ---------------------------------------------------
-     * REWARD POST OWNER (comment received)
-     * --------------------------------------------------- */
-    if (post.userId._id.toString() !== userId) {
-      await rewardService.reward(post.userId._id, REWARD_COMMENT, {
-        fromUserId: userId,
-        type: "REWARD_COMMENT",
-        description: `Earned ${REWARD_COMMENT} YKC for receiving a comment`,
-        relatedPostId: post._id,
-        relatedCommentId: comment._id,
-        activityId: `received_comment_${post._id}_${post.userId._id}`,
-      });
-    }
+/* ---------------------------------------------------
+ * REPLY LOGIC (FULLY FIXED)
+ * --------------------------------------------------- */
+let parentComment = null;
 
-    /* Update post comment count */
-    post.commentCount += 1;
-    await post.save();
+if (parentCommentId) {
 
-    /* ---------------------------------------------------
-     * REWARD COMMENTER
-     * --------------------------------------------------- */
-    await rewardService.reward(userId, REWARD_COMMENT_ACTION, {
-      type: "REWARD_COMMENT",
-      description: `Earned ${REWARD_COMMENT_ACTION} YKC for commenting`,
+  // 1️⃣ Load parent comment FIRST
+  parentComment = await Comment.findById(parentCommentId)
+    .populate("userId", "username oneSignalPlayerId");
+
+  if (!parentComment) {
+    return res.status(404).json({ error: "Parent comment not found" });
+  }
+
+  const parentOwnerId = parentComment.userId._id.toString();
+
+  // 2️⃣ FULL BLOCK RESTRICTION — cannot reply
+  if (await isBlocked(userId, parentOwnerId)) {
+    return res.status(403).json({ error: "You cannot reply due to privacy settings" });
+  }
+
+  // 3️⃣ Increase reply count
+  await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
+
+  // 4️⃣ Reward + notification if not replying to yourself
+  if (parentOwnerId !== userId) {
+    await rewardService.reward(parentOwnerId, REWARD_REPLY, {
+      fromUserId: userId,
+      type: "REWARD_REPLY",
+      description: `Earned ${REWARD_REPLY} YKC for receiving a reply`,
       relatedPostId: post._id,
       relatedCommentId: comment._id,
-      activityId: `comment_${post._id}_${userId}`,
+      activityId: `reply_${parentCommentId}_${userId}`,
     });
 
-    /* ---------------------------------------------------
-     * NOTIFY POST OWNER ABOUT NEW COMMENT
-     * --------------------------------------------------- */
-    if (post.userId._id.toString() !== userId) {
-      await sendNotification({
-        type: "post_comment",
-        senderId: userId,
-        receiverId: post.userId._id.toString(),
-        activityId: `comment_${comment._id}`,
-        message: `${commenter.username} commented on your post`,
-      });
-    }
-
-    /* ---------------------------------------------------
-     * REPLY LOGIC
-     * --------------------------------------------------- */
-    let parentComment = null;
-
-    if (parentCommentId) {
-      parentComment = await Comment.findById(parentCommentId).populate('userId', 'username oneSignalPlayerId');
-
-      if (parentComment) {
-        await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
-
-        const parentOwnerId = parentComment.userId._id.toString();
-
-        // BLOCK CHECK between user replying and comment owner
-        if (!(await isBlocked(userId, parentOwnerId))) {
-          if (parentOwnerId !== userId) {
-            /* Reward parent comment owner */
-            await rewardService.reward(parentOwnerId, REWARD_REPLY, {
-              fromUserId: userId,
-              type: "REWARD_REPLY",
-              description: `Earned ${REWARD_REPLY} YKC for receiving a reply`,
-              relatedPostId: post._id,
-              relatedCommentId: comment._id,
-              activityId: `reply_${parentCommentId}_${userId}`,
-            });
-
-            /* Notify parent comment owner */
-            await sendNotification({
-              type: "comment_reply",
-              senderId: userId,
-              receiverId: parentOwnerId,
-              activityId: `reply_${comment._id}`,
-              message: `${commenter.username} replied to your comment`,
-            });
-          }
-        }
-      }
-    }
-
-    /* Populate final comment */
-    const populatedComment = await Comment.findById(comment._id)
-      .populate('userId', 'username profileImage verified')
-      .lean();
-
-    /* Optional socket broadcast */
-    if (global.io) {
-      global.io.emit('feedUpdate', {
-        type: parentCommentId ? "newReply" : "newComment",
-        postId,
-        parentCommentId: parentCommentId || null,
-        comment: populatedComment,
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      message: "Comment added",
-      comment: populatedComment,
+    await sendNotification({
+      type: "comment_reply",
+      senderId: userId,
+      receiverId: parentOwnerId,
+      activityId: `reply_${comment._id}`,
+      message: `${commenter.username} replied to your comment`,
+      targetType: "comment",
+      targetId: parentCommentId
     });
+  }
+}
+
+/* ---------------------------------------------------
+ * POPULATE + SOCKET EMIT (this remains outside the reply block)
+ * --------------------------------------------------- */
+const populatedComment = await Comment.findById(comment._id)
+  .populate('userId', 'username profileImage verified')
+  .lean();
+
+if (global.io) {
+  global.io.emit('feedUpdate', {
+    type: parentCommentId ? "newReply" : "newComment",
+    postId,
+    parentCommentId: parentCommentId || null,
+    comment: populatedComment,
+  });
+}
+
+return res.status(201).json({
+  success: true,
+  message: "Comment added",
+  comment: populatedComment,
+});
+
 
   } catch (err) {
     console.error("❌ Comment failed:", err);
@@ -169,13 +138,25 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 
-
 // ✅ Get comments for a post (with pagination)
 router.get('/post/:postId', authMiddleware, async (req, res) => {
   try {
+
     const { postId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
+    const viewerId = req.user.id;
+
+    // Load the post first
+    const post = await Post.findById(postId).populate("userId");
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    // 🛑 BLOCK CHECK: viewer vs post owner
+    if (await isBlocked(viewerId, post.userId._id.toString())) {
+      return res.status(403).json({ error: "You cannot view comments due to privacy settings" });
+    }
+
+    // Fetch comments only AFTER block validation
     const comments = await Comment.find({ postId, isActive: true })
       .populate('userId', 'username profileImage verified')
       .sort({ createdAt: 1 })
@@ -187,11 +168,13 @@ router.get('/post/:postId', authMiddleware, async (req, res) => {
       success: true,
       comments
     });
+
   } catch (err) {
     console.error('❌ Error loading comments:', err);
     res.status(500).json({ error: 'Failed to load comments' });
   }
 });
+
 
 
 /* ---------------------------------------------------
@@ -257,6 +240,8 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
         receiverId: commentOwnerId,
         activityId: `comment_like_notify_${commentId}_${userId}`,
         message: `${liker.username} liked your comment`,
+         targetType: "comment",
+         targetId: commentId
       });
 
       return res.json({

@@ -24,61 +24,62 @@ const ACCESS_EXPIRES_IN = '120d';
 const REFRESH_EXPIRES_IN = '120d';
 
 router.post('/register', async (req, res) => {
-  console.log("✅ /api/auth/register - ROUTE HANDLER REACHED");
+  console.log("🔥 /api/auth/register HIT");
+  console.log("📩 Incoming body:", req.body);
 
   let { email, phoneNumber, username, location, password, communityId, country } = req.body;
 
   try {
+    console.log("🔎 Before sanitize:", { email, phoneNumber, username, location, password, communityId, country });
+
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
     username = username ? sanitize(username.toLowerCase()) : null;
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
+    console.log("✨ After sanitize:", { email, phoneNumber, username, location, password, communityId, country });
+
     // 🌍 COUNTRY VALIDATION
-    const allowedCountries = [
-      "Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Cameroon",
-      "Tanzania", "Ethiopia", "Rwanda", "Senegal", "Ivory Coast", "Benin",
-      "Togo", "Gambia", "Zambia", "Zimbabwe", "Botswana", "Namibia",
-      "Malawi", "Sierra Leone", "Liberia", "Burkina Faso", "Niger",
-      "Mauritius", "Morocco", "Algeria", "Tunisia", "Egypt", "Sudan",
-      "Somalia", "Mozambique", "Angola", "Mali", "Guinea", "DR Congo",
-      "Congo", "Chad", "Equatorial Guinea", "Cape Verde", "Eritrea",
-      "Lesotho", "Eswatini", "Madagascar", "Seychelles", "South Sudan"
-    ];
+    const allowedCountries = [ /* ... */ ];
 
     country = country ? sanitize(country) : "Ghana";
+    console.log("🌍 Normalized country (raw):", country);
 
-    if (!allowedCountries.includes(country)) {
+    const normalizedCountry = country.trim().toLowerCase();
+    console.log("🌍 Normalized country (lowercase):", normalizedCountry);
+
+    if (!allowedCountries.includes(country.trim())) {
+      console.log("❌ Country not in allowed list:", country);
       return res.status(400).json({
         success: false,
         message: "Invalid country. African countries only."
       });
     }
-    
-// Normalize country
-country = country ? sanitize(country) : "Ghana";
-country = country.trim().toLowerCase();
 
-// Allow only Ghana
-if (country !== "ghana") {
-  return res.status(403).json({
-    success: false,
-    message: "Registration is currently available only in Ghana."
-  });
-}
-
+    if (normalizedCountry !== "ghana") {
+      console.log("❌ Rejected: NOT Ghana:", normalizedCountry);
+      return res.status(403).json({
+        success: false,
+        message: "Registration is currently available only in Ghana."
+      });
+    }
 
     // Validate required
+    console.log("🔍 Checking required fields…");
     if (!username || !location || !password || (!email && !phoneNumber) || !communityId) {
+      console.log("❌ Missing fields:", { username, location, password, email, phoneNumber, communityId });
       return res.status(400).json({ message: 'Missing required fields (including communityId)' });
     }
 
+    console.log("🔍 Checking community:", communityId);
     const community = await Community.findById(communityId);
     if (!community || !community.isApproved) {
+      console.log("❌ Community invalid:", communityId);
       return res.status(403).json({ message: 'Community not valid or not approved' });
     }
 
+    console.log("🔍 Checking duplicates...");
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
@@ -88,16 +89,18 @@ if (country !== "ghana") {
     });
 
     if (existingUser) {
+      console.log("❌ Duplicate user found:", existingUser._id);
       return res.status(409).json({ message: 'User already exists' });
     }
 
+    console.log("🔐 Hashing password…");
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🌍 INCLUDE COUNTRY HERE
+    console.log("🆕 Creating user…");
     const newUser = new User({
       username,
       location,
-      country,
+      country: "Ghana",
       password: hashedPassword,
       community: communityId,
       joinedCommunities: [communityId],
@@ -105,17 +108,25 @@ if (country !== "ghana") {
       ...(phoneNumber && { phoneNumber }),
     });
 
-      await newUser.save();
+    await newUser.save();
+    console.log("🎉 User created successfully:", newUser._id);
 
-    // END REGISTER ROUTE
+    // 🔥 THIS WAS MISSING — MUST RETURN A RESPONSE
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      userId: newUser._id,
+    });
+
   } catch (err) {
-    console.error('❌ Register error:', err.message);
+    console.error('❌ Register error:', err);
     if (err.code === 11000) {
       return res.status(409).json({ message: 'Duplicate entry detected (email, phone or username already exists)' });
     }
     res.status(500).json({ message: 'Server error during registration' });
   }
-}); 
+});
+
 
 
 // ✅ LOGIN

@@ -170,7 +170,7 @@ const ownerActivityId = `owner_${activityId}`;
             type: "view_milestone",
             senderId: viewerId,
             receiverId: owner._id.toString(),
-            activityId: `view_milestone_${postId}_${milestone}`,
+            activityId: postId,
             message: `Your post just hit ${milestone.toLocaleString()} views!`,
             targetType: "post",
             targetId: postId

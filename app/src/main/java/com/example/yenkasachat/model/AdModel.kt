@@ -19,23 +19,23 @@ data class AdModel(
     // MEDIA
     val imageUrl: String? = null,
     val videoUrl: String? = null,
+    val thumbnailUrl: String? = null,   // ⭐ REQUIRED FOR VIDEO PREVIEW
 
     // AD TYPE: "google", "sponsor", "internal"
     val adType: String? = null,
 
-    // WATCH-TO-EARN reward
+    // WATCH-TO-EARN
     val rewardYKC: Int = 5,
 
-
-
     // CTA BUTTON
-    val ctaText: String? = null,   // e.g. "Learn More"
-    val ctaUrl: String? = null,    // e.g. "https://example.com"
+    val ctaText: String? = null,
+    val ctaUrl: String? = null,
 
-    // Extra metadata (optional)
+    // SPONSOR DATA
     val sponsorName: String? = null,
     val campaignId: String? = null
 )
+
 
 data class AdCreateRequest(
     val title: String,
@@ -47,4 +47,9 @@ data class AdCreateResponse(
     val success: Boolean,
     val message: String? = null,
     val adId: String? = null
+)
+
+data class AdsFeedResponse(
+    val success: Boolean,
+    val ads: List<AdModel>
 )

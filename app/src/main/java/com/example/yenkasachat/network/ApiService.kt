@@ -676,14 +676,21 @@ interface ApiService {
     ): Call<MediaResponse>
 
 //Ads and reward
-@POST("ads/view/{adId}")
-fun recordAdView(@Path("adId") adId: String, @Body body: Map<String, Any>): Call<Map<String, Any>>
+
+
+    @POST("ads/view/{adId}")
+    fun recordAdView(
+        @Path("adId") adId: String,
+        @Header("Authorization") auth: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Call<Map<String, Any>>
 
     @POST("ads/reward/{adId}")
-    fun rewardAd(@Path("adId") adId: String, @Body body: Map<String, String>): Call<Map<String, Any>>
-
-    @GET("ads/feed")
-    fun getAdsFeed(@Query("page") page:Int = 1, @Query("limit") limit:Int = 10): Call<AdsFeedResponse>
+    fun rewardAd(
+        @Path("adId") adId: String,
+        @Header("Authorization") auth: String,
+        @Body body: Map<String, String>
+    ): Call<Map<String, Any>>
 
     @Multipart
     @POST("ads/create")
@@ -691,6 +698,7 @@ fun recordAdView(@Path("adId") adId: String, @Body body: Map<String, Any>): Call
         @Header("Authorization") token: String,
         @Body request: MultipartBody
     ): Call<AdCreateResponse>
+
 
 
 }

@@ -47,7 +47,7 @@ class AdBinder(
         holder.adCTAButton.visibility = View.GONE
 
         /* ----------------------------------------------
-         * IMAGE AD SUPPORT
+         * IMAGE AD
          * ---------------------------------------------- */
         if (!ad.imageUrl.isNullOrEmpty()) {
             holder.adImageThumbnail.visibility = View.VISIBLE
@@ -59,19 +59,18 @@ class AdBinder(
         }
 
         /* ----------------------------------------------
-         * VIDEO AD SUPPORT
+         * VIDEO AD
          * ---------------------------------------------- */
         if (!ad.videoUrl.isNullOrEmpty()) {
-
             holder.adVideoThumbnail.visibility = View.VISIBLE
             holder.adPlayButton.visibility = View.VISIBLE
 
             Glide.with(context)
-                .load(ad.imageUrl ?: R.drawable.placeholder_image)
+                .load(ad.thumbnailUrl ?: R.drawable.placeholder_image)
                 .into(holder.adVideoThumbnail)
 
             holder.adPlayButton.setOnClickListener {
-                playVideo(holder, ad.videoUrl)
+                playVideo(holder, ad.videoUrl!!)
             }
         }
 
@@ -96,11 +95,10 @@ class AdBinder(
         }
     }
 
-    /* ---------------------------
+    /* ----------------------------------------------
      * PLAY VIDEO
-     * --------------------------- */
+     * ---------------------------------------------- */
     private fun playVideo(holder: AdsViewHolder, url: String) {
-
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(context).build()
         }
@@ -116,25 +114,48 @@ class AdBinder(
         exoPlayer!!.play()
     }
 
-    /* ---------------------------
-     * REWARDED AD (backend track)
-     * --------------------------- */
-    private fun showRewardedAd(holder: AdsViewHolder, ad: AdModel) {
+    /* ----------------------------------------------
+     * SAVE REWARD (Backend)
+     * ---------------------------------------------- */
+    private fun recordAdViewAndReward(ad: AdModel, watchMs: Int) {
+        CoroutineScope(Dispatchers.IO).launch {
 
+            val token = TokenManager.getToken(context) ?: return@launch
+            val auth = "Bearer $token"
+
+            val viewRes = ApiClient.apiService.recordAdView(
+                ad._id,
+                auth,
+                mapOf<String, Any>(
+                    "durationMs" to watchMs,
+                    "fullyWatched" to true
+                )
+            ).execute()   // ⭐ FIX
+
+            if (viewRes.isSuccessful) {
+
+                val body = viewRes.body() ?: return@launch
+                val adViewId = body["adViewId"] as? String ?: return@launch
+
+                ApiClient.apiService.rewardAd(
+                    ad._id,
+                    auth,
+                    mapOf("adViewId" to adViewId)
+                ).execute()
+            }
+        }
+    }
+
+    /* ----------------------------------------------
+     * REWARDED AD (Google → Backend)
+     * ---------------------------------------------- */
+    private fun showRewardedAd(holder: AdsViewHolder, ad: AdModel) {
         holder.adWatchRewardButton.isEnabled = false
         holder.adWatchRewardButton.text = "Watching…"
 
-        // When Google Reward is done:
+        // AFTER Google rewards user:
         holder.adWatchRewardButton.text = "Reward Earned!"
-        rewardUser(ad._id)
-    }
 
-    private fun rewardUser(adId: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val token = TokenManager.getToken(context) ?: return@launch
-                ApiClient.apiService.trackAdView("Bearer $token").execute()
-            } catch (_: Exception) {}
-        }
+        recordAdViewAndReward(ad, 10000)   // 10 seconds example
     }
 }

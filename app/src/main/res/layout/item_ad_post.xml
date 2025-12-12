@@ -111,7 +111,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Learn More"
-        android:backgroundTint="@color/primary"
+        android:backgroundTint="@color/yenkasaEmerald"
         android:textColor="@color/white"
         android:textStyle="bold"
         android:padding="10dp"
@@ -124,7 +124,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Watch &amp; Earn 5 YKC"
-        android:backgroundTint="@color/primary"
+        android:backgroundTint="@color/yenkasa_amber"
         android:textColor="@color/white"
         android:textStyle="bold"
         android:padding="10dp"
@@ -138,11 +138,14 @@
         android:visibility="gone" />
 
     <com.google.android.gms.ads.nativead.NativeAdView
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/nativeAdView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp">
+        android:padding="16dp"
+        android:background="@drawable/bg_yenkasa_native_card"
+        android:layout_marginTop="14dp"
+        android:clipToPadding="false"
+        android:clipChildren="false">
 
         <LinearLayout
             android:orientation="vertical"
@@ -154,27 +157,40 @@
                 android:id="@+id/ad_headline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/black"
-                android:textSize="16sp"
-                android:textStyle="bold"/>
+                android:textColor="@color/yenkasa_black"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:paddingBottom="6dp"/>
 
-            <!-- MEDIA / IMAGE -->
+            <!-- MEDIA -->
             <com.google.android.gms.ads.nativead.MediaView
                 android:id="@+id/ad_media"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="260dp"
+                android:background="@color/yenkasa_amber"
                 android:layout_marginTop="6dp"
-                android:background="@android:color/darker_gray"/>
+                android:layout_marginBottom="12dp"
+                android:scaleType="centerCrop"
+                android:clipToOutline="true"/>
 
-            <!-- CALL TO ACTION -->
+            <!-- CTA BUTTON -->
             <Button
                 android:id="@+id/ad_call_to_action"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:layout_marginTop="8dp"/>
+                android:layout_height="42dp"
+                android:text="Get Started"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="22dp"
+                android:textColor="@color/yenkasaWhite"
+                android:background="@drawable/bg_yenkasa_cta"
+                android:backgroundTint="@null"
+                android:layout_gravity="start"/>
+
         </LinearLayout>
 
     </com.google.android.gms.ads.nativead.NativeAdView>
+
+
 
 </LinearLayout>

@@ -7,6 +7,6 @@ router.get('/feed', auth, AdsController.getAdsFeed);
 router.post('/view/:adId', auth, AdsController.recordAdView);
 router.post('/reward/:adId', auth, AdsController.rewardAd);
 router.post('/create', auth, AdsController.createAd); // add admin check inside controller
-router.post("/reward-click/:adId", auth, adsController.rewardClick);
+router.post("/reward-click/:adId", auth, AdsController.rewardClick);
 
 module.exports = router;

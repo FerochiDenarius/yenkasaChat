@@ -516,9 +516,10 @@ interface ApiService {
     ): Call<TrackLoginResponse>
 
     @POST("app-verification/track-ad-view")
-    suspend fun trackAdView(
+    fun trackAdView(
         @Header("Authorization") token: String
-    ): TrackAdViewResponse
+    ): Call<TrackAdViewResponse>
+
 
 
     @GET("app-verification/progress")
@@ -704,9 +705,10 @@ interface ApiService {
 
     @POST("ads/click/{adId}")
     suspend fun rewardAdClick(
-        @Header("Authorization") token: String,
-        @Path("adId") adId: String
+        @Path("adId") adId: String,
+        @Header("Authorization") token: String
     ): RewardResponse
+
 
 
 

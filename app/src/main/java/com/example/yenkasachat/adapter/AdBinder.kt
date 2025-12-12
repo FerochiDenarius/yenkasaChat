@@ -21,27 +21,22 @@ import com.google.android.gms.ads.nativead.*
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
     private var exoPlayer: ExoPlayer? = null
-    private val trackedImpressions = mutableSetOf<String>()   // Prevent duplicate impressions
+    private val trackedImpressions = mutableSetOf<String>()  // avoid duplicate views
 
     override fun bind(holder: AdsViewHolder, ad: AdModel) {
 
-        // ----------------------------------
-        // 1️⃣ TRACK IMPRESSION (User saw ad)
-        // ----------------------------------
+        // 1️⃣ Track impression ONCE
         holder.itemView.post {
             if (!trackedImpressions.contains(ad._id)) {
                 trackedImpressions.add(ad._id)
-                sendImpression(ad)       // Backend increments adsViewed
+                sendImpression()  // increments adsViewed in backend
             }
         }
 
-        // ----------------------------------
-        // 2️⃣ UI: Sponsor label
-        // ----------------------------------
+        // 2️⃣ Sponsor label
         holder.adSponsorLabel.text =
             ad.sponsorName ?: "Sponsored • Earn ${ad.rewardYKC} YKC"
 
-        // Title
         if (!ad.title.isNullOrEmpty()) {
             holder.adTitle.visibility = View.VISIBLE
             holder.adTitle.text = ad.title
@@ -49,7 +44,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             holder.adTitle.visibility = View.GONE
         }
 
-        // Reset UI visibility
+        // Reset UI
         holder.adImageThumbnail.visibility = View.GONE
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayerView.visibility = View.GONE
@@ -57,21 +52,15 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         holder.adCTAButton.visibility = View.GONE
         holder.adWatchRewardButton.visibility = View.VISIBLE
 
-        // ----------------------------------
-        // 3️⃣ IMAGE AD
-        // ----------------------------------
+        // 3️⃣ Image ad
         if (!ad.imageUrl.isNullOrEmpty()) {
             holder.adImageThumbnail.visibility = View.VISIBLE
-
-            Glide.with(context)
-                .load(ad.imageUrl)
+            Glide.with(context).load(ad.imageUrl)
                 .placeholder(R.drawable.placeholder_image)
                 .into(holder.adImageThumbnail)
         }
 
-        // ----------------------------------
-        // 4️⃣ VIDEO AD
-        // ----------------------------------
+        // 4️⃣ Video ad
         if (!ad.videoUrl.isNullOrEmpty()) {
             holder.adVideoThumbnail.visibility = View.VISIBLE
             holder.adPlayButton.visibility = View.VISIBLE
@@ -85,58 +74,35 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             }
         }
 
-        // ----------------------------------
-        // 5️⃣ CTA BUTTON
-        // ----------------------------------
+        // 5️⃣ CTA CLICK REWARD (5 YKC)
         if (!ad.ctaUrl.isNullOrEmpty()) {
             holder.adCTAButton.visibility = View.VISIBLE
             holder.adCTAButton.text = ad.ctaText ?: "Learn More"
 
             holder.adCTAButton.setOnClickListener {
-                rewardClick(ad)  // reward user for clicking
+                rewardClick(ad)
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ad.ctaUrl)))
             }
         }
 
-        holder.adCTAButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ad.ctaUrl))
-            context.startActivity(intent)
-
-            // reward backend for click
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val token = TokenManager.getToken(context) ?: return@launch
-                    ApiClient.apiService.rewardAdClick("Bearer $token", ad._id)
-                } catch (e: Exception) {
-                    Log.e("AdBinder", "Failed to send click reward: ${e.message}")
-                }
-            }
-        }
-
-        // ----------------------------------
-        // 6️⃣ WATCH-TO-EARN BUTTON
-        // ----------------------------------
+        // 6️⃣ WATCH VIDEO TO EARN REWARD
         holder.adWatchRewardButton.setOnClickListener {
-            holder.adWatchRewardButton.text = "Watching..."
+            holder.adWatchRewardButton.text = "Watching…"
             showRewardedAd(ad) {
                 holder.adWatchRewardButton.text = "Reward Earned!"
             }
         }
 
-        // ----------------------------------
-        // 7️⃣ Load AdMob Native Ad
-        // ----------------------------------
+        // 7️⃣ Load AdMob native ad
         loadAdmobNativeAd(holder)
     }
 
-    // ---------------------------------------------------------------------
-    // IMPRESSION: User saw ad → +1 ADS VIEWED (verification metric)
-    // ---------------------------------------------------------------------
-    private fun sendImpression(ad: AdModel) {
-        val token = TokenManager.getToken(context) ?: return
+    // ---------------- IMPRESSION ----------------
 
+    private fun sendImpression() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                val token = TokenManager.getToken(context) ?: return@launch
                 ApiClient.apiService.trackAdView("Bearer $token")
             } catch (e: Exception) {
                 Log.e("AdBinder", "Failed to track ad view: ${e.message}")
@@ -144,28 +110,22 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // CLICK REWARD: +5 YKC (from ad.rewardYKC)
-    // ---------------------------------------------------------------------
+    // ---------------- CLICK REWARD ----------------
+
     private fun rewardClick(ad: AdModel) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
-                ApiClient.apiService.rewardAdClick(
-                    ad._id,
-                    "Bearer $token"
-                )
+                ApiClient.apiService.rewardAdClick("Bearer $token", ad._id)
             } catch (e: Exception) {
                 Log.e("AdBinder", "Click reward failed: ${e.message}")
             }
         }
     }
 
-    // ---------------------------------------------------------------------
-    // VIDEO PLAY: Record watch time + backend reward if fully watched
-    // ---------------------------------------------------------------------
-    private fun playVideo(holder: AdsViewHolder, ad: AdModel) {
+    // ---------------- VIDEO PLAY ----------------
 
+    private fun playVideo(holder: AdsViewHolder, ad: AdModel) {
         if (exoPlayer == null)
             exoPlayer = ExoPlayer.Builder(context).build()
 
@@ -175,12 +135,11 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
         holder.adPlayerView.player = exoPlayer
 
-        val url = ad.videoUrl ?: return
-        exoPlayer!!.setMediaItem(MediaItem.fromUri(url))
+        exoPlayer!!.setMediaItem(MediaItem.fromUri(ad.videoUrl!!))
         exoPlayer!!.prepare()
         exoPlayer!!.play()
 
-        // Track reward after video plays for 10 seconds (example)
+        // Track reward after 10 seconds
         CoroutineScope(Dispatchers.IO).launch {
             delay(10000)
             recordVideoReward(ad, 10000)
@@ -192,19 +151,16 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         val auth = "Bearer $token"
 
         try {
-            val response = ApiClient.apiService.recordAdView(
-                ad._id,
-                auth,
+            val viewRes = ApiClient.apiService.recordAdView(
+                ad._id, auth,
                 mapOf("durationMs" to watchMs, "fullyWatched" to true)
             ).execute()
 
-            if (!response.isSuccessful) return
-            val adViewId = response.body()?.get("adViewId") as? String ?: return
+            if (!viewRes.isSuccessful) return
+            val adViewId = viewRes.body()?.get("adViewId") as? String ?: return
 
             ApiClient.apiService.rewardAd(
-                ad._id,
-                auth,
-                mapOf("adViewId" to adViewId)
+                ad._id, auth, mapOf("adViewId" to adViewId)
             ).execute()
 
         } catch (e: Exception) {
@@ -212,36 +168,36 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // GOOGLE REWARDED AD → backend reward
-    // ---------------------------------------------------------------------
+    // ---------------- GOOGLE REWARDED AD ----------------
+
     private fun showRewardedAd(ad: AdModel, onReward: () -> Unit) {
-        onReward()                              // UI update
-        CoroutineScope(Dispatchers.IO).launch { recordVideoReward(ad, 10000) }
+        onReward()
+        CoroutineScope(Dispatchers.IO).launch {
+            recordVideoReward(ad, 10000)
+        }
     }
 
-    // ---------------------------------------------------------------------
-    // ADMOB NATIVE AD LOADING
-    // ---------------------------------------------------------------------
+    // ---------------- ADMOB NATIVE ----------------
+
     private fun loadAdmobNativeAd(holder: AdsViewHolder) {
 
-        val adLoader = AdLoader.Builder(context, "ca-app-pub-3940256099942544/2247696110")
+        val adLoader = AdLoader.Builder(context, "ca-app-pub-5051666473627498/1225516323")
             .forNativeAd { nativeAd ->
 
                 holder.admobNativeContainer.visibility = View.VISIBLE
                 holder.nativeAdView.visibility = View.VISIBLE
 
-                val headlineView = holder.nativeAdView.findViewById<TextView>(R.id.ad_headline)
-                headlineView.text = nativeAd.headline
-                holder.nativeAdView.headlineView = headlineView
+                val headline = holder.nativeAdView.findViewById<TextView>(R.id.ad_headline)
+                headline.text = nativeAd.headline
+                holder.nativeAdView.headlineView = headline
 
                 val media = holder.nativeAdView.findViewById<MediaView>(R.id.ad_media)
                 media.setMediaContent(nativeAd.mediaContent)
                 holder.nativeAdView.mediaView = media
 
-                val ctaButton = holder.nativeAdView.findViewById<Button>(R.id.ad_call_to_action)
-                ctaButton.text = nativeAd.callToAction
-                holder.nativeAdView.callToActionView = ctaButton
+                val btn = holder.nativeAdView.findViewById<Button>(R.id.ad_call_to_action)
+                btn.text = nativeAd.callToAction
+                holder.nativeAdView.callToActionView = btn
 
                 holder.nativeAdView.setNativeAd(nativeAd)
             }

@@ -183,6 +183,40 @@ app.get("/health", (req, res) => {
 });
 
 // ---------------------------------
+// Serve Compliance / Policy Documents
+// ---------------------------------
+
+// Generic function to serve static policy HTML files
+function servePolicy(fileName) {
+  return (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', fileName));
+  };
+}
+
+app.get('/privacy-policy', servePolicy('privacy-policy.html'));
+app.get('/privacy-policy.html', servePolicy('privacy-policy.html'));
+
+app.get('/user-agreement', servePolicy('user-agreement.html'));
+app.get('/user-agreement.html', servePolicy('user-agreement.html'));
+
+app.get('/community-guidelines', servePolicy('community-guidelines.html'));
+app.get('/community-guidelines.html', servePolicy('community-guidelines.html'));
+
+app.get('/moderation-policy', servePolicy('moderation-policy.html'));
+app.get('/moderation-policy.html', servePolicy('moderation-policy.html'));
+
+app.get('/safety-policy', servePolicy('safety-policy.html'));
+app.get('/safety-policy.html', servePolicy('safety-policy.html'));
+
+app.get('/ads-disclosure', servePolicy('ads-disclosure.html'));
+app.get('/ads-disclosure.html', servePolicy('ads-disclosure.html'));
+
+// Google Play App-Ads.txt
+app.get('/app-ads.txt', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app-ads.txt'));
+});
+
+// ---------------------------------
 // Static Files
 // ---------------------------------
 app.get('/.well-known/assetlinks.json', (req, res) => {

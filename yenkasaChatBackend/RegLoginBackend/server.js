@@ -237,11 +237,6 @@ app.get('/reset-password', (req, res) => {
 
 
 
-// ✅ Serve User Agreement / Terms
-app.get('/terms', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'user_agreement.html'));
-});
-
 //Post routes
 
 const postRoutes = require('./routes/post.routes');

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
 import com.example.yenkasachat.adapter.PostAdapter
+import com.example.yenkasachat.adapter.FeedAdapter
 import com.example.yenkasachat.model.*
 import com.example.yenkasachat.network.ApiClient
 import com.example.yenkasachat.network.SocketManager
@@ -22,6 +23,8 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.yenkasachat.adapter.AdBinder
+
 
 class FeedFragment : Fragment() {
 
@@ -34,7 +37,8 @@ class FeedFragment : Fragment() {
     private lateinit var selectedCommunitiesText: TextView
 
     private val posts = mutableListOf<Post>()
-    private lateinit var adapter: PostAdapter
+    private lateinit var feedAdapter: FeedAdapter
+
     private lateinit var layoutManager: LinearLayoutManager
 
     private var token: String? = null
@@ -94,12 +98,12 @@ class FeedFragment : Fragment() {
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
     }
 
+
     private fun setupRecyclerView() {
         layoutManager = LinearLayoutManager(requireContext())
 
-        adapter = PostAdapter(
+        feedAdapter = FeedAdapter(
             requireContext(),
-            posts,
             onLikeClick = { post, position ->
                 val context = requireContext()
                 val token = TokenManager.getToken(context)
@@ -111,7 +115,9 @@ class FeedFragment : Fragment() {
                             likeCount = newLikeCount
                         )
                         posts[position] = updatedPost
-                        adapter.notifyItemChanged(position)
+
+                        val mixed = buildMixedFeed(posts)
+                        feedAdapter.updateItems(mixed)
                     }
                 }
             },
@@ -124,43 +130,12 @@ class FeedFragment : Fragment() {
                     !post.audioUrl.isNullOrEmpty() -> openAudio(post)
                 }
             },
-            onShareClick = { post -> sharePost(post) }
+            onShareClick = { post -> sharePost(post) },
+            adAdapterCallbacks = AdBinder(requireContext())
         )
 
         recyclerView.layoutManager = layoutManager
-        recyclerView.adapter = adapter
-
-        // 🔥 DELETE
-        adapter.setOnDeleteClickListener { post ->
-            val token = TokenManager.getToken(requireContext()) ?: return@setOnDeleteClickListener
-            FeedUtils.deletePost(requireContext(), token, post._id) {
-                posts.remove(post)
-                adapter.updatePosts(posts)
-            }
-        }
-
-// 🔥 HIDE
-        adapter.setOnHideClickListener { post ->
-            val token = TokenManager.getToken(requireContext()) ?: return@setOnHideClickListener
-            FeedUtils.hidePost(requireContext(), token, post._id) {
-                posts.remove(post)
-                adapter.updatePosts(posts)
-            }
-        }
-
-// 🔥 DOWNLOAD
-        adapter.setOnDownloadClickListener { post ->
-            val token = TokenManager.getToken(requireContext()) ?: return@setOnDownloadClickListener
-            FeedUtils.downloadMedia(requireContext(), token, post._id)
-        }
-
-// 🔥 FLAG
-        adapter.setOnFlagClickListener { post ->
-            val token = TokenManager.getToken(requireContext()) ?: return@setOnFlagClickListener
-            FeedUtils.flagPost(requireContext(), token, post._id)
-        }
-
-
+        recyclerView.adapter = feedAdapter
     }
 
     private fun openImage(post: Post) {
@@ -224,6 +199,36 @@ class FeedFragment : Fragment() {
                 }
             })
     }
+
+
+    private fun buildMixedFeed(posts: List<Post>): List<Any> {
+        val mixed = mutableListOf<Any>()
+        var counter = 0
+
+        for (post in posts) {
+            mixed.add(post)
+            counter++
+
+            if (counter % 5 == 0) {
+                mixed.add(
+                    AdModel(
+                        _id = "local-ad-${counter}",
+                        sponsorName = "AdMob",
+                        title = "Sponsored Ad",
+                        imageUrl = null,
+                        videoUrl = null,
+                        thumbnailUrl = null,
+                        ctaUrl = null,
+                        ctaText = "Learn More",
+                        rewardYKC = 0
+                    )
+                )
+            }
+        }
+
+        return mixed
+    }
+
 
     private fun fetchUserMembership() {
         val auth = "Bearer $token"
@@ -329,7 +334,9 @@ class FeedFragment : Fragment() {
         val names = selectedCommunities.mapNotNull { it.displayName ?: it.name }
         if (names.isEmpty()) {
             posts.clear()
-            adapter.updatePosts(posts)
+            val mixedList = buildMixedFeed(posts)
+            feedAdapter.updateItems(mixedList)
+
             emptyView.visibility = View.VISIBLE
             showLoading(false)
             return
@@ -351,7 +358,8 @@ class FeedFragment : Fragment() {
                 if (response.isSuccessful && response.body() != null) {
                     posts.clear()
                     posts.addAll(response.body()!!.posts)
-                    adapter.updatePosts(posts)
+                    val mixedList = buildMixedFeed(posts)
+                    feedAdapter.updateItems(mixedList)
                     emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
                 } else {
                     Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
@@ -399,7 +407,9 @@ class FeedFragment : Fragment() {
                 val newPost = Post.fromJson(json)
                 lifecycleScope.launch {
                     posts.add(0, newPost)
-                    adapter.updatePosts(posts)
+                    val mixed = buildMixedFeed(posts)
+                    feedAdapter.updateItems(mixed)
+
                     recyclerView.scrollToPosition(0)
                 }
             } catch (e: Exception) {
@@ -416,7 +426,8 @@ class FeedFragment : Fragment() {
                     val index = posts.indexOfFirst { it._id == postId }
                     if (index >= 0) {
                         posts[index] = posts[index].copy(viewCount = viewsCount)
-                        adapter.notifyItemChanged(index)
+                        val mixed = buildMixedFeed(posts)
+                        feedAdapter.updateItems(mixed)
                     }
                 }
             } catch (e: Exception) {
@@ -434,7 +445,8 @@ class FeedFragment : Fragment() {
                     val index = posts.indexOfFirst { it._id == postId }
                     if (index >= 0) {
                         posts[index] = posts[index].copy(likeCount = likeCount)
-                        adapter.notifyItemChanged(index)
+                        val mixed = buildMixedFeed(posts)
+                        feedAdapter.updateItems(mixed)
                     }
                 }
             } catch (e: Exception) {
@@ -443,19 +455,21 @@ class FeedFragment : Fragment() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        adapter.pauseAllVideos()
-    }
 
     override fun onResume() {
         super.onResume()
     }
 
+    override fun onPause() {
+        super.onPause()
+        feedAdapter.pauseAllVideos()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
-        adapter.pauseAllVideos()
+        feedAdapter.pauseAllVideos()
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
     }
+
 }

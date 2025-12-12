@@ -36,3 +36,8 @@ data class ViewRequest(
 
 
 
+data class RewardResponse(
+    val success: Boolean,
+    val newBalance: Int,
+    val message: String?
+)

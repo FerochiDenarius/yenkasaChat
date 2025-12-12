@@ -6,46 +6,28 @@ const messageSchema = new mongoose.Schema({
     required: true,
     ref: 'ChatRoom'
   },
-  
-senderId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'User',
-  required: true
-},
 
-  text: {
+  // Keep this a string for API stability (your clients expect string id)
+  senderId: {
     type: String,
-    required: false
+    required: true
   },
 
-  // ✅ Proper reply-to field (matches frontend key `repliedTo`)
+  text: { type: String, required: false },
+
   repliedTo: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message', // Self-reference to another message
+    ref: 'Message',
     required: false,
     default: null
   },
 
-  imageUrl: {
-    type: String,
-    required: false
-  },
-  audioUrl: {
-    type: String,
-    required: false
-  },
-  videoUrl: {
-    type: String,
-    required: false
-  },
-  fileUrl: {
-    type: String,
-    required: false
-  },
-  contactInfo: {
-    type: String,
-    required: false
-  },
+  imageUrl: { type: String, required: false },
+  audioUrl: { type: String, required: false },
+  videoUrl: { type: String, required: false },
+  fileUrl: { type: String, required: false },
+  contactInfo: { type: String, required: false },
+
   location: {
     type: {
       latitude: Number,
@@ -53,32 +35,56 @@ senderId: {
     },
     required: false
   },
-  timestamp: {
-    type: Date,
-    default: Date.now
-  },
+
+  timestamp: { type: Date, default: Date.now },
+
   status: {
     type: String,
     enum: ['sent', 'delivered', 'read'],
     default: 'sent'
   }
 }, {
-  timestamps: true // Adds createdAt and updatedAt
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// ✅ Auto-populate sender + repliedTo message when querying
-messageSchema.pre(/^find/, function (next) {
-  this.populate({
-    path: 'senderId',
-    select: 'username profileImage _id'
-  }).populate({
-    path: 'repliedTo',
-    populate: {
-      path: 'senderId',
-      select: 'username profileImage _id'
-    }
-  });
-  next();
+/**
+ * Virtual `sender` field:
+ * - Adds a `sender` object on output (username, profileImage, _id)
+ * - Keeps `senderId` (string) untouched for backwards compatibility
+ */
+messageSchema.virtual('sender', {
+  ref: 'User',
+  localField: 'senderId',
+  foreignField: '_id',
+  justOne: true,
+  options: { select: 'username profileImage _id' }
 });
+
+/**
+ * Also create a virtual for the repliedTo.message.sender so we can populate nested sender
+ * We'll populate 'repliedTo' normally (it remains an ObjectId ref to Message),
+ * and after that, the repliedTo's `sender` virtual will be resolvable.
+ */
+
+/**
+ * Auto-populate hook for queries:
+ * - populate repliedTo message and also populate the virtual `sender` for this message
+ * - populate virtual `sender` on repliedTo by path populate
+ */
+function autoPopulate(next) {
+  this.populate({ path: 'sender' })
+    .populate({
+      path: 'repliedTo',
+      populate: { path: 'sender', select: 'username profileImage _id' }
+    });
+  next();
+}
+
+// run for find, findOne, findOneAndUpdate, findById, etc.
+messageSchema.pre(/^find/, autoPopulate);
+messageSchema.pre('findOne', autoPopulate);
+messageSchema.pre('findOneAndUpdate', autoPopulate);
 
 module.exports = mongoose.model('Message', messageSchema);

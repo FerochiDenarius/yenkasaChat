@@ -21,4 +21,6 @@
     <string name="post_image">post image\n</string>
     <string name="send_comment">Send comment</string>
     <string name="select_community">select community\n</string>
+    <string name="sponsored_earn_5_ykc">Sponsored • Earn 5 YKC</string>
+    <string name="your_ad_title_here">Your Ad Title Here</string>
 </resources>

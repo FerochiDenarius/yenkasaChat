@@ -36,6 +36,79 @@ exports.recordAdView = async (req, res) => {
   } catch(err){ console.error(err); res.status(500).json({ success:false }); }
 };
 
+exports.rewardAdClick = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { adId } = req.params;
+
+    // Prevent double rewards: 1 click per ad per user
+    const RewardTx = require('../models/RewardTransaction.model');
+    const existing = await RewardTx.findOne({
+      userId,
+      adId,
+      type: "AD_CLICK_REWARD"
+    });
+
+    if (existing) {
+      return res.json({
+        success: false,
+        message: "Already rewarded for clicking this ad"
+      });
+    }
+
+    const rewardAmount = 5;
+
+    // Create reward transaction
+    const tx = new RewardTx({
+      userId,
+      type: "AD_CLICK_REWARD",
+      adId,
+      amount: rewardAmount,
+      meta: { note: "Reward for clicking ad" }
+    });
+
+    await tx.save();
+
+    // Update user balance
+    await User.findByIdAndUpdate(userId, {
+      $inc: { coins: rewardAmount }
+    });
+
+    // Send Notification
+    const notificationService = require("../services/notification.service");
+    await notificationService.sendNotification(
+      userId,
+      "Ad Click Reward",
+      `You earned ${rewardAmount} YKC for clicking an ad.`
+    );
+
+    // Emit socket update
+    if (global.io) {
+      global.io.emit("adClickReward", {
+        userId,
+        adId,
+        amount: rewardAmount,
+        timestamp: new Date()
+      });
+    }
+
+    return res.json({
+      success: true,
+      rewarded: true,
+      amount: rewardAmount,
+      message: "Ad click reward processed."
+    });
+
+  } catch (err) {
+    console.error("❌ Error rewarding ad click:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Server error rewarding ad click"
+    });
+  }
+};
+
+
 // POST /ads/reward/:adId  (idempotent — will only reward once per ad view per user)
 exports.rewardAd = async (req, res) => {
   try {

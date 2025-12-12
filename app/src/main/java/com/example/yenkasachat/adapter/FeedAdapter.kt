@@ -2,53 +2,68 @@ package com.example.yenkasachat.adapter
 
 import android.content.Context
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.*
-import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.yenkasachat.R
-import com.example.yenkasachat.model.Post
 import com.example.yenkasachat.model.AdModel
+import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.adapter.AdsViewHolder
+
+
 
 class FeedAdapter(
     private val context: Context,
-    private val items: List<Any>,
-    private val postAdapterCallbacks: PostAdapterCallbacks,
+    private val onLikeClick: (Post, Int) -> Unit,
+    private val onCommentClick: (Post, Int) -> Unit,
+    private val onUserClick: (String) -> Unit,
+    private val onPostClick: (Post) -> Unit,
+    private val onShareClick: (Post) -> Unit,
     private val adAdapterCallbacks: AdAdapterCallbacks
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val TYPE_POST = 0
     private val TYPE_AD = 1
 
-    // ⭐ Create a dummy PostAdapter instance so we can instantiate PostViewHolder
+    private var items: List<Any> = emptyList()
+
+    // 🔥 NEW CALLBACKS FOR DELETE / HIDE / DOWNLOAD / FLAG
+    var onDelete: ((Post) -> Unit)? = null
+    var onHide: ((Post) -> Unit)? = null
+    var onDownload: ((Post) -> Unit)? = null
+    var onFlag: ((Post) -> Unit)? = null
+
+    // Internal PostAdapter handling all post logic
     private val internalPostAdapter = PostAdapter(
         context,
         emptyList(),
-        onLikeClick = { _, _ -> },
-        onCommentClick = { _, _ -> },
-        onUserClick = { _ -> },
-        onPostClick = { _ -> },
-        onShareClick = { _ -> }
-    )
+        onLikeClick = { post, position -> onLikeClick(post, position) },
+        onCommentClick = { post, position -> onCommentClick(post, position) },
+        onUserClick = { id -> onUserClick(id) },
+        onPostClick = { post -> onPostClick(post) },
+        onShareClick = { post -> onShareClick(post) }
+    ).apply {
+        // 🔥 FORWARD PostAdapter option buttons to FeedFragment
+        setOnDeleteClickListener { post -> onDelete?.invoke(post) }
+        setOnHideClickListener { post -> onHide?.invoke(post) }
+        setOnDownloadClickListener { post -> onDownload?.invoke(post) }
+        setOnFlagClickListener { post -> onFlag?.invoke(post) }
+    }
+
+    private var currentPostsForInternal = listOf<Post>()
 
     override fun getItemViewType(position: Int): Int {
         return when (items[position]) {
             is Post -> TYPE_POST
             is AdModel -> TYPE_AD
-            else -> error("Unknown feed item type")
+            else -> error("Unsupported item at position $position")
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-
         return when (viewType) {
-
             TYPE_POST -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_post, parent, false)
-
-                // ⭐ Correct way to instantiate an INNER CLASS:
                 internalPostAdapter.PostViewHolder(view)
             }
 
@@ -58,54 +73,57 @@ class FeedAdapter(
                 AdsViewHolder(view)
             }
 
-            else -> error("Invalid viewType")
+            else -> error("Unknown view type: $viewType")
         }
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+    override fun getItemCount(): Int = items.size
 
-        when (val item = items[position]) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (val obj = items[position]) {
 
             is Post -> {
-                postAdapterCallbacks.bind(holder as PostAdapter.PostViewHolder, item, position)
+                val indexInPosts = computePostIndex(position)
+
+                if (currentPostsForInternal.size != totalPostsCount()) {
+                    currentPostsForInternal = extractPosts(items)
+                    internalPostAdapter.updatePosts(currentPostsForInternal)
+                }
+
+                internalPostAdapter.onBindViewHolder(
+                    holder as PostAdapter.PostViewHolder,
+                    indexInPosts
+                )
             }
 
             is AdModel -> {
-                adAdapterCallbacks.bind(holder as AdsViewHolder, item)
+                adAdapterCallbacks.bind(holder as AdsViewHolder, obj)
             }
         }
     }
 
-    override fun getItemCount() = items.size
-}
+    private fun computePostIndex(adapterPosition: Int): Int {
+        var idx = 0
+        for (i in 0 until adapterPosition) {
+            if (items[i] is Post) idx++
+        }
+        return idx
+    }
 
+    private fun extractPosts(list: List<Any>): List<Post> =
+        list.filterIsInstance<Post>()
 
-/* --------------------------------------------------------
-   ADS VIEW HOLDER — EXACT MATCH TO XML
-   -------------------------------------------------------- */
-class AdsViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    private fun totalPostsCount(): Int =
+        items.count { it is Post }
 
-    val adSponsorLabel: TextView = itemView.findViewById(R.id.adSponsorLabel)
-    val adTitle: TextView = itemView.findViewById(R.id.adTitle)
+    fun updateItems(newItems: List<Any>) {
+        items = newItems
+        currentPostsForInternal = emptyList()
+        notifyDataSetChanged()
+    }
 
-    val adImageThumbnail: ImageView = itemView.findViewById(R.id.adImageThumbnail)
-    val adVideoThumbnail: ImageView = itemView.findViewById(R.id.adVideoThumbnail)
-
-    val adPlayerView: PlayerView = itemView.findViewById(R.id.adPlayerView)
-    val adPlayButton: ImageButton = itemView.findViewById(R.id.adPlayButton)
-
-    val adCTAButton: Button = itemView.findViewById(R.id.adCTAButton)
-    val adWatchRewardButton: Button = itemView.findViewById(R.id.adWatchRewardButton)
-}
-
-
-/* --------------------------------------------------------
-   CALLBACK INTERFACES
-   -------------------------------------------------------- */
-interface PostAdapterCallbacks {
-    fun bind(holder: PostAdapter.PostViewHolder, post: Post, position: Int)
-}
-
-interface AdAdapterCallbacks {
-    fun bind(holder: AdsViewHolder, ad: AdModel)
+    // 🔥 NEW → Allow FeedFragment to pause videos safely
+    fun pauseAllVideos() {
+        internalPostAdapter.pauseAllVideos()
+    }
 }

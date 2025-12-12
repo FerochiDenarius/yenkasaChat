@@ -26,20 +26,22 @@ const viewSchema = new mongoose.Schema(
       default: Date.now
     },
 
+    // <-- THIS WAS BROKEN. FIXED NOW.
     viewsCount: {
-  type: Number,
-  default: 0
-},
+      type: Number,
+      default: 0
+    },
 
-
-    watchDuration: { type: Number, default: 0 },
+    watchDuration: {
+      type: Number,
+      default: 0
+    },
 
     mediaType: {
-  type: String,
-  enum: ['image', 'video', 'audio', 'text', 'unknown'],
-  default: 'unknown'
-}
-
+      type: String,
+      enum: ['image', 'video', 'audio', 'text', 'unknown'],
+      default: 'unknown'
+    }
   },
   { timestamps: true }
 );

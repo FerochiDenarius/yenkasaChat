@@ -23,6 +23,10 @@ import com.jakewharton.threetenabp.AndroidThreeTen
 import android.media.AudioAttributes
 import android.net.Uri
 import androidx.core.app.NotificationCompat
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.initialization.InitializationStatus
+import com.google.android.gms.ads.initialization.OnInitializationCompleteListener
+
 
 
 
@@ -52,6 +56,11 @@ class MyApplication : Application(), OSSubscriptionObserver {
     override fun onCreate() {
         super.onCreate()
         AndroidThreeTen.init(this)
+        // Initialize Google Mobile Ads SDK
+        MobileAds.initialize(this) { initializationStatus ->
+            Log.d("Ads", "Google Mobile Ads initialized: $initializationStatus")
+        }
+
         OneSignal.getDeviceState()?.let {
             Log.d(
                 "MyApp",

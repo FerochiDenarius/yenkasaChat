@@ -3,6 +3,7 @@ package com.example.yenkasachat.ui
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -25,6 +26,9 @@ class MainActivity : AppCompatActivity() {
     private var currentUser: User? = null
     private lateinit var fabAddPost: FloatingActionButton
 
+    // NEW: toolbar create-ad button
+    private lateinit var btnCreateAd: LinearLayout
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main) // ✅ links to your activity_main.xml
@@ -36,11 +40,17 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationIcon(R.drawable.ic_menu) // ✅ menu icon from drawable folder
 
-        // ✅ Handle toolbar menu button click
+        // Handle toolbar menu button click
         toolbar.setNavigationOnClickListener {
             val intent = Intent(this, MenuActivity::class.java)
             startActivity(intent)
         }
+
+        // FIND/Create-Ad toolbar button (declared in your toolbar XML)
+        btnCreateAd = findViewById(R.id.btnCreateAd)
+        // default disabled until we know permissions
+        btnCreateAd.isEnabled = false
+        btnCreateAd.alpha = 0.35f
 
         // ✅ Retrieve auth info
         val retrievedToken = TokenManager.getToken(this)
@@ -85,6 +95,9 @@ class MainActivity : AppCompatActivity() {
                     currentUser = response.body()
                     setupFab()
 
+                    // IMPORTANT: setup the create-ad button now that we have currentUser
+                    setupCreateAdButton()
+
                     try {
                         val user = currentUser!!
                         val roleName = user.role?.name ?: "user"
@@ -111,8 +124,7 @@ class MainActivity : AppCompatActivity() {
                             }
                             put("permissions", permissionsJson)
                             put("permissions", permissionsJson)
-                        }
-.toString()
+                        }.toString()
 
                         TokenManager.saveUserJson(this@MainActivity, userJson)
                         Log.i("MainActivity", "✅ User JSON updated and saved successfully.")
@@ -139,58 +151,90 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==================== FAB Setup with Permission Checks ====================
+    private fun setupFab() {
+        val user = currentUser
+        if (user == null) {
+            fabAddPost.isEnabled = false
+            fabAddPost.alpha = 0.5f
+            return
+        }
 
+        val roleName: String? = user.role?.name
+        val verified = user.verified
 
+        val canPost = UserPermissions.canPost(roleName, verified)
 
-        private fun setupFab() {
-            val user = currentUser
-            if (user == null) {
-                fabAddPost.isEnabled = false
-                fabAddPost.alpha = 0.5f
-                return
-            }
+        fabAddPost.isEnabled = canPost
+        fabAddPost.alpha = if (canPost) 1f else 0.5f
 
-            // Ensure roleName is a String, not Any
-            val roleName: String? = user.role?.name
-            val verified = user.verified
-
-            // ✅ Directly rely on your permission logic
-            val canPost = UserPermissions.canPost(roleName, verified)
-
-            fabAddPost.isEnabled = canPost
-            fabAddPost.alpha = if (canPost) 1f else 0.5f
-
-            fabAddPost.setOnClickListener {
-                when {
-                    canPost -> {
-                        val intent = Intent(this, PostActivity::class.java)
-                        intent.putExtra("userId", user._id)
-                        startActivity(intent)
-                    }
-                    !verified -> {
-                        Toast.makeText(
-                            this,
-                            "Your account must be verified before you can post.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                    else -> {
-                        Toast.makeText(
-                            this,
-                            "You do not have permission to post at this time.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+        fabAddPost.setOnClickListener {
+            when {
+                canPost -> {
+                    val intent = Intent(this, PostActivity::class.java)
+                    intent.putExtra("userId", user._id)
+                    startActivity(intent)
+                }
+                !verified -> {
+                    Toast.makeText(
+                        this,
+                        "Your account must be verified before you can post.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                else -> {
+                    Toast.makeText(
+                        this,
+                        "You do not have permission to post at this time.",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
+    }
+
+    /**
+     * Enable/disable and wire up the CREATE-AD toolbar button.
+     * Only accessible to owner/admin/sponsor roles (adjust as needed).
+     */
+    private fun setupCreateAdButton() {
+        val user = currentUser
+        if (user == null) {
+            btnCreateAd.isEnabled = false
+            btnCreateAd.alpha = 0.35f
+            btnCreateAd.setOnClickListener {
+                Toast.makeText(this, "Please wait...", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        val roleName = user.role?.name ?: "user"
+
+        // Allowed roles — tweak as necessary
+        val allowed = roleName == "owner" || roleName == "admin" || roleName == "sponsor"
+
+        btnCreateAd.isEnabled = allowed
+        btnCreateAd.alpha = if (allowed) 1f else 0.35f
+
+        if (!allowed) {
+            btnCreateAd.setOnClickListener {
+                Toast.makeText(this, "You do not have permission to create ads.", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        // Allowed user → open CreateAdActivity
+        btnCreateAd.setOnClickListener {
+            val intent = Intent(this, CreateAdActivity::class.java)
+            startActivity(intent)
+        }
+    }
+
     private fun handleIntentExtras() {
         val communityId = intent.getStringExtra("communityId")
         val communityName = intent.getStringExtra("communityName")
         val openFragment = intent.getStringExtra("openFragment")
 
         if (openFragment == "feed" && communityId != null) {
-            // You can pass these to your FeedFragment
             val bundle = Bundle().apply {
                 putString("communityId", communityId)
                 putString("communityName", communityName)
@@ -204,5 +248,5 @@ class MainActivity : AppCompatActivity() {
                 replace(R.id.feedContainer, feedFragment)
             }
         }
-    }}
-
+    }
+}

@@ -37,6 +37,7 @@ class PostAdapter(
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit,
     private val onShareClick: (Post) -> Unit
+
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     // Single ExoPlayer for all video playback
@@ -56,6 +57,8 @@ class PostAdapter(
     private var onHideClickListener: ((Post) -> Unit)? = null
     private var onDownloadClickListener: ((Post) -> Unit)? = null
     private var onFlagClickListener: ((Post) -> Unit)? = null
+
+
 
     fun setOnDeleteClickListener(listener: (Post) -> Unit) { onDeleteClickListener = listener }
     fun setOnHideClickListener(listener: (Post) -> Unit) { onHideClickListener = listener }

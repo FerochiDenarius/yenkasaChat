@@ -139,4 +139,7 @@ dependencies {
 // Check for the latest version
     implementation("com.jakewharton.threetenabp:threetenabp:1.4.6")
 
+    //Ads dependencies.
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
+
 }

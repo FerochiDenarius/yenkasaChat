@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.yenkasachat.R
 import com.example.yenkasachat.model.Post
+import com.example.yenkasachat.model.TrackAdViewResponse
 import com.example.yenkasachat.model.ViewResponse
 import com.example.yenkasachat.model.ViewRequest
 import com.example.yenkasachat.network.ApiClient
@@ -23,6 +24,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardItem
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
+
+
 
 class ViewActivity : AppCompatActivity() {
 
@@ -32,6 +44,8 @@ class ViewActivity : AppCompatActivity() {
     private lateinit var imageContent: ImageView
     private lateinit var videoContent: VideoView
     private lateinit var audioIcon: ImageView
+    private var rewardedAd: RewardedAd? = null
+
 
     private var post: Post? = null
     private var token: String? = null
@@ -183,6 +197,56 @@ class ViewActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e("ViewActivity", "❌ Error recording view: ${e.message}")
         }
+    }
+
+    private fun loadRewardedAd() {
+        val adRequest = AdRequest.Builder().build()
+
+        RewardedAd.load(
+            this,
+            "ca-app-pub-3940256099942544/5224354917", // TEST Rewarded Ad ID
+            adRequest,
+            object : RewardedAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    rewardedAd = null
+                    Log.e("Ads", "Failed to load rewarded ad: ${adError.message}")
+                }
+
+                override fun onAdLoaded(ad: RewardedAd) {
+                    rewardedAd = ad
+                    Log.d("Ads", "Rewarded ad loaded")
+                }
+            }
+        )
+    }
+
+    private fun showRewardedAd() {
+        rewardedAd?.show(this) { rewardItem: RewardItem ->
+            Log.d("Ads", "User earned reward: ${rewardItem.amount}")
+
+            // 🔥 Track the ad view in your backend
+            trackAdView()
+        } ?: run {
+            Log.d("Ads", "Rewarded ad not ready")
+        }
+    }
+
+    private fun trackAdView() {
+        val token = TokenManager.getToken(this) ?: return
+
+        ApiClient.apiService.trackAdView("Bearer $token")
+            .enqueue(object : Callback<TrackAdViewResponse> {
+                override fun onResponse(
+                    call: Call<TrackAdViewResponse>,
+                    response: Response<TrackAdViewResponse>
+                ) {
+                    Log.d("Ads", "Ad tracked successfully on backend")
+                }
+
+                override fun onFailure(call: Call<TrackAdViewResponse>, t: Throwable) {
+                    Log.e("Ads", "Failed to track ad: ${t.message}")
+                }
+            })
     }
 
     private fun fetchTotalViews() {

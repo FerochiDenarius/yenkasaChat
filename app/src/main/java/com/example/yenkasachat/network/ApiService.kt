@@ -675,7 +675,22 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<MediaResponse>
 
+//Ads and reward
+@POST("ads/view/{adId}")
+fun recordAdView(@Path("adId") adId: String, @Body body: Map<String, Any>): Call<Map<String, Any>>
 
+    @POST("ads/reward/{adId}")
+    fun rewardAd(@Path("adId") adId: String, @Body body: Map<String, String>): Call<Map<String, Any>>
+
+    @GET("ads/feed")
+    fun getAdsFeed(@Query("page") page:Int = 1, @Query("limit") limit:Int = 10): Call<AdsFeedResponse>
+
+    @Multipart
+    @POST("ads/create")
+    fun createSponsoredAd(
+        @Header("Authorization") token: String,
+        @Body request: MultipartBody
+    ): Call<AdCreateResponse>
 
 
 }

@@ -80,7 +80,7 @@ class VerifiedMetricsFragment : MetricListFragment() {
 
         val list = listOf(
             // ACTIVITY
-            Triple(R.drawable.ic_file, "${m.postsCreated}", "Posts created"),
+            Triple(R.drawable.ic_eye, "${m.totalViewsCount}", "Views made"),
 
             // COMMENTS MADE (correct field)
             Triple(R.drawable.ic_comment_edit, "${m.totalCommentsMade}", "Comments made"),

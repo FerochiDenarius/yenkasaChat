@@ -10,22 +10,72 @@
     tools:context=".ui.MainActivity">
 
     <!-- AppBar / Toolbar -->
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        android:elevation="6dp">
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/yellowAccent"
+        app:titleTextColor="#222222"
+        android:elevation="6dp"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/yellowAccent"
-            app:titleTextColor="#222222"
-            android:elevation="6dp"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
-    </com.google.android.material.appbar.AppBarLayout>
+            android:layout_height="match_parent"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <!-- LEFT: MENU BUTTON -->
+            <ImageView
+                android:id="@+id/btnMenu"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_menu"
+                android:layout_centerVertical="true"
+                app:tint="#222" />
+
+            <!-- CENTER: TITLE -->
+            <TextView
+                android:id="@+id/toolbarTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Yenkasa"
+                android:textColor="#222222"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_centerInParent="true" />
+
+            <!-- RIGHT: CREATE AD BUTTON -->
+            <LinearLayout
+                android:id="@+id/btnCreateAd"
+                android:orientation="horizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:padding="6dp"
+                android:background="@drawable/bg_button_round">
+
+                <ImageView
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:src="@drawable/ic_ads_plus"
+                    app:tint="@color/yenkasa_black" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Create Ad"
+                    android:textColor="@color/yenkasa_black"
+                    android:textSize="14sp"
+                    android:layout_marginStart="4dp"/>
+            </LinearLayout>
+
+        </RelativeLayout>
+
+    </androidx.appcompat.widget.Toolbar>
+
 
     <!-- Feed container -->
     <FrameLayout
@@ -54,5 +104,8 @@
         android:elevation="8dp"
         app:borderWidth="0dp"
         app:useCompatPadding="true" />
+
+
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

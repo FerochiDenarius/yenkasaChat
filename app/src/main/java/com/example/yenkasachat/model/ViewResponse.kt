@@ -35,3 +35,9 @@ data class ViewRequest(
 )
 
 
+
+data class TrackAdViewResponse(
+    val success: Boolean,
+    val message: String? = null,
+    val rewardAmount: Int? = null
+)

@@ -146,6 +146,8 @@ safeMount('/api/post-approval', './routes/postapproval.routes');
 safeMount('/api/notifications', './routes/notifications.routes');
 safeMount('/api/user-privacy', './routes/userPrivacy.routes');
 safeMount('/api/metrics', './routes/metrics.routes');
+safeMount('/api/ads', './routes/ads.routes');
+
 
 
 

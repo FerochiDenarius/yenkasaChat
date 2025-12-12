@@ -3,7 +3,55 @@
 
 # YenkasaChat
 
-**YenkasaChat** is a modern Android chat application built with Kotlin. It supports real-time messaging with multimedia sharing — including photos, videos, audio, documents, location, and contacts. Designed with a clean interface and robust backend, it's ideal for both casual and professional communication.
+YenkasaChat is a community-driven social platform that helps you discover 
+local and interest-based communities, share meaningful content, engage with 
+others, and earn rewards for your activity. Whether you want to explore 
+your city, follow your interests, meet new people, or build a community, 
+Yenkasa gives you a place to connect—and get rewarded for it.
+
+EXPLORE COMMUNITIES
+• Find local communities around your area  
+• Join interest-based groups and discussions  
+• Discover trending topics and creators  
+• Follow people and communities you care about  
+
+SHARE & EARN WITH YKC REWARDS
+• Earn YKC coins for posting valuable content  
+• Receive rewards for engaging with posts  
+• Watch sponsored ads from brands and earn coins  
+• Build your reputation and influence in the community  
+
+CREATE CONTENT THAT MATTERS
+• Share photos, videos, updates and community stories  
+• Support local creators and emerging voices  
+• Spark discussions through comments and interactions  
+
+SOCIAL FEATURES
+• Like, comment and share posts  
+• View detailed creator profiles  
+• Connect with people in your interest circles  
+
+COMMUNICATION FEATURES (OPTIONAL)
+• Send messages to friends and followers  
+• Share images, audio and location inside chats  
+• Use chat when needed—community content remains the core focus  
+
+SAFETY & MODERATION
+• Block and report users or content  
+• Automated checks and human review  
+• Transparent community guidelines  
+• User-controlled privacy features  
+
+REWARDS & ADVERTISING
+• Optional rewarded ads for earning extra YKC  
+• Local business promotions integrated in the feed  
+• Your data is never sold  
+
+YenkasaChat brings communities together—local or global—while giving 
+everyone a chance to grow, belong and earn from meaningful engagement.
+
+Join your community. Join Yenkasa.
+
 
 ---
 

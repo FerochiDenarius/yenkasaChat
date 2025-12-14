@@ -1,7 +1,0 @@
-package com.example.yenkasachat.model
-
-data class PushNotificationRequest(
-    val playerId: String,
-    val title: String,
-    val body: String
-)

@@ -207,7 +207,7 @@
 
             <!-- Message EditText -->
             <!-- Message EditText -->
-            <com.example.yenkasachat.ui.RichContentEditText
+            <com.example.yenkasa.ui.RichContentEditText
                 android:id="@+id/editTextMessage"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

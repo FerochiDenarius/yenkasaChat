@@ -39,7 +39,7 @@
                     android:layout_weight="1"
                     android:text="USER_WALLET_ID"
                     android:textSize="16sp"
-                    android:textColor="@color/background_light" />
+                    android:textColor="@color/yenkasa_black" />
 
                 <Button
                     android:id="@+id/btnCopyWalletId"
@@ -82,8 +82,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Send Coins"
-                android:backgroundTint="@drawable/btn_login_gold"
+                android:background="@drawable/btn_login_gold"
                 android:textColor="@color/amber_300" />
+
         </LinearLayout>
     </ScrollView>
 

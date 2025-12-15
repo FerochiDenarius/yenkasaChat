@@ -15,6 +15,8 @@ import xyz.yenkasa.app.model.EmailRequest
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import retrofit2.Response
+import android.widget.LinearLayout
+
 
 
 class EmailVerificationActivity : AppCompatActivity() {
@@ -24,6 +26,10 @@ class EmailVerificationActivity : AppCompatActivity() {
     private lateinit var codeInputEditText: EditText
     private lateinit var confirmCodeButton: Button
     private lateinit var statusResultTextView: TextView
+    private lateinit var verifiedLayout: LinearLayout
+    private lateinit var emailStatus: TextView
+    private lateinit var phoneStatus: TextView
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +40,10 @@ class EmailVerificationActivity : AppCompatActivity() {
         codeInputEditText = findViewById(R.id.editCode)
         confirmCodeButton = findViewById(R.id.btnConfirmCode)
         statusResultTextView = findViewById(R.id.textStatus)
+        verifiedLayout = findViewById(R.id.layoutVerifiedStatus)
+        emailStatus = findViewById(R.id.emailStatus)
+        phoneStatus = findViewById(R.id.phoneStatus)
+
 
         // Request email verification code
         requestEmailCodeButton.setOnClickListener {
@@ -98,10 +108,22 @@ class EmailVerificationActivity : AppCompatActivity() {
             try {
                 val response = ApiClient.apiService.confirmEmailVerification(payload)
                 if (response.isSuccessful) {
+
                     val body = response.body()
                     val message = body?.message ?: "Email verified."
+
                     statusResultTextView.text = "✅ $message"
                     Toast.makeText(this@EmailVerificationActivity, message, Toast.LENGTH_LONG).show()
+
+                    // 🔥 SHOW VERIFIED STATUS UI
+                    verifiedLayout.visibility = LinearLayout.VISIBLE
+
+                    emailStatus.text = "Verified"
+                    emailStatus.setTextColor(getColor(R.color.yenkasa_emerald))
+
+                    phoneStatus.text = "Not verified"
+                    phoneStatus.setTextColor(getColor(android.R.color.darker_gray))
+
                 } else {
                     handleErrorResponse(response)
                 }

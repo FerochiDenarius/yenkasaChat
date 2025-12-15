@@ -12,6 +12,9 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.util.concurrent.TimeUnit
+import androidx.core.content.ContextCompat
+
+
 
 class VerificationActivity : AppCompatActivity() {
 
@@ -25,6 +28,14 @@ class VerificationActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private var verificationId: String? = null
+    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
+
+    // 🔥 Firebase callbacks must be a field
+    private lateinit var callbacks: PhoneAuthProvider.OnVerificationStateChangedCallbacks
+    private lateinit var verifiedLayout: LinearLayout
+    private lateinit var emailStatus: TextView
+    private lateinit var phoneStatus: TextView
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,35 +50,37 @@ class VerificationActivity : AppCompatActivity() {
         btnPhoneCode = findViewById(R.id.btnRequestPhoneCode)
         btnConfirmCode = findViewById(R.id.btnConfirmCode)
         statusText = findViewById(R.id.textStatus)
+        verifiedLayout = findViewById(R.id.layoutVerifiedStatus)
+        emailStatus = findViewById(R.id.emailStatus)
+        phoneStatus = findViewById(R.id.phoneStatus)
 
-        // 📧 EMAIL VERIFICATION (BACKEND)
+
+        setupFirebaseCallbacks()
+
+        // 📧 EMAIL (BACKEND)
         btnEmailCode.setOnClickListener {
             val email = emailInput.text.toString().trim()
-            if (email.isNotEmpty()) {
-                sendEmailCode(email)
-            } else {
-                toast("Enter email")
-            }
+            if (email.isNotEmpty()) sendEmailCode(email)
+            else toast("Enter email")
         }
 
-        // 📱 PHONE VERIFICATION (FIREBASE)
+        // 📱 PHONE (FIREBASE)
         btnPhoneCode.setOnClickListener {
             val phone = phoneInput.text.toString().trim()
-            if (phone.isNotEmpty()) {
-                sendOtp(phone)
+            val formatted = formatPhone(phone)
+
+            if (formatted == null) {
+                toast("Use format +233XXXXXXXXX")
             } else {
-                toast("Enter phone number")
+                sendOtp(formatted)
             }
         }
 
-        // ✅ CONFIRM OTP
+        // ✅ CONFIRM SMS CODE
         btnConfirmCode.setOnClickListener {
             val code = codeInput.text.toString().trim()
-            if (code.isNotEmpty()) {
-                verifyCode(code)
-            } else {
-                toast("Enter verification code")
-            }
+            if (code.isNotEmpty()) verifyCode(code)
+            else toast("Enter verification code")
         }
     }
 
@@ -84,57 +97,106 @@ class VerificationActivity : AppCompatActivity() {
                 ) {
                     statusText.text =
                         if (response.isSuccessful)
-                            "Verification code sent to your email."
+                            "📧 Email verification sent"
                         else
-                            "Failed to send email"
+                            "❌ Email verification failed"
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                    statusText.text = "Error: ${t.message}"
+                    statusText.text = "❌ ${t.message}"
                 }
             })
     }
 
-    // ================= FIREBASE PHONE =================
+    // ================= FIREBASE =================
+
+    private fun setupFirebaseCallbacks() {
+        callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+
+            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                // 🔥 Auto-verification (instant or SMS auto-read)
+                signInWithCredential(credential)
+            }
+
+            override fun onVerificationFailed(e: FirebaseException) {
+                statusText.text = "❌ SMS failed. Try email instead."
+            }
+
+            override fun onCodeSent(
+                id: String,
+                token: PhoneAuthProvider.ForceResendingToken
+            ) {
+                verificationId = id
+                resendToken = token
+                statusText.text = "📱 SMS code sent"
+            }
+        }
+    }
 
     private fun sendOtp(phone: String) {
+        statusText.text = "Sending SMS..."
+
         val options = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(phone)
             .setTimeout(60L, TimeUnit.SECONDS)
             .setActivity(this)
-            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-
-                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                    signInWithCredential(credential)
-                }
-
-                override fun onVerificationFailed(e: FirebaseException) {
-                    statusText.text =
-                        "SMS failed. Please verify via email."
-                }
-
-                override fun onCodeSent(
-                    id: String,
-                    token: PhoneAuthProvider.ForceResendingToken
-                ) {
-                    verificationId = id
-                    statusText.text = "SMS code sent"
-                }
-            })
+            .setCallbacks(callbacks)
             .build()
 
         PhoneAuthProvider.verifyPhoneNumber(options)
     }
 
     private fun verifyCode(code: String) {
-        val id = verificationId
-        if (id == null) {
+        val id = verificationId ?: run {
             toast("Request SMS code first")
             return
         }
 
         val credential = PhoneAuthProvider.getCredential(id, code)
         signInWithCredential(credential)
+    }
+
+    // ================= HELPERS =================
+
+    private fun formatPhone(input: String): String? {
+        val trimmed = input.replace(" ", "")
+        return if (trimmed.startsWith("+") && trimmed.length >= 10) trimmed else null
+    }
+
+    private fun toast(msg: String) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+
+        private fun showVerifiedStatus(
+    emailVerified: Boolean,
+    phoneVerified: Boolean
+    ) {
+        verifiedLayout.visibility = LinearLayout.VISIBLE
+
+        if (emailVerified) {
+            emailStatus.text = "Verified"
+            emailStatus.setTextColor(
+                ContextCompat.getColor(this, R.color.yenkasa_emerald)
+            )
+        } else {
+            emailStatus.text = "Not verified"
+            emailStatus.setTextColor(
+                ContextCompat.getColor(this, android.R.color.darker_gray)
+            )
+        }
+
+        if (phoneVerified) {
+            phoneStatus.text = "Verified"
+            phoneStatus.setTextColor(
+                ContextCompat.getColor(this, R.color.yenkasa_emerald)
+            )
+        } else {
+            phoneStatus.text = "Not verified"
+            phoneStatus.setTextColor(
+                ContextCompat.getColor(this, android.R.color.darker_gray)
+            )
+        }
     }
 
     private fun signInWithCredential(credential: PhoneAuthCredential) {
@@ -149,15 +211,16 @@ class VerificationActivity : AppCompatActivity() {
 
                     statusText.text = "✅ Phone verified successfully"
 
+                    // 🔥 SHOW VERIFIED STATUS UI
+                    showVerifiedStatus(
+                        emailVerified = false,   // email may or may not be verified yet
+                        phoneVerified = true
+                    )
+
                 } else {
                     toast("Invalid verification code")
                 }
             }
     }
 
-    // ================= UTILS =================
-
-    private fun toast(msg: String) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-    }
 }

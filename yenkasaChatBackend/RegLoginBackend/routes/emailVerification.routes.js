@@ -90,38 +90,49 @@ user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
    POST /api/email-verification/confirm
 ================================ */
 router.post('/confirm', async (req, res) => {
-const { email, code } = req.body;
-
-const cleanCode = String(code).trim();
+  const { email, code } = req.body;
   const timestamp = new Date().toISOString();
 
   if (!email || !code) {
     return res.status(400).json({ message: 'Email and code are required' });
   }
 
+  const cleanEmail = email.toLowerCase().trim();
+  const cleanCode = String(code).trim();
+
   try {
-    const hashedCode = crypto
-  .createHash('sha256')
-  .update(cleanCode)
-  .digest('hex');
+    const user = await User.findOne({ email: cleanEmail });
 
-
-  const user = await User.findOne({
-  email: email.toLowerCase().trim(),
-  emailVerificationCode: hashedCode,
-  emailVerificationExpires: { $gt: new Date() },
-});
-
-
-    if (!user) {
+    if (!user || !user.emailVerificationCode || !user.emailVerificationExpires) {
       return res.status(400).json({
         message: 'Invalid or expired verification code',
       });
     }
 
+    // ⏱️ Expiry check (explicit & safe)
+    if (user.emailVerificationExpires.getTime() < Date.now()) {
+      return res.status(400).json({
+        message: 'Invalid or expired verification code',
+      });
+    }
+
+    // 🔐 Hash & compare (deterministic)
+    const hashedInputCode = crypto
+      .createHash('sha256')
+      .update(cleanCode)
+      .digest('hex');
+
+    if (hashedInputCode !== user.emailVerificationCode) {
+      return res.status(400).json({
+        message: 'Invalid or expired verification code',
+      });
+    }
+
+    // ✅ SUCCESS
     user.verified = true;
     user.emailVerificationCode = undefined;
     user.emailVerificationExpires = undefined;
+
     await user.save();
 
     console.log(`[EMAIL_VERIFY][${timestamp}] Email verified for ${user.email}`);

@@ -7,21 +7,10 @@ const adsController = require(
   path.join(__dirname, '..', 'Controller', 'Ads.controller')
 );
 
-
-console.log('ROUTES DIR:', __dirname);
-console.log('PARENT DIR CONTENTS:', require('fs').readdirSync('..'));
-
-
-router.get('/feed', auth, AdsController.getAdsFeed);
-router.post('/view/:adId', auth, AdsController.recordAdView);
-router.post('/reward/:adId', auth, AdsController.rewardAd);
-router.post('/create', auth, AdsController.createAd); // add admin check inside controller
-router.post(
-  "/reward-click/:adId",
-  auth,
-  AdsController.rewardAdClick
-);
-
-
+router.get('/feed', auth, adsController.getAdsFeed);
+router.post('/view/:adId', auth, adsController.recordAdView);
+router.post('/reward/:adId', auth, adsController.rewardAd);
+router.post('/create', auth, adsController.createAd);
+router.post('/reward-click/:adId', auth, adsController.rewardAdClick);
 
 module.exports = router;

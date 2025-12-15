@@ -43,7 +43,6 @@ exports.rewardAdClick = async (req, res) => {
     const { adId } = req.params;
 
     // Prevent double rewards: 1 click per ad per user
-    const RewardTx = require('../models/RewardTransaction.model');
     const existing = await RewardTx.findOne({
       userId,
       adId,

@@ -377,9 +377,6 @@ interface ApiService {
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
 
-
-
-
     // -----------------------------
     // Other social endpoints can be added here if needed
     // -----------------------------

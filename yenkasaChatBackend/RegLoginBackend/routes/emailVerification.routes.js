@@ -54,7 +54,7 @@ router.post('/request', async (req, res) => {
       .update(code)
       .digest('hex');
 
-    user.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
     await transporter.sendMail({
@@ -106,11 +106,12 @@ const cleanCode = String(code).trim();
   .digest('hex');
 
 
-    const user = await User.findOne({
-      email: email.toLowerCase().trim(),
-      emailVerificationCode: hashedCode,
-      emailVerificationExpires: { $gt: Date.now() },
-    });
+  const user = await User.findOne({
+  email: email.toLowerCase().trim(),
+  emailVerificationCode: hashedCode,
+  emailVerificationExpires: { $gt: new Date() },
+});
+
 
     if (!user) {
       return res.status(400).json({

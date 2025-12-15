@@ -13,6 +13,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.model.ConfirmRequest
 import xyz.yenkasa.app.model.EmailRequest
 import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import retrofit2.Response
 import android.widget.LinearLayout
@@ -116,13 +117,19 @@ class EmailVerificationActivity : AppCompatActivity() {
                     Toast.makeText(this@EmailVerificationActivity, message, Toast.LENGTH_LONG).show()
 
                     // 🔥 SHOW VERIFIED STATUS UI
+                    // 🔥 SHOW VERIFIED STATUS UI
                     verifiedLayout.visibility = LinearLayout.VISIBLE
 
                     emailStatus.text = "Verified"
-                    emailStatus.setTextColor(getColor(R.color.yenkasa_emerald))
+                    emailStatus.setTextColor(
+                        ContextCompat.getColor(this, R.color.yenkasa_emerald)
+                    )
 
                     phoneStatus.text = "Not verified"
-                    phoneStatus.setTextColor(getColor(android.R.color.darker_gray))
+                    phoneStatus.setTextColor(
+                        ContextCompat.getColor(this, android.R.color.darker_gray)
+                    )
+
 
                 } else {
                     handleErrorResponse(response)

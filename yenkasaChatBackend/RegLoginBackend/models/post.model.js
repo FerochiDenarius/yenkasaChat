@@ -147,9 +147,19 @@ postSchema.statics.findPending = function () {
   return this.find({ status: 'pending' });
 };
 
-await Post.findByIdAndUpdate(postId, {
-  $addToSet: { views: viewRecord._id }
-});
+// Static helper: record a view
+postSchema.statics.addView = async function (postId, viewId) {
+  return this.findByIdAndUpdate(
+    postId,
+    {
+      $addToSet: { views: viewId },
+      $inc: { viewCount: 1 }
+    },
+    { new: true }
+  );
+};
+
+
 
 
 // EXPORT MODEL

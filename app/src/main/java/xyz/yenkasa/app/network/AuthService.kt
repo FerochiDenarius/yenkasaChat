@@ -25,21 +25,6 @@ interface AuthService {
         @Body request: LoginRequest
     ): Call<LoginResponse>
 
-    // ✅ POST /api/auth/verify/request
-
-
-    // ✅ PATCH /api/users/{userId}/fcm-token
-    @PATCH("users/{userId}/fcm-token")
-    fun updateFcmToken(
-        @Path("userId") userId: String,
-        @Body body: Map<String, String>
-    ): Call<Void>
-
-    // ✅ POST /api/auth/verify/confirm
-    @POST("auth/verify/confirm")
-    fun confirmVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
 
     // ✅ PATCH /api/users/{userId}/player-id (NEWLY ADDED)
     @PATCH("users/{userId}/player-id")

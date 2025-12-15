@@ -1,7 +1,7 @@
 const Ad = require('../models/Ad.model');
 const AdView = require('../models/AdView.model');
-const RewardTx = require('../models/RewardTransaction.model');
 const User = require('../models/user.model');
+const RewardTx = require('../models/Rewards.Transaction.model');
 
 
 // GET /ads/feed?page=&limit=

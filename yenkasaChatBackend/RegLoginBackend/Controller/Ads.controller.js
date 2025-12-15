@@ -108,6 +108,67 @@ exports.rewardAdClick = async (req, res) => {
   }
 };
 
+const path = require('path');
+const fs = require('fs');
+
+exports.createAd = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const {
+      title,
+      ctaText,
+      ctaUrl,
+      rewardAmount
+    } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title is required'
+      });
+    }
+
+    const adData = {
+      title,
+      rewardYKC: Number(rewardAmount) || 5,
+      sponsorId: userId,
+      adType: 'sponsor',
+      meta: {
+        ctaText,
+        ctaUrl
+      }
+    };
+
+    // files come from multer
+    if (req.files?.image) {
+      adData.imageUrl = `/uploads/${req.files.image[0].filename}`;
+    }
+
+    if (req.files?.video) {
+      adData.videoUrl = `/uploads/${req.files.video[0].filename}`;
+    }
+
+    if (req.files?.thumbnail) {
+      adData.meta.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
+    }
+
+    const ad = await Ad.create(adData);
+
+    return res.json({
+      success: true,
+      ad
+    });
+
+  } catch (err) {
+    console.error('❌ createAd error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create ad'
+    });
+  }
+};
+
 
 // POST /ads/reward/:adId  (idempotent — will only reward once per ad view per user)
 exports.rewardAd = async (req, res) => {

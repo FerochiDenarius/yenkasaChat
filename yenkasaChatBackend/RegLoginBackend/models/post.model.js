@@ -147,6 +147,10 @@ postSchema.statics.findPending = function () {
   return this.find({ status: 'pending' });
 };
 
+await Post.findByIdAndUpdate(postId, {
+  $addToSet: { views: viewRecord._id }
+});
+
 
 // EXPORT MODEL
 const Post = mongoose.model("Post", postSchema);

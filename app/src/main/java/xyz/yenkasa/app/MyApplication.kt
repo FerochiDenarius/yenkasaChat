@@ -7,7 +7,6 @@ import android.os.Build // Added
 import android.util.Log
 import io.socket.client.IO
 import io.socket.client.Socket
-import com.pusher.pushnotifications.PushNotifications
 import com.cloudinary.android.MediaManager
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
@@ -67,12 +66,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         ApiClient.init(this)
         Log.d("MyApplication", "ApiClient initialized")
 
-        // Initialize Pusher Beams
-        PushNotifications.start(applicationContext, "f34a0d73-54be-4201-af13-7fd4dfa88bc0")
-
-
-        // Subscribe to an interest (like a topic)
-        PushNotifications.addDeviceInterest("hello")
 
         // Initialize Firebase
         FirebaseApp.initializeApp(this)

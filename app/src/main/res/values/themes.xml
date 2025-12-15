@@ -1,20 +1,38 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Base.Theme.YenkasaChat" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Colors -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/purple_200</item>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
 
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorOnSecondary">@color/black</item>
+    <!-- =========================
+         YENKASA APP THEME
+         ========================= -->
+    <style name="Theme.Yenkasa" parent="Theme.Material3.DayNight.NoActionBar">
 
-        <!-- Status bar -->
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimary</item>
+        <!-- App colors -->
+        <item name="colorPrimary">@color/yenkasa_black</item>
+        <item name="colorOnPrimary">@color/yenkasa_amber</item>
 
-        <!-- Fix potential button crash -->
-        <!-- Do NOT include textButtonStyle here unless you're defining it yourself -->
+        <item name="colorSecondary">@color/yenkasa_black</item>
+        <item name="colorOnSecondary">@color/yenkasa_amber</item>
+
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/yenkasa_black</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@color/yenkasa_black</item>
+        <item name="android:navigationBarColor">@color/yenkasa_black</item>
+
+        <!-- 🔥 GLOBAL BUTTON STYLE -->
+        <item name="materialButtonStyle">@style/YenkasaButton</item>
+
     </style>
 
+    <!-- =========================
+         GLOBAL BUTTON STYLE
+         ========================= -->
+    <style name="YenkasaButton" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/yenkasa_black</item>
+        <item name="android:textColor">@color/yenkasa_amber</item>
+        <item name="cornerRadius">10dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
 
-    <style name="Theme.YenkasaChat" parent="Base.Theme.YenkasaChat" />
 </resources>

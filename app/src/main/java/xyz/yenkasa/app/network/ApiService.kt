@@ -151,10 +151,15 @@ interface ApiService {
     // ==================== VERIFICATION ====================
 
     @POST("verify/request-email-code")
-    suspend fun requestEmailVerification(@Body emailRequest: EmailRequest): Response<VerificationResponse>
+    suspend fun requestEmailVerification(
+        @Body emailRequest: EmailRequest
+    ): Response<VerificationResponse>
 
     @POST("verify/confirm-email-code")
-    suspend fun confirmEmailVerification(@Body confirmRequest: ConfirmRequest): Response<VerificationResponse>
+    suspend fun confirmEmailVerification(
+        @Body confirmRequest: ConfirmRequest
+    ): Response<VerificationResponse>
+    
 
     @POST("verify/request-phone-code")
     suspend fun requestPhoneVerification(@Body request: PhoneRequest): Response<VerificationResponse>

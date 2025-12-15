@@ -8,6 +8,8 @@ import androidx.security.crypto.MasterKey
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.model.TransactionUiModel
 import org.json.JSONObject
+import android.os.Build
+
 
 
 object TokenManager {
@@ -42,12 +44,12 @@ object TokenManager {
 
     // === EncryptedSharedPreferences Access ===
     private fun getEncryptedPrefs(context: Context): SharedPreferences {
-        try {
+        return try {
             val masterKey = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build()
 
-            return EncryptedSharedPreferences.create(
+            EncryptedSharedPreferences.create(
                 context,
                 PREF_NAME,
                 masterKey,
@@ -55,10 +57,28 @@ object TokenManager {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing EncryptedSharedPreferences. Falling back to regular SharedPreferences for this session.", e)
-            // Consider using a different fallback name to avoid potential collisions
-            // if the user somehow fixes the encryption issue later.
-            return context.getSharedPreferences("${PREF_NAME}_unencrypted_fallback_token_manager", Context.MODE_PRIVATE)
+            Log.e(
+                TAG,
+                "EncryptedSharedPreferences corrupted. Clearing and falling back safely.",
+                e
+            )
+
+            // 🔥 CRITICAL FIX: remove corrupted encrypted storage
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                context.deleteSharedPreferences("settings")
+            } else {
+                context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+            }
+
+
+            // ✅ Fallback remains EXACTLY as before (login safe)
+            context.getSharedPreferences(
+                "${PREF_NAME}_unencrypted_fallback_token_manager",
+                Context.MODE_PRIVATE
+            )
         }
     }
     fun saveUserDetails(

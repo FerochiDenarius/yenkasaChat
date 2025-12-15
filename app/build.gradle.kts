@@ -87,8 +87,6 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
 
-    implementation("com.pusher:push-notifications-android:1.9.0")
-
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
     implementation("com.onesignal:OneSignal:4.8.6")
     implementation("de.hdodenhof:circleimageview:3.1.0")
@@ -106,6 +104,9 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging:23.4.1")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
+    implementation ("com.google.firebase:firebase-bom:32.7.3")
+    implementation ("com.google.firebase:firebase-messaging")
+
 
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
@@ -142,6 +143,9 @@ dependencies {
         exclude(group = "org.json", module = "json")
     }
 
+    // Add the dependency for the Firebase Phone Number Verification library
+    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
+    implementation("com.google.firebase:firebase-auth-ktx")
 
 
 }

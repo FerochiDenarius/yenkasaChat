@@ -16,6 +16,8 @@ import kotlinx.coroutines.*
 import android.util.Log
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.nativead.*
+import xyz.yenkasa.app.R
+
 
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 

@@ -72,8 +72,9 @@ class MenuActivity : AppCompatActivity() {
         // ✔ Verify Account
         btnVerifyAccount.setOnClickListener {
             Log.d(TAG, "VerifyAccount clicked")
-            Toast.makeText(this, "Verify Account feature coming soon!", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, VerificationActivity::class.java))
         }
+
 
         // ✔ Settings
         btnSettings.setOnClickListener {

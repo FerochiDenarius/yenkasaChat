@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">yenkasaChat</string>
+    <string name="app_name">yenkasa</string>
     <string name="default_web_client_id">AIzaSyBm1FoiLEXHhPLVMT_2gPQXOnMyhBlsGyo.apps.googleusercontent.com</string>
     <string name="call_status_initializing">Initializing...</string>
     <string name="call_status_connected">Connected</string>

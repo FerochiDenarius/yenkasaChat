@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "972183108724",
-    "project_id": "yenkasachat-480",
-    "storage_bucket": "yenkasachat-480.firebasestorage.app"
+    "project_number": "85969657018",
+    "project_id": "yenkasa-40772",
+    "storage_bucket": "yenkasa-40772.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:972183108724:android:6a9cd9aecfe924597da521",
+        "mobilesdk_app_id": "1:85969657018:android:ef11a149b2cf66219ff683",
         "android_client_info": {
-          "package_name": "com.example.yenkasachat"
+          "package_name": "xyz.yenkasa.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBm1FoiLEXHhPLVMT_2gPQXOnMyhBlsGyo"
+          "current_key": "AIzaSyBB4Qsjxj5kpMiOZ9Mb7Fl1bIlKnXEpffk"
         }
       ],
       "services": {

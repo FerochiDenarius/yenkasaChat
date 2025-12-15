@@ -13,8 +13,7 @@ import xyz.yenkasa.app.adapter.ContactAdapter
 import xyz.yenkasa.app.model.Contact // Your existing Contact model
 import xyz.yenkasa.app.model.CreateChatRoomRequest // IF you use this for the API
 import xyz.yenkasa.app.model.CreateChatRoomResponse
-// Participant model is not directly used here, but its structure might influence Contact model
-// import xyz.yenkasa.appchat.model.Participant
+import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.network.ApiClient
 import retrofit2.Call
 import retrofit2.Callback
@@ -37,15 +36,16 @@ class ContactsActivity : AppCompatActivity() {
         btnAddContact = findViewById(R.id.btnAddContact)
         recyclerView = findViewById(R.id.recyclerViewContacts)
 
-        val prefs = getSharedPreferences("auth", Context.MODE_PRIVATE)
-        val storedToken = prefs.getString("token", null)
-        val storedUserId = prefs.getString("userId", null)
+        val token =TokenManager.getToken(this)
+        val userId = TokenManager.getUserId(this)
 
-        if (storedToken.isNullOrEmpty() || storedUserId.isNullOrEmpty()) {
-            Toast.makeText(this, "Authentication required. Please log in again.", Toast.LENGTH_LONG).show()
+        if (token.isNullOrEmpty() || userId.isNullOrEmpty()) {
+            Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_LONG).show()
+            startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
         }
+
 
         contactAdapter = ContactAdapter(
             contacts,

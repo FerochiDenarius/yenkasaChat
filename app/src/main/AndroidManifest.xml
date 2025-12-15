@@ -30,19 +30,11 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="YenkasaChat"
+        android:label="yenkasa"
         android:supportsRtl="true"
-        android:theme="@style/Theme.YenkasaChat"
+        android:theme="@style/AppTheme"
         android:networkSecurityConfig="@xml/network_security_config">
 
-
-        <service
-            android:name="com.pusher.pushnotifications.fcm.MessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
@@ -112,6 +104,7 @@
         <activity android:name=".ui.ChatRoomsActivity" />
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />
+        <activity android:name=".ui.VerificationActivity" />
         <activity android:name=".ui.EmailVerificationActivity" />
         <activity android:name=".ui.PhoneVerificationActivity" />
         <activity android:name=".ui.ImagePreviewActivity" />

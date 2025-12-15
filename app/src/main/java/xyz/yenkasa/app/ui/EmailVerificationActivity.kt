@@ -118,17 +118,25 @@ class EmailVerificationActivity : AppCompatActivity() {
 
                     // 🔥 SHOW VERIFIED STATUS UI
                     // 🔥 SHOW VERIFIED STATUS UI
+                    // 🔥 SHOW VERIFIED STATUS UI
                     verifiedLayout.visibility = LinearLayout.VISIBLE
 
                     emailStatus.text = "Verified"
                     emailStatus.setTextColor(
-                        ContextCompat.getColor(this, R.color.yenkasa_emerald)
+                        ContextCompat.getColor(
+                            this@EmailVerificationActivity,
+                            R.color.yenkasa_emerald
+                        )
                     )
 
                     phoneStatus.text = "Not verified"
                     phoneStatus.setTextColor(
-                        ContextCompat.getColor(this, android.R.color.darker_gray)
+                        ContextCompat.getColor(
+                            this@EmailVerificationActivity,
+                            android.R.color.darker_gray
+                        )
                     )
+
 
 
                 } else {

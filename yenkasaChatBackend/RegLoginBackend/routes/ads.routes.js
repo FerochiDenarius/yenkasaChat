@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const AdsController = require('../Controller/ads.controller.js');
+const path = require('path');
+
+const adsController = require(
+  path.join(__dirname, '..', 'Controller', 'ads.controller')
+);
 
 
 console.log('ROUTES DIR:', __dirname);

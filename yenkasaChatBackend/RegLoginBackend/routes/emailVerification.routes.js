@@ -90,7 +90,9 @@ router.post('/request', async (req, res) => {
    POST /api/email-verification/confirm
 ================================ */
 router.post('/confirm', async (req, res) => {
-  const { email, code } = req.body;
+const { email, code } = req.body;
+
+const cleanCode = String(code).trim();
   const timestamp = new Date().toISOString();
 
   if (!email || !code) {
@@ -99,9 +101,10 @@ router.post('/confirm', async (req, res) => {
 
   try {
     const hashedCode = crypto
-      .createHash('sha256')
-      .update(code)
-      .digest('hex');
+  .createHash('sha256')
+  .update(cleanCode)
+  .digest('hex');
+
 
     const user = await User.findOne({
       email: email.toLowerCase().trim(),

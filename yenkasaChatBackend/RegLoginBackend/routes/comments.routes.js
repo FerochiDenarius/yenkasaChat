@@ -4,9 +4,10 @@ const Comment = require('../models/comment.model');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
-const rewardService = require('../services/reward.service');
-const { sendNotification } = require('../services/notification.service');
 const UserPrivacy = require('../models/userPrivacy.model');
+
+
+
 
 const REWARD_COMMENT = 5;
 const REWARD_REPLY = 2;
@@ -85,27 +86,29 @@ if (parentCommentId) {
   // 3️⃣ Increase reply count
   await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
 
-  // 4️⃣ Reward + notification if not replying to yourself
-  if (parentOwnerId !== userId) {
-    await rewardService.reward(parentOwnerId, REWARD_REPLY, {
-      fromUserId: userId,
-      type: "REWARD_REPLY",
-      description: `Earned ${REWARD_REPLY} YKC for receiving a reply`,
-      relatedPostId: post._id,
-      relatedCommentId: comment._id,
-      activityId: `reply_${parentCommentId}_${userId}`,
-    });
+ const { reward } = await import('../services/reward.service.js');
+const { sendNotification } =
+  await import('../services/notification.service.js');
 
-    await sendNotification({
-      type: "comment_reply",
-      senderId: userId,
-      receiverId: parentOwnerId,
-      activityId: `reply_${comment._id}`,
-      message: `${commenter.username} replied to your comment`,
-      targetType: "comment",
-      targetId: parentCommentId
-    });
-  }
+await reward(parentOwnerId, REWARD_REPLY, {
+  fromUserId: userId,
+  type: "REWARD_REPLY",
+  description: `Earned ${REWARD_REPLY} YKC for receiving a reply`,
+  relatedPostId: post._id,
+  relatedCommentId: comment._id,
+  activityId: `reply_${parentCommentId}_${userId}`,
+});
+
+await sendNotification({
+  type: "comment_reply",
+  senderId: userId,
+  receiverId: parentOwnerId,
+  activityId: `reply_${comment._id}`,
+  message: `${commenter.username} replied to your comment`,
+  targetType: "comment",
+  targetId: parentCommentId
+});
+
 }
 
 /* ---------------------------------------------------
@@ -214,24 +217,27 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
       // Reload updated likeCount
       const updated = await Comment.findById(commentId).select("likeCount");
 
-      // Reward liker
-      await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
-        type: "REWARD_COMMENT_LIKE",
-        description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
-        relatedCommentId: comment._id,
-        activityId: `comment_like_${commentId}_${userId}_${Date.now()}`, 
-      });
+   const { reward } = await import('../services/reward.service.js');
+const { sendNotification } =
+  await import('../services/notification.service.js');
+
+await reward(userId, REWARD_COMMENT_LIKE, {
+  type: "REWARD_COMMENT_LIKE",
+  description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
+  relatedCommentId: comment._id,
+  activityId: `comment_like_${commentId}_${userId}_${Date.now()}`,
+});
+
 
       // Reward comment owner
-      if (commentOwnerId !== userId) {
-        await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
-          fromUserId: userId,
-          type: "REWARD_COMMENT_LIKE",
-          description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
-          relatedCommentId: comment._id,
-          activityId: `comment_like_received_${commentId}_${userId}_${Date.now()}`,
-        });
-      }
+  await reward(commentOwnerId, REWARD_COMMENT_LIKE, {
+  fromUserId: userId,
+  type: "REWARD_COMMENT_LIKE",
+  description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
+  relatedCommentId: comment._id,
+  activityId: `comment_like_received_${commentId}_${userId}_${Date.now()}`,
+});
+
 
       // Notify comment owner
       await sendNotification({

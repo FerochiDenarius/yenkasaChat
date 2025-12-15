@@ -26,17 +26,7 @@ interface AuthService {
     ): Call<LoginResponse>
 
     // ✅ POST /api/auth/verify/request
-    @POST("auth/verify/request")
-    fun requestEmailVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
 
-
-    // ✅ POST /api/auth/verify/request-phone
-    @POST("auth/verify/request-phone")
-    fun requestPhoneVerification(
-        @Body body: Map<String, String>
-    ): Call<Map<String, Any>>
 
     // ✅ PATCH /api/users/{userId}/fcm-token
     @PATCH("users/{userId}/fcm-token")

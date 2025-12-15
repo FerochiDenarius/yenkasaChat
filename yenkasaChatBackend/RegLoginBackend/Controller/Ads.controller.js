@@ -209,7 +209,7 @@ exports.rewardAd = async (req, res) => {
     await User.findByIdAndUpdate(userId, { $inc: { coins: tx.amount } });
 
     // also increment verification metric adsViewed if desired:
-    const AppVerification = require('../models/appVerification.model');
+    const AppVerification = require('../models/appverification.model');
     const av = await AppVerification.findOne({ userId });
     if(av){
       av.currentMetrics.adsViewed = (av.currentMetrics.adsViewed || 0) + 1;
@@ -218,4 +218,5 @@ exports.rewardAd = async (req, res) => {
 
     return res.json({ success:true, rewarded: true, amount: tx.amount });
   } catch(err){ console.error(err); res.status(500).json({ success:false }); }
+  
 };

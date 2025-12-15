@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const path = require('path');
 
 const adsController = require(
-  path.join(__dirname, '..', 'Controller', 'ads.controller')
+  path.join(__dirname, '..', 'Controller', 'Ads.controller')
 );
 
 

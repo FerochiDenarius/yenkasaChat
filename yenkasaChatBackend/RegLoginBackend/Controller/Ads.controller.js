@@ -1,7 +1,8 @@
 const Ad = require('../models/Ad.model');
 const AdView = require('../models/AdView.model');
 const RewardTx = require('../models/RewardTransaction.model');
-const User = require('../models/user.model'); // adjust name
+const User = require('../models/user.model');
+
 
 // GET /ads/feed?page=&limit=
 exports.getAdsFeed = async (req, res) => {

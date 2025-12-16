@@ -22,10 +22,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/* ==============================
-   1️⃣ REQUEST EMAIL VERIFICATION
-   POST /api/email-verification/request
-================================ */
 router.post('/request', async (req, res) => {
   const { email } = req.body;
   const timestamp = new Date().toISOString();
@@ -46,20 +42,33 @@ router.post('/request', async (req, res) => {
       });
     }
 
+    // ✅ FIX: reuse existing valid code
+    if (
+      user.emailVerificationCode &&
+      user.emailVerificationExpires &&
+      user.emailVerificationExpires.getTime() > Date.now()
+    ) {
+      console.log(
+        `[EMAIL_VERIFY][${timestamp}] Reusing existing verification code for ${user.email}`
+      );
 
+      return res.json({
+        success: true,
+        message: 'Verification code already sent. Please check your email.',
+      });
+    }
 
-// 🔐 Generate NEW code only if none exists or expired
-const code = crypto.randomInt(100000, 999999).toString();
+    // 🔐 Generate NEW code only if none exists or expired
+    const code = crypto.randomInt(100000, 999999).toString();
 
-user.emailVerificationCode = crypto
-  .createHash('sha256')
-  .update(code)
-  .digest('hex');
+    user.emailVerificationCode = crypto
+      .createHash('sha256')
+      .update(code)
+      .digest('hex');
 
-user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
+    user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-await user.save();
-
+    await user.save();
 
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || `"Yenkasa Support" <${process.env.EMAIL_USER}>`,
@@ -88,6 +97,7 @@ await user.save();
     res.status(500).json({ message: 'Failed to send verification email' });
   }
 });
+
 
 /* ==============================
    2️⃣ CONFIRM EMAIL VERIFICATION

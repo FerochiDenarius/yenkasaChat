@@ -155,9 +155,10 @@ interface ApiService {
         @Body emailRequest: EmailRequest
     ): Response<VerificationResponse>
 
+    @FormUrlEncoded
     @POST("email-verification/confirm")
     suspend fun confirmEmailVerification(
-        @Body confirmRequest: ConfirmRequest
+        @Field("code") code: String
     ): Response<VerificationResponse>
 
     @POST("verify/request-phone-code")

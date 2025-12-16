@@ -114,19 +114,13 @@ class VerificationActivity : AppCompatActivity() {
 
             when (currentMode) {
                 VerificationMode.EMAIL -> {
-                    val email = emailInput.text.toString().trim()
-
-                    if (email.isEmpty()) {
-                        toast("Enter email first")
-                        return@setOnClickListener
-                    }
 
                     if (!emailCodeRequested) {
                         toast("Request a verification code first")
                         return@setOnClickListener
                     }
 
-                    confirmEmailVerification(email, code)
+                    confirmEmailVerification(code)
                 }
 
                 VerificationMode.PHONE -> {
@@ -170,21 +164,19 @@ class VerificationActivity : AppCompatActivity() {
         }
     }
 
-    private fun confirmEmailVerification(email: String, code: String) {
+    private fun confirmEmailVerification(code: String) {
         statusText.text = "Confirming email code..."
 
         lifecycleScope.launch {
             try {
                 val response = ApiClient.apiService
-                    .confirmEmailVerification(
-                        ConfirmRequest(email = email, code = code)
-                    )
+                    .confirmEmailVerification(code.trim())
 
                 Log.d("Verification", "📡 Email confirm response: ${response.code()}")
 
                 if (response.isSuccessful) {
 
-                    // ✅ Correct: mark EMAIL verified only
+                    // ✅ Mark EMAIL verified only
                     TokenManager.setEmailVerified(this@VerificationActivity, true)
 
                     statusText.text = "✅ Email verified"
@@ -193,16 +185,20 @@ class VerificationActivity : AppCompatActivity() {
                         emailVerified = true,
                         phoneVerified = isPhoneVerified()
                     )
+
+                } else {
+                    statusText.text = "❌ Invalid or expired code"
                 }
-else {
-                    handleApiError(response)
-                }
+
             } catch (e: Exception) {
-                Log.e("Verification", "🔥 Email confirm error", e)
-                toast("Network error")
+                Log.e("Verification", "❌ Email verification failed", e)
+                statusText.text = "⚠️ Verification failed. Try again."
             }
         }
     }
+
+
+
 
     // ================= FIREBASE PHONE =================
 

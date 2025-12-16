@@ -25,13 +25,13 @@ const transporter = nodemailer.createTransport({
 });
 
 // =============================== // email code Request // ===============================
-
-router.post('/request', authMiddleware,  async (req, res) => {
+router.post('/request', authMiddleware, async (req, res) => {
   const user = req.user;
-  const timestamp = new Date().toISOString();
+  const now = Date.now();
+  const timestamp = new Date(now).toISOString();
 
   console.log(
-    `[EMAIL_VERIFY][${timestamp}] Request by authenticated user ${user._id}`
+    `[EMAIL_VERIFY][${timestamp}] Request by user ${user._id}`
   );
 
   if (!user.email) {
@@ -41,7 +41,6 @@ router.post('/request', authMiddleware,  async (req, res) => {
     });
   }
 
-  // Already verified
   if (user.emailVerified) {
     return res.json({
       success: true,
@@ -49,38 +48,55 @@ router.post('/request', authMiddleware,  async (req, res) => {
     });
   }
 
-  // ✅ Reuse existing valid code
+  /**
+   * ⏱️ SINGLE SOURCE OF TRUTH
+   * Code lifetime = 3 minutes
+   */
+  const CODE_LIFETIME_SECONDS = 180;
+
+  /**
+   * If a code exists and is still valid → block request
+   */
   if (
-    user.emailVerificationCode &&
     user.emailVerificationExpires &&
-    user.emailVerificationExpires > new Date()
+    user.emailVerificationExpires.getTime() > now
   ) {
-    console.log(
-      `[EMAIL_VERIFY][${timestamp}] Reusing existing code for ${user.email}`
+    const remainingSeconds = Math.ceil(
+      (user.emailVerificationExpires.getTime() - now) / 1000
     );
 
-    return res.json({
-      success: true,
-      message: 'Verification code already sent. Please check your email.',
+    return res.status(429).json({
+      success: false,
+      message: 'Please wait before requesting a new code.',
+      retryAfterSeconds: remainingSeconds, // 🔥 frontend timer
     });
   }
 
-  // 🔐 Generate new code
-  const code = crypto.randomInt(100000, 999999).toString();
+  /**
+   * ❌ Invalidate any old code (expired or not)
+   */
+  user.emailVerificationCode = undefined;
+  user.emailVerificationExpires = undefined;
+
+  /**
+   * 🔐 Generate NEW code
+   */
+  const code = crypto.randomInt(100000, 999999).toString().trim();
 
   user.emailVerificationCode = crypto
     .createHash('sha256')
     .update(code)
     .digest('hex');
 
-  user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
+  user.emailVerificationExpires = new Date(
+    now + CODE_LIFETIME_SECONDS * 1000
+  );
 
   await user.save();
 
   console.log(
-    `[EMAIL_VERIFY][${timestamp}] Persisted verification fields`,
+    `[EMAIL_VERIFY][${timestamp}] New code generated`,
     {
-      codeExists: !!user.emailVerificationCode,
       expiresAt: user.emailVerificationExpires.toISOString(),
     }
   );
@@ -93,21 +109,20 @@ router.post('/request', authMiddleware,  async (req, res) => {
       <p>Hello ${user.username || 'User'},</p>
       <p>Your verification code is:</p>
       <h2>${code}</h2>
-      <p>This code expires in 10 minutes.</p>
+      <p>This code expires in 3 minutes.</p>
       <p>— Yenkasa Team</p>
     `,
-    text: `Your Yenkasa verification code is ${code}. It expires in 10 minutes.`,
+    text: `Your Yenkasa verification code is ${code}. It expires in 3 minutes.`,
   });
-
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] Code sent to ${user.email}`
-  );
 
   res.json({
     success: true,
     message: 'Verification code sent to email.',
+    expiresInSeconds: CODE_LIFETIME_SECONDS, // frontend can show countdown
   });
 });
+
+
 
 // =============================== // email code confirm// ===============================
 

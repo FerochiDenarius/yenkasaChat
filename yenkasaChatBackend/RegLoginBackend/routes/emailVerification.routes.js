@@ -121,7 +121,6 @@ router.post('/request', authMiddleware, async (req, res) => {
 });
 
 
-
 router.post('/confirm', authMiddleware, async (req, res) => {
   const { code } = req.body;
   const user = req.user;
@@ -138,25 +137,30 @@ router.post('/confirm', authMiddleware, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Verification code is required.' });
   }
 
-  if (!dbUser.emailVerificationCode || !dbUser.emailVerificationExpires) {
+  // 🟢 Fix: use the correct field name (codeExpiresAt)
+  if (!dbUser.emailVerificationCode || !dbUser.codeExpiresAt) {
     return res.status(400).json({ success: false, message: 'No verification in progress.' });
   }
 
-  if (Date.now() > dbUser.emailVerificationExpires.getTime()) {
+  // 🕒 Check expiration correctly
+  if (Date.now() > new Date(dbUser.codeExpiresAt).getTime()) {
     return res.status(400).json({ success: false, message: 'Verification code expired.' });
   }
 
+  // 🔍 Compare codes
   if (String(code).trim() !== String(dbUser.emailVerificationCode).trim()) {
     return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
   }
 
+  // ✅ Mark verified
   dbUser.emailVerified = true;
   dbUser.emailVerificationCode = undefined;
-  dbUser.emailVerificationExpires = undefined;
+  dbUser.codeExpiresAt = undefined;
   await dbUser.save();
 
   res.json({ success: true, message: 'Email verified successfully.' });
 });
+
 
 
 

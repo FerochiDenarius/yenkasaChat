@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 
 // =============================== // email code Request // ===============================
 
-router.post('/request', auth, async (req, res) => {
+router.post('/request', authMiddleware,  async (req, res) => {
   const user = req.user;
   const timestamp = new Date().toISOString();
 
@@ -111,7 +111,7 @@ router.post('/request', auth, async (req, res) => {
 
 // =============================== // email code confirm// ===============================
 
-router.post('/confirm', auth, async (req, res) => {
+router.post('/confirm', authMiddleware,  async (req, res) => {
   const { code } = req.body;
   const user = req.user;
   const timestamp = new Date().toISOString();

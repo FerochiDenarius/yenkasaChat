@@ -6,6 +6,8 @@ const express = require('express');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const User = require('../models/user.model');
+const authMiddleware = require('../middleware/auth');
+
 
 const router = express.Router();
 
@@ -21,6 +23,8 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+// =============================== // email code Request // ===============================
 
 router.post('/request', auth, async (req, res) => {
   const user = req.user;
@@ -105,6 +109,7 @@ router.post('/request', auth, async (req, res) => {
   });
 });
 
+// =============================== // email code confirm// ===============================
 
 router.post('/confirm', auth, async (req, res) => {
   const { code } = req.body;

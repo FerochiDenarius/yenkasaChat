@@ -124,91 +124,37 @@ router.post('/request', authMiddleware, async (req, res) => {
 
 // =============================== // email code confirm// ===============================
 
-router.post('/confirm', authMiddleware,  async (req, res) => {
+router.post('/confirm', authMiddleware, async (req, res) => {
   const { code } = req.body;
   const user = req.user;
   const timestamp = new Date().toISOString();
 
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] Confirm attempt by user ${user._id}`
-  );
+  console.log(`[EMAIL_VERIFY][${timestamp}] Confirm attempt by user ${user._id}`);
 
   if (!code) {
-    return res.status(400).json({
-      success: false,
-      message: 'Verification code is required.',
-    });
-  }
-
-  // Already verified
-  if (user.emailVerified) {
-    console.log(
-      `[EMAIL_VERIFY][${timestamp}] Email already verified for ${user.email}`
-    );
-    return res.json({
-      success: true,
-      message: 'Email already verified.',
-    });
+    return res.status(400).json({ success: false, message: 'Verification code is required.' });
   }
 
   if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-    console.warn(
-      `[EMAIL_VERIFY][${timestamp}] Missing verification fields for ${user.email}`
-    );
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired verification code.',
-    });
+    return res.status(400).json({ success: false, message: 'No verification in progress.' });
   }
 
-  if (user.emailVerificationExpires.getTime() < Date.now()) {
-    console.warn(
-      `[EMAIL_VERIFY][${timestamp}] Code expired for ${user.email}`
-    );
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired verification code.',
-    });
+  if (Date.now() > user.emailVerificationExpires.getTime()) {
+    return res.status(400).json({ success: false, message: 'Verification code expired.' });
   }
 
-if (String(code).trim() !== String(user.emailVerificationCode)) 
-
-
-  // 🔍 TEMP DEBUG (remove later)
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] Hash comparison`,
-    {
-      inputHash: hashedInputCode,
-      storedHash: user.emailVerificationCode,
-    }
-  );
-
-  if (hashedInputCode !== user.emailVerificationCode) {
-    console.warn(
-      `[EMAIL_VERIFY][${timestamp}] Code mismatch for ${user.email}`
-    );
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired verification code.',
-    });
+  if (String(code).trim() !== String(user.emailVerificationCode).trim()) {
+    return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
   }
 
-  // ✅ SUCCESS
   user.emailVerified = true;
   user.emailVerificationCode = undefined;
   user.emailVerificationExpires = undefined;
-
   await user.save();
 
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] ✅ Email verified for ${user.email}`
-  );
-
-  res.json({
-    success: true,
-    message: 'Email verified successfully.',
-  });
+  res.json({ success: true, message: 'Email verified successfully.' });
 });
+
 
 
 

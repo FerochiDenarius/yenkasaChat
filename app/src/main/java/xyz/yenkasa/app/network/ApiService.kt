@@ -62,6 +62,11 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<User>
 
+    @PUT("users/change-password")
+    suspend fun changePassword(
+        @Header("Authorization") token: String,
+        @Body body: ChangePasswordRequest
+    ): Response<GenericSuccessResponse>
 
 
     @PUT("/api/users/password")

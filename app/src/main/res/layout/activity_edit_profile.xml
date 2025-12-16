@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Yenkasa Amber Header -->
+        <!-- ================= HEADER ================= -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="270dp"
@@ -19,14 +19,12 @@
             android:paddingTop="40dp"
             android:paddingBottom="40dp">
 
-            <!-- IMPORTANT: match_parent so children can center -->
             <LinearLayout
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
 
-                <!-- Profile Image container -->
                 <RelativeLayout
                     android:layout_width="130dp"
                     android:layout_height="130dp">
@@ -50,10 +48,8 @@
                         android:padding="8dp"
                         android:src="@drawable/ic_camera"
                         app:tint="@android:color/white" />
-
                 </RelativeLayout>
 
-                <!-- Name -->
                 <TextView
                     android:id="@+id/textName"
                     android:layout_width="wrap_content"
@@ -64,222 +60,214 @@
                     android:textColor="@color/yenkasaWhite"
                     android:layout_marginTop="8dp" />
 
-                <!-- Phone -->
                 <TextView
                     android:id="@+id/textPhone"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="+233 558 123 456"
                     android:textSize="14sp"
-                    android:alpha="0.8"
-                    android:textColor="@color/yenkasaWhite" />
+                    android:textColor="@color/yenkasaWhite"
+                    android:alpha="0.8" />
 
             </LinearLayout>
-
         </FrameLayout>
 
+        <!-- ================= CARD ================= -->
         <LinearLayout
             android:id="@+id/cardContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/card_rounded"
-            android:padding="20dp"
-            android:elevation="4dp"
             android:layout_margin="16dp"
             android:layout_marginTop="-60dp"
-            android:orientation="vertical">
+            android:padding="20dp"
+            android:orientation="vertical"
+            android:background="@drawable/card_rounded"
+            android:elevation="4dp">
 
-            <!-- Username -->
-            <!-- Username -->
+            <!-- USERNAME -->
             <TextView
                 android:id="@+id/labelUsername"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Username"
-                android:textColor="@color/inputLabel"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:textColor="@color/inputLabel" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:boxBackgroundMode="none"
-                android:paddingTop="4dp"
-                android:paddingBottom="8dp">
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/til_box_stroke"
+                app:boxStrokeWidth="1dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editUsername"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Akua Ataa"
-                    android:textColor="@color/yenkasaBlack"
+                    android:padding="14dp"
                     android:textSize="16sp"
-                    android:background="@null"
-                    android:imeOptions="actionDone"
+                    android:textColor="@color/yenkasaBlack"
+                    android:textCursorDrawable="@drawable/cursor_green"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Email -->
+            <!-- EMAIL -->
             <TextView
                 android:id="@+id/labelEmail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Email"
+                android:textSize="13sp"
                 android:textColor="@color/inputLabel"
-                android:textSize="13sp" />
+                android:layout_marginTop="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:boxBackgroundMode="none"
-                android:paddingTop="4dp"
-                android:paddingBottom="8dp">
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/til_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editEmail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="becca@gmail.com"
-                    android:inputType="textEmailAddress"
-                    android:textColor="@color/yenkasaBlack"
+                    android:padding="14dp"
                     android:textSize="16sp"
-                    android:background="@null"
+                    android:textColor="@color/yenkasaBlack"
+                    android:textCursorDrawable="@drawable/cursor_green"
+                    android:inputType="textEmailAddress"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Phone -->
+            <!-- PHONE -->
             <TextView
                 android:id="@+id/labelPhone"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Phone"
+                android:textSize="13sp"
                 android:textColor="@color/inputLabel"
-                android:textSize="13sp" />
+                android:layout_marginTop="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:boxBackgroundMode="none"
-                android:paddingTop="4dp"
-                android:paddingBottom="8dp">
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/til_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editPhone"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="+233 558 123 456"
-                    android:inputType="phone"
-                    android:textColor="@color/yenkasaBlack"
+                    android:padding="14dp"
                     android:textSize="16sp"
-                    android:background="@null"
+                    android:textColor="@color/yenkasaBlack"
+                    android:textCursorDrawable="@drawable/cursor_green"
+                    android:inputType="phone"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Location -->
+            <!-- LOCATION -->
             <TextView
                 android:id="@+id/labelLocation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Location"
+                android:textSize="13sp"
                 android:textColor="@color/inputLabel"
-                android:textSize="13sp" />
+                android:layout_marginTop="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:boxBackgroundMode="none"
-                android:paddingTop="4dp"
-                android:paddingBottom="8dp">
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/til_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Abrepo"
-                    android:textColor="@color/yenkasaBlack"
+                    android:padding="14dp"
                     android:textSize="16sp"
-                    android:background="@null"
+                    android:textColor="@color/yenkasaBlack"
+                    android:textCursorDrawable="@drawable/cursor_green"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Gender -->
+            <!-- GENDER -->
             <TextView
                 android:id="@+id/labelGender"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Gender"
+                android:textSize="13sp"
                 android:textColor="@color/inputLabel"
-                android:textSize="13sp" />
+                android:layout_marginTop="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:boxBackgroundMode="none"
-                android:paddingTop="4dp"
-                android:paddingBottom="8dp">
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/til_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editGender"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Female"
-                    android:textColor="@color/yenkasaBlack"
+                    android:padding="14dp"
                     android:textSize="16sp"
-                    android:background="@null"
+                    android:textColor="@color/yenkasaBlack"
+                    android:textCursorDrawable="@drawable/cursor_green"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Date of Birth -->
+            <!-- DOB -->
             <TextView
                 android:id="@+id/labelDob"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Date of Birth"
+                android:textSize="13sp"
                 android:textColor="@color/inputLabel"
-                android:textSize="13sp" />
+                android:layout_marginTop="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:boxBackgroundMode="none"
-                android:paddingTop="4dp"
-                android:paddingBottom="22dp">
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/til_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editDob"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="12/07/2001"
-                    android:hint="YYYY-MM-DD"
+                    android:padding="14dp"
                     android:textColor="@color/yenkasaBlack"
-                    android:textSize="16sp"
-                    android:background="@null"
-                    android:singleLine="true" />
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:hint="YYYY-MM-DD"
+                    android:drawableEnd="@drawable/ic_calendar" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- optional Save button (if you want) -->
-            <!--
-            <Button
-                android:id="@+id/btnSave"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Save"
-                android:layout_marginTop="12dp"
-                android:backgroundTint="@color/yenkasaEmerald"
-                android:textColor="@color/yenkasaWhite"/>
-            -->
-
-            <!-- Change Password Row -->
+            <!-- CHANGE PASSWORD -->
             <LinearLayout
                 android:id="@+id/rowPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_marginTop="20dp"
                 android:padding="14dp"
-                android:background="@drawable/row_bg"
-                android:gravity="center_vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/row_bg">
 
                 <ImageView
-                    android:id="@+id/iconLock"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_lock"
@@ -292,7 +280,7 @@
                     android:text="Change Password"
                     android:textSize="16sp"
                     android:textColor="@color/yenkasaBlack"
-                    android:layout_marginStart="12dp"/>
+                    android:layout_marginStart="12dp" />
             </LinearLayout>
 
         </LinearLayout>

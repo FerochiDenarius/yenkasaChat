@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.UpdateProfileRequest
 import xyz.yenkasa.app.model.User
+import xyz.yenkasa.app.model.ChangePasswordRequest
 import xyz.yenkasa.app.model.UploadPictureResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
@@ -28,6 +29,15 @@ import retrofit2.Response
 import java.io.File
 import java.io.FileOutputStream
 import android.widget.TextView
+import android.app.DatePickerDialog
+import java.util.Calendar
+import com.google.android.material.datepicker.MaterialDatePicker
+import java.time.*
+import android.view.View
+import androidx.appcompat.app.AlertDialog
+
+
+
 
 
 class EditProfileActivity : AppCompatActivity() {
@@ -43,6 +53,8 @@ class EditProfileActivity : AppCompatActivity() {
     private lateinit var dobView: TextInputEditText
     private lateinit var textName: TextView
     private lateinit var textPhone: TextView
+    private lateinit var rowPassword: View
+
 
 
 
@@ -54,20 +66,25 @@ class EditProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_edit_profile)
 
         bindViews()
+
         loadCurrentData()
         loadUserInfo()          // ⭐ updates username + phone header
-        fetchRemoteProfile()    // loads full profile (bio, email, gender etc.)
+        fetchRemoteProfile()
+        setupDobPicker()// loads full profile (bio, email, gender etc.)
 
+        rowPassword.setOnClickListener {
+            showChangePasswordDialog()
+        }
         // Auto-save
         enableAutoSave(usernameView, "username")
         enableAutoSave(emailView, "email")
         enableAutoSave(phoneView, "phoneNumber")
         enableAutoSave(locationView, "location")
         enableAutoSave(genderView, "gender")
-        enableAutoSave(dobView, "dateOfBirth")
 
         btnChangeImage.setOnClickListener { openImagePicker() }
     }
+
 
     /** Bind XML Views */
     private fun bindViews() {
@@ -83,6 +100,13 @@ class EditProfileActivity : AppCompatActivity() {
         locationView = findViewById(R.id.editLocation)
         genderView = findViewById(R.id.editGender)
         dobView = findViewById(R.id.editDob)
+        rowPassword = findViewById(R.id.rowPassword)
+
+
+
+
+
+
     }
 
     /** Load cached data */
@@ -310,6 +334,101 @@ class EditProfileActivity : AppCompatActivity() {
                     ).show()
                 }
             })
+    }
+    private fun showChangePasswordDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_change_password, null)
+
+        val oldPass = view.findViewById<TextInputEditText>(R.id.editOldPassword)
+        val newPass = view.findViewById<TextInputEditText>(R.id.editNewPassword)
+
+        AlertDialog.Builder(this)
+            .setTitle("Change Password")
+            .setView(view)
+            .setPositiveButton("Update") { _, _ ->
+                val old = oldPass.text?.toString() ?: ""
+                val new = newPass.text?.toString() ?: ""
+
+                if (new.length < 6) {
+                    Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                changePassword(old, new)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    private fun changePassword(oldPass: String, newPass: String) {
+        lifecycleScope.launch {
+            try {
+                val token = TokenManager.getToken(this@EditProfileActivity) ?: return@launch
+
+                val body = ChangePasswordRequest(
+                    oldPassword = oldPass,
+                    newPassword = newPass
+                )
+
+                val res = ApiClient.apiService.changePassword(
+                    "Bearer $token",
+                    body
+                )
+
+                if (res.isSuccessful) {
+                    Toast.makeText(this@EditProfileActivity, "Password updated", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@EditProfileActivity, "Wrong current password", Toast.LENGTH_SHORT).show()
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(this@EditProfileActivity, "Network error", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun setupDobPicker() {
+        dobView.setOnClickListener {
+
+            val calendar = Calendar.getInstance()
+
+            // Pre-fill with existing DOB if available
+            if (!dobView.text.isNullOrBlank()) {
+                try {
+                    val parts = dobView.text.toString().split("-")
+                    calendar.set(
+                        parts[0].toInt(),
+                        parts[1].toInt() - 1,
+                        parts[2].toInt()
+                    )
+                } catch (_: Exception) { }
+            }
+
+            val dialog = DatePickerDialog(
+                this,
+                { _, year, month, dayOfMonth ->
+
+                    val formattedDate = String.format(
+                        "%04d-%02d-%02d",
+                        year, month + 1,
+                        dayOfMonth
+                    )
+
+                    dobView.setText(formattedDate)
+                    saveSingleField("dateOfBirth", formattedDate)
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+
+            // 🚫 No future dates
+            dialog.datePicker.maxDate = System.currentTimeMillis()
+
+            // 🔥 THIS IS THE MAGIC (SCROLLABLE SPINNERS)
+            dialog.datePicker.calendarViewShown = false
+            dialog.datePicker.spinnersShown = true
+
+            dialog.show()
+        }
     }
 
     /** Convert URI → Temp File */

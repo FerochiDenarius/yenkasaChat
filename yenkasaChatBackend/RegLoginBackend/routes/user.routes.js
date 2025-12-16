@@ -228,6 +228,80 @@ router.post('/fix-contacts', async (req, res) => {
 });
 
 // ======================================================================
+// UPDATE USER PROFILE
+// ======================================================================
+router.put('/profile', authMiddleware, async (req, res) => {
+    const userId = req.user?.id || req.user?._id;
+
+    try {
+        const updates = {};
+
+        const allowedFields = [
+            "username",
+            "email",
+            "phoneNumber",
+            "location",
+            "gender",
+            "dateOfBirth"
+        ];
+
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        });
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updates },
+            { new: true }
+        ).select("-password");
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated",
+            user: updatedUser
+        });
+
+    } catch (err) {
+        console.error("❌ Profile update error:", err);
+        res.status(500).json({ error: "Failed to update profile" });
+    }
+});
+
+// ======================================================================
+// CHANGE PASSWORD
+// ======================================================================
+router.put('/change-password', authMiddleware, async (req, res) => {
+  const userId = req.user.id;
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: "Both passwords required" });
+  }
+
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const bcrypt = require('bcryptjs');
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) {
+    return res.status(400).json({ error: "Incorrect current password" });
+  }
+
+  user.password = newPassword; // pre-save hook hashes it
+  await user.save();
+
+  res.json({ success: true, message: "Password updated" });
+});
+
+
+
+// ======================================================================
 // UPDATE FCM TOKEN
 // ======================================================================
 router.patch('/:userId/fcm-token', authMiddleware, async (req, res) => {

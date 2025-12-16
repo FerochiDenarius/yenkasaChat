@@ -111,7 +111,6 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     val composeBom = platform("androidx.compose:compose-bom:2023.10.01")
     implementation(composeBom)
@@ -143,9 +142,15 @@ dependencies {
         exclude(group = "org.json", module = "json")
     }
 
+
     // Add the dependency for the Firebase Phone Number Verification library
     implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
     implementation("com.google.firebase:firebase-auth-ktx")
 
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.android.material:material:1.11.0")
+        }
+    }
 
 }

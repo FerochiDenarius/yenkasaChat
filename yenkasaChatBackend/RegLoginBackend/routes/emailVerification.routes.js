@@ -22,166 +22,178 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-router.post('/request', async (req, res) => {
-  const { email } = req.body;
+router.post('/request', auth, async (req, res) => {
+  const user = req.user;
   const timestamp = new Date().toISOString();
 
-  console.log(`[EMAIL_VERIFY][${timestamp}] Request received for:`, email);
+  console.log(
+    `[EMAIL_VERIFY][${timestamp}] Request by authenticated user ${user._id}`
+  );
 
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ message: 'Valid email is required' });
+  if (!user.email) {
+    return res.status(400).json({
+      success: false,
+      message: 'No email address associated with this account.',
+    });
   }
 
-  try {
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-
-    if (!user) {
-      // SECURITY: Do not reveal existence
-      return res.status(200).json({
-        message: 'If an account exists, a verification code has been sent.',
-      });
-    }
-
-    // ✅ FIX: reuse existing valid code
-    if (
-      user.emailVerificationCode &&
-      user.emailVerificationExpires &&
-      user.emailVerificationExpires.getTime() > Date.now()
-    ) {
-      console.log(
-        `[EMAIL_VERIFY][${timestamp}] Reusing existing verification code for ${user.email}`
-      );
-
-      return res.json({
-        success: true,
-        message: 'Verification code already sent. Please check your email.',
-      });
-    }
-
-    // 🔐 Generate NEW code only if none exists or expired
-    const code = crypto.randomInt(100000, 999999).toString();
-
-    user.emailVerificationCode = crypto
-      .createHash('sha256')
-      .update(code)
-      .digest('hex');
-
-    user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
-
-    await user.save();
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || `"Yenkasa Support" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Yenkasa Email Verification Code',
-      html: `
-        <p>Hello ${user.username || 'User'},</p>
-        <p>Your verification code is:</p>
-        <h2>${code}</h2>
-        <p>This code expires in 10 minutes.</p>
-        <p>If you did not request this, ignore this email.</p>
-        <p>— Yenkasa Team</p>
-      `,
-      text: `Your Yenkasa verification code is ${code}. It expires in 10 minutes.`,
-    });
-
-    console.log(`[EMAIL_VERIFY][${timestamp}] Code sent to ${user.email}`);
-
-    res.json({
+  // Already verified
+  if (user.emailVerified) {
+    return res.json({
       success: true,
-      message: 'Verification code sent to email',
+      message: 'Email already verified.',
     });
-
-  } catch (err) {
-    console.error('[EMAIL_VERIFY] ERROR:', err);
-    res.status(500).json({ message: 'Failed to send verification email' });
-  }
-});
-
-
-router.post('/confirm', async (req, res) => {
-  const { email, code } = req.body;
-  const timestamp = new Date().toISOString();
-
-  console.log(`[EMAIL_VERIFY][${timestamp}] Confirm attempt for:`, email);
-
-  if (!email || !code) {
-    console.warn(`[EMAIL_VERIFY][${timestamp}] Missing email or code`);
-    return res.status(400).json({ message: 'Email and code are required' });
   }
 
-  const cleanEmail = email.toLowerCase().trim();
-  const cleanCode = String(code).trim();
-
-  try {
-    const user = await User.findOne({ email: cleanEmail });
-
-    if (!user) {
-      console.warn(`[EMAIL_VERIFY][${timestamp}] User not found`);
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
-    }
-
-    // ✅ Already verified → short-circuit
-    if (user.emailVerified) {
-      console.log(`[EMAIL_VERIFY][${timestamp}] Email already verified for ${user.email}`);
-      return res.json({ success: true, message: 'Email already verified' });
-    }
-
-    if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-      console.warn(
-        `[EMAIL_VERIFY][${timestamp}] Missing verification fields for ${user.email}`
-      );
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
-    }
-
+  // ✅ Reuse existing valid code
+  if (
+    user.emailVerificationCode &&
+    user.emailVerificationExpires &&
+    user.emailVerificationExpires > new Date()
+  ) {
     console.log(
-      `[EMAIL_VERIFY][${timestamp}] Stored expiry: ${user.emailVerificationExpires.toISOString()}`
+      `[EMAIL_VERIFY][${timestamp}] Reusing existing code for ${user.email}`
     );
 
-    if (user.emailVerificationExpires.getTime() < Date.now()) {
-      console.warn(
-        `[EMAIL_VERIFY][${timestamp}] Code expired for ${user.email}`
-      );
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
+    return res.json({
+      success: true,
+      message: 'Verification code already sent. Please check your email.',
+    });
+  }
+
+  // 🔐 Generate new code
+  const code = crypto.randomInt(100000, 999999).toString();
+
+  user.emailVerificationCode = crypto
+    .createHash('sha256')
+    .update(code)
+    .digest('hex');
+
+  user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+  await user.save();
+
+  console.log(
+    `[EMAIL_VERIFY][${timestamp}] Persisted verification fields`,
+    {
+      codeExists: !!user.emailVerificationCode,
+      expiresAt: user.emailVerificationExpires.toISOString(),
     }
+  );
 
-    const hashedInputCode = crypto
-      .createHash('sha256')
-      .update(cleanCode)
-      .digest('hex');
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || `"Yenkasa Support" <${process.env.EMAIL_USER}>`,
+    to: user.email,
+    subject: 'Yenkasa Email Verification Code',
+    html: `
+      <p>Hello ${user.username || 'User'},</p>
+      <p>Your verification code is:</p>
+      <h2>${code}</h2>
+      <p>This code expires in 10 minutes.</p>
+      <p>— Yenkasa Team</p>
+    `,
+    text: `Your Yenkasa verification code is ${code}. It expires in 10 minutes.`,
+  });
 
-    // 🔍 DEBUG LOG (TEMPORARY — REMOVE LATER)
-    console.log(`[EMAIL_VERIFY][${timestamp}] Hash compare`, {
+  console.log(
+    `[EMAIL_VERIFY][${timestamp}] Code sent to ${user.email}`
+  );
+
+  res.json({
+    success: true,
+    message: 'Verification code sent to email.',
+  });
+});
+
+
+router.post('/confirm', auth, async (req, res) => {
+  const { code } = req.body;
+  const user = req.user;
+  const timestamp = new Date().toISOString();
+
+  console.log(
+    `[EMAIL_VERIFY][${timestamp}] Confirm attempt by user ${user._id}`
+  );
+
+  if (!code) {
+    return res.status(400).json({
+      success: false,
+      message: 'Verification code is required.',
+    });
+  }
+
+  // Already verified
+  if (user.emailVerified) {
+    console.log(
+      `[EMAIL_VERIFY][${timestamp}] Email already verified for ${user.email}`
+    );
+    return res.json({
+      success: true,
+      message: 'Email already verified.',
+    });
+  }
+
+  if (!user.emailVerificationCode || !user.emailVerificationExpires) {
+    console.warn(
+      `[EMAIL_VERIFY][${timestamp}] Missing verification fields for ${user.email}`
+    );
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid or expired verification code.',
+    });
+  }
+
+  if (user.emailVerificationExpires.getTime() < Date.now()) {
+    console.warn(
+      `[EMAIL_VERIFY][${timestamp}] Code expired for ${user.email}`
+    );
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid or expired verification code.',
+    });
+  }
+
+  const hashedInputCode = crypto
+    .createHash('sha256')
+    .update(String(code).trim())
+    .digest('hex');
+
+  // 🔍 TEMP DEBUG (remove later)
+  console.log(
+    `[EMAIL_VERIFY][${timestamp}] Hash comparison`,
+    {
       inputHash: hashedInputCode,
       storedHash: user.emailVerificationCode,
-    });
-
-    if (hashedInputCode !== user.emailVerificationCode) {
-      console.warn(
-        `[EMAIL_VERIFY][${timestamp}] Code mismatch for ${user.email}`
-      );
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
     }
+  );
 
-    // ✅ SUCCESS
-    user.emailVerified = true;
-    user.emailVerificationCode = undefined;
-    user.emailVerificationExpires = undefined;
-
-    await user.save();
-
-    console.log(`[EMAIL_VERIFY][${timestamp}] ✅ Email verified for ${user.email}`);
-
-    res.json({
-      success: true,
-      message: 'Email verified successfully',
+  if (hashedInputCode !== user.emailVerificationCode) {
+    console.warn(
+      `[EMAIL_VERIFY][${timestamp}] Code mismatch for ${user.email}`
+    );
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid or expired verification code.',
     });
-
-  } catch (err) {
-    console.error('[EMAIL_VERIFY] CONFIRM ERROR:', err);
-    res.status(500).json({ message: 'Verification failed' });
   }
+
+  // ✅ SUCCESS
+  user.emailVerified = true;
+  user.emailVerificationCode = undefined;
+  user.emailVerificationExpires = undefined;
+
+  await user.save();
+
+  console.log(
+    `[EMAIL_VERIFY][${timestamp}] ✅ Email verified for ${user.email}`
+  );
+
+  res.json({
+    success: true,
+    message: 'Email verified successfully.',
+  });
 });
+
 
 
 module.exports = router;

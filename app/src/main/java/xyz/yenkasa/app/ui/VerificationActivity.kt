@@ -81,9 +81,11 @@ class VerificationActivity : AppCompatActivity() {
         phoneStatus = findViewById(R.id.phoneStatus)
         emailTimerLayout = findViewById(R.id.layoutEmailTimer)
         emailTimerText = findViewById(R.id.textEmailTimer)
+        emailTimerLayout.visibility = LinearLayout.GONE
 
 
         setupFirebaseCallbacks()
+
 
         // ================= EMAIL =================
         btnEmailCode.setOnClickListener {
@@ -160,10 +162,13 @@ class VerificationActivity : AppCompatActivity() {
                     statusText.text = "📧 Email code sent"
                     toast("Email verification code sent")
 
-                    val raw = response.raw().body?.string()
-                    val json = JSONObject(raw ?: "{}")
-                    val seconds = json.optInt("expiresInSeconds", 180)
+                    val raw = response.body()?.let {
+                        JSONObject(it.toString())
+                    }
+
+                    val seconds = raw?.optInt("expiresInSeconds", 180) ?: 180
                     startEmailCooldown(seconds)
+
 
 
                 }
@@ -188,6 +193,12 @@ class VerificationActivity : AppCompatActivity() {
         }
     }
     private fun startEmailCooldown(seconds: Int) {
+        if (seconds <= 0) {
+            btnEmailCode.isEnabled = true
+            emailTimerLayout.visibility = LinearLayout.GONE
+            return
+        }
+
         emailCountDownTimer?.cancel()
 
         btnEmailCode.isEnabled = false

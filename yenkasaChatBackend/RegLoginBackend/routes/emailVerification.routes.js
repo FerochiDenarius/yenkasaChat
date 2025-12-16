@@ -122,44 +122,74 @@ router.post('/request', authMiddleware, async (req, res) => {
 
 
 router.post('/confirm', authMiddleware, async (req, res) => {
-  const { code } = req.body;
-  const user = req.user;
-  const dbUser = await User.findById(user._id);
-  const timestamp = new Date().toISOString();
+  try {
+    const { code } = req.body;
+    const userId = req.user._id;
+    const timestamp = new Date().toISOString();
 
-  console.log(`[EMAIL_VERIFY][${timestamp}] Confirm attempt by user ${user._id}`);
+    console.log(`[EMAIL_VERIFY][${timestamp}] Confirm attempt by user ${userId}`);
 
-  if (!dbUser) {
-    return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code is required.'
+      });
+    }
+
+    const dbUser = await User.findById(userId);
+    if (!dbUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    if (!dbUser.emailVerificationCode || !dbUser.codeExpiresAt) {
+      return res.status(400).json({
+        success: false,
+        message: 'No verification in progress.'
+      });
+    }
+
+    // DEBUG (safe to keep)
+    console.log('[EMAIL_VERIFY] Stored:', dbUser.emailVerificationCode);
+    console.log('[EMAIL_VERIFY] Received:', code);
+    console.log('[EMAIL_VERIFY] Expires:', dbUser.codeExpiresAt);
+    console.log('[EMAIL_VERIFY] Now:', new Date());
+
+    if (Date.now() > new Date(dbUser.codeExpiresAt).getTime()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code expired.'
+      });
+    }
+
+    if (String(code).trim() !== String(dbUser.emailVerificationCode).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code.'
+      });
+    }
+
+    dbUser.emailVerified = true;
+    dbUser.emailVerificationCode = undefined;
+    dbUser.codeExpiresAt = undefined;
+    await dbUser.save();
+
+    return res.json({
+      success: true,
+      message: 'Email verified successfully.'
+    });
+
+  } catch (err) {
+    console.error('❌ EMAIL VERIFY CONFIRM ERROR:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Verification failed.'
+    });
   }
-
-  if (!code) {
-    return res.status(400).json({ success: false, message: 'Verification code is required.' });
-  }
-
-  // 🟢 Fix: use the correct field name (codeExpiresAt)
-  if (!dbUser.emailVerificationCode || !dbUser.codeExpiresAt) {
-    return res.status(400).json({ success: false, message: 'No verification in progress.' });
-  }
-
-  // 🕒 Check expiration correctly
-  if (Date.now() > new Date(dbUser.codeExpiresAt).getTime()) {
-    return res.status(400).json({ success: false, message: 'Verification code expired.' });
-  }
-
-  // 🔍 Compare codes
-  if (String(code).trim() !== String(dbUser.emailVerificationCode).trim()) {
-    return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
-  }
-
-  // ✅ Mark verified
-  dbUser.emailVerified = true;
-  dbUser.emailVerificationCode = undefined;
-  dbUser.codeExpiresAt = undefined;
-  await dbUser.save();
-
-  res.json({ success: true, message: 'Email verified successfully.' });
 });
+
 
 
 

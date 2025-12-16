@@ -6,7 +6,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.util.PreferenceManager
+import xyz.yenkasa.app.util.TokenManager
 
 class PolicyDisclosureActivity : AppCompatActivity() {
 
@@ -43,7 +43,7 @@ class PolicyDisclosureActivity : AppCompatActivity() {
 
         val btnAccept: Button = findViewById(R.id.btnAccept)
         btnAccept.setOnClickListener {
-            PreferenceManager.setPoliciesAccepted(this, true)
+            TokenManager.setPoliciesAccepted(this)
 
             // Send user to main home page
             startActivity(Intent(this, MainActivity::class.java))

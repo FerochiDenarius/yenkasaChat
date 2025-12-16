@@ -33,10 +33,18 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var loginCard: View
 
+
     private val userViewModel: UserViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (TokenManager.isFirstLaunch(this)) {
+            startActivity(Intent(this, IntroActivity::class.java))
+            finish()
+            return
+        }
+
 
         val existingToken = TokenManager.getToken(this)
         val existingUserId = TokenManager.getUserId(this)
@@ -155,8 +163,13 @@ class LoginActivity : AppCompatActivity() {
 
                     SocketManager.connect(user._id)
 
-                    startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                    if (!TokenManager.hasAcceptedPolicies(this@LoginActivity)) {
+                        startActivity(Intent(this@LoginActivity, PolicyDisclosureActivity::class.java))
+                    } else {
+                        startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                    }
                     finish()
+
                 } else {
                     shakeCard()
                     Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_LONG).show()

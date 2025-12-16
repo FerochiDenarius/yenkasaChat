@@ -46,16 +46,20 @@ router.post('/request', async (req, res) => {
       });
     }
 
-    // Generate 6-digit code
-    const code = crypto.randomInt(100000, 999999).toString();
 
-    user.emailVerificationCode = crypto
-      .createHash('sha256')
-      .update(code)
-      .digest('hex');
+
+// 🔐 Generate NEW code only if none exists or expired
+const code = crypto.randomInt(100000, 999999).toString();
+
+user.emailVerificationCode = crypto
+  .createHash('sha256')
+  .update(code)
+  .digest('hex');
 
 user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
-    await user.save();
+
+await user.save();
+
 
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || `"Yenkasa Support" <${process.env.EMAIL_USER}>`,
@@ -129,7 +133,7 @@ router.post('/confirm', async (req, res) => {
     }
 
     // ✅ SUCCESS
-    user.verified = true;
+user.emailVerified = true;
     user.emailVerificationCode = undefined;
     user.emailVerificationExpires = undefined;
 

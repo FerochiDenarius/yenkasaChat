@@ -17,6 +17,7 @@ import xyz.yenkasa.app.model.ConfirmRequest
 import xyz.yenkasa.app.model.EmailRequest
 import xyz.yenkasa.app.network.ApiClient
 import java.util.concurrent.TimeUnit
+import xyz.yenkasa.app.util.TokenManager
 
 class VerificationActivity : AppCompatActivity() {
 
@@ -32,6 +33,8 @@ class VerificationActivity : AppCompatActivity() {
     // ================= EMAIL =================
     private lateinit var emailInput: EditText
     private lateinit var btnEmailCode: Button
+    private var emailCodeRequested = false
+
 
     // ================= PHONE =================
     private lateinit var phoneInput: EditText
@@ -112,10 +115,17 @@ class VerificationActivity : AppCompatActivity() {
             when (currentMode) {
                 VerificationMode.EMAIL -> {
                     val email = emailInput.text.toString().trim()
+
                     if (email.isEmpty()) {
                         toast("Enter email first")
                         return@setOnClickListener
                     }
+
+                    if (!emailCodeRequested) {
+                        toast("Request a verification code first")
+                        return@setOnClickListener
+                    }
+
                     confirmEmailVerification(email, code)
                 }
 
@@ -144,11 +154,13 @@ class VerificationActivity : AppCompatActivity() {
                 Log.d("Verification", "📡 Email request response: ${response.code()}")
 
                 if (response.isSuccessful) {
+                    emailCodeRequested = true
                     statusText.text = "📧 Email code sent"
                     toast("Email verification code sent")
                 } else {
                     handleApiError(response)
                 }
+
             } catch (e: Exception) {
                 Log.e("Verification", "🔥 Email request error", e)
                 toast("Network error")
@@ -171,12 +183,18 @@ class VerificationActivity : AppCompatActivity() {
                 Log.d("Verification", "📡 Email confirm response: ${response.code()}")
 
                 if (response.isSuccessful) {
+
+                    // ✅ Correct: mark EMAIL verified only
+                    TokenManager.setEmailVerified(this@VerificationActivity, true)
+
                     statusText.text = "✅ Email verified"
+
                     showVerifiedStatus(
                         emailVerified = true,
                         phoneVerified = isPhoneVerified()
                     )
-                } else {
+                }
+else {
                     handleApiError(response)
                 }
             } catch (e: Exception) {
@@ -237,10 +255,8 @@ class VerificationActivity : AppCompatActivity() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
 
-                    getSharedPreferences("auth", Context.MODE_PRIVATE)
-                        .edit()
-                        .putBoolean("phone_verified", true)
-                        .apply()
+                    TokenManager.setPhoneVerified(this@VerificationActivity, true)
+
 
                     statusText.text = "✅ Phone verified"
 
@@ -277,9 +293,9 @@ class VerificationActivity : AppCompatActivity() {
     }
 
     private fun isPhoneVerified(): Boolean {
-        return getSharedPreferences("auth", Context.MODE_PRIVATE)
-            .getBoolean("phone_verified", false)
+        return TokenManager.isPhoneVerified(this)
     }
+
 
     private fun handleApiError(response: Response<*>) {
         val raw = response.errorBody()?.string()

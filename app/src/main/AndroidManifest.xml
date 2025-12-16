@@ -72,6 +72,7 @@
             android:label="Menu" />
         <activity android:name=".ui.SettingsActivity" />
         <activity android:name=".ui.WebViewActivity" />
+        <activity android:name=".ui.PolicyDisclosureActivity" />
         <activity android:name=".ui.CreateAdActivity" />
         <activity android:name=".ui.PrivacySettingsActivity" />
         <activity android:name=".ui.BlockedUsersActivity" />

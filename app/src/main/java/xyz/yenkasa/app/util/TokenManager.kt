@@ -39,6 +39,12 @@ object TokenManager {
     private const val GENDER_KEY = "user_gender"
     private const val DOB_KEY = "user_dob"
     private const val DASHBOARD_CACHE_KEY = "verification_dashboard_json"
+    private const val FIRST_LAUNCH_KEY = "first_launch_completed"
+    private const val POLICIES_ACCEPTED_KEY = "policies_accepted"
+    private const val EMAIL_VERIFIED_KEY = "email_verified"
+    private const val PHONE_VERIFIED_KEY = "phone_verified"
+
+
 
 
 
@@ -133,6 +139,32 @@ object TokenManager {
         Log.i(TAG, "Partial user details saved (with gender & dob).")
     }
 
+    // ===============================
+// EMAIL / PHONE VERIFICATION
+// ===============================
+    fun setEmailVerified(context: Context, verified: Boolean) {
+        try {
+            getEncryptedPrefs(context)
+                .edit()
+                .putBoolean(EMAIL_VERIFIED_KEY, verified)
+                .apply()
+            Log.i(TAG, "📧 Email verified set to: $verified")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving email verification state", e)
+        }
+    }
+
+    fun setPhoneVerified(context: Context, verified: Boolean) {
+        try {
+            getEncryptedPrefs(context)
+                .edit()
+                .putBoolean(PHONE_VERIFIED_KEY, verified)
+                .apply()
+            Log.i(TAG, "📱 Phone verified set to: $verified")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving phone verification state", e)
+        }
+    }
 
     // === Auth Token (Access Token) ===
     fun saveToken(context: Context, token: String?) {
@@ -329,24 +361,7 @@ object TokenManager {
             null
         }
     }
-    // In your util/TokenManager.kt
-    object TokenManager {
-        // ... other constants and methods ...
-        private const val KEY_EMAIL = "user_email"
 
-        fun saveEmail(context: Context, email: String) {
-            // Your SharedPreferences logic to save the email
-            // Example: getEncryptedSharedPreferences(context).edit().putString(KEY_EMAIL, email).apply()
-            Log.d("TokenManager", "Email saved: $email")
-        }
-
-        fun getEmail(context: Context): String? {
-            // Your SharedPreferences logic to retrieve the email
-            // Example: return getEncryptedSharedPreferences(context).getString(KEY_EMAIL, null)
-            return "user@example.com" // Placeholder
-        }
-        // ...
-    }
     // === Username ===
     fun saveUsername(context: Context, username: String?) {
         if (username.isNullOrBlank()) {
@@ -381,12 +396,13 @@ object TokenManager {
     }
 
     fun isEmailVerified(context: Context): Boolean {
-        return getBoolean(context, "emailVerified", false)
+        return getBoolean(context, EMAIL_VERIFIED_KEY, false)
     }
 
     fun isPhoneVerified(context: Context): Boolean {
-        return getBoolean(context, "phoneVerified", false)
+        return getBoolean(context, PHONE_VERIFIED_KEY, false)
     }
+
     // === Coins Balance ===
     private const val COINS_KEY = "coins_balance"
 
@@ -961,6 +977,57 @@ object TokenManager {
             Log.i("TokenManager", "🧹 Dashboard cache cleared.")
         } catch (e: Exception) {
             Log.e("TokenManager", "Error clearing dashboard cache", e)
+        }
+    }
+
+
+    // ===============================
+// FIRST LAUNCH (INTRO / GET STARTED)
+// ===============================
+    fun isFirstLaunch(context: Context): Boolean {
+        return try {
+            !getEncryptedPrefs(context)
+                .getBoolean(FIRST_LAUNCH_KEY, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking first launch", e)
+            true
+        }
+    }
+
+    fun markFirstLaunchCompleted(context: Context) {
+        try {
+            getEncryptedPrefs(context)
+                .edit()
+                .putBoolean(FIRST_LAUNCH_KEY, true)
+                .apply()
+            Log.i(TAG, "🚀 First launch marked as completed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error marking first launch completed", e)
+        }
+    }
+
+    // ===============================
+// POLICIES ACCEPTANCE
+// ===============================
+    fun hasAcceptedPolicies(context: Context): Boolean {
+        return try {
+            getEncryptedPrefs(context)
+                .getBoolean(POLICIES_ACCEPTED_KEY, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading policies accepted flag", e)
+            false
+        }
+    }
+
+    fun setPoliciesAccepted(context: Context) {
+        try {
+            getEncryptedPrefs(context)
+                .edit()
+                .putBoolean(POLICIES_ACCEPTED_KEY, true)
+                .apply()
+            Log.i(TAG, "📜 Policies accepted and recorded")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving policies accepted flag", e)
         }
     }
 

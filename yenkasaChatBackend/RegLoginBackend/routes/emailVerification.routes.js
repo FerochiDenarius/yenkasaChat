@@ -25,194 +25,99 @@ const transporter = nodemailer.createTransport({
 });
 
 // =============================== // email code Request // ===============================
-router.post('/request', authMiddleware, async (req, res) => {
-  const user = req.user;
-  const now = Date.now();
-  const timestamp = new Date(now).toISOString();
-
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] Request by user ${user._id}`
-  );
-
-  if (!user.email) {
-    return res.status(400).json({
-      success: false,
-      message: 'No email address associated with this account.',
-    });
+// ✅ Email verification code request
+router.post('/request', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email required' });
   }
 
-  if (user.emailVerified) {
-    return res.json({
-      success: true,
-      message: 'Email already verified.',
-    });
-  }
-
-  /**
-   * ⏱️ SINGLE SOURCE OF TRUTH
-   * Code lifetime = 3 minutes
-   */
-  const CODE_LIFETIME_SECONDS = 180;
-
-  /**
-   * If a code exists and is still valid → block request
-   */
-  if (
-    user.emailVerificationExpires &&
-    user.emailVerificationExpires.getTime() > now
-  ) {
-    const remainingSeconds = Math.ceil(
-      (user.emailVerificationExpires.getTime() - now) / 1000
-    );
-
-    return res.status(429).json({
-      success: false,
-      message: 'Please wait before requesting a new code.',
-      retryAfterSeconds: remainingSeconds, // 🔥 frontend timer
-    });
-  }
-
-  /**
-   * ❌ Invalidate any old code (expired or not)
-   */
-  user.emailVerificationCode = undefined;
-  user.emailVerificationExpires = undefined;
-
-  /**
-   * 🔐 Generate NEW code
-   */
-  const code = crypto.randomInt(100000, 999999).toString().trim();
-
-  user.emailVerificationCode = crypto
-    .createHash('sha256')
-    .update(code)
-    .digest('hex');
-
-  user.emailVerificationExpires = new Date(
-    now + CODE_LIFETIME_SECONDS * 1000
-  );
-
-  await user.save();
-
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] New code generated`,
-    {
-      expiresAt: user.emailVerificationExpires.toISOString(),
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-  );
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM || `"Yenkasa Support" <${process.env.EMAIL_USER}>`,
-    to: user.email,
-    subject: 'Yenkasa Email Verification Code',
-    html: `
-      <p>Hello ${user.username || 'User'},</p>
-      <p>Your verification code is:</p>
-      <h2>${code}</h2>
-      <p>This code expires in 3 minutes.</p>
-      <p>— Yenkasa Team</p>
-    `,
-    text: `Your Yenkasa verification code is ${code}. It expires in 3 minutes.`,
-  });
+    // ⏱️ 5 minutes validity
+    const CODE_LIFETIME_SECONDS = 300;
 
-  res.json({
-    success: true,
-    message: 'Verification code sent to email.',
-    expiresInSeconds: CODE_LIFETIME_SECONDS, // frontend can show countdown
-  });
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + CODE_LIFETIME_SECONDS * 1000);
+
+    user.verificationCode = code;
+    user.codeExpiresAt = expiresAt;
+    await user.save();
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Yenkasa Chat" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your Verification Code',
+      text: `Your verification code is: ${code}`,
+    });
+
+    // ✅ RETURN TIMER INFO
+    res.json({
+      message: 'Verification code sent via email',
+      expiresInSeconds: CODE_LIFETIME_SECONDS,
+      expiresAt,
+    });
+
+  } catch (err) {
+    console.error('Email send error:', err);
+    res.status(500).json({ message: 'Failed to send verification code' });
+  }
 });
 
 
 
 // =============================== // email code confirm// ===============================
 
-router.post('/confirm', authMiddleware,  async (req, res) => {
-  const { code } = req.body;
-  const user = req.user;
-  const timestamp = new Date().toISOString();
-
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] Confirm attempt by user ${user._id}`
-  );
-
-  if (!code) {
-    return res.status(400).json({
-      success: false,
-      message: 'Verification code is required.',
-    });
+// ✅ Confirm verification code
+router.post('/confirm', async (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ message: 'Email and code are required' });
   }
 
-  // Already verified
-  if (user.emailVerified) {
-    console.log(
-      `[EMAIL_VERIFY][${timestamp}] Email already verified for ${user.email}`
-    );
-    return res.json({
-      success: true,
-      message: 'Email already verified.',
-    });
-  }
-
-  if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-    console.warn(
-      `[EMAIL_VERIFY][${timestamp}] Missing verification fields for ${user.email}`
-    );
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired verification code.',
-    });
-  }
-
-  if (user.emailVerificationExpires.getTime() < Date.now()) {
-    console.warn(
-      `[EMAIL_VERIFY][${timestamp}] Code expired for ${user.email}`
-    );
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired verification code.',
-    });
-  }
-
-  const hashedInputCode = crypto
-    .createHash('sha256')
-    .update(String(code).trim())
-    .digest('hex');
-
-  // 🔍 TEMP DEBUG (remove later)
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] Hash comparison`,
-    {
-      inputHash: hashedInputCode,
-      storedHash: user.emailVerificationCode,
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-  );
 
-  if (hashedInputCode !== user.emailVerificationCode) {
-    console.warn(
-      `[EMAIL_VERIFY][${timestamp}] Code mismatch for ${user.email}`
-    );
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired verification code.',
-    });
+    if (!user.verificationCode || !user.codeExpiresAt) {
+      return res.status(400).json({ message: 'No verification in progress' });
+    }
+
+    if (Date.now() > user.codeExpiresAt.getTime()) {
+      return res.status(400).json({ message: 'Verification code expired' });
+    }
+
+    if (user.verificationCode !== code) {
+      return res.status(400).json({ message: 'Invalid code' });
+    }
+
+    user.verified = true;
+    user.verificationCode = null;
+    user.codeExpiresAt = null;
+    await user.save();
+
+    res.json({ message: 'Account verified successfully', verified: true });
+
+  } catch (err) {
+    console.error('Confirm error:', err);
+    res.status(500).json({ message: 'Verification failed' });
   }
-
-  // ✅ SUCCESS
-  user.emailVerified = true;
-  user.emailVerificationCode = undefined;
-  user.emailVerificationExpires = undefined;
-
-  await user.save();
-
-  console.log(
-    `[EMAIL_VERIFY][${timestamp}] ✅ Email verified for ${user.email}`
-  );
-
-  res.json({
-    success: true,
-    message: 'Email verified successfully.',
-  });
 });
+
 
 
 

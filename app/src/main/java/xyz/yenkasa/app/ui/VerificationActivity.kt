@@ -18,6 +18,8 @@ import xyz.yenkasa.app.model.EmailRequest
 import xyz.yenkasa.app.network.ApiClient
 import java.util.concurrent.TimeUnit
 import xyz.yenkasa.app.util.TokenManager
+import android.os.CountDownTimer
+
 
 class VerificationActivity : AppCompatActivity() {
 
@@ -47,6 +49,9 @@ class VerificationActivity : AppCompatActivity() {
     private lateinit var verifiedLayout: LinearLayout
     private lateinit var emailStatus: TextView
     private lateinit var phoneStatus: TextView
+    private lateinit var emailTimerLayout: LinearLayout
+    private lateinit var emailTimerText: TextView
+    private var emailCountDownTimer: CountDownTimer? = null
 
     // ================= FIREBASE =================
     private lateinit var auth: FirebaseAuth
@@ -74,6 +79,9 @@ class VerificationActivity : AppCompatActivity() {
         verifiedLayout = findViewById(R.id.layoutVerifiedStatus)
         emailStatus = findViewById(R.id.emailStatus)
         phoneStatus = findViewById(R.id.phoneStatus)
+        emailTimerLayout = findViewById(R.id.layoutEmailTimer)
+        emailTimerText = findViewById(R.id.textEmailTimer)
+
 
         setupFirebaseCallbacks()
 
@@ -151,17 +159,57 @@ class VerificationActivity : AppCompatActivity() {
                     emailCodeRequested = true
                     statusText.text = "📧 Email code sent"
                     toast("Email verification code sent")
-                } else {
+
+                    val raw = response.raw().body?.string()
+                    val json = JSONObject(raw ?: "{}")
+                    val seconds = json.optInt("expiresInSeconds", 180)
+                    startEmailCooldown(seconds)
+
+
+                }
+
+                else {
+                    val raw = response.errorBody()?.string()
+                    val json = JSONObject(raw ?: "")
+                    val retry = json.optInt("retryAfterSeconds", -1)
+
+                    if (retry > 0) {
+                        startEmailCooldown(retry)
+                    }
+
                     handleApiError(response)
                 }
+
 
             } catch (e: Exception) {
                 Log.e("Verification", "🔥 Email request error", e)
                 toast("Network error")
-            } finally {
-                btnEmailCode.isEnabled = true
             }
         }
+    }
+    private fun startEmailCooldown(seconds: Int) {
+        emailCountDownTimer?.cancel()
+
+        btnEmailCode.isEnabled = false
+        emailTimerLayout.visibility = LinearLayout.VISIBLE
+
+        emailCountDownTimer = object : CountDownTimer(seconds * 1000L, 1000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                val totalSeconds = millisUntilFinished / 1000
+                val minutes = totalSeconds / 60
+                val secs = totalSeconds % 60
+                emailTimerText.text = String.format(
+                    "Resend in %02d:%02d",
+                    minutes,
+                    secs
+                )
+            }
+
+            override fun onFinish() {
+                emailTimerLayout.visibility = LinearLayout.GONE
+                btnEmailCode.isEnabled = true
+            }
+        }.start()
     }
 
     private fun confirmEmailVerification(code: String) {

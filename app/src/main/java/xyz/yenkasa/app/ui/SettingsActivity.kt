@@ -37,6 +37,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var itemNotificationToggle: LinearLayout
     private lateinit var txtSoundCurrent: TextView
     private lateinit var switchNotifications: Switch
+    private lateinit var itemDeleteAccount: LinearLayout
 
     private val soundOptions = listOf(
         "sound_default" to "Default",
@@ -69,6 +70,8 @@ class SettingsActivity : AppCompatActivity() {
         itemNotificationToggle = findViewById(R.id.itemNotificationToggle)
         txtSoundCurrent = findViewById(R.id.txtSoundCurrent)
         switchNotifications = findViewById(R.id.switchNotifications)
+        itemDeleteAccount = findViewById(R.id.itemDeleteAccount)
+
 
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val savedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
@@ -114,6 +117,9 @@ class SettingsActivity : AppCompatActivity() {
         itemNotificationSound.setOnClickListener {
             showSoundPickerDialog()
         }
+        itemDeleteAccount.setOnClickListener {
+            showDeleteAccountDialog()
+        }
 
     }
 
@@ -136,6 +142,27 @@ class SettingsActivity : AppCompatActivity() {
                 Log.e(TAG, "Failed to load privacy", t)
             }
         })
+    }
+
+    private fun showDeleteAccountDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Delete Account & Data")
+            .setMessage(
+                "This will permanently delete your Yenkasa account and associated data.\n\n" +
+                        "This action cannot be undone.\n\n" +
+                        "Some data may be retained if required by law."
+            )
+            .setPositiveButton("Continue") { _, _ ->
+                openDeleteAccountPage()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    private fun openDeleteAccountPage() {
+        val url = "https://yenkasa-bldrv.ondigitalocean.app/delete-account"
+        val intent = Intent(Intent.ACTION_VIEW)
+        intent.data = android.net.Uri.parse(url)
+        startActivity(intent)
     }
 
     private fun showSoundPickerDialog() {

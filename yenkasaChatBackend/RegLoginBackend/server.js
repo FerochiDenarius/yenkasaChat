@@ -251,6 +251,13 @@ app.use('/api/social', socialRoutes);
 const viewRoutes = require('./routes/view.routes');
 app.use('/api/views', viewRoutes);
 
+
+// ---------------------------------
+// Account Deletion Page
+// ---------------------------------
+const deleteAccountPage = require("./routes/deleteAccount.page");
+app.use(deleteAccountPage);
+
 // ---------------------------------
 // Error Handling
 // ---------------------------------

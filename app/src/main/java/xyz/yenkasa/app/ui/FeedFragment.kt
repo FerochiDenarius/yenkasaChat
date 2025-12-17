@@ -132,6 +132,22 @@ class FeedFragment : Fragment() {
             onShareClick = { post -> sharePost(post) },
             adAdapterCallbacks = AdBinder(requireContext())
         )
+// 🔥 CONNECT POST OPTIONS (delete / hide / flag / download)
+        feedAdapter.onDelete = { post ->
+            confirmDeletePost(post)
+        }
+
+        feedAdapter.onHide = { post ->
+            hidePost(post)
+        }
+
+        feedAdapter.onFlag = { post ->
+            flagPost(post)
+        }
+
+        feedAdapter.onDownload = { post ->
+            downloadPost(post)
+        }
 
         recyclerView.layoutManager = layoutManager
         recyclerView.adapter = feedAdapter
@@ -454,6 +470,140 @@ class FeedFragment : Fragment() {
         }
     }
 
+    private fun confirmDeletePost(post: Post) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete post")
+            .setMessage("Are you sure you want to delete this post?")
+            .setPositiveButton("Delete") { _, _ ->
+                deletePost(post)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun downloadPost(post: Post) {
+        ApiClient.apiService.getPostMedia(
+            post._id,
+            "Bearer $token"
+        ).enqueue(object : Callback<MediaResponse> {
+
+            override fun onResponse(
+                call: Call<MediaResponse>,
+                response: Response<MediaResponse>
+            ) {
+                if (!response.isSuccessful || response.body() == null) {
+                    Toast.makeText(requireContext(), "Failed to get media", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                val media = response.body()!!.media
+
+                val url = media.imageUrl
+                    ?: media.videoUrl
+                    ?: media.audioUrl
+
+                if (url.isNullOrEmpty()) {
+                    Toast.makeText(requireContext(), "No media found", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                // Open system downloader / browser
+                startActivity(
+                    Intent(Intent.ACTION_VIEW).apply {
+                        data = android.net.Uri.parse(url)
+                    }
+                )
+            }
+
+            override fun onFailure(call: Call<MediaResponse>, t: Throwable) {
+                Toast.makeText(requireContext(), "Download failed", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun deletePost(post: Post) {
+        ApiClient.apiService.deletePost(
+            post._id,
+            "Bearer $token"
+        ).enqueue(object : Callback<GenericResponse> {
+
+            override fun onResponse(
+                call: Call<GenericResponse>,
+                response: Response<GenericResponse>
+            ) {
+                if (response.isSuccessful) {
+                    posts.removeAll { it._id == post._id }
+                    feedAdapter.updateItems(buildMixedFeed(posts))
+                    Toast.makeText(requireContext(), "Post deleted", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+    private fun hidePost(post: Post) {
+        ApiClient.apiService.hidePost(
+            post._id,
+            "Bearer $token"
+        ).enqueue(object : Callback<GenericResponse> {
+
+            override fun onResponse(
+                call: Call<GenericResponse>,
+                response: Response<GenericResponse>
+            ) {
+                posts.removeAll { it._id == post._id }
+                feedAdapter.updateItems(buildMixedFeed(posts))
+                Toast.makeText(requireContext(), "Post hidden", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                Toast.makeText(requireContext(), "Failed to hide post", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+    private fun flagPost(post: Post) {
+        val request = FlagRequest(
+            reason = "inappropriate"
+        )
+
+        ApiClient.apiService.flagPost(
+            post._id,
+            "Bearer $token",
+            request
+        ).enqueue(object : Callback<GenericResponse> {
+
+            override fun onResponse(
+                call: Call<GenericResponse>,
+                response: Response<GenericResponse>
+            ) {
+                if (response.isSuccessful) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Post reported successfully",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "Failed to report post",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                Toast.makeText(
+                    requireContext(),
+                    "Report failed: ${t.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
+    }
 
     override fun onResume() {
         super.onResume()

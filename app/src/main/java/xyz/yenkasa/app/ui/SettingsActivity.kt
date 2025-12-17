@@ -8,11 +8,15 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.model.UserPrivacyModel
 import android.widget.Switch
 import androidx.appcompat.app.AlertDialog
 import android.media.MediaPlayer
+import android.view.View
+import android.net.Uri
+
 
 
 
@@ -38,6 +42,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var txtSoundCurrent: TextView
     private lateinit var switchNotifications: Switch
     private lateinit var itemDeleteAccount: LinearLayout
+    private lateinit var itemModerationDashboard: LinearLayout
+    private lateinit var moderationHeader: TextView
+
 
     private val soundOptions = listOf(
         "sound_default" to "Default",
@@ -71,6 +78,22 @@ class SettingsActivity : AppCompatActivity() {
         txtSoundCurrent = findViewById(R.id.txtSoundCurrent)
         switchNotifications = findViewById(R.id.switchNotifications)
         itemDeleteAccount = findViewById(R.id.itemDeleteAccount)
+        itemModerationDashboard = findViewById(R.id.itemModerationDashboard)
+        moderationHeader = findViewById(R.id.moderationHeader)
+
+        val role = TokenManager.getUserRole(this)
+
+        if (role in listOf(
+                "moderator",
+                "admin",
+                "junior_developer",
+                "senior_developer"
+            )) {
+
+            moderationHeader.visibility = View.VISIBLE
+            itemModerationDashboard.visibility = View.VISIBLE
+        }
+
 
 
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -120,6 +143,15 @@ class SettingsActivity : AppCompatActivity() {
         itemDeleteAccount.setOnClickListener {
             showDeleteAccountDialog()
         }
+
+        itemModerationDashboard.setOnClickListener {
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://yenkasa-bldrv.ondigitalocean.app/moderation")
+            )
+            startActivity(intent)
+        }
+
 
     }
 

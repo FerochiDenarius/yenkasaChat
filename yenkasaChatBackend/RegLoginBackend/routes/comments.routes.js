@@ -103,7 +103,7 @@ await sendNotification({
   type: "comment_reply",
   senderId: userId,
   receiverId: parentOwnerId,
-  activityId: `reply_${comment._id}`,
+  activityId: parentCommentId, // ✅ FIX
   message: `${commenter.username} replied to your comment`,
   targetType: "comment",
   targetId: parentCommentId
@@ -238,17 +238,16 @@ await reward(userId, REWARD_COMMENT_LIKE, {
   activityId: `comment_like_received_${commentId}_${userId}_${Date.now()}`,
 });
 
+await sendNotification({
+  type: "comment_like",
+  senderId: userId,
+  receiverId: commentOwnerId,
+  activityId: commentId,
+  message: `${liker.username} liked your comment`,
+  targetType: "comment",
+  targetId: commentId
+});
 
-      // Notify comment owner
-      await sendNotification({
-        type: "comment_liked",
-        senderId: userId,
-        receiverId: commentOwnerId,
-        activityId: `comment_like_notify_${commentId}_${userId}`,
-        message: `${liker.username} liked your comment`,
-         targetType: "comment",
-         targetId: commentId
-      });
 
       return res.json({
         success: true,

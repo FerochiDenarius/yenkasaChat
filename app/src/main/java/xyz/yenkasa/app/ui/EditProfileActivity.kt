@@ -71,6 +71,8 @@ class EditProfileActivity : AppCompatActivity() {
         loadUserInfo()          // ⭐ updates username + phone header
         fetchRemoteProfile()
         setupDobPicker()// loads full profile (bio, email, gender etc.)
+        setupGenderPicker()
+
 
         rowPassword.setOnClickListener {
             showChangePasswordDialog()
@@ -384,50 +386,40 @@ class EditProfileActivity : AppCompatActivity() {
             }
         }
     }
+    private fun setupGenderPicker() {
+        val genders = arrayOf("Male", "Female", "Other")
+
+        genderView.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Select Gender")
+                .setItems(genders) { _, which ->
+                    val selected = genders[which]
+                    genderView.setText(selected)
+                    saveSingleField("gender", selected.lowercase())
+                }
+                .show()
+        }
+    }
 
     private fun setupDobPicker() {
         dobView.setOnClickListener {
 
-            val calendar = Calendar.getInstance()
+            val picker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Select Date of Birth")
+                .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
+                .build()
 
-            // Pre-fill with existing DOB if available
-            if (!dobView.text.isNullOrBlank()) {
-                try {
-                    val parts = dobView.text.toString().split("-")
-                    calendar.set(
-                        parts[0].toInt(),
-                        parts[1].toInt() - 1,
-                        parts[2].toInt()
-                    )
-                } catch (_: Exception) { }
+            picker.addOnPositiveButtonClickListener { selection ->
+                val date = Instant.ofEpochMilli(selection)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+
+                val formatted = date.toString() // yyyy-MM-dd
+                dobView.setText(formatted)
+                saveSingleField("dateOfBirth", formatted)
             }
 
-            val dialog = DatePickerDialog(
-                this,
-                { _, year, month, dayOfMonth ->
-
-                    val formattedDate = String.format(
-                        "%04d-%02d-%02d",
-                        year, month + 1,
-                        dayOfMonth
-                    )
-
-                    dobView.setText(formattedDate)
-                    saveSingleField("dateOfBirth", formattedDate)
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-
-            // 🚫 No future dates
-            dialog.datePicker.maxDate = System.currentTimeMillis()
-
-            // 🔥 THIS IS THE MAGIC (SCROLLABLE SPINNERS)
-            dialog.datePicker.calendarViewShown = false
-            dialog.datePicker.spinnersShown = true
-
-            dialog.show()
+            picker.show(supportFragmentManager, "DOB_PICKER")
         }
     }
 

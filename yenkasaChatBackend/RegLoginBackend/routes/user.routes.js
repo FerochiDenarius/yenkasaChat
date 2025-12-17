@@ -231,73 +231,107 @@ router.post('/fix-contacts', async (req, res) => {
 // UPDATE USER PROFILE
 // ======================================================================
 router.put('/profile', authMiddleware, async (req, res) => {
-    const userId = req.user?.id || req.user?._id;
+  const userId = req.user?.id || req.user?._id;
 
-    try {
-        const updates = {};
+  try {
+    const updates = {};
+    const allowedFields = [
+      "username",
+      "email",
+      "phoneNumber",
+      "location",
+      "gender",
+      "dateOfBirth"
+    ];
 
-        const allowedFields = [
-            "username",
-            "email",
-            "phoneNumber",
-            "location",
-            "gender",
-            "dateOfBirth"
-        ];
+    allowedFields.forEach(field => {
+      const value = req.body[field];
 
-        allowedFields.forEach(field => {
-            if (req.body[field] !== undefined) {
-                updates[field] = req.body[field];
-            }
-        });
-
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { $set: updates },
-            { new: true }
-        ).select("-password");
-
-        if (!updatedUser) {
-            return res.status(404).json({ error: "User not found" });
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed !== "") {
+          updates[field] = trimmed;
         }
+      }
+    });
 
-        res.status(200).json({
-            success: true,
-            message: "Profile updated",
-            user: updatedUser
-        });
-
-    } catch (err) {
-        console.error("❌ Profile update error:", err);
-        res.status(500).json({ error: "Failed to update profile" });
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
     }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated",
+      user: updatedUser
+    });
+
+  } catch (err) {
+    console.error("❌ Profile update error:", err);
+    res.status(500).json({
+      error: "Internal server error"
+    });
+  }
 });
 
 // ======================================================================
 // CHANGE PASSWORD
 // ======================================================================
 router.put('/change-password', authMiddleware, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id || req.user?._id;
   const { oldPassword, newPassword } = req.body;
 
-  if (!oldPassword || !newPassword) {
-    return res.status(400).json({ error: "Both passwords required" });
+  try {
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Both passwords required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "Password too short" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const bcrypt = require("bcryptjs");
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ error: "Incorrect current password" });
+    }
+
+    user.password = newPassword; // pre-save hook hashes it
+
+    const savedUser = await user.save();
+
+    if (!savedUser) {
+      return res.status(500).json({ error: "Password update failed" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully"
+    });
+
+  } catch (err) {
+    console.error("❌ Change password error:", err);
+    return res.status(500).json({
+      error: "Internal server error while updating password"
+    });
   }
-
-  const user = await User.findById(userId);
-  if (!user) return res.status(404).json({ error: "User not found" });
-
-  const bcrypt = require('bcryptjs');
-  const isMatch = await bcrypt.compare(oldPassword, user.password);
-  if (!isMatch) {
-    return res.status(400).json({ error: "Incorrect current password" });
-  }
-
-  user.password = newPassword; // pre-save hook hashes it
-  await user.save();
-
-  res.json({ success: true, message: "Password updated" });
 });
+
 
 
 

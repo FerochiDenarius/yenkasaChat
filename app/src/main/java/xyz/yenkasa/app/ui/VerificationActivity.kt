@@ -85,6 +85,9 @@ class VerificationActivity : AppCompatActivity() {
 
 
         setupFirebaseCallbacks()
+        restoreVerificationState()
+
+
 
 
         // ================= EMAIL =================
@@ -231,18 +234,17 @@ class VerificationActivity : AppCompatActivity() {
                 val response = ApiClient.apiService
                     .confirmEmailVerification(code.trim())
 
-                Log.d("Verification", "📡 Email confirm response: ${response.code()}")
-
                 if (response.isSuccessful) {
 
-                    // ✅ Mark EMAIL verified only
+                    // 1️⃣ Persist email verification
                     TokenManager.setEmailVerified(this@VerificationActivity, true)
 
                     statusText.text = "✅ Email verified"
 
+                    // 2️⃣ Update UI using stored truth
                     showVerifiedStatus(
                         emailVerified = true,
-                        phoneVerified = isPhoneVerified()
+                        phoneVerified = TokenManager.isPhoneVerified(this@VerificationActivity)
                     )
 
                 } else {
@@ -250,7 +252,6 @@ class VerificationActivity : AppCompatActivity() {
                 }
 
             } catch (e: Exception) {
-                Log.e("Verification", "❌ Email verification failed", e)
                 statusText.text = "⚠️ Verification failed. Try again."
             }
         }
@@ -310,15 +311,15 @@ class VerificationActivity : AppCompatActivity() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
 
-                    TokenManager.setPhoneVerified(this@VerificationActivity, true)
-
+                    TokenManager.setPhoneVerified(this, true)
 
                     statusText.text = "✅ Phone verified"
 
                     showVerifiedStatus(
-                        emailVerified = false,
+                        emailVerified = TokenManager.isEmailVerified(this),
                         phoneVerified = true
                     )
+
                 } else {
                     toast("Invalid verification code")
                 }
@@ -361,6 +362,18 @@ class VerificationActivity : AppCompatActivity() {
         }
         toast(msg)
     }
+    private fun restoreVerificationState() {
+        val emailVerified = TokenManager.isEmailVerified(this)
+        val phoneVerified = TokenManager.isPhoneVerified(this)
+
+        if (emailVerified || phoneVerified) {
+            showVerifiedStatus(emailVerified, phoneVerified)
+        } else {
+            verifiedLayout.visibility = LinearLayout.GONE
+        }
+    }
+
+
 
     private fun formatPhone(input: String): String? {
         val trimmed = input.replace(" ", "")

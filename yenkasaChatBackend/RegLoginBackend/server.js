@@ -219,6 +219,10 @@ app.get('/safety-policy.html', servePolicy('safety-policy.html'));
 app.get('/ads-disclosure', servePolicy('ads-disclosure.html'));
 app.get('/ads-disclosure.html', servePolicy('ads-disclosure.html'));
 
+app.get('/delete-data', servePolicy('delete-data.html'));
+app.get('/delete-data.html', servePolicy('delete-data.html'));
+
+
 // Google Play App-Ads.txt
 app.get('/app-ads.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app-ads.txt'));

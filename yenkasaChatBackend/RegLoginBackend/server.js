@@ -153,6 +153,9 @@ safeMount("/api", "./routes/accountDeletion.routes");
 
 // 🛡️ Moderation actions
 safeMount("/api", "./routes/moderation.routes");
+// 🧩 Moderation WEB dashboard
+safeMount("/", "./routes/moderation.page");
+
 
 
 

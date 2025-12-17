@@ -515,6 +515,8 @@ router.get("/:postId/download", authMiddleware, async (req, res) => {
 // -----------------------------------------------
 // FLAG / REPORT POST
 // -----------------------------------------------
+const ModerationItem = require("../models/ModerationItem.model");
+
 router.post("/:postId/flag", authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
@@ -522,30 +524,46 @@ router.post("/:postId/flag", authMiddleware, async (req, res) => {
 
     const post = await Post.findById(postId);
     if (!post) {
-      return res.status(404).json({ success: false, error: "Post not found" });
+      return res.status(404).json({ error: "Post not found" });
     }
 
-    // save inside post document
-    if (!post.flags) post.flags = [];
-
-    post.flags.push({
-      user: req.user.id,
-      reason: reason || "inappropriate",
-      createdAt: new Date()
+    // Create moderation queue item
+    await ModerationItem.create({
+      type: "post_flag",
+      targetPostId: postId,
+      targetUserId: post.userId,
+      reportedBy: req.user.id,
+      reason: reason || "inappropriate"
     });
-
-    await post.save();
 
     res.json({
       success: true,
-      message: "Post flagged and sent to admins",
+      message: "Post flagged and sent for moderation review"
     });
 
   } catch (err) {
     console.error("❌ Flag post error:", err);
-    res.status(500).json({ success: false, error: "Failed to flag post" });
+    res.status(500).json({ error: "Failed to flag post" });
   }
 });
+
+const { hasMinimumRole } = require("../utils/authority");
+
+router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
+  const role = req.user.roleName || req.user.role;
+
+  if (!hasMinimumRole(role, "admin")) {
+    return res.status(403).json({ error: "Insufficient privileges" });
+  }
+
+  const post = await Post.findById(req.params.postId);
+  if (!post) return res.status(404).json({ error: "Post not found" });
+
+  await post.deleteOne();
+
+  res.json({ success: true, message: "Post deleted by moderator action" });
+});
+
 
 
 

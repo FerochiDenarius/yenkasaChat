@@ -258,6 +258,9 @@ app.use('/api/views', viewRoutes);
 const deleteAccountPage = require("./routes/deleteAccount.page");
 app.use(deleteAccountPage);
 
+app.use("/api", require("./routes/accountDeletion.routes"));
+
+
 // ---------------------------------
 // Error Handling
 // ---------------------------------

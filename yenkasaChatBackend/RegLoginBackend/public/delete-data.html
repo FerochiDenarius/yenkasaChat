@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Request Data Deletion – Yenkasa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial; padding: 24px; background: #f8f8f8;">
+
+  <div style="max-width:520px; margin:auto; background:#fff; padding:24px; border-radius:12px;">
+    <h2>Request Data Deletion – Yenkasa</h2>
+
+    <p>
+      Yenkasa allows users to request deletion of specific types of personal data
+      without deleting their account.
+    </p>
+
+    <h3>What data you can request to delete</h3>
+    <ul>
+      <li>Posts you created</li>
+      <li>Comments and replies</li>
+      <li>Profile media (profile picture)</li>
+      <li>Location information</li>
+    </ul>
+
+    <h3>What data may be retained</h3>
+    <ul>
+      <li>Financial or reward transaction records (if required by law)</li>
+      <li>Aggregated analytics (non-identifiable)</li>
+      <li>Security and abuse-prevention logs (limited time)</li>
+    </ul>
+
+    <h3>How to request data deletion</h3>
+    <p>
+      Submit the form below using the email associated with your Yenkasa account.
+      Your request will be reviewed and processed within 30 days.
+    </p>
+
+    <form method="POST" action="/api/account/data-delete-request">
+      <label>Email used for your Yenkasa account</label><br/>
+      <input type="email" name="email" required style="width:100%;padding:10px;"><br/><br/>
+
+      <label>Data you want deleted</label><br/>
+      <textarea name="reason" placeholder="e.g. Delete my posts and comments"
+        style="width:100%;padding:10px;"></textarea><br/><br/>
+
+      <button type="submit" style="background:#D32F2F;color:#fff;padding:12px;width:100%;border:none;">
+        Submit Data Deletion Request
+      </button>
+    </form>
+
+    <p style="font-size:12px;margin-top:16px;">
+      Requests are processed within 30 days. Some data may be retained if required by law.
+    </p>
+  </div>
+
+</body>
+</html>

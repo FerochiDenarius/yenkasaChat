@@ -406,17 +406,24 @@ class EditProfileActivity : AppCompatActivity() {
 
             val picker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Select Date of Birth")
-                .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
                 .build()
 
             picker.addOnPositiveButtonClickListener { selection ->
-                val date = Instant.ofEpochMilli(selection)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
 
-                val formatted = date.toString() // yyyy-MM-dd
-                dobView.setText(formatted)
-                saveSingleField("dateOfBirth", formatted)
+                val calendar = Calendar.getInstance()
+                calendar.timeInMillis = selection
+
+                val year = calendar.get(Calendar.YEAR)
+                val month = calendar.get(Calendar.MONTH) + 1
+                val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+                val formattedDate = String.format(
+                    "%04d-%02d-%02d",
+                    year, month, day
+                )
+
+                dobView.setText(formattedDate)
+                saveSingleField("dateOfBirth", formattedDate)
             }
 
             picker.show(supportFragmentManager, "DOB_PICKER")

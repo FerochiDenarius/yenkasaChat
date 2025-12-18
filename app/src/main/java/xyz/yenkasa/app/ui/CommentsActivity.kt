@@ -12,6 +12,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+import androidx.media3.ui.PlayerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.CommentAdapter
 import xyz.yenkasa.app.model.Comment
@@ -32,12 +36,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import android.content.Intent
-
-
-
-
-
-
+import xyz.yenkasa.app.ui.PostBinder
 
 
 class CommentsActivity : AppCompatActivity() {
@@ -87,6 +86,8 @@ class CommentsActivity : AppCompatActivity() {
             postHeaderContainer,
             false
         )
+
+        resetPostMedia(postHeaderView)
 
         postHeaderContainer.addView(postHeaderView)
 
@@ -288,9 +289,9 @@ class CommentsActivity : AppCompatActivity() {
 
 
         val layoutManager = LinearLayoutManager(this)
-        layoutManager.stackFromEnd = true
         recyclerComments.layoutManager = layoutManager
         recyclerComments.adapter = adapter
+
 
         postId = intent.getStringExtra("POST_ID")
         if (postId.isNullOrEmpty()) {
@@ -338,61 +339,6 @@ class CommentsActivity : AppCompatActivity() {
         autoRefreshJob = null
     }
 
-    private fun loadPostDetails() {
-        val token = TokenManager.getToken(this) ?: return
-        val id = postId ?: return
-
-        ApiClient.apiService.getPostById(
-            postId = id,
-            token = "Bearer $token"
-        ).enqueue(object : Callback<Post> {
-
-            override fun onResponse(call: Call<Post>, response: Response<Post>) {
-                if (!response.isSuccessful || response.body() == null) {
-                    Log.w("CommentsActivity", "Failed to load post: ${response.code()}")
-                    return
-                }
-
-                val post = response.body()!!
-
-                // 🕒 Timestamp
-                textTimestampPost.text = formatTimeAgo(post.createdAt)
-
-                // 📝 Text + stats
-                textPostContent.text = post.caption
-                textLikeCount.text = post.likeCount.toString()
-                textCommentCount.text = post.commentCount.toString()
-                textViewCount.text = "👁 ${post.viewCount}"
-
-                // 🎬 Media
-                imagePostContent.visibility = View.GONE
-                videoPlayerView.visibility = View.GONE
-                audioContainer.visibility = View.GONE
-
-                when {
-                    !post.videoUrl.isNullOrEmpty() -> {
-                        videoPlayerView.visibility = View.VISIBLE
-                        // (attach ExoPlayer here if already used in PostAdapter)
-                    }
-
-                    !post.imageUrl.isNullOrEmpty() -> {
-                        imagePostContent.visibility = View.VISIBLE
-                        Glide.with(this@CommentsActivity)
-                            .load(post.imageUrl)
-                            .into(imagePostContent)
-                    }
-
-                    !post.audioUrl.isNullOrEmpty() -> {
-                        audioContainer.visibility = View.VISIBLE
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call<Post>, t: Throwable) {
-                Log.e("CommentsActivity", "Failed to load post", t)
-            }
-        })
-    }
 
     private fun loadComments(autoRefresh: Boolean = false) {
         if (isRefreshing) return
@@ -444,41 +390,20 @@ class CommentsActivity : AppCompatActivity() {
             }
         })
     }
-    private fun formatTimeAgo(isoTime: String?): String {
-        if (isoTime.isNullOrEmpty()) return ""
+    private fun formatTimestamp(ts: Long?): String {
+        if (ts == null) return ""
+        return SimpleDateFormat(
+            "dd MMM • hh:mm a",
+            Locale.getDefault()
+        ).format(Date(ts))
+    }
 
-        return try {
-            val sdf = java.text.SimpleDateFormat(
-                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                java.util.Locale.getDefault()
-            )
-            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-
-            val time = sdf.parse(isoTime) ?: return ""
-            val now = System.currentTimeMillis()
-            val diff = now - time.time
-
-            val seconds = diff / 1000
-            val minutes = seconds / 60
-            val hours = minutes / 60
-            val days = hours / 24
-
-            when {
-                seconds < 60 -> "just now"
-                minutes < 60 -> "${minutes}m"
-                hours < 24 -> "${hours}h"
-                days < 7 -> "${days}d"
-                else -> {
-                    val outFormat = java.text.SimpleDateFormat(
-                        "MMM d",
-                        java.util.Locale.getDefault()
-                    )
-                    outFormat.format(time)
-                }
-            }
-        } catch (e: Exception) {
-            ""
-        }
+    private fun resetPostMedia(header: View) {
+        header.findViewById<ImageView>(R.id.imagePostContent).visibility = View.GONE
+        header.findViewById<PlayerView>(R.id.playerView).visibility = View.GONE
+        header.findViewById<ImageView>(R.id.imageVideoThumbnail)?.visibility = View.GONE
+        header.findViewById<ImageButton>(R.id.btnVideoPlay)?.visibility = View.GONE
+        header.findViewById<LinearLayout>(R.id.audioIcon).visibility = View.GONE
     }
 
     private fun postComment(text: String) {
@@ -677,6 +602,39 @@ class CommentsActivity : AppCompatActivity() {
     }
 
 
+    private fun loadPostDetails() {
+        val token = TokenManager.getToken(this) ?: return
+        val id = postId ?: return
+
+        ApiClient.apiService.getPostById(
+            token = "Bearer $token",
+            postId = id
+        ).enqueue(object : Callback<Post> {
+
+            override fun onResponse(call: Call<Post>, response: Response<Post>) {
+                if (!response.isSuccessful || response.body() == null) return
+
+                val post = response.body()!!
+
+                // ✅ Bind post EXACTLY like feed
+                PostBinder.bind(
+                    context = this@CommentsActivity,
+                    root = postHeaderView,
+                    post = post,
+                    onUserClick = { userId ->
+                        startActivity(
+                            Intent(this@CommentsActivity, UserProfileActivity::class.java)
+                                .putExtra("USER_ID", userId)
+                        )
+                    }
+                )
+            }
+
+            override fun onFailure(call: Call<Post>, t: Throwable) {
+                Log.e("CommentsActivity", "Failed to load post", t)
+            }
+        })
+    }
 
 
     private fun resetSendButton() {

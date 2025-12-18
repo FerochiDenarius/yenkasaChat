@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "xyz.yenkasa.app",
       "sha256_cert_fingerprints": [
-        "39:FD:0C:0F:89:E9:E2:3F:0A:4B:A7:BC:25:DB:8F:3C:8D:D7:2C:FB:1B:9A:CC:34:44:DA:E8:A9:22:35:DC:F4"
+        "39:FD:0C:0F:89:E9:E2:3F:0A:4B:A7:BC:25:DB:8F:3C:8D:D7:2C:FB:1B:9A:CC:34:44:DA:E8:A9:22:35:DC:F4",
+        "98:2A:92:76:35:F3:46:52:3E:FB:C3:22:02:D2:B2:B8:38:4E:2D:38:24:9A:F1:0A:93:B4:88:57:EF:A6:64:C2"
       ]
     }
   }

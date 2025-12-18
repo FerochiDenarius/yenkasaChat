@@ -61,6 +61,20 @@ router.post('/', authMiddleware, async (req, res) => {
       parentCommentId: parentCommentId || null,
     });
 
+    if (!parentCommentId && post.userId._id.toString() !== userId) {
+  const { sendNotification } =
+    await import('../services/notification.service.js');
+
+  await sendNotification({
+    type: "post_comment",
+    senderId: userId,
+    receiverId: post.userId._id,
+    activityId: post._id,
+    message: `${commenter.username} commented on your post`
+  });
+}
+
+
 /* ---------------------------------------------------
  * REPLY LOGIC (FULLY FIXED)
  * --------------------------------------------------- */

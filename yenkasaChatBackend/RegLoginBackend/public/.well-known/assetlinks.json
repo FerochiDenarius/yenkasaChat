@@ -1,9 +1,12 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.example.yenkasachat",
-        "sha256_cert_fingerprints": ["B8:72:B2:50:76:BD:B0:78:A0:D7:DB:45:F7:82:C0:45:85:B5:48:39:B1:5D:24:90:CD:A8:C6:FF:EC:1A:01:A5"]
-      }
-    }]
-    
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "xyz.yenkasa.app",
+      "sha256_cert_fingerprints": [
+        "39:FD:0C:0F:89:E9:E2:3F:0A:4B:A7:BC:25:DB:8F:3C:8D:D7:2C:FB:1B:9A:CC:34:44:DA:E8:A9:22:35:DC:F4"
+      ]
+    }
+  }
+]

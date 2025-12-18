@@ -60,21 +60,52 @@ class CommentsActivity : AppCompatActivity() {
     private var postId: String? = null
     private var isRefreshing = false
     private var autoRefreshJob: Job? = null
+    // Post header root
+    private lateinit var postHeaderView: View
+
+    // Post header views (from item_post.xml)
+    private lateinit var textTimestampPost: TextView
+    private lateinit var textPostContent: TextView
+    private lateinit var textLikeCount: TextView
+    private lateinit var textCommentCount: TextView
+    private lateinit var textViewCount: TextView
+
+    private lateinit var imagePostContent: ImageView
+    private lateinit var videoPlayerView: androidx.media3.ui.PlayerView
+    private lateinit var audioContainer: View
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_comments)
 
+        // 🔹 Inflate post header (item_post.xml)
+        val postHeaderContainer = findViewById<FrameLayout>(R.id.postHeaderContainer)
+
+        postHeaderView = layoutInflater.inflate(
+            R.layout.item_post,
+            postHeaderContainer,
+            false
+        )
+
+        postHeaderContainer.addView(postHeaderView)
+
+
         // Initialize views
         recyclerComments = findViewById(R.id.recyclerComments)
         editComment = findViewById(R.id.editComment)
         buttonSend = findViewById(R.id.buttonSend)
-        textCaption = findViewById(R.id.textPostCaption)
-        imagePost = findViewById(R.id.imagePostMedia)
-        videoPost = findViewById(R.id.videoPostMedia)
-        textLikes = findViewById(R.id.textPostLikes)
-        textComments = findViewById(R.id.textPostComments)
-        textViews = findViewById(R.id.textPostViews)
+        textTimestampPost = postHeaderView.findViewById(R.id.textTimestampPost)
+        textPostContent = postHeaderView.findViewById(R.id.textPostContent)
+        textLikeCount = postHeaderView.findViewById(R.id.textLikeCount)
+        textCommentCount = postHeaderView.findViewById(R.id.textCommentCount)
+        textViewCount = postHeaderView.findViewById(R.id.textViewCount)
+
+        imagePostContent = postHeaderView.findViewById(R.id.imagePostContent)
+        videoPlayerView = postHeaderView.findViewById(R.id.playerView)
+        audioContainer = postHeaderView.findViewById(R.id.audioIcon)
+
+
 
         val buttonBack = findViewById<ImageButton>(R.id.buttonBack)
         buttonBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
@@ -93,6 +124,9 @@ class CommentsActivity : AppCompatActivity() {
                 intent.putExtra("USER_ID", userId)
                 startActivity(intent)
             }
+
+
+
             // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
                 editComment.setText("@${comment.user?.username ?: ""} ")
@@ -306,69 +340,58 @@ class CommentsActivity : AppCompatActivity() {
 
     private fun loadPostDetails() {
         val token = TokenManager.getToken(this) ?: return
+        val id = postId ?: return
 
-        ApiClient.apiService.getPostById("Bearer $token", postId!!)
-            .enqueue(object : Callback<Post> {
-                override fun onResponse(call: Call<Post>, response: Response<Post>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        val post = response.body()!!
+        ApiClient.apiService.getPostById(
+            postId = id,
+            token = "Bearer $token"
+        ).enqueue(object : Callback<Post> {
 
-                        // --- 📝 Text & Stats ---
-                        textCaption.text = post.caption
-                        textLikes.text = "${post.likeCount} likes"
-                        textComments.text = " • ${post.commentCount} comments"
-                        textViews.text = " • ${post.viewCount} views"
+            override fun onResponse(call: Call<Post>, response: Response<Post>) {
+                if (!response.isSuccessful || response.body() == null) {
+                    Log.w("CommentsActivity", "Failed to load post: ${response.code()}")
+                    return
+                }
 
-                        // --- 🎬 Media Handling ---
-                        imagePost.visibility = View.GONE
-                        videoPost.visibility = View.GONE
-                        audioIcon.visibility = View.GONE
+                val post = response.body()!!
 
-                        when {
-                            // 🎥 Video post
-                            !post.videoUrl.isNullOrEmpty() -> {
-                                videoPost.setVideoURI(Uri.parse(post.videoUrl))
-                                videoPost.visibility = View.VISIBLE
-                                videoPost.setOnPreparedListener { mp ->
-                                    mp.isLooping = true
-                                    mp.start()
-                                }
-                            }
+                // 🕒 Timestamp
+                textTimestampPost.text = formatTimeAgo(post.createdAt)
 
-                            // 🖼️ Image post
-                            !post.imageUrl.isNullOrEmpty() -> {
-                                Glide.with(this@CommentsActivity)
-                                    .load(post.imageUrl)
-                                    .placeholder(R.drawable.placeholder_image)
-                                    .into(imagePost)
-                                imagePost.visibility = View.VISIBLE
-                            }
+                // 📝 Text + stats
+                textPostContent.text = post.caption
+                textLikeCount.text = post.likeCount.toString()
+                textCommentCount.text = post.commentCount.toString()
+                textViewCount.text = "👁 ${post.viewCount}"
 
-                            // 🎧 Audio post
-                            !post.audioUrl.isNullOrEmpty() -> {
-                                audioIcon.visibility = View.VISIBLE
-                                audioIcon.setImageResource(R.drawable.ic_audio_placeholder)
-                                audioIcon.setOnClickListener {
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(Uri.parse(post.audioUrl), "audio/*")
-                                    }
-                                    startActivity(intent)
-                                }
-                            }
+                // 🎬 Media
+                imagePostContent.visibility = View.GONE
+                videoPlayerView.visibility = View.GONE
+                audioContainer.visibility = View.GONE
 
-                            else -> {
-                                Log.w("CommentsActivity", "⚠️ No media found for post ${post._id}")
-                            }
-                        }
-                    } else {
-                        Log.w("CommentsActivity", "⚠️ Failed to load post: ${response.code()}")
+                when {
+                    !post.videoUrl.isNullOrEmpty() -> {
+                        videoPlayerView.visibility = View.VISIBLE
+                        // (attach ExoPlayer here if already used in PostAdapter)
+                    }
+
+                    !post.imageUrl.isNullOrEmpty() -> {
+                        imagePostContent.visibility = View.VISIBLE
+                        Glide.with(this@CommentsActivity)
+                            .load(post.imageUrl)
+                            .into(imagePostContent)
+                    }
+
+                    !post.audioUrl.isNullOrEmpty() -> {
+                        audioContainer.visibility = View.VISIBLE
                     }
                 }
+            }
 
-                override fun onFailure(call: Call<Post>, t: Throwable) {
-                    Log.e("CommentsActivity", "❌ Failed to load post: ${t.message}", t)
-                }
-            })
+            override fun onFailure(call: Call<Post>, t: Throwable) {
+                Log.e("CommentsActivity", "Failed to load post", t)
+            }
+        })
     }
 
     private fun loadComments(autoRefresh: Boolean = false) {
@@ -420,6 +443,42 @@ class CommentsActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+    private fun formatTimeAgo(isoTime: String?): String {
+        if (isoTime.isNullOrEmpty()) return ""
+
+        return try {
+            val sdf = java.text.SimpleDateFormat(
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                java.util.Locale.getDefault()
+            )
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+
+            val time = sdf.parse(isoTime) ?: return ""
+            val now = System.currentTimeMillis()
+            val diff = now - time.time
+
+            val seconds = diff / 1000
+            val minutes = seconds / 60
+            val hours = minutes / 60
+            val days = hours / 24
+
+            when {
+                seconds < 60 -> "just now"
+                minutes < 60 -> "${minutes}m"
+                hours < 24 -> "${hours}h"
+                days < 7 -> "${days}d"
+                else -> {
+                    val outFormat = java.text.SimpleDateFormat(
+                        "MMM d",
+                        java.util.Locale.getDefault()
+                    )
+                    outFormat.format(time)
+                }
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     private fun postComment(text: String) {

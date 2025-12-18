@@ -61,6 +61,13 @@ router.post('/', authMiddleware, async (req, res) => {
       parentCommentId: parentCommentId || null,
     });
 
+if (!parentCommentId) {
+  await Post.updateOne(
+    { _id: postId },
+    { $inc: { commentCount: 1 } }
+  );
+}
+
     if (!parentCommentId && post.userId._id.toString() !== userId) {
   const { sendNotification } =
     await import('../services/notification.service.js');

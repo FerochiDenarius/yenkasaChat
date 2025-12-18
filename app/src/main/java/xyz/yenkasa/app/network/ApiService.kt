@@ -224,6 +224,7 @@ interface ApiService {
     ): Call<Post>
 
 
+
     @GET("posts/my")
     fun getMyPosts(@Header("Authorization") token: String): Call<List<Post>>
 
@@ -307,11 +308,6 @@ interface ApiService {
         @Path("postId") postId: String
     ): Call<LikeResponse>
 
-
-
-
-
-
     // -----------------------------
     // 🤝 FOLLOW / UNFOLLOW USER (toggle)
     // -----------------------------
@@ -382,10 +378,6 @@ interface ApiService {
     @PUT("profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileResponse>
 
-
-    // -----------------------------
-    // Other social endpoints can be added here if needed
-    // -----------------------------
 
     // ==================== COMMUNITIES ====================
 

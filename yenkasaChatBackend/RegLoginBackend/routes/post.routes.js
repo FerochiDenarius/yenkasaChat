@@ -420,6 +420,40 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
   }
 });
 
+/* ------------------------------------
+ * 🧩 GET SINGLE POST BY ID (for comments screen, deep links)
+ * ------------------------------------ */
+router.get("/:postId", authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const viewerId = req.user.id;
+
+    const post = await Post.findOne({
+      _id: postId,
+      isActive: true,
+      status: "approved"
+    })
+      .populate("userId", "username profileImage verified")
+      .populate("communityId", "name displayName")
+      .lean();
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    // 🔒 One-way block enforcement (same logic as feed)
+    const blocked = await isBlocked(viewerId, post.userId._id.toString());
+    if (blocked) {
+      return res.status(403).json({ error: "You cannot view this post" });
+    }
+
+    res.json(post);
+
+  } catch (err) {
+    console.error("❌ Failed to fetch post by ID:", err);
+    res.status(500).json({ error: "Failed to fetch post" });
+  }
+});
 
 // -----------------------------------------------
 // DELETE POST (OWNER ONLY)

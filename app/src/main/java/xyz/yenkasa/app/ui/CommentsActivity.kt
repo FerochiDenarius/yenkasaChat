@@ -11,10 +11,6 @@ import xyz.yenkasa.app.model.CommentsResponse
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.Date
 import androidx.media3.ui.PlayerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.CommentAdapter
@@ -36,7 +32,9 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import android.content.Intent
-import xyz.yenkasa.app.ui.PostBinder
+import xyz.yenkasa.app.adapter.PostHeaderAdapter
+import androidx.recyclerview.widget.ConcatAdapter
+
 
 
 class CommentsActivity : AppCompatActivity() {
@@ -47,14 +45,8 @@ class CommentsActivity : AppCompatActivity() {
     private lateinit var adapter: CommentAdapter
     private val comments = mutableListOf<Comment>()
 
-    private lateinit var textCaption: TextView
-    private lateinit var imagePost: ImageView
-    private lateinit var videoPost: VideoView
-    private lateinit var audioIcon: ImageView
+    private lateinit var postHeaderAdapter: PostHeaderAdapter
 
-    private lateinit var textLikes: TextView
-    private lateinit var textComments: TextView
-    private lateinit var textViews: TextView
 
     private var postId: String? = null
     private var isRefreshing = false
@@ -62,50 +54,45 @@ class CommentsActivity : AppCompatActivity() {
     // Post header root
     private lateinit var postHeaderView: View
 
-    // Post header views (from item_post.xml)
-    private lateinit var textTimestampPost: TextView
-    private lateinit var textPostContent: TextView
-    private lateinit var textLikeCount: TextView
-    private lateinit var textCommentCount: TextView
-    private lateinit var textViewCount: TextView
-
-    private lateinit var imagePostContent: ImageView
-    private lateinit var videoPlayerView: androidx.media3.ui.PlayerView
-    private lateinit var audioContainer: View
+    private lateinit var currentUserId: String
+    private lateinit var accessToken: String
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_comments)
 
-        // 🔹 Inflate post header (item_post.xml)
-        val postHeaderContainer = findViewById<FrameLayout>(R.id.postHeaderContainer)
+        // 1️⃣ RecyclerView
+        recyclerComments = findViewById(R.id.recyclerComments)
 
+// 2️⃣ Inflate post header ONCE
         postHeaderView = layoutInflater.inflate(
             R.layout.item_post,
-            postHeaderContainer,
+            null,
             false
         )
 
-        resetPostMedia(postHeaderView)
 
-        postHeaderContainer.addView(postHeaderView)
+// 3️⃣ Create PostHeaderAdapter
+        postHeaderAdapter = PostHeaderAdapter(
+            headerView = postHeaderView,
+            onUserClick = { userId ->
+                startActivity(
+                    Intent(this, UserProfileActivity::class.java)
+                        .putExtra("USER_ID", userId)
+                )
+            }
+        )
+
+
+        resetPostMedia(postHeaderView)
+        accessToken = TokenManager.getToken(this) ?: ""
+        currentUserId = TokenManager.getUserId(this) ?: ""
 
 
         // Initialize views
-        recyclerComments = findViewById(R.id.recyclerComments)
         editComment = findViewById(R.id.editComment)
         buttonSend = findViewById(R.id.buttonSend)
-        textTimestampPost = postHeaderView.findViewById(R.id.textTimestampPost)
-        textPostContent = postHeaderView.findViewById(R.id.textPostContent)
-        textLikeCount = postHeaderView.findViewById(R.id.textLikeCount)
-        textCommentCount = postHeaderView.findViewById(R.id.textCommentCount)
-        textViewCount = postHeaderView.findViewById(R.id.textViewCount)
-
-        imagePostContent = postHeaderView.findViewById(R.id.imagePostContent)
-        videoPlayerView = postHeaderView.findViewById(R.id.playerView)
-        audioContainer = postHeaderView.findViewById(R.id.audioIcon)
-
 
 
         val buttonBack = findViewById<ImageButton>(R.id.buttonBack)
@@ -113,6 +100,7 @@ class CommentsActivity : AppCompatActivity() {
 
         // ✅ Initialize adapter with CommentActionListener
         adapter = CommentAdapter(this, comments, object : CommentAdapter.CommentActionListener {
+
 
             // This MUST exist
             override fun onLike(comment: Comment, isLiked: Boolean, position: Int) {
@@ -287,10 +275,13 @@ class CommentsActivity : AppCompatActivity() {
             }
         })
 
+        recyclerComments.layoutManager = LinearLayoutManager(this)
+        recyclerComments.adapter = ConcatAdapter(
+            postHeaderAdapter,
+            adapter // CommentAdapter
+        )
+        recyclerComments.isNestedScrollingEnabled = false
 
-        val layoutManager = LinearLayoutManager(this)
-        recyclerComments.layoutManager = layoutManager
-        recyclerComments.adapter = adapter
 
 
         postId = intent.getStringExtra("POST_ID")
@@ -364,7 +355,14 @@ class CommentsActivity : AppCompatActivity() {
                     comments.clear()
                     comments.addAll(newComments)
                     adapter.notifyDataSetChanged()
-                    recyclerComments.scrollToPosition(comments.size - 1)
+
+                    // ✅ UPDATE COMMENT COUNT IN HEADER (HERE)
+                    postHeaderAdapter.updateCommentCount(newComments.size)
+
+                    // ✅ Safe scroll
+                    if (comments.isNotEmpty()) {
+                        recyclerComments.scrollToPosition(comments.lastIndex)
+                    }
                 } else {
                     Log.e("CommentsActivity", "Failed to load comments: ${response.code()} | ${response.errorBody()?.string()}")
                     if (!autoRefresh) {
@@ -389,13 +387,6 @@ class CommentsActivity : AppCompatActivity() {
                 }
             }
         })
-    }
-    private fun formatTimestamp(ts: Long?): String {
-        if (ts == null) return ""
-        return SimpleDateFormat(
-            "dd MMM • hh:mm a",
-            Locale.getDefault()
-        ).format(Date(ts))
     }
 
     private fun resetPostMedia(header: View) {
@@ -616,18 +607,8 @@ class CommentsActivity : AppCompatActivity() {
 
                 val post = response.body()!!
 
-                // ✅ Bind post EXACTLY like feed
-                PostBinder.bind(
-                    context = this@CommentsActivity,
-                    root = postHeaderView,
-                    post = post,
-                    onUserClick = { userId ->
-                        startActivity(
-                            Intent(this@CommentsActivity, UserProfileActivity::class.java)
-                                .putExtra("USER_ID", userId)
-                        )
-                    }
-                )
+                postHeaderAdapter.submitPost(post)
+
             }
 
             override fun onFailure(call: Call<Post>, t: Throwable) {

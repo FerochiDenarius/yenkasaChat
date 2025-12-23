@@ -5,6 +5,8 @@
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary branding color -->
         <item name="colorOnPrimary">@color/white</item>
+        <item name="android:textCursorDrawable">@drawable/cursor_color</item>
+
 
         <!-- Backgrounds -->
         <item name="android:windowBackground">?attr/colorSurface</item>
@@ -105,5 +107,7 @@
         <item name="android:backgroundTint">@null</item>
         <!-- keep default paddings/shape from Material if you want; we only remove the tint -->
     </style>
+
+
 
 </resources>

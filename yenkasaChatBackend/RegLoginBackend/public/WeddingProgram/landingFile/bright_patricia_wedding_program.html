@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bright & Patricia | Wedding Program</title>
+
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --green: #1f4d2b;
@@ -12,156 +14,234 @@
       --light: #f9f9f6;
     }
 
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: 'Montserrat', sans-serif;
       background: var(--light);
       color: #222;
+      line-height: 1.6;
     }
 
-    header {
-      background: var(--green);
+    /* ---------- HERO ---------- */
+    .hero {
+      position: relative;
+      background: linear-gradient(135deg, #1f4d2b, #174022);
       color: white;
-      padding: 40px 20px;
       text-align: center;
+      padding: 60px 20px;
+      overflow: hidden;
     }
 
-    header h1 {
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(242,211,94,.4), transparent 70%);
+    }
+
+    .hero::before { top: -80px; left: -80px; }
+    .hero::after { bottom: -80px; right: -80px; }
+
+    .hero h1 {
       font-family: 'Playfair Display', serif;
-      font-size: 34px;
+      font-size: 42px;
       margin-bottom: 10px;
     }
 
-    header p {
+    .hero p {
       font-size: 16px;
-      opacity: 0.95;
+      opacity: .95;
     }
 
     .hero-img {
-      margin-top: 20px;
+      margin-top: 25px;
       max-width: 320px;
-      border-radius: 16px;
+      border-radius: 18px;
       border: 4px solid var(--yellow);
     }
 
+    /* ---------- SECTIONS ---------- */
     section {
-      padding: 40px 20px;
-      max-width: 900px;
+      max-width: 1000px;
       margin: auto;
+      padding: 50px 20px;
     }
 
     h2 {
       font-family: 'Playfair Display', serif;
       color: var(--green);
-      border-bottom: 3px solid var(--yellow);
-      display: inline-block;
-      padding-bottom: 6px;
+      text-align: center;
+      margin-bottom: 10px;
     }
 
-    .scripture {
+    .divider {
+      text-align: center;
+      color: var(--yellow);
+      font-size: 22px;
+      margin-bottom: 30px;
+    }
+
+    .card {
       background: white;
-      border-left: 6px solid var(--green);
-      padding: 20px;
-      margin-top: 20px;
-      font-style: italic;
+      padding: 25px;
+      border-radius: 18px;
+      border: 2px solid var(--yellow);
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
     }
 
-    .list {
-      margin-top: 20px;
-      line-height: 1.8;
+    /* ---------- GALLERY ---------- */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
     }
+
+    .gallery figure {
+      background: white;
+      padding: 10px;
+      border-radius: 16px;
+      border: 2px solid var(--yellow);
+      text-align: center;
+    }
+
+    .gallery img {
+      width: 100%;
+      border-radius: 12px;
+    }
+
+    .gallery figcaption {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--green);
+    }
+
+    /* ---------- LISTS & TIMELINE ---------- */
+    .list div { margin-bottom: 8px; }
 
     .timeline div {
       background: white;
       padding: 12px 16px;
       border-left: 5px solid var(--green);
       margin-bottom: 12px;
+      border-radius: 8px;
     }
 
+    /* ---------- VIDEO ---------- */
     video {
       width: 100%;
-      max-width: 500px;
-      border-radius: 14px;
-      display: block;
+      max-width: 520px;
       margin: 20px auto;
+      display: block;
+      border-radius: 16px;
       border: 3px solid var(--yellow);
     }
 
+    /* ---------- SONGS ---------- */
     details {
       background: white;
-      padding: 15px;
-      margin-bottom: 12px;
-      border-left: 5px solid var(--green);
+      padding: 18px;
+      border-radius: 14px;
+      border: 2px solid var(--yellow);
+      margin-bottom: 15px;
       cursor: pointer;
     }
 
+    details summary {
+      font-weight: bold;
+      color: var(--green);
+    }
+
+    /* ---------- FOOTER ---------- */
     footer {
       background: var(--green);
       color: white;
       text-align: center;
-      padding: 30px 15px;
+      padding: 40px 20px;
       font-size: 15px;
     }
   </style>
 </head>
+
 <body>
 
-<header>
+<!-- HERO -->
+<header class="hero">
   <h1>Bright & Patricia</h1>
-  <img src="..//images/outingPic.jpeg" alt="Bright and Patricia" class="hero-img" />
+  <p>Saturday, 28th February 2026 • 11:00 AM<br>Mampong Akuapem</p>
+  <img src="/WeddingProgram/images/outingPic.jpeg" class="hero-img" alt="Bright and Patricia">
 </header>
 
-<header>
-  <h1>At Convention</h1>
-  <img src="..//images/ConventionPhotos.jpeg" alt="Bright and Patricia" class="hero-img" />
-</header>
+<!-- OUR JOURNEY -->
+<section>
+  <h2>Our Journey</h2>
+  <div class="divider">✿</div>
 
-<header>
-  <h1>A visit to a family member</h1>
-  <img src="..//images/AVisitToAFamilyMember.jpeg" alt="Bright and Patricia" class="hero-img" />
-</header>
+  <div class="gallery">
+    <figure>
+      <img src="/WeddingProgram/images/ConventionPhotos.jpeg">
+      <figcaption>At Convention</figcaption>
+    </figure>
+    <figure>
+      <img src="/WeddingProgram/images/AVisitToAFamilyMember.jpeg">
+      <figcaption>Family Visit</figcaption>
+    </figure>
+    <figure>
+      <img src="/WeddingProgram/images/AfterProposal.jpeg">
+      <figcaption>The Proposal</figcaption>
+    </figure>
+  </div>
+</section>
 
-<header>
-  <h1>When I Proposed</h1>
-  <img src="..//images/AfterProposal.jpeg" alt="Bright and Patricia" class="hero-img" />
-</header>
-
+<!-- THEME -->
 <section>
   <h2>Theme Scripture</h2>
-  <div class="scripture">
-    “A house and wealth are inherited from fathers, but a discreet wife is from Jehovah.”<br />
-    <strong>— Proverbs 19:14</strong>
+  <div class="divider">✿</div>
+  <div class="card">
+    “A house and wealth are inherited from fathers, but a discreet wife is from Jehovah.”  
+    <br><strong>— Proverbs 19:14</strong>
   </div>
 </section>
 
+<!-- VIDEOS -->
 <section>
-  <h2>A Moment With Us</h2>
-  <video controls muted src="..//videos/AtimeTogether.m4v" width="300" height="300" ></video>
+  <h2>Moments With Us</h2>
+  <div class="divider">✿</div>
+
+  <video controls muted playsinline preload="metadata">
+    <source src="/WeddingProgram/videos/AtimeTogether.mp4" type="video/mp4">
+  </video>
+
+  <video controls muted playsinline preload="metadata">
+    <source src="/WeddingProgram/videos/WhenIproposed.mp4" type="video/mp4">
+  </video>
 </section>
 
-<section>
-  <h2>When I Proposed</h2>
-  <video controls muted src="..//videos/WhenIproposed.webm" width="300" height="300" ></video>
-</section>
-
+<!-- OFFICIATING -->
 <section>
   <h2>Officiating Roles</h2>
-  <div class="list">
-    Chairman for Marriage Discourse – Bro. Kwame Monto<br />
-    Opening Prayer of Marriage Discourse – Chairman<br />
-    Marriage Discourse Speaker – Br. Asamoah Tetteh<br />
-    Closing Prayer – Br. Asamoah Tetteh<br />
-    MC for Refreshment – Br. Desmond Anim<br />
-    Sounds – Br. Abbey<br />
-    Car Park Attendants – Franklin Asamoah, Solomon 
+  <div class="divider">✿</div>
+  <div class="card list">
+    <div>Chairman – Bro. Kwame Monto</div>
+    <div>Marriage Discourse Speaker – Br. Asamoah Tetteh</div>
+    <div>Opening Prayer – Chairman</div>
+    <div>Closing Prayer – Br. Asamoah Tetteh</div>
+    <div>MC (Refreshment) – Br. Desmond Anim</div>
+    <div>Sounds – Br. Abbey</div>
+    <div>Car Park – Franklin Asamoah, Solomon</div>
   </div>
 </section>
 
+<!-- TIMELINE -->
 <section>
   <h2>Program Timeline</h2>
+  <div class="divider">✿</div>
   <div class="timeline">
     <div>Traditional Engagement – 11:00 AM</div>
-    <div>Bride & Groom Redress – 12:00 PM</div>
+    <div>Redress – 12:00 PM</div>
     <div>Marriage Talk & Vows – 1:00 PM</div>
     <div>Photography – 1:45 PM</div>
     <div>Refreshment – 2:30 PM</div>
@@ -169,93 +249,45 @@
   </div>
 </section>
 
-        <section>
-  <h2>Marriage Discourse</h2>
-  <div class="list">
-    <div>Music & Arrival of guest.</div>
-    <div>Arrival of Bride and Groom</div>
-    <div>Opening Prayer : Bro Kwame Monto.</div>
-    <div>Introduction of Chairman .</div>
-    <div>Introduction of Bride & Groom. </div>
-    <div>Chairman’s Opening Remarks.</div>
-    <div>Opening Songs. 131 & Prayer.</div>
-    <div>Theme: Mariage Discourse :</div>
-    <div>Chairmans Closing Remarks.</div>
-    <div>Closing Song 132 and Prayer.</div>
-    <div>Refreshment.</div>
-  </div>
-  </section>
-
-<section>
-  <h2>Photograph Arrangements </h2>
-  <div class="list">
-    <div>Speaker & Spouse </div>
-    <div>Chairman & Spouse</div>
-    <div>Bride's Parents</div>
-    <div>Bride's Siblings</div>
-    <div>Groom Parents</div>
-    <div> Groom Siblings.</div>
-    <div> Bride & Groom with both sets of Parents</div>
-    <div> Bride & Groom with Both Siblings. </div>
-    <div> Bride & Groom with . Mountains View Congregation. </div>
-    <div> Bride & Groom with Groom's Friends </div>
-    <div> Bride & Groom with Bride's Friends</div>
-    <div> Bride & Groom with Danfa south twi Congregation  </div>
-
-      <h2>Exclusive </h2>
-          <div> Bride & Groom Alone</div>
-    <div> Bride Alone</div>
-        <div> Groom Alone</div>
-
-
-
-  <section>
-  <h2>Refreshment</h2>
-  <div class="list">
-    <div>Food Services – Felicia Bonsu, Lydia Amponsah.</div>
-    <div>Servers – Abena Nkum, Lisa Monto</div>
-    <div>Drinks – Gertrude Nipaa, Joana Amoquandoh, Akosuah Asamoah.</div>
-    <div>Ushers – Lois, Jasmine, Ruth Awuni</div>
-    <div>Gift Table – Philip Offei Kwadwo.</div>
-
-  </div>
-</section>
-
+<!-- SONGS -->
 <section>
   <h2>Song Lyrics</h2>
+  <div class="divider">✿</div>
+
+
 
   <details>
-    <summary><strong>Song 131</strong></summary>
-    	<h3>Song 131 lyrics</h3>
-     <p>With dignity and joy,</p> 
-<p></p>A threefold cord is bound.</p>
-<p>With God and men to witness,</p>
-<p>These sacred vows resound.</p>
+    <summary>Song 131</summary>
+    <p><h3>131 lyrics:</h3>
+      <p>1.With dignity and joy,</p> 
+      <p>A threefold cord is bound.</p>
+      <p>With God and men to witness,</p>
+      <p>These sacred vows resound.</p>
 
-<h3>CHORUS 1</h3>
-<p>He vowed before Jehovah</p>
-<p></p>To love her from the heart.</p>
-<p>“What God has yoked together,</p>
-<p>Let no man put apart.”</p>
+      <p>(CHORUS 1)</p>
+      <p>He vowed before Jehovah</p>
+      <p>To love her from the heart.</p>
+      <p>“What God has yoked together,</p>
+      <p>Let no man put apart.”</p>
+      <p>2.	2.They both have searched God’s Word</p>
+      <p>To learn to do his will,</p>
+      <p>And now they seek his blessing,</p>
+      <p>Their promise to fulfill.</p>
 
-<p> 2.They both have searched God’s Word</p>
-<p>To learn to do his will,</p>
-<p>And now they seek his blessing,</p>
-<p>Their promise to fulfill.</p>
-
-
-<h3>CHORUS 2</h3>
-<p></p> <p>She vowed before Jehovah</p>
-<p>To love him from the heart.</p>
-<p>“What God has yoked together,</p>
-<p>Let no man put apart.”</p>
-
+      <p>(CHORUS 2)</p>
+      <p>She vowed before Jehovah</p>
+      <p>To love him from the heart.</p>
+      <p>“What God has yoked together,</p>
+      <p>Let no man put apart.”</p>
+</p>
   </details>
 
-  <details>
-    <summary><strong>Song 132</strong></summary>
-    <p>Song 132 lyrics.</p>
-<p>This is at last bone of my bone,</p>
+
+    <details>
+    <summary>Song 132</summary>
+    <p><h3>132 lyrics:</h3>
+
+<p> 1.This is at last bone of my bone,</p>	
 <p>Flesh of my flesh; now I’m not alone.</p>
 <p>God has provided a partner,</p>
 <p>Someone to call my own.</p>
@@ -274,8 +306,8 @@
 </section>
 
 <footer>
-  Thank you for celebrating with us<br />
-  <strong>Bright & Patricia</strong><br />
+  Thank you for celebrating with us<br>
+  <strong>Bright & Patricia</strong><br>
   28th February 2026
 </footer>
 

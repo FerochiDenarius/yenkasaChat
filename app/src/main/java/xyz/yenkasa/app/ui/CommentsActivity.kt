@@ -45,7 +45,7 @@ class CommentsActivity : AppCompatActivity() {
     private lateinit var editComment: EditText
     private lateinit var buttonSend: ImageButton
     private lateinit var adapter: CommentAdapter
-    private val comments = mutableListOf<Comment>() 
+    private val comments = mutableListOf<Comment>()
     private lateinit var postHeaderAdapter: PostHeaderAdapter
     private var postId: String? = null
     private var isRefreshing = false

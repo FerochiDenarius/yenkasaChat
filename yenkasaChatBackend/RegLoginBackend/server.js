@@ -196,6 +196,14 @@ app.get("/health", (req, res) => {
 // ---------------------------------
 // Serve Compliance / Policy Documents
 // ---------------------------------
+// ✅ Ensure correct MIME type for MP4 videos
+app.use((req, res, next) => {
+  if (req.path.endsWith('.mp4')) {
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Accept-Ranges', 'bytes');
+  }
+  next();
+});
 
 // Generic function to serve static policy HTML files
 function servePolicy(fileName) {

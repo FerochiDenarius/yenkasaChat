@@ -34,6 +34,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import android.content.Intent
 import xyz.yenkasa.app.adapter.PostHeaderAdapter
 import androidx.recyclerview.widget.ConcatAdapter
+import xyz.yenkasa.app.adapter.PostAdapter
+
 
 
 
@@ -43,11 +45,8 @@ class CommentsActivity : AppCompatActivity() {
     private lateinit var editComment: EditText
     private lateinit var buttonSend: ImageButton
     private lateinit var adapter: CommentAdapter
-    private val comments = mutableListOf<Comment>()
-
+    private val comments = mutableListOf<Comment>() 
     private lateinit var postHeaderAdapter: PostHeaderAdapter
-
-
     private var postId: String? = null
     private var isRefreshing = false
     private var autoRefreshJob: Job? = null
@@ -65,27 +64,20 @@ class CommentsActivity : AppCompatActivity() {
         // 1️⃣ RecyclerView
         recyclerComments = findViewById(R.id.recyclerComments)
 
+
 // 2️⃣ Inflate post header ONCE
         postHeaderView = layoutInflater.inflate(
             R.layout.item_post,
             null,
             false
         )
-
-
-// 3️⃣ Create PostHeaderAdapter
-        postHeaderAdapter = PostHeaderAdapter(
-            headerView = postHeaderView,
-            onUserClick = { userId ->
-                startActivity(
-                    Intent(this, UserProfileActivity::class.java)
-                        .putExtra("USER_ID", userId)
-                )
-            }
+        postHeaderView.layoutParams = RecyclerView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
         )
 
 
-        resetPostMedia(postHeaderView)
+
         accessToken = TokenManager.getToken(this) ?: ""
         currentUserId = TokenManager.getUserId(this) ?: ""
 
@@ -113,8 +105,6 @@ class CommentsActivity : AppCompatActivity() {
                 intent.putExtra("USER_ID", userId)
                 startActivity(intent)
             }
-
-
 
             // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
@@ -304,6 +294,21 @@ class CommentsActivity : AppCompatActivity() {
             postComment(text)
         }
     }
+
+    val headerPostAdapter = PostAdapter(
+        context = this,
+        posts = emptyList(), // will set later
+        onLikeClick = { _, _ -> },
+        onCommentClick = { _, _ -> },
+        onUserClick = { userId ->
+            startActivity(
+                Intent(this, UserProfileActivity::class.java)
+                    .putExtra("USER_ID", userId)
+            )
+        },
+        onPostClick = {},
+        onShareClick = {}
+    )
 
     override fun onResume() {
         super.onResume()
@@ -607,7 +612,7 @@ class CommentsActivity : AppCompatActivity() {
 
                 val post = response.body()!!
 
-                postHeaderAdapter.submitPost(post)
+                headerPostAdapter.updatePosts(listOf(post))
 
             }
 

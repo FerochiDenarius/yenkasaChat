@@ -12,7 +12,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 
 object ApiClient {
-    const val BASE_URL = "https://yenkasa-bldrv.ondigitalocean.app/api/"
+    const val BASE_URL = "https://yenkasa-8rjea.ondigitalocean.app/api/"
 
     private lateinit var retrofit: Retrofit
     private var initialized = false

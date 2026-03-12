@@ -146,6 +146,37 @@ const tx = await CoinTransaction.create({
     );
     break;
 
+      // ============================
+  // REWARD POST APPROVED
+  // ============================
+
+    case "REWARD_POST_APPROVED":
+  ver.metrics.postsCreated += 1;
+  ver.metrics.totalPostCount += 1;
+  break;
+
+
+        // ============================
+  // REWARD POST REJECTED
+  // ============================
+
+
+        // ============================
+  // REWARD POST VIEW RECEIVED
+  // ============================
+
+  case "REWARD_POST_VIEW_RECEIVED":
+  ver.metrics.totalViewsReceived += 1;
+  break;
+
+
+  case "REWARD_POST_REJECTED":
+  if (!ver.metrics.postsModerated) ver.metrics.postsModerated = 0;
+  ver.metrics.postsModerated += 1;
+  break;
+
+
+
   // ============================
   // POST VIEWS RECEIVED
   // ============================

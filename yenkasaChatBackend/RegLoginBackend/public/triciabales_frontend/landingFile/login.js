@@ -12,7 +12,7 @@ function login() {
 
   console.log("Sending request...", data);
 
-fetch("http://134.209.182.39:8080/api/auth/login", {
+fetch("https://134.209.182.39:8080/api/auth/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

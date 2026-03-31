@@ -53,7 +53,7 @@ window.addBale = function () {
   console.log("Sending data...");
 
   // 🔹 Send request
-  fetch("http://134.209.182.39:8080/api/triciabales/upload", {
+  fetch("https://134.209.182.39:8080/api/triciabales/upload", {
     method: "POST",
     body: formData
   })

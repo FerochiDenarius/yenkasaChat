@@ -1,4 +1,4 @@
-fetch("http://134.209.182.39:8080/api/triciabales")
+fetch("https://134.209.182.39:8080/api/triciabales")
   .then(res => res.json())
   .then(data => {
     console.log("Bales:", data);
@@ -21,11 +21,11 @@ card.innerHTML = `
   <p><strong>Weight:</strong> ${bale.weight}</p>
   <p>${bale.description}</p>
 
-  <img src="http://134.209.182.39:8080${bale.imageUrl}" />
+  <img src="https://134.209.182.39:8080${bale.imageUrl}" />
 
   ${
     bale.videoUrl
-      ? `<video controls src="http://134.209.182.39:8080${bale.videoUrl}"></video>`
+      ? `<video controls src="https://134.209.182.39:8080${bale.videoUrl}"></video>`
       : ""
   }
 

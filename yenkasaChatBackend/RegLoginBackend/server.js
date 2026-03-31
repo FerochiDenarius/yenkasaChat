@@ -21,6 +21,8 @@ const commentRoutes = require('./routes/comments.routes');
 const multer = require("multer");
 
 
+
+
 const app = express();
 console.log("server.js: Starting application setup...");
 
@@ -42,7 +44,20 @@ global.io = io;
 // ---------------------------------
 // Middlewares
 // ---------------------------------
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "http://134.209.182.39:8080"],
+        mediaSrc: ["'self'", "http://134.209.182.39:8080"],
+        connectSrc: ["'self'", "http://134.209.182.39:8080"]
+      }
+    }
+  })
+);
 app.use(compression());
 app.use(cors({
   origin: process.env.CLIENT_URL || "*",
@@ -280,7 +295,18 @@ const deleteAccountPage = require("./routes/deleteAccount.page");
 app.use(deleteAccountPage);
 
 
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
+app.use(
+  '/triciabales-api',
+  createProxyMiddleware({
+    target: 'http://localhost:8080/api',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/triciabales-api': ''
+    }
+  })
+);
 
 // ---------------------------------
 // Error Handling

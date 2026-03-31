@@ -304,7 +304,7 @@ app.use(
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
     pathRewrite: {
-      '^/triciabales-api': '/api'
+      '^/': '/api/'
     }
   })
 );

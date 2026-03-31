@@ -40,4 +40,7 @@ fetch("http://134.209.182.39:8080/api/auth/login", {
     console.error("Fetch error:", err);
     alert("Login failed - check backend");
   });
+
 }
+
+  document.getElementById("loginBtn").addEventListener("click", login);

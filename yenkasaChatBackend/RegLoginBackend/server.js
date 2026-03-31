@@ -19,6 +19,8 @@ const verificationRules = require('./config/verificationRules');
 const seedCommunities = require('./seed/seedCommunities');
 const commentRoutes = require('./routes/comments.routes');
 const multer = require("multer");
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
 
 
 
@@ -295,7 +297,6 @@ const deleteAccountPage = require("./routes/deleteAccount.page");
 app.use(deleteAccountPage);
 
 
-const { createProxyMiddleware } = require('http-proxy-middleware');
 
 app.use(
   '/triciabales-api',

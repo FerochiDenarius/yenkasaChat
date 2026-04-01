@@ -303,8 +303,8 @@ app.use(
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
-    pathRewrite: {
-      '^/': '/api/'
+    pathRewrite: (path, req) => {
+      return '/api' + path;
     }
   })
 );

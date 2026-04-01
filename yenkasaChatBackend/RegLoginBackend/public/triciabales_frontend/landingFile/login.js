@@ -12,7 +12,9 @@ function login() {
 
   console.log("Sending request...", data);
 
-fetch("https://www.yenkasa.xyz/triciabales-api/auth/login", {    method: "POST",
+fetch("https://www.yenkasa.xyz/triciabales-api/api/auth/login", {  
+  
+  method: "POST",
     headers: {
       "Content-Type": "application/json"
     },

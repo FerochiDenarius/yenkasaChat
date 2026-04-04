@@ -33,6 +33,14 @@ const axios = require('axios');
 
 app.use(express.json());
 
+// DEBUG: Check if this route is being hit
+app.use('/triciabales-api/uploads/*', (req, res, next) => {
+  console.log('🔵 ROUTE HIT:', req.method, req.originalUrl);
+  console.log('🔵 Full URL:', req.url);
+  console.log('🔵 Params:', req.params);
+  next();
+});
+
 
 
 // Handles files with extensions like image.jpg

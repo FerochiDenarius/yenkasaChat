@@ -63,17 +63,9 @@ app.post('/triciabales-api/api/auth/login', async (req, res) => {
   }
 });
 
-app.use(
-  '/triciabales-api/api/triciabales/upload',
-  createProxyMiddleware({
-    target: 'http://134.209.182.39:8080',
-    changeOrigin: true,
-    secure: false,
-    pathRewrite: {
-      '^/triciabales-api': ''
-    }
-  })
-);
+app.post('/triciabales-api/api/triciabales/upload', (req, res) => {
+  console.log('UPLOAD HIT');
+});
 
 console.log("server.js: Starting application setup...");
 

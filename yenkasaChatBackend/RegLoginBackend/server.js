@@ -33,7 +33,7 @@ app.use(express.json());
 
 
 app.use(
-  '/triciabales-api/api/auth',
+  '/triciabales-api',
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
@@ -47,7 +47,7 @@ app.use(
 
     onProxyReq: (proxyReq, req) => {
       console.log(
-        'LOGIN PROXY:',
+        'TRICIABALES PROXY:',
         req.method,
         req.originalUrl,
         '->',
@@ -57,18 +57,18 @@ app.use(
 
     onProxyRes: (proxyRes, req) => {
       console.log(
-        'LOGIN RESPONSE:',
+        'TRICIABALES RESPONSE:',
         proxyRes.statusCode,
         req.originalUrl
       );
     },
 
     onError: (err, req, res) => {
-      console.error('LOGIN PROXY ERROR:', err);
+      console.error('TRICIABALES PROXY ERROR:', err);
 
       if (!res.headersSent) {
         res.status(500).json({
-          error: 'Login proxy failed',
+          error: 'Proxy failed',
           details: err.message
         });
       }

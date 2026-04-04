@@ -79,15 +79,14 @@ app.use(
 app.use(
   '/triciabales-api/api/triciabales/upload',
   createProxyMiddleware({
-    target: 'http://134.209.182.39:8080',
+    target: 'http://134.209.182.39:8080/api/triciabales/upload',
     changeOrigin: true,
     secure: false,
-    pathRewrite: {
-      '^/triciabales-api': ''
-    },
     proxyTimeout: 120000,
     timeout: 120000,
     logLevel: 'debug',
+
+    pathRewrite: () => '',
 
     onProxyReq: (proxyReq, req) => {
       console.log(
@@ -105,17 +104,6 @@ app.use(
         proxyRes.statusCode,
         req.originalUrl
       );
-    },
-
-    onError: (err, req, res) => {
-      console.error('UPLOAD PROXY ERROR:', err);
-
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: 'Upload proxy failed',
-          details: err.message
-        });
-      }
     }
   })
 );
@@ -129,8 +117,6 @@ app.use(
     pathRewrite: {
       '^/triciabales-api': ''
     },
-    proxyTimeout: 60000,
-    timeout: 60000,
     logLevel: 'debug',
 
     onProxyReq: (proxyReq, req) => {
@@ -141,25 +127,6 @@ app.use(
         '->',
         proxyReq.path
       );
-    },
-
-    onProxyRes: (proxyRes, req) => {
-      console.log(
-        'PRODUCTS RESPONSE:',
-        proxyRes.statusCode,
-        req.originalUrl
-      );
-    },
-
-    onError: (err, req, res) => {
-      console.error('PRODUCTS PROXY ERROR:', err);
-
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: 'Products proxy failed',
-          details: err.message
-        });
-      }
     }
   })
 );
@@ -191,13 +158,24 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "http://134.209.182.39:8080"],
-        mediaSrc: ["'self'", "http://134.209.182.39:8080"],
-        connectSrc: ["'self'", "http://134.209.182.39:8080"]
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "http://134.209.182.39:8080",
+          "https://images.unsplash.com"
+        ],
+        mediaSrc: [
+          "'self'",
+          "blob:",
+          "http://134.209.182.39:8080"
+        ]
       }
     }
   })
 );
+
+
 app.use(compression());
 app.use(cors({
   origin: process.env.CLIENT_URL || "*",

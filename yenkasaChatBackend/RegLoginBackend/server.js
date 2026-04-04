@@ -33,7 +33,7 @@ app.use(express.json());
 
 
 app.use(
-  '/triciabales-api/api/auth/login',
+  '/triciabales-api/api/auth',
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,

@@ -26,6 +26,41 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 
 const app = express();
+
+app.use(
+  '/triciabales-api',
+  createProxyMiddleware({
+    target: 'http://134.209.182.39:8080',
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: {
+      '^/triciabales-api': ''
+    },
+    proxyTimeout: 30000,
+    timeout: 30000,
+
+    on: {
+      proxyReq: (proxyReq, req, res) => {
+        console.log('PROXYING:', req.method, req.originalUrl, '->', proxyReq.path);
+      },
+
+      proxyRes: (proxyRes, req, res) => {
+        console.log('PROXY RESPONSE STATUS:', proxyRes.statusCode);
+      },
+
+      error: (err, req, res) => {
+        console.error('PROXY ERROR:', err);
+
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: err.message
+          });
+        }
+      }
+    }
+  })
+);
+
 console.log("server.js: Starting application setup...");
 
 
@@ -73,44 +108,7 @@ if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
 console.log("server.js: Core middlewares configured.");
 
 
-app.use('/triciabales-api', (req, res, next) => {
-  console.log('TRICIABALES FIRST HIT:', req.originalUrl);
-  next();
-});
 
-app.use(
-  '/triciabales-api',
-  createProxyMiddleware({
-    target: 'http://134.209.182.39:8080',
-    changeOrigin: true,
-    secure: false,
-    pathRewrite: {
-      '^/triciabales-api': ''
-    },
-    proxyTimeout: 30000,
-    timeout: 30000,
-
-    on: {
-      proxyReq: (proxyReq, req, res) => {
-        console.log('PROXYING:', req.method, req.originalUrl, '->', proxyReq.path);
-      },
-
-      proxyRes: (proxyRes, req, res) => {
-        console.log('PROXY RESPONSE STATUS:', proxyRes.statusCode);
-      },
-
-      error: (err, req, res) => {
-        console.error('PROXY ERROR:', err);
-
-        if (!res.headersSent) {
-          res.status(500).json({
-            error: err.message
-          });
-        }
-      }
-    }
-  })
-);
 
 // ---------------------------------
 // ✨ SOCKET.IO ONLINE/OFFLINE TRACKING

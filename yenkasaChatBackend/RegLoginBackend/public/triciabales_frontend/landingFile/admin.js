@@ -91,7 +91,7 @@ addBaleBtn.addEventListener("click", async () => {
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/triciabales/uploads",
+      "https://www.yenkasa.xyz/triciabales-api/api/triciabales/upload",
       {
         method: "POST",
         body: formData

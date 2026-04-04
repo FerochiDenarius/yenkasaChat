@@ -32,104 +32,50 @@ const axios = require('axios');
 app.use(express.json());
 
 
-app.use(
-  '/triciabales-api',
-  createProxyMiddleware({
-    target: 'http://134.209.182.39:8080',
-    changeOrigin: true,
-    secure: false,
-    pathRewrite: {
-      '^/triciabales-api': ''
-    },
-    proxyTimeout: 60000,
-    timeout: 60000,
-    logLevel: 'debug',
+app.post('/triciabales-api/api/auth/login', async (req, res) => {
+  try {
+    console.log('LOGIN BODY:', req.body);
 
-    onProxyReq: (proxyReq, req) => {
-      console.log(
-        'TRICIABALES PROXY:',
-        req.method,
-        req.originalUrl,
-        '->',
-        proxyReq.path
-      );
-    },
+    const response = await axios.post(
+      'http://134.209.182.39:8080/api/auth/login',
+      req.body
+    );
 
-    onProxyRes: (proxyRes, req) => {
-      console.log(
-        'TRICIABALES RESPONSE:',
-        proxyRes.statusCode,
-        req.originalUrl
-      );
-    },
+    console.log('BACKEND RESPONSE:', response.data);
 
-    onError: (err, req, res) => {
-      console.error('TRICIABALES PROXY ERROR:', err);
+    res.json(response.data);
+  } catch (err) {
+    console.error('LOGIN ERROR:', err.response?.data || err.message);
 
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: 'Proxy failed',
-          details: err.message
-        });
-      }
-    }
-  })
-);
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: err.message }
+    );
+  }
+});
 
-app.use(
-  '/triciabales-api/api/triciabales/upload',
-  createProxyMiddleware({
-    target: 'http://134.209.182.39:8080/api/triciabales/upload',
-    changeOrigin: true,
-    secure: false,
-    proxyTimeout: 120000,
-    timeout: 120000,
-    logLevel: 'debug',
+app.get('/triciabales-api/api/triciabales', async (req, res) => {
+  try {
+    const response = await axios.get(
+      'http://134.209.182.39:8080/api/triciabales'
+    );
 
-    pathRewrite: () => '',
+    res.json(response.data);
+  } catch (err) {
+    console.error('LOAD BALES ERROR:', err.response?.data || err.message);
 
-    onProxyReq: (proxyReq, req) => {
-      console.log(
-        'UPLOAD PROXY:',
-        req.method,
-        req.originalUrl,
-        '->',
-        proxyReq.path
-      );
-    },
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: err.message }
+    );
+  }
+});
 
-    onProxyRes: (proxyRes, req) => {
-      console.log(
-        'UPLOAD RESPONSE:',
-        proxyRes.statusCode,
-        req.originalUrl
-      );
-    }
-  })
-);
+app.post('/triciabales-api/api/triciabales/upload', async (req, res) => {
+  res.status(500).json({
+    error: 'Use proxy middleware or multer passthrough for upload route'
+  });
+});
 
-app.use(
-  '/triciabales-api/api/triciabales',
-  createProxyMiddleware({
-    target: 'http://134.209.182.39:8080',
-    changeOrigin: true,
-    secure: false,
-    pathRewrite: {
-      '^/triciabales-api': ''
-    },
-    logLevel: 'debug',
 
-    onProxyReq: (proxyReq, req) => {
-      console.log(
-        'PRODUCTS PROXY:',
-        req.method,
-        req.originalUrl,
-        '->',
-        proxyReq.path
-      );
-    }
-  })
-);
 
 console.log("server.js: Starting application setup...");
 

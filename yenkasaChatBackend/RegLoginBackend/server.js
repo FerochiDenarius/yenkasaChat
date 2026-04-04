@@ -83,15 +83,31 @@ app.use(
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
+    secure: false,
     pathRewrite: {
       '^/triciabales-api': ''
     },
-    onProxyReq: (proxyReq, req, res) => {
-      console.log('PROXYING TO:', proxyReq.path);
-    },
-    onError: (err, req, res) => {
-      console.error('PROXY ERROR:', err.message);
-      res.status(500).send(err.message);
+    proxyTimeout: 30000,
+    timeout: 30000,
+
+    on: {
+      proxyReq: (proxyReq, req, res) => {
+        console.log('PROXYING:', req.method, req.originalUrl, '->', proxyReq.path);
+      },
+
+      proxyRes: (proxyRes, req, res) => {
+        console.log('PROXY RESPONSE STATUS:', proxyRes.statusCode);
+      },
+
+      error: (err, req, res) => {
+        console.error('PROXY ERROR:', err);
+
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: err.message
+          });
+        }
+      }
     }
   })
 );

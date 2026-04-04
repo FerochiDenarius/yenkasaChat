@@ -1,109 +1,280 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin - Tricia Bales</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tricia Bales Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    h2 { margin-bottom: 20px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(184,134,11,0.18), transparent 30%),
+        linear-gradient(180deg, #f8f5ef 0%, #f2f2f2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #222;
+    }
+
+    .wrapper {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(184,134,11,0.12);
+      color: #9b6b00;
+      border: 1px solid rgba(184,134,11,0.2);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .header h1 {
+      font-size: clamp(28px, 5vw, 40px);
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(14px);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 24px 50px rgba(0,0,0,0.08);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
 
     label {
-      font-weight: bold;
-      margin-top: 10px;
-      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
     }
 
-    input, textarea, select {
-      display: block;
-      margin: 5px 0 10px;
-      padding: 8px;
-      width: 300px;
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 15px 16px;
+      border: 1px solid #ddd;
+      border-radius: 18px;
+      background: #fff;
+      font-size: 15px;
+      font-family: inherit;
     }
 
-    button {
-      padding: 10px;
-      background: green;
-      color: white;
-      border: none;
-      cursor: pointer;
+    textarea {
+      min-height: 120px;
+      resize: vertical;
     }
 
-    img, video {
-      margin-top: 10px;
-      width: 200px;
-      border-radius: 10px;
-      display: none;
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #c99511;
+      box-shadow: 0 0 0 4px rgba(184,134,11,0.15);
+    }
+
+    .upload-box {
+      border: 2px dashed #d9d9d9;
+      border-radius: 22px;
+      padding: 18px;
+      background: #fafafa;
     }
 
     .preview {
-      margin-bottom: 15px;
+      display: none;
+      width: 100%;
+      max-width: 240px;
+      margin-top: 14px;
+      border-radius: 18px;
+      border: 1px solid #ececec;
+    }
+
+    video.preview {
+      max-width: 280px;
+    }
+
+    .action-bar {
+      margin-top: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .submit-btn {
+      border: none;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(135deg, #c99511, #8b5f00);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+
+    .progress-wrap {
+      display: none;
+      width: 100%;
+      height: 10px;
+      background: #ececec;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #c99511, #f0c14d);
+      animation: progressMove 1.2s linear infinite;
+    }
+
+    @keyframes progressMove {
+      0% { width: 0%; }
+      50% { width: 75%; }
+      100% { width: 100%; }
+    }
+
+    .status-text {
+      display: none;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 18px;
+      }
     }
   </style>
 </head>
-
 <body>
 
-<h2>🛠 Add New Bale</h2>
+  <div class="wrapper">
+    <div class="header">
+      <div class="badge">Tricia Bales Admin Panel</div>
+      <h1>Add New Bale</h1>
+      <p>Upload new bale details, images and videos directly from your phone or computer.</p>
+    </div>
 
-<label>Bale Name</label>
-<input type="text" id="name">
+    <div class="card">
+      <div class="grid">
 
-<label>Price (GHS)</label>
-<input type="number" id="price">
+        <div class="field">
+          <label for="name">Bale Name</label>
+          <input type="text" id="name" placeholder="e.g. Ladies Flannel Blouse Bale">
+        </div>
 
-<label>Weight</label>
-<input type="text" id="weight">
+        <div class="field">
+          <label for="price">Price (GHS)</label>
+          <input type="number" id="price" placeholder="4500">
+        </div>
 
-<label>Category</label>
-<input type="text" id="category">
+        <div class="field">
+          <label for="weight">Weight</label>
+          <input type="text" id="weight" placeholder="55kg">
+        </div>
 
-<label>Description</label>
-<textarea id="description"></textarea>
+        <div class="field">
+          <label for="category">Category</label>
+          <input type="text" id="category" placeholder="Flannel Blouse">
+        </div>
 
-<!-- ✅ STATUS ADDED -->
-<label>Status</label>
-<select id="status">
-  <option value="available">Available</option>
-  <option value="preorder">Preorder</option>
-  <option value="sold">Sold</option>
-</select>
+        <div class="field full">
+          <label for="description">Description</label>
+          <textarea id="description" placeholder="Describe the bale, quantity, grade, colours and anything buyers should know."></textarea>
+        </div>
 
-<!-- IMAGE -->
-<label>📸 Select Image</label>
-<input type="file" id="imageFile" accept="image/*" onchange="previewImage()">
-<img id="imagePreview" class="preview">
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="available">Available</option>
+            <option value="preorder">Preorder</option>
+            <option value="sold">Sold</option>
+          </select>
+        </div>
 
-<!-- VIDEO -->
-<label>🎥 Select Video (Optional)</label>
-<input type="file" id="videoFile" accept="video/*" onchange="previewVideo()">
-<video id="videoPreview" class="preview" controls></video>
+        <div class="field full">
+          <label for="imageFile">📸 Bale Image</label>
+          <div class="upload-box">
+            <input type="file" id="imageFile" accept="image/*">
+            <img id="imagePreview" class="preview" alt="Image preview">
+          </div>
+        </div>
 
-<button onclick="addBale()">Add Bale</button>
+        <div class="field full">
+          <label for="videoFile">🎥 Bale Video (Optional)</label>
+          <div class="upload-box">
+            <input type="file" id="videoFile" accept="video/*">
+            <video id="videoPreview" class="preview" controls></video>
+          </div>
+        </div>
 
-<script src="admin.js"></script>
+      </div>
 
-<script>
-  function previewImage() {
-    const file = document.getElementById("imageFile").files[0];
-    const preview = document.getElementById("imagePreview");
+      <div class="action-bar">
+        <button id="addBaleBtn" class="submit-btn">Upload Bale</button>
 
-    if (file) {
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = "block";
-    }
-  }
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar"></div>
+        </div>
 
-  function previewVideo() {
-    const file = document.getElementById("videoFile").files[0];
-    const preview = document.getElementById("videoPreview");
+        <div class="status-text" id="statusText">
+          Uploading bale, please wait...
+        </div>
+      </div>
+    </div>
+  </div>
 
-    if (file) {
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = "block";
-    }
-  }
-</script>
-
+  <script src="../landingFile/admin.js"></script>
 </body>
 </html>

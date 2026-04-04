@@ -36,23 +36,41 @@ app.use(express.json());
 
 
 // Handles files with extensions like image.jpg
-app.get('/triciabales-api/uploads/:filename.:ext', async (req, res) => {
+// Make sure this route is defined BEFORE any static file middleware
+app.get('/triciabales-api/uploads/*', async (req, res) => {
   try {
-    const fullFileName = `${req.params.filename}.${req.params.ext}`;
+    // Get the full file path from the URL
+    const filePath = req.params[0];
     
+    console.log('Axios proxying:', filePath);
+    
+    // Make request to remote server
     const response = await axios({
       method: 'get',
-      url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(fullFileName)}`,
-      responseType: 'stream'
+      url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(filePath)}`,
+      responseType: 'stream',
+      validateStatus: (status) => status < 500 // Accept 404s, etc.
     });
-
+    
+    // Set content type from remote server
+    if (response.headers['content-type']) {
+      res.setHeader('Content-Type', response.headers['content-type']);
+    }
+    
+    // Pipe the remote file to the response
     response.data.pipe(res);
-
+    
   } catch (err) {
-    console.error('MEDIA FILE ERROR:', err.message);
-    res.status(err.response?.status || 500).json({
-      error: 'Media file could not be loaded'
-    });
+    console.error('Axios proxy error:', err.message);
+    
+    // Handle different error types
+    if (err.response?.status === 404) {
+      res.status(404).json({ error: 'File not found' });
+    } else if (err.code === 'ECONNREFUSED') {
+      res.status(503).json({ error: 'Remote server unavailable' });
+    } else {
+      res.status(500).json({ error: 'Failed to load media file' });
+    }
   }
 });
 

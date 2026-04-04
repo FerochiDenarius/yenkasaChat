@@ -73,6 +73,11 @@ if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
 console.log("server.js: Core middlewares configured.");
 
 
+app.use('/triciabales-api', (req, res, next) => {
+  console.log('TRICIABALES ROUTE HIT:', req.method, req.originalUrl);
+  next();
+});
+
 //my wifes site 
 app.use(
   '/triciabales-api',

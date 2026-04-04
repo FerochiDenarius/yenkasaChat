@@ -297,18 +297,26 @@ const deleteAccountPage = require("./routes/deleteAccount.page");
 app.use(deleteAccountPage);
 
 
-
+//my wifes site 
 app.use(
   '/triciabales-api',
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
+    secure: false,
     pathRewrite: {
       '^/triciabales-api': ''
     },
     proxyTimeout: 30000,
     timeout: 30000,
-    logLevel: 'debug'
+    logLevel: 'debug',
+    onProxyReq: (proxyReq, req, res) => {
+      console.log('Proxying:', req.method, req.originalUrl, '->', proxyReq.path);
+    },
+    onError: (err, req, res) => {
+      console.error('Proxy error:', err);
+      res.status(500).json({ error: err.message });
+    }
   })
 );
 

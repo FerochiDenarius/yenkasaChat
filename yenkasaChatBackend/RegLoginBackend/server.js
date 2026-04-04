@@ -27,39 +27,41 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 
-app.use(
-  '/triciabales-api',
-  createProxyMiddleware({
-    target: 'http://134.209.182.39:8080',
-    changeOrigin: true,
-    secure: false,
-    pathRewrite: {
-      '^/triciabales-api': ''
-    },
-    proxyTimeout: 30000,
-    timeout: 30000,
+const axios = require('axios');
 
-    on: {
-      proxyReq: (proxyReq, req, res) => {
-        console.log('PROXYING:', req.method, req.originalUrl, '->', proxyReq.path);
-      },
+app.use(express.json());
 
-      proxyRes: (proxyRes, req, res) => {
-        console.log('PROXY RESPONSE STATUS:', proxyRes.statusCode);
-      },
+app.post('/triciabales-api/api/auth/login', async (req, res) => {
+  try {
+    console.log('LOGIN BODY:', req.body);
 
-      error: (err, req, res) => {
-        console.error('PROXY ERROR:', err);
-
-        if (!res.headersSent) {
-          res.status(500).json({
-            error: err.message
-          });
+    const response = await axios.post(
+      'http://134.209.182.39:8080/api/auth/login',
+      req.body,
+      {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json'
         }
       }
+    );
+
+    console.log('BACKEND RESPONSE:', response.data);
+
+    res.json(response.data);
+  } catch (err) {
+    console.error('AXIOS ERROR:', err.message);
+
+    if (err.response) {
+      console.error('BACKEND STATUS:', err.response.status);
+      console.error('BACKEND DATA:', err.response.data);
     }
-  })
-);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
 
 console.log("server.js: Starting application setup...");
 

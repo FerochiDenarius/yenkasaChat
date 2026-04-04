@@ -32,27 +32,37 @@ const axios = require('axios');
 app.use(express.json());
 
 
-
 app.use(
   '/triciabales-api/api/auth/login',
   createProxyMiddleware({
-    target: 'http://134.209.182.39:8080/api/auth/login',
+    target: 'http://134.209.182.39:8080',
     changeOrigin: true,
     secure: false,
     pathRewrite: {
-      '^/triciabales-api/api/auth/login': ''
+      '^/triciabales-api': ''
     },
     proxyTimeout: 60000,
     timeout: 60000,
     logLevel: 'debug',
+
     onProxyReq: (proxyReq, req) => {
       console.log(
         'LOGIN PROXY:',
+        req.method,
         req.originalUrl,
         '->',
         proxyReq.path
       );
     },
+
+    onProxyRes: (proxyRes, req) => {
+      console.log(
+        'LOGIN RESPONSE:',
+        proxyRes.statusCode,
+        req.originalUrl
+      );
+    },
+
     onError: (err, req, res) => {
       console.error('LOGIN PROXY ERROR:', err);
 
@@ -69,23 +79,34 @@ app.use(
 app.use(
   '/triciabales-api/api/triciabales/upload',
   createProxyMiddleware({
-    target: 'http://134.209.182.39:8080/api/triciabales/upload',
+    target: 'http://134.209.182.39:8080',
     changeOrigin: true,
     secure: false,
     pathRewrite: {
-      '^/triciabales-api/api/triciabales/upload': ''
+      '^/triciabales-api': ''
     },
     proxyTimeout: 120000,
     timeout: 120000,
     logLevel: 'debug',
+
     onProxyReq: (proxyReq, req) => {
       console.log(
         'UPLOAD PROXY:',
+        req.method,
         req.originalUrl,
         '->',
         proxyReq.path
       );
     },
+
+    onProxyRes: (proxyRes, req) => {
+      console.log(
+        'UPLOAD RESPONSE:',
+        proxyRes.statusCode,
+        req.originalUrl
+      );
+    },
+
     onError: (err, req, res) => {
       console.error('UPLOAD PROXY ERROR:', err);
 
@@ -102,14 +123,44 @@ app.use(
 app.use(
   '/triciabales-api/api/triciabales',
   createProxyMiddleware({
-    target: 'http://134.209.182.39:8080/api/triciabales',
+    target: 'http://134.209.182.39:8080',
     changeOrigin: true,
     secure: false,
     pathRewrite: {
-      '^/triciabales-api/api/triciabales': ''
+      '^/triciabales-api': ''
     },
     proxyTimeout: 60000,
-    timeout: 60000
+    timeout: 60000,
+    logLevel: 'debug',
+
+    onProxyReq: (proxyReq, req) => {
+      console.log(
+        'PRODUCTS PROXY:',
+        req.method,
+        req.originalUrl,
+        '->',
+        proxyReq.path
+      );
+    },
+
+    onProxyRes: (proxyRes, req) => {
+      console.log(
+        'PRODUCTS RESPONSE:',
+        proxyRes.statusCode,
+        req.originalUrl
+      );
+    },
+
+    onError: (err, req, res) => {
+      console.error('PRODUCTS PROXY ERROR:', err);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Products proxy failed',
+          details: err.message
+        });
+      }
+    }
   })
 );
 

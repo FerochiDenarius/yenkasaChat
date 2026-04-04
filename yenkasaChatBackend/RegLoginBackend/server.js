@@ -34,7 +34,7 @@ app.use(express.json());
 
 
 app.use(
-  '/triciabales-api',
+  '/triciabales-api/api/auth/login',
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
@@ -45,9 +45,9 @@ app.use(
     proxyTimeout: 60000,
     timeout: 60000,
     logLevel: 'debug',
-    onProxyReq: (proxyReq, req, res) => {
+    onProxyReq: (proxyReq, req) => {
       console.log(
-        'TRICIABALES PROXY:',
+        'LOGIN PROXY:',
         req.method,
         req.originalUrl,
         '->',
@@ -55,8 +55,55 @@ app.use(
       );
     },
     onError: (err, req, res) => {
-      console.error('TRICIABALES PROXY ERROR:', err);
-      res.status(500).json({ error: err.message });
+      console.error('LOGIN PROXY ERROR:', err);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Login proxy failed',
+          details: err.message
+        });
+      }
+    }
+  })
+);
+
+app.use(
+  '/triciabales-api/api/triciabales/upload',
+  createProxyMiddleware({
+    target: 'http://134.209.182.39:8080',
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: {
+      '^/triciabales-api': ''
+    },
+    proxyTimeout: 120000,
+    timeout: 120000,
+    logLevel: 'debug',
+    onProxyReq: (proxyReq, req) => {
+      console.log(
+        'UPLOAD PROXY:',
+        req.method,
+        req.originalUrl,
+        '->',
+        proxyReq.path
+      );
+    },
+    onProxyRes: (proxyRes, req) => {
+      console.log(
+        'UPLOAD RESPONSE:',
+        proxyRes.statusCode,
+        req.originalUrl
+      );
+    },
+    onError: (err, req, res) => {
+      console.error('UPLOAD PROXY ERROR:', err);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Upload proxy failed',
+          details: err.message
+        });
+      }
     }
   })
 );

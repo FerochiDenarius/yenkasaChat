@@ -74,29 +74,24 @@ console.log("server.js: Core middlewares configured.");
 
 
 app.use('/triciabales-api', (req, res, next) => {
-  console.log('TRICIABALES ROUTE HIT:', req.method, req.originalUrl);
+  console.log('TRICIABALES FIRST HIT:', req.originalUrl);
   next();
 });
 
-//my wifes site 
 app.use(
   '/triciabales-api',
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
-    secure: false,
     pathRewrite: {
       '^/triciabales-api': ''
     },
-    proxyTimeout: 30000,
-    timeout: 30000,
-    logLevel: 'debug',
     onProxyReq: (proxyReq, req, res) => {
-      console.log('Proxying:', req.method, req.originalUrl, '->', proxyReq.path);
+      console.log('PROXYING TO:', proxyReq.path);
     },
     onError: (err, req, res) => {
-      console.error('Proxy error:', err);
-      res.status(500).json({ error: err.message });
+      console.error('PROXY ERROR:', err.message);
+      res.status(500).send(err.message);
     }
   })
 );

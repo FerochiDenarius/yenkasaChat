@@ -33,12 +33,37 @@ const axios = require('axios');
 
 app.use(express.json());
 
-app.use(
-  '/triciabales-api/uploads',
-  express.static('/var/www/triciabales/uploads', {
-    fallthrough: false
-  })
-);
+
+
+app.get('/triciabales-api/uploads/:file(*)', async (req, res) => {
+  try {
+    const fileName = req.params.file;
+
+    const response = await axios({
+      method: 'get',
+      url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(fileName)}`,
+      responseType: 'stream'
+    });
+
+    if (response.headers['content-type']) {
+      res.setHeader('Content-Type', response.headers['content-type']);
+    }
+
+    response.data.pipe(res);
+
+  } catch (err) {
+    console.error(
+      'MEDIA FILE ERROR:',
+      req.params.file,
+      err.response?.status,
+      err.message
+    );
+
+    res.status(err.response?.status || 500).json({
+      error: 'Media file could not be loaded'
+    });
+  }
+});
 
 
 app.post('/triciabales-api/api/auth/login', async (req, res) => {

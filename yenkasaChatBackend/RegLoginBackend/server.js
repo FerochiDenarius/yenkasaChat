@@ -64,35 +64,7 @@ app.post('/triciabales-api/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/triciabales-api/api/auth/login', async (req, res) => {
-  try {
-    console.log('LOGIN BODY:', req.body);
 
-    const response = await axios.post(
-      'http://134.209.182.39:8080/api/auth/login',
-      req.body,
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    console.log('LOGIN RESPONSE:', response.data);
-    res.json(response.data);
-
-  } catch (err) {
-    console.error(
-      'LOGIN ERROR:',
-      err.response?.status,
-      err.response?.data || err.message
-    );
-
-    res.status(err.response?.status || 500).json(
-      err.response?.data || { error: err.message }
-    );
-  }
-});
 
 app.post(
   '/triciabales-api/api/triciabales/upload',
@@ -157,6 +129,30 @@ app.post(
     }
   }
 );
+
+app.get('/triciabales-api/api/triciabales', async (req, res) => {
+  try {
+    console.log('LOAD BALES');
+
+    const response = await axios.get(
+      'http://134.209.182.39:8080/api/triciabales'
+    );
+
+    console.log('BALES RESPONSE:', response.data);
+
+    res.json(response.data);
+  } catch (err) {
+    console.error(
+      'BALES ERROR:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: err.message }
+    );
+  }
+});
 
 
 

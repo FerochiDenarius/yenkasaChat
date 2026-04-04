@@ -154,6 +154,11 @@ app.get('/triciabales-api/api/triciabales', async (req, res) => {
   }
 });
 
+app.use(
+  '/triciabales-api/uploads',
+  express.static('/root/triciabales/uploads')
+);
+
 
 
 console.log("server.js: Starting application setup...");
@@ -187,12 +192,14 @@ app.use(
           "'self'",
           "data:",
           "blob:",
+          "https://www.yenkasa.xyz",
           "http://134.209.182.39:8080",
           "https://images.unsplash.com"
         ],
         mediaSrc: [
           "'self'",
           "blob:",
+          "https://www.yenkasa.xyz",
           "http://134.209.182.39:8080"
         ]
       }

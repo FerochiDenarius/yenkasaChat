@@ -35,34 +35,31 @@ app.use(express.json());
 
 
 
-app.get('/triciabales-api/uploads/:file(*)', async (req, res) => {
+// Handles files with extensions like image.jpg
+app.get('/triciabales-api/uploads/:filename.:ext', async (req, res) => {
   try {
-    const fileName = req.params.file;
-
+    const fullFileName = `${req.params.filename}.${req.params.ext}`;
+    
     const response = await axios({
       method: 'get',
-      url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(fileName)}`,
+      url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(fullFileName)}`,
       responseType: 'stream'
     });
-
-    if (response.headers['content-type']) {
-      res.setHeader('Content-Type', response.headers['content-type']);
-    }
 
     response.data.pipe(res);
 
   } catch (err) {
-    console.error(
-      'MEDIA FILE ERROR:',
-      req.params.file,
-      err.response?.status,
-      err.message
-    );
-
+    console.error('MEDIA FILE ERROR:', err.message);
     res.status(err.response?.status || 500).json({
       error: 'Media file could not be loaded'
     });
   }
+});
+
+// For nested folders: /uploads/folder/subfolder/file.jpg
+app.get('/triciabales-api/uploads/*', async (req, res) => {
+  const filePath = req.params[0];
+  // ... rest same as Solution 1
 });
 
 

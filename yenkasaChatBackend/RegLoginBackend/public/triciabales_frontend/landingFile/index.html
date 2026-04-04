@@ -1,14 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Tricia Bales</title>
-  <link rel="stylesheet" href="../cssFile/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tricia Bales | Quality Bale Clothing in Ghana</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>🧺 Tricia Bales</h1>
-<div id="bale-container"></div>
+  <header class="hero">
+    <nav class="navbar">
+      <div class="logo">🧺 Tricia Bales</div>
 
-<script src="../jsFiles/script.js"></script>
+      <div class="nav-links">
+        <a href="#collection">Collections</a>
+        <a href="#why-us">Why Us</a>
+        <a href="#contact">Contact</a>
+        <a href="login.html" class="admin-btn">Admin Login</a>
+      </div>
+    </nav>
+
+    <div class="hero-content">
+      <div class="hero-text">
+        <span class="badge">Grade A Bale Clothing • Accra, Ghana</span>
+        <h1>Beautiful Bale Clothes at Affordable Prices</h1>
+        <p>
+          Shop flannel blouses, jogger pants, sweatshirts and more.
+          View available bales, prices, photos and chat directly on WhatsApp.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#collection" class="primary-btn">Browse Bales</a>
+          <a href="https://wa.me/233551699010" target="_blank" class="secondary-btn">
+            Chat on WhatsApp
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <div class="mini-card">
+          <h3>55kg Grade A Bales</h3>
+          <p>Premium quality with carefully selected items.</p>
+        </div>
+
+        <div class="stats">
+          <div>
+            <strong>100+</strong>
+            <span>Happy Buyers</span>
+          </div>
+          <div>
+            <strong>24/7</strong>
+            <span>WhatsApp Support</span>
+          </div>
+          <div>
+            <strong>Accra</strong>
+            <span>Fast Pickup</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="features" id="why-us">
+    <div class="feature-box">
+      <div class="icon">✨</div>
+      <h3>Grade A Quality</h3>
+      <p>Only neat and wearable clothes are selected.</p>
+    </div>
+
+    <div class="feature-box">
+      <div class="icon">📍</div>
+      <h3>Located in Oyarifa</h3>
+      <p>Easy pickup and selection for buyers in Accra.</p>
+    </div>
+
+    <div class="feature-box">
+      <div class="icon">💬</div>
+      <h3>Direct WhatsApp</h3>
+      <p>Chat instantly to reserve or ask about any bale.</p>
+    </div>
+  </section>
+
+  <section class="collection-section" id="collection">
+    <div class="section-header">
+      <span>Our Collection</span>
+      <h2>Available Bales</h2>
+      <p>Fresh arrivals updated regularly</p>
+    </div>
+
+    <div id="bale-container" class="bale-grid"></div>
+  </section>
+
+  <section class="contact-banner" id="contact">
+    <div>
+      <h2>Need help choosing a bale?</h2>
+      <p>Message Tricia directly and get quick answers.</p>
+    </div>
+
+    <a href="https://wa.me/233551699010" target="_blank" class="primary-btn white-btn">
+      Contact on WhatsApp
+    </a>
+  </section>
+
+  <footer>
+    <p>© 2026 Tricia Bales • Oyarifa, Ghana</p>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>

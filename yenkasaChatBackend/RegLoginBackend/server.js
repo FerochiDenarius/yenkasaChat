@@ -301,7 +301,7 @@ app.use(deleteAccountPage);
 app.use(
   '/triciabales-api',
   createProxyMiddleware({
-    target: 'http://127.0.0.1:8080',
+    target: 'http://134.209.182.39:8080',
     changeOrigin: true,
     pathRewrite: {
       '^/triciabales-api': ''

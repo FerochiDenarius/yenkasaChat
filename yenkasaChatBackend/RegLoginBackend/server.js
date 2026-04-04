@@ -31,40 +31,10 @@ const axios = require('axios');
 
 app.use(express.json());
 
-app.post('/triciabales-api/api/auth/login', async (req, res) => {
-  try {
-    console.log('LOGIN BODY:', req.body);
 
-    const response = await axios.post(
-      'http://134.209.182.39:8080/api/auth/login',
-      req.body,
-      {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    console.log('BACKEND RESPONSE:', response.data);
-
-    res.json(response.data);
-  } catch (err) {
-    console.error('AXIOS ERROR:', err.message);
-
-    if (err.response) {
-      console.error('BACKEND STATUS:', err.response.status);
-      console.error('BACKEND DATA:', err.response.data);
-    }
-
-    res.status(500).json({
-      error: err.message
-    });
-  }
-});
 
 app.use(
-  '/triciabales-api/api/triciabales/upload',
+  '/triciabales-api',
   createProxyMiddleware({
     target: 'http://134.209.182.39:8080',
     changeOrigin: true,
@@ -77,7 +47,7 @@ app.use(
     logLevel: 'debug',
     onProxyReq: (proxyReq, req, res) => {
       console.log(
-        'UPLOAD PROXY:',
+        'TRICIABALES PROXY:',
         req.method,
         req.originalUrl,
         '->',
@@ -85,7 +55,7 @@ app.use(
       );
     },
     onError: (err, req, res) => {
-      console.error('UPLOAD PROXY ERROR:', err);
+      console.error('TRICIABALES PROXY ERROR:', err);
       res.status(500).json({ error: err.message });
     }
   })

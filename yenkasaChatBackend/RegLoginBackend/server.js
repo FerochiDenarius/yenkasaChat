@@ -33,6 +33,13 @@ const axios = require('axios');
 
 app.use(express.json());
 
+app.use(
+  '/triciabales-api/uploads',
+  express.static('/var/www/triciabales/uploads', {
+    fallthrough: false
+  })
+);
+
 
 app.post('/triciabales-api/api/auth/login', async (req, res) => {
   try {
@@ -154,10 +161,7 @@ app.get('/triciabales-api/api/triciabales', async (req, res) => {
   }
 });
 
-app.use(
-  '/triciabales-api/uploads',
-  express.static('/var/www/triciabales/uploads')
-);
+
 
 
 

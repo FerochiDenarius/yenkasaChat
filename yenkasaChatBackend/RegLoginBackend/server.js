@@ -156,7 +156,7 @@ app.get('/triciabales-api/api/triciabales', async (req, res) => {
 
 app.use(
   '/triciabales-api/uploads',
-  express.static('/root/triciabales/uploads')
+  express.static('/var/www/triciabales/uploads')
 );
 
 

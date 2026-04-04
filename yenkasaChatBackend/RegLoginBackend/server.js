@@ -42,51 +42,66 @@ app.use('/triciabales-api/uploads/*', (req, res, next) => {
 });
 
 
-
-// Handles files with extensions like image.jpg
-// Make sure this route is defined BEFORE any static file middleware
-app.get('/triciabales-api/uploads/*', async (req, res) => {
+app.get(/^\/triciabales-api\/uploads\/(.+)$/, async (req, res) => {
   try {
-    // Get the full file path from the URL
     const filePath = req.params[0];
-    
-    console.log('Axios proxying:', filePath);
-    
-    // Make request to remote server
+
+    console.log('MEDIA REQUEST:', filePath);
+
     const response = await axios({
       method: 'get',
       url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(filePath)}`,
       responseType: 'stream',
-      validateStatus: (status) => status < 500 // Accept 404s, etc.
+      validateStatus: (status) => status < 500,
+      timeout: 60000
     });
-    
-    // Set content type from remote server
+
+    if (response.status === 404) {
+      console.error('MEDIA NOT FOUND ON JAVA SERVER:', filePath);
+
+      return res.status(404).json({
+        error: 'File not found on Java server'
+      });
+    }
+
     if (response.headers['content-type']) {
       res.setHeader('Content-Type', response.headers['content-type']);
     }
-    
-    // Pipe the remote file to the response
-    response.data.pipe(res);
-    
-  } catch (err) {
-    console.error('Axios proxy error:', err.message);
-    
-    // Handle different error types
-    if (err.response?.status === 404) {
-      res.status(404).json({ error: 'File not found' });
-    } else if (err.code === 'ECONNREFUSED') {
-      res.status(503).json({ error: 'Remote server unavailable' });
-    } else {
-      res.status(500).json({ error: 'Failed to load media file' });
+
+    if (response.headers['content-length']) {
+      res.setHeader('Content-Length', response.headers['content-length']);
     }
+
+    response.data.pipe(res);
+
+  } catch (err) {
+    console.error(
+      'MEDIA PROXY ERROR:',
+      err.code,
+      err.response?.status,
+      err.message
+    );
+
+    if (err.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        error: 'Java backend is not reachable'
+      });
+    }
+
+    if (err.code === 'ECONNABORTED') {
+      return res.status(504).json({
+        error: 'Media request timed out'
+      });
+    }
+
+    return res.status(err.response?.status || 500).json({
+      error: 'Failed to load media file',
+      details: err.message
+    });
   }
 });
 
-// For nested folders: /uploads/folder/subfolder/file.jpg
-app.get('/triciabales-api/uploads/*', async (req, res) => {
-  const filePath = req.params[0];
-  // ... rest same as Solution 1
-});
+
 
 
 app.post('/triciabales-api/api/auth/login', async (req, res) => {

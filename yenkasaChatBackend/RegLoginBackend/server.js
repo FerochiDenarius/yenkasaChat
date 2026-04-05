@@ -33,73 +33,8 @@ const axios = require('axios');
 
 app.use(express.json());
 
-// DEBUG: Check if this route is being hit
-app.use('/triciabales-api/uploads/*', (req, res, next) => {
-  console.log('🔵 ROUTE HIT:', req.method, req.originalUrl);
-  console.log('🔵 Full URL:', req.url);
-  console.log('🔵 Params:', req.params);
-  next();
-});
 
 
-app.get(/^\/triciabales-api\/uploads\/(.+)$/, async (req, res) => {
-  try {
-    const filePath = req.params[0];
-
-    console.log('MEDIA REQUEST:', filePath);
-
-    const response = await axios({
-      method: 'get',
-      url: `http://134.209.182.39:8080/uploads/${encodeURIComponent(filePath)}`,
-      responseType: 'stream',
-      validateStatus: (status) => status < 500,
-      timeout: 60000
-    });
-
-    if (response.status === 404) {
-      console.error('MEDIA NOT FOUND ON JAVA SERVER:', filePath);
-
-      return res.status(404).json({
-        error: 'File not found on Java server'
-      });
-    }
-
-    if (response.headers['content-type']) {
-      res.setHeader('Content-Type', response.headers['content-type']);
-    }
-
-    if (response.headers['content-length']) {
-      res.setHeader('Content-Length', response.headers['content-length']);
-    }
-
-    response.data.pipe(res);
-
-  } catch (err) {
-    console.error(
-      'MEDIA PROXY ERROR:',
-      err.code,
-      err.response?.status,
-      err.message
-    );
-
-    if (err.code === 'ECONNREFUSED') {
-      return res.status(503).json({
-        error: 'Java backend is not reachable'
-      });
-    }
-
-    if (err.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Media request timed out'
-      });
-    }
-
-    return res.status(err.response?.status || 500).json({
-      error: 'Failed to load media file',
-      details: err.message
-    });
-  }
-});
 
 
 
@@ -255,20 +190,20 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "blob:",
-          "https://www.yenkasa.xyz",
-          "http://134.209.182.39:8080",
-          "https://images.unsplash.com"
-        ],
-        mediaSrc: [
-          "'self'",
-          "blob:",
-          "https://www.yenkasa.xyz",
-          "http://134.209.182.39:8080"
-        ]
+imgSrc: [
+  "'self'",
+  "data:",
+  "blob:",
+  "https://www.yenkasa.xyz",
+  "https://res.cloudinary.com",
+  "https://images.unsplash.com"
+],
+mediaSrc: [
+  "'self'",
+  "blob:",
+  "https://www.yenkasa.xyz",
+  "https://res.cloudinary.com"
+]
       }
     }
   })

@@ -8,8 +8,7 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
       card.className = "card";
 
       card.innerHTML = `
-        ${bale.imageUrl ? `<img src="https://www.yenkasa.xyz/triciabales-api${bale.imageUrl}" alt="${bale.name}">` : ""}
-
+${bale.imageUrl ? `<img src="${bale.imageUrl}" alt="${bale.name}">` : ""}
         <div class="card-content">
           <div class="card-top">
             <h3>${bale.name}</h3>
@@ -22,9 +21,9 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
 
           <p><strong>Weight:</strong> ${bale.weight}</p>
 
-          ${bale.videoUrl
-            ? `<video controls src="https://www.yenkasa.xyz/triciabales-api${bale.videoUrl}"></video>`
-            : ""}
+        ${bale.videoUrl
+  ? `<video controls src="${bale.videoUrl}"></video>`
+  : ""}
 
           ${bale.status !== "sold"
             ? `

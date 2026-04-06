@@ -76,8 +76,9 @@ addBaleBtn.addEventListener("click", async () => {
   formData.append("weight", weight);
   formData.append("category", category);
   formData.append("description", description);
-  formData.append("status", status);
-  formData.append("image", imageFile);
+formData.append("status", status);
+formData.append("type", "bale");
+formData.append("image", imageFile);
 
   if (videoFile) {
     formData.append("video", videoFile);

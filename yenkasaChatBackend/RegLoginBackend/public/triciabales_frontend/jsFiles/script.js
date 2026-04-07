@@ -1,3 +1,6 @@
+const imageModal = document.getElementById("imageModal");
+const modalImage = document.getElementById("modalImage");
+
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
   .then(res => res.json())
   .then(data => {
@@ -15,7 +18,6 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
               src="${item.imageUrl}"
               alt="${item.name}"
               class="product-image"
-              onclick="openImage('${item.imageUrl}')"
             >
           </div>
         ` : ""}
@@ -51,6 +53,14 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
         </div>
       `;
 
+      const productImage = card.querySelector(".product-image");
+
+      if (productImage) {
+        productImage.addEventListener("click", () => {
+          openImage(item.imageUrl);
+        });
+      }
+
       if (item.type === "single") {
         dressContainer.appendChild(card);
       } else {
@@ -72,11 +82,17 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
     document.getElementById("dress-container").innerHTML = errorHtml;
   });
 
+imageModal.addEventListener("click", event => {
+  if (event.target === imageModal) {
+    closeImage();
+  }
+});
+
 function openImage(src) {
-  document.getElementById("modalImage").src = src;
-  document.getElementById("imageModal").style.display = "flex";
+  modalImage.src = src;
+  imageModal.style.display = "flex";
 }
 
 function closeImage() {
-  document.getElementById("imageModal").style.display = "none";
+  imageModal.style.display = "none";
 }

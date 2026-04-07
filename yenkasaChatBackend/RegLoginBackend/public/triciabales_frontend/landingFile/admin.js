@@ -12,6 +12,7 @@ const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
 const manageTab = document.getElementById("manageTab");
 const manageSection = document.getElementById("manageSection");
+const manageList = document.getElementById("manageList");
 const uploadCard = document.querySelector(".card");
 
 baleTab.addEventListener("click", () => {
@@ -56,6 +57,28 @@ manageTab.addEventListener("click", () => {
   manageSection.style.display = "block";
 
   loadManageProducts();
+});
+
+manageList.addEventListener("click", event => {
+  const button = event.target.closest(".manage-btn");
+
+  if (!button) {
+    return;
+  }
+
+  const { action, id } = button.dataset;
+
+  if (!id) {
+    return;
+  }
+
+  if (action === "status") {
+    markSold(Number(id));
+  }
+
+  if (action === "delete") {
+    deleteProduct(Number(id));
+  }
 });
 
 // Image preview
@@ -224,8 +247,6 @@ formData.append("type", productType.value);
 });
 
 async function loadManageProducts() {
-  const manageList = document.getElementById("manageList");
-
   manageList.innerHTML = "<p>Loading products...</p>";
 
   try {
@@ -262,11 +283,11 @@ async function loadManageProducts() {
         </div>
 
         <div class="manage-actions">
-          <button class="manage-btn status" onclick="markSold(${item.id})">
+          <button class="manage-btn status" data-action="status" data-id="${item.id}">
             ${item.status === "sold" ? "Mark Available" : "Mark Sold"}
           </button>
 
-          <button class="manage-btn delete" onclick="deleteProduct(${item.id})">
+          <button class="manage-btn delete" data-action="delete" data-id="${item.id}">
             Delete
           </button>
         </div>

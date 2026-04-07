@@ -15,10 +15,16 @@ const manageSection = document.getElementById("manageSection");
 const uploadCard = document.querySelector(".card");
 
 baleTab.addEventListener("click", () => {
+  manageTab.classList.remove("active");
+  uploadCard.style.display = "block";
+  manageSection.style.display = "none";
+
   baleTab.classList.add("active");
   singleTab.classList.remove("active");
 
   productType.value = "bale";
+  weightField.style.display = "flex";
+  sizeField.style.display = "none";
 
   document.querySelector("label[for='name']").textContent = "Bale Name";
   document.getElementById("name").placeholder = "e.g. Ladies Flannel Blouse Bale";
@@ -207,3 +213,97 @@ formData.append("type", productType.value);
     statusText.style.display = "none";
   }
 });
+
+async function loadManageProducts() {
+  const manageList = document.getElementById("manageList");
+
+  manageList.innerHTML = "<p>Loading products...</p>";
+
+  try {
+    const response = await fetch(
+      "https://www.yenkasa.xyz/triciabales-api/api/triciabales"
+    );
+
+    const products = await response.json();
+
+    if (!products.length) {
+      manageList.innerHTML = "<p>No products found.</p>";
+      return;
+    }
+
+    manageList.innerHTML = products.map(item => `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        padding:14px;
+        border:1px solid #eee;
+        border-radius:16px;
+        margin-bottom:12px;
+      ">
+        <div>
+          <strong>${item.name}</strong><br>
+          <small>${item.type} • ${item.status}</small>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button onclick="markSold(${item.id})">
+            ${item.status === "sold" ? "Mark Available" : "Mark Sold"}
+          </button>
+
+          <button onclick="deleteProduct(${item.id})">
+            Delete
+          </button>
+        </div>
+      </div>
+    `).join("");
+  } catch (err) {
+    console.error(err);
+    manageList.innerHTML = "<p>Unable to load products.</p>";
+  }
+}
+
+async function markSold(id) {
+  try {
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}/status`,
+      {
+        method: "PUT"
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to update product status");
+    }
+
+    loadManageProducts();
+  } catch (err) {
+    console.error(err);
+    alert("Unable to update product status.");
+  }
+}
+
+async function deleteProduct(id) {
+  const confirmDelete = confirm("Are you sure you want to delete this product?");
+
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete product");
+    }
+
+    loadManageProducts();
+  } catch (err) {
+    console.error(err);
+    alert("Unable to delete product.");
+  }
+}

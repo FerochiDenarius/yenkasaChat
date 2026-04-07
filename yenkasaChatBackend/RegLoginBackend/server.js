@@ -18,10 +18,7 @@ const CoinTransaction = require('./models/cointransaction.model');
 const verificationRules = require('./config/verificationRules');
 const seedCommunities = require('./seed/seedCommunities');
 const commentRoutes = require('./routes/comments.routes');
-const multer = require("multer");
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const FormData = require('form-data');
-const upload = multer();
 
 
 
@@ -29,183 +26,13 @@ const upload = multer();
 
 const app = express();
 
-const axios = require('axios');
+require('./store/yenkasa-store-server')(app);
+
 
 app.use(express.json());
 
 
 
-
-
-
-
-app.post('/triciabales-api/api/auth/login', async (req, res) => {
-  try {
-    console.log('LOGIN BODY:', req.body);
-
-    const response = await axios.post(
-      'http://134.209.182.39:8080/api/auth/login',
-      req.body,
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    console.log('LOGIN RESPONSE:', response.data);
-    res.json(response.data);
-
-  } catch (err) {
-    console.error(
-      'LOGIN ERROR:',
-      err.response?.status,
-      err.response?.data || err.message
-    );
-
-    res.status(err.response?.status || 500).json(
-      err.response?.data || { error: err.message }
-    );
-  }
-});
-
-
-
-app.post(
-  '/triciabales-api/api/triciabales/upload',
-  upload.fields([
-    { name: 'image', maxCount: 1 },
-    { name: 'video', maxCount: 1 }
-  ]),
-  async (req, res) => {
-    try {
-      console.log('UPLOAD BODY:', req.body);
-      console.log('UPLOAD FILES:', Object.keys(req.files || {}));
-
-      const form = new FormData();
-
-      form.append('name', req.body.name);
-      form.append('price', req.body.price);
-      form.append('weight', req.body.weight);
-      form.append('category', req.body.category);
-      form.append('description', req.body.description);
-      form.append('status', req.body.status);
-
-      if (req.files?.image?.[0]) {
-        form.append(
-          'image',
-          req.files.image[0].buffer,
-          req.files.image[0].originalname
-        );
-      }
-
-      if (req.files?.video?.[0]) {
-        form.append(
-          'video',
-          req.files.video[0].buffer,
-          req.files.video[0].originalname
-        );
-      }
-
-      const response = await axios.post(
-        'http://134.209.182.39:8080/api/triciabales/upload',
-        form,
-        {
-          headers: form.getHeaders(),
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity
-        }
-      );
-
-      console.log('UPLOAD RESPONSE:', response.data);
-
-      res.json(response.data);
-
-    } catch (err) {
-      console.error(
-        'UPLOAD ERROR:',
-        err.response?.status,
-        err.response?.data || err.message
-      );
-
-      res.status(err.response?.status || 500).json(
-        err.response?.data || { error: err.message }
-      );
-    }
-  }
-);
-
-app.get('/triciabales-api/api/triciabales', async (req, res) => {
-  try {
-    console.log('LOAD BALES');
-
-    const response = await axios.get(
-      'http://134.209.182.39:8080/api/triciabales'
-    );
-
-    console.log('BALES RESPONSE:', response.data);
-
-    res.json(response.data);
-  } catch (err) {
-    console.error(
-      'BALES ERROR:',
-      err.response?.status,
-      err.response?.data || err.message
-    );
-
-    res.status(err.response?.status || 500).json(
-      err.response?.data || { error: err.message }
-    );
-  }
-});
-
-app.put('/triciabales-api/api/triciabales/:id/status', async (req, res) => {
-  try {
-    console.log('TOGGLE BALE STATUS:', req.params.id);
-
-    const response = await axios.put(
-      `http://134.209.182.39:8080/api/triciabales/${req.params.id}/status`
-    );
-
-    console.log('STATUS RESPONSE:', response.data);
-
-    res.json(response.data);
-  } catch (err) {
-    console.error(
-      'STATUS ERROR:',
-      err.response?.status,
-      err.response?.data || err.message
-    );
-
-    res.status(err.response?.status || 500).json(
-      err.response?.data || { error: err.message }
-    );
-  }
-});
-
-app.delete('/triciabales-api/api/triciabales/:id', async (req, res) => {
-  try {
-    console.log('DELETE BALE:', req.params.id);
-
-    const response = await axios.delete(
-      `http://134.209.182.39:8080/api/triciabales/${req.params.id}`
-    );
-
-    console.log('DELETE RESPONSE STATUS:', response.status);
-
-    res.status(response.status).json(response.data || { success: true });
-  } catch (err) {
-    console.error(
-      'DELETE ERROR:',
-      err.response?.status,
-      err.response?.data || err.message
-    );
-
-    res.status(err.response?.status || 500).json(
-      err.response?.data || { error: err.message }
-    );
-  }
-});
 
 
 

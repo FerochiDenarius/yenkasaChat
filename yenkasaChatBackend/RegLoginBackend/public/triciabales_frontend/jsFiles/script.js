@@ -1,33 +1,38 @@
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
   .then(res => res.json())
   .then(data => {
-    const container = document.getElementById("bale-container");
+    const baleContainer = document.getElementById("bale-container");
+    const dressContainer = document.getElementById("dress-container");
 
-    data.forEach(bale => {
+    data.forEach(item => {
       const card = document.createElement("div");
       card.className = "card";
 
       card.innerHTML = `
-${bale.imageUrl ? `<img src="${bale.imageUrl}" alt="${bale.name}">` : ""}
+        ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : ""}
+
         <div class="card-content">
           <div class="card-top">
-            <h3>${bale.name}</h3>
-            <span class="status ${bale.status}">${bale.status}</span>
+            <h3>${item.name}</h3>
+            <span class="status ${item.status}">${item.status}</span>
           </div>
 
-          <p>${bale.description}</p>
+          <p>${item.description}</p>
 
-          <div class="price">GHS ${bale.price}</div>
+          <div class="price">GHS ${item.price}</div>
 
-          <p><strong>Weight:</strong> ${bale.weight}</p>
+          <p>
+            <strong>${item.type === "single" ? "Size" : "Weight"}:</strong>
+            ${item.weight}
+          </p>
 
-        ${bale.videoUrl
-  ? `<video controls src="${bale.videoUrl}"></video>`
-  : ""}
+          ${item.videoUrl
+            ? `<video controls src="${item.videoUrl}"></video>`
+            : ""}
 
-          ${bale.status !== "sold"
+          ${item.status !== "sold"
             ? `
-              <a href="https://wa.me/233551699010?text=Hello%20Tricia,%20I%20am%20interested%20in%20${encodeURIComponent(bale.name)}" target="_blank">
+              <a href="https://wa.me/233551699010?text=Hello%20Tricia,%20I%20am%20interested%20in%20${encodeURIComponent(item.name)}" target="_blank">
                 <button>💬 Chat on WhatsApp</button>
               </a>
             `
@@ -37,16 +42,23 @@ ${bale.imageUrl ? `<img src="${bale.imageUrl}" alt="${bale.name}">` : ""}
         </div>
       `;
 
-      container.appendChild(card);
+      if (item.type === "single") {
+        dressContainer.appendChild(card);
+      } else {
+        baleContainer.appendChild(card);
+      }
     });
   })
   .catch(err => {
     console.error(err);
 
-    document.getElementById("bale-container").innerHTML = `
+    const errorHtml = `
       <div style="grid-column:1/-1;text-align:center;padding:40px;background:white;border-radius:20px;">
         <h3>Unable to load products</h3>
         <p>Please check that the server is running.</p>
       </div>
     `;
+
+    document.getElementById("bale-container").innerHTML = errorHtml;
+    document.getElementById("dress-container").innerHTML = errorHtml;
   });

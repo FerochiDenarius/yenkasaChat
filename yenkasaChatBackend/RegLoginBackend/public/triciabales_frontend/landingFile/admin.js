@@ -10,6 +10,9 @@ const singleTab = document.getElementById("singleTab");
 const productType = document.getElementById("productType");
 const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
+const manageTab = document.getElementById("manageTab");
+const manageSection = document.getElementById("manageSection");
+const uploadCard = document.querySelector(".card");
 
 baleTab.addEventListener("click", () => {
   baleTab.classList.add("active");
@@ -23,6 +26,9 @@ baleTab.addEventListener("click", () => {
 });
 
 singleTab.addEventListener("click", () => {
+  manageTab.classList.remove("active");
+uploadCard.style.display = "block";
+manageSection.style.display = "none";
   singleTab.classList.add("active");
   baleTab.classList.remove("active");
   
@@ -33,6 +39,17 @@ sizeField.style.display = "flex";
   document.querySelector("label[for='name']").textContent = "Dress Name";
   document.getElementById("name").placeholder = "e.g. Floral Summer Dress";
   addBaleBtn.textContent = "Upload Dress";
+});
+
+manageTab.addEventListener("click", () => {
+  manageTab.classList.add("active");
+  baleTab.classList.remove("active");
+  singleTab.classList.remove("active");
+
+  uploadCard.style.display = "none";
+  manageSection.style.display = "block";
+
+  loadManageProducts();
 });
 
 // Image preview

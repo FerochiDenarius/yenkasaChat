@@ -159,6 +159,54 @@ app.get('/triciabales-api/api/triciabales', async (req, res) => {
   }
 });
 
+app.put('/triciabales-api/api/triciabales/:id/status', async (req, res) => {
+  try {
+    console.log('TOGGLE BALE STATUS:', req.params.id);
+
+    const response = await axios.put(
+      `http://134.209.182.39:8080/api/triciabales/${req.params.id}/status`
+    );
+
+    console.log('STATUS RESPONSE:', response.data);
+
+    res.json(response.data);
+  } catch (err) {
+    console.error(
+      'STATUS ERROR:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: err.message }
+    );
+  }
+});
+
+app.delete('/triciabales-api/api/triciabales/:id', async (req, res) => {
+  try {
+    console.log('DELETE BALE:', req.params.id);
+
+    const response = await axios.delete(
+      `http://134.209.182.39:8080/api/triciabales/${req.params.id}`
+    );
+
+    console.log('DELETE RESPONSE STATUS:', response.status);
+
+    res.status(response.status).json(response.data || { success: true });
+  } catch (err) {
+    console.error(
+      'DELETE ERROR:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: err.message }
+    );
+  }
+});
+
 
 
 

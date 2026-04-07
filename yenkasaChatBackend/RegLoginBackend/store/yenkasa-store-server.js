@@ -1,3 +1,5 @@
+console.log('✅ yenkasa-store-server loaded');
+
 const axios = require('axios');
 const multer = require('multer');
 const FormData = require('form-data');

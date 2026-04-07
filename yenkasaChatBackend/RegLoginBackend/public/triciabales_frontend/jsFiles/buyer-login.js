@@ -1,0 +1,41 @@
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const payload = {
+    email: document.getElementById("email").value,
+    password: document.getElementById("password").value
+  };
+
+  try {
+    const response = await fetch(
+      "https://www.yenkasa.xyz/triciabales-api/api/users/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || data.error || "Login failed");
+    }
+
+    localStorage.setItem("currentUser", JSON.stringify(data));
+
+    alert("Login successful!");
+
+    if (data.role === "SELLER") {
+      window.location.href = "dashboard.html";
+    } else {
+      window.location.href = "index.html";
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+});

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account | Tricia Bales</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <section class="collection-section">
+    <div class="section-header">
+      <span>Welcome</span>
+      <h2>Create Your Account</h2>
+      <p>Register as a buyer or seller</p>
+    </div>
+
+    <div class="card" style="max-width:700px;margin:0 auto;">
+      <div class="card-content">
+
+        <form id="register-form" style="display:flex;flex-direction:column;gap:18px;">
+
+          <input
+            type="text"
+            id="name"
+            placeholder="Full Name"
+            required
+          >
+
+          <input
+            type="email"
+            id="email"
+            placeholder="Email Address"
+            required
+          >
+
+          <input
+            type="tel"
+            id="phone"
+            placeholder="Phone Number"
+            required
+          >
+
+          <textarea
+            id="address"
+            placeholder="Address"
+            rows="3"
+            required
+          ></textarea>
+
+          <select id="role" required>
+            <option value="">Choose Account Type</option>
+            <option value="BUYER">Buyer</option>
+            <option value="SELLER">Seller</option>
+          </select>
+
+          <input
+            type="password"
+            id="password"
+            placeholder="Password"
+            required
+          >
+
+          <button type="submit">
+            Create Account
+          </button>
+
+        </form>
+
+        <p style="margin-top:20px;text-align:center;">
+          Already have an account?
+          <a href="buyer-login.html">Login</a>
+        </p>
+
+      </div>
+    </div>
+  </section>
+
+  <script src="../jsFiles/register.js"></script>
+</body>
+</html>

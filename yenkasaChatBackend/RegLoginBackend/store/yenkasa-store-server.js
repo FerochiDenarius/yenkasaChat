@@ -8,6 +8,62 @@ const upload = multer();
 
 module.exports = function (app) {
 
+  // USER REGISTER
+  app.post('/triciabales-api/api/users/register', async (req, res) => {
+    try {
+      const response = await axios.post(
+        'http://134.209.182.39:8080/api/users/register',
+        req.body,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'REGISTER ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // USER LOGIN
+  app.post('/triciabales-api/api/users/login', async (req, res) => {
+    try {
+      const response = await axios.post(
+        'http://134.209.182.39:8080/api/users/login',
+        req.body,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'USER LOGIN ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // LOGIN
   app.post('/triciabales-api/api/auth/login', async (req, res) => {
     try {

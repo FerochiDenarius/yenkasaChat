@@ -246,4 +246,26 @@ module.exports = function (app) {
       );
     }
   });
+
+  // USER ORDER HISTORY
+  app.get('/triciabales-api/api/orders/user/:userId', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `http://134.209.182.39:8080/api/orders/user/${req.params.userId}`
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'USER ORDERS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
 };

@@ -9,7 +9,16 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
       card.className = "card";
 
       card.innerHTML = `
-        ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : ""}
+        ${item.imageUrl ? `
+          <div class="product-image-wrap">
+            <img
+              src="${item.imageUrl}"
+              alt="${item.name}"
+              class="product-image"
+              onclick="openImage('${item.imageUrl}')"
+            >
+          </div>
+        ` : ""}
 
         <div class="card-content">
           <div class="card-top">
@@ -62,3 +71,12 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
     document.getElementById("bale-container").innerHTML = errorHtml;
     document.getElementById("dress-container").innerHTML = errorHtml;
   });
+
+function openImage(src) {
+  document.getElementById("modalImage").src = src;
+  document.getElementById("imageModal").style.display = "flex";
+}
+
+function closeImage() {
+  document.getElementById("imageModal").style.display = "none";
+}

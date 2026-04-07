@@ -232,27 +232,32 @@ async function loadManageProducts() {
     }
 
     manageList.innerHTML = products.map(item => `
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        gap:12px;
-        padding:14px;
-        border:1px solid #eee;
-        border-radius:16px;
-        margin-bottom:12px;
-      ">
-        <div>
-          <strong>${item.name}</strong><br>
-          <small>${item.type} • ${item.status}</small>
+      <div class="manage-item">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img 
+            src="${item.imageUrl}" 
+            alt="${item.name}"
+            style="
+              width:60px;
+              height:60px;
+              object-fit:cover;
+              border-radius:12px;
+              border:1px solid #eee;
+            "
+          >
+
+          <div class="manage-info">
+            <strong>${item.name}</strong>
+            <small>${item.type} • ${item.status}</small>
+          </div>
         </div>
 
-        <div style="display:flex; gap:10px;">
-          <button onclick="markSold(${item.id})">
+        <div class="manage-actions">
+          <button class="manage-btn status" onclick="markSold(${item.id})">
             ${item.status === "sold" ? "Mark Available" : "Mark Sold"}
           </button>
 
-          <button onclick="deleteProduct(${item.id})">
+          <button class="manage-btn delete" onclick="deleteProduct(${item.id})">
             Delete
           </button>
         </div>

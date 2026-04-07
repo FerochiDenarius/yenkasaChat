@@ -202,7 +202,50 @@ body {
   transform: translateY(-10px);
 }
 
-.card img,
+.product-image-wrap {
+  width: 100%;
+  height: 260px;
+  background: #f7f7f7;
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+  background: white;
+}
+
+.product-image:hover {
+  transform: scale(1.03);
+}
+
+.image-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-image {
+  max-width: 95%;
+  max-height: 95%;
+  border-radius: 16px;
+  object-fit: contain;
+  background: white;
+}
+
 .card video {
   width: 100%;
   height: 260px;

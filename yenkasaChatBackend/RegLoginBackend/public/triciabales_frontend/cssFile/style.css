@@ -306,6 +306,12 @@ body {
   margin-top: 20px;
 }
 
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .card button:disabled {
   background: #9ca3af;
 }

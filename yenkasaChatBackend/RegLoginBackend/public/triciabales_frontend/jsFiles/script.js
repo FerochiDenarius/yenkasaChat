@@ -1,6 +1,36 @@
 const imageModal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
 
+function getCart() {
+  return JSON.parse(localStorage.getItem("cart") || "[]");
+}
+
+function saveCart(cart) {
+  localStorage.setItem("cart", JSON.stringify(cart));
+}
+
+function addToCart(item) {
+  const cart = getCart();
+
+  const existing = cart.find(cartItem => cartItem.id === item.id);
+
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    cart.push({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      imageUrl: item.imageUrl,
+      quantity: 1
+    });
+  }
+
+  saveCart(cart);
+
+  alert(`${item.name} added to cart`);
+}
+
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
   .then(res => res.json())
   .then(data => {
@@ -43,9 +73,13 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
 
           ${item.status !== "sold"
             ? `
-              <a href="https://wa.me/233551699010?text=Hello%20Tricia,%20I%20am%20interested%20in%20${encodeURIComponent(item.name)}" target="_blank">
-                <button>💬 Chat on WhatsApp</button>
-              </a>
+              <div class="card-actions">
+                <button class="add-cart-btn">🛒 Add to Cart</button>
+
+                <a href="https://wa.me/233551699010?text=Hello%20Tricia,%20I%20am%20interested%20in%20${encodeURIComponent(item.name)}" target="_blank">
+                  <button>💬 Chat on WhatsApp</button>
+                </a>
+              </div>
             `
             : `
               <button disabled>Sold Out</button>
@@ -54,10 +88,17 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
       `;
 
       const productImage = card.querySelector(".product-image");
+      const addCartBtn = card.querySelector(".add-cart-btn");
 
       if (productImage) {
         productImage.addEventListener("click", () => {
           openImage(item.imageUrl);
+        });
+      }
+
+      if (addCartBtn) {
+        addCartBtn.addEventListener("click", () => {
+          addToCart(item);
         });
       }
 

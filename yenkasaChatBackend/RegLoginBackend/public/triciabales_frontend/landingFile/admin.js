@@ -5,6 +5,35 @@ const videoPreview = document.getElementById("videoPreview");
 const addBaleBtn = document.getElementById("addBaleBtn");
 const progressWrap = document.getElementById("progressWrap");
 const statusText = document.getElementById("statusText");
+const baleTab = document.getElementById("baleTab");
+const singleTab = document.getElementById("singleTab");
+const productType = document.getElementById("productType");
+const weightField = document.getElementById("weightField");
+const sizeField = document.getElementById("sizeField");
+
+baleTab.addEventListener("click", () => {
+  baleTab.classList.add("active");
+  singleTab.classList.remove("active");
+
+  productType.value = "bale";
+
+  document.querySelector("label[for='name']").textContent = "Bale Name";
+  document.getElementById("name").placeholder = "e.g. Ladies Flannel Blouse Bale";
+  addBaleBtn.textContent = "Upload Bale";
+});
+
+singleTab.addEventListener("click", () => {
+  singleTab.classList.add("active");
+  baleTab.classList.remove("active");
+  
+productType.value = "single";
+weightField.style.display = "none";
+sizeField.style.display = "flex";
+
+  document.querySelector("label[for='name']").textContent = "Dress Name";
+  document.getElementById("name").placeholder = "e.g. Floral Summer Dress";
+  addBaleBtn.textContent = "Upload Dress";
+});
 
 // Image preview
 imageInput.addEventListener("change", () => {
@@ -42,6 +71,9 @@ addBaleBtn.addEventListener("click", async () => {
   const category = document.getElementById("category").value.trim();
   const description = document.getElementById("description").value.trim();
   const status = document.getElementById("status").value;
+  const size = document.getElementById("size").value;
+  
+
 
   const imageFile = imageInput.files[0];
   const videoFile = videoInput.files[0];
@@ -49,10 +81,20 @@ addBaleBtn.addEventListener("click", async () => {
   const MAX_SIZE = 20 * 1024 * 1024;
 
   // Validation
-  if (!name || !price || !weight || !category) {
-    alert("Please fill all required fields.");
-    return;
-  }
+ if (!name || !price || !category) {
+  alert("Please fill all required fields.");
+  return;
+}
+
+if (productType.value === "bale" && !weight) {
+  alert("Please enter the bale weight.");
+  return;
+}
+
+if (productType.value === "single" && !size) {
+  alert("Please select a dress size.");
+  return;
+}
 
   if (!imageFile) {
     alert("Please select a bale image.");
@@ -73,12 +115,16 @@ addBaleBtn.addEventListener("click", async () => {
   const formData = new FormData();
   formData.append("name", name);
   formData.append("price", price);
+if (productType.value === "bale") {
   formData.append("weight", weight);
-  formData.append("category", category);
+} else {
+  formData.append("weight", size);
+}  formData.append("category", category);
   formData.append("description", description);
 formData.append("status", status);
-formData.append("type", "bale");
 formData.append("image", imageFile);
+formData.append("type", productType.value);
+
 
   if (videoFile) {
     formData.append("video", videoFile);

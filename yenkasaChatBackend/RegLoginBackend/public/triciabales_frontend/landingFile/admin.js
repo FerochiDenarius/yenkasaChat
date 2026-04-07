@@ -60,16 +60,20 @@ manageTab.addEventListener("click", () => {
 
 // Image preview
 imageInput.addEventListener("change", () => {
-  const file = imageInput.files[0];
+  imagePreview.innerHTML = "";
 
-  if (!file) {
+  if (!imageInput.files.length) {
     imagePreview.style.display = "none";
-    imagePreview.removeAttribute("src");
     return;
   }
 
-  imagePreview.src = URL.createObjectURL(file);
-  imagePreview.style.display = "block";
+  imagePreview.style.display = "grid";
+
+  Array.from(imageInput.files).forEach(file => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    imagePreview.appendChild(img);
+  });
 });
 
 // Video preview
@@ -98,7 +102,7 @@ addBaleBtn.addEventListener("click", async () => {
   
 
 
-  const imageFile = imageInput.files[0];
+  const imageFiles = Array.from(imageInput.files);
   const videoFile = videoInput.files[0];
 
   const MAX_SIZE = 20 * 1024 * 1024;
@@ -119,14 +123,16 @@ if (productType.value === "single" && !size) {
   return;
 }
 
-  if (!imageFile) {
-    alert("Please select a bale image.");
+  if (!imageFiles.length) {
+    alert("Please select at least one image.");
     return;
   }
 
-  if (imageFile.size > MAX_SIZE) {
-    alert("Image is too large. Maximum size is 20MB.");
-    return;
+  for (const imageFile of imageFiles) {
+    if (imageFile.size > MAX_SIZE) {
+      alert("One of the images is too large. Maximum size is 20MB.");
+      return;
+    }
   }
 
   if (videoFile && videoFile.size > MAX_SIZE) {
@@ -145,8 +151,11 @@ if (productType.value === "bale") {
 }  formData.append("category", category);
   formData.append("description", description);
 formData.append("status", status);
-formData.append("image", imageFile);
 formData.append("type", productType.value);
+
+  imageFiles.forEach(imageFile => {
+    formData.append("image", imageFile);
+  });
 
 
   if (videoFile) {
@@ -198,7 +207,7 @@ formData.append("type", productType.value);
     videoInput.value = "";
 
     imagePreview.style.display = "none";
-    imagePreview.removeAttribute("src");
+    imagePreview.innerHTML = "";
 
     videoPreview.style.display = "none";
     videoPreview.removeAttribute("src");

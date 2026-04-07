@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Method | Tricia Bales</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <section class="collection-section">
+    <div class="section-header">
+      <span>Step 2 of 3</span>
+      <h2>Select Delivery Method</h2>
+      <p>Choose how you want to receive your order</p>
+    </div>
+
+    <div class="card" style="max-width:700px;margin:0 auto;">
+      <div class="card-content">
+
+        <form id="delivery-form" style="display:flex;flex-direction:column;gap:18px;">
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="deliveryMethod" value="pickup" required>
+            Pick Up at Oyarifa
+          </label>
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="deliveryMethod" value="uber">
+            Uber Delivery
+          </label>
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="deliveryMethod" value="bolt">
+            Bolt Delivery
+          </label>
+
+          <div id="pickup-details" style="display:none;">
+            <div style="background:#f3f4f6;padding:16px;border-radius:12px;margin-top:10px;">
+              <strong>Pickup Location:</strong><br>
+              Oyarifa, Accra
+            </div>
+          </div>
+
+          <button type="submit">
+            Continue to Payment
+          </button>
+
+        </form>
+
+      </div>
+    </div>
+  </section>
+
+  <script src="../jsFiles/delivery.js"></script>
+</body>
+</html>

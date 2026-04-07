@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment | Tricia Bales</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <section class="collection-section">
+    <div class="section-header">
+      <span>Step 3 of 3</span>
+      <h2>Select Payment Method</h2>
+      <p>Choose how you want to pay</p>
+    </div>
+
+    <div class="card" style="max-width:700px;margin:0 auto;">
+      <div class="card-content">
+
+        <form id="payment-form" style="display:flex;flex-direction:column;gap:18px;">
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="paymentMethod" value="cash" required>
+            Cash on Delivery / Pickup
+          </label>
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="paymentMethod" value="mtn">
+            MTN Mobile Money
+          </label>
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="paymentMethod" value="telecel">
+            Telecel Cash
+          </label>
+
+          <label style="display:flex;align-items:center;gap:12px;">
+            <input type="radio" name="paymentMethod" value="airteltigo">
+            AirtelTigo Money
+          </label>
+
+          <div id="momo-details" style="display:none;">
+            <input
+              type="tel"
+              id="momoNumber"
+              placeholder="Mobile Money Number"
+              style="padding:16px;border-radius:12px;border:1px solid #d1d5db;margin-top:10px;"
+            >
+          </div>
+
+          <button type="submit">
+            Place Order
+          </button>
+
+        </form>
+
+      </div>
+    </div>
+  </section>
+
+  <script src="../jsFiles/payment.js"></script>
+</body>
+</html>

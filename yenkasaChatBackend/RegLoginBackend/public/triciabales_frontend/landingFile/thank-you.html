@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Received | Tricia Bales</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <section class="collection-section" style="max-width:800px;margin:60px auto;">
+    <div class="card">
+      <div class="card-content">
+
+        <div style="text-align:center;margin-bottom:30px;">
+          <div style="font-size:4rem;">🎉</div>
+          <h2>Order Received</h2>
+          <p>Thank you! We have received your order.</p>
+        </div>
+
+        <div id="order-summary"></div>
+
+        <div style="margin-top:30px;text-align:center;">
+          <a href="index.html" class="primary-btn">
+            Continue Shopping
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const order = JSON.parse(localStorage.getItem("lastOrder") || "{}");
+
+    const summary = document.getElementById("order-summary");
+
+    summary.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <p><strong>Order ID:</strong> #${order.id}</p>
+        <p><strong>Name:</strong> ${order.customerName}</p>
+        <p><strong>Total:</strong> GHS ${order.total}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <p><strong>Payment Status:</strong> ${order.paymentStatus}</p>
+        <p><strong>Delivery Method:</strong> ${order.deliveryMethod}</p>
+        <p><strong>Delivery Status:</strong> ${order.deliveryStatus}</p>
+      </div>
+    `;
+  </script>
+
+</body>
+</html>

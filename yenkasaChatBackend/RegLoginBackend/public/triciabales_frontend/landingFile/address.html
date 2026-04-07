@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Address | Tricia Bales</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <section class="collection-section">
+    <div class="section-header">
+      <span>Step 1 of 3</span>
+      <h2>Delivery Address</h2>
+      <p>Tell us where your order should go</p>
+    </div>
+
+    <div class="card" style="max-width:700px;margin:0 auto;">
+      <div class="card-content">
+        <form id="address-form" style="display:flex;flex-direction:column;gap:18px;">
+
+          <input
+            type="text"
+            id="customerName"
+            placeholder="Full Name"
+            required
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          >
+
+          <input
+            type="tel"
+            id="phone"
+            placeholder="Phone Number"
+            required
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          >
+
+          <input
+            type="text"
+            id="region"
+            placeholder="Region"
+            required
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          >
+
+          <input
+            type="text"
+            id="area"
+            placeholder="Town / Area"
+            required
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          >
+
+          <input
+            type="text"
+            id="landmark"
+            placeholder="Nearest Landmark"
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          >
+
+          <textarea
+            id="address"
+            rows="3"
+            placeholder="Street Address"
+            required
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          ></textarea>
+
+          <textarea
+            id="notes"
+            rows="3"
+            placeholder="Extra Notes (optional)"
+            style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
+          ></textarea>
+
+          <button type="submit">
+            Continue to Delivery
+          </button>
+
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script src="../jsFiles/address.js"></script>
+</body>
+</html>

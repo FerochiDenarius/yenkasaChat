@@ -80,3 +80,19 @@ document.addEventListener("click", event => {
 });
 
 renderCart();
+
+const checkoutBtn = document.getElementById("checkout-btn");
+
+if (checkoutBtn) {
+  checkoutBtn.addEventListener("click", () => {
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+
+    if (!currentUser) {
+      alert("Please login or register before checkout.");
+      window.location.href = "buyer-login.html";
+      return;
+    }
+
+    window.location.href = "address.html";
+  });
+}

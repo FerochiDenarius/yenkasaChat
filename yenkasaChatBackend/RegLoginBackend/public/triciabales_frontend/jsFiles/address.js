@@ -1,3 +1,11 @@
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+
+if (currentUser) {
+  document.getElementById("customerName").value = currentUser.name || "";
+  document.getElementById("phone").value = currentUser.phone || "";
+  document.getElementById("address").value = currentUser.address || "";
+}
+
 document.getElementById("address-form").addEventListener("submit", (e) => {
   e.preventDefault();
 

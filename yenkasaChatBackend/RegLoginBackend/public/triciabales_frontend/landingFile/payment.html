@@ -19,34 +19,92 @@
       <div class="card-content">
 
         <form id="payment-form" style="display:flex;flex-direction:column;gap:18px;">
+          <div class="payment-section">
+            <h2>Select Payment Method</h2>
 
-          <label style="display:flex;align-items:center;gap:12px;">
-            <input type="radio" name="paymentMethod" value="cash" required>
-            Cash on Delivery / Pickup
-          </label>
+            <div class="payment-options">
+              <label class="payment-option active" data-method="cash">
+                <input type="radio" name="paymentMethod" value="cash" checked>
+                <div class="payment-option-content">
+                  <span class="payment-title">Cash on Delivery</span>
+                  <span class="payment-desc">Pay when your order arrives</span>
+                </div>
+              </label>
 
-          <label style="display:flex;align-items:center;gap:12px;">
-            <input type="radio" name="paymentMethod" value="mtn">
-            MTN Mobile Money
-          </label>
+              <label class="payment-option" data-method="momo">
+                <input type="radio" name="paymentMethod" value="momo">
+                <div class="payment-option-content">
+                  <span class="payment-title">Mobile Money</span>
+                  <span class="payment-desc">MTN, Telecel or AirtelTigo</span>
+                </div>
+              </label>
 
-          <label style="display:flex;align-items:center;gap:12px;">
-            <input type="radio" name="paymentMethod" value="telecel">
-            Telecel Cash
-          </label>
+              <label class="payment-option" data-method="card">
+                <input type="radio" name="paymentMethod" value="card">
+                <div class="payment-option-content">
+                  <span class="payment-title">Debit / Credit Card</span>
+                  <span class="payment-desc">Visa or Mastercard via Paystack</span>
+                </div>
+              </label>
 
-          <label style="display:flex;align-items:center;gap:12px;">
-            <input type="radio" name="paymentMethod" value="airteltigo">
-            AirtelTigo Money
-          </label>
+              <label class="payment-option" data-method="bank">
+                <input type="radio" name="paymentMethod" value="bank">
+                <div class="payment-option-content">
+                  <span class="payment-title">Bank Transfer</span>
+                  <span class="payment-desc">Transfer to our business account</span>
+                </div>
+              </label>
+            </div>
 
-          <div id="momo-details" style="display:none;">
-            <input
-              type="tel"
-              id="momoNumber"
-              placeholder="Mobile Money Number"
-              style="padding:16px;border-radius:12px;border:1px solid #d1d5db;margin-top:10px;"
-            >
+            <div id="momo-details" class="payment-details hidden">
+              <h3>Mobile Money Details</h3>
+
+              <div class="form-group">
+                <label for="momo-network">Network</label>
+                <select id="momo-network">
+                  <option value="">Select network</option>
+                  <option value="mtn">MTN Mobile Money</option>
+                  <option value="telecel">Telecel Cash</option>
+                  <option value="airteltigo">AirtelTigo Money</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="momo-number">Mobile Money Number</label>
+                <input type="tel" id="momo-number" placeholder="0241234567">
+              </div>
+
+              <p class="payment-note">
+                Later this will trigger a Paystack Mobile Money payment request.
+              </p>
+            </div>
+
+            <div id="card-details" class="payment-details hidden">
+              <h3>Card Payment</h3>
+
+              <div class="form-group">
+                <label for="card-name">Cardholder Name</label>
+                <input type="text" id="card-name" placeholder="Name on card">
+              </div>
+
+              <div class="form-group">
+                <label for="card-email">Email Address</label>
+                <input type="email" id="card-email" placeholder="your@email.com">
+              </div>
+
+              <p class="payment-note">
+                Actual card details will later be handled securely by Paystack popup.
+              </p>
+            </div>
+
+            <div id="bank-details" class="payment-details hidden">
+              <h3>Bank Transfer Instructions</h3>
+              <div class="bank-box">
+                <p><strong>Bank:</strong> Example Bank Ghana</p>
+                <p><strong>Account Name:</strong> Tricia Bales</p>
+                <p><strong>Account Number:</strong> 1234567890</p>
+              </div>
+            </div>
           </div>
 
           <button type="submit">

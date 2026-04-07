@@ -1,28 +1,51 @@
-const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
+const paymentOptions = document.querySelectorAll(".payment-option");
 const momoDetails = document.getElementById("momo-details");
+const cardDetails = document.getElementById("card-details");
+const bankDetails = document.getElementById("bank-details");
 
-paymentRadios.forEach(radio => {
-  radio.addEventListener("change", () => {
-    if (radio.value === "cash") {
-      momoDetails.style.display = "none";
-    } else {
-      momoDetails.style.display = "block";
+paymentOptions.forEach(option => {
+  option.addEventListener("click", () => {
+    const radio = option.querySelector('input[name="paymentMethod"]');
+
+    paymentOptions.forEach(opt => opt.classList.remove("active"));
+    option.classList.add("active");
+
+    if (radio) {
+      radio.checked = true;
+    }
+
+    const method = option.dataset.method;
+
+    momoDetails.classList.add("hidden");
+    cardDetails.classList.add("hidden");
+    bankDetails.classList.add("hidden");
+
+    if (method === "momo") {
+      momoDetails.classList.remove("hidden");
+    }
+
+    if (method === "card") {
+      cardDetails.classList.remove("hidden");
+    }
+
+    if (method === "bank") {
+      bankDetails.classList.remove("hidden");
     }
   });
 });
 
-document.getElementById("payment-form").addEventListener("submit", async (e) => {
+document.getElementById("payment-form").addEventListener("submit", async e => {
   e.preventDefault();
 
   const cart = JSON.parse(localStorage.getItem("cart") || "[]");
   const addressData = JSON.parse(localStorage.getItem("checkoutAddress") || "{}");
   const deliveryMethod = localStorage.getItem("deliveryMethod");
-
-  const selectedPayment = document.querySelector(
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+  const selectedPaymentMethod = document.querySelector(
     'input[name="paymentMethod"]:checked'
-  );
+  )?.value;
 
-  if (!selectedPayment) {
+  if (!selectedPaymentMethod) {
     alert("Please select a payment method");
     return;
   }
@@ -35,10 +58,18 @@ document.getElementById("payment-form").addEventListener("submit", async (e) => 
     area: addressData.area,
     landmark: addressData.landmark,
     notes: addressData.notes,
-
-    deliveryMethod: deliveryMethod,
-    paymentMethod: selectedPayment.value,
-
+    deliveryMethod,
+    paymentMethod: selectedPaymentMethod,
+    paymentStatus:
+      selectedPaymentMethod === "cash"
+        ? "pending"
+        : selectedPaymentMethod === "bank"
+          ? "awaiting_transfer"
+          : "awaiting_payment",
+    userId: currentUser ? currentUser.id : null,
+    momoNumber: document.getElementById("momo-number")?.value || null,
+    momoNetwork: document.getElementById("momo-network")?.value || null,
+    cardEmail: document.getElementById("card-email")?.value || null,
     items: cart.map(item => ({
       baleId: item.id,
       baleName: item.name,
@@ -72,7 +103,6 @@ document.getElementById("payment-form").addEventListener("submit", async (e) => 
     localStorage.setItem("lastOrder", JSON.stringify(data));
 
     window.location.href = "thank-you.html";
-
   } catch (err) {
     console.error(err);
     alert("Could not place order. Please try again.");

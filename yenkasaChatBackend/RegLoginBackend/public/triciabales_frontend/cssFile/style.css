@@ -312,6 +312,78 @@ body {
   gap: 10px;
 }
 
+.payment-options {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.payment-option {
+  display: block;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: #fff;
+}
+
+.payment-option:hover {
+  border-color: #111;
+  transform: translateY(-2px);
+}
+
+.payment-option.active {
+  border-color: #000;
+  background: #f7f7f7;
+}
+
+.payment-option input {
+  display: none;
+}
+
+.payment-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+}
+
+.payment-desc {
+  font-size: 14px;
+  color: #666;
+}
+
+.payment-details {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.hidden {
+  display: none;
+}
+
+.payment-note {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+.bank-box {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
 .card button:disabled {
   background: #9ca3af;
 }

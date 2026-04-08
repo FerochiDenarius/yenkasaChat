@@ -13,9 +13,6 @@ if (!currentUser || currentUser.role !== "SUPER_ADMIN") {
   window.location.href = "buyer-login.html";
 }
 
-document.getElementById("owner-referral-code").textContent = currentUser.referralCode || "-";
-document.getElementById("owner-email").textContent = currentUser.email || "-";
-
 function formatStatus(status) {
   if (!status) return "-";
 
@@ -69,10 +66,13 @@ function renderPendingPayoutItems(target, orders) {
           </div>
           <strong>GH₵${total.toFixed(2)}</strong>
         </div>
+        <p><strong>Seller Name:</strong> ${order.sellerName || "Seller"}</p>
+        <p><strong>Order #:</strong> ${order.id}</p>
         <p><strong>Buyer:</strong> ${order.customerName || "-"}</p>
+        <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
+        <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
         <p><strong>Commission:</strong> GH₵${commission.toFixed(2)}</p>
         <p><strong>Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
-        <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
         <div class="super-admin-actions">
           <button class="manage-btn status release-payment-btn" data-id="${order.id}">
             Release Payment
@@ -189,8 +189,8 @@ async function loadDashboard() {
     );
 
     document.getElementById("total-orders").textContent = orders.length;
-    document.getElementById("pending-payout-count").textContent = pendingPayouts.length;
-    document.getElementById("total-commission").textContent = `GH₵${totalCommission.toFixed(2)}`;
+    document.getElementById("ready-payouts").textContent = pendingPayouts.length;
+    document.getElementById("commission-total").textContent = `GH₵${totalCommission.toFixed(2)}`;
 
     renderPendingPayoutItems(pendingPayoutsList, pendingPayouts);
     renderPendingPayoutItems(pendingPayoutsSectionList, pendingPayouts);

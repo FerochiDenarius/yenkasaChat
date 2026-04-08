@@ -8,7 +8,6 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
     address: document.getElementById("address").value,
     role: document.getElementById("role").value,
     referralCode: document.getElementById("referralCode").value.trim() || null,
-    ownerCode: document.getElementById("ownerCode").value.trim() || null,
     password: document.getElementById("password").value
   };
 

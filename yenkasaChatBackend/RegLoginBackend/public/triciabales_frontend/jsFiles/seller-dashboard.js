@@ -636,6 +636,7 @@ payoutForm.addEventListener("submit", async event => {
 
     localStorage.setItem("currentUser", JSON.stringify(data));
     alert("Payout details saved successfully.");
+    window.location.href = "seller-dashboard.html";
   } catch (err) {
     console.error(err);
     alert("Unable to save payout details.");

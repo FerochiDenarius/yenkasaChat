@@ -8,6 +8,7 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
     address: document.getElementById("address").value,
     role: document.getElementById("role").value,
     referralCode: document.getElementById("referralCode").value.trim() || null,
+    ownerCode: document.getElementById("ownerCode").value.trim() || null,
     password: document.getElementById("password").value
   };
 
@@ -29,16 +30,15 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
       throw new Error(data.message || data.error || "Registration failed");
     }
 
-    localStorage.setItem("currentUser", JSON.stringify(data));
-
-    alert("Account created successfully!");
-
-    if (data.role === "SELLER" || data.role === "SUPER_ADMIN") {
-      window.location.href = "dashboard.html";
+    if (data.role === "SELLER" || data.role === "ADMIN" || data.role === "SUPER_ADMIN") {
+      localStorage.removeItem("currentUser");
+      alert("Account created successfully. Please log in to continue.");
+      window.location.href = "buyer-login.html";
     } else {
+      localStorage.setItem("currentUser", JSON.stringify(data));
+      alert("Account created successfully!");
       window.location.href = "index.html";
     }
-
   } catch (err) {
     console.error(err);
     alert(err.message);

@@ -20,8 +20,17 @@ const paidCount = document.getElementById("paid-count");
 const pendingCount = document.getElementById("pending-count");
 const completedCount = document.getElementById("completed-count");
 const uploadCard = document.querySelector(".card");
-const isSuperAdmin = localStorage.getItem("loggedIn") === "true";
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const hasLegacyAdminSession = localStorage.getItem("loggedIn") === "true";
+const isAdminRole = currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
+const canAccessAdmin = hasLegacyAdminSession || isAdminRole;
+const canReleasePayout = currentUser?.role === "SUPER_ADMIN";
+
+if (currentUser?.role === "SELLER") {
+  window.location.href = "seller-dashboard.html";
+} else if (!canAccessAdmin) {
+  window.location.href = "login.html";
+}
 
 baleTab.addEventListener("click", () => {
   manageTab.classList.remove("active");
@@ -475,7 +484,7 @@ async function loadSellerOrders() {
             </button>
           `
         : "";
-      const releasePaymentBtn = isSuperAdmin &&
+      const releasePaymentBtn = canReleasePayout &&
         paymentStatus === "ready_for_payout" &&
         order.confirmedByBuyer === true
         ? `

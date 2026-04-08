@@ -247,6 +247,28 @@ module.exports = function (app) {
     }
   });
 
+  // ALL ORDERS
+  app.get('/triciabales-api/api/orders', async (req, res) => {
+    try {
+      const response = await axios.get(
+        'http://134.209.182.39:8080/api/orders'
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'ORDERS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // USER ORDER HISTORY
   app.get('/triciabales-api/api/orders/user/:userId', async (req, res) => {
     try {
@@ -259,6 +281,34 @@ module.exports = function (app) {
     } catch (err) {
       console.error(
         'USER ORDERS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // ORDER STATUS UPDATE
+  app.put('/triciabales-api/api/orders/:id/status', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `http://134.209.182.39:8080/api/orders/${req.params.id}/status`,
+        req.body,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'ORDER STATUS ERROR:',
         err.response?.status,
         err.response?.data || err.message
       );

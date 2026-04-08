@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tricia Bales Admin</title>
+  <title>Yenkasa Store Admin</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -276,21 +276,55 @@
   background: #d62828;
   color: white;
 }
+
+.orders-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.summary-card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+}
+
+.summary-card h3 {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.summary-card span {
+  font-size: 28px;
+  font-weight: 700;
+  color: #8b5f00;
+}
+
+@media (max-width: 640px) {
+  .orders-summary {
+    grid-template-columns: 1fr;
+  }
+}
   </style>
 </head>
 <body>
 
   <div class="wrapper">
     <div class="header">
-      <div class="badge">Tricia Bales Admin Panel</div>
+      <div class="badge">Yenkasa Store Admin Panel</div>
       <h1>Add New Bale</h1>
       <p>Upload new bale details, images and videos directly from your phone or computer.</p>
     </div>
 
-    <div class="admin-tabs">
+<div class="admin-tabs">
   <button class="tab-btn active" id="baleTab">Upload Bale</button>
   <button class="tab-btn" id="singleTab">Upload Single Dress</button>
   <button class="tab-btn" id="manageTab">Manage Products</button>
+  <button class="tab-btn" id="ordersTab">Orders</button>
 </div>
 
    <div class="card">
@@ -388,6 +422,31 @@
   <div class="card">
     <h2 style="margin-bottom:20px;">Manage Products</h2>
     <div id="manageList"></div>
+  </div>
+</div>
+
+<div id="ordersSection" style="display:none; margin-top:20px;">
+  <div class="card">
+    <h2 style="margin-bottom:20px;">Seller Orders</h2>
+
+    <div class="orders-summary">
+      <div class="summary-card">
+        <h3>Paid</h3>
+        <span id="paid-count">0</span>
+      </div>
+
+      <div class="summary-card">
+        <h3>Awaiting Payment</h3>
+        <span id="pending-count">0</span>
+      </div>
+
+      <div class="summary-card">
+        <h3>Completed</h3>
+        <span id="completed-count">0</span>
+      </div>
+    </div>
+
+    <div id="sellerOrdersList"></div>
   </div>
 </div>
   </div>

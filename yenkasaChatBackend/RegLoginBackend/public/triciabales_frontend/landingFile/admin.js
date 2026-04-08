@@ -11,14 +11,22 @@ const productType = document.getElementById("productType");
 const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
 const manageTab = document.getElementById("manageTab");
+const ordersTab = document.getElementById("ordersTab");
 const manageSection = document.getElementById("manageSection");
+const ordersSection = document.getElementById("ordersSection");
 const manageList = document.getElementById("manageList");
+const sellerOrdersList = document.getElementById("sellerOrdersList");
+const paidCount = document.getElementById("paid-count");
+const pendingCount = document.getElementById("pending-count");
+const completedCount = document.getElementById("completed-count");
 const uploadCard = document.querySelector(".card");
 
 baleTab.addEventListener("click", () => {
   manageTab.classList.remove("active");
+  ordersTab.classList.remove("active");
   uploadCard.style.display = "block";
   manageSection.style.display = "none";
+  ordersSection.style.display = "none";
 
   baleTab.classList.add("active");
   singleTab.classList.remove("active");
@@ -34,8 +42,10 @@ baleTab.addEventListener("click", () => {
 
 singleTab.addEventListener("click", () => {
   manageTab.classList.remove("active");
-uploadCard.style.display = "block";
-manageSection.style.display = "none";
+  ordersTab.classList.remove("active");
+  uploadCard.style.display = "block";
+  manageSection.style.display = "none";
+  ordersSection.style.display = "none";
   singleTab.classList.add("active");
   baleTab.classList.remove("active");
   
@@ -50,13 +60,28 @@ sizeField.style.display = "flex";
 
 manageTab.addEventListener("click", () => {
   manageTab.classList.add("active");
+  ordersTab.classList.remove("active");
   baleTab.classList.remove("active");
   singleTab.classList.remove("active");
 
   uploadCard.style.display = "none";
   manageSection.style.display = "block";
+  ordersSection.style.display = "none";
 
   loadManageProducts();
+});
+
+ordersTab.addEventListener("click", () => {
+  ordersTab.classList.add("active");
+  manageTab.classList.remove("active");
+  baleTab.classList.remove("active");
+  singleTab.classList.remove("active");
+
+  uploadCard.style.display = "none";
+  manageSection.style.display = "none";
+  ordersSection.style.display = "block";
+
+  loadSellerOrders();
 });
 
 manageList.addEventListener("click", event => {
@@ -78,6 +103,53 @@ manageList.addEventListener("click", event => {
 
   if (action === "delete") {
     deleteProduct(Number(id));
+  }
+});
+
+sellerOrdersList.addEventListener("click", async event => {
+  const button = event.target.closest(".order-action-btn");
+
+  if (!button) return;
+
+  const orderId = button.dataset.id;
+  const action = button.dataset.action;
+
+  if (!orderId || !action) return;
+
+  try {
+    let body = {};
+
+    if (action === "accept") {
+      body = {
+        deliveryStatus: "accepted"
+      };
+    }
+
+    if (action === "deliver") {
+      body = {
+        deliveryStatus: "delivered"
+      };
+    }
+
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to update order");
+    }
+
+    loadSellerOrders();
+  } catch (err) {
+    console.error(err);
+    alert("Unable to update order status.");
   }
 });
 
@@ -296,6 +368,87 @@ async function loadManageProducts() {
   } catch (err) {
     console.error(err);
     manageList.innerHTML = "<p>Unable to load products.</p>";
+  }
+}
+
+async function loadSellerOrders() {
+  sellerOrdersList.innerHTML = "<p>Loading orders...</p>";
+
+  try {
+    const response = await fetch(
+      "https://www.yenkasa.xyz/triciabales-api/api/orders"
+    );
+
+    if (!response.ok) {
+      throw new Error("Unable to load orders");
+    }
+
+    const orders = await response.json();
+
+    const paidOrders = orders.filter(
+      order => order.paymentStatus === "paid"
+    );
+
+    const awaitingOrders = orders.filter(
+      order => order.paymentStatus === "awaiting_payment"
+    );
+
+    const completedOrders = orders.filter(
+      order => order.deliveryStatus === "delivered"
+    );
+
+    paidCount.textContent = paidOrders.length;
+    pendingCount.textContent = awaitingOrders.length;
+    completedCount.textContent = completedOrders.length;
+
+    if (!orders.length) {
+      sellerOrdersList.innerHTML = "<p>No orders found.</p>";
+      return;
+    }
+
+    sellerOrdersList.innerHTML = orders.map(order => {
+      const total = Number(order.total || 0);
+      const commission = total * 0.10;
+      const sellerReceives = total - commission;
+
+      return `
+        <div class="manage-item" style="align-items:flex-start; flex-direction:column;">
+          <div style="width:100%;">
+            <strong>Order #${order.id}</strong>
+            <p><strong>Customer:</strong> ${order.customerName || "Unknown"}</p>
+            <p><strong>Phone:</strong> ${order.phone || "-"}</p>
+            <p><strong>Address:</strong> ${order.address || "-"}</p>
+            <p><strong>Payment:</strong> ${order.paymentMethod || "-"} (${order.paymentStatus || "-"})</p>
+            <p><strong>Delivery:</strong> ${order.deliveryStatus || "-"}</p>
+            <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
+            <p><strong>Commission (10%):</strong> GH₵${commission.toFixed(2)}</p>
+            <p><strong>Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
+          </div>
+
+          <div class="manage-actions" style="margin-top:12px;">
+            <button
+              class="manage-btn status order-action-btn"
+              data-id="${order.id}"
+              data-action="accept"
+            >
+              Mark Accepted
+            </button>
+
+            <button
+              class="manage-btn status order-action-btn"
+              data-id="${order.id}"
+              data-action="deliver"
+            >
+              Mark Delivered
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error(err);
+    sellerOrdersList.innerHTML =
+      "<p>Unable to load seller orders.</p>";
   }
 }
 

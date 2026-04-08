@@ -8,6 +8,13 @@ const videoPreview = document.getElementById("videoPreview");
 const addBaleBtn = document.getElementById("addBaleBtn");
 const progressWrap = document.getElementById("progressWrap");
 const statusText = document.getElementById("statusText");
+const imageInputDress = document.getElementById("imageFileDress");
+const videoInputDress = document.getElementById("videoFileDress");
+const imagePreviewDress = document.getElementById("imagePreviewDress");
+const videoPreviewDress = document.getElementById("videoPreviewDress");
+const addDressBtn = document.getElementById("addDressBtn");
+const progressWrapDress = document.getElementById("progressWrapDress");
+const statusTextDress = document.getElementById("statusTextDress");
 const productType = document.getElementById("productType");
 const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
@@ -39,13 +46,19 @@ document.getElementById("seller-name").textContent = currentUser?.name || "Selle
 document.getElementById("seller-email").textContent = currentUser?.email || "";
 
 function openPanel(panelName) {
-  menuButtons.forEach(button => {
-    button.classList.toggle("active", button.dataset.panel === panelName);
-  });
+  menuButtons.forEach(button => button.classList.remove("active"));
+  panels.forEach(panel => panel.classList.remove("active"));
 
-  panels.forEach(panel => {
-    panel.classList.toggle("active", panel.id === `panel-${panelName}`);
-  });
+  const activeButton = Array.from(menuButtons).find(button => button.dataset.panel === panelName);
+  const activePanel = document.getElementById(`panel-${panelName}`);
+
+  if (activeButton) {
+    activeButton.classList.add("active");
+  }
+
+  if (activePanel) {
+    activePanel.classList.add("active");
+  }
 
   if (panelName === "manage-products") {
     loadManageProducts();
@@ -53,14 +66,6 @@ function openPanel(panelName) {
 
   if (panelName === "my-orders") {
     loadSellerOrders();
-  }
-
-  if (panelName === "upload-bale") {
-    switchProductMode("bale");
-  }
-
-  if (panelName === "upload-dress") {
-    switchProductMode("single");
   }
 }
 
@@ -198,6 +203,21 @@ function resetUploadForm() {
   imagePreview.style.display = "none";
   videoPreview.style.display = "none";
   videoPreview.removeAttribute("src");
+}
+
+function resetDressForm() {
+  document.getElementById("nameDress").value = "";
+  document.getElementById("priceDress").value = "";
+  document.getElementById("sizeDress").value = "";
+  document.getElementById("categoryDress").value = "";
+  document.getElementById("descriptionDress").value = "";
+  document.getElementById("statusDress").value = "available";
+  imageInputDress.value = "";
+  videoInputDress.value = "";
+  imagePreviewDress.innerHTML = "";
+  imagePreviewDress.style.display = "none";
+  videoPreviewDress.style.display = "none";
+  videoPreviewDress.removeAttribute("src");
 }
 
 function renderPendingPayouts(orders) {
@@ -450,6 +470,23 @@ imageInput.addEventListener("change", () => {
   });
 });
 
+imageInputDress.addEventListener("change", () => {
+  imagePreviewDress.innerHTML = "";
+
+  if (!imageInputDress.files.length) {
+    imagePreviewDress.style.display = "none";
+    return;
+  }
+
+  imagePreviewDress.style.display = "grid";
+
+  Array.from(imageInputDress.files).forEach(file => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    imagePreviewDress.appendChild(img);
+  });
+});
+
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
 
@@ -461,6 +498,19 @@ videoInput.addEventListener("change", () => {
 
   videoPreview.src = URL.createObjectURL(file);
   videoPreview.style.display = "block";
+});
+
+videoInputDress.addEventListener("change", () => {
+  const file = videoInputDress.files[0];
+
+  if (!file) {
+    videoPreviewDress.style.display = "none";
+    videoPreviewDress.removeAttribute("src");
+    return;
+  }
+
+  videoPreviewDress.src = URL.createObjectURL(file);
+  videoPreviewDress.style.display = "block";
 });
 
 addBaleBtn.addEventListener("click", async () => {
@@ -557,6 +607,97 @@ addBaleBtn.addEventListener("click", async () => {
     addBaleBtn.textContent = productType.value === "bale" ? "Upload Bale" : "Upload Dress";
     progressWrap.style.display = "none";
     statusText.style.display = "none";
+  }
+});
+
+addDressBtn.addEventListener("click", async () => {
+  const name = document.getElementById("nameDress").value.trim();
+  const price = document.getElementById("priceDress").value.trim();
+  const size = document.getElementById("sizeDress").value;
+  const category = document.getElementById("categoryDress").value.trim();
+  const description = document.getElementById("descriptionDress").value.trim();
+  const status = document.getElementById("statusDress").value;
+  const imageFiles = Array.from(imageInputDress.files);
+  const videoFile = videoInputDress.files[0];
+  const maxSize = 20 * 1024 * 1024;
+
+  if (!name || !price || !category) {
+    alert("Please fill all required fields.");
+    return;
+  }
+
+  if (!size) {
+    alert("Please select a dress size.");
+    return;
+  }
+
+  if (!imageFiles.length) {
+    alert("Please select at least one image.");
+    return;
+  }
+
+  for (const imageFile of imageFiles) {
+    if (imageFile.size > maxSize) {
+      alert("One of the images is too large. Maximum size is 20MB.");
+      return;
+    }
+  }
+
+  if (videoFile && videoFile.size > maxSize) {
+    alert("Video is too large. Maximum size is 20MB.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("price", price);
+  formData.append("weight", size);
+  formData.append("category", category);
+  formData.append("description", description);
+  formData.append("status", status);
+  formData.append("type", "single");
+  formData.append("sellerId", currentUser.id);
+  formData.append("sellerName", currentUser.name || "");
+
+  imageFiles.forEach(imageFile => {
+    formData.append("image", imageFile);
+  });
+
+  if (videoFile) {
+    formData.append("video", videoFile);
+  }
+
+  addDressBtn.disabled = true;
+  addDressBtn.textContent = "Uploading Dress...";
+  progressWrapDress.style.display = "block";
+  statusTextDress.style.display = "block";
+
+  try {
+    const response = await fetch(
+      "https://www.yenkasa.xyz/triciabales-api/api/triciabales/upload",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+
+    const rawText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${rawText}`);
+    }
+
+    alert("Dress uploaded successfully.");
+    resetDressForm();
+    loadManageProducts();
+  } catch (err) {
+    console.error("Upload error:", err);
+    alert(`Upload failed.\n\n${err.message}`);
+  } finally {
+    addDressBtn.disabled = false;
+    addDressBtn.textContent = "Upload Dress";
+    progressWrapDress.style.display = "none";
+    statusTextDress.style.display = "none";
   }
 });
 

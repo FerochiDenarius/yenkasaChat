@@ -158,6 +158,91 @@
           </div>
         </section>
 
+        <section class="seller-panel" id="panel-upload-dress">
+          <div class="card">
+            <div class="card-content dashboard-card">
+              <div class="dashboard-header">
+                <div>
+                  <h3>Upload Single Dress</h3>
+                  <p>Add one fashion item with size, images and an optional video.</p>
+                </div>
+              </div>
+
+              <div class="seller-upload-grid">
+                <div class="field">
+                  <label for="nameDress">Dress Name</label>
+                  <input type="text" id="nameDress" placeholder="e.g. Floral Summer Dress">
+                </div>
+
+                <div class="field">
+                  <label for="priceDress">Price (GHS)</label>
+                  <input type="number" id="priceDress" placeholder="350">
+                </div>
+
+                <div class="field">
+                  <label for="sizeDress">Size</label>
+                  <select id="sizeDress">
+                    <option value="">Select Size</option>
+                    <option value="XS">XS</option>
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="XXL">XXL</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="categoryDress">Category</label>
+                  <input type="text" id="categoryDress" placeholder="Summer Dress">
+                </div>
+
+                <div class="field full">
+                  <label for="descriptionDress">Description</label>
+                  <textarea id="descriptionDress" placeholder="Describe the dress, fabric, colour, fit and anything buyers should know."></textarea>
+                </div>
+
+                <div class="field">
+                  <label for="statusDress">Status</label>
+                  <select id="statusDress">
+                    <option value="available">Available</option>
+                    <option value="preorder">Preorder</option>
+                    <option value="sold">Sold</option>
+                  </select>
+                </div>
+
+                <div class="field full">
+                  <label for="imageFileDress">Product Images</label>
+                  <div class="seller-upload-box">
+                    <input type="file" id="imageFileDress" accept="image/*" multiple>
+                    <div id="imagePreviewDress" class="image-preview-grid"></div>
+                  </div>
+                </div>
+
+                <div class="field full">
+                  <label for="videoFileDress">Product Video (Optional)</label>
+                  <div class="seller-upload-box">
+                    <input type="file" id="videoFileDress" accept="video/*">
+                    <video id="videoPreviewDress" class="preview" controls></video>
+                  </div>
+                </div>
+              </div>
+
+              <div class="action-bar">
+                <button id="addDressBtn" class="submit-btn">Upload Dress</button>
+
+                <div class="progress-wrap" id="progressWrapDress">
+                  <div class="progress-bar"></div>
+                </div>
+
+                <div class="status-text" id="statusTextDress">
+                  Uploading dress, please wait...
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="seller-panel" id="panel-manage-products">
           <div class="card">
             <div class="card-content dashboard-card">

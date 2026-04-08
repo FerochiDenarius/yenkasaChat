@@ -533,6 +533,103 @@ body {
   align-items: start;
 }
 
+.seller-dashboard-card {
+  margin-top: 20px;
+}
+
+.dashboard-menu {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: #ececec;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #c99511, #8b5f00);
+  color: white;
+}
+
+.manage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  background: #fafafa;
+}
+
+.manage-info strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.manage-info small {
+  color: #666;
+}
+
+.manage-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.manage-btn {
+  border: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.manage-btn.status {
+  background: #c99511;
+  color: white;
+}
+
+.manage-btn.delete {
+  background: #d62828;
+  color: white;
+}
+
+.orders-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.summary-card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+}
+
+.summary-card h3 {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.summary-card span {
+  font-size: 28px;
+  font-weight: 700;
+  color: #8b5f00;
+}
+
 .seller-shell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -589,6 +686,10 @@ body {
 }
 
 .seller-menu-icon {
+  display: none;
+}
+
+.seller-menu-overlay {
   display: none;
 }
 
@@ -904,35 +1005,37 @@ footer {
 }
 
 @media (max-width: 768px) {
-  .seller-menu-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .menu-toggle {
+    display: block;
     position: fixed;
-    top: 90px;
+    top: 16px;
     left: 16px;
-    width: 48px;
-    height: 48px;
+    z-index: 1001;
     border: none;
     border-radius: 14px;
-    background: #151515;
+    background: #111;
     color: #fff;
-    font-size: 24px;
-    z-index: 1100;
-    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    padding: 12px 14px;
+    font-size: 22px;
   }
 
-  .seller-menu {
+  .dashboard-menu {
     position: fixed;
     top: 0;
     left: -280px;
     width: 260px;
     height: 100vh;
-    z-index: 1050;
+    background: #fff;
+    padding: 80px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 1000;
     transition: left .3s ease;
+    box-shadow: 0 0 30px rgba(0,0,0,.15);
   }
 
-  .seller-menu.open {
+  .dashboard-menu.open {
     left: 0;
   }
 
@@ -940,5 +1043,9 @@ footer {
   .settings-grid,
   .seller-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tab-btn {
+    width: 100%;
   }
 }

@@ -14,359 +14,220 @@
 
   <section class="collection-section">
     <div class="section-header">
-      <span>Seller Workspace</span>
-      <h2>Run Your Store in One Place</h2>
-      <p>Upload products, manage your listings, track seller orders, and control payout details from one dashboard.</p>
+      <span>Seller Dashboard</span>
+      <h2 id="sellerHeading">Manage Your Store</h2>
+      <p id="sellerSubheading">Upload products, manage stock, track orders, and update payout settings.</p>
     </div>
 
-    <div class="seller-summary-grid">
-      <article class="seller-summary-card">
-        <span>Total Orders</span>
-        <strong id="seller-total-orders">0</strong>
-        <p>All orders currently linked to your products.</p>
-      </article>
+    <button id="menuToggle" class="menu-toggle">☰</button>
 
-      <article class="seller-summary-card">
-        <span>Estimated Earnings</span>
-        <strong id="seller-estimated-earnings">GH₵0.00</strong>
-        <p>Estimated seller amount after platform commission.</p>
-      </article>
-
-      <article class="seller-summary-card">
-        <span>Pending Payouts</span>
-        <strong id="seller-pending-payouts">GH₵0.00</strong>
-        <p>Orders still waiting for buyer confirmation or payout release.</p>
-      </article>
+    <div class="dashboard-menu" id="dashboardMenu">
+      <button class="tab-btn active" id="baleTab">Upload Bale</button>
+      <button class="tab-btn" id="singleTab">Upload Single Dress</button>
+      <button class="tab-btn" id="manageTab">Manage Products</button>
+      <button class="tab-btn" id="ordersTab">My Orders</button>
+      <button class="tab-btn" id="payoutTab">Payout Settings</button>
     </div>
 
-    <div class="seller-shell">
-      <button id="sellerMenuToggle" class="seller-menu-icon">
-        ☰
-      </button>
+    <div class="card seller-dashboard-card" id="uploadCard">
+      <div class="card-content">
+        <div class="dashboard-header">
+          <div>
+            <h3 id="panelTitle">Upload New Bale</h3>
+            <p id="panelDescription">Add a bale listing with images and an optional video.</p>
+          </div>
 
-      <aside class="seller-menu" id="sellerMenu">
-        <div class="seller-menu-head">
-          <h3 id="seller-name">Seller</h3>
-          <p id="seller-email">seller@email.com</p>
+          <a href="index.html" class="secondary-btn">Back to Store</a>
         </div>
 
-        <button class="seller-menu-btn active" data-panel="upload-bale">
-          Upload Bale
-        </button>
-        <button class="seller-menu-btn" data-panel="upload-dress">
-          Upload Single Dress
-        </button>
-        <button class="seller-menu-btn" data-panel="manage-products">
-          Manage Products
-        </button>
-        <button class="seller-menu-btn" data-panel="my-orders">
-          My Orders
-        </button>
-        <button class="seller-menu-btn" data-panel="payout-settings">
-          Payout Settings
-        </button>
+        <div class="seller-upload-grid">
+          <input type="hidden" id="productType" value="bale">
 
-        <a href="index.html" class="secondary-btn seller-menu-link">Back to Store</a>
-      </aside>
-
-      <div class="seller-main">
-        <section class="seller-panel active" id="panel-upload-bale">
-          <div class="card">
-            <div class="card-content dashboard-card">
-              <div class="dashboard-header">
-                <div>
-                  <h3>Upload New Bale</h3>
-                  <p>Add a fresh bale listing with multiple photos and an optional video.</p>
-                </div>
-              </div>
-
-              <div class="seller-upload-grid">
-                <input type="hidden" id="productType" value="bale">
-
-                <div class="field">
-                  <label for="name">Bale Name</label>
-                  <input type="text" id="name" placeholder="e.g. Ladies Flannel Blouse Bale">
-                </div>
-
-                <div class="field">
-                  <label for="price">Price (GHS)</label>
-                  <input type="number" id="price" placeholder="4500">
-                </div>
-
-                <div class="field" id="weightField">
-                  <label for="weight">Weight</label>
-                  <input type="text" id="weight" placeholder="55kg">
-                </div>
-
-                <div class="field" id="sizeField" style="display:none;">
-                  <label for="size">Size</label>
-                  <select id="size">
-                    <option value="">Select Size</option>
-                    <option value="XS">XS</option>
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                    <option value="XL">XL</option>
-                    <option value="XXL">XXL</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="category">Category</label>
-                  <input type="text" id="category" placeholder="Flannel Blouse">
-                </div>
-
-                <div class="field full">
-                  <label for="description">Description</label>
-                  <textarea id="description" placeholder="Describe the bale, quantity, grade, colours and anything buyers should know."></textarea>
-                </div>
-
-                <div class="field">
-                  <label for="status">Status</label>
-                  <select id="status">
-                    <option value="available">Available</option>
-                    <option value="preorder">Preorder</option>
-                    <option value="sold">Sold</option>
-                  </select>
-                </div>
-
-                <div class="field full">
-                  <label for="imageFile">Product Images</label>
-                  <div class="seller-upload-box">
-                    <input type="file" id="imageFile" accept="image/*" multiple>
-                    <div id="imagePreview" class="image-preview-grid"></div>
-                  </div>
-                </div>
-
-                <div class="field full">
-                  <label for="videoFile">Product Video (Optional)</label>
-                  <div class="seller-upload-box">
-                    <input type="file" id="videoFile" accept="video/*">
-                    <video id="videoPreview" class="preview" controls></video>
-                  </div>
-                </div>
-              </div>
-
-              <div class="action-bar">
-                <button id="addBaleBtn" class="submit-btn">Upload Bale</button>
-
-                <div class="progress-wrap" id="progressWrap">
-                  <div class="progress-bar"></div>
-                </div>
-
-                <div class="status-text" id="statusText">
-                  Uploading product, please wait...
-                </div>
-              </div>
-            </div>
+          <div class="field">
+            <label for="name">Bale Name</label>
+            <input type="text" id="name" placeholder="e.g. Ladies Flannel Blouse Bale">
           </div>
-        </section>
 
-        <section class="seller-panel" id="panel-upload-dress">
-          <div class="card">
-            <div class="card-content dashboard-card">
-              <div class="dashboard-header">
-                <div>
-                  <h3>Upload Single Dress</h3>
-                  <p>Add one fashion item with size, images and an optional video.</p>
-                </div>
-              </div>
-
-              <div class="seller-upload-grid">
-                <div class="field">
-                  <label for="nameDress">Dress Name</label>
-                  <input type="text" id="nameDress" placeholder="e.g. Floral Summer Dress">
-                </div>
-
-                <div class="field">
-                  <label for="priceDress">Price (GHS)</label>
-                  <input type="number" id="priceDress" placeholder="350">
-                </div>
-
-                <div class="field">
-                  <label for="sizeDress">Size</label>
-                  <select id="sizeDress">
-                    <option value="">Select Size</option>
-                    <option value="XS">XS</option>
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                    <option value="XL">XL</option>
-                    <option value="XXL">XXL</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="categoryDress">Category</label>
-                  <input type="text" id="categoryDress" placeholder="Summer Dress">
-                </div>
-
-                <div class="field full">
-                  <label for="descriptionDress">Description</label>
-                  <textarea id="descriptionDress" placeholder="Describe the dress, fabric, colour, fit and anything buyers should know."></textarea>
-                </div>
-
-                <div class="field">
-                  <label for="statusDress">Status</label>
-                  <select id="statusDress">
-                    <option value="available">Available</option>
-                    <option value="preorder">Preorder</option>
-                    <option value="sold">Sold</option>
-                  </select>
-                </div>
-
-                <div class="field full">
-                  <label for="imageFileDress">Product Images</label>
-                  <div class="seller-upload-box">
-                    <input type="file" id="imageFileDress" accept="image/*" multiple>
-                    <div id="imagePreviewDress" class="image-preview-grid"></div>
-                  </div>
-                </div>
-
-                <div class="field full">
-                  <label for="videoFileDress">Product Video (Optional)</label>
-                  <div class="seller-upload-box">
-                    <input type="file" id="videoFileDress" accept="video/*">
-                    <video id="videoPreviewDress" class="preview" controls></video>
-                  </div>
-                </div>
-              </div>
-
-              <div class="action-bar">
-                <button id="addDressBtn" class="submit-btn">Upload Dress</button>
-
-                <div class="progress-wrap" id="progressWrapDress">
-                  <div class="progress-bar"></div>
-                </div>
-
-                <div class="status-text" id="statusTextDress">
-                  Uploading dress, please wait...
-                </div>
-              </div>
-            </div>
+          <div class="field">
+            <label for="price">Price (GHS)</label>
+            <input type="number" id="price" placeholder="4500">
           </div>
-        </section>
 
-        <section class="seller-panel" id="panel-manage-products">
-          <div class="card">
-            <div class="card-content dashboard-card">
-              <div class="dashboard-header">
-                <div>
-                  <h3>Manage Products</h3>
-                  <p>Update availability and remove products you no longer want to sell.</p>
-                </div>
-              </div>
-
-              <div id="manageList"></div>
-            </div>
+          <div class="field" id="weightField">
+            <label for="weight">Weight</label>
+            <input type="text" id="weight" placeholder="55kg">
           </div>
-        </section>
 
-        <section class="seller-panel" id="panel-my-orders">
-          <div class="card">
-            <div class="card-content dashboard-card">
-              <div class="dashboard-header">
-                <div>
-                  <h3>My Orders</h3>
-                  <p>These are orders placed for products linked to your seller account.</p>
-                </div>
-              </div>
+          <div class="field" id="sizeField" style="display:none;">
+            <label for="size">Size</label>
+            <select id="size">
+              <option value="">Select Size</option>
+              <option value="XS">XS</option>
+              <option value="S">S</option>
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
+            </select>
+          </div>
 
-              <div id="seller-orders-feedback" class="orders-feedback hidden"></div>
-              <div id="seller-orders-list" class="seller-orders-list"></div>
+          <div class="field">
+            <label for="category">Category</label>
+            <input type="text" id="category" placeholder="Flannel Blouse">
+          </div>
+
+          <div class="field full">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder="Describe the item, quantity, grade, colours and anything buyers should know."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="available">Available</option>
+              <option value="preorder">Preorder</option>
+              <option value="sold">Sold</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label for="imageFile">Product Images</label>
+            <div class="seller-upload-box">
+              <input type="file" id="imageFile" accept="image/*" multiple>
+              <div id="imagePreview" class="image-preview-grid"></div>
             </div>
           </div>
 
-          <div class="payouts-card" style="margin-top:24px;">
-            <div class="dashboard-header">
-              <div>
-                <h3>Pending Payouts</h3>
-                <p>Orders moving through delivery or waiting for payout release.</p>
-              </div>
+          <div class="field full">
+            <label for="videoFile">Product Video (Optional)</label>
+            <div class="seller-upload-box">
+              <input type="file" id="videoFile" accept="video/*">
+              <video id="videoPreview" class="preview" controls></video>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <button id="addBaleBtn" class="submit-btn">Upload Bale</button>
+
+          <div class="progress-wrap" id="progressWrap">
+            <div class="progress-bar"></div>
+          </div>
+
+          <div class="status-text" id="statusText">
+            Uploading product, please wait...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="manageSection" style="display:none; margin-top:20px;">
+      <div class="card">
+        <div class="card-content">
+          <h2 style="margin-bottom:20px;">Manage Products</h2>
+          <div id="manageList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ordersSection" style="display:none; margin-top:20px;">
+      <div class="card">
+        <div class="card-content">
+          <h2 style="margin-bottom:20px;">My Orders</h2>
+
+          <div class="orders-summary">
+            <div class="summary-card">
+              <h3>Paid</h3>
+              <span id="paid-count">0</span>
             </div>
 
-            <div id="pending-payouts-list" class="payouts-list"></div>
+            <div class="summary-card">
+              <h3>Awaiting Payment</h3>
+              <span id="pending-count">0</span>
+            </div>
+
+            <div class="summary-card">
+              <h3>Completed</h3>
+              <span id="completed-count">0</span>
+            </div>
           </div>
-        </section>
 
-        <section class="seller-panel" id="panel-payout-settings">
-          <div class="card">
-            <div class="card-content dashboard-card">
-              <div class="dashboard-header">
-                <div>
-                  <h3>Payout Settings</h3>
-                  <p>Choose how Yenkasa Store should send your future payouts.</p>
+          <div id="sellerOrdersList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="payoutSection" style="display:none; margin-top:20px;">
+      <div class="card">
+        <div class="card-content">
+          <h2 style="margin-bottom:20px;">Payout Settings</h2>
+
+          <form id="payout-form" class="payout-form-shell">
+            <input type="hidden" id="payoutMethod">
+
+            <div class="payout-layout">
+              <div class="payout-main">
+                <div class="payout-methods">
+                  <button type="button" class="payout-card active" data-method="momo">
+                    <h4>Mobile Money</h4>
+                    <p>Receive payouts directly to MTN, Telecel or AirtelTigo.</p>
+                  </button>
+
+                  <button type="button" class="payout-card" data-method="bank">
+                    <h4>Bank Transfer</h4>
+                    <p>Receive payouts directly to your bank account.</p>
+                  </button>
                 </div>
-              </div>
 
-              <form id="payout-form" class="payout-form-shell">
-                <input type="hidden" id="payoutMethod">
-
-                <div class="payout-layout">
-                  <div class="payout-main">
-                    <div class="payout-methods">
-                      <button type="button" class="payout-card active" data-method="momo">
-                        <h4>Mobile Money</h4>
-                        <p>Receive payouts directly to MTN, Telecel or AirtelTigo.</p>
-                      </button>
-
-                      <button type="button" class="payout-card" data-method="bank">
-                        <h4>Bank Transfer</h4>
-                        <p>Receive payouts directly to your bank account.</p>
-                      </button>
+                <div class="payout-content">
+                  <div id="momoFields" class="settings-panel payout-panel">
+                    <div class="field">
+                      <label for="momoNetwork">MoMo Network</label>
+                      <select id="momoNetwork">
+                        <option value="">Select network</option>
+                        <option value="MTN">MTN Mobile Money</option>
+                        <option value="Telecel">Telecel Cash</option>
+                        <option value="AirtelTigo">AirtelTigo Money</option>
+                      </select>
                     </div>
 
-                    <div class="payout-content">
-                      <div id="momoFields" class="settings-panel payout-panel">
-                        <div class="field">
-                          <label for="momoNetwork">MoMo Network</label>
-                          <select id="momoNetwork">
-                            <option value="">Select network</option>
-                            <option value="MTN">MTN Mobile Money</option>
-                            <option value="Telecel">Telecel Cash</option>
-                            <option value="AirtelTigo">AirtelTigo Money</option>
-                          </select>
-                        </div>
-
-                        <div class="field">
-                          <label for="momoNumber">MoMo Number</label>
-                          <input type="tel" id="momoNumber" placeholder="0241234567">
-                        </div>
-                      </div>
-
-                      <div id="bankFields" class="settings-panel payout-panel hidden-panel">
-                        <div class="field">
-                          <label for="bankName">Bank Name</label>
-                          <input type="text" id="bankName" placeholder="GCB Bank">
-                        </div>
-
-                        <div class="field">
-                          <label for="bankAccountNumber">Account Number</label>
-                          <input type="text" id="bankAccountNumber" placeholder="0123456789">
-                        </div>
-
-                        <div class="field full">
-                          <label for="bankAccountName">Account Name</label>
-                          <input type="text" id="bankAccountName" placeholder="Seller account name">
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="payout-save-wrap">
-                      <button type="submit" class="primary-btn settings-submit">Save Payout Details</button>
+                    <div class="field">
+                      <label for="momoNumber">MoMo Number</label>
+                      <input type="tel" id="momoNumber" placeholder="0241234567">
                     </div>
                   </div>
 
-                  <aside class="payout-preview">
-                    <h4>Payout Preview</h4>
-                    <p id="preview-method">No payout method selected</p>
-                    <p id="preview-account"></p>
-                  </aside>
+                  <div id="bankFields" class="settings-panel payout-panel hidden-panel">
+                    <div class="field">
+                      <label for="bankName">Bank Name</label>
+                      <input type="text" id="bankName" placeholder="GCB Bank">
+                    </div>
+
+                    <div class="field">
+                      <label for="bankAccountNumber">Account Number</label>
+                      <input type="text" id="bankAccountNumber" placeholder="0123456789">
+                    </div>
+
+                    <div class="field full">
+                      <label for="bankAccountName">Account Name</label>
+                      <input type="text" id="bankAccountName" placeholder="Seller account name">
+                    </div>
+                  </div>
                 </div>
-              </form>
+
+                <div class="payout-save-wrap">
+                  <button type="submit" class="primary-btn settings-submit">Save Payout Details</button>
+                </div>
+              </div>
+
+              <aside class="payout-preview">
+                <h4>Payout Preview</h4>
+                <p id="preview-method">No payout method selected</p>
+                <p id="preview-account"></p>
+              </aside>
             </div>
-          </div>
-        </section>
+          </form>
+        </div>
       </div>
     </div>
   </section>

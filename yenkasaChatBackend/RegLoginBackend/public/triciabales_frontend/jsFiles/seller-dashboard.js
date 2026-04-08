@@ -1,8 +1,4 @@
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-const menuButtons = document.querySelectorAll(".seller-menu-btn");
-const panels = document.querySelectorAll(".seller-panel");
-const sellerMenu = document.getElementById("sellerMenu");
-const sellerMenuToggle = document.getElementById("sellerMenuToggle");
 const imageInput = document.getElementById("imageFile");
 const videoInput = document.getElementById("videoFile");
 const imagePreview = document.getElementById("imagePreview");
@@ -10,20 +6,25 @@ const videoPreview = document.getElementById("videoPreview");
 const addBaleBtn = document.getElementById("addBaleBtn");
 const progressWrap = document.getElementById("progressWrap");
 const statusText = document.getElementById("statusText");
-const imageInputDress = document.getElementById("imageFileDress");
-const videoInputDress = document.getElementById("videoFileDress");
-const imagePreviewDress = document.getElementById("imagePreviewDress");
-const videoPreviewDress = document.getElementById("videoPreviewDress");
-const addDressBtn = document.getElementById("addDressBtn");
-const progressWrapDress = document.getElementById("progressWrapDress");
-const statusTextDress = document.getElementById("statusTextDress");
+const baleTab = document.getElementById("baleTab");
+const singleTab = document.getElementById("singleTab");
+const manageTab = document.getElementById("manageTab");
+const ordersTab = document.getElementById("ordersTab");
+const payoutTab = document.getElementById("payoutTab");
 const productType = document.getElementById("productType");
 const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
+const uploadCard = document.getElementById("uploadCard");
+const manageSection = document.getElementById("manageSection");
+const ordersSection = document.getElementById("ordersSection");
+const payoutSection = document.getElementById("payoutSection");
 const manageList = document.getElementById("manageList");
-const sellerOrdersList = document.getElementById("seller-orders-list");
-const sellerOrdersFeedback = document.getElementById("seller-orders-feedback");
-const pendingPayoutsList = document.getElementById("pending-payouts-list");
+const sellerOrdersList = document.getElementById("sellerOrdersList");
+const paidCount = document.getElementById("paid-count");
+const pendingCount = document.getElementById("pending-count");
+const completedCount = document.getElementById("completed-count");
+const menuToggle = document.getElementById("menuToggle");
+const dashboardMenu = document.getElementById("dashboardMenu");
 const payoutForm = document.getElementById("payout-form");
 const payoutMethod = document.getElementById("payoutMethod");
 const momoFields = document.getElementById("momoFields");
@@ -31,6 +32,8 @@ const bankFields = document.getElementById("bankFields");
 const payoutCards = document.querySelectorAll(".payout-card");
 const previewMethod = document.getElementById("preview-method");
 const previewAccount = document.getElementById("preview-account");
+const panelTitle = document.getElementById("panelTitle");
+const panelDescription = document.getElementById("panelDescription");
 
 if (!currentUser) {
   window.location.href = "buyer-login.html";
@@ -44,98 +47,41 @@ if (currentUser?.role !== "SELLER") {
   window.location.href = "buyer-login.html";
 }
 
-document.getElementById("seller-name").textContent = currentUser?.name || "Seller";
-document.getElementById("seller-email").textContent = currentUser?.email || "";
+document.getElementById("sellerHeading").textContent = `${currentUser.name || "Seller"} Dashboard`;
+document.getElementById("sellerSubheading").textContent = currentUser.email || "Manage your store from one place.";
 
-function openPanel(panelName) {
-  menuButtons.forEach(button => button.classList.remove("active"));
-  panels.forEach(panel => panel.classList.remove("active"));
-
-  const activeButton = Array.from(menuButtons).find(button => button.dataset.panel === panelName);
-  const activePanel = document.getElementById(`panel-${panelName}`);
-
-  if (activeButton) {
-    activeButton.classList.add("active");
-  }
-
-  if (activePanel) {
-    activePanel.classList.add("active");
-  }
-
-  if (panelName === "manage-products") {
-    loadManageProducts();
-  }
-
-  if (panelName === "my-orders") {
-    loadSellerOrders();
-  }
+function closeMenu() {
+  dashboardMenu.classList.remove("open");
 }
 
-function switchProductMode(mode) {
+function activateTab(activeTab) {
+  [baleTab, singleTab, manageTab, ordersTab, payoutTab].forEach(tab => {
+    tab.classList.toggle("active", tab === activeTab);
+  });
+}
+
+function showSection(section) {
+  uploadCard.style.display = section === "upload" ? "block" : "none";
+  manageSection.style.display = section === "manage" ? "block" : "none";
+  ordersSection.style.display = section === "orders" ? "block" : "none";
+  payoutSection.style.display = section === "payout" ? "block" : "none";
+}
+
+function setUploadMode(mode) {
   productType.value = mode;
   const isBale = mode === "bale";
 
   weightField.style.display = isBale ? "flex" : "none";
   sizeField.style.display = isBale ? "none" : "flex";
-
+  panelTitle.textContent = isBale ? "Upload New Bale" : "Upload Single Dress";
+  panelDescription.textContent = isBale
+    ? "Add a bale listing with images and an optional video."
+    : "Add one fashion item with size, images and an optional video.";
   document.querySelector("label[for='name']").textContent = isBale ? "Bale Name" : "Dress Name";
   document.getElementById("name").placeholder = isBale
     ? "e.g. Ladies Flannel Blouse Bale"
     : "e.g. Floral Summer Dress";
   addBaleBtn.textContent = isBale ? "Upload Bale" : "Upload Dress";
-}
-
-function togglePayoutFields(method) {
-  payoutCards.forEach(card => {
-    card.classList.toggle("active", card.dataset.method === method);
-  });
-
-  momoFields.classList.toggle("hidden-panel", method !== "momo");
-  bankFields.classList.toggle("hidden-panel", method !== "bank");
-  payoutMethod.value = method || "";
-  updatePayoutPreview();
-}
-
-function hydratePayoutForm() {
-  payoutMethod.value = currentUser?.payoutMethod || "momo";
-  document.getElementById("momoNetwork").value = currentUser?.momoNetwork || "";
-  document.getElementById("momoNumber").value = currentUser?.momoNumber || "";
-  document.getElementById("bankName").value = currentUser?.bankName || "";
-  document.getElementById("bankAccountNumber").value = currentUser?.bankAccountNumber || "";
-  document.getElementById("bankAccountName").value = currentUser?.bankAccountName || "";
-  togglePayoutFields(payoutMethod.value);
-}
-
-function updatePayoutPreview() {
-  const method = payoutMethod.value;
-
-  if (method === "momo") {
-    const network = document.getElementById("momoNetwork").value || "Mobile Money";
-    const number = document.getElementById("momoNumber").value.trim();
-
-    previewMethod.textContent = `Method: ${network}`;
-    previewAccount.textContent = number
-      ? `Account: ${number}`
-      : "Enter your MoMo number to preview where your payouts will go.";
-    return;
-  }
-
-  if (method === "bank") {
-    const bankName = document.getElementById("bankName").value.trim();
-    const accountName = document.getElementById("bankAccountName").value.trim();
-    const accountNumber = document.getElementById("bankAccountNumber").value.trim();
-
-    previewMethod.textContent = bankName
-      ? `Method: ${bankName}`
-      : "Method: Bank Transfer";
-    previewAccount.textContent = accountNumber || accountName
-      ? `Account: ${accountName || "Account Name"} ${accountNumber ? `• ${accountNumber}` : ""}`.trim()
-      : "Enter your bank details to preview the payout destination.";
-    return;
-  }
-
-  previewMethod.textContent = "No payout method selected";
-  previewAccount.textContent = "";
 }
 
 function formatStatus(status) {
@@ -147,26 +93,6 @@ function formatStatus(status) {
     .join(" ");
 }
 
-function getStatusClass(type, value) {
-  const normalized = (value || "").toLowerCase();
-
-  if (type === "payment") {
-    if (normalized === "paid" || normalized === "payout_released") return "paid";
-    if (
-      normalized === "awaiting_payment" ||
-      normalized === "awaiting_transfer" ||
-      normalized === "ready_for_payout"
-    ) {
-      return "awaiting";
-    }
-    return "unpaid";
-  }
-
-  if (normalized === "delivered") return "paid";
-  if (normalized === "accepted") return "awaiting";
-  return "unpaid";
-}
-
 function estimateSellerPayout(order) {
   if (order.sellerPayoutAmount != null) {
     return Number(order.sellerPayoutAmount || 0);
@@ -176,19 +102,53 @@ function estimateSellerPayout(order) {
   return total - (total * 0.10);
 }
 
-function setSummary(orders) {
-  const totalOrders = orders.length;
-  const estimatedEarnings = orders.reduce(
-    (sum, order) => sum + estimateSellerPayout(order),
-    0
-  );
-  const pendingPayouts = orders
-    .filter(order => order.paymentStatus !== "payout_released")
-    .reduce((sum, order) => sum + estimateSellerPayout(order), 0);
+function togglePayoutFields(method) {
+  payoutCards.forEach(card => {
+    card.classList.toggle("active", card.dataset.method === method);
+  });
 
-  document.getElementById("seller-total-orders").textContent = totalOrders;
-  document.getElementById("seller-estimated-earnings").textContent = `GH₵${estimatedEarnings.toFixed(2)}`;
-  document.getElementById("seller-pending-payouts").textContent = `GH₵${pendingPayouts.toFixed(2)}`;
+  payoutMethod.value = method || "";
+  momoFields.classList.toggle("hidden-panel", method !== "momo");
+  bankFields.classList.toggle("hidden-panel", method !== "bank");
+  updatePayoutPreview();
+}
+
+function updatePayoutPreview() {
+  const method = payoutMethod.value;
+
+  if (method === "momo") {
+    const network = document.getElementById("momoNetwork").value || "Mobile Money";
+    const number = document.getElementById("momoNumber").value.trim();
+    previewMethod.textContent = `Method: ${network}`;
+    previewAccount.textContent = number
+      ? `Account: ${number}`
+      : "Enter your MoMo number to preview where payouts will go.";
+    return;
+  }
+
+  if (method === "bank") {
+    const bankName = document.getElementById("bankName").value.trim() || "Bank Transfer";
+    const accountName = document.getElementById("bankAccountName").value.trim();
+    const accountNumber = document.getElementById("bankAccountNumber").value.trim();
+    previewMethod.textContent = `Method: ${bankName}`;
+    previewAccount.textContent = accountName || accountNumber
+      ? `Account: ${accountName || "Account Name"}${accountNumber ? ` • ${accountNumber}` : ""}`
+      : "Enter your bank details to preview where payouts will go.";
+    return;
+  }
+
+  previewMethod.textContent = "No payout method selected";
+  previewAccount.textContent = "";
+}
+
+function hydratePayoutForm() {
+  payoutMethod.value = currentUser?.payoutMethod || "momo";
+  document.getElementById("momoNetwork").value = currentUser?.momoNetwork || "";
+  document.getElementById("momoNumber").value = currentUser?.momoNumber || "";
+  document.getElementById("bankName").value = currentUser?.bankName || "";
+  document.getElementById("bankAccountNumber").value = currentUser?.bankAccountNumber || "";
+  document.getElementById("bankAccountName").value = currentUser?.bankAccountName || "";
+  togglePayoutFields(payoutMethod.value);
 }
 
 function resetUploadForm() {
@@ -207,147 +167,11 @@ function resetUploadForm() {
   videoPreview.removeAttribute("src");
 }
 
-function resetDressForm() {
-  document.getElementById("nameDress").value = "";
-  document.getElementById("priceDress").value = "";
-  document.getElementById("sizeDress").value = "";
-  document.getElementById("categoryDress").value = "";
-  document.getElementById("descriptionDress").value = "";
-  document.getElementById("statusDress").value = "available";
-  imageInputDress.value = "";
-  videoInputDress.value = "";
-  imagePreviewDress.innerHTML = "";
-  imagePreviewDress.style.display = "none";
-  videoPreviewDress.style.display = "none";
-  videoPreviewDress.removeAttribute("src");
-}
-
-function renderPendingPayouts(orders) {
-  const pendingOrders = orders.filter(order => order.paymentStatus !== "payout_released");
-
-  if (!pendingOrders.length) {
-    pendingPayoutsList.innerHTML = "<p>There are no pending payouts right now.</p>";
-    return;
-  }
-
-  pendingPayoutsList.innerHTML = pendingOrders.map(order => `
-    <div class="payout-line">
-      <div>
-        <strong>Order #${order.id}</strong>
-        <p>${formatStatus(order.paymentStatus)} / ${formatStatus(order.deliveryStatus)}</p>
-      </div>
-      <strong>GH₵${estimateSellerPayout(order).toFixed(2)}</strong>
-    </div>
-  `).join("");
-}
-
-function renderOrders(orders) {
-  if (!orders.length) {
-    sellerOrdersFeedback.classList.remove("hidden");
-    sellerOrdersFeedback.innerHTML = `
-      <div class="card">
-        <div class="card-content">
-          <h3>No seller orders yet.</h3>
-          <p>Your linked orders will appear here after buyers place orders for your products.</p>
-        </div>
-      </div>
-    `;
-    sellerOrdersList.innerHTML = "";
-    return;
-  }
-
-  sellerOrdersFeedback.classList.add("hidden");
-  sellerOrdersList.innerHTML = orders.map(order => {
-    const deliveryStatus = order.deliveryStatus || "pending";
-    const paymentStatus = order.paymentStatus || "pending";
-    const acceptedBtn = deliveryStatus !== "accepted" && deliveryStatus !== "delivered"
-      ? `<button class="primary-btn seller-order-btn" data-id="${order.id}" data-action="accept">Mark Accepted</button>`
-      : "";
-    const deliveredBtn = deliveryStatus !== "delivered"
-      ? `<button class="secondary-btn seller-order-btn" data-id="${order.id}" data-action="deliver">Mark Delivered</button>`
-      : "";
-
-    return `
-      <article class="seller-order-card">
-        <div class="seller-order-top">
-          <div>
-            <p class="order-label">Order #${order.id}</p>
-            <h3>${order.customerName || "Customer"}</h3>
-          </div>
-          <div class="order-total">GH₵${Number(order.total || 0).toFixed(2)}</div>
-        </div>
-
-        <div class="order-meta">
-          <span class="status-pill ${getStatusClass("payment", paymentStatus)}">
-            Payment: ${formatStatus(paymentStatus)}
-          </span>
-          <span class="status-pill ${getStatusClass("delivery", deliveryStatus)}">
-            Delivery: ${formatStatus(deliveryStatus)}
-          </span>
-        </div>
-
-        <div class="seller-order-meta">
-          <p><strong>Customer:</strong> ${order.customerName || "-"}</p>
-          <p><strong>Phone:</strong> ${order.phone || "-"}</p>
-          <p><strong>Address:</strong> ${order.address || "-"}</p>
-          <p><strong>Estimated Payout:</strong> GH₵${estimateSellerPayout(order).toFixed(2)}</p>
-        </div>
-
-        <div class="seller-order-items">
-          ${(order.items || []).map(item => `
-            <div class="order-item-row">
-              <span>${item.baleName}</span>
-              <span>${item.quantity} x GH₵${Number(item.price || 0).toFixed(2)}</span>
-            </div>
-          `).join("")}
-        </div>
-
-        <div class="seller-order-actions">
-          ${acceptedBtn}
-          ${deliveredBtn}
-        </div>
-      </article>
-    `;
-  }).join("");
-}
-
-async function loadSellerOrders() {
-  try {
-    const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not load seller orders");
-    }
-
-    setSummary(data);
-    renderPendingPayouts(data);
-    renderOrders(data);
-  } catch (err) {
-    console.error(err);
-    sellerOrdersFeedback.classList.remove("hidden");
-    sellerOrdersFeedback.innerHTML = `
-      <div class="card">
-        <div class="card-content">
-          <h3>Could not load your seller orders right now.</h3>
-        </div>
-      </div>
-    `;
-    sellerOrdersList.innerHTML = "";
-    pendingPayoutsList.innerHTML = "<p>Unable to load pending payouts.</p>";
-  }
-}
-
 async function loadManageProducts() {
   manageList.innerHTML = "<p>Loading products...</p>";
 
   try {
-    const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/triciabales"
-    );
+    const response = await fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales");
     const products = await response.json();
 
     if (!response.ok) {
@@ -367,15 +191,8 @@ async function loadManageProducts() {
           <img
             src="${item.imageUrl}"
             alt="${item.name}"
-            style="
-              width:60px;
-              height:60px;
-              object-fit:cover;
-              border-radius:12px;
-              border:1px solid #eee;
-            "
+            style="width:60px;height:60px;object-fit:cover;border-radius:12px;border:1px solid #eee;"
           >
-
           <div class="manage-info">
             <strong>${item.name}</strong>
             <small>${item.type} • ${item.status}</small>
@@ -386,7 +203,6 @@ async function loadManageProducts() {
           <button class="manage-btn status" data-action="status" data-id="${item.id}">
             ${item.status === "sold" ? "Mark Available" : "Mark Sold"}
           </button>
-
           <button class="manage-btn delete" data-action="delete" data-id="${item.id}">
             Delete
           </button>
@@ -399,13 +215,85 @@ async function loadManageProducts() {
   }
 }
 
+async function loadSellerOrders() {
+  sellerOrdersList.innerHTML = "<p>Loading orders...</p>";
+
+  try {
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Unable to load orders");
+    }
+
+    const orders = await response.json();
+    const paidOrders = orders.filter(order => order.paymentStatus === "paid");
+    const awaitingOrders = orders.filter(order =>
+      order.paymentStatus === "awaiting_payment" || order.paymentStatus === "ready_for_payout"
+    );
+    const completedOrders = orders.filter(order => order.deliveryStatus === "delivered");
+
+    paidCount.textContent = paidOrders.length;
+    pendingCount.textContent = awaitingOrders.length;
+    completedCount.textContent = completedOrders.length;
+
+    if (!orders.length) {
+      sellerOrdersList.innerHTML = "<p>No orders found.</p>";
+      return;
+    }
+
+    sellerOrdersList.innerHTML = orders.map(order => {
+      const total = Number(order.total || 0);
+      const sellerReceives = estimateSellerPayout(order);
+      const deliveryStatus = order.deliveryStatus || "pending";
+      const paymentStatus = order.paymentStatus || "pending";
+      const acceptedBtn = deliveryStatus !== "accepted" && deliveryStatus !== "delivered"
+        ? `
+          <button class="manage-btn status seller-order-btn" data-id="${order.id}" data-action="accept">
+            Mark Accepted
+          </button>
+        `
+        : "";
+      const deliveredBtn = deliveryStatus !== "delivered"
+        ? `
+          <button class="manage-btn status seller-order-btn" data-id="${order.id}" data-action="deliver">
+            Mark Delivered
+          </button>
+        `
+        : "";
+
+      return `
+        <div class="manage-item" style="align-items:flex-start; flex-direction:column;">
+          <div style="width:100%;">
+            <strong>Order #${order.id}</strong>
+            <p><strong>Customer:</strong> ${order.customerName || "Unknown"}</p>
+            <p><strong>Phone:</strong> ${order.phone || "-"}</p>
+            <p><strong>Address:</strong> ${order.address || "-"}</p>
+            <p><strong>Payment:</strong> ${order.paymentMethod || "-"} (${paymentStatus})</p>
+            <p><strong>Delivery:</strong> ${deliveryStatus}</p>
+            <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
+            <p><strong>Estimated Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
+          </div>
+
+          <div class="manage-actions" style="margin-top:12px;">
+            ${acceptedBtn}
+            ${deliveredBtn}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error(err);
+    sellerOrdersList.innerHTML = "<p>Unable to load seller orders.</p>";
+  }
+}
+
 async function markSold(id) {
   try {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}/status`,
-      {
-        method: "PUT"
-      }
+      { method: "PUT" }
     );
 
     if (!response.ok) {
@@ -421,15 +309,12 @@ async function markSold(id) {
 
 async function deleteProduct(id) {
   const confirmDelete = confirm("Are you sure you want to delete this product?");
-
   if (!confirmDelete) return;
 
   try {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}`,
-      {
-        method: "DELETE"
-      }
+      { method: "DELETE" }
     );
 
     if (!response.ok) {
@@ -443,24 +328,91 @@ async function deleteProduct(id) {
   }
 }
 
-menuButtons.forEach(button => {
-  button.addEventListener("click", () => {
-    openPanel(button.dataset.panel);
+menuToggle.addEventListener("click", () => {
+  dashboardMenu.classList.toggle("open");
+});
 
-    if (window.innerWidth <= 768) {
-      sellerMenu.classList.remove("open");
+baleTab.addEventListener("click", () => {
+  activateTab(baleTab);
+  showSection("upload");
+  setUploadMode("bale");
+  closeMenu();
+});
+
+singleTab.addEventListener("click", () => {
+  activateTab(singleTab);
+  showSection("upload");
+  setUploadMode("single");
+  closeMenu();
+});
+
+manageTab.addEventListener("click", () => {
+  activateTab(manageTab);
+  showSection("manage");
+  loadManageProducts();
+  closeMenu();
+});
+
+ordersTab.addEventListener("click", () => {
+  activateTab(ordersTab);
+  showSection("orders");
+  loadSellerOrders();
+  closeMenu();
+});
+
+payoutTab.addEventListener("click", () => {
+  activateTab(payoutTab);
+  showSection("payout");
+  closeMenu();
+});
+
+manageList.addEventListener("click", event => {
+  const button = event.target.closest(".manage-btn");
+  if (!button) return;
+  const { action, id } = button.dataset;
+  if (!id) return;
+
+  if (action === "status") {
+    markSold(Number(id));
+  }
+
+  if (action === "delete") {
+    deleteProduct(Number(id));
+  }
+});
+
+sellerOrdersList.addEventListener("click", async event => {
+  const button = event.target.closest(".seller-order-btn");
+  if (!button) return;
+
+  const orderId = button.dataset.id;
+  const action = button.dataset.action;
+  if (!orderId || !action) return;
+
+  try {
+    const body = action === "accept"
+      ? { deliveryStatus: "accepted" }
+      : { deliveryStatus: "delivered" };
+
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to update order");
     }
-  });
-});
 
-sellerMenuToggle.addEventListener("click", () => {
-  sellerMenu.classList.toggle("open");
-});
-
-payoutCards.forEach(card => {
-  card.addEventListener("click", () => {
-    togglePayoutFields(card.dataset.method);
-  });
+    alert(action === "accept" ? "Order marked as accepted." : "Order marked as delivered.");
+    loadSellerOrders();
+  } catch (err) {
+    console.error(err);
+    alert("Unable to update order status.");
+  }
 });
 
 imageInput.addEventListener("change", () => {
@@ -472,28 +424,10 @@ imageInput.addEventListener("change", () => {
   }
 
   imagePreview.style.display = "grid";
-
   Array.from(imageInput.files).forEach(file => {
     const img = document.createElement("img");
     img.src = URL.createObjectURL(file);
     imagePreview.appendChild(img);
-  });
-});
-
-imageInputDress.addEventListener("change", () => {
-  imagePreviewDress.innerHTML = "";
-
-  if (!imageInputDress.files.length) {
-    imagePreviewDress.style.display = "none";
-    return;
-  }
-
-  imagePreviewDress.style.display = "grid";
-
-  Array.from(imageInputDress.files).forEach(file => {
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(file);
-    imagePreviewDress.appendChild(img);
   });
 });
 
@@ -510,27 +444,14 @@ videoInput.addEventListener("change", () => {
   videoPreview.style.display = "block";
 });
 
-videoInputDress.addEventListener("change", () => {
-  const file = videoInputDress.files[0];
-
-  if (!file) {
-    videoPreviewDress.style.display = "none";
-    videoPreviewDress.removeAttribute("src");
-    return;
-  }
-
-  videoPreviewDress.src = URL.createObjectURL(file);
-  videoPreviewDress.style.display = "block";
-});
-
 addBaleBtn.addEventListener("click", async () => {
   const name = document.getElementById("name").value.trim();
   const price = document.getElementById("price").value.trim();
   const weight = document.getElementById("weight").value.trim();
+  const size = document.getElementById("size").value;
   const category = document.getElementById("category").value.trim();
   const description = document.getElementById("description").value.trim();
   const status = document.getElementById("status").value;
-  const size = document.getElementById("size").value;
   const imageFiles = Array.from(imageInput.files);
   const videoFile = videoInput.files[0];
   const maxSize = 20 * 1024 * 1024;
@@ -578,10 +499,7 @@ addBaleBtn.addEventListener("click", async () => {
   formData.append("sellerId", currentUser.id);
   formData.append("sellerName", currentUser.name || "");
 
-  imageFiles.forEach(imageFile => {
-    formData.append("image", imageFile);
-  });
-
+  imageFiles.forEach(imageFile => formData.append("image", imageFile));
   if (videoFile) {
     formData.append("video", videoFile);
   }
@@ -601,7 +519,6 @@ addBaleBtn.addEventListener("click", async () => {
     );
 
     const rawText = await response.text();
-
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${rawText}`);
     }
@@ -620,163 +537,10 @@ addBaleBtn.addEventListener("click", async () => {
   }
 });
 
-addDressBtn.addEventListener("click", async () => {
-  const name = document.getElementById("nameDress").value.trim();
-  const price = document.getElementById("priceDress").value.trim();
-  const size = document.getElementById("sizeDress").value;
-  const category = document.getElementById("categoryDress").value.trim();
-  const description = document.getElementById("descriptionDress").value.trim();
-  const status = document.getElementById("statusDress").value;
-  const imageFiles = Array.from(imageInputDress.files);
-  const videoFile = videoInputDress.files[0];
-  const maxSize = 20 * 1024 * 1024;
-
-  if (!name || !price || !category) {
-    alert("Please fill all required fields.");
-    return;
-  }
-
-  if (!size) {
-    alert("Please select a dress size.");
-    return;
-  }
-
-  if (!imageFiles.length) {
-    alert("Please select at least one image.");
-    return;
-  }
-
-  for (const imageFile of imageFiles) {
-    if (imageFile.size > maxSize) {
-      alert("One of the images is too large. Maximum size is 20MB.");
-      return;
-    }
-  }
-
-  if (videoFile && videoFile.size > maxSize) {
-    alert("Video is too large. Maximum size is 20MB.");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("name", name);
-  formData.append("price", price);
-  formData.append("weight", size);
-  formData.append("category", category);
-  formData.append("description", description);
-  formData.append("status", status);
-  formData.append("type", "single");
-  formData.append("sellerId", currentUser.id);
-  formData.append("sellerName", currentUser.name || "");
-
-  imageFiles.forEach(imageFile => {
-    formData.append("image", imageFile);
+payoutCards.forEach(card => {
+  card.addEventListener("click", () => {
+    togglePayoutFields(card.dataset.method);
   });
-
-  if (videoFile) {
-    formData.append("video", videoFile);
-  }
-
-  addDressBtn.disabled = true;
-  addDressBtn.textContent = "Uploading Dress...";
-  progressWrapDress.style.display = "block";
-  statusTextDress.style.display = "block";
-
-  try {
-    const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/triciabales/upload",
-      {
-        method: "POST",
-        body: formData
-      }
-    );
-
-    const rawText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${rawText}`);
-    }
-
-    alert("Dress uploaded successfully.");
-    resetDressForm();
-    loadManageProducts();
-  } catch (err) {
-    console.error("Upload error:", err);
-    alert(`Upload failed.\n\n${err.message}`);
-  } finally {
-    addDressBtn.disabled = false;
-    addDressBtn.textContent = "Upload Dress";
-    progressWrapDress.style.display = "none";
-    statusTextDress.style.display = "none";
-  }
-});
-
-manageList.addEventListener("click", event => {
-  const button = event.target.closest(".manage-btn");
-
-  if (!button) {
-    return;
-  }
-
-  const { action, id } = button.dataset;
-
-  if (!id) {
-    return;
-  }
-
-  if (action === "status") {
-    markSold(Number(id));
-  }
-
-  if (action === "delete") {
-    deleteProduct(Number(id));
-  }
-});
-
-sellerOrdersList.addEventListener("click", async event => {
-  const button = event.target.closest(".seller-order-btn");
-
-  if (!button) {
-    return;
-  }
-
-  const orderId = button.dataset.id;
-  const action = button.dataset.action;
-
-  if (!orderId || !action) {
-    return;
-  }
-
-  try {
-    const body = action === "accept"
-      ? { deliveryStatus: "accepted" }
-      : { deliveryStatus: "delivered" };
-
-    const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to update order");
-    }
-
-    alert(action === "accept" ? "Order marked as accepted." : "Order marked as delivered.");
-    loadSellerOrders();
-  } catch (err) {
-    console.error(err);
-    alert("Unable to update order status.");
-  }
-});
-
-payoutMethod.addEventListener("change", () => {
-  togglePayoutFields(payoutMethod.value);
 });
 
 ["momoNetwork", "momoNumber", "bankName", "bankAccountNumber", "bankAccountName"].forEach(id => {
@@ -788,7 +552,6 @@ payoutForm.addEventListener("submit", async event => {
   event.preventDefault();
 
   const method = payoutMethod.value;
-
   if (!method) {
     alert("Please choose a payout method.");
     return;
@@ -824,15 +587,12 @@ payoutForm.addEventListener("submit", async event => {
       "https://www.yenkasa.xyz/triciabales-api/api/seller/payout-details",
       {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }
     );
 
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.error || "Could not save payout details");
     }
@@ -850,5 +610,5 @@ payoutForm.addEventListener("submit", async event => {
 });
 
 hydratePayoutForm();
-switchProductMode("bale");
-loadSellerOrders();
+setUploadMode("bale");
+showSection("upload");

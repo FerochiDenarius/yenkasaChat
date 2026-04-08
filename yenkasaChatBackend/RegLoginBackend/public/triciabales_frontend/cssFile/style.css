@@ -29,8 +29,25 @@ body {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 1.6rem;
   font-weight: 700;
+}
+
+.logo img,
+.page-brand img {
+  display: block;
+  height: 52px;
+  width: auto;
+}
+
+.page-brand {
+  width: min(1250px, 92%);
+  margin: 36px auto 16px;
+  display: flex;
+  justify-content: center;
 }
 
 .nav-links {

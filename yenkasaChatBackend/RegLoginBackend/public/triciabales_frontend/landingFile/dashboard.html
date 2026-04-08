@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Dashboard | Yenkasa Store</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <section class="collection-section" style="max-width:900px;">
+    <div class="section-header">
+      <span>Seller Dashboard</span>
+      <h2>Payout Settings</h2>
+      <p>Choose how Yenkasa Store should send your future payouts.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-content dashboard-card">
+        <div class="dashboard-header">
+          <div>
+            <h3 id="seller-name">Seller</h3>
+            <p id="seller-email">Manage your payout destination here.</p>
+          </div>
+
+          <a href="my-orders.html" class="secondary-btn">My Orders</a>
+        </div>
+
+        <form id="payout-form" class="settings-grid">
+          <div class="field full">
+            <label for="payoutMethod">Payout Method</label>
+            <select id="payoutMethod" required>
+              <option value="">Choose payout method</option>
+              <option value="momo">Mobile Money</option>
+              <option value="bank">Bank Transfer</option>
+            </select>
+          </div>
+
+          <div id="momoFields" class="settings-panel hidden-panel">
+            <div class="field">
+              <label for="momoNetwork">MoMo Network</label>
+              <select id="momoNetwork">
+                <option value="">Select network</option>
+                <option value="MTN">MTN Mobile Money</option>
+                <option value="Telecel">Telecel Cash</option>
+                <option value="AirtelTigo">AirtelTigo Money</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="momoNumber">MoMo Number</label>
+              <input type="tel" id="momoNumber" placeholder="0241234567">
+            </div>
+          </div>
+
+          <div id="bankFields" class="settings-panel hidden-panel">
+            <div class="field">
+              <label for="bankName">Bank Name</label>
+              <input type="text" id="bankName" placeholder="GCB Bank">
+            </div>
+
+            <div class="field">
+              <label for="bankAccountNumber">Account Number</label>
+              <input type="text" id="bankAccountNumber" placeholder="0123456789">
+            </div>
+
+            <div class="field full">
+              <label for="bankAccountName">Account Name</label>
+              <input type="text" id="bankAccountName" placeholder="Seller account name">
+            </div>
+          </div>
+
+          <div class="field full">
+            <button type="submit" class="primary-btn settings-submit">Save Payout Details</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script src="../jsFiles/dashboard.js"></script>
+</body>
+</html>

@@ -470,6 +470,45 @@ body {
   gap: 10px;
 }
 
+.order-confirm {
+  margin-top: 18px;
+}
+
+.dashboard-card {
+  padding: 30px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 20px;
+  border-radius: 18px;
+  background: #f9fafb;
+}
+
+.hidden-panel {
+  display: none;
+}
+
+.settings-submit {
+  border: none;
+  cursor: pointer;
+}
+
 .order-item-row {
   display: flex;
   justify-content: space-between;
@@ -539,7 +578,14 @@ footer {
   }
 
   .order-card-top,
-  .order-item-row {
+  .order-item-row,
+  .dashboard-header,
+  .settings-panel {
     flex-direction: column;
+  }
+
+  .settings-panel {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }

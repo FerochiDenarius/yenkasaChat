@@ -64,6 +64,34 @@ module.exports = function (app) {
     }
   });
 
+  // SELLER PAYOUT DETAILS
+  app.put('/triciabales-api/api/seller/payout-details', async (req, res) => {
+    try {
+      const response = await axios.put(
+        'http://134.209.182.39:8080/api/seller/payout-details',
+        req.body,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'PAYOUT DETAILS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // LOGIN
   app.post('/triciabales-api/api/auth/login', async (req, res) => {
     try {
@@ -309,6 +337,28 @@ module.exports = function (app) {
     } catch (err) {
       console.error(
         'ORDER STATUS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // BUYER ORDER CONFIRMATION
+  app.put('/triciabales-api/api/orders/:id/confirm-received', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `http://134.209.182.39:8080/api/orders/${req.params.id}/confirm-received`
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'ORDER CONFIRM ERROR:',
         err.response?.status,
         err.response?.data || err.message
       );

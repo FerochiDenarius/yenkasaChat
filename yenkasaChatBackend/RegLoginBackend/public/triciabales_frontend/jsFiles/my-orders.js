@@ -19,9 +19,14 @@ function getStatusClass(type, value) {
 
   if (type === "payment") {
     if (normalized === "paid") return "paid";
-    if (normalized === "awaiting_payment" || normalized === "awaiting_transfer") {
+    if (
+      normalized === "awaiting_payment" ||
+      normalized === "awaiting_transfer" ||
+      normalized === "ready_for_payout"
+    ) {
       return "awaiting";
     }
+    if (normalized === "payout_released") return "paid";
     return "unpaid";
   }
 
@@ -70,6 +75,7 @@ function renderOrders(orders) {
         <p><strong>Payment Method:</strong> ${formatStatus(order.paymentMethod)}</p>
         <p><strong>Delivery Method:</strong> ${formatStatus(order.deliveryMethod)}</p>
         <p><strong>Address:</strong> ${order.address || "-"}</p>
+        <p><strong>Buyer Confirmation:</strong> ${order.confirmedByBuyer ? "Confirmed" : "Pending"}</p>
       </div>
 
       <div class="order-items">
@@ -83,9 +89,58 @@ function renderOrders(orders) {
           `).join("")}
         </div>
       </div>
+
+      ${order.deliveryStatus === "delivered" && !order.confirmedByBuyer ? `
+        <div class="order-confirm">
+          <button class="confirm-received-btn" data-id="${order.id}">
+            I Have Received My Order
+          </button>
+        </div>
+      ` : ""}
     </article>
   `).join("");
 }
+
+ordersContainer.addEventListener("click", async event => {
+  const button = event.target.closest(".confirm-received-btn");
+
+  if (!button) {
+    return;
+  }
+
+  const orderId = button.dataset.id;
+
+  if (!orderId) {
+    return;
+  }
+
+  try {
+    const confirmed = confirm(
+      "Confirm that you have received this order? This cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/confirm-received`,
+      {
+        method: "PUT"
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not confirm order");
+    }
+
+    alert("Thank you. Seller payment is now ready for release.");
+    loadOrders();
+  } catch (err) {
+    console.error(err);
+    alert("Could not confirm this order.");
+  }
+});
 
 async function loadOrders() {
   if (!currentUser?.id) {

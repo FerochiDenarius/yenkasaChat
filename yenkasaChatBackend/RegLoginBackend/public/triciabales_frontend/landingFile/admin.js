@@ -20,6 +20,7 @@ const paidCount = document.getElementById("paid-count");
 const pendingCount = document.getElementById("pending-count");
 const completedCount = document.getElementById("completed-count");
 const uploadCard = document.querySelector(".card");
+const isSuperAdmin = localStorage.getItem("loggedIn") === "true";
 
 baleTab.addEventListener("click", () => {
   manageTab.classList.remove("active");
@@ -107,12 +108,16 @@ manageList.addEventListener("click", event => {
 });
 
 sellerOrdersList.addEventListener("click", async event => {
-  const button = event.target.closest(".order-action-btn");
+  const button = event.target.closest(
+    ".order-action-btn, .accept-order-btn, .deliver-order-btn, .release-payment-btn"
+  );
 
   if (!button) return;
 
   const orderId = button.dataset.id;
-  const action = button.dataset.action;
+  const action = button.dataset.action ||
+    (button.classList.contains("accept-order-btn") ? "accept" : "") ||
+    (button.classList.contains("deliver-order-btn") ? "deliver" : "");
 
   if (!orderId || !action) return;
 
@@ -131,6 +136,20 @@ sellerOrdersList.addEventListener("click", async event => {
       };
     }
 
+    if (action === "release") {
+      const confirmed = confirm(
+        "Release seller payment after deducting 10% commission?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      body = {
+        releasePayout: "true"
+      };
+    }
+
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
       {
@@ -146,6 +165,21 @@ sellerOrdersList.addEventListener("click", async event => {
       throw new Error("Failed to update order");
     }
 
+    const updatedOrder = await response.json();
+
+    if (action === "release") {
+      alert(
+        `Seller payout released.\n\nCommission: GH₵${Number(updatedOrder.commissionAmount || 0).toFixed(2)}\nSeller Gets: GH₵${Number(updatedOrder.sellerPayoutAmount || 0).toFixed(2)}`
+      );
+      loadSellerOrders();
+      return;
+    }
+
+    alert(
+      action === "accept"
+        ? "Order marked as accepted."
+        : "Order marked as delivered."
+    );
     loadSellerOrders();
   } catch (err) {
     console.error(err);
@@ -410,6 +444,43 @@ async function loadSellerOrders() {
       const total = Number(order.total || 0);
       const commission = total * 0.10;
       const sellerReceives = total - commission;
+      const deliveryStatus = order.deliveryStatus || "pending";
+      const paymentStatus = order.paymentStatus || "pending";
+      const acceptedBtn = deliveryStatus !== "accepted" && deliveryStatus !== "delivered"
+        ? `
+            <button
+              class="manage-btn status order-action-btn accept-order-btn"
+              data-id="${order.id}"
+              data-action="accept"
+            >
+              Mark Accepted
+            </button>
+          `
+        : "";
+      const deliveredBtn = deliveryStatus !== "delivered"
+        ? `
+            <button
+              class="manage-btn status order-action-btn deliver-order-btn"
+              data-id="${order.id}"
+              data-action="deliver"
+            >
+              Mark Delivered
+            </button>
+          `
+        : "";
+      const releasePaymentBtn = isSuperAdmin &&
+        paymentStatus === "ready_for_payout" &&
+        order.confirmedByBuyer === true
+        ? `
+            <button
+              class="manage-btn status order-action-btn release-payment-btn"
+              data-id="${order.id}"
+              data-action="release"
+            >
+              Release Seller Payment
+            </button>
+          `
+        : "";
 
       return `
         <div class="manage-item" style="align-items:flex-start; flex-direction:column;">
@@ -418,29 +489,24 @@ async function loadSellerOrders() {
             <p><strong>Customer:</strong> ${order.customerName || "Unknown"}</p>
             <p><strong>Phone:</strong> ${order.phone || "-"}</p>
             <p><strong>Address:</strong> ${order.address || "-"}</p>
-            <p><strong>Payment:</strong> ${order.paymentMethod || "-"} (${order.paymentStatus || "-"})</p>
+            <p><strong>Payment:</strong> ${order.paymentMethod || "-"} (${paymentStatus})</p>
             <p><strong>Delivery:</strong> ${order.deliveryStatus || "-"}</p>
+            <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
             <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
             <p><strong>Commission (10%):</strong> GH₵${commission.toFixed(2)}</p>
             <p><strong>Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
+            ${order.commissionAmount != null ? `
+              <p><strong>Released Commission:</strong> GH₵${Number(order.commissionAmount).toFixed(2)}</p>
+            ` : ""}
+            ${order.sellerPayoutAmount != null ? `
+              <p><strong>Released Seller Payout:</strong> GH₵${Number(order.sellerPayoutAmount).toFixed(2)}</p>
+            ` : ""}
           </div>
 
           <div class="manage-actions" style="margin-top:12px;">
-            <button
-              class="manage-btn status order-action-btn"
-              data-id="${order.id}"
-              data-action="accept"
-            >
-              Mark Accepted
-            </button>
-
-            <button
-              class="manage-btn status order-action-btn"
-              data-id="${order.id}"
-              data-action="deliver"
-            >
-              Mark Delivered
-            </button>
+            ${acceptedBtn}
+            ${deliveredBtn}
+            ${releasePaymentBtn}
           </div>
         </div>
       `;

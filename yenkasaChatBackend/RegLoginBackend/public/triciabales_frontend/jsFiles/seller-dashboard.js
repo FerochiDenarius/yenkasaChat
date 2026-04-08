@@ -19,6 +19,9 @@ const payoutForm = document.getElementById("payout-form");
 const payoutMethod = document.getElementById("payoutMethod");
 const momoFields = document.getElementById("momoFields");
 const bankFields = document.getElementById("bankFields");
+const payoutCards = document.querySelectorAll(".payout-card");
+const previewMethod = document.getElementById("preview-method");
+const previewAccount = document.getElementById("preview-account");
 
 if (!currentUser) {
   window.location.href = "buyer-login.html";
@@ -76,18 +79,56 @@ function switchProductMode(mode) {
 }
 
 function togglePayoutFields(method) {
+  payoutCards.forEach(card => {
+    card.classList.toggle("active", card.dataset.method === method);
+  });
+
   momoFields.classList.toggle("hidden-panel", method !== "momo");
   bankFields.classList.toggle("hidden-panel", method !== "bank");
+  payoutMethod.value = method || "";
+  updatePayoutPreview();
 }
 
 function hydratePayoutForm() {
-  payoutMethod.value = currentUser?.payoutMethod || "";
+  payoutMethod.value = currentUser?.payoutMethod || "momo";
   document.getElementById("momoNetwork").value = currentUser?.momoNetwork || "";
   document.getElementById("momoNumber").value = currentUser?.momoNumber || "";
   document.getElementById("bankName").value = currentUser?.bankName || "";
   document.getElementById("bankAccountNumber").value = currentUser?.bankAccountNumber || "";
   document.getElementById("bankAccountName").value = currentUser?.bankAccountName || "";
   togglePayoutFields(payoutMethod.value);
+}
+
+function updatePayoutPreview() {
+  const method = payoutMethod.value;
+
+  if (method === "momo") {
+    const network = document.getElementById("momoNetwork").value || "Mobile Money";
+    const number = document.getElementById("momoNumber").value.trim();
+
+    previewMethod.textContent = `Method: ${network}`;
+    previewAccount.textContent = number
+      ? `Account: ${number}`
+      : "Enter your MoMo number to preview where your payouts will go.";
+    return;
+  }
+
+  if (method === "bank") {
+    const bankName = document.getElementById("bankName").value.trim();
+    const accountName = document.getElementById("bankAccountName").value.trim();
+    const accountNumber = document.getElementById("bankAccountNumber").value.trim();
+
+    previewMethod.textContent = bankName
+      ? `Method: ${bankName}`
+      : "Method: Bank Transfer";
+    previewAccount.textContent = accountNumber || accountName
+      ? `Account: ${accountName || "Account Name"} ${accountNumber ? `• ${accountNumber}` : ""}`.trim()
+      : "Enter your bank details to preview the payout destination.";
+    return;
+  }
+
+  previewMethod.textContent = "No payout method selected";
+  previewAccount.textContent = "";
 }
 
 function formatStatus(status) {
@@ -386,6 +427,12 @@ menuButtons.forEach(button => {
   });
 });
 
+payoutCards.forEach(card => {
+  card.addEventListener("click", () => {
+    togglePayoutFields(card.dataset.method);
+  });
+});
+
 imageInput.addEventListener("change", () => {
   imagePreview.innerHTML = "";
 
@@ -579,6 +626,11 @@ sellerOrdersList.addEventListener("click", async event => {
 
 payoutMethod.addEventListener("change", () => {
   togglePayoutFields(payoutMethod.value);
+});
+
+["momoNetwork", "momoNumber", "bankName", "bankAccountNumber", "bankAccountName"].forEach(id => {
+  document.getElementById(id).addEventListener("input", updatePayoutPreview);
+  document.getElementById(id).addEventListener("change", updatePayoutPreview);
 });
 
 payoutForm.addEventListener("submit", async event => {

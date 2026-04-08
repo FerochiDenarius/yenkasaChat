@@ -665,6 +665,92 @@ body {
   background: #f9fafb;
 }
 
+.payout-form-shell {
+  display: block;
+}
+
+.payout-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 24px;
+}
+
+.payout-main {
+  display: grid;
+  gap: 20px;
+}
+
+.payout-methods {
+  display: flex;
+  gap: 16px;
+}
+
+.payout-card {
+  flex: 1;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 20px;
+  background: #141414;
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.payout-card h4 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.payout-card p {
+  color: rgba(255,255,255,0.72);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.payout-card:hover,
+.payout-card.active {
+  border-color: #c7a75b;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(0,0,0,0.16);
+}
+
+.payout-content {
+  display: grid;
+}
+
+.payout-panel {
+  background: #f8fafc;
+}
+
+.payout-preview {
+  padding: 24px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #151515, #1f1f1f);
+  border: 1px solid rgba(255,255,255,0.06);
+  position: sticky;
+  top: 20px;
+  min-height: 220px;
+}
+
+.payout-preview h4 {
+  color: white;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+}
+
+.payout-preview p {
+  color: rgba(255,255,255,0.78);
+  line-height: 1.8;
+}
+
+.payout-save-wrap {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 28%);
+  padding-top: 18px;
+}
+
 .payouts-card {
   background: white;
   border-radius: 24px;
@@ -798,8 +884,13 @@ footer {
   .seller-summary-grid,
   .seller-dashboard-grid,
   .seller-shell,
-  .seller-upload-grid {
+  .seller-upload-grid,
+  .payout-layout {
     grid-template-columns: 1fr;
+  }
+
+  .payout-methods {
+    flex-direction: column;
   }
 
   .settings-panel {

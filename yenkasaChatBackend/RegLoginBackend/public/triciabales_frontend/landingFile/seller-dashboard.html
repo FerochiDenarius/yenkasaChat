@@ -210,52 +210,69 @@
                 </div>
               </div>
 
-              <form id="payout-form" class="settings-grid">
-                <div class="field full">
-                  <label for="payoutMethod">Payout Method</label>
-                  <select id="payoutMethod" required>
-                    <option value="">Choose payout method</option>
-                    <option value="momo">Mobile Money</option>
-                    <option value="bank">Bank Transfer</option>
-                  </select>
-                </div>
+              <form id="payout-form" class="payout-form-shell">
+                <input type="hidden" id="payoutMethod">
 
-                <div id="momoFields" class="settings-panel hidden-panel">
-                  <div class="field">
-                    <label for="momoNetwork">MoMo Network</label>
-                    <select id="momoNetwork">
-                      <option value="">Select network</option>
-                      <option value="MTN">MTN Mobile Money</option>
-                      <option value="Telecel">Telecel Cash</option>
-                      <option value="AirtelTigo">AirtelTigo Money</option>
-                    </select>
+                <div class="payout-layout">
+                  <div class="payout-main">
+                    <div class="payout-methods">
+                      <button type="button" class="payout-card active" data-method="momo">
+                        <h4>Mobile Money</h4>
+                        <p>Receive payouts directly to MTN, Telecel or AirtelTigo.</p>
+                      </button>
+
+                      <button type="button" class="payout-card" data-method="bank">
+                        <h4>Bank Transfer</h4>
+                        <p>Receive payouts directly to your bank account.</p>
+                      </button>
+                    </div>
+
+                    <div class="payout-content">
+                      <div id="momoFields" class="settings-panel payout-panel">
+                        <div class="field">
+                          <label for="momoNetwork">MoMo Network</label>
+                          <select id="momoNetwork">
+                            <option value="">Select network</option>
+                            <option value="MTN">MTN Mobile Money</option>
+                            <option value="Telecel">Telecel Cash</option>
+                            <option value="AirtelTigo">AirtelTigo Money</option>
+                          </select>
+                        </div>
+
+                        <div class="field">
+                          <label for="momoNumber">MoMo Number</label>
+                          <input type="tel" id="momoNumber" placeholder="0241234567">
+                        </div>
+                      </div>
+
+                      <div id="bankFields" class="settings-panel payout-panel hidden-panel">
+                        <div class="field">
+                          <label for="bankName">Bank Name</label>
+                          <input type="text" id="bankName" placeholder="GCB Bank">
+                        </div>
+
+                        <div class="field">
+                          <label for="bankAccountNumber">Account Number</label>
+                          <input type="text" id="bankAccountNumber" placeholder="0123456789">
+                        </div>
+
+                        <div class="field full">
+                          <label for="bankAccountName">Account Name</label>
+                          <input type="text" id="bankAccountName" placeholder="Seller account name">
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="payout-save-wrap">
+                      <button type="submit" class="primary-btn settings-submit">Save Payout Details</button>
+                    </div>
                   </div>
 
-                  <div class="field">
-                    <label for="momoNumber">MoMo Number</label>
-                    <input type="tel" id="momoNumber" placeholder="0241234567">
-                  </div>
-                </div>
-
-                <div id="bankFields" class="settings-panel hidden-panel">
-                  <div class="field">
-                    <label for="bankName">Bank Name</label>
-                    <input type="text" id="bankName" placeholder="GCB Bank">
-                  </div>
-
-                  <div class="field">
-                    <label for="bankAccountNumber">Account Number</label>
-                    <input type="text" id="bankAccountNumber" placeholder="0123456789">
-                  </div>
-
-                  <div class="field full">
-                    <label for="bankAccountName">Account Name</label>
-                    <input type="text" id="bankAccountName" placeholder="Seller account name">
-                  </div>
-                </div>
-
-                <div class="field full">
-                  <button type="submit" class="primary-btn settings-submit">Save Payout Details</button>
+                  <aside class="payout-preview">
+                    <h4>Payout Preview</h4>
+                    <p id="preview-method">No payout method selected</p>
+                    <p id="preview-account"></p>
+                  </aside>
                 </div>
               </form>
             </div>

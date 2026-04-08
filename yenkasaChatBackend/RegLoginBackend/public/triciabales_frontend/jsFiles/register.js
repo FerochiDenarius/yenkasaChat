@@ -7,6 +7,7 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
     phone: document.getElementById("phone").value,
     address: document.getElementById("address").value,
     role: document.getElementById("role").value,
+    referralCode: document.getElementById("referralCode").value.trim() || null,
     password: document.getElementById("password").value
   };
 
@@ -32,7 +33,7 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
 
     alert("Account created successfully!");
 
-    if (data.role === "SELLER") {
+    if (data.role === "SELLER" || data.role === "SUPER_ADMIN") {
       window.location.href = "dashboard.html";
     } else {
       window.location.href = "index.html";

@@ -28,7 +28,7 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
     alert("Login successful!");
 
-    if (data.role === "SELLER") {
+    if (data.role === "SELLER" || data.role === "SUPER_ADMIN") {
       window.location.href = "dashboard.html";
     } else {
       window.location.href = "index.html";

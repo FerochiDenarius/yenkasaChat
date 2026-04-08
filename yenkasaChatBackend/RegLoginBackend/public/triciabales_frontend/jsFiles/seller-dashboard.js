@@ -1,6 +1,8 @@
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const menuButtons = document.querySelectorAll(".seller-menu-btn");
 const panels = document.querySelectorAll(".seller-panel");
+const sellerMenu = document.getElementById("sellerMenu");
+const sellerMenuToggle = document.getElementById("sellerMenuToggle");
 const imageInput = document.getElementById("imageFile");
 const videoInput = document.getElementById("videoFile");
 const imagePreview = document.getElementById("imagePreview");
@@ -444,7 +446,15 @@ async function deleteProduct(id) {
 menuButtons.forEach(button => {
   button.addEventListener("click", () => {
     openPanel(button.dataset.panel);
+
+    if (window.innerWidth <= 768) {
+      sellerMenu.classList.remove("open");
+    }
   });
+});
+
+sellerMenuToggle.addEventListener("click", () => {
+  sellerMenu.classList.toggle("open");
 });
 
 payoutCards.forEach(card => {

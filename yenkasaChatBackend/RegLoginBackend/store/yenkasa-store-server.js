@@ -162,6 +162,12 @@ module.exports = function (app) {
         form.append('description', req.body.description);
         form.append('status', req.body.status);
         form.append('type', req.body.type || 'bale');
+        if (req.body.sellerId) {
+          form.append('sellerId', req.body.sellerId);
+        }
+        if (req.body.sellerName) {
+          form.append('sellerName', req.body.sellerName);
+        }
 
         (req.files?.image || []).forEach(file => {
           form.append('image', file.buffer, file.originalname);
@@ -309,6 +315,28 @@ module.exports = function (app) {
     } catch (err) {
       console.error(
         'USER ORDERS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // SELLER ORDER HISTORY
+  app.get('/triciabales-api/api/orders/seller/:sellerId', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `http://134.209.182.39:8080/api/orders/seller/${req.params.sellerId}`
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'SELLER ORDERS ERROR:',
         err.response?.status,
         err.response?.data || err.message
       );

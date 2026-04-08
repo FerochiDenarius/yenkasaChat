@@ -21,6 +21,7 @@ const pendingCount = document.getElementById("pending-count");
 const completedCount = document.getElementById("completed-count");
 const uploadCard = document.querySelector(".card");
 const isSuperAdmin = localStorage.getItem("loggedIn") === "true";
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
 baleTab.addEventListener("click", () => {
   manageTab.classList.remove("active");
@@ -278,9 +279,14 @@ if (productType.value === "bale") {
 } else {
   formData.append("weight", size);
 }  formData.append("category", category);
-  formData.append("description", description);
+formData.append("description", description);
 formData.append("status", status);
 formData.append("type", productType.value);
+
+  if (currentUser?.id) {
+    formData.append("sellerId", currentUser.id);
+    formData.append("sellerName", currentUser.name || "");
+  }
 
   imageFiles.forEach(imageFile => {
     formData.append("image", imageFile);
@@ -409,9 +415,10 @@ async function loadSellerOrders() {
   sellerOrdersList.innerHTML = "<p>Loading orders...</p>";
 
   try {
-    const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/orders"
-    );
+    const ordersUrl = currentUser?.role === "SELLER"
+      ? `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`
+      : "https://www.yenkasa.xyz/triciabales-api/api/orders";
+    const response = await fetch(ordersUrl);
 
     if (!response.ok) {
       throw new Error("Unable to load orders");

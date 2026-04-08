@@ -28,6 +28,8 @@ const canReleasePayout = currentUser?.role === "SUPER_ADMIN";
 
 if (currentUser?.role === "SELLER") {
   window.location.href = "seller-dashboard.html";
+} else if (currentUser?.role === "SUPER_ADMIN") {
+  window.location.href = "super-admin.html";
 } else if (!canAccessAdmin) {
   window.location.href = "login.html";
 }

@@ -62,11 +62,20 @@ body {
   font-weight: 500;
 }
 
+.seller-btn {
+  background: #1f7a4f;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
 .admin-btn {
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.25);
-  padding: 10px 18px;
-  border-radius: 999px;
+  background: #8b5f00;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
 .hero-content {
@@ -628,6 +637,60 @@ body {
   font-size: 28px;
   font-weight: 700;
   color: #8b5f00;
+}
+
+.menu-toggle {
+  display: none;
+}
+
+.super-admin-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.super-admin-panel {
+  display: none;
+}
+
+.super-admin-panel.active {
+  display: block;
+}
+
+.super-admin-list {
+  display: grid;
+  gap: 16px;
+}
+
+.super-admin-item {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.super-admin-item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.super-admin-item p {
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.super-admin-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.stats-note {
+  color: #6b7280;
+  line-height: 1.7;
 }
 
 .seller-shell {

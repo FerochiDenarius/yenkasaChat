@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin | Yenkasa Store</title>
+  <link rel="stylesheet" href="../cssFile/style.css">
+</head>
+<body>
+
+  <div class="page-brand">
+    <img src="../images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
+  </div>
+
+  <section class="collection-section">
+    <div class="section-header">
+      <span>Platform Owner</span>
+      <h2>Super Admin Dashboard</h2>
+      <p>Track all seller activity, release ready payouts, and monitor platform-wide order flow.</p>
+    </div>
+
+    <button id="menuToggle" class="menu-toggle">☰</button>
+
+    <div class="dashboard-menu" id="dashboardMenu">
+      <button class="tab-btn active" data-panel="dashboard">Dashboard</button>
+      <button class="tab-btn" data-panel="all-orders">All Orders</button>
+      <button class="tab-btn" data-panel="pending-payouts">Pending Payouts</button>
+      <button class="tab-btn" data-panel="released-payouts">Released Payouts</button>
+      <button class="tab-btn" data-panel="sellers">Sellers</button>
+      <button class="tab-btn" data-panel="referral-stats">Referral Stats</button>
+      <button class="tab-btn" data-panel="settings">Settings</button>
+    </div>
+
+    <div class="orders-summary">
+      <div class="summary-card">
+        <h3>Total Orders</h3>
+        <span id="total-orders">0</span>
+      </div>
+
+      <div class="summary-card">
+        <h3>Pending Payouts</h3>
+        <span id="pending-payout-count">0</span>
+      </div>
+
+      <div class="summary-card">
+        <h3>Total Commission</h3>
+        <span id="total-commission">GH₵0.00</span>
+      </div>
+    </div>
+
+    <div class="super-admin-shell">
+      <section class="super-admin-panel active" id="panel-dashboard">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Pending Seller Payouts</h2>
+            <div id="pendingPayoutsList" class="super-admin-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-all-orders">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">All Orders</h2>
+            <div id="allOrdersList" class="super-admin-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-pending-payouts">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Pending Seller Payouts</h2>
+            <div id="pendingPayoutsSectionList" class="super-admin-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-released-payouts">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Released Payouts</h2>
+            <div id="releasedPayoutsList" class="super-admin-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-sellers">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Sellers</h2>
+            <div id="sellersList" class="super-admin-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-referral-stats">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Referral Stats</h2>
+            <p class="stats-note"><strong>Your referral code:</strong> <span id="owner-referral-code">-</span></p>
+            <p class="stats-note">Referral analytics can be expanded later with a dedicated backend reporting endpoint. This page is already ready to display the owner referral code and platform referral metrics once that endpoint exists.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-settings">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Settings</h2>
+            <p class="stats-note"><strong>Business Owner:</strong> Yenkasa-Soft-O-Tech</p>
+            <p class="stats-note"><strong>Primary MoMo:</strong> 0537044801</p>
+            <p class="stats-note"><strong>Owner Email:</strong> <span id="owner-email">-</span></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <script src="../jsFiles/super-admin.js"></script>
+</body>
+</html>

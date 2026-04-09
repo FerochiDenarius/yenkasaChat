@@ -632,6 +632,16 @@ body {
   color: white;
 }
 
+.manage-btn.hold {
+  background: #374151;
+  color: white;
+}
+
+.manage-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .orders-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

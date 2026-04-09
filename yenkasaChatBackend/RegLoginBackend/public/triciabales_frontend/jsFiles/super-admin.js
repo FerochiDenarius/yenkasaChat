@@ -28,6 +28,10 @@ function getJsonAuthHeaders() {
   };
 }
 
+function isAuthFailure(status) {
+  return status === 401 || status === 403;
+}
+
 function handleUnauthorized(responseData) {
   localStorage.removeItem("currentUser");
   localStorage.removeItem("authToken");
@@ -78,6 +82,19 @@ function renderPendingPayoutItems(target, orders) {
     const sellerReceives = order.sellerPayoutAmount != null
       ? Number(order.sellerPayoutAmount)
       : total - commission;
+    const isOnHold = order.paymentStatus === "payout_on_hold";
+    const primaryAction = isOnHold
+      ? `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="resume">
+          Mark Ready
+        </button>`
+      : `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="release">
+          Release Payment
+        </button>`;
+    const secondaryAction = isOnHold
+      ? ""
+      : `<button class="manage-btn hold payout-action-btn" data-id="${order.id}" data-action="hold">
+          Hold Payout
+        </button>`;
 
     return `
       <div class="super-admin-item">
@@ -95,10 +112,12 @@ function renderPendingPayoutItems(target, orders) {
         <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
         <p><strong>Commission:</strong> GH₵${commission.toFixed(2)}</p>
         <p><strong>Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
+        <p><strong>Payout Status:</strong> ${formatStatus(order.paymentStatus)}</p>
+        ${order.payoutHeldAt ? `<p><strong>Held At:</strong> ${formatDateTime(order.payoutHeldAt)}</p>` : ""}
+        ${order.payoutHoldReason ? `<p><strong>Hold Reason:</strong> ${order.payoutHoldReason}</p>` : ""}
         <div class="super-admin-actions">
-          <button class="manage-btn status release-payment-btn" data-id="${order.id}">
-            Release Payment
-          </button>
+          ${primaryAction}
+          ${secondaryAction}
         </div>
       </div>
     `;
@@ -223,6 +242,7 @@ function renderUsers(users) {
         <p><strong>Phone:</strong> ${user.phone || "-"}</p>
         <p><strong>Suspended At:</strong> ${formatDateTime(user.suspendedAt)}</p>
         <p><strong>Blocked At:</strong> ${formatDateTime(user.blockedAt)}</p>
+        <p><strong>Deleted At:</strong> ${formatDateTime(user.deletedAt)}</p>
         <div class="super-admin-actions">
           <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="ACTIVE">
             Reactivate
@@ -232,6 +252,9 @@ function renderUsers(users) {
           </button>
           <button class="manage-btn delete user-status-btn" data-id="${user.id}" data-status="BLOCKED" ${isSelf ? "disabled" : ""}>
             Block
+          </button>
+          <button class="manage-btn delete user-delete-btn" data-id="${user.id}" ${isSelf ? "disabled" : ""}>
+            Delete
           </button>
         </div>
       </div>
@@ -249,7 +272,7 @@ async function loadDashboard() {
     );
     const orders = await response.json();
 
-    if (response.status === 401) {
+    if (isAuthFailure(response.status)) {
       handleUnauthorized(orders);
       return;
     }
@@ -258,8 +281,12 @@ async function loadDashboard() {
       throw new Error("Could not load platform orders");
     }
 
-    const pendingPayouts = orders.filter(order =>
+    const readyPayouts = orders.filter(order =>
       order.paymentStatus === "ready_for_payout" && order.confirmedByBuyer === true
+    );
+    const pendingPayouts = orders.filter(order =>
+      (order.paymentStatus === "ready_for_payout" || order.paymentStatus === "payout_on_hold")
+      && order.confirmedByBuyer === true
     );
     const releasedPayouts = orders.filter(order => order.paymentStatus === "payout_released");
     const totalCommission = releasedPayouts.reduce(
@@ -268,7 +295,7 @@ async function loadDashboard() {
     );
 
     document.getElementById("total-orders").textContent = orders.length;
-    document.getElementById("ready-payouts").textContent = pendingPayouts.length;
+    document.getElementById("ready-payouts").textContent = readyPayouts.length;
     document.getElementById("commission-total").textContent = `GH₵${totalCommission.toFixed(2)}`;
 
     renderPendingPayoutItems(pendingPayoutsList, pendingPayouts);
@@ -296,7 +323,7 @@ async function loadUsers() {
     );
     const users = await response.json();
 
-    if (response.status === 401) {
+    if (isAuthFailure(response.status)) {
       handleUnauthorized(users);
       return;
     }
@@ -324,14 +351,32 @@ menuButtons.forEach(button => {
 
 function attachReleaseHandler(target) {
   target.addEventListener("click", async event => {
-    const button = event.target.closest(".release-payment-btn");
+    const button = event.target.closest(".payout-action-btn");
     if (!button) return;
 
     const orderId = button.dataset.id;
-    if (!orderId) return;
+    const action = button.dataset.action;
+    if (!orderId || !action) return;
 
     try {
-      const confirmed = confirm("Release seller payment after deducting 10% commission?");
+      let requestBody;
+      let confirmMessage;
+      let successMessage;
+
+      if (action === "hold") {
+        requestBody = { holdPayout: "true" };
+        confirmMessage = "Hold this seller payout for manual review?";
+        successMessage = "Payout placed on hold.";
+      } else if (action === "resume") {
+        requestBody = { resumePayout: "true" };
+        confirmMessage = "Move this payout back to ready for release?";
+        successMessage = "Payout moved back to ready for release.";
+      } else {
+        requestBody = { releasePayout: "true" };
+        confirmMessage = "Release seller payment after deducting 10% commission?";
+      }
+
+      const confirmed = confirm(confirmMessage);
       if (!confirmed) return;
 
       const response = await fetch(
@@ -339,13 +384,13 @@ function attachReleaseHandler(target) {
         {
           method: "PUT",
           headers: getJsonAuthHeaders(),
-          body: JSON.stringify({ releasePayout: "true" })
+          body: JSON.stringify(requestBody)
         }
       );
 
       const data = await response.json();
 
-      if (response.status === 401) {
+      if (isAuthFailure(response.status)) {
         handleUnauthorized(data);
         return;
       }
@@ -354,14 +399,18 @@ function attachReleaseHandler(target) {
         throw new Error(data.error || "Failed to release payout");
       }
 
-      alert(
-        `Seller payout released.\n\nCommission: GH₵${Number(data.commissionAmount || 0).toFixed(2)}\nSeller Gets: GH₵${Number(data.sellerPayoutAmount || 0).toFixed(2)}`
-      );
+      if (action === "release") {
+        alert(
+          `Seller payout released.\n\nCommission: GH₵${Number(data.commissionAmount || 0).toFixed(2)}\nSeller Gets: GH₵${Number(data.sellerPayoutAmount || 0).toFixed(2)}`
+        );
+      } else {
+        alert(successMessage);
+      }
 
       loadDashboard();
     } catch (err) {
       console.error(err);
-      alert("Unable to release payout.");
+      alert(err.message || "Unable to update payout.");
     }
   });
 }
@@ -370,6 +419,44 @@ attachReleaseHandler(pendingPayoutsList);
 attachReleaseHandler(pendingPayoutsSectionList);
 
 usersList.addEventListener("click", async event => {
+  const deleteButton = event.target.closest(".user-delete-btn");
+  if (deleteButton) {
+    const userId = deleteButton.dataset.id;
+
+    if (!userId) return;
+
+    try {
+      const confirmed = confirm("Delete this account? This will disable login and mark the account as deleted.");
+      if (!confirmed) return;
+
+      const response = await fetch(
+        `https://www.yenkasa.xyz/triciabales-api/api/users/${userId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders()
+        }
+      );
+
+      const data = await response.json();
+
+      if (isAuthFailure(response.status)) {
+        handleUnauthorized(data);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Could not delete account");
+      }
+
+      loadUsers();
+      return;
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+      return;
+    }
+  }
+
   const button = event.target.closest(".user-status-btn");
   if (!button) return;
 
@@ -389,7 +476,7 @@ usersList.addEventListener("click", async event => {
 
     const data = await response.json();
 
-    if (response.status === 401) {
+    if (isAuthFailure(response.status)) {
       handleUnauthorized(data);
       return;
     }

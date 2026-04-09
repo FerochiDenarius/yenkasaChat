@@ -225,6 +225,29 @@ module.exports = function (app) {
     }
   });
 
+  app.delete('/triciabales-api/api/users/:id', async (req, res) => {
+    try {
+      const response = await axios.delete(
+        `${API_BASE}/api/users/${req.params.id}`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.status(response.status).json(response.data);
+    } catch (err) {
+      console.error(
+        'USER DELETE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // SELLER PAYOUT DETAILS
   app.put('/triciabales-api/api/seller/payout-details', async (req, res) => {
     try {

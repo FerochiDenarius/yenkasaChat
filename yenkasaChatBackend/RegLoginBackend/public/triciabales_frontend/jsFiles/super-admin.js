@@ -244,6 +244,11 @@ function renderUsers(users) {
         <p><strong>Blocked At:</strong> ${formatDateTime(user.blockedAt)}</p>
         <p><strong>Deleted At:</strong> ${formatDateTime(user.deletedAt)}</p>
         <div class="super-admin-actions">
+          ${user.emailVerified ? "" : `
+            <button class="manage-btn hold resend-verification-btn" data-email="${user.email || ""}">
+              Resend Verification
+            </button>
+          `}
           <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="ACTIVE">
             Reactivate
           </button>
@@ -419,6 +424,42 @@ attachReleaseHandler(pendingPayoutsList);
 attachReleaseHandler(pendingPayoutsSectionList);
 
 usersList.addEventListener("click", async event => {
+  const resendButton = event.target.closest(".resend-verification-btn");
+  if (resendButton) {
+    const email = resendButton.dataset.email;
+    if (!email) return;
+
+    try {
+      const response = await fetch(
+        "https://www.yenkasa.xyz/triciabales-api/api/users/resend-verification",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Could not resend verification email");
+      }
+
+      const message = data.actionUrl
+        ? `${data.message}\n\nFallback verification link:\n${data.actionUrl}`
+        : data.message;
+
+      alert(message);
+      return;
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+      return;
+    }
+  }
+
   const deleteButton = event.target.closest(".user-delete-btn");
   if (deleteButton) {
     const userId = deleteButton.dataset.id;

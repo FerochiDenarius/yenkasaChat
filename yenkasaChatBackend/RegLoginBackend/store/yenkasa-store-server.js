@@ -126,6 +126,32 @@ module.exports = function (app) {
     }
   });
 
+  app.post('/triciabales-api/api/users/resend-verification', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/users/resend-verification`,
+        req.body,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'RESEND VERIFICATION ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   app.post('/triciabales-api/api/users/password-reset/confirm', async (req, res) => {
     try {
       const response = await axios.post(

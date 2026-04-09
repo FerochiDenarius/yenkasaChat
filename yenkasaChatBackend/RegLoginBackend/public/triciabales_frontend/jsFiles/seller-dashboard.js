@@ -35,6 +35,7 @@ const previewMethod = document.getElementById("preview-method");
 const previewAccount = document.getElementById("preview-account");
 const panelTitle = document.getElementById("panelTitle");
 const panelDescription = document.getElementById("panelDescription");
+const API_BASE = "/triciabales-api";
 
 if (!currentUser || !authToken) {
   window.location.href = "buyer-login.html";
@@ -93,8 +94,8 @@ function setUploadMode(mode) {
   sizeField.style.display = isBale ? "none" : "flex";
   panelTitle.textContent = isBale ? "Upload New Bale" : "Upload Single Dress";
   panelDescription.textContent = isBale
-    ? "Add a bale listing with images and an optional video."
-    : "Add one fashion item with size, images and an optional video.";
+    ? "Add a bale listing with images, or upload a fashion-related video only."
+    : "Add one fashion item with size, images, or a fashion-related video only.";
   document.querySelector("label[for='name']").textContent = isBale ? "Bale Name" : "Dress Name";
   document.getElementById("name").placeholder = isBale
     ? "e.g. Ladies Flannel Blouse Bale"
@@ -185,12 +186,24 @@ function resetUploadForm() {
   videoPreview.removeAttribute("src");
 }
 
+function isFashionVideoOnlyAllowed(mode, category, description, name) {
+  const combined = `${mode} ${category} ${description} ${name}`.toLowerCase();
+  const fashionKeywords = [
+    "fashion", "bale", "cloth", "clothes", "clothing", "apparel",
+    "dress", "shirt", "skirt", "trouser", "trousers", "jeans",
+    "hoodie", "jacket", "sneaker", "shoe", "bag", "handbag",
+    "boutique", "wear", "outfit", "ladies wear", "mens wear", "kids wear"
+  ];
+
+  return fashionKeywords.some(keyword => combined.includes(keyword));
+}
+
 async function loadManageProducts() {
   manageList.innerHTML = "<p>Loading products...</p>";
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/triciabales/seller/${currentUser.id}`,
+      `${API_BASE}/api/triciabales/seller/${currentUser.id}`,
       {
         headers: getAuthHeaders()
       }
@@ -241,7 +254,7 @@ async function loadSellerOrders() {
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`,
+      `${API_BASE}/api/orders/seller/${currentUser.id}`,
       {
         headers: getAuthHeaders()
       }
@@ -316,7 +329,7 @@ async function loadSellerOrders() {
 async function markSold(id) {
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}/status`,
+      `${API_BASE}/api/triciabales/${id}/status`,
       {
         method: "PUT",
         headers: getAuthHeaders()
@@ -340,7 +353,7 @@ async function deleteProduct(id) {
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}`,
+      `${API_BASE}/api/triciabales/${id}`,
       {
         method: "DELETE",
         headers: getAuthHeaders()
@@ -425,7 +438,7 @@ sellerOrdersList.addEventListener("click", async event => {
       : { deliveryStatus: "delivered" };
 
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
+      `${API_BASE}/api/orders/${orderId}/status`,
       {
         method: "PUT",
         headers: getJsonAuthHeaders(),
@@ -501,8 +514,13 @@ addBaleBtn.addEventListener("click", async () => {
     return;
   }
 
-  if (!imageFiles.length) {
-    alert("Please select at least one image.");
+  if (!imageFiles.length && !videoFile) {
+    alert("Please select at least one image or one video.");
+    return;
+  }
+
+  if (!imageFiles.length && videoFile && !isFashionVideoOnlyAllowed(productType.value, category, description, name)) {
+    alert("Video-only listings must be fashion related.");
     return;
   }
 
@@ -534,6 +552,10 @@ addBaleBtn.addEventListener("click", async () => {
     formData.append("video", videoFile);
   }
 
+  const uploadEndpoint = !imageFiles.length && videoFile
+    ? `${API_BASE}/api/triciabales/upload/video-only`
+    : `${API_BASE}/api/triciabales/upload`;
+
   addBaleBtn.disabled = true;
   addBaleBtn.textContent = productType.value === "bale" ? "Uploading Bale..." : "Uploading Dress...";
   progressWrap.style.display = "block";
@@ -541,7 +563,7 @@ addBaleBtn.addEventListener("click", async () => {
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/triciabales/upload",
+      uploadEndpoint,
       {
         method: "POST",
         headers: getAuthHeaders(),
@@ -615,7 +637,7 @@ payoutForm.addEventListener("submit", async event => {
     submitButton.textContent = "Saving...";
 
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/seller/payout-details",
+      `${API_BASE}/api/seller/payout-details`,
       {
         method: "PUT",
         headers: getJsonAuthHeaders(),

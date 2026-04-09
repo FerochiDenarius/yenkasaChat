@@ -10,6 +10,7 @@ const allOrdersList = document.getElementById("allOrdersList");
 const releasedPayoutsList = document.getElementById("releasedPayoutsList");
 const sellersList = document.getElementById("sellersList");
 const usersList = document.getElementById("usersList");
+const API_BASE = "/triciabales-api";
 
 if (!currentUser || currentUser.role !== "SUPER_ADMIN" || !authToken) {
   window.location.href = "buyer-login.html";
@@ -135,10 +136,14 @@ function renderAllOrders(orders) {
       <div class="super-admin-item-header">
         <div>
           <strong>Order #${order.id}</strong>
-          <p>${order.sellerName || "Seller"} • ${order.customerName || "Customer"}</p>
+          <p>${order.sellerName || "Seller"} • ${order.buyerName || order.customerName || "Customer"}</p>
         </div>
         <strong>GH₵${Number(order.total || 0).toFixed(2)}</strong>
       </div>
+      <p><strong>Seller ID:</strong> ${order.sellerId || "-"}</p>
+      <p><strong>Buyer ID:</strong> ${order.buyerId || "-"}</p>
+      <p><strong>Buyer:</strong> ${order.buyerName || order.customerName || "-"}</p>
+      <p><strong>Buyer Email:</strong> ${order.buyerEmail || "-"}</p>
       <p><strong>Payment:</strong> ${formatStatus(order.paymentStatus)}</p>
       <p><strong>Delivery:</strong> ${formatStatus(order.deliveryStatus)}</p>
       <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
@@ -167,14 +172,20 @@ function renderReleasedPayouts(orders) {
   `).join("");
 }
 
-function renderSellers(orders) {
+function renderSellers(sellers, orders) {
   const sellerMap = new Map();
 
   orders.forEach(order => {
     if (!order.sellerId) return;
 
-    const existing = sellerMap.get(order.sellerId) || {
+    const sellerKey = Number(order.sellerId);
+    const existing = sellerMap.get(sellerKey) || {
+      sellerId: sellerKey,
       sellerName: order.sellerName || "Seller",
+      email: "-",
+      phone: "-",
+      verified: false,
+      accountStatus: "ACTIVE",
       totalOrders: 0,
       totalSales: 0,
       pendingPayouts: 0
@@ -187,25 +198,59 @@ function renderSellers(orders) {
       existing.pendingPayouts += 1;
     }
 
-    sellerMap.set(order.sellerId, existing);
+    sellerMap.set(sellerKey, existing);
   });
 
-  const sellers = Array.from(sellerMap.values());
+  (Array.isArray(sellers) ? sellers : []).forEach(user => {
+    const sellerKey = Number(user.id);
+    const existing = sellerMap.get(sellerKey) || {
+      sellerId: sellerKey,
+      sellerName: user.name || "Seller",
+      email: "-",
+      phone: "-",
+      verified: false,
+      accountStatus: "ACTIVE",
+      totalOrders: 0,
+      totalSales: 0,
+      pendingPayouts: 0
+    };
 
-  if (!sellers.length) {
-    renderEmpty(sellersList, "No seller activity yet.");
+    existing.sellerName = user.name || existing.sellerName;
+    existing.email = user.email || existing.email;
+    existing.phone = user.phone || existing.phone;
+    existing.verified = Boolean(user.emailVerified);
+    existing.accountStatus = user.accountStatus || existing.accountStatus;
+
+    sellerMap.set(sellerKey, existing);
+  });
+
+  const sellerAccounts = Array.from(sellerMap.values()).sort((a, b) => {
+    if (b.totalOrders !== a.totalOrders) {
+      return b.totalOrders - a.totalOrders;
+    }
+
+    return b.sellerId - a.sellerId;
+  });
+
+  if (!sellerAccounts.length) {
+    renderEmpty(sellersList, "No registered sellers found.");
     return;
   }
 
-  sellersList.innerHTML = sellers.map(seller => `
+  sellersList.innerHTML = sellerAccounts.map(seller => `
     <div class="super-admin-item">
       <div class="super-admin-item-header">
         <div>
           <strong>${seller.sellerName}</strong>
-          <p>${seller.totalOrders} orders</p>
+          <p>Seller ID: ${seller.sellerId}</p>
         </div>
         <strong>GH₵${seller.totalSales.toFixed(2)}</strong>
       </div>
+      <p><strong>Email:</strong> ${seller.email || "-"}</p>
+      <p><strong>Phone:</strong> ${seller.phone || "-"}</p>
+      <p><strong>Status:</strong> ${formatStatus(seller.accountStatus || "ACTIVE")}</p>
+      <p><strong>Verified:</strong> ${seller.verified ? "Yes" : "No"}</p>
+      <p><strong>Total Orders:</strong> ${seller.totalOrders}</p>
       <p><strong>Pending Payouts:</strong> ${seller.pendingPayouts}</p>
     </div>
   `).join("");
@@ -237,6 +282,7 @@ function renderUsers(users) {
           </div>
           <strong>${user.role || "-"}</strong>
         </div>
+        <p><strong>User ID:</strong> ${user.id || "-"}</p>
         <p><strong>Status:</strong> ${status}</p>
         <p><strong>Verified:</strong> ${user.emailVerified ? "Yes" : "No"}</p>
         <p><strong>Phone:</strong> ${user.phone || "-"}</p>
@@ -269,21 +315,41 @@ function renderUsers(users) {
 
 async function loadDashboard() {
   try {
-    const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/orders",
-      {
-        headers: getAuthHeaders()
-      }
-    );
-    const orders = await response.json();
+    const [ordersResponse, sellersResponse] = await Promise.all([
+      fetch(
+        `${API_BASE}/api/orders`,
+        {
+          headers: getAuthHeaders()
+        }
+      ),
+      fetch(
+        `${API_BASE}/api/users/sellers`,
+        {
+          headers: getAuthHeaders()
+        }
+      )
+    ]);
+    const [orders, sellers] = await Promise.all([
+      ordersResponse.json(),
+      sellersResponse.json()
+    ]);
 
-    if (isAuthFailure(response.status)) {
+    if (isAuthFailure(ordersResponse.status)) {
       handleUnauthorized(orders);
       return;
     }
 
-    if (!response.ok) {
+    if (isAuthFailure(sellersResponse.status)) {
+      handleUnauthorized(sellers);
+      return;
+    }
+
+    if (!ordersResponse.ok) {
       throw new Error("Could not load platform orders");
+    }
+
+    if (!sellersResponse.ok) {
+      throw new Error(sellers.message || sellers.error || "Could not load seller accounts");
     }
 
     const readyPayouts = orders.filter(order =>
@@ -307,7 +373,7 @@ async function loadDashboard() {
     renderPendingPayoutItems(pendingPayoutsSectionList, pendingPayouts);
     renderAllOrders(orders);
     renderReleasedPayouts(releasedPayouts);
-    renderSellers(orders);
+    renderSellers(sellers, orders);
   } catch (err) {
     console.error(err);
     renderEmpty(pendingPayoutsList, "Unable to load dashboard.");
@@ -321,7 +387,7 @@ async function loadDashboard() {
 async function loadUsers() {
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/users",
+      `${API_BASE}/api/users?includeDeleted=true`,
       {
         headers: getAuthHeaders()
       }
@@ -385,7 +451,7 @@ function attachReleaseHandler(target) {
       if (!confirmed) return;
 
       const response = await fetch(
-        `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
+        `${API_BASE}/api/orders/${orderId}/status`,
         {
           method: "PUT",
           headers: getJsonAuthHeaders(),
@@ -471,7 +537,7 @@ usersList.addEventListener("click", async event => {
       if (!confirmed) return;
 
       const response = await fetch(
-        `https://www.yenkasa.xyz/triciabales-api/api/users/${userId}`,
+        `${API_BASE}/api/users/${userId}`,
         {
           method: "DELETE",
           headers: getAuthHeaders()
@@ -507,7 +573,7 @@ usersList.addEventListener("click", async event => {
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/users/${userId}/status`,
+      `${API_BASE}/api/users/${userId}/status`,
       {
         method: "PUT",
         headers: getJsonAuthHeaders(),

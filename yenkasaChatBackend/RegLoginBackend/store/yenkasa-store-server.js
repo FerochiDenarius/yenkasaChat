@@ -626,7 +626,7 @@ module.exports = function (app) {
       );
     }
   });
-};
+
   app.get('/triciabales-api/api/triciabales/seller/:sellerId', async (req, res) => {
     try {
       const response = await axios.get(
@@ -649,3 +649,4 @@ module.exports = function (app) {
       );
     }
   });
+};

@@ -26,8 +26,20 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 
+const corsOptions = {
+  origin(origin, callback) {
+    callback(null, origin || true);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 require('./store/yenkasa-store-server')(app);
 
@@ -86,12 +98,6 @@ mediaSrc: [
 
 
 app.use(compression());
-app.use(cors({
-  origin: process.env.CLIENT_URL || "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-}));
-
 if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
 console.log("server.js: Core middlewares configured.");
 

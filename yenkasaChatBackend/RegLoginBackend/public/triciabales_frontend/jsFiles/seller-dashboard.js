@@ -187,12 +187,18 @@ function resetUploadForm() {
 }
 
 function isFashionVideoOnlyAllowed(mode, category, description, name) {
+  const normalizedMode = (mode || "").toLowerCase();
+  if (normalizedMode === "single" || normalizedMode === "dress" || normalizedMode === "bale") {
+    return true;
+  }
+
   const combined = `${mode} ${category} ${description} ${name}`.toLowerCase();
   const fashionKeywords = [
-    "fashion", "bale", "cloth", "clothes", "clothing", "apparel",
-    "dress", "shirt", "skirt", "trouser", "trousers", "jeans",
-    "hoodie", "jacket", "sneaker", "shoe", "bag", "handbag",
-    "boutique", "wear", "outfit", "ladies wear", "mens wear", "kids wear"
+    "fashion", "bale", "single", "cloth", "clothes", "clothing", "apparel",
+    "dress", "shirt", "top", "blouse", "gown", "skirt", "trouser", "trousers",
+    "jeans", "hoodie", "jacket", "sneaker", "shoe", "bag", "handbag",
+    "boutique", "wear", "outfit", "ladies", "women", "women's", "mens", "men",
+    "kids", "ladies wear", "mens wear", "kids wear"
   ];
 
   return fashionKeywords.some(keyword => combined.includes(keyword));

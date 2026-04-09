@@ -5,7 +5,7 @@ const multer = require('multer');
 const FormData = require('form-data');
 
 const upload = multer();
-const API_BASE = process.env.TRICIABALES_API_BASE || 'http://127.0.0.1:8080';
+const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
 
 function forwardHeaders(req, extraHeaders = {}) {
   const headers = { ...extraHeaders };

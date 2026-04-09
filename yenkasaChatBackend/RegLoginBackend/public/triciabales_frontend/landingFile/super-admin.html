@@ -27,6 +27,7 @@
       <button class="tab-btn" data-panel="pending-payouts">Pending Payouts</button>
       <button class="tab-btn" data-panel="released-payouts">Released Payouts</button>
       <button class="tab-btn" data-panel="sellers">Sellers</button>
+      <button class="tab-btn" data-panel="users">Users</button>
     </div>
 
     <div class="orders-summary">
@@ -91,6 +92,18 @@
           <div class="card-content">
             <h2 style="margin-bottom:20px;">Sellers</h2>
             <div id="sellersList" class="super-admin-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="super-admin-panel" id="panel-users">
+        <div class="card">
+          <div class="card-content">
+            <h2 style="margin-bottom:20px;">Registered Accounts</h2>
+            <p class="stats-note" style="margin-bottom:18px;">
+              Review buyer and seller accounts, then suspend, block or reactivate them.
+            </p>
+            <div id="usersList" class="super-admin-list"></div>
           </div>
         </div>
       </section>

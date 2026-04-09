@@ -9,6 +9,7 @@ const pendingPayoutsSectionList = document.getElementById("pendingPayoutsSection
 const allOrdersList = document.getElementById("allOrdersList");
 const releasedPayoutsList = document.getElementById("releasedPayoutsList");
 const sellersList = document.getElementById("sellersList");
+const usersList = document.getElementById("usersList");
 
 if (!currentUser || currentUser.role !== "SUPER_ADMIN" || !authToken) {
   window.location.href = "buyer-login.html";
@@ -25,6 +26,13 @@ function getJsonAuthHeaders() {
     ...getAuthHeaders(),
     "Content-Type": "application/json"
   };
+}
+
+function handleUnauthorized(responseData) {
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("authToken");
+  alert(responseData?.message || responseData?.error || "Your session has expired. Please log in again.");
+  window.location.href = "login.html";
 }
 
 function formatStatus(status) {
@@ -184,6 +192,53 @@ function renderSellers(orders) {
   `).join("");
 }
 
+function formatDateTime(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function renderUsers(users) {
+  if (!Array.isArray(users) || !users.length) {
+    renderEmpty(usersList, "No registered users found.");
+    return;
+  }
+
+  usersList.innerHTML = users.map(user => {
+    const status = (user.accountStatus || "ACTIVE").toUpperCase();
+    const isSelf = Number(user.id) === Number(currentUser.id);
+
+    return `
+      <div class="super-admin-item">
+        <div class="super-admin-item-header">
+          <div>
+            <strong>${user.name || "User"}</strong>
+            <p>${user.email || "-"}</p>
+          </div>
+          <strong>${user.role || "-"}</strong>
+        </div>
+        <p><strong>Status:</strong> ${status}</p>
+        <p><strong>Verified:</strong> ${user.emailVerified ? "Yes" : "No"}</p>
+        <p><strong>Phone:</strong> ${user.phone || "-"}</p>
+        <p><strong>Suspended At:</strong> ${formatDateTime(user.suspendedAt)}</p>
+        <p><strong>Blocked At:</strong> ${formatDateTime(user.blockedAt)}</p>
+        <div class="super-admin-actions">
+          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="ACTIVE">
+            Reactivate
+          </button>
+          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="SUSPENDED" ${isSelf ? "disabled" : ""}>
+            Suspend
+          </button>
+          <button class="manage-btn delete user-status-btn" data-id="${user.id}" data-status="BLOCKED" ${isSelf ? "disabled" : ""}>
+            Block
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 async function loadDashboard() {
   try {
     const response = await fetch(
@@ -193,6 +248,11 @@ async function loadDashboard() {
       }
     );
     const orders = await response.json();
+
+    if (response.status === 401) {
+      handleUnauthorized(orders);
+      return;
+    }
 
     if (!response.ok) {
       throw new Error("Could not load platform orders");
@@ -223,6 +283,32 @@ async function loadDashboard() {
     renderEmpty(allOrdersList, "Unable to load orders.");
     renderEmpty(releasedPayoutsList, "Unable to load released payouts.");
     renderEmpty(sellersList, "Unable to load sellers.");
+  }
+}
+
+async function loadUsers() {
+  try {
+    const response = await fetch(
+      "https://www.yenkasa.xyz/triciabales-api/api/users",
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    const users = await response.json();
+
+    if (response.status === 401) {
+      handleUnauthorized(users);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(users.message || users.error || "Could not load users");
+    }
+
+    renderUsers(users);
+  } catch (err) {
+    console.error(err);
+    renderEmpty(usersList, "Unable to load registered users.");
   }
 }
 
@@ -259,6 +345,11 @@ function attachReleaseHandler(target) {
 
       const data = await response.json();
 
+      if (response.status === 401) {
+        handleUnauthorized(data);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Failed to release payout");
       }
@@ -278,4 +369,41 @@ function attachReleaseHandler(target) {
 attachReleaseHandler(pendingPayoutsList);
 attachReleaseHandler(pendingPayoutsSectionList);
 
+usersList.addEventListener("click", async event => {
+  const button = event.target.closest(".user-status-btn");
+  if (!button) return;
+
+  const userId = button.dataset.id;
+  const status = button.dataset.status;
+  if (!userId || !status) return;
+
+  try {
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/users/${userId}/status`,
+      {
+        method: "PUT",
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({ status })
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.status === 401) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data.message || data.error || "Could not update account status");
+    }
+
+    loadUsers();
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+});
+
 loadDashboard();
+loadUsers();

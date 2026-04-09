@@ -176,6 +176,55 @@ module.exports = function (app) {
     }
   });
 
+  app.get('/triciabales-api/api/users', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/users`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'USERS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.put('/triciabales-api/api/users/:id/status', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `${API_BASE}/api/users/${req.params.id}/status`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'USER STATUS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // SELLER PAYOUT DETAILS
   app.put('/triciabales-api/api/seller/payout-details', async (req, res) => {
     try {

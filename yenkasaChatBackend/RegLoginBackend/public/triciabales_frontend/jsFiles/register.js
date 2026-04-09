@@ -1,14 +1,19 @@
+function getInputValue(id) {
+  const element = document.getElementById(id);
+  return element ? element.value : "";
+}
+
 document.getElementById("register-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const payload = {
-    name: document.getElementById("name").value,
-    email: document.getElementById("email").value,
-    phone: document.getElementById("phone").value,
-    address: document.getElementById("address").value,
-    role: document.getElementById("role").value,
-    referralCode: document.getElementById("referralCode").value.trim() || null,
-    password: document.getElementById("password").value
+    name: getInputValue("name").trim(),
+    email: getInputValue("email").trim(),
+    phone: getInputValue("phone").trim(),
+    address: getInputValue("address").trim(),
+    role: getInputValue("role").trim(),
+    referralCode: getInputValue("referralCode").trim() || null,
+    password: getInputValue("password")
   };
 
   try {

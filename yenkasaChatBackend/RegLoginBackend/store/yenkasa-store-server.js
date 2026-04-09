@@ -5,6 +5,17 @@ const multer = require('multer');
 const FormData = require('form-data');
 
 const upload = multer();
+const API_BASE = 'http://134.209.182.39:8080';
+
+function forwardHeaders(req, extraHeaders = {}) {
+  const headers = { ...extraHeaders };
+
+  if (req.headers.authorization) {
+    headers.Authorization = req.headers.authorization;
+  }
+
+  return headers;
+}
 
 module.exports = function (app) {
 
@@ -12,7 +23,7 @@ module.exports = function (app) {
   app.post('/triciabales-api/api/users/register', async (req, res) => {
     try {
       const response = await axios.post(
-        'http://134.209.182.39:8080/api/users/register',
+        `${API_BASE}/api/users/register`,
         req.body,
         {
           headers: {
@@ -40,7 +51,7 @@ module.exports = function (app) {
   app.post('/triciabales-api/api/users/login', async (req, res) => {
     try {
       const response = await axios.post(
-        'http://134.209.182.39:8080/api/users/login',
+        `${API_BASE}/api/users/login`,
         req.body,
         {
           headers: {
@@ -64,16 +75,117 @@ module.exports = function (app) {
     }
   });
 
-  // SELLER PAYOUT DETAILS
-  app.put('/triciabales-api/api/seller/payout-details', async (req, res) => {
+  app.get('/triciabales-api/api/users/verify-email', async (req, res) => {
     try {
-      const response = await axios.put(
-        'http://134.209.182.39:8080/api/seller/payout-details',
+      const response = await axios.get(
+        `${API_BASE}/api/users/verify-email`,
+        {
+          params: {
+            token: req.query.token
+          }
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'VERIFY EMAIL ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/users/password-reset/request', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/users/password-reset/request`,
         req.body,
         {
           headers: {
             'Content-Type': 'application/json'
           }
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PASSWORD RESET REQUEST ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/users/password-reset/confirm', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/users/password-reset/confirm`,
+        req.body,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PASSWORD RESET CONFIRM ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/users/logout', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/users/logout`,
+        {},
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'USER LOGOUT ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // SELLER PAYOUT DETAILS
+  app.put('/triciabales-api/api/seller/payout-details', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `${API_BASE}/api/seller/payout-details`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
         }
       );
 
@@ -98,7 +210,7 @@ module.exports = function (app) {
       console.log('LOGIN BODY:', req.body);
 
       const response = await axios.post(
-        'http://134.209.182.39:8080/api/auth/login',
+        `${API_BASE}/api/auth/login`,
         req.body,
         {
           headers: {
@@ -126,7 +238,7 @@ module.exports = function (app) {
   app.get('/triciabales-api/api/triciabales', async (req, res) => {
     try {
       const response = await axios.get(
-        'http://134.209.182.39:8080/api/triciabales'
+        `${API_BASE}/api/triciabales`
       );
 
       res.json(response.data);
@@ -182,10 +294,10 @@ module.exports = function (app) {
         }
 
         const response = await axios.post(
-          'http://134.209.182.39:8080/api/triciabales/upload',
+          `${API_BASE}/api/triciabales/upload`,
           form,
           {
-            headers: form.getHeaders(),
+            headers: forwardHeaders(req, form.getHeaders()),
             maxBodyLength: Infinity,
             maxContentLength: Infinity
           }
@@ -211,7 +323,11 @@ module.exports = function (app) {
   app.put('/triciabales-api/api/triciabales/:id/status', async (req, res) => {
     try {
       const response = await axios.put(
-        `http://134.209.182.39:8080/api/triciabales/${req.params.id}/status`
+        `${API_BASE}/api/triciabales/${req.params.id}/status`,
+        {},
+        {
+          headers: forwardHeaders(req)
+        }
       );
 
       res.json(response.data);
@@ -233,7 +349,10 @@ module.exports = function (app) {
   app.delete('/triciabales-api/api/triciabales/:id', async (req, res) => {
     try {
       const response = await axios.delete(
-        `http://134.209.182.39:8080/api/triciabales/${req.params.id}`
+        `${API_BASE}/api/triciabales/${req.params.id}`,
+        {
+          headers: forwardHeaders(req)
+        }
       );
 
       res.status(response.status).json(response.data);
@@ -257,12 +376,12 @@ module.exports = function (app) {
       console.log('CHECKOUT BODY:', req.body);
 
       const response = await axios.post(
-        'http://134.209.182.39:8080/api/orders/checkout',
+        `${API_BASE}/api/orders/checkout`,
         req.body,
         {
-          headers: {
+          headers: forwardHeaders(req, {
             'Content-Type': 'application/json'
-          }
+          })
         }
       );
 
@@ -285,7 +404,10 @@ module.exports = function (app) {
   app.get('/triciabales-api/api/orders', async (req, res) => {
     try {
       const response = await axios.get(
-        'http://134.209.182.39:8080/api/orders'
+        `${API_BASE}/api/orders`,
+        {
+          headers: forwardHeaders(req)
+        }
       );
 
       res.json(response.data);
@@ -307,7 +429,10 @@ module.exports = function (app) {
   app.get('/triciabales-api/api/orders/user/:userId', async (req, res) => {
     try {
       const response = await axios.get(
-        `http://134.209.182.39:8080/api/orders/user/${req.params.userId}`
+        `${API_BASE}/api/orders/user/${req.params.userId}`,
+        {
+          headers: forwardHeaders(req)
+        }
       );
 
       res.json(response.data);
@@ -329,7 +454,10 @@ module.exports = function (app) {
   app.get('/triciabales-api/api/orders/seller/:sellerId', async (req, res) => {
     try {
       const response = await axios.get(
-        `http://134.209.182.39:8080/api/orders/seller/${req.params.sellerId}`
+        `${API_BASE}/api/orders/seller/${req.params.sellerId}`,
+        {
+          headers: forwardHeaders(req)
+        }
       );
 
       res.json(response.data);
@@ -351,12 +479,12 @@ module.exports = function (app) {
   app.put('/triciabales-api/api/orders/:id/status', async (req, res) => {
     try {
       const response = await axios.put(
-        `http://134.209.182.39:8080/api/orders/${req.params.id}/status`,
+        `${API_BASE}/api/orders/${req.params.id}/status`,
         req.body,
         {
-          headers: {
+          headers: forwardHeaders(req, {
             'Content-Type': 'application/json'
-          }
+          })
         }
       );
 
@@ -379,7 +507,11 @@ module.exports = function (app) {
   app.put('/triciabales-api/api/orders/:id/confirm-received', async (req, res) => {
     try {
       const response = await axios.put(
-        `http://134.209.182.39:8080/api/orders/${req.params.id}/confirm-received`
+        `${API_BASE}/api/orders/${req.params.id}/confirm-received`,
+        {},
+        {
+          headers: forwardHeaders(req)
+        }
       );
 
       res.json(response.data);
@@ -397,3 +529,25 @@ module.exports = function (app) {
     }
   });
 };
+  app.get('/triciabales-api/api/triciabales/seller/:sellerId', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/triciabales/seller/${req.params.sellerId}`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'SELLER BALES ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });

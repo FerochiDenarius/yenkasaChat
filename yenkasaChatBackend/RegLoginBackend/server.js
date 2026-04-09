@@ -5,6 +5,7 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const fs = require('fs');
+const multer = require('multer');
 const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
@@ -39,7 +40,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 require('./store/yenkasa-store-server')(app);
 

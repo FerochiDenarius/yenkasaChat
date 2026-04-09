@@ -22,13 +22,20 @@ document.getElementById("sellerLoginForm").addEventListener("submit", async e =>
       throw new Error(user.message || user.error || "Login failed");
     }
 
-    if (user.role !== "SELLER") {
+    if (!user.user || !user.token) {
+      throw new Error(user.message || "Login failed");
+    }
+
+    if (user.user.role !== "SELLER") {
       alert("This login is only for sellers.");
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("authToken");
       return;
     }
 
-    localStorage.setItem("currentUser", JSON.stringify(user));
+    localStorage.removeItem("loggedIn");
+    localStorage.setItem("currentUser", JSON.stringify(user.user));
+    localStorage.setItem("authToken", user.token);
     window.location.href = "seller-dashboard.html";
   } catch (err) {
     console.error(err);

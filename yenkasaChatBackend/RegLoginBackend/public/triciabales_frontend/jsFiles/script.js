@@ -1,5 +1,9 @@
 const imageModal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const logoutLink = document.getElementById("logoutLink");
+const registerLink = document.getElementById("registerLink");
+const buyerLoginLink = document.getElementById("buyerLoginLink");
 
 function getCart() {
   return JSON.parse(localStorage.getItem("cart") || "[]");
@@ -8,6 +12,55 @@ function getCart() {
 function saveCart(cart) {
   localStorage.setItem("cart", JSON.stringify(cart));
 }
+
+function updateHomepageNav() {
+  if (!logoutLink) {
+    return;
+  }
+
+  if (currentUser) {
+    logoutLink.classList.remove("hidden-nav-link");
+    registerLink?.classList.add("hidden-nav-link");
+    buyerLoginLink?.classList.add("hidden-nav-link");
+    return;
+  }
+
+  logoutLink.classList.add("hidden-nav-link");
+  registerLink?.classList.remove("hidden-nav-link");
+  buyerLoginLink?.classList.remove("hidden-nav-link");
+}
+
+async function logout() {
+  const authToken = localStorage.getItem("authToken");
+
+  try {
+    if (authToken) {
+      await fetch("https://www.yenkasa.xyz/triciabales-api/api/users/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("loggedIn");
+    localStorage.removeItem("checkoutAddress");
+    localStorage.removeItem("deliveryMethod");
+    localStorage.removeItem("lastOrder");
+    window.location.href = "index.html";
+  }
+}
+
+logoutLink?.addEventListener("click", event => {
+  event.preventDefault();
+  logout();
+});
+
+updateHomepageNav();
 
 function addToCart(item) {
   const cart = getCart();

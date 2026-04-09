@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Yenkasa Store</title>
+  <title>Super Admin Login - Yenkasa Store</title>
 
   <style>
     body {
@@ -125,12 +125,15 @@
       <img src="../images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
     </div>
 
-    <h2>Admin Login</h2>
+    <h2>Super Admin Login</h2>
+    <p style="margin:0 0 20px;text-align:center;color:#666;font-size:14px;">
+      Login to review all orders, monitor payouts and manage the marketplace.
+    </p>
 
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
 
-    <button id="loginBtn">Login</button>
+    <button id="loginBtn">Open Super Admin Dashboard</button>
 
     <div class="loading-container" id="loadingContainer">
       <div class="loading-bar"></div>
@@ -139,6 +142,10 @@
     <div class="loading-text" id="loadingText">
       Logging in...
     </div>
+
+    <p style="margin-top:18px;text-align:center;">
+      <a href="forgot-password.html">Forgot password?</a>
+    </p>
   </div>
 
   <script src="login.js"></script>

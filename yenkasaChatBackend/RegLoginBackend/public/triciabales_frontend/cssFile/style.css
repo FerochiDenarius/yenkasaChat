@@ -78,6 +78,18 @@ body {
   font-weight: 600;
 }
 
+.logout-btn {
+  background: #b42318;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.hidden-nav-link {
+  display: none;
+}
+
 .hero-content {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
@@ -566,6 +578,14 @@ body {
 .tab-btn.active {
   background: linear-gradient(135deg, #c99511, #8b5f00);
   color: white;
+}
+
+.dashboard-menu-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #111827;
 }
 
 .manage-item {

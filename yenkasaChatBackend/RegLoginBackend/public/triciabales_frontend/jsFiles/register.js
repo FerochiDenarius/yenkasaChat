@@ -29,15 +29,16 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
       throw new Error(data.message || data.error || "Registration failed");
     }
 
-    if (data.role === "SELLER" || data.role === "ADMIN" || data.role === "SUPER_ADMIN") {
-      localStorage.removeItem("currentUser");
-      alert("Account created successfully. Please log in to continue.");
-      window.location.href = "buyer-login.html";
-    } else {
-      localStorage.setItem("currentUser", JSON.stringify(data));
-      alert("Account created successfully!");
-      window.location.href = "index.html";
-    }
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("loggedIn");
+
+    const message = data.actionUrl
+      ? `${data.message}\n\nUse this verification link if email delivery is not configured yet:\n${data.actionUrl}`
+      : (data.message || "Account created successfully. Please verify your email.");
+
+    alert(message);
+    window.location.href = "buyer-login.html";
   } catch (err) {
     console.error(err);
     alert(err.message);

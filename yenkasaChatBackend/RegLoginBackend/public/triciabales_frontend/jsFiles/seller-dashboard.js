@@ -1,4 +1,5 @@
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const authToken = localStorage.getItem("authToken") || "";
 const imageInput = document.getElementById("imageFile");
 const videoInput = document.getElementById("videoFile");
 const imagePreview = document.getElementById("imagePreview");
@@ -35,11 +36,15 @@ const previewAccount = document.getElementById("preview-account");
 const panelTitle = document.getElementById("panelTitle");
 const panelDescription = document.getElementById("panelDescription");
 
-if (!currentUser) {
+if (!currentUser || !authToken) {
   window.location.href = "buyer-login.html";
 }
 
-if (currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN") {
+if (currentUser?.role === "SUPER_ADMIN") {
+  window.location.href = "super-admin.html";
+}
+
+if (currentUser?.role === "ADMIN") {
   window.location.href = "admin.html";
 }
 
@@ -49,6 +54,19 @@ if (currentUser?.role !== "SELLER") {
 
 document.getElementById("sellerHeading").textContent = `${currentUser.name || "Seller"} Dashboard`;
 document.getElementById("sellerSubheading").textContent = currentUser.email || "Manage your store from one place.";
+
+function getAuthHeaders() {
+  return {
+    Authorization: `Bearer ${authToken}`
+  };
+}
+
+function getJsonAuthHeaders() {
+  return {
+    ...getAuthHeaders(),
+    "Content-Type": "application/json"
+  };
+}
 
 function closeMenu() {
   dashboardMenu.classList.remove("open");
@@ -171,21 +189,24 @@ async function loadManageProducts() {
   manageList.innerHTML = "<p>Loading products...</p>";
 
   try {
-    const response = await fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales");
+    const response = await fetch(
+      `https://www.yenkasa.xyz/triciabales-api/api/triciabales/seller/${currentUser.id}`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
     const products = await response.json();
 
     if (!response.ok) {
       throw new Error("Could not load products");
     }
 
-    const sellerProducts = products.filter(item => Number(item.sellerId) === Number(currentUser.id));
-
-    if (!sellerProducts.length) {
+    if (!products.length) {
       manageList.innerHTML = "<p>You have not uploaded any products yet.</p>";
       return;
     }
 
-    manageList.innerHTML = sellerProducts.map(item => `
+    manageList.innerHTML = products.map(item => `
       <div class="manage-item">
         <div style="display:flex; align-items:center; gap:12px;">
           <img
@@ -220,7 +241,10 @@ async function loadSellerOrders() {
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`
+      `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`,
+      {
+        headers: getAuthHeaders()
+      }
     );
 
     if (!response.ok) {
@@ -293,7 +317,10 @@ async function markSold(id) {
   try {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}/status`,
-      { method: "PUT" }
+      {
+        method: "PUT",
+        headers: getAuthHeaders()
+      }
     );
 
     if (!response.ok) {
@@ -314,7 +341,10 @@ async function deleteProduct(id) {
   try {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}`,
-      { method: "DELETE" }
+      {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      }
     );
 
     if (!response.ok) {
@@ -398,7 +428,7 @@ sellerOrdersList.addEventListener("click", async event => {
       `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getJsonAuthHeaders(),
         body: JSON.stringify(body)
       }
     );
@@ -514,6 +544,7 @@ addBaleBtn.addEventListener("click", async () => {
       "https://www.yenkasa.xyz/triciabales-api/api/triciabales/upload",
       {
         method: "POST",
+        headers: getAuthHeaders(),
         body: formData
       }
     );
@@ -587,7 +618,7 @@ payoutForm.addEventListener("submit", async event => {
       "https://www.yenkasa.xyz/triciabales-api/api/seller/payout-details",
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getJsonAuthHeaders(),
         body: JSON.stringify(payload)
       }
     );

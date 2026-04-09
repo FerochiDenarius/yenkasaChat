@@ -1,6 +1,13 @@
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+const authToken = localStorage.getItem("authToken") || "";
 const feedback = document.getElementById("orders-feedback");
 const ordersContainer = document.getElementById("orders-container");
+
+function getAuthHeaders() {
+  return {
+    Authorization: `Bearer ${authToken}`
+  };
+}
 
 function setFeedback(message, actionHtml = "") {
   feedback.classList.remove("hidden");
@@ -126,7 +133,8 @@ ordersContainer.addEventListener("click", async event => {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/confirm-received`,
       {
-        method: "PUT"
+        method: "PUT",
+        headers: getAuthHeaders()
       }
     );
 
@@ -143,7 +151,7 @@ ordersContainer.addEventListener("click", async event => {
 });
 
 async function loadOrders() {
-  if (!currentUser?.id) {
+  if (!currentUser?.id || !authToken) {
     setFeedback(
       "Please login to view your orders.",
       '<p><a href="buyer-login.html" class="primary-btn">Login</a></p>'
@@ -153,7 +161,10 @@ async function loadOrders() {
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/orders/user/${currentUser.id}`
+      `https://www.yenkasa.xyz/triciabales-api/api/orders/user/${currentUser.id}`,
+      {
+        headers: getAuthHeaders()
+      }
     );
     const data = await response.json();
 

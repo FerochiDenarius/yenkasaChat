@@ -42,12 +42,13 @@ paymentForm.addEventListener("submit", async e => {
   const addressData = JSON.parse(localStorage.getItem("checkoutAddress") || "{}");
   const deliveryMethod = localStorage.getItem("deliveryMethod");
   const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+  const authToken = localStorage.getItem("authToken") || "";
   const submitButton = paymentForm.querySelector('button[type="submit"]');
   const selectedPaymentMethod = document.querySelector(
     'input[name="paymentMethod"]:checked'
   )?.value;
 
-  if (!currentUser?.id) {
+  if (!currentUser?.id || !authToken) {
     alert("Please login before checkout.");
     window.location.href = "buyer-login.html";
     return;
@@ -134,7 +135,8 @@ paymentForm.addEventListener("submit", async e => {
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
         },
         body: JSON.stringify(payload)
       }

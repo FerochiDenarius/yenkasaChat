@@ -19,7 +19,7 @@ function login() {
 
   const data = { email, password };
 
-  fetch("https://www.yenkasa.xyz/triciabales-api/api/auth/login", {
+  fetch("https://www.yenkasa.xyz/triciabales-api/api/users/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -27,24 +27,28 @@ function login() {
     body: JSON.stringify(data)
   })
     .then(async res => {
-      const text = await res.text();
-
-      console.log("Raw response:", text);
+      const payload = await res.json();
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${text}`);
+        throw new Error(payload.message || payload.error || "Login failed");
       }
 
-      return JSON.parse(text);
+      return payload;
     })
     .then(res => {
-      if (res.success === true) {
-        localStorage.setItem("loggedIn", "true");
-        alert("Login successful");
-        window.location.href = "admin.html";
-      } else {
-        alert("Invalid email or password");
+      if (!res.user || !res.token) {
+        throw new Error(res.message || "Login failed");
       }
+
+      if (res.user.role !== "SUPER_ADMIN") {
+        throw new Error("This login is only for the platform owner.");
+      }
+
+      localStorage.removeItem("loggedIn");
+      localStorage.setItem("currentUser", JSON.stringify(res.user));
+      localStorage.setItem("authToken", res.token);
+      alert("Login successful");
+      window.location.href = "super-admin.html";
     })
     .catch(err => {
       console.error("Fetch error:", err);
@@ -55,7 +59,7 @@ function login() {
       loadingContainer.style.display = "none";
       loadingText.style.display = "none";
       loginBtn.disabled = false;
-      loginBtn.textContent = "Login";
+      loginBtn.textContent = "Open Super Admin Dashboard";
     });
 }
 

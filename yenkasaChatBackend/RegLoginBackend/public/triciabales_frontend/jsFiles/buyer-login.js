@@ -24,15 +24,24 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
       throw new Error(data.message || data.error || "Login failed");
     }
 
-    localStorage.setItem("currentUser", JSON.stringify(data));
+    const user = data.user;
+    const token = data.token;
+
+    if (!user || !token) {
+      throw new Error(data.message || "Login failed");
+    }
+
+    localStorage.removeItem("loggedIn");
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    localStorage.setItem("authToken", token);
 
     alert("Login successful!");
 
-    if (data.role === "SUPER_ADMIN") {
+    if (user.role === "SUPER_ADMIN") {
       window.location.href = "super-admin.html";
-    } else if (data.role === "ADMIN") {
+    } else if (user.role === "ADMIN") {
       window.location.href = "admin.html";
-    } else if (data.role === "SELLER") {
+    } else if (user.role === "SELLER") {
       window.location.href = "seller-dashboard.html";
     } else {
       window.location.href = "index.html";

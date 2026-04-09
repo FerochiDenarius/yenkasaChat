@@ -21,9 +21,9 @@ const pendingCount = document.getElementById("pending-count");
 const completedCount = document.getElementById("completed-count");
 const uploadCard = document.querySelector(".card");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-const hasLegacyAdminSession = localStorage.getItem("loggedIn") === "true";
+const authToken = localStorage.getItem("authToken") || "";
 const isAdminRole = currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
-const canAccessAdmin = hasLegacyAdminSession || isAdminRole;
+const canAccessAdmin = !!authToken && isAdminRole;
 const canReleasePayout = currentUser?.role === "SUPER_ADMIN";
 
 if (currentUser?.role === "SELLER") {
@@ -32,6 +32,19 @@ if (currentUser?.role === "SELLER") {
   window.location.href = "super-admin.html";
 } else if (!canAccessAdmin) {
   window.location.href = "login.html";
+}
+
+function getAuthHeaders() {
+  return {
+    Authorization: `Bearer ${authToken}`
+  };
+}
+
+function getJsonAuthHeaders() {
+  return {
+    ...getAuthHeaders(),
+    "Content-Type": "application/json"
+  };
 }
 
 baleTab.addEventListener("click", () => {
@@ -166,9 +179,7 @@ sellerOrdersList.addEventListener("click", async event => {
       `https://www.yenkasa.xyz/triciabales-api/api/orders/${orderId}/status`,
       {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: getJsonAuthHeaders(),
         body: JSON.stringify(body)
       }
     );
@@ -319,6 +330,7 @@ formData.append("type", productType.value);
       "https://www.yenkasa.xyz/triciabales-api/api/triciabales/upload",
       {
         method: "POST",
+        headers: getAuthHeaders(),
         body: formData
       }
     );
@@ -374,7 +386,10 @@ async function loadManageProducts() {
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/triciabales"
+      "https://www.yenkasa.xyz/triciabales-api/api/triciabales",
+      {
+        headers: getAuthHeaders()
+      }
     );
 
     const products = await response.json();
@@ -429,7 +444,9 @@ async function loadSellerOrders() {
     const ordersUrl = currentUser?.role === "SELLER"
       ? `https://www.yenkasa.xyz/triciabales-api/api/orders/seller/${currentUser.id}`
       : "https://www.yenkasa.xyz/triciabales-api/api/orders";
-    const response = await fetch(ordersUrl);
+    const response = await fetch(ordersUrl, {
+      headers: getAuthHeaders()
+    });
 
     if (!response.ok) {
       throw new Error("Unable to load orders");
@@ -541,7 +558,8 @@ async function markSold(id) {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}/status`,
       {
-        method: "PUT"
+        method: "PUT",
+        headers: getAuthHeaders()
       }
     );
 
@@ -565,7 +583,8 @@ async function deleteProduct(id) {
     const response = await fetch(
       `https://www.yenkasa.xyz/triciabales-api/api/triciabales/${id}`,
       {
-        method: "DELETE"
+        method: "DELETE",
+        headers: getAuthHeaders()
       }
     );
 

@@ -18,7 +18,7 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/users/register",
+      "/triciabales-api/api/users/register",
       {
         method: "POST",
         headers: {

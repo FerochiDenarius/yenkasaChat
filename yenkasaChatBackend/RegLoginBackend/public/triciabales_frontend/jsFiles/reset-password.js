@@ -14,7 +14,7 @@ resetPasswordForm.addEventListener("submit", async event => {
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/users/password-reset/confirm",
+      "/triciabales-api/api/users/password-reset/confirm",
       {
         method: "POST",
         headers: {

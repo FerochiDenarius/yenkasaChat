@@ -8,7 +8,7 @@ forgotPasswordForm.addEventListener("submit", async event => {
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/users/password-reset/request",
+      "/triciabales-api/api/users/password-reset/request",
       {
         method: "POST",
         headers: {

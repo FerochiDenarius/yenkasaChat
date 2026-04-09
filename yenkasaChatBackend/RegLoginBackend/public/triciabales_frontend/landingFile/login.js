@@ -19,7 +19,7 @@ function login() {
 
   const data = { email, password };
 
-  fetch("https://www.yenkasa.xyz/triciabales-api/api/users/login", {
+  fetch("/triciabales-api/api/users/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

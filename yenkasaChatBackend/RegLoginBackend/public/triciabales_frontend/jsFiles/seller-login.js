@@ -6,7 +6,7 @@ document.getElementById("sellerLoginForm").addEventListener("submit", async e =>
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/users/login",
+      "/triciabales-api/api/users/login",
       {
         method: "POST",
         headers: {
@@ -68,7 +68,7 @@ document.getElementById("resendVerificationBtn").addEventListener("click", async
 
   try {
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/users/resend-verification",
+      "/triciabales-api/api/users/resend-verification",
       {
         method: "POST",
         headers: {

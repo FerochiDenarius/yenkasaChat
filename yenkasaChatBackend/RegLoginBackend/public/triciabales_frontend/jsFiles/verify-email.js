@@ -13,7 +13,7 @@ async function verifyEmail() {
 
   try {
     const response = await fetch(
-      `https://www.yenkasa.xyz/triciabales-api/api/users/verify-email?token=${encodeURIComponent(token)}`
+      `/triciabales-api/api/users/verify-email?token=${encodeURIComponent(token)}`
     );
     const data = await response.json();
 

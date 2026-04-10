@@ -41,25 +41,28 @@
           <a href="index.html" class="secondary-btn">Back to Store</a>
         </div>
 
-        <div class="seller-upload-grid">
+        <div class="seller-upload-grid modern-upload-grid">
           <input type="hidden" id="productType" value="bale">
 
-          <div class="field">
-            <label for="name">Bale Name</label>
+          <div class="field modern-field">
+            <label for="name">Product Name</label>
             <input type="text" id="name" placeholder="e.g. Ladies Flannel Blouse Bale">
           </div>
 
-          <div class="field">
+          <div class="field modern-field">
             <label for="price">Price (GHS)</label>
-            <input type="number" id="price" placeholder="4500">
+            <div class="input-with-prefix">
+              <span>GHS</span>
+              <input type="number" id="price" placeholder="4500">
+            </div>
           </div>
 
-          <div class="field" id="weightField">
+          <div class="field modern-field" id="weightField">
             <label for="weight">Weight</label>
             <input type="text" id="weight" placeholder="55kg">
           </div>
 
-          <div class="field" id="sizeField" style="display:none;">
+          <div class="field modern-field" id="sizeField" style="display:none;">
             <label for="size">Size</label>
             <select id="size">
               <option value="">Select Size</option>
@@ -72,17 +75,12 @@
             </select>
           </div>
 
-          <div class="field">
+          <div class="field modern-field">
             <label for="category">Category</label>
             <input type="text" id="category" placeholder="Flannel Blouse">
           </div>
 
-          <div class="field full">
-            <label for="description">Description</label>
-            <textarea id="description" placeholder="Describe the item, quantity, grade, colours and anything buyers should know."></textarea>
-          </div>
-
-          <div class="field">
+          <div class="field modern-field">
             <label for="status">Status</label>
             <select id="status">
               <option value="available">Available</option>
@@ -91,21 +89,50 @@
             </select>
           </div>
 
-          <div class="field full">
-            <label for="imageFile">Product Images</label>
-            <div class="seller-upload-box">
-              <input type="file" id="imageFile" accept="image/*" multiple>
-              <small>Images are optional only when you are posting a fashion-related video listing.</small>
-              <div id="imagePreview" class="image-preview-grid"></div>
-            </div>
+          <div class="field full modern-field">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder="Describe the item, quantity, grade, colours and anything buyers should know."></textarea>
           </div>
 
           <div class="field full">
-            <label for="videoFile">Product Video</label>
-            <div class="seller-upload-box">
-              <input type="file" id="videoFile" accept="video/*">
-              <small>You can upload video only for bale and other fashion-related products.</small>
-              <video id="videoPreview" class="preview" controls></video>
+            <div class="media-upload-grid">
+              <div class="media-upload-card">
+                <div class="media-upload-head">
+                  <div>
+                    <h4>Product Images</h4>
+                    <p>Add clear photos for buyers to preview the item.</p>
+                  </div>
+                  <span class="media-badge">Multiple</span>
+                </div>
+
+                <label for="imageFile" class="modern-dropzone">
+                  <div class="dropzone-icon">IMG</div>
+                  <strong>Click to upload images</strong>
+                  <small>PNG, JPG, WEBP accepted</small>
+                </label>
+                <input type="file" id="imageFile" accept="image/*" multiple hidden>
+
+                <div id="imagePreview" class="image-preview-grid modern-preview-grid"></div>
+              </div>
+
+              <div class="media-upload-card">
+                <div class="media-upload-head">
+                  <div>
+                    <h4>Product Video</h4>
+                    <p>Optional for bale and fashion-related products.</p>
+                  </div>
+                  <span class="media-badge alt">Optional</span>
+                </div>
+
+                <label for="videoFile" class="modern-dropzone">
+                  <div class="dropzone-icon">VID</div>
+                  <strong>Click to upload video</strong>
+                  <small>MP4 and other video formats</small>
+                </label>
+                <input type="file" id="videoFile" accept="video/*" hidden>
+
+                <video id="videoPreview" class="preview modern-video-preview" controls></video>
+              </div>
             </div>
           </div>
         </div>
@@ -127,8 +154,13 @@
     <div id="manageSection" style="display:none; margin-top:20px;">
       <div class="card">
         <div class="card-content">
-          <h2 style="margin-bottom:20px;">Manage Products</h2>
-          <div id="manageList"></div>
+          <div class="manage-header">
+            <div>
+              <h2>Manage Products</h2>
+              <p>Edit price, fix wrong details, update stock status, or delete products.</p>
+            </div>
+          </div>
+          <div id="manageList" class="manage-list-modern"></div>
         </div>
       </div>
     </div>
@@ -234,6 +266,64 @@
       </div>
     </div>
   </section>
+
+  <div class="edit-modal" id="editModal">
+    <div class="edit-modal-card">
+      <div class="edit-modal-header">
+        <div>
+          <h3>Edit Product</h3>
+          <p>Update price or correct product details.</p>
+        </div>
+        <button type="button" class="edit-close-btn" id="closeEditModal">x</button>
+      </div>
+
+      <form id="editProductForm" class="edit-product-form">
+        <input type="hidden" id="editProductId">
+
+        <div class="field modern-field">
+          <label for="editName">Product Name</label>
+          <input type="text" id="editName">
+        </div>
+
+        <div class="field modern-field">
+          <label for="editPrice">Price (GHS)</label>
+          <div class="input-with-prefix">
+            <span>GHS</span>
+            <input type="number" id="editPrice">
+          </div>
+        </div>
+
+        <div class="field modern-field">
+          <label for="editCategory">Category</label>
+          <input type="text" id="editCategory">
+        </div>
+
+        <div class="field modern-field">
+          <label for="editStatus">Status</label>
+          <select id="editStatus">
+            <option value="available">Available</option>
+            <option value="preorder">Preorder</option>
+            <option value="sold">Sold</option>
+          </select>
+        </div>
+
+        <div class="field modern-field">
+          <label for="editWeight">Weight / Size</label>
+          <input type="text" id="editWeight">
+        </div>
+
+        <div class="field full modern-field">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription"></textarea>
+        </div>
+
+        <div class="edit-actions">
+          <button type="button" class="secondary-btn" id="cancelEditBtn">Cancel</button>
+          <button type="submit" class="primary-btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script src="../jsFiles/seller-dashboard.js"></script>
 </body>

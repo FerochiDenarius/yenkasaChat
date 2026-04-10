@@ -1142,3 +1142,379 @@ footer {
     width: 100%;
   }
 }
+
+.modern-upload-grid {
+  gap: 22px;
+}
+
+.modern-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modern-field input,
+.modern-field select,
+.modern-field textarea {
+  width: 100%;
+  border: 1px solid #dbe3ee;
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 0.98rem;
+  color: #111827;
+  outline: none;
+  transition: 0.25s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.modern-field input:focus,
+.modern-field select:focus,
+.modern-field textarea:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.10);
+}
+
+.modern-field textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.input-with-prefix {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.input-with-prefix span {
+  background: #f3f6fb;
+  color: #4b5563;
+  font-weight: 700;
+  padding: 14px 16px;
+  border-right: 1px solid #dbe3ee;
+}
+
+.input-with-prefix input {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.media-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.media-upload-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+  padding: 20px;
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+}
+
+.media-upload-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.media-upload-head h4 {
+  margin-bottom: 6px;
+  font-size: 1.05rem;
+}
+
+.media-upload-head p {
+  color: #6b7280;
+  line-height: 1.6;
+  font-size: 0.93rem;
+}
+
+.media-badge {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.media-badge.alt {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.modern-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 170px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 20px;
+  background: #f8fafc;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.25s ease;
+  padding: 20px;
+}
+
+.modern-dropzone:hover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  transform: translateY(-2px);
+}
+
+.dropzone-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.modern-dropzone strong {
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.modern-dropzone small {
+  color: #6b7280;
+}
+
+.modern-preview-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 12px;
+}
+
+.modern-preview-grid img {
+  width: 100%;
+  height: 95px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.modern-video-preview {
+  margin-top: 16px;
+  width: 100%;
+  min-height: 180px;
+  border-radius: 18px;
+  background: #0f172a;
+}
+
+.manage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.manage-header p {
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.manage-list-modern {
+  display: grid;
+  gap: 16px;
+}
+
+.manage-product-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.manage-thumb {
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  flex: 0 0 auto;
+}
+
+.manage-thumb.placeholder {
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.75rem;
+  background: #f3f4f6;
+}
+
+.manage-item {
+  align-items: center;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+}
+
+.manage-info {
+  flex: 1;
+}
+
+.manage-info strong {
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.manage-info small {
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.manage-btn.edit {
+  background: #111827;
+  color: white;
+}
+
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+}
+
+.edit-modal.show {
+  display: flex;
+}
+
+.edit-modal-card {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.18);
+}
+
+.edit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.edit-modal-header p {
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.edit-close-btn {
+  border: none;
+  background: #f3f4f6;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.edit-product-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.edit-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .media-upload-grid,
+  .edit-product-form {
+    grid-template-columns: 1fr;
+  }
+
+  .manage-item,
+  .manage-product-main {
+    align-items: stretch;
+  }
+
+  .manage-product-main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .media-upload-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .modern-dropzone {
+    min-height: 140px;
+    padding: 16px;
+  }
+
+  .modern-field input,
+  .modern-field select,
+  .modern-field textarea {
+    padding: 13px 14px;
+    font-size: 0.95rem;
+  }
+
+  .edit-modal-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .edit-actions {
+    flex-direction: column;
+  }
+
+  .edit-actions button,
+  .edit-actions a {
+    width: 100%;
+  }
+
+  .manage-product-main {
+    flex-direction: column;
+  }
+
+  .manage-thumb {
+    width: 100%;
+    height: 180px;
+  }
+}

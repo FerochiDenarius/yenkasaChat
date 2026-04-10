@@ -527,6 +527,33 @@ module.exports = function (app) {
     }
   });
 
+  app.put('/triciabales-api/api/triciabales/:id', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `${API_BASE}/api/triciabales/${req.params.id}`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      console.error(
+        'UPDATE BALE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // DELETE BALE
   app.delete('/triciabales-api/api/triciabales/:id', async (req, res) => {
     try {

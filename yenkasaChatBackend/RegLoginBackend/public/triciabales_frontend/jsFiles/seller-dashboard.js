@@ -35,7 +35,12 @@ const previewMethod = document.getElementById("preview-method");
 const previewAccount = document.getElementById("preview-account");
 const panelTitle = document.getElementById("panelTitle");
 const panelDescription = document.getElementById("panelDescription");
+const editModal = document.getElementById("editModal");
+const closeEditModal = document.getElementById("closeEditModal");
+const cancelEditBtn = document.getElementById("cancelEditBtn");
+const editProductForm = document.getElementById("editProductForm");
 const API_BASE = "/triciabales-api";
+const productCache = new Map();
 
 if (!currentUser || !authToken) {
   window.location.href = "buyer-login.html";
@@ -204,6 +209,94 @@ function isFashionVideoOnlyAllowed(mode, category, description, name) {
   return fashionKeywords.some(keyword => combined.includes(keyword));
 }
 
+function renderProductThumbnail(item) {
+  if (item.imageUrl) {
+    return `
+      <img
+        src="${item.imageUrl}"
+        alt="${item.name || "Product"}"
+        class="manage-thumb"
+      >
+    `;
+  }
+
+  if (item.videoUrl) {
+    return `
+      <video
+        src="${item.videoUrl}"
+        class="manage-thumb"
+        muted
+        playsinline
+      ></video>
+    `;
+  }
+
+  return `<div class="manage-thumb placeholder">No Media</div>`;
+}
+
+function renderManageProducts(products) {
+  productCache.clear();
+
+  if (!products.length) {
+    manageList.innerHTML = `
+      <div class="manage-item">
+        <div class="manage-info">
+          <strong>No products yet</strong>
+          <small>Your uploaded products will appear here.</small>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  manageList.innerHTML = products.map(item => {
+    productCache.set(String(item.id), item);
+
+    return `
+      <div class="manage-item">
+        <div class="manage-product-main">
+          ${renderProductThumbnail(item)}
+          <div class="manage-info">
+            <strong>${item.name || "Untitled Product"}</strong>
+            <small>
+              ${item.type || "product"} • ${item.status || "available"}<br>
+              GH₵${Number(item.price || 0).toFixed(2)} • ${item.category || "-"}<br>
+              ${item.weight ? `Weight/Size: ${item.weight}` : ""}
+            </small>
+          </div>
+        </div>
+
+        <div class="manage-actions">
+          <button class="manage-btn edit" data-action="edit" data-id="${item.id}">
+            Edit
+          </button>
+          <button class="manage-btn status" data-action="status" data-id="${item.id}">
+            ${item.status === "sold" ? "Mark Available" : "Mark Sold"}
+          </button>
+          <button class="manage-btn delete" data-action="delete" data-id="${item.id}">
+            Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function openEditProduct(product) {
+  document.getElementById("editProductId").value = product.id || "";
+  document.getElementById("editName").value = product.name || "";
+  document.getElementById("editPrice").value = product.price || "";
+  document.getElementById("editCategory").value = product.category || "";
+  document.getElementById("editStatus").value = product.status || "available";
+  document.getElementById("editWeight").value = product.weight || "";
+  document.getElementById("editDescription").value = product.description || "";
+  editModal.classList.add("show");
+}
+
+function closeProductModal() {
+  editModal.classList.remove("show");
+}
+
 async function loadManageProducts() {
   manageList.innerHTML = "<p>Loading products...</p>";
 
@@ -221,34 +314,11 @@ async function loadManageProducts() {
     }
 
     if (!products.length) {
-      manageList.innerHTML = "<p>You have not uploaded any products yet.</p>";
+      renderManageProducts([]);
       return;
     }
 
-    manageList.innerHTML = products.map(item => `
-      <div class="manage-item">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img
-            src="${item.imageUrl}"
-            alt="${item.name}"
-            style="width:60px;height:60px;object-fit:cover;border-radius:12px;border:1px solid #eee;"
-          >
-          <div class="manage-info">
-            <strong>${item.name}</strong>
-            <small>${item.type} • ${item.status}</small>
-          </div>
-        </div>
-
-        <div class="manage-actions">
-          <button class="manage-btn status" data-action="status" data-id="${item.id}">
-            ${item.status === "sold" ? "Mark Available" : "Mark Sold"}
-          </button>
-          <button class="manage-btn delete" data-action="delete" data-id="${item.id}">
-            Delete
-          </button>
-        </div>
-      </div>
-    `).join("");
+    renderManageProducts(products);
   } catch (err) {
     console.error(err);
     manageList.innerHTML = "<p>Unable to load your products.</p>";
@@ -421,12 +491,81 @@ manageList.addEventListener("click", event => {
   const { action, id } = button.dataset;
   if (!id) return;
 
+  if (action === "edit") {
+    const product = productCache.get(String(id));
+    if (product) {
+      openEditProduct(product);
+    }
+  }
+
   if (action === "status") {
     markSold(Number(id));
   }
 
   if (action === "delete") {
     deleteProduct(Number(id));
+  }
+});
+
+closeEditModal.addEventListener("click", closeProductModal);
+cancelEditBtn.addEventListener("click", closeProductModal);
+
+editModal.addEventListener("click", event => {
+  if (event.target === editModal) {
+    closeProductModal();
+  }
+});
+
+editProductForm.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const productId = document.getElementById("editProductId").value;
+  if (!productId) return;
+
+  const payload = {
+    name: document.getElementById("editName").value.trim(),
+    price: document.getElementById("editPrice").value,
+    category: document.getElementById("editCategory").value.trim(),
+    status: document.getElementById("editStatus").value,
+    weight: document.getElementById("editWeight").value.trim(),
+    description: document.getElementById("editDescription").value.trim()
+  };
+
+  if (!payload.name || !payload.price || !payload.category) {
+    alert("Please enter product name, price and category.");
+    return;
+  }
+
+  try {
+    const submitButton = editProductForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = "Saving...";
+
+    const response = await fetch(
+      `${API_BASE}/api/triciabales/${productId}`,
+      {
+        method: "PUT",
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || data.error || "Failed to update product");
+    }
+
+    alert("Product updated successfully.");
+    closeProductModal();
+    loadManageProducts();
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Unable to update product.");
+  } finally {
+    const submitButton = editProductForm.querySelector('button[type="submit"]');
+    submitButton.disabled = false;
+    submitButton.textContent = "Save Changes";
   }
 });
 

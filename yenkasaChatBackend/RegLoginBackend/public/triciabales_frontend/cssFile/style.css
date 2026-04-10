@@ -1518,3 +1518,263 @@ footer {
     height: 180px;
   }
 }
+
+/* =========================
+   POLISHED SELLER MOBILE OVERRIDES
+========================= */
+
+.modern-field label {
+  font-size: 0.95rem;
+}
+
+.modern-field textarea {
+  line-height: 1.6;
+}
+
+.input-with-prefix span {
+  white-space: nowrap;
+}
+
+.input-with-prefix input {
+  background: transparent;
+}
+
+.media-upload-head h4 {
+  color: #111827;
+}
+
+.modern-dropzone strong {
+  font-size: 1rem;
+}
+
+.modern-dropzone small {
+  line-height: 1.5;
+}
+
+.modern-video-preview {
+  object-fit: cover;
+}
+
+.manage-header h2 {
+  margin-bottom: 6px;
+}
+
+.manage-header p {
+  line-height: 1.6;
+}
+
+.manage-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.manage-info {
+  min-width: 0;
+}
+
+.manage-info strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.manage-info small {
+  display: block;
+}
+
+.manage-actions {
+  justify-content: flex-end;
+}
+
+.manage-btn {
+  border: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 42px;
+}
+
+.edit-modal-card {
+  overflow-y: auto;
+}
+
+.edit-modal-header h3 {
+  color: #111827;
+}
+
+.edit-close-btn {
+  flex-shrink: 0;
+}
+
+.edit-actions .primary-btn,
+.edit-actions .secondary-btn {
+  border: none;
+  cursor: pointer;
+}
+
+.modern-field input,
+.modern-field select,
+.modern-field textarea,
+.manage-btn,
+.edit-close-btn,
+.primary-btn,
+.secondary-btn,
+.submit-btn,
+.tab-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modern-field input,
+.modern-field select,
+.manage-btn,
+.primary-btn,
+.secondary-btn,
+.submit-btn {
+  min-height: 48px;
+}
+
+@media (max-width: 900px) {
+  .manage-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .manage-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .seller-dashboard-card .card-content,
+  .card-content {
+    padding: 18px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-header .secondary-btn,
+  .dashboard-header .primary-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .modern-upload-grid {
+    gap: 18px;
+  }
+
+  .media-upload-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .media-badge {
+    align-self: flex-start;
+  }
+
+  .dropzone-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .modern-preview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .modern-preview-grid img {
+    height: 82px;
+    border-radius: 12px;
+  }
+
+  .modern-video-preview {
+    min-height: 150px;
+    border-radius: 16px;
+  }
+
+  .manage-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .manage-info strong {
+    font-size: 1rem;
+  }
+
+  .manage-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .manage-btn {
+    width: 100%;
+  }
+
+  .edit-modal {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .edit-modal-card {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .edit-modal-header {
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .edit-modal-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .edit-product-form {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .seller-dashboard-card .card-content,
+  .card-content {
+    padding: 14px;
+  }
+
+  .modern-field input,
+  .modern-field select,
+  .modern-field textarea {
+    font-size: 0.92rem;
+    padding: 12px;
+  }
+
+  .input-with-prefix span {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  .modern-dropzone {
+    min-height: 125px;
+    padding: 14px;
+  }
+
+  .modern-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manage-item {
+    padding: 14px;
+  }
+
+  .edit-modal-card {
+    padding: 16px 14px;
+  }
+}

@@ -40,6 +40,22 @@ function handleUnauthorized(responseData) {
   window.location.href = "login.html";
 }
 
+async function readResponseData(response) {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return {
+      rawText
+    };
+  }
+}
+
 function formatStatus(status) {
   if (!status) return "-";
 
@@ -315,32 +331,16 @@ function renderUsers(users) {
 
 async function loadDashboard() {
   try {
-    const [ordersResponse, sellersResponse] = await Promise.all([
-      fetch(
-        `${API_BASE}/api/orders`,
-        {
-          headers: getAuthHeaders()
-        }
-      ),
-      fetch(
-        `${API_BASE}/api/users/sellers`,
-        {
-          headers: getAuthHeaders()
-        }
-      )
-    ]);
-    const [orders, sellers] = await Promise.all([
-      ordersResponse.json(),
-      sellersResponse.json()
-    ]);
+    const ordersResponse = await fetch(
+      `${API_BASE}/api/orders`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    const orders = await readResponseData(ordersResponse);
 
     if (isAuthFailure(ordersResponse.status)) {
       handleUnauthorized(orders);
-      return;
-    }
-
-    if (isAuthFailure(sellersResponse.status)) {
-      handleUnauthorized(sellers);
       return;
     }
 
@@ -348,8 +348,41 @@ async function loadDashboard() {
       throw new Error("Could not load platform orders");
     }
 
-    if (!sellersResponse.ok) {
-      throw new Error(sellers.message || sellers.error || "Could not load seller accounts");
+    let sellers = [];
+    const sellersResponse = await fetch(
+      `${API_BASE}/api/users/sellers`,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    const sellersPayload = await readResponseData(sellersResponse);
+
+    if (isAuthFailure(sellersResponse.status)) {
+      handleUnauthorized(sellersPayload);
+      return;
+    }
+
+    if (sellersResponse.ok && Array.isArray(sellersPayload)) {
+      sellers = sellersPayload;
+    } else {
+      const usersResponse = await fetch(
+        `${API_BASE}/api/users`,
+        {
+          headers: getAuthHeaders()
+        }
+      );
+      const usersPayload = await readResponseData(usersResponse);
+
+      if (isAuthFailure(usersResponse.status)) {
+        handleUnauthorized(usersPayload);
+        return;
+      }
+
+      if (!usersResponse.ok || !Array.isArray(usersPayload)) {
+        throw new Error("Could not load seller accounts");
+      }
+
+      sellers = usersPayload.filter(user => (user.role || "").toUpperCase() === "SELLER");
     }
 
     const readyPayouts = orders.filter(order =>

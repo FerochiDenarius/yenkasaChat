@@ -7,11 +7,16 @@ const FormData = require('form-data');
 const upload = multer();
 const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
 
+function getAuthorizationHeader(req) {
+  return req.headers.authorization || req.get?.('Authorization') || '';
+}
+
 function forwardHeaders(req, extraHeaders = {}) {
   const headers = { ...extraHeaders };
+  const authorization = getAuthorizationHeader(req);
 
-  if (req.headers.authorization) {
-    headers.Authorization = req.headers.authorization;
+  if (authorization) {
+    headers.Authorization = authorization;
   }
 
   return headers;
@@ -363,6 +368,14 @@ module.exports = function (app) {
     ]),
     async (req, res) => {
       try {
+        const authorization = getAuthorizationHeader(req);
+
+        if (!authorization) {
+          return res.status(401).json({
+            error: 'Authentication token is missing'
+          });
+        }
+
         const form = new FormData();
 
         form.append('name', req.body.name);
@@ -395,7 +408,10 @@ module.exports = function (app) {
           `${API_BASE}/api/triciabales/upload`,
           form,
           {
-            headers: forwardHeaders(req, form.getHeaders()),
+            headers: {
+              ...form.getHeaders(),
+              Authorization: authorization
+            },
             maxBodyLength: Infinity,
             maxContentLength: Infinity
           }
@@ -406,6 +422,74 @@ module.exports = function (app) {
       } catch (err) {
         console.error(
           'UPLOAD ERROR:',
+          err.response?.status,
+          err.response?.data || err.message
+        );
+
+        res.status(err.response?.status || 500).json(
+          err.response?.data || { error: err.message }
+        );
+      }
+    }
+  );
+
+  app.post(
+    '/triciabales-api/api/triciabales/upload/video-only',
+    upload.fields([
+      { name: 'video', maxCount: 1 }
+    ]),
+    async (req, res) => {
+      try {
+        const authorization = getAuthorizationHeader(req);
+
+        if (!authorization) {
+          return res.status(401).json({
+            error: 'Authentication token is missing'
+          });
+        }
+
+        const form = new FormData();
+
+        form.append('name', req.body.name);
+        form.append('price', req.body.price);
+        form.append('weight', req.body.weight);
+        form.append('category', req.body.category);
+        form.append('description', req.body.description);
+        form.append('status', req.body.status);
+        form.append('type', req.body.type || 'product_video');
+        if (req.body.sellerId) {
+          form.append('sellerId', req.body.sellerId);
+        }
+        if (req.body.sellerName) {
+          form.append('sellerName', req.body.sellerName);
+        }
+
+        if (req.files?.video?.[0]) {
+          form.append(
+            'video',
+            req.files.video[0].buffer,
+            req.files.video[0].originalname
+          );
+        }
+
+        const response = await axios.post(
+          `${API_BASE}/api/triciabales/upload/video-only`,
+          form,
+          {
+            headers: {
+              ...form.getHeaders(),
+              Authorization: authorization
+            },
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity
+          }
+        );
+
+        res.json(response.data);
+
+      } catch (err) {
+        console.error(
+          'VIDEO UPLOAD ERROR:',
           err.response?.status,
           err.response?.data || err.message
         );

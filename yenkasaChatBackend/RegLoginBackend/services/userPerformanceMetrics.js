@@ -6,93 +6,126 @@ const View = require('../models/view.model');        // optional: views collecti
 const User = require('../models/user.model');        // users collection
 
 // Helper: convert string id to ObjectId
-const toId = id => mongoose.Types.ObjectId(id);
+const toId = id => {
+  if (!id) {
+    return null;
+  }
 
-// GET /api/users/:userId/performance-metrics
-exports.getUserPerformanceMetrics = async (req, res) => {
-  try {
-    const userId = req.params.userId;
+  if (id instanceof mongoose.Types.ObjectId) {
+    return id;
+  }
 
-    // 1) Aggregate posts by user to get per-post sums and totals in one pipeline
-    const postsAgg = await Post.aggregate([
-      { $match: { 'userId': toId(userId) } }, // if userId stored as ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error(`Invalid user id: ${id}`);
+  }
+
+  return new mongoose.Types.ObjectId(id);
+};
+
+async function computeUserPerformanceMetrics(userIdInput) {
+  const userId = toId(userIdInput);
+
+  // 1) Aggregate posts by user to get per-post sums and totals in one pipeline
+  const postsAgg = await Post.aggregate([
+    { $match: { userId } },
+    {
+      $group: {
+        _id: null,
+        postsCreated: { $sum: 1 },
+        totalLikesReceived: { $sum: '$likeCount' },
+        totalCommentsReceived: { $sum: '$commentCount' },
+        totalShares: { $sum: '$shareCount' },
+        totalViewsFromPostField: { $sum: '$viewCount' },
+        coinsEarned: { $sum: '$coinsEarned' },
+        maxLikesOnPost: { $max: '$likeCount' }
+      }
+    }
+  ]);
+
+  const postSums = postsAgg[0] || {
+    postsCreated: 0,
+    totalLikesReceived: 0,
+    totalCommentsReceived: 0,
+    totalShares: 0,
+    totalViewsFromPostField: 0,
+    coinsEarned: 0,
+    maxLikesOnPost: 0
+  };
+
+  // 2) Aggregate comments that belong to this user's posts to get reply counts & comment likes
+  const userPosts = await Post.find({ userId }, { _id: 1 }).lean();
+  const postIds = userPosts.map(p => p._id);
+  let totalRepliesReceived = 0;
+  let commentLikesReceived = 0;
+  if (postIds.length > 0) {
+    const commentsAgg = await Comment.aggregate([
+      { $match: { postId: { $in: postIds } } },
       {
         $group: {
           _id: null,
-          postsCreated: { $sum: 1 },
-          totalLikesReceived: { $sum: '$likeCount' },
-          totalCommentsReceived: { $sum: '$commentCount' },
-          totalShares: { $sum: '$shareCount' },
-          totalViewsFromPostField: { $sum: '$viewCount' },
-          coinsEarned: { $sum: '$coinsEarned' }
+          totalReplies: { $sum: '$replyCount' },
+          totalCommentLikes: { $sum: '$likeCount' }
         }
       }
     ]);
+    const cAgg = commentsAgg[0] || { totalReplies: 0, totalCommentLikes: 0 };
+    totalRepliesReceived = cAgg.totalReplies || 0;
+    commentLikesReceived = cAgg.totalCommentLikes || 0;
+  }
 
-    const postSums = postsAgg[0] || {
-      postsCreated: 0,
-      totalLikesReceived: 0,
-      totalCommentsReceived: 0,
-      totalShares: 0,
-      totalViewsFromPostField: 0,
-      coinsEarned: 0
-    };
+  // 3) Count comments made by the user
+  const commentsMade = await Comment.countDocuments({ userId });
 
-    // 2) Aggregate comments that belong to this user's posts to get reply counts & comment likes
-    // First get user's post ids (we could reuse the same aggregation if we stored ids)
-    const userPosts = await Post.find({ userId }, { _id: 1 }).lean();
-    const postIds = userPosts.map(p => p._id);
-    let totalRepliesReceived = 0;
-    let commentLikesReceived = 0;
-    if (postIds.length > 0) {
-      const commentsAgg = await Comment.aggregate([
-        { $match: { postId: { $in: postIds.map(toId) } } },
-        {
-          $group: {
-            _id: null,
-            totalReplies: { $sum: '$replyCount' },
-            totalCommentLikes: { $sum: '$likeCount' }
-          }
-        }
-      ]);
-      const cAgg = commentsAgg[0] || { totalReplies: 0, totalCommentLikes: 0 };
-      totalRepliesReceived = cAgg.totalReplies || 0;
-      commentLikesReceived = cAgg.totalCommentLikes || 0;
+  // 4) Views: prefer aggregated 'views' collection if you track individual views
+  let totalViewsReceived = postSums.totalViewsFromPostField;
+  if (postIds.length > 0 && await View.collection.countDocuments() > 0) {
+    const viewsAgg = await View.aggregate([
+      { $match: { postId: { $in: postIds } } },
+      { $group: { _id: null, viewsCount: { $sum: 1 } } }
+    ]);
+    totalViewsReceived = (viewsAgg[0] && viewsAgg[0].viewsCount) || totalViewsReceived;
+  }
+
+  // 5) Followers: use user.followersCount if present, else count followers array
+  const userDoc = await User.findById(userId).select('followersCount followers').lean();
+  const totalFollowers = userDoc ? (userDoc.followersCount || (userDoc.followers && userDoc.followers.length) || 0) : 0;
+
+  return {
+    followers: totalFollowers,
+    postsCreated: postSums.postsCreated || 0,
+    likesReceived: postSums.totalLikesReceived || 0,
+    maxLikesOnPost: postSums.maxLikesOnPost || 0,
+    viewsReceived: totalViewsReceived || 0,
+    commentsReceived: postSums.totalCommentsReceived || 0,
+    repliesReceived: totalRepliesReceived || 0,
+    commentLikesReceived: commentLikesReceived || 0,
+    commentsMade: commentsMade || 0,
+    totalShares: postSums.totalShares || 0,
+    coinsEarned: postSums.coinsEarned || 0
+  };
+}
+
+// GET /api/users/:userId/performance-metrics
+exports.getUserPerformanceMetrics = async (reqOrUserId, res) => {
+  try {
+    const isHttpRequest = reqOrUserId && typeof reqOrUserId === 'object' && reqOrUserId.params;
+    const userId = isHttpRequest ? reqOrUserId.params?.userId : reqOrUserId;
+
+    const performanceMetrics = await computeUserPerformanceMetrics(userId);
+
+    if (res && typeof res.json === 'function') {
+      return res.json({ success: true, performanceMetrics });
     }
 
-    // 3) Views: prefer aggregated 'views' collection if you track individual views
-    // If you have a views collection where each doc has postId, we count them, else fallback to Post.viewCount sum
-    let totalViewsReceived = postSums.totalViewsFromPostField;
-    if (await View.collection.countDocuments() > 0) {
-      // aggregate views collection
-      const viewsAgg = await View.aggregate([
-        { $match: { postId: { $in: postIds.map(toId) } } },
-        { $group: { _id: null, viewsCount: { $sum: 1 } } }
-      ]);
-      totalViewsReceived = (viewsAgg[0] && viewsAgg[0].viewsCount) || totalViewsReceived;
-    }
-
-    // 4) Followers: use user.followersCount if present, else count followers array
-    const userDoc = await User.findById(userId).select('followersCount followers').lean();
-    const totalFollowers = userDoc ? (userDoc.followersCount || (userDoc.followers && userDoc.followers.length) || 0) : 0;
-
-    // Build response shape that matches your Verification/UserPerformance models
-    const response = {
-      followers: totalFollowers,
-      postsCreated: postSums.postsCreated || 0,
-      likesReceived: postSums.totalLikesReceived || 0,
-      viewsReceived: totalViewsReceived || 0,
-      commentsReceived: postSums.totalCommentsReceived || 0,
-      repliesReceived: totalRepliesReceived || 0,
-      commentLikesReceived: commentLikesReceived || 0,
-      totalShares: postSums.totalShares || 0,
-      coinsEarned: postSums.coinsEarned || 0
-    };
-
-    return res.json({ success: true, performanceMetrics: response });
+    return performanceMetrics;
   } catch (err) {
     console.error('Error computing performance metrics', err);
-    return res.status(500).json({ success: false, error: 'Failed to compute metrics' });
+
+    if (res && typeof res.status === 'function') {
+      return res.status(500).json({ success: false, error: 'Failed to compute metrics' });
+    }
+
+    throw err;
   }
 };
 

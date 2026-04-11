@@ -1857,42 +1857,68 @@ footer {
 
 .password-field input {
   width: 100%;
-  padding-right: 86px !important;
+  padding-right: 46px !important;
 }
 
-.password-toggle-btn {
+.password-field .password-toggle-btn {
   position: absolute;
   top: 50%;
-  right: 10px;
+  right: 12px;
   transform: translateY(-50%);
   border: none;
-  border-radius: 999px;
-  background: #eef4ed;
-  color: #1f4d2b;
+  border-radius: 0;
+  background: transparent;
+  color: #6b7280;
   cursor: pointer;
-  font-size: 0.84rem;
-  font-weight: 700;
-  min-height: 36px;
-  padding: 7px 12px;
-  transition: background 0.2s ease, color 0.2s ease;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: none;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.password-toggle-btn:hover,
-.password-toggle-btn:focus-visible {
-  background: #1f4d2b;
-  color: #fff;
+.password-field .password-toggle-btn:hover,
+.password-field .password-toggle-btn:focus-visible {
+  background: transparent;
+  color: #111827;
   outline: none;
+  transform: translateY(-50%);
+}
+
+.password-field .password-toggle-btn:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.password-field .password-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 @media (max-width: 420px) {
   .password-field input {
-    padding-right: 78px !important;
+    padding-right: 42px !important;
   }
 
-  .password-toggle-btn {
-    right: 8px;
-    min-height: 34px;
-    padding: 6px 10px;
-    font-size: 0.78rem;
+  .password-field .password-toggle-btn {
+    right: 10px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .password-field .password-toggle-btn svg {
+    width: 19px;
+    height: 19px;
   }
 }

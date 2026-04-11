@@ -3,6 +3,7 @@ const momoDetails = document.getElementById("momo-details");
 const cardDetails = document.getElementById("card-details");
 const bankDetails = document.getElementById("bank-details");
 const paymentForm = document.getElementById("payment-form");
+const API_BASE = "/triciabales-api";
 
 paymentOptions.forEach(option => {
   option.addEventListener("click", () => {
@@ -127,11 +128,13 @@ paymentForm.addEventListener("submit", async e => {
   try {
     if (submitButton) {
       submitButton.disabled = true;
-      submitButton.textContent = "Placing Order...";
+      submitButton.textContent = selectedPaymentMethod === "card" || selectedPaymentMethod === "momo"
+        ? "Preparing Secure Payment..."
+        : "Placing Order...";
     }
 
     const response = await fetch(
-      "https://www.yenkasa.xyz/triciabales-api/api/orders/checkout",
+      `${API_BASE}/api/orders/checkout`,
       {
         method: "POST",
         headers: {
@@ -148,6 +151,37 @@ paymentForm.addEventListener("submit", async e => {
       throw new Error(data.error || "Order failed");
     }
 
+    if (selectedPaymentMethod === "card" || selectedPaymentMethod === "momo") {
+      const paystackResponse = await fetch(`${API_BASE}/api/paystack/initialize`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          orderId: data.id,
+          email: document.getElementById("card-email")?.value?.trim() || currentUser.email
+        })
+      });
+
+      const paystackData = await paystackResponse.json();
+
+      if (!paystackResponse.ok) {
+        throw new Error(paystackData.error || paystackData.message || "Could not start Paystack payment");
+      }
+
+      if (!paystackData.authorizationUrl) {
+        throw new Error("Paystack did not return a payment URL");
+      }
+
+      localStorage.setItem("lastOrder", JSON.stringify(data));
+      localStorage.setItem("pendingPaystackOrderId", String(data.id));
+      localStorage.setItem("pendingPaystackReference", paystackData.reference);
+
+      window.location.href = paystackData.authorizationUrl;
+      return;
+    }
+
     localStorage.removeItem("cart");
     localStorage.removeItem("checkoutAddress");
     localStorage.removeItem("deliveryMethod");
@@ -157,7 +191,7 @@ paymentForm.addEventListener("submit", async e => {
     window.location.href = "/store/thank-you";
   } catch (err) {
     console.error(err);
-    alert("Could not place order. Please try again.");
+    alert(err.message || "Could not place order. Please try again.");
   } finally {
     if (submitButton) {
       submitButton.disabled = false;

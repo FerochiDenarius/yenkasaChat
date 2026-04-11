@@ -36,7 +36,13 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl === '/triciabales-api/api/paystack/webhook') {
+      req.rawBody = buf.toString('utf8');
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cors(corsOptions));
@@ -372,7 +378,8 @@ const STORE_PAGE_ALIASES = new Map(Object.entries({
   'thank-you': 'thank-you.html',
   'forgot-password': 'forgot-password.html',
   'reset-password': 'reset-password.html',
-  'verify-email': 'verify-email.html'
+  'verify-email': 'verify-email.html',
+  'paystack-callback': 'paystack-callback.html'
 }));
 const STORE_FILE_TO_ALIAS = new Map(Object.entries({
   'index.html': '',
@@ -392,7 +399,8 @@ const STORE_FILE_TO_ALIAS = new Map(Object.entries({
   'thank-you.html': 'thank-you',
   'forgot-password.html': 'forgot-password',
   'reset-password.html': 'reset-password',
-  'verify-email.html': 'verify-email'
+  'verify-email.html': 'verify-email',
+  'paystack-callback.html': 'paystack-callback'
 }));
 
 function getQueryString(req) {
@@ -411,6 +419,7 @@ function serveStorePage(fileName) {
 }
 
 app.get('/store', serveStorePage('index.html'));
+app.get('/store/paystack/callback', serveStorePage('paystack-callback.html'));
 app.get('/store/:page', (req, res, next) => {
   const fileName = STORE_PAGE_ALIASES.get(req.params.page);
   if (!fileName) return next();

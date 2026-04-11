@@ -696,6 +696,92 @@ module.exports = function (app) {
     }
   });
 
+  // PAYSTACK INITIALIZE
+  app.post('/triciabales-api/api/paystack/initialize', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/paystack/initialize`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PAYSTACK INIT ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // PAYSTACK VERIFY
+  app.get('/triciabales-api/api/paystack/verify', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/paystack/verify`,
+        {
+          params: {
+            reference: req.query.reference
+          },
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PAYSTACK VERIFY ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // PAYSTACK WEBHOOK
+  app.post('/triciabales-api/api/paystack/webhook', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/paystack/webhook`,
+        req.rawBody || JSON.stringify(req.body || {}),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-paystack-signature': req.get('x-paystack-signature') || ''
+          },
+          transformRequest: [(data) => {
+            if (typeof data === 'string') return data;
+            return JSON.stringify(data);
+          }]
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PAYSTACK WEBHOOK ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // USER ORDER HISTORY
   app.get('/triciabales-api/api/orders/user/:userId', async (req, res) => {
     try {

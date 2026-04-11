@@ -1849,3 +1849,50 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 86px !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 999px;
+  background: #eef4ed;
+  color: #1f4d2b;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 7px 12px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle-btn:hover,
+.password-toggle-btn:focus-visible {
+  background: #1f4d2b;
+  color: #fff;
+  outline: none;
+}
+
+@media (max-width: 420px) {
+  .password-field input {
+    padding-right: 78px !important;
+  }
+
+  .password-toggle-btn {
+    right: 8px;
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+}

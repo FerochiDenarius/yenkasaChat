@@ -1,4 +1,68 @@
 (function () {
+  function injectPasswordToggleStyles() {
+    if (document.getElementById("passwordToggleStyles")) {
+      return;
+    }
+
+    const style = document.createElement("style");
+    style.id = "passwordToggleStyles";
+    style.textContent = `
+      .password-field {
+        position: relative !important;
+        width: 100% !important;
+      }
+
+      .password-field input {
+        width: 100% !important;
+        padding-right: 46px !important;
+      }
+
+      .password-field .password-toggle-btn {
+        position: absolute !important;
+        top: 50% !important;
+        right: 12px !important;
+        transform: translateY(-50%) !important;
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: #6b7280 !important;
+        box-shadow: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1 !important;
+        cursor: pointer !important;
+        user-select: none !important;
+      }
+
+      .password-field .password-toggle-btn:hover,
+      .password-field .password-toggle-btn:focus-visible {
+        background: transparent !important;
+        color: #111827 !important;
+        outline: none !important;
+        transform: translateY(-50%) !important;
+      }
+
+      .password-field .password-toggle-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+        fill: none !important;
+        stroke: currentColor !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
+        stroke-width: 2 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   const eyeIcon = `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M2.1 12s3.5-6.5 9.9-6.5S21.9 12 21.9 12s-3.5 6.5-9.9 6.5S2.1 12 2.1 12Z"></path>
@@ -28,26 +92,36 @@
     input.parentNode.insertBefore(wrapper, input);
     wrapper.appendChild(input);
 
-    const toggle = document.createElement("button");
-    toggle.type = "button";
+    const toggle = document.createElement("span");
+    toggle.setAttribute("role", "button");
+    toggle.setAttribute("tabindex", "0");
     toggle.className = "password-toggle-btn";
     toggle.innerHTML = eyeIcon;
     toggle.setAttribute("aria-label", "Show password");
     toggle.setAttribute("aria-pressed", "false");
 
-    toggle.addEventListener("click", () => {
+    function togglePasswordVisibility() {
       const isHidden = input.type === "password";
       input.type = isHidden ? "text" : "password";
       toggle.innerHTML = isHidden ? eyeOffIcon : eyeIcon;
       toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
       toggle.setAttribute("aria-pressed", String(isHidden));
       input.focus();
+    }
+
+    toggle.addEventListener("click", togglePasswordVisibility);
+    toggle.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        togglePasswordVisibility();
+      }
     });
 
     wrapper.appendChild(toggle);
   }
 
   function initPasswordToggles() {
+    injectPasswordToggleStyles();
     document.querySelectorAll('input[type="password"]').forEach(enhancePasswordField);
   }
 

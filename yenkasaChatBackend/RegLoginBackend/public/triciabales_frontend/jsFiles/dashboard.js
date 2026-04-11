@@ -5,12 +5,12 @@ const momoFields = document.getElementById("momoFields");
 const bankFields = document.getElementById("bankFields");
 
 if (currentUser?.role === "SELLER") {
-  window.location.href = "seller-dashboard.html";
+  window.location.href = "/store/seller-dashboard";
 }
 
 if (!currentUser || currentUser.role !== "SELLER") {
   alert("Please login as a seller first.");
-  window.location.href = "buyer-login.html";
+  window.location.href = "/store/buyer-login";
 }
 
 document.getElementById("seller-name").textContent = currentUser?.name || "Seller";
@@ -90,7 +90,7 @@ payoutForm.addEventListener("submit", async event => {
 
     localStorage.setItem("currentUser", JSON.stringify(data));
     alert("Payout details saved successfully.");
-    window.location.href = "seller-dashboard.html";
+    window.location.href = "/store/seller-dashboard";
   } catch (err) {
     console.error(err);
     alert("Unable to save payout details.");

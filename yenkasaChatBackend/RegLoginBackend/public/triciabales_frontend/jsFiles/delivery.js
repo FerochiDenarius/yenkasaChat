@@ -20,5 +20,5 @@ document.getElementById("delivery-form").addEventListener("submit", (e) => {
 
   localStorage.setItem("deliveryMethod", selected.value);
 
-  window.location.href = "payment.html";
+  window.location.href = "/store/payment";
 });

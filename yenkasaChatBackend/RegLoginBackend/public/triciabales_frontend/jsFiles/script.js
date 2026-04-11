@@ -51,7 +51,7 @@ async function logout() {
     localStorage.removeItem("checkoutAddress");
     localStorage.removeItem("deliveryMethod");
     localStorage.removeItem("lastOrder");
-    window.location.href = "index.html";
+    window.location.href = "/store";
   }
 }
 

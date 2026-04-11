@@ -154,7 +154,7 @@ async function loadOrders() {
   if (!currentUser?.id || !authToken) {
     setFeedback(
       "Please login to view your orders.",
-      '<p><a href="buyer-login.html" class="primary-btn">Login</a></p>'
+      '<p><a href="/store/buyer-login" class="primary-btn">Login</a></p>'
     );
     return;
   }
@@ -175,7 +175,7 @@ async function loadOrders() {
     if (!Array.isArray(data) || data.length === 0) {
       setFeedback(
         "You have not placed any orders yet.",
-        '<p><a href="index.html" class="primary-btn">Start Shopping</a></p>'
+        '<p><a href="/store" class="primary-btn">Start Shopping</a></p>'
       );
       return;
     }

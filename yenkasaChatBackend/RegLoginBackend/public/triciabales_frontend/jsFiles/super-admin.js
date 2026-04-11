@@ -13,7 +13,7 @@ const usersList = document.getElementById("usersList");
 const API_BASE = "/triciabales-api";
 
 if (!currentUser || currentUser.role !== "SUPER_ADMIN" || !authToken) {
-  window.location.href = "buyer-login.html";
+  window.location.href = "/store/buyer-login";
 }
 
 function getAuthHeaders() {
@@ -37,7 +37,7 @@ function handleUnauthorized(responseData) {
   localStorage.removeItem("currentUser");
   localStorage.removeItem("authToken");
   alert(responseData?.message || responseData?.error || "Your session has expired. Please log in again.");
-  window.location.href = "login.html";
+  window.location.href = "/store/admin-login";
 }
 
 async function readResponseData(response) {

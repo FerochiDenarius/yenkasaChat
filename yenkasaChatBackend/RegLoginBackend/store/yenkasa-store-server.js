@@ -554,6 +554,68 @@ module.exports = function (app) {
     }
   });
 
+  app.put(
+    '/triciabales-api/api/triciabales/:id/media',
+    upload.fields([
+      { name: 'image', maxCount: 20 }
+    ]),
+    async (req, res) => {
+      try {
+        const authorization = getAuthorizationHeader(req);
+
+        if (!authorization) {
+          return res.status(401).json({
+            error: 'Authentication token is missing'
+          });
+        }
+
+        const form = new FormData();
+
+        const retainedImageUrls = Array.isArray(req.body.retainedImageUrls)
+          ? req.body.retainedImageUrls
+          : req.body.retainedImageUrls
+            ? [req.body.retainedImageUrls]
+            : [];
+
+        retainedImageUrls.forEach(url => {
+          if (url) {
+            form.append('retainedImageUrls', url);
+          }
+        });
+
+        (req.files?.image || []).forEach(file => {
+          form.append('image', file.buffer, file.originalname);
+        });
+
+        const response = await axios.put(
+          `${API_BASE}/api/triciabales/${req.params.id}/media`,
+          form,
+          {
+            headers: {
+              ...form.getHeaders(),
+              Authorization: authorization
+            },
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity
+          }
+        );
+
+        res.json(response.data);
+
+      } catch (err) {
+        console.error(
+          'UPDATE BALE MEDIA ERROR:',
+          err.response?.status,
+          err.response?.data || err.message
+        );
+
+        res.status(err.response?.status || 500).json(
+          err.response?.data || { error: err.message }
+        );
+      }
+    }
+  );
+
   // DELETE BALE
   app.delete('/triciabales-api/api/triciabales/:id', async (req, res) => {
     try {

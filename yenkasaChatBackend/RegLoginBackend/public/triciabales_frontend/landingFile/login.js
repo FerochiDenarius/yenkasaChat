@@ -48,7 +48,7 @@ function login() {
       localStorage.setItem("currentUser", JSON.stringify(res.user));
       localStorage.setItem("authToken", res.token);
       alert("Login successful");
-      window.location.href = "super-admin.html";
+      window.location.href = "/store/super-admin";
     })
     .catch(err => {
       console.error("Fetch error:", err);

@@ -51,7 +51,7 @@ if (!response.ok) {
     localStorage.removeItem("loggedIn");
     localStorage.setItem("currentUser", JSON.stringify(user.user));
     localStorage.setItem("authToken", user.token);
-    window.location.href = "seller-dashboard.html";
+    window.location.href = "/store/seller-dashboard";
   } catch (err) {
     console.error(err);
     alert(err.message);

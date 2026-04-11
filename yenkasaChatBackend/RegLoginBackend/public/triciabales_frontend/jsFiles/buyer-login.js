@@ -51,13 +51,13 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     alert("Login successful!");
 
     if (user.role === "SUPER_ADMIN") {
-      window.location.href = "super-admin.html";
+      window.location.href = "/store/super-admin";
     } else if (user.role === "ADMIN") {
-      window.location.href = "admin.html";
+      window.location.href = "/store/admin";
     } else if (user.role === "SELLER") {
-      window.location.href = "seller-dashboard.html";
+      window.location.href = "/store/seller-dashboard";
     } else {
-      window.location.href = "index.html";
+      window.location.href = "/store";
     }
 
   } catch (err) {

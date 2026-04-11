@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Dashboard | Yenkasa Store</title>
-  <link rel="stylesheet" href="../cssFile/style.css">
+  <link rel="stylesheet" href="/triciabales_frontend/cssFile/style.css">
 </head>
 <body>
 
   <div class="page-brand">
-    <img src="../images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
+    <img src="/triciabales_frontend/images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
   </div>
 
   <section class="collection-section">
@@ -27,7 +27,7 @@
       <button class="tab-btn" id="manageTab">Manage Products</button>
       <button class="tab-btn" id="ordersTab">My Orders</button>
       <button class="tab-btn" id="payoutTab">Payout Settings</button>
-      <a href="index.html" class="tab-btn dashboard-menu-link">Back to Store</a>
+      <a href="/store" class="tab-btn dashboard-menu-link">Back to Store</a>
     </div>
 
     <div class="card seller-dashboard-card" id="uploadCard">
@@ -38,7 +38,7 @@
             <p id="panelDescription">Add a bale listing with images and an optional video.</p>
           </div>
 
-          <a href="index.html" class="secondary-btn">Back to Store</a>
+          <a href="/store" class="secondary-btn">Back to Store</a>
         </div>
 
         <div class="seller-upload-grid modern-upload-grid">
@@ -317,6 +317,26 @@
           <textarea id="editDescription"></textarea>
         </div>
 
+        <div class="field full edit-media-section">
+          <div class="edit-media-header">
+            <div>
+              <h4>Product Pictures</h4>
+              <p>Remove old pictures or add replacement pictures.</p>
+            </div>
+          </div>
+
+          <div id="editCurrentImages" class="edit-current-images"></div>
+
+          <label for="editImageFile" class="modern-dropzone edit-image-dropzone">
+            <div class="dropzone-icon">IMG</div>
+            <strong>Add replacement pictures</strong>
+            <small>New pictures will be added to the pictures you keep above.</small>
+          </label>
+          <input type="file" id="editImageFile" accept="image/*" multiple hidden>
+
+          <div id="editImagePreview" class="image-preview-grid modern-preview-grid"></div>
+        </div>
+
         <div class="edit-actions">
           <button type="button" class="secondary-btn" id="cancelEditBtn">Cancel</button>
           <button type="submit" class="primary-btn">Save Changes</button>
@@ -325,6 +345,6 @@
     </div>
   </div>
 
-  <script src="../jsFiles/seller-dashboard.js"></script>
+  <script src="/triciabales_frontend/jsFiles/seller-dashboard.js"></script>
 </body>
 </html>

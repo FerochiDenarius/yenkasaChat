@@ -43,7 +43,7 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
       : (data.message || "Account created successfully. Please verify your email.");
 
     alert(message);
-    window.location.href = "buyer-login.html";
+    window.location.href = "/store/buyer-login";
   } catch (err) {
     console.error(err);
     alert(err.message);

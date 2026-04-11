@@ -21,5 +21,5 @@ document.getElementById("address-form").addEventListener("submit", (e) => {
 
   localStorage.setItem("checkoutAddress", JSON.stringify(data));
 
-  window.location.href = "delivery.html";
+  window.location.href = "/store/delivery";
 });

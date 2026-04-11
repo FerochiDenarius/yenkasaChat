@@ -6,7 +6,7 @@ async function verifyEmail() {
     verifyContainer.innerHTML = `
       <h2>Verification Link Missing</h2>
       <p>This email verification link is incomplete.</p>
-      <p><a href="buyer-login.html" class="primary-btn">Go to Login</a></p>
+      <p><a href="/store/buyer-login" class="primary-btn">Go to Login</a></p>
     `;
     return;
   }
@@ -24,13 +24,13 @@ async function verifyEmail() {
     verifyContainer.innerHTML = `
       <h2>Email Verified</h2>
       <p>${data.message || "Your email has been verified successfully."}</p>
-      <p><a href="buyer-login.html" class="primary-btn">Login Now</a></p>
+      <p><a href="/store/buyer-login" class="primary-btn">Login Now</a></p>
     `;
   } catch (err) {
     verifyContainer.innerHTML = `
       <h2>Verification Failed</h2>
       <p>${err.message}</p>
-      <p><a href="buyer-login.html" class="primary-btn">Go to Login</a></p>
+      <p><a href="/store/buyer-login" class="primary-btn">Go to Login</a></p>
     `;
   }
 }

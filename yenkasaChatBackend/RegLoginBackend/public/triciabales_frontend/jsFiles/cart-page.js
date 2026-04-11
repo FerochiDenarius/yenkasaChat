@@ -89,10 +89,10 @@ if (checkoutBtn) {
 
     if (!currentUser) {
       alert("Please login or register before checkout.");
-      window.location.href = "buyer-login.html";
+      window.location.href = "/store/buyer-login";
       return;
     }
 
-    window.location.href = "address.html";
+    window.location.href = "/store/address";
   });
 }

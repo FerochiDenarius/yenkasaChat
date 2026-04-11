@@ -347,6 +347,95 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+
+// ---------------------------------
+// Clean Store URLs
+// ---------------------------------
+const STORE_LANDING_DIR = path.join(__dirname, 'public', 'triciabales_frontend', 'landingFile');
+const STORE_PAGE_ALIASES = new Map(Object.entries({
+  '': 'index.html',
+  'home': 'index.html',
+  'cart': 'cart.html',
+  'orders': 'my-orders.html',
+  'my-orders': 'my-orders.html',
+  'register': 'register.html',
+  'buyer-login': 'buyer-login.html',
+  'seller-login': 'seller-login.html',
+  'seller-dashboard': 'seller-dashboard.html',
+  'admin-login': 'login.html',
+  'admin': 'admin.html',
+  'super-admin': 'super-admin.html',
+  'dashboard': 'dashboard.html',
+  'address': 'address.html',
+  'delivery': 'delivery.html',
+  'payment': 'payment.html',
+  'thank-you': 'thank-you.html',
+  'forgot-password': 'forgot-password.html',
+  'reset-password': 'reset-password.html',
+  'verify-email': 'verify-email.html'
+}));
+const STORE_FILE_TO_ALIAS = new Map(Object.entries({
+  'index.html': '',
+  'cart.html': 'cart',
+  'my-orders.html': 'orders',
+  'register.html': 'register',
+  'buyer-login.html': 'buyer-login',
+  'seller-login.html': 'seller-login',
+  'seller-dashboard.html': 'seller-dashboard',
+  'login.html': 'admin-login',
+  'admin.html': 'admin',
+  'super-admin.html': 'super-admin',
+  'dashboard.html': 'dashboard',
+  'address.html': 'address',
+  'delivery.html': 'delivery',
+  'payment.html': 'payment',
+  'thank-you.html': 'thank-you',
+  'forgot-password.html': 'forgot-password',
+  'reset-password.html': 'reset-password',
+  'verify-email.html': 'verify-email'
+}));
+
+function getQueryString(req) {
+  const index = req.originalUrl.indexOf('?');
+  return index === -1 ? '' : req.originalUrl.slice(index);
+}
+
+function storePathForAlias(alias) {
+  return alias ? `/store/${alias}` : '/store';
+}
+
+function serveStorePage(fileName) {
+  return (req, res) => {
+    res.sendFile(path.join(STORE_LANDING_DIR, fileName));
+  };
+}
+
+app.get('/store', serveStorePage('index.html'));
+app.get('/store/:page', (req, res, next) => {
+  const fileName = STORE_PAGE_ALIASES.get(req.params.page);
+  if (!fileName) return next();
+  res.sendFile(path.join(STORE_LANDING_DIR, fileName));
+});
+
+app.get('/triciabales_frontend/landingFile', (req, res) => {
+  res.redirect(301, `/store${getQueryString(req)}`);
+});
+app.get('/triciabales_frontend/landingFile/', (req, res) => {
+  res.redirect(301, `/store${getQueryString(req)}`);
+});
+app.get('/triciabales_frontend/landingFile/:page', (req, res, next) => {
+  const page = req.params.page;
+  if (!page.endsWith('.html')) {
+    const fileName = STORE_PAGE_ALIASES.get(page);
+    if (!fileName) return next();
+    return res.sendFile(path.join(STORE_LANDING_DIR, fileName));
+  }
+
+  const alias = STORE_FILE_TO_ALIAS.get(page);
+  if (!alias && page !== 'index.html') return next();
+  res.redirect(301, `${storePathForAlias(alias)}${getQueryString(req)}`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 console.log("server.js: Static file serving configured for /public.");
 

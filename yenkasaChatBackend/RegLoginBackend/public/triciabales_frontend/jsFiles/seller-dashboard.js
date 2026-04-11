@@ -39,23 +39,28 @@ const editModal = document.getElementById("editModal");
 const closeEditModal = document.getElementById("closeEditModal");
 const cancelEditBtn = document.getElementById("cancelEditBtn");
 const editProductForm = document.getElementById("editProductForm");
+const editCurrentImages = document.getElementById("editCurrentImages");
+const editImageInput = document.getElementById("editImageFile");
+const editImagePreview = document.getElementById("editImagePreview");
 const API_BASE = "/triciabales-api";
 const productCache = new Map();
+let editRetainedImageUrls = [];
+let editMediaDirty = false;
 
 if (!currentUser || !authToken) {
-  window.location.href = "buyer-login.html";
+  window.location.href = "/store/buyer-login";
 }
 
 if (currentUser?.role === "SUPER_ADMIN") {
-  window.location.href = "super-admin.html";
+  window.location.href = "/store/super-admin";
 }
 
 if (currentUser?.role === "ADMIN") {
-  window.location.href = "admin.html";
+  window.location.href = "/store/admin";
 }
 
 if (currentUser?.role !== "SELLER") {
-  window.location.href = "buyer-login.html";
+  window.location.href = "/store/buyer-login";
 }
 
 document.getElementById("sellerHeading").textContent = `${currentUser.name || "Seller"} Dashboard`;
@@ -283,6 +288,12 @@ function renderManageProducts(products) {
 }
 
 function openEditProduct(product) {
+  const currentImages = Array.isArray(product.imageUrls) && product.imageUrls.length
+    ? product.imageUrls
+    : product.imageUrl
+      ? [product.imageUrl]
+      : [];
+
   document.getElementById("editProductId").value = product.id || "";
   document.getElementById("editName").value = product.name || "";
   document.getElementById("editPrice").value = product.price || "";
@@ -290,11 +301,78 @@ function openEditProduct(product) {
   document.getElementById("editStatus").value = product.status || "available";
   document.getElementById("editWeight").value = product.weight || "";
   document.getElementById("editDescription").value = product.description || "";
+  editRetainedImageUrls = [...currentImages];
+  editMediaDirty = false;
+  editImageInput.value = "";
+  editImagePreview.innerHTML = "";
+  renderEditableImages();
   editModal.classList.add("show");
 }
 
 function closeProductModal() {
   editModal.classList.remove("show");
+}
+
+function renderEditableImages() {
+  if (!editRetainedImageUrls.length) {
+    editCurrentImages.innerHTML = `
+      <div class="edit-image-empty">
+        No current pictures. Add replacement pictures below.
+      </div>
+    `;
+    return;
+  }
+
+  editCurrentImages.innerHTML = editRetainedImageUrls.map((url, index) => `
+    <div class="edit-image-item">
+      <img src="${url}" alt="Product picture ${index + 1}">
+      <button type="button" class="edit-image-remove" data-index="${index}">
+        Remove
+      </button>
+    </div>
+  `).join("");
+}
+
+function renderEditImagePreview() {
+  const files = Array.from(editImageInput.files || []);
+
+  if (!files.length) {
+    editImagePreview.innerHTML = "";
+    return;
+  }
+
+  editImagePreview.innerHTML = files.map(file => `
+    <img src="${URL.createObjectURL(file)}" alt="${file.name}">
+  `).join("");
+}
+
+async function updateProductMedia(productId) {
+  const formData = new FormData();
+
+  editRetainedImageUrls.forEach(url => {
+    formData.append("retainedImageUrls", url);
+  });
+
+  Array.from(editImageInput.files || []).forEach(file => {
+    formData.append("image", file);
+  });
+
+  const response = await fetch(
+    `${API_BASE}/api/triciabales/${productId}/media`,
+    {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: formData
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || "Failed to update product pictures");
+  }
+
+  return data;
 }
 
 async function loadManageProducts() {
@@ -516,6 +594,21 @@ editModal.addEventListener("click", event => {
   }
 });
 
+editCurrentImages.addEventListener("click", event => {
+  const button = event.target.closest(".edit-image-remove");
+  if (!button) return;
+
+  const imageIndex = Number(button.dataset.index);
+  editRetainedImageUrls = editRetainedImageUrls.filter((_, index) => index !== imageIndex);
+  editMediaDirty = true;
+  renderEditableImages();
+});
+
+editImageInput.addEventListener("change", () => {
+  editMediaDirty = true;
+  renderEditImagePreview();
+});
+
 editProductForm.addEventListener("submit", async event => {
   event.preventDefault();
 
@@ -554,6 +647,10 @@ editProductForm.addEventListener("submit", async event => {
 
     if (!response.ok) {
       throw new Error(data.message || data.error || "Failed to update product");
+    }
+
+    if (editMediaDirty || editImageInput.files.length) {
+      await updateProductMedia(productId);
     }
 
     alert("Product updated successfully.");
@@ -797,7 +894,7 @@ payoutForm.addEventListener("submit", async event => {
 
     localStorage.setItem("currentUser", JSON.stringify(data));
     alert("Payout details saved successfully.");
-    window.location.href = "seller-dashboard.html";
+    window.location.href = "/store/seller-dashboard";
   } catch (err) {
     console.error(err);
     alert("Unable to save payout details.");

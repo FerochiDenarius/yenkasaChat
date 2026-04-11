@@ -36,7 +36,7 @@ resetPasswordForm.addEventListener("submit", async event => {
     resetPasswordResult.innerHTML = `
       <div class="payment-alert">
         <p>${data.message}</p>
-        <p style="margin-top:10px;"><a href="buyer-login.html">Go to login</a></p>
+        <p style="margin-top:10px;"><a href="/store/buyer-login">Go to login</a></p>
       </div>
     `;
     resetPasswordForm.reset();

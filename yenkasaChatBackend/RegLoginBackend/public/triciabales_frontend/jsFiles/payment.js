@@ -50,25 +50,25 @@ paymentForm.addEventListener("submit", async e => {
 
   if (!currentUser?.id || !authToken) {
     alert("Please login before checkout.");
-    window.location.href = "buyer-login.html";
+    window.location.href = "/store/buyer-login";
     return;
   }
 
   if (!cart.length) {
     alert("Your cart is empty.");
-    window.location.href = "cart.html";
+    window.location.href = "/store/cart";
     return;
   }
 
   if (!addressData.customerName || !addressData.phone || !addressData.address) {
     alert("Please complete your delivery address first.");
-    window.location.href = "address.html";
+    window.location.href = "/store/address";
     return;
   }
 
   if (!deliveryMethod) {
     alert("Please select a delivery method first.");
-    window.location.href = "delivery.html";
+    window.location.href = "/store/delivery";
     return;
   }
 
@@ -154,7 +154,7 @@ paymentForm.addEventListener("submit", async e => {
 
     localStorage.setItem("lastOrder", JSON.stringify(data));
 
-    window.location.href = "thank-you.html";
+    window.location.href = "/store/thank-you";
   } catch (err) {
     console.error(err);
     alert("Could not place order. Please try again.");

@@ -27,11 +27,11 @@ const canAccessAdmin = !!authToken && isAdminRole;
 const canReleasePayout = currentUser?.role === "SUPER_ADMIN";
 
 if (currentUser?.role === "SELLER") {
-  window.location.href = "seller-dashboard.html";
+  window.location.href = "/store/seller-dashboard";
 } else if (currentUser?.role === "SUPER_ADMIN") {
-  window.location.href = "super-admin.html";
+  window.location.href = "/store/super-admin";
 } else if (!canAccessAdmin) {
-  window.location.href = "login.html";
+  window.location.href = "/store/admin-login";
 }
 
 function getAuthHeaders() {

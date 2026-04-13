@@ -171,21 +171,54 @@ function getEmptyCategoryCard(title, message) {
   `;
 }
 
+function getProductImages(item) {
+  const images = Array.isArray(item.imageUrls)
+    ? item.imageUrls.filter(Boolean)
+    : [];
+
+  if (item.imageUrl && !images.includes(item.imageUrl)) {
+    images.unshift(item.imageUrl);
+  }
+
+  return images;
+}
+
 function createProductCard(item) {
   const card = document.createElement("div");
   card.className = "card marketplace-product-card";
   const productCategory = getProductCategory(item);
   const categoryLabel = productDisplayLabels[productCategory] || "Product";
   const status = String(item.status || "available").toLowerCase();
+  const productImages = getProductImages(item);
+  const firstImage = productImages[0];
 
   card.innerHTML = `
-    ${item.imageUrl ? `
-      <div class="product-image-wrap">
+    ${firstImage ? `
+      <div class="product-gallery">
+        <div class="product-image-wrap">
+          ${productImages.length > 1 ? `<span class="product-image-count">${productImages.length} photos</span>` : ""}
         <img
-          src="${item.imageUrl}"
+            src="${firstImage}"
           alt="${item.name || "Yenkasa Store product"}"
           class="product-image"
+            data-gallery-main
         >
+        </div>
+
+        ${productImages.length > 1 ? `
+          <div class="product-image-thumbs">
+            ${productImages.map((imageUrl, index) => `
+              <button
+                type="button"
+                class="product-image-thumb ${index === 0 ? "active" : ""}"
+                data-product-image="${imageUrl}"
+                aria-label="Show product photo ${index + 1}"
+              >
+                <img src="${imageUrl}" alt="">
+              </button>
+            `).join("")}
+          </div>
+        ` : ""}
       </div>
     ` : `
       <div class="product-image-wrap product-image-placeholder">
@@ -226,13 +259,32 @@ function createProductCard(item) {
     </div>
   `;
 
-  const productImage = card.querySelector(".product-image");
+  const productImage = card.querySelector("[data-gallery-main]");
   const addCartBtn = card.querySelector(".add-cart-btn");
+  const imageThumbs = card.querySelectorAll(".product-image-thumb");
 
   if (productImage) {
     productImage.addEventListener("click", () => {
-      openImage(item.imageUrl);
+      openImage(productImage.src);
     });
+  }
+
+  imageThumbs.forEach(thumb => {
+    thumb.addEventListener("click", () => {
+      const nextImage = thumb.dataset.productImage;
+
+      if (!nextImage || !productImage) {
+        return;
+      }
+
+      productImage.src = nextImage;
+      imageThumbs.forEach(item => item.classList.remove("active"));
+      thumb.classList.add("active");
+    });
+  });
+
+  if (!item.imageUrl && firstImage) {
+    item.imageUrl = firstImage;
   }
 
   if (addCartBtn) {

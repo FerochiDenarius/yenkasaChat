@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Yenkasa Store | Quality Bale Clothing in Ghana</title>
+  <title>Yenkasa Store | Ghana Marketplace for Fashion, Fabrics and More</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,113 +13,211 @@
 </head>
 <body>
 
-  <header class="hero">
-    <nav class="navbar">
+  <header class="market-hero">
+    <nav class="topbar navbar">
       <div class="logo">
         <img src="/triciabales_frontend/images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
         <span>Yenkasa Store</span>
       </div>
 
-<div class="nav-links">
-  <a href="#bales">Bales</a>
-  <a href="#dresses">Dresses</a>
-  <a href="#why-us">Why Us</a>
-  <a href="#contact">Contact</a>
-  <a href="/store/cart">Cart</a>
-  <a href="/store/orders">My Orders</a>
-  <a href="/store/register" id="registerLink">Register</a>
-  <a href="/store/buyer-login" id="buyerLoginLink">Buyer Login</a>
-  <a href="/store/seller-login" class="seller-btn">Seller Dashboard</a>
-  <a href="/store/admin-login" class="admin-btn">Super Admin</a>
-  <a href="#" class="logout-btn hidden-nav-link" id="logoutLink">Logout</a>
-</div>
+      <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">Menu</button>
+
+      <div class="nav-links" id="mainNav">
+        <a href="#catalogue">Catalogue</a>
+        <a href="#featured">Featured</a>
+        <a href="#bales">Bales</a>
+        <a href="#dresses">Dresses</a>
+        <a href="#market-services">Services</a>
+        <a href="/store/cart">Cart</a>
+        <a href="/store/orders">My Orders</a>
+        <a href="/store/register" id="registerLink">Register</a>
+        <a href="/store/buyer-login" id="buyerLoginLink">Buyer Login</a>
+        <a href="/store/seller-login" class="seller-btn">Seller Dashboard</a>
+        <a href="/store/admin-login" class="admin-btn">Super Admin</a>
+        <a href="#" class="logout-btn hidden-nav-link" id="logoutLink">Logout</a>
+      </div>
     </nav>
 
-    <div class="hero-content">
-      <div class="hero-text">
-        <span class="badge">Grade A Bale Clothing • Accra, Ghana</span>
-        <h1>Beautiful Bale Clothes at Affordable Prices</h1>
+    <div class="hero-shell">
+      <div class="hero-copy">
+        <span class="hero-tag">Marketplace for fashion, fabrics, accessories and more</span>
+        <h1>One store, many products, trusted sellers.</h1>
         <p>
-          Shop flannel blouses, jogger pants, sweatshirts and more.
-          View available bales, prices, photos and chat directly on WhatsApp.
+          Shop bales, dresses, fabrics, fashion accessories and more on Yenkasa Store.
+          The foundation is now ready for more categories, sellers, promotions and future imports.
         </p>
 
-        <div class="hero-actions">
-          <a href="#collection" class="primary-btn">Browse Bales</a>
-          <a href="https://wa.me/233551699010" target="_blank" class="secondary-btn">
-            Chat on WhatsApp
-          </a>
+        <div class="hero-search" id="searchArea">
+          <input type="search" id="siteSearch" placeholder="Search bales, dresses, fabrics, accessories...">
+          <button type="button" id="searchBtn">Search</button>
+        </div>
+
+        <div class="hero-quick-links">
+          <a href="#featured" class="primary-btn">Shop Now</a>
+          <a href="https://wa.me/233551699010" target="_blank" class="secondary-btn">WhatsApp Us</a>
         </div>
       </div>
 
-      <div class="hero-card">
-        <div class="mini-card">
-          <h3>55kg Grade A Bales</h3>
-          <p>Premium quality with carefully selected items.</p>
+      <div class="hero-promo-stack">
+        <div class="promo-slider-card">
+          <div class="promo-slide active">
+            <span>Hot Category</span>
+            <h3>Fresh Bale Arrivals</h3>
+            <p>Updated listings with ready-to-order options from sellers.</p>
+          </div>
+
+          <div class="promo-slide">
+            <span>New Expansion</span>
+            <h3>Fabrics and Accessories</h3>
+            <p>The marketplace shell is ready for textiles, bags, beauty and fashion extras.</p>
+          </div>
+
+          <div class="promo-slide">
+            <span>Coming Soon</span>
+            <h3>Imported Cars</h3>
+            <p>A premium category area is reserved for future import listings.</p>
+          </div>
         </div>
 
-        <div class="stats">
+        <div class="mini-market-stats">
           <div>
-            <strong>100+</strong>
-            <span>Happy Buyers</span>
+            <strong>Multi-Seller</strong>
+            <span>Built for many sellers and product types</span>
           </div>
           <div>
-            <strong>24/7</strong>
-            <span>WhatsApp Support</span>
+            <strong>Fast Search</strong>
+            <span>Find products quickly by name or category</span>
           </div>
           <div>
-            <strong>Accra</strong>
-            <span>Fast Pickup</span>
+            <strong>Ad Ready</strong>
+            <span>Space reserved for future promotions</span>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <section class="features" id="why-us">
-    <div class="feature-box">
-      <div class="icon">✨</div>
-      <h3>Grade A Quality</h3>
-      <p>Only neat and wearable clothes are selected.</p>
+  <section class="catalogue-strip" id="catalogue">
+    <div class="section-header left">
+      <span>Catalogue</span>
+      <h2>Browse by Category</h2>
+      <p>Yenkasa Store is being structured as a broader marketplace, not only a bale page.</p>
     </div>
 
-    <div class="feature-box">
-      <div class="icon">📍</div>
-      <h3>Located in Oyarifa</h3>
-      <p>Easy pickup and selection for buyers in Accra.</p>
-    </div>
+    <div class="catalogue-grid">
+      <a href="#bales" class="catalogue-card">
+        <div class="catalogue-icon">B</div>
+        <h3>Bales</h3>
+        <p>Bulk fashion bundles and premium bale arrivals.</p>
+      </a>
 
-    <div class="feature-box">
-      <div class="icon">💬</div>
-      <h3>Direct WhatsApp</h3>
-      <p>Chat instantly to reserve or ask about any bale.</p>
+      <a href="#dresses" class="catalogue-card">
+        <div class="catalogue-icon">D</div>
+        <h3>Dresses</h3>
+        <p>Single dresses and selected wearable pieces.</p>
+      </a>
+
+      <a href="#fabrics" class="catalogue-card">
+        <div class="catalogue-icon">F</div>
+        <h3>Fabrics</h3>
+        <p>A ready section for textiles and material sellers.</p>
+      </a>
+
+      <a href="#accessories" class="catalogue-card">
+        <div class="catalogue-icon">A</div>
+        <h3>Accessories</h3>
+        <p>Bags, beauty items, extras and fashion add-ons.</p>
+      </a>
+
+      <a href="#imports" class="catalogue-card">
+        <div class="catalogue-icon">C</div>
+        <h3>Car Imports</h3>
+        <p>Reserved for future imported vehicle listings.</p>
+      </a>
     </div>
   </section>
 
-<section class="collection-section" id="bales">
-  <div class="section-header">
-    <span>Our Bale Collection</span>
-    <h2>Available Bales</h2>
-    <p>Fresh bale arrivals updated regularly</p>
-  </div>
+  <section class="market-banner-row" id="market-services">
+    <div class="market-banner primary-banner">
+      <span>Marketplace Upgrade</span>
+      <h3>More sellers. More products. Better discovery.</h3>
+      <p>This space can later hold paid promotions, Google ads, and featured sellers.</p>
+    </div>
 
-  <div id="bale-container" class="bale-grid"></div>
-</section>
+    <div class="market-banner ad-banner">
+      <span>Ad Space</span>
+      <h3>Sponsored promotion block</h3>
+      <p>Reserved for Google ads, brand campaigns or store announcements.</p>
+    </div>
+  </section>
 
-<section class="collection-section" id="dresses">
-  <div class="section-header">
-    <span>Single Pieces</span>
-    <h2>Available Dresses</h2>
-    <p>Shop single dresses and selected clothing pieces</p>
-  </div>
+  <section class="collection-section" id="featured">
+    <div class="section-header">
+      <span>Featured Products</span>
+      <h2>Top Picks on Yenkasa Store</h2>
+      <p>A mixed display from all active categories.</p>
+    </div>
 
-  <div id="dress-container" class="bale-grid"></div>
-</section>
+    <div id="featured-container" class="bale-grid"></div>
+  </section>
+
+  <section class="collection-section" id="bales">
+    <div class="section-header left">
+      <span>Our Bale Collection</span>
+      <h2>Available Bales</h2>
+      <p>Fresh bale arrivals updated regularly.</p>
+    </div>
+
+    <div id="bale-container" class="bale-grid"></div>
+  </section>
+
+  <section class="collection-section" id="dresses">
+    <div class="section-header left">
+      <span>Single Pieces</span>
+      <h2>Available Dresses</h2>
+      <p>Shop selected dresses and single fashion pieces.</p>
+    </div>
+
+    <div id="dress-container" class="bale-grid"></div>
+  </section>
+
+  <section class="collection-section" id="fabrics">
+    <div class="section-header left">
+      <span>Ready for Expansion</span>
+      <h2>Fabrics</h2>
+      <p>This section can receive real listings once sellers start uploading fabrics.</p>
+    </div>
+
+    <div id="fabric-container" class="bale-grid"></div>
+  </section>
+
+  <section class="collection-section" id="accessories">
+    <div class="section-header left">
+      <span>Ready for Expansion</span>
+      <h2>Accessories</h2>
+      <p>Jewelry, bags, cosmetics, footwear and more can live here later.</p>
+    </div>
+
+    <div id="accessory-container" class="bale-grid"></div>
+  </section>
+
+  <section class="collection-section" id="imports">
+    <div class="section-header left">
+      <span>Future Premium Category</span>
+      <h2>Imported Cars</h2>
+      <p>When you are ready, this can become a premium listing block with separate filters.</p>
+    </div>
+
+    <div class="coming-category-card dark">
+      <h3>Car import marketplace foundation added</h3>
+      <p>For now, this remains a premium placeholder so the brand already feels bigger.</p>
+    </div>
+  </section>
 
   <section class="contact-banner" id="contact">
     <div>
-      <h2>Need help choosing a bale?</h2>
-    <p>Message Yenkasa Store directly and get quick answers.</p>
+      <h2>Need help choosing a product?</h2>
+      <p>Message Yenkasa Store directly for quick support and seller guidance.</p>
     </div>
 
     <a href="https://wa.me/233551699010" target="_blank" class="primary-btn white-btn">

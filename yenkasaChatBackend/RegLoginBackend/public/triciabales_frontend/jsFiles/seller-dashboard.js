@@ -14,8 +14,10 @@ const ordersTab = document.getElementById("ordersTab");
 const payoutTab = document.getElementById("payoutTab");
 const profileTab = document.getElementById("profileTab");
 const productType = document.getElementById("productType");
+const productCategoryType = document.getElementById("productCategoryType");
 const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
+const catalogueFieldPanels = document.querySelectorAll(".catalogue-field-panel");
 const uploadCard = document.getElementById("uploadCard");
 const manageSection = document.getElementById("manageSection");
 const ordersSection = document.getElementById("ordersSection");
@@ -48,6 +50,26 @@ const API_BASE = "/triciabales-api";
 const productCache = new Map();
 let editRetainedImageUrls = [];
 let editMediaDirty = false;
+
+const productCatalogueLabels = {
+  bale: "Bale",
+  dress: "Dress / Clothing",
+  shoe: "Shoes",
+  bag: "Bags",
+  wig: "Wig / Human Hair",
+  fabric: "Fabric / Cloth",
+  accessory: "Fashion Accessory",
+  car_importation: "Cars Importation"
+};
+
+const productCataloguePanels = {
+  shoe: document.getElementById("shoeFields"),
+  bag: document.getElementById("bagFields"),
+  wig: document.getElementById("wigFields"),
+  fabric: document.getElementById("fabricFields"),
+  accessory: document.getElementById("accessoryFields"),
+  car_importation: document.getElementById("carFields")
+};
 
 if (!currentUser || !authToken) {
   window.location.href = "/store/buyer-login";
@@ -106,21 +128,77 @@ function showSection(section) {
   profileSection.style.display = section === "profile" ? "block" : "none";
 }
 
+function getValue(id) {
+  return document.getElementById(id)?.value?.trim() || "";
+}
+
+function setFieldValue(id, value = "") {
+  const field = document.getElementById(id);
+  if (field) {
+    field.value = value;
+  }
+}
+
+function updateCatalogueFieldVisibility(mode) {
+  catalogueFieldPanels.forEach(panel => {
+    panel.classList.add("hidden-panel");
+  });
+
+  const activePanel = productCataloguePanels[mode];
+  if (activePanel) {
+    activePanel.classList.remove("hidden-panel");
+  }
+}
+
+function getProductNamePlaceholder(mode) {
+  const placeholders = {
+    bale: "e.g. Ladies Flannel Blouse Bale",
+    dress: "e.g. Floral Summer Dress",
+    shoe: "e.g. Black Nike Sneakers",
+    bag: "e.g. Brown Leather Hand Bag",
+    wig: "e.g. 24 inches Body Wave Human Hair",
+    fabric: "e.g. 6 yards Ankara Fabric",
+    accessory: "e.g. Gold Fashion Watch",
+    car_importation: "e.g. Toyota Corolla Import"
+  };
+
+  return placeholders[mode] || "Enter product name";
+}
+
+function getCategoryPlaceholder(mode) {
+  const placeholders = {
+    bale: "Flannel Blouse",
+    dress: "Women Dress",
+    shoe: "Sneakers, Heels, Sandals",
+    bag: "Hand Bag, Backpack",
+    wig: "Human Hair, Wig, Bundle",
+    fabric: "Lace, Kente, Ankara",
+    accessory: "Watch, Jewelry, Belt",
+    car_importation: "Sedan, SUV, Pickup"
+  };
+
+  return placeholders[mode] || "Product subcategory";
+}
+
 function setUploadMode(mode) {
-  productType.value = mode;
-  const isBale = mode === "bale";
+  const nextMode = mode === "single" ? "dress" : (mode || "bale");
+  productType.value = nextMode;
+  productCategoryType.value = nextMode;
+
+  const isBale = nextMode === "bale";
+  const isDress = nextMode === "dress";
+  const label = productCatalogueLabels[nextMode] || "Product";
 
   weightField.style.display = isBale ? "flex" : "none";
-  sizeField.style.display = isBale ? "none" : "flex";
-  panelTitle.textContent = isBale ? "Upload New Bale" : "Upload Single Dress";
-  panelDescription.textContent = isBale
-    ? "Add a bale listing with images, or upload a fashion-related video only."
-    : "Add one fashion item with size, images, or a fashion-related video only.";
-  document.querySelector("label[for='name']").textContent = isBale ? "Bale Name" : "Dress Name";
-  document.getElementById("name").placeholder = isBale
-    ? "e.g. Ladies Flannel Blouse Bale"
-    : "e.g. Floral Summer Dress";
-  addBaleBtn.textContent = isBale ? "Upload Bale" : "Upload Dress";
+  sizeField.style.display = isDress ? "flex" : "none";
+  updateCatalogueFieldVisibility(nextMode);
+
+  panelTitle.textContent = `Upload ${label}`;
+  panelDescription.textContent = "Choose the product type first, then complete the fields buyers need for that catalogue.";
+  document.querySelector("label[for='name']").textContent = `${label} Name`;
+  document.getElementById("name").placeholder = getProductNamePlaceholder(nextMode);
+  document.getElementById("category").placeholder = getCategoryPlaceholder(nextMode);
+  addBaleBtn.textContent = `Upload ${label}`;
 }
 
 function formatStatus(status) {
@@ -204,11 +282,29 @@ function resetUploadForm() {
   imagePreview.style.display = "none";
   videoPreview.style.display = "none";
   videoPreview.removeAttribute("src");
+
+  [
+    "shoeBrand", "shoeSize", "shoeColor", "shoeCondition",
+    "hairType", "hairLength", "hairColor", "hairDensity",
+    "bagType", "bagColor", "bagMaterial", "bagCondition",
+    "fabricType", "fabricLength", "fabricColor", "fabricPattern",
+    "accessoryType", "accessoryBrand", "accessoryColor", "accessoryCondition",
+    "carBrand", "carModel", "carYear", "carTransmission", "carMileage", "carFuel"
+  ].forEach(id => setFieldValue(id));
 }
 
 function isFashionVideoOnlyAllowed(mode, category, description, name) {
   const normalizedMode = (mode || "").toLowerCase();
-  if (normalizedMode === "single" || normalizedMode === "dress" || normalizedMode === "bale") {
+  if (
+    normalizedMode === "single" ||
+    normalizedMode === "dress" ||
+    normalizedMode === "bale" ||
+    normalizedMode === "shoe" ||
+    normalizedMode === "bag" ||
+    normalizedMode === "wig" ||
+    normalizedMode === "fabric" ||
+    normalizedMode === "accessory"
+  ) {
     return true;
   }
 
@@ -218,10 +314,107 @@ function isFashionVideoOnlyAllowed(mode, category, description, name) {
     "dress", "shirt", "top", "blouse", "gown", "skirt", "trouser", "trousers",
     "jeans", "hoodie", "jacket", "sneaker", "shoe", "bag", "handbag",
     "boutique", "wear", "outfit", "ladies", "women", "women's", "mens", "men",
-    "kids", "ladies wear", "mens wear", "kids wear"
+    "kids", "ladies wear", "mens wear", "kids wear", "wig", "hair",
+    "human hair", "fabric", "textile", "material", "accessory", "accessories"
   ];
 
   return fashionKeywords.some(keyword => combined.includes(keyword));
+}
+
+function collectCatalogueDetails(mode) {
+  const detailsByMode = {
+    bale: {
+      weight: getValue("weight")
+    },
+    dress: {
+      size: getValue("size")
+    },
+    shoe: {
+      brand: getValue("shoeBrand"),
+      size: getValue("shoeSize"),
+      color: getValue("shoeColor"),
+      condition: getValue("shoeCondition")
+    },
+    wig: {
+      type: getValue("hairType"),
+      length: getValue("hairLength"),
+      color: getValue("hairColor"),
+      density: getValue("hairDensity")
+    },
+    bag: {
+      type: getValue("bagType"),
+      color: getValue("bagColor"),
+      material: getValue("bagMaterial"),
+      condition: getValue("bagCondition")
+    },
+    fabric: {
+      type: getValue("fabricType"),
+      length: getValue("fabricLength"),
+      color: getValue("fabricColor"),
+      pattern: getValue("fabricPattern")
+    },
+    accessory: {
+      type: getValue("accessoryType"),
+      brand: getValue("accessoryBrand"),
+      color: getValue("accessoryColor"),
+      condition: getValue("accessoryCondition")
+    },
+    car_importation: {
+      brand: getValue("carBrand"),
+      model: getValue("carModel"),
+      year: getValue("carYear"),
+      transmission: getValue("carTransmission"),
+      mileage: getValue("carMileage"),
+      fuelType: getValue("carFuel")
+    }
+  };
+
+  return detailsByMode[mode] || {};
+}
+
+function getPrimaryDetail(mode, details) {
+  if (mode === "bale") return details.weight || "";
+  if (mode === "dress" || mode === "shoe") return details.size || "";
+  if (mode === "wig" || mode === "fabric") return details.length || "";
+  if (mode === "bag" || mode === "accessory") return details.type || "";
+  if (mode === "car_importation") return [details.year, details.brand, details.model].filter(Boolean).join(" ");
+  return "";
+}
+
+function validateCatalogueDetails(mode, details) {
+  if (mode === "bale" && !details.weight) {
+    return "Please enter the bale weight.";
+  }
+
+  if (mode === "dress" && !details.size) {
+    return "Please select the dress size.";
+  }
+
+  if (mode === "shoe" && !details.size) {
+    return "Please select the shoe size.";
+  }
+
+  if (mode === "wig" && (!details.type || !details.length || !details.color)) {
+    return "Please enter hair type, length and color.";
+  }
+
+  if (mode === "bag" && !details.type) {
+    return "Please select the bag type.";
+  }
+
+  if (mode === "fabric" && (!details.type || !details.length)) {
+    return "Please enter fabric type and length.";
+  }
+
+  if (mode === "accessory" && !details.type) {
+    return "Please enter the accessory type.";
+  }
+
+  if (mode === "car_importation" && (!details.brand || !details.model || !details.year)) {
+    return "Please enter car brand, model and year.";
+  }
+
+  return "";
 }
 
 function renderProductThumbnail(item) {
@@ -274,9 +467,11 @@ function renderManageProducts(products) {
           <div class="manage-info">
             <strong>${item.name || "Untitled Product"}</strong>
             <small>
-              ${item.type || "product"} • ${item.status || "available"}<br>
+              ${productCatalogueLabels[item.categoryType] || productCatalogueLabels[item.type] || item.type || "Product"} • ${item.status || "available"}<br>
               GH₵${Number(item.price || 0).toFixed(2)} • ${item.category || "-"}<br>
-              ${item.weight ? `Weight/Size: ${item.weight}` : ""}
+              ${item.weight ? `Main detail: ${item.weight}` : ""}
+              ${item.color ? `<br>Color: ${item.color}` : ""}
+              ${item.brand ? `<br>Brand: ${item.brand}` : ""}
             </small>
           </div>
         </div>
@@ -549,8 +744,12 @@ baleTab.addEventListener("click", () => {
 singleTab.addEventListener("click", () => {
   activateTab(singleTab);
   showSection("upload");
-  setUploadMode("single");
+  setUploadMode("dress");
   closeMenu();
+});
+
+productCategoryType.addEventListener("change", () => {
+  setUploadMode(productCategoryType.value);
 });
 
 manageTab.addEventListener("click", () => {
@@ -748,27 +947,25 @@ videoInput.addEventListener("change", () => {
 addBaleBtn.addEventListener("click", async () => {
   const name = document.getElementById("name").value.trim();
   const price = document.getElementById("price").value.trim();
-  const weight = document.getElementById("weight").value.trim();
-  const size = document.getElementById("size").value;
+  const selectedProductType = productCategoryType.value || productType.value || "bale";
+  const catalogueDetails = collectCatalogueDetails(selectedProductType);
+  const primaryDetail = getPrimaryDetail(selectedProductType, catalogueDetails);
   const category = document.getElementById("category").value.trim();
   const description = document.getElementById("description").value.trim();
   const status = document.getElementById("status").value;
   const imageFiles = Array.from(imageInput.files);
   const videoFile = videoInput.files[0];
   const maxSize = 20 * 1024 * 1024;
+  const productLabel = productCatalogueLabels[selectedProductType] || "Product";
 
   if (!name || !price || !category) {
     alert("Please fill all required fields.");
     return;
   }
 
-  if (productType.value === "bale" && !weight) {
-    alert("Please enter the bale weight.");
-    return;
-  }
-
-  if (productType.value === "single" && !size) {
-    alert("Please select a dress size.");
+  const catalogueError = validateCatalogueDetails(selectedProductType, catalogueDetails);
+  if (catalogueError) {
+    alert(catalogueError);
     return;
   }
 
@@ -777,7 +974,7 @@ addBaleBtn.addEventListener("click", async () => {
     return;
   }
 
-  if (!imageFiles.length && videoFile && !isFashionVideoOnlyAllowed(productType.value, category, description, name)) {
+  if (!imageFiles.length && videoFile && !isFashionVideoOnlyAllowed(selectedProductType, category, description, name)) {
     alert("Video-only listings must be fashion related.");
     return;
   }
@@ -797,13 +994,23 @@ addBaleBtn.addEventListener("click", async () => {
   const formData = new FormData();
   formData.append("name", name);
   formData.append("price", price);
-  formData.append("weight", productType.value === "bale" ? weight : size);
+  formData.append("weight", primaryDetail);
   formData.append("category", category);
   formData.append("description", description);
   formData.append("status", status);
-  formData.append("type", productType.value);
+  formData.append("type", selectedProductType);
+  formData.append("categoryType", selectedProductType);
+  formData.append("metadataJson", JSON.stringify(catalogueDetails));
   formData.append("sellerId", currentUser.id);
   formData.append("sellerName", currentUser.name || "");
+
+  if (catalogueDetails.brand) formData.append("brand", catalogueDetails.brand);
+  if (catalogueDetails.color) formData.append("color", catalogueDetails.color);
+  if (catalogueDetails.material) formData.append("material", catalogueDetails.material);
+  if (catalogueDetails.condition) formData.append("condition", catalogueDetails.condition);
+  if (catalogueDetails.length) formData.append("length", catalogueDetails.length);
+  if (catalogueDetails.model) formData.append("model", catalogueDetails.model);
+  if (catalogueDetails.year) formData.append("year", catalogueDetails.year);
 
   imageFiles.forEach(imageFile => formData.append("image", imageFile));
   if (videoFile) {
@@ -815,7 +1022,7 @@ addBaleBtn.addEventListener("click", async () => {
     : `${API_BASE}/api/triciabales/upload`;
 
   addBaleBtn.disabled = true;
-  addBaleBtn.textContent = productType.value === "bale" ? "Uploading Bale..." : "Uploading Dress...";
+  addBaleBtn.textContent = `Uploading ${productLabel}...`;
   progressWrap.style.display = "block";
   statusText.style.display = "block";
 
@@ -834,7 +1041,7 @@ addBaleBtn.addEventListener("click", async () => {
       throw new Error(`HTTP ${response.status}: ${rawText}`);
     }
 
-    alert(productType.value === "bale" ? "Bale uploaded successfully." : "Dress uploaded successfully.");
+    alert(`${productLabel} uploaded successfully.`);
     resetUploadForm();
     loadManageProducts();
   } catch (err) {
@@ -842,7 +1049,7 @@ addBaleBtn.addEventListener("click", async () => {
     alert(`Upload failed.\n\n${err.message}`);
   } finally {
     addBaleBtn.disabled = false;
-    addBaleBtn.textContent = productType.value === "bale" ? "Upload Bale" : "Upload Dress";
+    addBaleBtn.textContent = `Upload ${productCatalogueLabels[productType.value] || "Product"}`;
     progressWrap.style.display = "none";
     statusText.style.display = "none";
   }

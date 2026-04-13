@@ -12,6 +12,13 @@ const mainNav = document.getElementById("mainNav");
 const promoSlides = document.querySelectorAll(".promo-slide");
 let allProducts = [];
 let currentPromoIndex = 0;
+const productDisplayLabels = {
+  bale: "Bale",
+  dress: "Dress",
+  fabric: "Fabric",
+  accessory: "Accessory",
+  car_importation: "Cars Importation"
+};
 
 function getCart() {
   return JSON.parse(localStorage.getItem("cart") || "[]");
@@ -155,8 +162,19 @@ function renderSellerAvatar(item) {
 function getProductCategory(item) {
   const type = String(item.type || "").toLowerCase();
   const category = String(item.category || "").toLowerCase();
+  const categoryType = String(item.categoryType || "").toLowerCase();
   const name = String(item.name || "").toLowerCase();
-  const combined = `${type} ${category} ${name}`;
+  const combined = `${type} ${categoryType} ${category} ${name}`;
+
+  if (
+    type === "car_importation" ||
+    categoryType === "car_importation" ||
+    combined.includes("car") ||
+    combined.includes("vehicle") ||
+    combined.includes("import")
+  ) {
+    return "car_importation";
+  }
 
   if (type === "single" || combined.includes("dress")) {
     return "dress";
@@ -195,7 +213,7 @@ function createProductCard(item) {
   const whatsappNumber = normalizeWhatsappNumber(item.sellerPhone);
   const whatsappMessage = encodeURIComponent(`Hello ${sellerName}, I am interested in ${item.name}`);
   const productCategory = getProductCategory(item);
-  const categoryLabel = productCategory.charAt(0).toUpperCase() + productCategory.slice(1);
+  const categoryLabel = productDisplayLabels[productCategory] || "Product";
   const status = String(item.status || "available").toLowerCase();
 
   card.innerHTML = `
@@ -309,12 +327,14 @@ function renderMarketplaceProducts(products) {
   const dressContainer = document.getElementById("dress-container");
   const fabricContainer = document.getElementById("fabric-container");
   const accessoryContainer = document.getElementById("accessory-container");
+  const importContainer = document.getElementById("import-container");
   const availableProducts = products.filter(item => String(item.status || "").toLowerCase() !== "sold");
   const categoryGroups = {
     bale: products.filter(item => getProductCategory(item) === "bale"),
     dress: products.filter(item => getProductCategory(item) === "dress"),
     fabric: products.filter(item => getProductCategory(item) === "fabric"),
-    accessory: products.filter(item => getProductCategory(item) === "accessory")
+    accessory: products.filter(item => getProductCategory(item) === "accessory"),
+    car_importation: products.filter(item => getProductCategory(item) === "car_importation")
   };
 
   renderIntoContainer(
@@ -350,6 +370,13 @@ function renderMarketplaceProducts(products) {
     categoryGroups.accessory,
     "Accessories section ready",
     "Bags, beauty items, shoes and other accessories can appear here later."
+  );
+
+  renderIntoContainer(
+    importContainer,
+    categoryGroups.car_importation,
+    "Cars importation listings coming soon",
+    "Future car importation listings will appear in this premium section."
   );
 }
 
@@ -403,6 +430,7 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
     document.getElementById("dress-container").innerHTML = errorHtml;
     document.getElementById("fabric-container").innerHTML = errorHtml;
     document.getElementById("accessory-container").innerHTML = errorHtml;
+    document.getElementById("import-container").innerHTML = errorHtml;
     if (featuredContainer) {
       featuredContainer.innerHTML = errorHtml;
     }

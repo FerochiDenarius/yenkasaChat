@@ -856,6 +856,10 @@ body {
   gap: 18px;
 }
 
+.seller-upload-grid .field.full {
+  grid-column: 1 / -1;
+}
+
 .seller-upload-box {
   border: 2px dashed #d1d5db;
   border-radius: 20px;
@@ -1145,6 +1149,24 @@ footer {
 
 .modern-upload-grid {
   gap: 22px;
+}
+
+.catalogue-field-panel {
+  grid-column: 1 / -1;
+  border: 1px solid #e5e7eb;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 22px;
+}
+
+.catalogue-field-panel::before {
+  content: "Catalogue details";
+  grid-column: 1 / -1;
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .modern-field label {

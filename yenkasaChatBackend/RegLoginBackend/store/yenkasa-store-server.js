@@ -34,6 +34,24 @@ function forwardHeaders(req, extraHeaders = {}) {
   return headers;
 }
 
+function appendOptionalProductFields(form, body) {
+  [
+    'categoryType',
+    'brand',
+    'color',
+    'material',
+    'condition',
+    'length',
+    'model',
+    'year',
+    'metadataJson'
+  ].forEach(field => {
+    if (body?.[field] !== undefined && body[field] !== null && String(body[field]).trim() !== '') {
+      form.append(field, body[field]);
+    }
+  });
+}
+
 module.exports = function (app) {
 
   // USER REGISTER
@@ -489,6 +507,7 @@ module.exports = function (app) {
         form.append('description', req.body.description);
         form.append('status', req.body.status);
         form.append('type', req.body.type || 'bale');
+        appendOptionalProductFields(form, req.body);
         if (req.body.sellerId) {
           form.append('sellerId', req.body.sellerId);
         }
@@ -561,6 +580,7 @@ module.exports = function (app) {
         form.append('description', req.body.description);
         form.append('status', req.body.status);
         form.append('type', req.body.type || 'product_video');
+        appendOptionalProductFields(form, req.body);
         if (req.body.sellerId) {
           form.append('sellerId', req.body.sellerId);
         }

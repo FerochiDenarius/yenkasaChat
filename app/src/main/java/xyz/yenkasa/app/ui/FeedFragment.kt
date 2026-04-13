@@ -1,11 +1,13 @@
 package xyz.yenkasa.app.ui
 
 import android.app.AlertDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.*
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -157,6 +159,9 @@ class FeedFragment : Fragment() {
         val intent = Intent(requireContext(), PostMediaActivity::class.java)
         intent.putExtra("MEDIA_URL", post.imageUrl)
         intent.putExtra("MEDIA_TYPE", "image")
+        intent.putExtra("POST_ID", post._id)
+        intent.putExtra("USERNAME", post.userId.username)
+        intent.putExtra("CAPTION", post.caption ?: "")
         startActivity(intent)
     }
 
@@ -309,25 +314,46 @@ class FeedFragment : Fragment() {
             return
         }
 
-        val names = allCommunities.map { it.displayName }
+        val selectedIds = selectedCommunities.mapNotNull { it.id }.toMutableSet()
+        val names = allCommunities
+            .map { it.displayName ?: it.name ?: "Unnamed community" }
+            .toTypedArray()
         val checkedItems = BooleanArray(allCommunities.size) { i ->
-            selectedCommunities.contains(allCommunities[i])
+            allCommunities[i].id in selectedIds
         }
 
-        AlertDialog.Builder(requireContext())
+        val dialog = AlertDialog.Builder(requireContext())
             .setTitle("Select Communities")
-            .setMultiChoiceItems(names.toTypedArray(), checkedItems) { _, which, isChecked ->
+            .setMultiChoiceItems(names, checkedItems) { _, which, isChecked ->
                 val community = allCommunities[which]
-                if (isChecked) selectedCommunities.add(community)
-                else selectedCommunities.remove(community)
+                val communityId = community.id
+
+                if (isChecked) {
+                    if (communityId == null || selectedCommunities.none { it.id == communityId }) {
+                        selectedCommunities.add(community)
+                    }
+                } else {
+                    selectedCommunities.removeAll { it.id == communityId }
+                }
             }
-            .setPositiveButton("Apply") { dialog, _ ->
+            .setPositiveButton("OK") { dialog, _ ->
                 updateSelectedCommunitiesUI()
                 loadFeed()
                 dialog.dismiss()
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            val actionColor = ContextCompat.getColor(requireContext(), R.color.yenkasa_emerald)
+            val cancelColor = ContextCompat.getColor(requireContext(), R.color.yenkasa_black)
+
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.setTextColor(actionColor)
+            dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.setTextColor(cancelColor)
+            dialog.listView?.isVerticalScrollBarEnabled = true
+        }
+
+        dialog.show()
     }
 
     private fun updateSelectedCommunitiesUI() {

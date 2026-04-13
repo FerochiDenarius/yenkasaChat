@@ -2,6 +2,8 @@ const Ad = require('../models/Ad.model');
 const AdView = require('../models/AdView.model');
 const User = require('../models/user.model');
 const RewardTx = require('../models/Rewards.Transaction.model');
+const { SYSTEM_USER_ID } = require('../config/system');
+const { sendNotification } = require('../services/notification.service');
 
 
 // GET /ads/feed?page=&limit=
@@ -74,13 +76,24 @@ exports.rewardAdClick = async (req, res) => {
       $inc: { coins: rewardAmount }
     });
 
-    // Send Notification
-    const notificationService = require("../services/notification.service");
-    await notificationService.sendNotification(
-      userId,
-      "Ad Click Reward",
-      `You earned ${rewardAmount} YKC for clicking an ad.`
-    );
+    const rewardMessage = `You earned ${rewardAmount} YKC for clicking an ad.`;
+    await sendNotification({
+      type: "reward",
+      senderId: SYSTEM_USER_ID,
+      receiverId: userId,
+      activityId: tx._id.toString(),
+      targetType: "wallet",
+      targetId: tx._id.toString(),
+      message: rewardMessage,
+      push: true,
+      pushTitle: "Reward earned",
+      pushBody: rewardMessage,
+      pushData: {
+        transactionId: tx._id.toString(),
+        rewardType: tx.type,
+        amount: rewardAmount
+      }
+    });
 
     // Emit socket update
     if (global.io) {
@@ -207,6 +220,25 @@ exports.rewardAd = async (req, res) => {
 
     // credit user's wallet/coins (implement your existing wallet update)
     await User.findByIdAndUpdate(userId, { $inc: { coins: tx.amount } });
+
+    const rewardMessage = `You earned ${tx.amount} YKC for watching an ad.`;
+    await sendNotification({
+      type: "reward",
+      senderId: SYSTEM_USER_ID,
+      receiverId: userId,
+      activityId: tx._id.toString(),
+      targetType: "wallet",
+      targetId: tx._id.toString(),
+      message: rewardMessage,
+      push: true,
+      pushTitle: "Reward earned",
+      pushBody: rewardMessage,
+      pushData: {
+        transactionId: tx._id.toString(),
+        rewardType: tx.type,
+        amount: tx.amount
+      }
+    });
 
     // also increment verification metric adsViewed if desired:
     const AppVerification = require('../models/appverification.model');

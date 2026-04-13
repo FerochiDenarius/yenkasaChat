@@ -104,6 +104,20 @@ class AccountInfoActivity : AppCompatActivity() {
                 // When a user clicks a post in the grid, open the detail view
                 val intent = Intent(this, PostMediaActivity::class.java)
                 intent.putExtra("POST_ID", post._id)
+                intent.putExtra("MEDIA_URL", post.imageUrl?.takeIf { it.isNotBlank() }
+                    ?: post.videoUrl?.takeIf { it.isNotBlank() }
+                    ?: post.audioUrl?.takeIf { it.isNotBlank() })
+                intent.putExtra(
+                    "MEDIA_TYPE",
+                    when {
+                        !post.videoUrl.isNullOrEmpty() -> "video"
+                        !post.audioUrl.isNullOrEmpty() -> "audio"
+                        !post.imageUrl.isNullOrEmpty() -> "image"
+                        else -> "text"
+                    }
+                )
+                intent.putExtra("USERNAME", post.userId.username)
+                intent.putExtra("CAPTION", post.caption ?: "")
                 startActivity(intent)
             },
             onShareClick = { post ->

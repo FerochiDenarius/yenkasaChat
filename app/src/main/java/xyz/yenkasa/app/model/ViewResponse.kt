@@ -4,6 +4,7 @@ data class ViewResponse(
     val success: Boolean,
     val message: String? = null,
     val viewsCount: Int = 0,
+    val viewCount: Int = 0,
     val rewardAmount: Int? = 0,
     val rewardTransaction: RewardTransaction? = null,
     val view: ViewData? = null

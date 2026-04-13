@@ -3,7 +3,10 @@ const axios = require('axios');
 
 // Load correct env vars
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
-const ONESIGNAL_REST_API_KEY = process.env.yenkasachatOneSignalKey; // ✅ Changed here
+const ONESIGNAL_REST_API_KEY =
+    process.env.yenkasachatOneSignalKey ||
+    process.env.ONESIGNAL_KEY ||
+    process.env.ONESIGNAL_REST_API_KEY;
 
 const ONESIGNAL_API_BASE_URL = 'https://onesignal.com/api/v1';
 
@@ -13,6 +16,7 @@ if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
 
 async function sendPushNotification({
     playerId,
+    targetPlayerIds,
     title,
     body,
     data,
@@ -26,11 +30,16 @@ async function sendPushNotification({
         throw new Error('OneSignal configuration is missing. Cannot send notification.');
     }
 
-    if (!playerId || !title || !body) {
+    const targetIds = playerId || targetPlayerIds;
+
+    if (!targetIds || !title || !body) {
         throw new Error('Missing required parameters: playerId, title, and body are all required.');
     }
 
-    const playerIdsToSend = Array.isArray(playerId) ? playerId : [playerId];
+    const playerIdsToSend = (Array.isArray(targetIds) ? targetIds : [targetIds])
+        .filter(Boolean)
+        .map(id => String(id).trim())
+        .filter(Boolean);
     if (playerIdsToSend.length === 0) {
         return { message: "No player IDs provided, notification not sent." };
     }

@@ -45,6 +45,7 @@ class PostMediaActivity : AppCompatActivity() {
     private var handler = Handler(Looper.getMainLooper())
     private var isAudioPrepared = false
     private var isVideoMuted = false
+    private var hasRecordedView = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,6 +96,8 @@ class PostMediaActivity : AppCompatActivity() {
             .load(mediaUrl)
             .placeholder(R.drawable.placeholder_image)
             .into(imageView)
+
+        handler.postDelayed({ rewardView(3) }, 3000)
     }
 
     private fun showVideo() {
@@ -109,6 +112,9 @@ class PostMediaActivity : AppCompatActivity() {
             mp.isLooping = true
             mp.setVolume(1f, 1f) // ensure sound plays
             videoView.start()
+            handler.postDelayed({
+                if (videoView.isPlaying) rewardView(10)
+            }, 10000)
 
             // play/pause
             videoPlayPauseBtn.setOnClickListener {
@@ -117,7 +123,9 @@ class PostMediaActivity : AppCompatActivity() {
                     videoPlayPauseBtn.setImageResource(R.drawable.ic_play)
                 } else {
                     videoView.start()
-                    rewardView()
+                    handler.postDelayed({
+                        if (videoView.isPlaying) rewardView(10)
+                    }, 10000)
 
                     videoPlayPauseBtn.setImageResource(R.drawable.ic_pause)
                 }
@@ -174,6 +182,9 @@ class PostMediaActivity : AppCompatActivity() {
                 audioPlayer?.start()
                 audioPlayBtn.visibility = View.GONE
                 audioPauseBtn.visibility = View.VISIBLE
+                handler.postDelayed({
+                    if (audioPlayer?.isPlaying == true) rewardView(20)
+                }, 20000)
             }
         }
 
@@ -233,9 +244,12 @@ class PostMediaActivity : AppCompatActivity() {
 
     }
 
-    private fun rewardView() {
+    private fun rewardView(durationSeconds: Int) {
+        if (hasRecordedView) return
+
         val postId = intent.getStringExtra("POST_ID") ?: return
         val token = TokenManager.getToken(this) ?: return
+        hasRecordedView = true
 
         // Determine mediaType for reward
         val mediaType = when (mediaType?.lowercase()) {
@@ -252,17 +266,19 @@ class PostMediaActivity : AppCompatActivity() {
                     postId,
                     "Bearer $token",
                     ViewRequest(
-                        watchDuration = 10,    // reward amount
+                        watchDuration = durationSeconds,
                         mediaType = mediaType  // ⭐ REQUIRED PARAMETER
                     )
                 )
 
                 if (response.isSuccessful) {
                     // reward recorded successfully (no UI update needed)
+                } else {
+                    hasRecordedView = false
                 }
 
             } catch (e: Exception) {
-                // ignore silently
+                hasRecordedView = false
             }
         }
     }

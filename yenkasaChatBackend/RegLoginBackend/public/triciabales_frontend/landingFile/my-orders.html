@@ -19,52 +19,92 @@
       <p>Track your paid, unpaid, and pending orders in one place</p>
     </div>
 
-    <div class="card account-profile-card">
+    <div class="card account-profile-card profile-card-shell">
       <div class="card-content">
-        <div class="profile-panel-header">
-          <div class="profile-avatar" id="profilePreview"></div>
-          <div>
-            <h2 data-profile-name>Account Profile</h2>
-            <p data-profile-email>Update your buyer details, profile photo, WhatsApp number and password.</p>
-          </div>
+        <div class="profile-topbar">
+          <span class="profile-kicker">Account Settings</span>
+          <h2>Buyer Profile</h2>
+          <p>Manage your personal details, contact information and login security.</p>
         </div>
 
-        <form id="accountProfileForm" class="settings-grid profile-form">
-          <div class="field">
-            <label for="profileName">Full Name</label>
-            <input type="text" id="profileName" required>
-          </div>
+        <div class="profile-layout-modern">
+          <aside class="profile-side-card">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar large" id="profilePreview"></div>
+              <label for="profileImage" class="profile-image-upload-btn">Change Photo</label>
+              <input type="file" id="profileImage" accept="image/*" hidden>
+            </div>
 
-          <div class="field">
-            <label for="profileEmail">Email</label>
-            <input type="email" id="profileEmail" required>
-          </div>
+            <div class="profile-side-meta">
+              <h3 data-profile-name>Buyer Name</h3>
+              <p data-profile-email>buyer@email.com</p>
+              <span class="profile-status-chip">Active Buyer</span>
+            </div>
 
-          <div class="field">
-            <label for="profilePhone">WhatsApp / Phone Number</label>
-            <input type="tel" id="profilePhone" placeholder="0241234567">
-          </div>
+            <div class="profile-side-note">
+              <p>Keep your details updated so sellers and delivery support can reach you easily.</p>
+            </div>
+          </aside>
 
-          <div class="field">
-            <label for="profileImage">Profile Picture</label>
-            <input type="file" id="profileImage" accept="image/*">
-          </div>
+          <form id="accountProfileForm" class="profile-form-modern">
+            <div class="profile-section-card">
+              <div class="profile-section-head">
+                <h3>Personal Information</h3>
+                <p>Your account identity</p>
+              </div>
 
-          <div class="field full">
-            <label for="profileAddress">Address</label>
-            <textarea id="profileAddress" rows="3"></textarea>
-          </div>
+              <div class="settings-grid">
+                <div class="field modern-field">
+                  <label for="profileName">Full Name</label>
+                  <input type="text" id="profileName" required placeholder="Enter full name">
+                </div>
 
-          <div class="field full">
-            <label for="profilePassword">New Password</label>
-            <input type="password" id="profilePassword" placeholder="Leave blank to keep current password">
-          </div>
+                <div class="field modern-field">
+                  <label for="profileEmail">Email Address</label>
+                  <input type="email" id="profileEmail" required placeholder="Enter email address">
+                </div>
+              </div>
+            </div>
 
-          <div class="field full">
-            <button type="submit" class="primary-btn settings-submit">Save Profile</button>
-            <p id="accountProfileFeedback" class="profile-feedback"></p>
-          </div>
-        </form>
+            <div class="profile-section-card">
+              <div class="profile-section-head">
+                <h3>Contact Details</h3>
+                <p>How sellers and the platform can reach you</p>
+              </div>
+
+              <div class="settings-grid">
+                <div class="field modern-field">
+                  <label for="profilePhone">WhatsApp / Phone Number</label>
+                  <input type="tel" id="profilePhone" placeholder="0241234567">
+                </div>
+
+                <div class="field full modern-field">
+                  <label for="profileAddress">Address</label>
+                  <textarea id="profileAddress" rows="4" placeholder="Enter your address"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-section-card">
+              <div class="profile-section-head">
+                <h3>Security</h3>
+                <p>Update your password when needed</p>
+              </div>
+
+              <div class="settings-grid">
+                <div class="field full modern-field">
+                  <label for="profilePassword">New Password</label>
+                  <input type="password" id="profilePassword" placeholder="Leave blank to keep current password">
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-action-row">
+              <button type="submit" class="primary-btn settings-submit">Save Profile Changes</button>
+              <p id="accountProfileFeedback" class="profile-feedback"></p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 

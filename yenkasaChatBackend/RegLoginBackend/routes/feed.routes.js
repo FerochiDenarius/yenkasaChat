@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const Post = require("../models/post.model");
 const UserPrivacy = require("../models/userPrivacy.model");
 const Ad = require("../models/Ad.model"); // ⭐ ADD THIS
+const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 
 /* ---------------------------------------------------
  * Helper: Get ALL users that viewer cannot see
@@ -39,6 +40,8 @@ router.get("/", auth, async (req, res) => {
       .skip(skip)
       .limit(limit)
       .lean();
+
+    await attachAccurateViewCounts(posts);
 
     const totalPosts = await Post.countDocuments({
       isActive: true,

@@ -4,6 +4,7 @@ const Post = require('../models/post.model');
 const CoinSupply = require('../models/coinSupply');
 const { v4: uuidv4 } = require('uuid');
 const { SYSTEM_USER_ID, SYSTEM_USERNAME, SYSTEM_WALLET_ID } = require('../config/system');
+const { sendNotification } = require('./notification.service');
 
 
 const MAX_SUPPLY = 100_000_000;
@@ -97,6 +98,32 @@ const tx = await CoinTransaction.create({
 
 
     console.log(`✅ Reward Transaction Saved → TXID=${tx.transactionId}`);
+
+    try {
+      const rewardMessage = opts.description
+        ? `${opts.description}. +${Number(amount)} YKC added to your wallet.`
+        : `You earned +${Number(amount)} YKC.`;
+
+      await sendNotification({
+        type: "reward",
+        senderId: SYSTEM_USER_ID,
+        receiverId: toUserId,
+        activityId: tx.transactionId,
+        targetType: "wallet",
+        targetId: tx.transactionId,
+        message: rewardMessage,
+        push: true,
+        pushTitle: "Reward earned",
+        pushBody: rewardMessage,
+        pushData: {
+          transactionId: tx.transactionId,
+          rewardType: tx.type,
+          amount: Number(amount)
+        }
+      });
+    } catch (notifyErr) {
+      console.error("⚠️ Reward notification failed:", notifyErr.message);
+    }
 
     /* ---------------------------------------------------
      * Update verification metrics safely

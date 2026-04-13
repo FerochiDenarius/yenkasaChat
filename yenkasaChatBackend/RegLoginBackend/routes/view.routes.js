@@ -8,6 +8,7 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require("../services/notification.service");
+const { toObjectId } = require("../utils/postViewCounts");
 
 
 
@@ -42,16 +43,21 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
     const { watchDuration = 0, mediaType = "unknown" } = req.body;
-    const viewerId = req.user?.id;
+    const viewerId = req.user?._id || req.user?.userId || req.user?.id;
 
     if (!viewerId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const objectIdPost = toObjectId(postId);
+    if (!objectIdPost) {
+      return res.status(400).json({ success: false, message: "Invalid post id" });
+    }
 
     // ---------------------------------------------------------------------
     // LOAD REQUIRED DATA
     // ---------------------------------------------------------------------
     const [post, viewer] = await Promise.all([
-      Post.findById(postId),
+      Post.findById(objectIdPost),
       User.findById(viewerId)
     ]);
 
@@ -70,7 +76,7 @@ const activityId = new mongoose.Types.ObjectId().toString();
 // ---------------------------------------------------------------------
 const view = await View.create({
   activityId,
-  postId,
+  postId: objectIdPost,
   userId: viewerId,
   username: viewer.username,
   mediaType,
@@ -84,21 +90,23 @@ const view = await View.create({
     // ---------------------------------------------------------------------
     // FOREIGN REFERENCE → add viewObject to Post.views[]
     // ---------------------------------------------------------------------
-    await Post.findByIdAndUpdate(postId, {
+    await Post.findByIdAndUpdate(objectIdPost, {
       $addToSet: { views: view._id }
     });
 
     // ---------------------------------------------------------------------
     // RECALCULATE TRUE VIEW COUNT
     // ---------------------------------------------------------------------
-    const viewsCount = await View.countDocuments({ postId });
+    const viewsCount = await View.countDocuments({ postId: objectIdPost });
 
     // ---------------------------------------------------------------------
     // SYNC LEGACY FIELD FOR ANDROID (viewCount)
     // ---------------------------------------------------------------------
-    await Post.findByIdAndUpdate(postId, {
-      viewCount: viewsCount
-    });
+    const updatedPost = await Post.findByIdAndUpdate(
+      objectIdPost,
+      { $set: { viewCount: viewsCount } },
+      { new: true, select: "_id viewCount" }
+    ).lean();
 
     // ---------------------------------------------------------------------
     // ⭐ REWARD LOGIC
@@ -204,10 +212,11 @@ const ownerActivityId = `owner_${activityId}`;
     // ---------------------------------------------------------------------
     if (global.io) {
       global.io.emit("viewUpdate", {
-        postId,
-        viewsCount,
+        postId: objectIdPost.toString(),
+        viewsCount: updatedPost?.viewCount ?? viewsCount,
+        viewCount: updatedPost?.viewCount ?? viewsCount,
         rewardAmount,
-        viewerId,
+        viewerId: viewerId.toString(),
         timestamp: new Date()
       });
     }
@@ -218,7 +227,9 @@ const ownerActivityId = `owner_${activityId}`;
     return res.json({
       success: true,
       message: "View recorded",
-      viewsCount,
+      viewsCount: updatedPost?.viewCount ?? viewsCount,
+      viewCount: updatedPost?.viewCount ?? viewsCount,
+      view,
       rewardAmount,
       rewardTransaction: rewardTx
     });
@@ -236,13 +247,19 @@ const ownerActivityId = `owner_${activityId}`;
 // ======================================================
 router.get('/:postId/views', authMiddleware, async (req, res) => {
   try {
-    const objectIdPost = new mongoose.Types.ObjectId(req.params.postId);
+    const objectIdPost = toObjectId(req.params.postId);
+    if (!objectIdPost) {
+      return res.status(400).json({ success: false, message: "Invalid post id" });
+    }
+
     const viewsCount = await View.countDocuments({ postId: objectIdPost });
+    await Post.findByIdAndUpdate(objectIdPost, { $set: { viewCount: viewsCount } });
 
     res.json({
       success: true,
       postId: req.params.postId,
       viewsCount,
+      viewCount: viewsCount,
       timestamp: new Date()
     });
 

@@ -119,20 +119,29 @@ const onlineUsers = new Map();
 io.on('connection', (socket) => {
   console.log(`💡 Client connected: ${socket.id}`);
 
+  const markUserOnline = async (userId) => {
+    if (!userId) return;
+
+    console.log(`🟢 User ${userId} is online`);
+    onlineUsers.set(userId, socket.id);
+    socket.join(userId.toString());
+
+    await User.findByIdAndUpdate(userId, { online: true }, { new: true });
+    io.emit('getOnlineUsers', Array.from(onlineUsers.keys()));
+  };
+
   // ✅ User connects
   socket.on('userConnected', async (data) => {
     try {
-      const { userId } = data;
-      if (!userId) return;
+      await markUserOnline(data?.userId || data);
+    } catch (err) {
+      console.error('❌ Error setting user online:', err.message);
+    }
+  });
 
-      console.log(`🟢 User ${userId} is online`);
-      onlineUsers.set(userId, socket.id);
-
-      // Update MongoDB
-      await User.findByIdAndUpdate(userId, { online: true }, { new: true });
-
-      // Notify all clients of updated online users
-      io.emit('getOnlineUsers', Array.from(onlineUsers.keys()));
+  socket.on('userOnline', async (userId) => {
+    try {
+      await markUserOnline(userId);
     } catch (err) {
       console.error('❌ Error setting user online:', err.message);
     }

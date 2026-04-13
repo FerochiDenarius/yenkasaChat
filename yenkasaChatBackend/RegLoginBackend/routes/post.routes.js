@@ -16,6 +16,7 @@ const { SYSTEM_USER_ID } = require('../config/system');
 const rewardService = require('../services/reward.service');
 
 const UserPrivacy = require("../models/userPrivacy.model");
+const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 
 /* ---------------------------------------------------
  * ONE-WAY BLOCK CHECK (Instagram style)
@@ -365,6 +366,8 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
       .populate('communityId', 'name displayName')
       .lean();
 
+    await attachAccurateViewCounts(posts);
+
     const totalPosts = await Post.countDocuments({ userId, isActive: true, status: 'approved' });
 
     res.json({
@@ -414,6 +417,8 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
     .populate("userId", "username profileImage verified")
     .populate("communityId", "name displayName")  // ✅ FIXED: populate communityId object
     .lean();
+
+  await attachAccurateViewCounts(posts);
 
   const totalPosts = await Post.countDocuments(filter);
 
@@ -467,6 +472,8 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
       .populate('communityId', 'name displayName')
       .lean();
 
+    await attachAccurateViewCounts(posts);
+
     const totalPosts = await Post.countDocuments({
       communityId,
       isActive: true,
@@ -511,7 +518,10 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
     })
       .sort({ createdAt: -1 })
       .populate('userId', 'username profileImage verified')
-      .populate('communityId', 'name displayName');
+      .populate('communityId', 'name displayName')
+      .lean();
+
+    await attachAccurateViewCounts(posts);
 
     res.json({ community, posts });
   } catch (err) {
@@ -540,6 +550,8 @@ router.get("/:postId", authMiddleware, async (req, res) => {
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
+
+    await attachAccurateViewCounts(post);
 
     // 🔒 One-way block enforcement (same logic as feed)
     const blocked = await isBlocked(viewerId, post.userId._id.toString());

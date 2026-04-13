@@ -3,6 +3,8 @@ package xyz.yenkasa.app
 import android.app.Application
 import android.app.NotificationChannel // Added
 import android.app.NotificationManager // Added
+import android.app.PendingIntent
+import android.content.Intent
 import android.os.Build // Added
 import android.util.Log
 import io.socket.client.IO
@@ -21,6 +23,11 @@ import android.media.AudioAttributes
 import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
+import org.json.JSONObject
+import xyz.yenkasa.app.ui.CoinWalletActivity
+import xyz.yenkasa.app.ui.CommentsActivity
+import xyz.yenkasa.app.ui.MainActivity
+import xyz.yenkasa.app.ui.UserProfileActivity
 
 
 class MyApplication : Application(), OSSubscriptionObserver {
@@ -102,6 +109,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
             val notif = event.notification
             val title = notif.title ?: "Notification"
             val body = notif.body ?: ""
+            val contentIntent = buildNotificationPendingIntent(notif.additionalData)
 
             // ❗ Stop OneSignal from showing its notification
             event.complete(null)
@@ -114,6 +122,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setSound(soundUri)
+                .setContentIntent(contentIntent)
 
             val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(System.currentTimeMillis().toInt(), builder.build())
@@ -122,7 +131,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
         OneSignal.setNotificationOpenedHandler { result ->
             val notification = result.notification
             Log.i(ONE_SIGNAL_TAG, "Notification Clicked: ${notification.notificationId}, Title: ${notification.title}")
-            // Add your navigation or custom action logic here
+            openNotificationTarget(notification.additionalData)
         }
 
         // Initial check for Player ID (as you have)
@@ -201,6 +210,47 @@ class MyApplication : Application(), OSSubscriptionObserver {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
+    }
+
+    private fun buildNotificationPendingIntent(data: JSONObject?): PendingIntent {
+        val intent = buildNotificationIntent(data)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+
+        val requestCode = data?.optString("notificationId")
+            ?.takeIf { it.isNotBlank() }
+            ?.hashCode()
+            ?: System.currentTimeMillis().toInt()
+
+        return PendingIntent.getActivity(this, requestCode, intent, flags)
+    }
+
+    private fun openNotificationTarget(data: JSONObject?) {
+        startActivity(buildNotificationIntent(data))
+    }
+
+    private fun buildNotificationIntent(data: JSONObject?): Intent {
+        val targetType = data?.optString("targetType").orEmpty()
+        val targetId = data?.optString("targetId").orEmpty()
+        val activityId = data?.optString("activityId").orEmpty()
+
+        val intent = when (targetType) {
+            "wallet" -> Intent(this, CoinWalletActivity::class.java)
+            "post" -> Intent(this, CommentsActivity::class.java).apply {
+                putExtra("POST_ID", targetId.ifBlank { activityId })
+            }
+            "comment" -> Intent(this, CommentsActivity::class.java).apply {
+                putExtra("POST_ID", targetId.ifBlank { activityId })
+                putExtra("openComments", true)
+            }
+            "profile" -> Intent(this, UserProfileActivity::class.java).apply {
+                putExtra("USER_ID", targetId)
+            }
+            else -> Intent(this, MainActivity::class.java)
+        }
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        return intent
     }
 
     override fun onOSSubscriptionChanged(stateChanges: OSSubscriptionStateChanges) {

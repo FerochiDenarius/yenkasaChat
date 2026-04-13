@@ -199,6 +199,11 @@ class UserNotificationsActivity : AppCompatActivity() {
                 }
                 return
             }
+
+            "wallet" -> {
+                startActivity(Intent(this, CoinWalletActivity::class.java))
+                return
+            }
         }
 
         // ------------------------------------------------------
@@ -287,6 +292,13 @@ class UserNotificationsActivity : AppCompatActivity() {
                 val intent = Intent(this, CommentsActivity::class.java)
                 intent.putExtra("POST_ID", targetId)
                 startActivity(intent)
+                return
+            }
+
+            "reward", "reward_post", "reward_comment", "reward_comment_like",
+            "reward_post_like", "reward_post_view", "reward_post_view_received",
+            "reward_follow", "reward_verification", "reward_daily_login" -> {
+                startActivity(Intent(this, CoinWalletActivity::class.java))
                 return
             }
 

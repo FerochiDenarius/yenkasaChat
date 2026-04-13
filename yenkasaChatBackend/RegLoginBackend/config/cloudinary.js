@@ -1,7 +1,7 @@
 // config/cloudinary.js
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const path = require("path");
+const cloudinarySdk = require('cloudinary');
+const cloudinaryStorage = require('multer-storage-cloudinary');
+const cloudinary = cloudinarySdk.v2;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -9,19 +9,17 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => {
-    return {
-      folder: 'yenkasa/profile',
-      allowed_formats: ['jpg', 'jpeg', 'png'],
-      public_id: `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
-      transformation: [
-        { width: 400, height: 400, crop: "fill", gravity: "face" },
-        { quality: "auto:good" }
-      ]
-    };
-  }
+const storage = cloudinaryStorage({
+  cloudinary: cloudinarySdk,
+  folder: 'yenkasa/profile',
+  allowedFormats: ['jpg', 'jpeg', 'png'],
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`);
+  },
+  transformation: [
+    { width: 400, height: 400, crop: "fill", gravity: "face" },
+    { quality: "auto:good" }
+  ]
 });
 
 module.exports = { cloudinary, storage };

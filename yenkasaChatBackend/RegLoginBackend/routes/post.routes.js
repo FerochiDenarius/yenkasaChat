@@ -43,6 +43,24 @@ async function isBlocked(userA, userB) {
 const REWARDS = { CREATE_POST: 10, GET_LIKE: 2, GET_COMMENT: 3 };
 
 /* ------------------------------------
+ * POSTING ACCESS CONFIGURATION
+ * ------------------------------------ */
+const UNVERIFIED_POST_LIMIT = 5;
+const POST_WINDOW_HOURS = 48;
+
+function getPostWindowStart() {
+  return new Date(Date.now() - POST_WINDOW_HOURS * 60 * 60 * 1000);
+}
+
+function isDeveloperRole(role) {
+  return Permission.normalize(role) === "developer";
+}
+
+function isAutoApprovedRole(role) {
+  return Permission.canApprove(role) || isDeveloperRole(role);
+}
+
+/* ------------------------------------
  * ✍️ CREATE POST (Supports text, image, video, audio)
  * ------------------------------------ */
 router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
@@ -64,8 +82,66 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
 
     const normalizedRole = Permission.normalize(user.roleName || user.role);
 
-    if (!Permission.canPost(normalizedRole, user.verified)) {
-      return res.status(403).json({ error: "You do not have permission to create posts." });
+    if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
+      return res.status(403).json({
+        success: false,
+        code: "ACCOUNT_SUSPENDED",
+        error: "Your account is suspended and cannot create posts right now.",
+        suspendedUntil: user.suspendedUntil
+      });
+    }
+
+    const isPrivileged = isAutoApprovedRole(normalizedRole);
+    const isVerifiedUser = user.verified === true;
+    const windowStart = getPostWindowStart();
+    let recentPostsCount = 0;
+    let remainingPosts = null;
+
+    if (!communityName || communityName.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        error: "Community selection is required to create a post."
+      });
+    }
+
+    const selectedCommunity = await Community.findOne({
+      $or: [
+        { name: communityName.trim() },
+        { displayName: communityName.trim() }
+      ]
+    });
+
+    if (!selectedCommunity) {
+      return res.status(404).json({
+        success: false,
+        error: "Selected community not found"
+      });
+    }
+
+    if (!isPrivileged && !isVerifiedUser) {
+      recentPostsCount = await Post.countDocuments({
+        userId: user._id,
+        createdAt: { $gte: windowStart }
+      });
+
+      if (recentPostsCount >= UNVERIFIED_POST_LIMIT) {
+        return res.status(429).json({
+          success: false,
+          code: "POST_LIMIT_REACHED",
+          error: `Unverified users can only create ${UNVERIFIED_POST_LIMIT} posts within ${POST_WINDOW_HOURS} hours.`,
+          postingAccess: {
+            verified: false,
+            privileged: false,
+            postWindowHours: POST_WINDOW_HOURS,
+            postingLimit: UNVERIFIED_POST_LIMIT,
+            postsUsed: recentPostsCount,
+            remainingPosts: 0,
+            requiresReview: true
+          }
+        });
+      }
+
+      remainingPosts = UNVERIFIED_POST_LIMIT - (recentPostsCount + 1);
     }
 
     let imageUrl = '';
@@ -74,18 +150,17 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     let detectedPostType = postType || 'text';
 
     let file;
-    if (req.files.media) file = req.files.media[0];
-    else if (req.files.videoUrl) file = req.files.videoUrl[0];
-    else if (req.files.audioUrl) file = req.files.audioUrl[0];
-    else if (req.files.imageUrl) file = req.files.imageUrl[0];
+    if (req.files?.media) file = req.files.media[0];
+    else if (req.files?.videoUrl) file = req.files.videoUrl[0];
+    else if (req.files?.audioUrl) file = req.files.audioUrl[0];
+    else if (req.files?.imageUrl) file = req.files.imageUrl[0];
 
     if (file) {
       const folder = "yenkasachat/posts";
-      const mime = file.mimetype;
+      const mime = file.mimetype || "";
 
       const isVideo = mime.startsWith("video");
       const isAudio = mime.startsWith("audio");
-
       const resourceType = isVideo || isAudio ? "video" : "image";
 
       const uploadRes = await cloudinary.uploader.upload(file.path, {
@@ -105,22 +180,6 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       }
     }
 
-    if (!communityName || communityName.trim() === "") {
-      return res.status(400).json({ error: "Community selection is required to create a post." });
-    }
-
-    const selectedCommunity = await Community.findOne({
-      $or: [
-        { name: communityName.trim() },
-        { displayName: communityName.trim() }
-      ]
-    });
-
-    if (!selectedCommunity) {
-      return res.status(404).json({ error: "Selected community not found" });
-    }
-
-    const isPrivileged = Permission.canApprove(normalizedRole);
     const postStatus = isPrivileged ? "approved" : "pending";
 
     const post = await Post.create({
@@ -225,7 +284,22 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     /* ------------------------------------
      * FINAL RESPONSE
      * ------------------------------------ */
-    res.status(201).json({ success: true, post });
+    res.status(201).json({
+      success: true,
+      post,
+      message: postStatus === "approved"
+        ? "Post published successfully."
+        : "Post submitted for approval.",
+      postingAccess: {
+        verified: isVerifiedUser,
+        privileged: isPrivileged,
+        postWindowHours: POST_WINDOW_HOURS,
+        postingLimit: isPrivileged || isVerifiedUser ? null : UNVERIFIED_POST_LIMIT,
+        postsUsed: isPrivileged || isVerifiedUser ? null : recentPostsCount + 1,
+        remainingPosts: isPrivileged || isVerifiedUser ? null : remainingPosts,
+        requiresReview: !isPrivileged
+      }
+    });
 
   } catch (err) {
     console.error("❌ Failed to create post:", err);

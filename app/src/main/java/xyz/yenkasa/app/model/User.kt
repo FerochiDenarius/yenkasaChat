@@ -46,6 +46,9 @@ data class User(
     @SerializedName("updatedAt")
     val updatedAt: String? = null,
 
+    @SerializedName("suspendedUntil")
+    val suspendedUntil: String? = null,
+
     @SerializedName("role")
     val role: Role? = null,
 

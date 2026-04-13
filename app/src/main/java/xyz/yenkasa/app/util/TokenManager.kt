@@ -656,41 +656,26 @@ object TokenManager {
     }
 
     fun canPost(context: Context): Boolean {
-        val userJson = getUser(context) ?: run {
-            Log.w("CanPostCheck", "❌ No user data found in local storage — cannot post.")
-            return false
-        }
-
         return try {
+            val userJson = getUser(context)
+            if (userJson.isNullOrBlank()) {
+                Log.w("CanPostCheck", "No cached user data found. Allowing UI and letting backend decide.")
+                return true
+            }
+
             val jsonObject = JSONObject(userJson)
 
-            val role = jsonObject.optString("role", "").lowercase()
-            val verified = jsonObject.optBoolean("verified", false)
-            val permissions = jsonObject.optJSONObject("permissions")
-            val canPostFromPermissions = permissions?.optBoolean("canPost", false) ?: false
-
-            Log.d("CanPostCheck", "👤 Role: $role | Verified: $verified | canPost (permissions): $canPostFromPermissions")
-
-            // Master permission for developers
-            if (role == "developer") {
-                Log.i("CanPostCheck", "✅ Developer role detected — overriding all checks, posting allowed.")
-                return true
+            val suspendedUntil = jsonObject.optString("suspendedUntil", "")
+            if (suspendedUntil.isNotBlank() && suspendedUntil != "null") {
+                Log.w("CanPostCheck", "Cached user data has suspendedUntil=$suspendedUntil. Blocking local post access.")
+                return false
             }
 
-            // Admin and Moderator can post if verified
-            if ((role == "admin" || role == "moderator") && verified) {
-                Log.i("CanPostCheck", "✅ $role role with verified=true — posting allowed.")
-                return true
-            }
-
-            // Normal users
-            val finalDecision = verified && canPostFromPermissions
-            Log.i("CanPostCheck", "👀 Normal user decision → verified=$verified & canPost=$canPostFromPermissions => $finalDecision")
-
-            return finalDecision
+            Log.i("CanPostCheck", "Posting UI allowed. Backend will enforce limits and moderation.")
+            true
         } catch (e: Exception) {
-            Log.e("CanPostCheck", "💥 Error checking canPost permissions: ${e.message}")
-            false
+            Log.e("CanPostCheck", "Error checking post access. Allowing UI and letting backend decide: ${e.message}")
+            true
         }
     }
     fun saveUserJson(context: Context, userJson: String) {

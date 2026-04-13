@@ -25,6 +25,14 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
 
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="true" />
+
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+
     <application
         android:name=".MyApplication"
         android:allowBackup="true"

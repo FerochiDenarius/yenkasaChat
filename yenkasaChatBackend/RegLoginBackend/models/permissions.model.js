@@ -71,7 +71,7 @@ permissionSchema.statics.normalize = normalize;
 // Basic permission checks
 permissionSchema.statics.canPost = function (role, verified = false) {
   const r = normalize(role);
-  return ['verified', 'admin', 'moderator', 'junior_developer', 'senior_developer'].includes(r);
+  return ['user', 'verified', 'admin', 'moderator', 'developer', 'junior_developer', 'senior_developer'].includes(r);
 };
 
 permissionSchema.statics.canApprove = function (role) {
@@ -115,7 +115,7 @@ permissionSchema.statics.seedDefaults = async function () {
   const Permission = this;
 
   const defaults = {
-    user: { canPost: false },
+    user: { canPost: true },
     verified: { canPost: true },
     admin: { canPost: true, canApprove: true, canCreateCommunity: true },
     moderator: {

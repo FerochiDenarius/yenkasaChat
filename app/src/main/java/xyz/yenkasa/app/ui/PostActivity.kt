@@ -10,7 +10,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.model.CreatePostResponse
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
@@ -25,6 +25,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
+import org.json.JSONObject
 
 class PostActivity : AppCompatActivity() {
 
@@ -68,13 +69,13 @@ class PostActivity : AppCompatActivity() {
 
         fetchCommunities()
 
-        // Permission check
+        // Backend enforces posting limits and moderation.
         if (!TokenManager.canPost(this)) {
-            Toast.makeText(this, "You are not allowed to post.", Toast.LENGTH_LONG).show()
-            btnPost.isEnabled = false
-            btnPost.alpha = 0.5f
-            btnChooseMedia.isEnabled = false
-            btnChooseMedia.alpha = 0.5f
+            Toast.makeText(
+                this,
+                "Your account may be restricted from posting right now.",
+                Toast.LENGTH_LONG
+            ).show()
         }
 
         // 🔹 Choose Media
@@ -207,38 +208,86 @@ class PostActivity : AppCompatActivity() {
             communityIdBody,
             communityNameBody,
             mediaPart
-        ).enqueue(object : Callback<Post> {
-            override fun onResponse(call: Call<Post>, response: Response<Post>) {
+        ).enqueue(object : Callback<CreatePostResponse> {
+            override fun onResponse(
+                call: Call<CreatePostResponse>,
+                response: Response<CreatePostResponse>
+            ) {
                 btnPost.isEnabled = true
                 progressBar.visibility = View.GONE
 
                 if (response.isSuccessful) {
-                    val post = response.body()
-                    val userRole = TokenManager.getUserRole(this@PostActivity)
-                    val isPrivileged = userRole == "admin" || userRole == "moderator" || userRole == "developer"
+                    val responseBody = response.body()
+                    val requiresReview = responseBody?.postingAccess?.requiresReview ?: true
+                    val toastMessage = responseBody?.message
+                        ?: if (requiresReview) {
+                            "Post submitted for approval."
+                        } else {
+                            "Post published successfully."
+                        }
 
                     Toast.makeText(
                         this@PostActivity,
-                        if (isPrivileged) "✅ Post published!" else "🕓 Post submitted for approval.",
-                        Toast.LENGTH_SHORT
+                        toastMessage,
+                        Toast.LENGTH_LONG
                     ).show()
 
-                    Log.i("PostActivity", "✅ Post created: ${post?._id}")
+                    val postId = responseBody?.post?.get("_id")?.asString ?: "unknown"
+                    Log.i("PostActivity", "Post created: $postId")
                     setResult(Activity.RESULT_OK)
                     finish()
                 } else {
-                    Log.e("PostActivity", "❌ Error: ${response.errorBody()?.string()}")
-                    Toast.makeText(this@PostActivity, "Failed (${response.code()})", Toast.LENGTH_SHORT).show()
+                    val backendMessage = readBackendError(response)
+                    Log.e("PostActivity", "Error response (${response.code()}): $backendMessage")
+
+                    val message = when (response.code()) {
+                        429 -> backendMessage.ifBlank {
+                            "You have reached your limit of 5 posts within 48 hours."
+                        }
+                        403 -> backendMessage.ifBlank {
+                            "Your account is currently restricted from posting."
+                        }
+                        404 -> backendMessage.ifBlank {
+                            "Selected community was not found."
+                        }
+                        400 -> backendMessage.ifBlank {
+                            "Please complete the post details correctly."
+                        }
+                        else -> backendMessage.ifBlank {
+                            "Failed to create post (${response.code()})"
+                        }
+                    }
+
+                    Toast.makeText(this@PostActivity, message, Toast.LENGTH_LONG).show()
                 }
             }
 
-            override fun onFailure(call: Call<Post>, t: Throwable) {
+            override fun onFailure(call: Call<CreatePostResponse>, t: Throwable) {
                 btnPost.isEnabled = true
                 progressBar.visibility = View.GONE
                 Log.e("PostActivity", "Upload failed", t)
                 Toast.makeText(this@PostActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    private fun readBackendError(response: Response<CreatePostResponse>): String {
+        val errorText = try {
+            response.errorBody()?.string().orEmpty()
+        } catch (e: Exception) {
+            ""
+        }
+
+        if (errorText.isBlank()) return ""
+
+        return try {
+            val json = JSONObject(errorText)
+            json.optString("error").ifBlank {
+                json.optString("message")
+            }
+        } catch (e: Exception) {
+            errorText
+        }
     }
 
     private fun getFileFromUri(uri: Uri): File? {

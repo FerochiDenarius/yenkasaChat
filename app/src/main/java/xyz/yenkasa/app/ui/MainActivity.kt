@@ -69,10 +69,15 @@ class MainActivity : AppCompatActivity() {
         token = retrievedToken
         userId = retrievedUserId
 
-        // ✅ Setup FAB (disabled until user info loads)
+        // ✅ Setup FAB immediately; backend enforces posting limits.
         fabAddPost = findViewById(R.id.fabCreatePost)
-        fabAddPost.isEnabled = false
-        fabAddPost.alpha = 0.5f
+        fabAddPost.isEnabled = true
+        fabAddPost.alpha = 1f
+        fabAddPost.setOnClickListener {
+            val intent = Intent(this, PostActivity::class.java)
+            intent.putExtra("userId", userId)
+            startActivity(intent)
+        }
 
         // ✅ Load user info for permissions
         loadUserProfile()
@@ -100,7 +105,7 @@ class MainActivity : AppCompatActivity() {
 
                     try {
                         val user = currentUser!!
-                        val roleName = user.role?.name ?: "user"
+                        val roleName = user.role?.name ?: user.roleName ?: "user"
                         val verified = user.verified
 
                         val userJson = JSONObject().apply {
@@ -113,6 +118,7 @@ class MainActivity : AppCompatActivity() {
                             put("phone", user.phone ?: "")
                             put("community", user.community ?: JSONObject.NULL)
                             put("coinsBalance", user.coinsBalance ?: 0)
+                            put("suspendedUntil", user.suspendedUntil ?: JSONObject.NULL)
 
                             put("role", roleName)
                             val permissionsJson = JSONObject().apply {
@@ -132,6 +138,7 @@ class MainActivity : AppCompatActivity() {
                         Log.e("MainActivity", "💥 Failed to save user JSON: ${e.message}", e)
                     }
                 } else {
+                    setupFab()
                     Toast.makeText(
                         this@MainActivity,
                         "Failed to load user profile",
@@ -141,6 +148,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<User>, t: Throwable) {
+                setupFab()
                 Toast.makeText(
                     this@MainActivity,
                     "Error loading profile: ${t.message}",
@@ -150,45 +158,27 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    // ==================== FAB Setup with Permission Checks ====================
+    // ==================== FAB Setup ====================
     private fun setupFab() {
         val user = currentUser
         if (user == null) {
-            fabAddPost.isEnabled = false
-            fabAddPost.alpha = 0.5f
+            fabAddPost.isEnabled = true
+            fabAddPost.alpha = 1f
+            fabAddPost.setOnClickListener {
+                val intent = Intent(this, PostActivity::class.java)
+                intent.putExtra("userId", userId)
+                startActivity(intent)
+            }
             return
         }
 
-        val roleName: String? = user.role?.name
-        val verified = user.verified
-
-        val canPost = UserPermissions.canPost(roleName, verified)
-
-        fabAddPost.isEnabled = canPost
-        fabAddPost.alpha = if (canPost) 1f else 0.5f
+        fabAddPost.isEnabled = true
+        fabAddPost.alpha = 1f
 
         fabAddPost.setOnClickListener {
-            when {
-                canPost -> {
-                    val intent = Intent(this, PostActivity::class.java)
-                    intent.putExtra("userId", user._id)
-                    startActivity(intent)
-                }
-                !verified -> {
-                    Toast.makeText(
-                        this,
-                        "Your account must be verified before you can post.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-                else -> {
-                    Toast.makeText(
-                        this,
-                        "You do not have permission to post at this time.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+            val intent = Intent(this, PostActivity::class.java)
+            intent.putExtra("userId", user._id)
+            startActivity(intent)
         }
     }
 

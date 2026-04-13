@@ -214,7 +214,7 @@ interface ApiService {
         @Part("communityId") communityId: RequestBody,
         @Part("communityName") communityName: RequestBody,
         @Part media: MultipartBody.Part? // optional: imageUrl, videoUrl, or audioUrl
-    ): Call<Post>
+    ): Call<CreatePostResponse>
 
 
     @GET("posts/{postId}")

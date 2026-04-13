@@ -63,12 +63,12 @@ class FeedFragment : Fragment() {
         recyclerView.post { fetchCommunitiesAndFeed() }
         trackDailyLogin()
 
+        fabCreatePost.isEnabled = true
+        fabCreatePost.alpha = 1f
         fabCreatePost.setOnClickListener {
-            val isVerified = TokenManager.isVerified(requireContext())
-            if (isVerified)
-                startActivity(Intent(requireContext(), PostActivity::class.java))
-            else
-                Toast.makeText(requireContext(), "Verify your account before posting.", Toast.LENGTH_LONG).show()
+            val intent = Intent(requireContext(), PostActivity::class.java)
+            intent.putExtra("userId", userId)
+            startActivity(intent)
         }
 
         btnSelectCommunities.setOnClickListener { showCommunitySelectorDialog() }

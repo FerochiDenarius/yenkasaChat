@@ -18,7 +18,8 @@ object UserPermissions {
     fun canPost(role: String?, verified: Boolean): Boolean {
         val r = normalize(role)
         return when (r) {
-            "senior_developer", "junior_developer", "moderator", "admin", "verified" -> true
+            "user", "verified", "admin", "moderator", "developer",
+            "junior_developer", "senior_developer" -> true
             else -> false
         }
     }

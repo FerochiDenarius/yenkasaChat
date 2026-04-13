@@ -124,41 +124,6 @@ function addToCart(item) {
   alert(`${item.name} added to cart`);
 }
 
-function getInitials(name) {
-  return String(name || "YS")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(part => part.charAt(0).toUpperCase())
-    .join("") || "YS";
-}
-
-function normalizeWhatsappNumber(phone) {
-  const digits = String(phone || "").replace(/\D/g, "");
-
-  if (!digits) {
-    return "";
-  }
-
-  if (digits.startsWith("233")) {
-    return digits;
-  }
-
-  if (digits.startsWith("0") && digits.length >= 10) {
-    return `233${digits.slice(1)}`;
-  }
-
-  return digits;
-}
-
-function renderSellerAvatar(item) {
-  if (item.sellerProfileImageUrl) {
-    return `<img src="${item.sellerProfileImageUrl}" alt="${item.sellerName || "Seller"}">`;
-  }
-
-  return `<span>${getInitials(item.sellerName)}</span>`;
-}
-
 function getProductCategory(item) {
   const type = String(item.type || "").toLowerCase();
   const category = String(item.category || "").toLowerCase();
@@ -209,9 +174,6 @@ function getEmptyCategoryCard(title, message) {
 function createProductCard(item) {
   const card = document.createElement("div");
   card.className = "card marketplace-product-card";
-  const sellerName = item.sellerName || "Yenkasa Seller";
-  const whatsappNumber = normalizeWhatsappNumber(item.sellerPhone);
-  const whatsappMessage = encodeURIComponent(`Hello ${sellerName}, I am interested in ${item.name}`);
   const productCategory = getProductCategory(item);
   const categoryLabel = productDisplayLabels[productCategory] || "Product";
   const status = String(item.status || "available").toLowerCase();
@@ -232,16 +194,6 @@ function createProductCard(item) {
     `}
 
     <div class="card-content">
-      <div class="seller-mini-profile">
-        <div class="seller-avatar">
-          ${renderSellerAvatar(item)}
-        </div>
-        <div>
-          <strong>${sellerName}</strong>
-          <small>${item.sellerPhone ? "Seller on Yenkasa Store" : "Seller WhatsApp not added"}</small>
-        </div>
-      </div>
-
       <div class="card-top">
         <h3>${item.name || "Untitled Product"}</h3>
         <span class="status ${status}">${status}</span>
@@ -253,6 +205,7 @@ function createProductCard(item) {
         <span class="product-chip">${categoryLabel}</span>
         <span class="product-chip">${item.weight || item.size || "Details pending"}</span>
         <span class="product-chip">${item.category || "General"}</span>
+        <span class="product-chip fixed-price-chip">Fixed Price</span>
       </div>
 
       <div class="price">GHS ${item.price || 0}</div>
@@ -265,14 +218,6 @@ function createProductCard(item) {
         ? `
           <div class="card-actions">
             <button class="add-cart-btn">Add to Cart</button>
-
-            ${whatsappNumber
-              ? `
-                <a href="https://wa.me/${whatsappNumber}?text=${whatsappMessage}" target="_blank">
-                  <button>Chat with Seller</button>
-                </a>
-              `
-              : `<button type="button" disabled>WhatsApp unavailable</button>`}
           </div>
         `
         : `
@@ -396,7 +341,6 @@ function applySearch() {
       item.status,
       item.weight,
       item.size,
-      item.sellerName,
       item.type
     ]
       .join(" ")

@@ -2803,6 +2803,11 @@ footer {
   font-weight: 800;
 }
 
+.fixed-price-chip {
+  background: #dcfce7;
+  color: #166534;
+}
+
 .coming-category-card {
   grid-column: 1 / -1;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -3470,6 +3475,105 @@ footer {
   line-height: 1.6;
 }
 
+footer a {
+  color: var(--yk-brown);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.policy-shell {
+  width: min(980px, 92%);
+  margin: 0 auto 60px;
+}
+
+.policy-hero {
+  margin: 20px 0 22px;
+  padding: 28px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(212, 162, 76, 0.24), transparent 34%),
+    linear-gradient(135deg, #2f1b10, #6b4321);
+  color: #ffffff;
+  box-shadow: 0 18px 42px rgba(36, 21, 13, 0.14);
+}
+
+.policy-hero span {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: #f9d892;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.policy-hero h1 {
+  max-width: 760px;
+  margin-bottom: 12px;
+  font-size: clamp(1.9rem, 5vw, 3.3rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.policy-hero p {
+  max-width: 760px;
+  color: rgba(255, 248, 239, 0.9);
+  line-height: 1.75;
+}
+
+.policy-hero small {
+  display: block;
+  margin-top: 14px;
+  color: rgba(255, 248, 239, 0.74);
+}
+
+.policy-card {
+  margin-bottom: 14px;
+  padding: 20px;
+  border: 1px solid var(--yk-border);
+  border-radius: 22px;
+  background: var(--yk-surface);
+  box-shadow: 0 12px 26px rgba(36, 21, 13, 0.06);
+}
+
+.policy-card h2 {
+  margin-bottom: 10px;
+  color: var(--yk-brown);
+  font-size: 1.18rem;
+}
+
+.policy-card p,
+.policy-card li {
+  color: var(--yk-muted);
+  line-height: 1.75;
+}
+
+.policy-card p + p {
+  margin-top: 10px;
+}
+
+.policy-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0 18px;
+}
+
+.policy-card a {
+  color: var(--yk-brown);
+  font-weight: 800;
+}
+
+.policy-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.policy-actions .primary-btn,
+.policy-actions .secondary-btn {
+  text-align: center;
+}
+
 @media (min-width: 700px) {
   .market-hero {
     padding: 20px 5% 56px;
@@ -3498,6 +3602,10 @@ footer {
   .hero-quick-links .primary-btn,
   .hero-quick-links .secondary-btn {
     width: auto;
+  }
+
+  .policy-actions {
+    display: flex;
   }
 }
 

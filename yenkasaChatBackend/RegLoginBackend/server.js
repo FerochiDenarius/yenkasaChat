@@ -388,7 +388,8 @@ const STORE_PAGE_ALIASES = new Map(Object.entries({
   'forgot-password': 'forgot-password.html',
   'reset-password': 'reset-password.html',
   'verify-email': 'verify-email.html',
-  'paystack-callback': 'paystack-callback.html'
+  'paystack-callback': 'paystack-callback.html',
+  'privacy': 'privacy.html'
 }));
 const STORE_FILE_TO_ALIAS = new Map(Object.entries({
   'index.html': '',
@@ -409,7 +410,8 @@ const STORE_FILE_TO_ALIAS = new Map(Object.entries({
   'forgot-password.html': 'forgot-password',
   'reset-password.html': 'reset-password',
   'verify-email.html': 'verify-email',
-  'paystack-callback.html': 'paystack-callback'
+  'paystack-callback.html': 'paystack-callback',
+  'privacy.html': 'privacy'
 }));
 
 function getQueryString(req) {
@@ -428,6 +430,7 @@ function serveStorePage(fileName) {
 }
 
 app.get('/store', serveStorePage('index.html'));
+app.get('/privacy', serveStorePage('privacy.html'));
 app.get('/store/paystack/callback', serveStorePage('paystack-callback.html'));
 app.get('/store/:page', (req, res, next) => {
   const fileName = STORE_PAGE_ALIASES.get(req.params.page);

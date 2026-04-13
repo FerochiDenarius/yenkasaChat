@@ -19,10 +19,61 @@
       <p>Track your paid, unpaid, and pending orders in one place</p>
     </div>
 
+    <div class="card account-profile-card">
+      <div class="card-content">
+        <div class="profile-panel-header">
+          <div class="profile-avatar" id="profilePreview"></div>
+          <div>
+            <h2 data-profile-name>Account Profile</h2>
+            <p data-profile-email>Update your buyer details, profile photo, WhatsApp number and password.</p>
+          </div>
+        </div>
+
+        <form id="accountProfileForm" class="settings-grid profile-form">
+          <div class="field">
+            <label for="profileName">Full Name</label>
+            <input type="text" id="profileName" required>
+          </div>
+
+          <div class="field">
+            <label for="profileEmail">Email</label>
+            <input type="email" id="profileEmail" required>
+          </div>
+
+          <div class="field">
+            <label for="profilePhone">WhatsApp / Phone Number</label>
+            <input type="tel" id="profilePhone" placeholder="0241234567">
+          </div>
+
+          <div class="field">
+            <label for="profileImage">Profile Picture</label>
+            <input type="file" id="profileImage" accept="image/*">
+          </div>
+
+          <div class="field full">
+            <label for="profileAddress">Address</label>
+            <textarea id="profileAddress" rows="3"></textarea>
+          </div>
+
+          <div class="field full">
+            <label for="profilePassword">New Password</label>
+            <input type="password" id="profilePassword" placeholder="Leave blank to keep current password">
+          </div>
+
+          <div class="field full">
+            <button type="submit" class="primary-btn settings-submit">Save Profile</button>
+            <p id="accountProfileFeedback" class="profile-feedback"></p>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div id="orders-feedback" class="orders-feedback hidden"></div>
     <div id="orders-container" class="orders-grid"></div>
   </section>
 
+  <script src="/triciabales_frontend/jsFiles/password-toggle.js"></script>
+  <script src="/triciabales_frontend/jsFiles/account-profile.js"></script>
   <script src="/triciabales_frontend/jsFiles/my-orders.js"></script>
 </body>
 </html>

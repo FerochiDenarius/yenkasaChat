@@ -27,6 +27,7 @@
       <button class="tab-btn" id="manageTab">Manage Products</button>
       <button class="tab-btn" id="ordersTab">My Orders</button>
       <button class="tab-btn" id="payoutTab">Payout Settings</button>
+      <button class="tab-btn" id="profileTab">Account Profile</button>
       <a href="/store" class="tab-btn dashboard-menu-link">Back to Store</a>
     </div>
 
@@ -265,6 +266,57 @@
         </div>
       </div>
     </div>
+
+    <div id="profileSection" style="display:none; margin-top:20px;">
+      <div class="card">
+        <div class="card-content">
+          <div class="profile-panel-header">
+            <div class="profile-avatar" id="profilePreview"></div>
+            <div>
+              <h2 data-profile-name>Account Profile</h2>
+              <p data-profile-email>Update your seller details, profile photo, WhatsApp number and password.</p>
+            </div>
+          </div>
+
+          <form id="accountProfileForm" class="settings-grid profile-form">
+            <div class="field">
+              <label for="profileName">Full Name</label>
+              <input type="text" id="profileName" required>
+            </div>
+
+            <div class="field">
+              <label for="profileEmail">Email</label>
+              <input type="email" id="profileEmail" required>
+            </div>
+
+            <div class="field">
+              <label for="profilePhone">WhatsApp / Phone Number</label>
+              <input type="tel" id="profilePhone" placeholder="0241234567">
+            </div>
+
+            <div class="field">
+              <label for="profileImage">Profile Picture</label>
+              <input type="file" id="profileImage" accept="image/*">
+            </div>
+
+            <div class="field full">
+              <label for="profileAddress">Address</label>
+              <textarea id="profileAddress" rows="3"></textarea>
+            </div>
+
+            <div class="field full">
+              <label for="profilePassword">New Password</label>
+              <input type="password" id="profilePassword" placeholder="Leave blank to keep current password">
+            </div>
+
+            <div class="field full">
+              <button type="submit" class="primary-btn settings-submit">Save Profile</button>
+              <p id="accountProfileFeedback" class="profile-feedback"></p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </section>
 
   <div class="edit-modal" id="editModal">
@@ -345,6 +397,8 @@
     </div>
   </div>
 
+  <script src="/triciabales_frontend/jsFiles/password-toggle.js"></script>
   <script src="/triciabales_frontend/jsFiles/seller-dashboard.js"></script>
+  <script src="/triciabales_frontend/jsFiles/account-profile.js"></script>
 </body>
 </html>

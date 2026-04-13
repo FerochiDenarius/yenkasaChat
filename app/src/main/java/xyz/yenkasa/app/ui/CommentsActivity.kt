@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.*
 import com.google.gson.Gson
 import xyz.yenkasa.app.model.CommentsResponse
@@ -34,7 +35,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import android.content.Intent
 import xyz.yenkasa.app.adapter.PostHeaderAdapter
 import androidx.recyclerview.widget.ConcatAdapter
-import xyz.yenkasa.app.adapter.PostAdapter
 
 
 
@@ -50,6 +50,8 @@ class CommentsActivity : AppCompatActivity() {
     private var postId: String? = null
     private var isRefreshing = false
     private var autoRefreshJob: Job? = null
+    private var latestCommentCount: Int? = null
+    private val pendingCommentLikeIds = mutableSetOf<String>()
     // Post header root
     private lateinit var postHeaderView: View
 
@@ -59,6 +61,10 @@ class CommentsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
         setContentView(R.layout.activity_comments)
 
         // 1️⃣ RecyclerView
@@ -75,6 +81,12 @@ class CommentsActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
+        postHeaderAdapter = PostHeaderAdapter(postHeaderView) { userId ->
+            startActivity(
+                Intent(this, UserProfileActivity::class.java)
+                    .putExtra("USER_ID", userId)
+            )
+        }
 
 
 
@@ -284,6 +296,7 @@ class CommentsActivity : AppCompatActivity() {
         // Load post and comments
         loadPostDetails()
         loadComments()
+        setupKeyboardAwareCommentInput()
 
         buttonSend.setOnClickListener {
             val text = editComment.text.toString().trim()
@@ -295,20 +308,25 @@ class CommentsActivity : AppCompatActivity() {
         }
     }
 
-    val headerPostAdapter = PostAdapter(
-        context = this,
-        posts = emptyList(), // will set later
-        onLikeClick = { _, _ -> },
-        onCommentClick = { _, _ -> },
-        onUserClick = { userId ->
-            startActivity(
-                Intent(this, UserProfileActivity::class.java)
-                    .putExtra("USER_ID", userId)
-            )
-        },
-        onPostClick = {},
-        onShareClick = {}
-    )
+    private fun setupKeyboardAwareCommentInput() {
+        editComment.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) scrollCommentsAboveKeyboard()
+        }
+        editComment.setOnClickListener {
+            scrollCommentsAboveKeyboard()
+        }
+    }
+
+    private fun scrollCommentsAboveKeyboard() {
+        recyclerComments.postDelayed({
+            val totalItems = recyclerComments.adapter?.itemCount ?: 0
+            if (totalItems > 1) {
+                recyclerComments.smoothScrollToPosition(totalItems - 1)
+            } else {
+                recyclerComments.smoothScrollBy(0, (postHeaderView.height * 0.35f).toInt().coerceAtLeast(180))
+            }
+        }, 250)
+    }
 
     override fun onResume() {
         super.onResume()
@@ -360,6 +378,7 @@ class CommentsActivity : AppCompatActivity() {
                     comments.clear()
                     comments.addAll(newComments)
                     adapter.notifyDataSetChanged()
+                    latestCommentCount = newComments.size
 
                     // ✅ UPDATE COMMENT COUNT IN HEADER (HERE)
                     postHeaderAdapter.updateCommentCount(newComments.size)
@@ -523,20 +542,39 @@ class CommentsActivity : AppCompatActivity() {
             return
         }
 
-        // 1️⃣ Optimistically update UI by creating a new Comment instance
-        val updatedLikes = if (isLiked) {
-            comment.likes + "tempUserId" // just for instant visual
+        val userId = currentUserId.takeIf { it.isNotBlank() }
+            ?: TokenManager.getUserId(this)
+            ?: run {
+                Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+        if (!pendingCommentLikeIds.add(comment._id)) return
+
+        val commentIndex = comments.indexOfFirst { it._id == comment._id }
+            .takeIf { it >= 0 }
+            ?: position.takeIf { it in comments.indices }
+            ?: run {
+                pendingCommentLikeIds.remove(comment._id)
+                return
+            }
+
+        val originalComment = comments[commentIndex]
+        val updatedLikes = originalComment.likes.toMutableList()
+
+        if (isLiked) {
+            if (!updatedLikes.contains(userId)) updatedLikes.add(userId)
         } else {
-            comment.likes - "tempUserId"
+            updatedLikes.remove(userId)
         }
 
-        val updatedComment = comment.copy(
+        val updatedComment = originalComment.copy(
             likes = updatedLikes,
             likeCount = updatedLikes.size
         )
 
-        comments[position] = updatedComment
-        adapter.notifyItemChanged(position)
+        comments[commentIndex] = updatedComment
+        adapter.notifyItemChanged(commentIndex)
 
         // 2️⃣ Call API
         val json = JSONObject().apply {
@@ -552,35 +590,55 @@ class CommentsActivity : AppCompatActivity() {
                     call: Call<Map<String, Any>>,
                     response: Response<Map<String, Any>>
                 ) {
+                    pendingCommentLikeIds.remove(comment._id)
                     if (response.isSuccessful && response.body() != null) {
                         // ✅ Use server value to fully sync
-                        val serverLikeCount = (response.body()?.get("likeCount") as? Double)?.toInt() ?: updatedLikes.size
-                        val likesArray = response.body()?.get("likes") as? List<*>
+                        val data = response.body()
+                        val serverLikeCount = parseInt(data?.get("likeCount"), updatedLikes.size)
+                        val likesArray = parseStringList(data?.get("likes"))
 
                         // Create another copy with server-corrected values
                         val syncedComment = updatedComment.copy(
-                            likes = likesArray?.mapNotNull { it as? String } ?: updatedLikes,
+                            likes = likesArray ?: updatedLikes,
                             likeCount = serverLikeCount
                         )
 
-                        comments[position] = syncedComment
-                        adapter.notifyItemChanged(position)
+                        updateCommentById(syncedComment)
                         Log.d("LikeComment", "✅ Synced with server")
                     } else {
                         // Revert in case of failure
-                        comments[position] = comment
-                        adapter.notifyItemChanged(position)
+                        updateCommentById(originalComment)
                         Toast.makeText(this@CommentsActivity, "Failed to update like", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    pendingCommentLikeIds.remove(comment._id)
                     // Revert in case of network failure
-                    comments[position] = comment
-                    adapter.notifyItemChanged(position)
+                    updateCommentById(originalComment)
                     Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    private fun updateCommentById(updatedComment: Comment) {
+        val index = comments.indexOfFirst { it._id == updatedComment._id }
+        if (index == -1) return
+
+        comments[index] = updatedComment
+        adapter.notifyItemChanged(index)
+    }
+
+    private fun parseInt(value: Any?, fallback: Int): Int {
+        return when (value) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull() ?: fallback
+            else -> fallback
+        }
+    }
+
+    private fun parseStringList(value: Any?): List<String>? {
+        return (value as? List<*>)?.mapNotNull { it as? String }
     }
 
     private fun showFloatingEmoji() {
@@ -612,7 +670,11 @@ class CommentsActivity : AppCompatActivity() {
 
                 val post = response.body()!!
 
-                headerPostAdapter.updatePosts(listOf(post))
+                val displayPost = latestCommentCount?.let { count ->
+                    post.copy(commentCount = count)
+                } ?: post
+
+                postHeaderAdapter.submitPost(displayPost)
 
             }
 

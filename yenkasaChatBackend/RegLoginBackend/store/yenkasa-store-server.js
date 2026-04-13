@@ -235,6 +235,82 @@ module.exports = function (app) {
     }
   });
 
+  app.get('/triciabales-api/api/users/me', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/users/me`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'USER PROFILE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.put(
+    '/triciabales-api/api/users/me',
+    upload.single('profileImage'),
+    async (req, res) => {
+      try {
+        const authorization = getAuthorizationHeader(req);
+
+        if (!authorization) {
+          return res.status(401).json({
+            error: 'Authentication token is missing'
+          });
+        }
+
+        const form = new FormData();
+
+        ['name', 'email', 'phone', 'address', 'password'].forEach(field => {
+          if (req.body[field] != null) {
+            form.append(field, req.body[field]);
+          }
+        });
+
+        if (req.file) {
+          form.append('profileImage', req.file.buffer, req.file.originalname);
+        }
+
+        const response = await axios.put(
+          `${API_BASE}/api/users/me`,
+          form,
+          {
+            headers: {
+              ...form.getHeaders(),
+              Authorization: authorization
+            },
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity
+          }
+        );
+
+        res.json(response.data);
+      } catch (err) {
+        console.error(
+          'USER PROFILE UPDATE ERROR:',
+          err.response?.status,
+          err.response?.data || err.message
+        );
+
+        res.status(err.response?.status || 500).json(
+          err.response?.data || { error: err.message }
+        );
+      }
+    }
+  );
+
   app.get('/triciabales-api/api/users', async (req, res) => {
     try {
       const response = await axios.get(

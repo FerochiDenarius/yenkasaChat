@@ -84,6 +84,41 @@ function addToCart(item) {
   alert(`${item.name} added to cart`);
 }
 
+function getInitials(name) {
+  return String(name || "YS")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join("") || "YS";
+}
+
+function normalizeWhatsappNumber(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.startsWith("233")) {
+    return digits;
+  }
+
+  if (digits.startsWith("0") && digits.length >= 10) {
+    return `233${digits.slice(1)}`;
+  }
+
+  return digits;
+}
+
+function renderSellerAvatar(item) {
+  if (item.sellerProfileImageUrl) {
+    return `<img src="${item.sellerProfileImageUrl}" alt="${item.sellerName || "Seller"}">`;
+  }
+
+  return `<span>${getInitials(item.sellerName)}</span>`;
+}
+
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
   .then(res => res.json())
   .then(data => {
@@ -93,6 +128,9 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
     data.forEach(item => {
       const card = document.createElement("div");
       card.className = "card";
+      const sellerName = item.sellerName || "Yenkasa Seller";
+      const whatsappNumber = normalizeWhatsappNumber(item.sellerPhone);
+      const whatsappMessage = encodeURIComponent(`Hello ${sellerName}, I am interested in ${item.name}`);
 
       card.innerHTML = `
         ${item.imageUrl ? `
@@ -106,6 +144,16 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
         ` : ""}
 
         <div class="card-content">
+          <div class="seller-mini-profile">
+            <div class="seller-avatar">
+              ${renderSellerAvatar(item)}
+            </div>
+            <div>
+              <strong>${sellerName}</strong>
+              <small>${item.sellerPhone ? "Seller on Yenkasa Store" : "Seller WhatsApp not added"}</small>
+            </div>
+          </div>
+
           <div class="card-top">
             <h3>${item.name}</h3>
             <span class="status ${item.status}">${item.status}</span>
@@ -129,9 +177,13 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
               <div class="card-actions">
                 <button class="add-cart-btn">🛒 Add to Cart</button>
 
-                <a href="https://wa.me/233551699010?text=Hello%20Tricia,%20I%20am%20interested%20in%20${encodeURIComponent(item.name)}" target="_blank">
-                  <button>💬 Chat on WhatsApp</button>
-                </a>
+                ${whatsappNumber
+                  ? `
+                    <a href="https://wa.me/${whatsappNumber}?text=${whatsappMessage}" target="_blank">
+                      <button>💬 Chat with Seller</button>
+                    </a>
+                  `
+                  : `<button type="button" disabled>WhatsApp unavailable</button>`}
               </div>
             `
             : `

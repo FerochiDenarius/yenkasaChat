@@ -1,4 +1,4 @@
-const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+let currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const authToken = localStorage.getItem("authToken") || "";
 const imageInput = document.getElementById("imageFile");
 const videoInput = document.getElementById("videoFile");
@@ -12,6 +12,7 @@ const singleTab = document.getElementById("singleTab");
 const manageTab = document.getElementById("manageTab");
 const ordersTab = document.getElementById("ordersTab");
 const payoutTab = document.getElementById("payoutTab");
+const profileTab = document.getElementById("profileTab");
 const productType = document.getElementById("productType");
 const weightField = document.getElementById("weightField");
 const sizeField = document.getElementById("sizeField");
@@ -19,6 +20,7 @@ const uploadCard = document.getElementById("uploadCard");
 const manageSection = document.getElementById("manageSection");
 const ordersSection = document.getElementById("ordersSection");
 const payoutSection = document.getElementById("payoutSection");
+const profileSection = document.getElementById("profileSection");
 const manageList = document.getElementById("manageList");
 const sellerOrdersList = document.getElementById("sellerOrdersList");
 const paidCount = document.getElementById("paid-count");
@@ -66,6 +68,13 @@ if (currentUser?.role !== "SELLER") {
 document.getElementById("sellerHeading").textContent = `${currentUser.name || "Seller"} Dashboard`;
 document.getElementById("sellerSubheading").textContent = currentUser.email || "Manage your store from one place.";
 
+window.updateCurrentUserFromProfile = function updateCurrentUserFromProfile(user) {
+  if (!user) return;
+  currentUser = user;
+  document.getElementById("sellerHeading").textContent = `${currentUser.name || "Seller"} Dashboard`;
+  document.getElementById("sellerSubheading").textContent = currentUser.email || "Manage your store from one place.";
+};
+
 function getAuthHeaders() {
   return {
     Authorization: `Bearer ${authToken}`
@@ -84,7 +93,7 @@ function closeMenu() {
 }
 
 function activateTab(activeTab) {
-  [baleTab, singleTab, manageTab, ordersTab, payoutTab].forEach(tab => {
+  [baleTab, singleTab, manageTab, ordersTab, payoutTab, profileTab].forEach(tab => {
     tab.classList.toggle("active", tab === activeTab);
   });
 }
@@ -94,6 +103,7 @@ function showSection(section) {
   manageSection.style.display = section === "manage" ? "block" : "none";
   ordersSection.style.display = section === "orders" ? "block" : "none";
   payoutSection.style.display = section === "payout" ? "block" : "none";
+  profileSection.style.display = section === "profile" ? "block" : "none";
 }
 
 function setUploadMode(mode) {
@@ -560,6 +570,12 @@ ordersTab.addEventListener("click", () => {
 payoutTab.addEventListener("click", () => {
   activateTab(payoutTab);
   showSection("payout");
+  closeMenu();
+});
+
+profileTab.addEventListener("click", () => {
+  activateTab(profileTab);
+  showSection("profile");
   closeMenu();
 });
 

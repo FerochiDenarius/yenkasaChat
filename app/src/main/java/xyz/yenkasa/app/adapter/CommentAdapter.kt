@@ -94,36 +94,15 @@ class CommentAdapter(
         holder.buttonLike.setImageResource(
             if (isLiked) R.drawable.ic_heart else R.drawable.ic_heart_outline
         )
-        holder.textLikeCount.text = (comment.likes?.size ?: 0).toString()
+        holder.textLikeCount.text = maxOf(comment.likeCount, comment.likes.size).toString()
 
         // ✅ Like click toggle
         holder.buttonLike.setOnClickListener {
-            val liked = comment.likes?.contains(currentUserId) == true
+            val adapterPosition = holder.bindingAdapterPosition
+            if (adapterPosition == RecyclerView.NO_POSITION) return@setOnClickListener
 
-            // Create a mutable copy of likes
-            val updatedLikes = comment.likes.toMutableList()
-
-            if (liked) {
-                updatedLikes.remove(currentUserId)
-            } else {
-                currentUserId?.let { updatedLikes.add(it) }
-            }
-
-            // Create a new updated comment object
-            val updatedComment = comment.copy(likes = updatedLikes)
-
-            // Update UI instantly
-            holder.buttonLike.setImageResource(
-                if (liked) R.drawable.ic_heart_outline else R.drawable.ic_heart_filled
-            )
-            holder.textLikeCount.text = updatedLikes.size.toString()
-
-            // Update adapter list with the new comment
-            comments[position] = updatedComment
-            notifyItemChanged(position)
-
-            // Notify backend
-            listener.onLike(updatedComment, !liked, position)
+            val liked = comment.likes.contains(currentUserId)
+            listener.onLike(comment, !liked, adapterPosition)
         }
 
         // Reply click

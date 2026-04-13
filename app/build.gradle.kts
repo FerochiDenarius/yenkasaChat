@@ -16,7 +16,7 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 9
+        versionCode = 10
         versionName = "0.2.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

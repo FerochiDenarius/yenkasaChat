@@ -1,277 +1,669 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download YenkasaChat!</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
-            margin: 0;
-            padding: 0;
-            background-color: #f0f2f5; /* Light grey-blue, common in tech sites */
-            color: #1c1e21; /* Dark grey, good for text */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yenkasa Portfolio | Bright Kofi Ofosu Menya</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --secondary: #1e293b;
+      --accent: #f59e0b;
+      --accent-dark: #d97706;
+      --light: #f8fafc;
+      --muted: #94a3b8;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
 
-        .container {
-            max-width: 850px; /* Slightly wider for more content */
-            margin: 20px auto; /* Centering */
-            padding: 25px 30px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        header {
-            padding: 25px 0;
-            border-bottom: 1px solid #dddfe2; /* Softer border */
-            margin-bottom: 25px;
-        }
+    html {
+      scroll-behavior: smooth;
+    }
 
-        header img.logo {
-            max-width: 120px;
-            margin-bottom: 15px;
-        }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--light);
+      color: var(--primary);
+      line-height: 1.6;
+    }
 
-        header h1 {
-            margin: 0;
-            color: #1877f2; /* Facebook-like blue, or choose your brand color */
-            font-size: 2.8em;
-            font-weight: 600;
-        }
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
 
-        header p.tagline {
-            font-size: 1.3em;
-            color: #606770; /* Softer grey for tagline */
-            margin-top: 5px;
-        }
+    img {
+      max-width: 100%;
+      display: block;
+    }
 
-        .section {
-            margin-bottom: 35px;
-            padding: 20px;
-            background-color: #f7f8fa; /* Very light section background */
-            border-radius: 8px;
-        }
-        .section:last-child {
-            margin-bottom: 0;
-        }
+    .container {
+      width: min(1150px, 92%);
+      margin: 0 auto;
+    }
 
-        .section h2 {
-            font-size: 1.8em;
-            color: #1c1e21;
-            margin-top: 0;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #1877f2; /* Accent color under headings */
-            padding-bottom: 8px;
-            display: inline-block; /* To make border only span text width */
-        }
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
 
+    .nav-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      gap: 16px;
+    }
 
-        .app-description p {
-            font-size: 1.15em;
-            line-height: 1.7;
-            color: #333;
-        }
+    .brand {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
 
-        .screenshots {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Align to top if heights differ */
-            gap: 20px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
+    .brand span {
+      color: var(--accent);
+    }
 
-        .screenshots img {
-            max-width: 220px;
-            max-height: 440px;
-            border-radius: 12px; /* More rounded */
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
 
-        .screenshots img:hover {
-            transform: scale(1.03);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
+    .nav-links a {
+      color: var(--secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
 
-        .download-button {
-            display: inline-block;
-            background-color: #42b72a; /* Vibrant green */
-            color: white;
-            padding: 16px 35px;
-            text-decoration: none;
-            font-size: 1.3em;
-            font-weight: bold;
-            border-radius: 6px;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+    .nav-links a:hover {
+      color: var(--accent-dark);
+    }
 
-        .download-button:hover, .download-button:focus {
-            background-color: #36a420; /* Darker green */
-            transform: translateY(-2px); /* Slight lift effect */
-        }
-        .download-button:active {
-            transform: translateY(0px);
-        }
+    .hero {
+      padding: 72px 0 48px;
+      background: linear-gradient(135deg, #fff7ed, #ffffff 40%, #f8fafc 100%);
+    }
 
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 32px;
+      align-items: center;
+    }
 
-        .contact-info p, .donation-info p {
-            font-size: 1.1em;
-            line-height: 1.6;
-            margin: 10px 0;
-        }
-        .contact-info a, .donation-info a {
-            color: #1877f2;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .contact-info a:hover, .donation-info a:hover {
-            text-decoration: underline;
-        }
+    .hero-text h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
 
-        .donation-info strong { /* For donation number */
-            font-size: 1.2em;
-            color: #e91e63; /* A distinct color for emphasis */
-        }
+    .hero-text h1 span {
+      color: var(--accent-dark);
+    }
 
+    .hero-text p {
+      font-size: 1.06rem;
+      color: #334155;
+      max-width: 650px;
+      margin-bottom: 24px;
+    }
 
-        .instructions {
-            background-color: #fff9c4; /* Light yellow for instructions */
-            padding: 18px;
-            border-radius: 8px;
-            font-size: 1em;
-            color: #333;
-            border: 1px solid #fbc02d; /* Yellow border */
-            margin-top: 10px; /* Give some space from the download button */
-        }
-        .instructions h4 {
-            margin-top: 0;
-            color: #c2185b; /* A stronger color for the heading */
-        }
-        .instructions p {
-            margin: 8px 0;
-        }
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
 
-        footer {
-            margin-top: 40px;
-            padding: 20px;
-            font-size: 0.95em;
-            color: #606770;
-            width: 100%; /* Make footer span width */
-            background-color: #e9ecef; /* Slightly different footer background */
-        }
+    .btn {
+      display: inline-block;
+      padding: 14px 22px;
+      border-radius: 12px;
+      font-weight: 700;
+      transition: 0.25s ease;
+    }
 
-        /* Responsive adjustments */
-        @media (max-width: 700px) {
-            .container {
-                margin: 10px;
-                padding: 20px;
-            }
-            header h1 {
-                font-size: 2.2em;
-            }
-            .screenshots img {
-                max-width: 80%;
-            }
-            .section h2 {
-                font-size: 1.5em;
-            }
-        }
-    </style>
+    .btn-primary {
+      background: var(--accent);
+      color: #111827;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dark);
+      color: white;
+    }
+
+    .btn-outline {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--primary);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent-dark);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .stat-card,
+    .project-card,
+    .skill-card,
+    .contact-card,
+    .review-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card {
+      padding: 18px;
+      text-align: center;
+    }
+
+    .stat-card h3 {
+      font-size: 1.4rem;
+      color: var(--accent-dark);
+      margin-bottom: 6px;
+    }
+
+    .hero-visual {
+      background: var(--primary);
+      color: white;
+      padding: 28px;
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-visual h3 {
+      font-size: 1.4rem;
+      margin-bottom: 14px;
+      color: #fde68a;
+    }
+
+    .hero-visual p {
+      color: #cbd5e1;
+      margin-bottom: 20px;
+    }
+
+    .stack-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      font-size: 0.92rem;
+    }
+
+    section {
+      padding: 70px 0;
+    }
+
+    .section-header {
+      margin-bottom: 28px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(1.6rem, 4vw, 2.5rem);
+      margin-bottom: 10px;
+    }
+
+    .section-header p {
+      color: #475569;
+      max-width: 760px;
+    }
+
+    .projects-grid,
+    .skills-grid,
+    .contact-grid,
+    .reviews-grid {
+      display: grid;
+      gap: 22px;
+    }
+
+    .projects-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .skills-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .contact-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .reviews-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .project-card,
+    .skill-card,
+    .contact-card,
+    .review-card {
+      padding: 24px;
+    }
+
+    .project-card h3,
+    .skill-card h3,
+    .contact-card h3,
+    .review-card h3 {
+      margin-bottom: 10px;
+    }
+
+    .project-card p,
+    .skill-card p,
+    .contact-card p,
+    .review-card p {
+      color: #475569;
+      margin-bottom: 16px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tag {
+      background: #fff7ed;
+      color: #b45309;
+      border: 1px solid #fed7aa;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .project-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .project-links a,
+    .contact-card a {
+      color: var(--accent-dark);
+      font-weight: 700;
+    }
+
+    .download-box {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      padding: 26px;
+      border-radius: 24px;
+      margin-top: 24px;
+    }
+
+    .download-box p {
+      color: #e2e8f0;
+      margin: 12px 0 18px;
+    }
+
+    .reviews {
+      background: #fff;
+    }
+
+    .review-form {
+      margin-top: 24px;
+      background: white;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      padding: 24px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid #cbd5e1;
+      font: inherit;
+      background: white;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .footer {
+      background: var(--primary);
+      color: #cbd5e1;
+      text-align: center;
+      padding: 30px 16px;
+      margin-top: 30px;
+    }
+
+    .footer strong {
+      color: white;
+    }
+
+    @media (max-width: 950px) {
+      .hero-grid,
+      .projects-grid,
+      .skills-grid,
+      .contact-grid,
+      .reviews-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .nav-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .nav-links {
+        gap: 12px;
+      }
+
+      .hero {
+        padding-top: 42px;
+      }
+    }
+  </style>
 </head>
 <body>
-
-    <div class="container">
-       <header>
-    <img src="images/yc.png" alt="YenkasaChat Logo" class="logo">
-    <h1>YenkasaChat</h1>
-    <p class="tagline">Connect, Share, and Chat Like Never Before!</p>
-</header>
-
-        <section class="section app-description">
-            <h2>About YenkasaChat</h2>
-            <p>
-                Welcome to YenkasaChat! This app is designed to bring people closer through seamless communication.
-                Share moments, chat with friends and family, and explore a new way to stay connected.
-                Download the test version and be part of our journey!
-            </p>
-        </section>
-
-        <section class="section screenshots-gallery">
-            <h2>App Sneak Peek</h2>
-            <div class="screenshots">
-                <!--
-                    Place your screenshots in an 'images' folder
-                    relative to where this yenkasachat.html file is.
-                -->
-                <img src="images/login.jpeg" alt="YenkasaChat Screenshot 1">
-                <img src="images/background.jpeg" alt="YenkasaChat Screenshot 2">
-                <img src="images/Screenshot3.png" alt="YenkasaChat Screenshot 3">
-            </div>
-        </section>
-
-        <section class="section download-area">
-            <h2>Get The App</h2>
-           <a href="https://yenkasa.xyz/yenkasa0.2.4.apk" class="download-button" download>
-   Download YenkasaChat (Android APK)
-</a>
-
-            <div class="instructions">
-                <h4>Installation Notes:</h4>
-                <p>After downloading the <code>.apk</code> file:</p>
-                <p>1. Open your phone's file manager and find the downloaded file.</p>
-                <p>2. Tap on it to install. You might need to <strong>enable "Installation from Unknown Sources"</strong> or "Allow apps from this source" in your Android settings if prompted.</p>
-                <p>(Usually found in Settings > Security or Settings > Apps > Special app access).</p>
-            </div>
-        </section>
-
-        <section class="section contact-support">
-            <h2>Support & Feedback</h2>
-            <div class="contact-info">
-                <p>
-                    Have questions, suggestions, or found a bug? We'd love to hear from you!
-                </p>
-                <p>
-                    <strong>GitHub:</strong> <a href="https://github.com/FerochiDenarius" target="_blank" rel="noopener noreferrer">FerochiDenarius</a> (Check for issues or contribute!)
-                </p>
-                <p>
-                    <strong>Email:</strong> <a href="mailto:denarius@yenkasa.xyz">denarius@yenkasa.xyz</a>
-                </p>
-                 <p>
-                    <strong>WhatsApp (for inquiries):</strong> <a href="https://wa.me/233537044801" target="_blank" rel="noopener noreferrer">+233 53 704 4801</a>
-                </p>
-            </div>
-        </section>
-
-        <section class="section project-donation">
-            <h2>Support the Project</h2>
-            <div class="donation-info">
-                <p>
-                    YenkasaChat is a passion project. If you find it useful or promising and would like to support its development,
-                    your contribution would be greatly appreciated!
-                </p>
-                <p>
-                    <strong>Donate via MTN Mobile Money (Ghana):</strong>
-                </p>
-                <p>
-                    Account Number: <strong>0537044801</strong>
-                    Account Name: <strong>Bright Kofi Ofosu Menya</strong>
-                </p>
-                <p>
-                    (You can also reach out on WhatsApp at <a href="https://wa.me/233537044801" target="_blank" rel="noopener noreferrer">+233 53 704 4801</a> if you have questions about donations or other ways to support.)
-                </p>
-            </div>
-        </section>
-
-        <footer>
-            <p>&copy; 2025 Yenkasa Soft O Tech by FerochiDenarius. All Rights Reserved. Happy Testing!</p>
-        </footer>
+  <nav class="navbar">
+    <div class="container nav-wrap">
+      <a href="#home" class="brand">Yenkasa<span>Portfolio</span></a>
+      <div class="nav-links">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#projects">Projects</a>
+        <a href="#skills">Skills</a>
+        <a href="#reviews">Reviews</a>
+        <a href="#contact">Contact</a>
+        <a href="#app-download">Download App</a>
+      </div>
     </div>
+  </nav>
+
+  <header class="hero" id="home">
+    <div class="container hero-grid">
+      <div class="hero-text">
+        <h1>Building digital products with <span>Yenkasa</span> vision.</h1>
+        <p>
+          I am a developer and founder building practical digital solutions, including the Yenkasa App,
+          Yenkasa Store, and web platforms that help people connect, discover, and do business online.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#projects" class="btn btn-primary">View My Work</a>
+          <a href="https://wa.me/233537044801" target="_blank" class="btn btn-outline">Chat on WhatsApp</a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-card">
+            <h3>3+</h3>
+            <p>Main Products</p>
+          </div>
+          <div class="stat-card">
+            <h3>6+</h3>
+            <p>Core Languages</p>
+          </div>
+          <div class="stat-card">
+            <h3>24/7</h3>
+            <p>Open to Work</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <h3>What this portfolio covers</h3>
+        <p>
+          A dynamic portfolio website where visitors can explore my projects, download my app, contact me on WhatsApp,
+          check my GitHub work, and leave a review.
+        </p>
+        <div class="stack-pills">
+          <span class="pill">Java</span>
+          <span class="pill">Kotlin</span>
+          <span class="pill">JavaScript</span>
+          <span class="pill">HTML</span>
+          <span class="pill">CSS</span>
+          <span class="pill">C++</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="about">
+    <div class="container">
+      <div class="section-header">
+        <h2>About Me</h2>
+        <p>
+          My name is Bright Kofi Ofosu Menya. I build apps and websites under the Yenkasa brand.
+          My focus is on clean interfaces, practical backend logic, and platforms that can grow into full digital businesses.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="projects">
+    <div class="container">
+      <div class="section-header">
+        <h2>Featured Projects</h2>
+        <p>
+          These are the key products I want visitors, clients, recruiters, schools, churches, and businesses to see first.
+        </p>
+      </div>
+
+      <div class="projects-grid">
+        <article class="project-card">
+          <h3>Yenkasa App</h3>
+          <p>
+            A social and community-driven mobile platform built to help users connect, interact, and grow engagement.
+          </p>
+          <div class="tag-row">
+            <span class="tag">Kotlin</span>
+            <span class="tag">JavaScript Backend</span>
+            <span class="tag">Android</span>
+          </div>
+          <div class="project-links">
+            <a href="#app-download">Download App</a>
+            <a href="https://github.com/FerochiDenarius" target="_blank">View GitHub</a>
+          </div>
+        </article>
+
+        <article class="project-card">
+          <h3>Yenkasa Store</h3>
+          <p>
+            A growing e-commerce platform for fashion accessories, dresses, fabrics, bales, and future large-scale product sales.
+          </p>
+          <div class="tag-row">
+            <span class="tag">Frontend UI</span>
+            <span class="tag">Seller Flow</span>
+            <span class="tag">Paystack Ready</span>
+          </div>
+          <div class="project-links">
+            <a href="https://www.yenkasa.xyz/store" target="_blank">Visit Store</a>
+          </div>
+        </article>
+
+        <article class="project-card">
+          <h3>GitHub Portfolio</h3>
+          <p>
+            My code repository where I publish and maintain different software projects, experiments, and backend logic.
+          </p>
+          <div class="tag-row">
+            <span class="tag">Source Code</span>
+            <span class="tag">Projects</span>
+            <span class="tag">Version Control</span>
+          </div>
+          <div class="project-links">
+            <a href="https://github.com/FerochiDenarius" target="_blank">Open GitHub</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="download-box" id="app-download">
+        <h3>Yenkasa App Download</h3>
+        <p>
+          This area in the navigation is dedicated to your app details and download link, exactly as you requested.
+          You can later add version number, screenshots, release notes, and Play Store link here too.
+        </p>
+        <a href="https://yenkasa.xyz/yenkasa0.2.4.apk" class="btn btn-primary">Download Yenkasa App APK</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="skills">
+    <div class="container">
+      <div class="section-header">
+        <h2>Languages & Skills</h2>
+        <p>
+          These are the main technologies I currently use in my app and website development journey.
+        </p>
+      </div>
+
+      <div class="skills-grid">
+        <div class="skill-card">
+          <h3>Java</h3>
+          <p>Backend logic, Android concepts, object-oriented programming, and project structure.</p>
+        </div>
+        <div class="skill-card">
+          <h3>Kotlin</h3>
+          <p>Native Android app development for the Yenkasa App with modern UI and mobile features.</p>
+        </div>
+        <div class="skill-card">
+          <h3>JavaScript</h3>
+          <p>Dynamic frontend behavior, backend integration, and website functionality.</p>
+        </div>
+        <div class="skill-card">
+          <h3>HTML</h3>
+          <p>Semantic page structure for landing pages, product views, and portfolio sections.</p>
+        </div>
+        <div class="skill-card">
+          <h3>CSS</h3>
+          <p>Modern UI styling, mobile responsiveness, spacing, layout, and polished presentation.</p>
+        </div>
+        <div class="skill-card">
+          <h3>C++</h3>
+          <p>Programming fundamentals, structured logic, and deeper understanding of software development.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="reviews" id="reviews">
+    <div class="container">
+      <div class="section-header">
+        <h2>Reviews & Testimonials</h2>
+        <p>
+          Visitors should be able to leave feedback about your work. For now, this section includes sample review cards and a form layout.
+          Later, we can connect this form to a backend or Google Sheet.
+        </p>
+      </div>
+
+      <div class="reviews-grid">
+        <div class="review-card">
+          <h3>Client Review Example</h3>
+          <p>“Very committed developer with strong effort and clear growth in app and web development.”</p>
+        </div>
+        <div class="review-card">
+          <h3>Business Review Example</h3>
+          <p>“Responsive, easy to work with, and serious about building useful digital solutions.”</p>
+        </div>
+      </div>
+
+      <form class="review-form">
+        <div class="form-grid">
+          <input type="text" placeholder="Your name" required />
+          <select required>
+            <option value="">Rate my work</option>
+            <option>5 Stars</option>
+            <option>4 Stars</option>
+            <option>3 Stars</option>
+            <option>2 Stars</option>
+            <option>1 Star</option>
+          </select>
+          <textarea class="full" placeholder="Write your review here..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit Review</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="container">
+      <div class="section-header">
+        <h2>Contact Me</h2>
+        <p>
+          This portfolio is meant to help clients and visitors reach you easily through WhatsApp, email, and your online platforms.
+        </p>
+      </div>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Direct Contact</h3>
+          <p><strong>WhatsApp:</strong> <a href="https://wa.me/233537044801" target="_blank">+233 53 704 4801</a></p>
+          <p><strong>Email:</strong> <a href="mailto:denarius@yenkasa.xyz">denarius@yenkasa.xyz</a></p>
+          <p><strong>GitHub:</strong> <a href="https://github.com/FerochiDenarius" target="_blank">FerochiDenarius</a></p>
+        </div>
+
+        <div class="contact-card">
+          <h3>Quick Message Form</h3>
+          <p>This form is ready for the next step when we connect it to backend mail or WhatsApp redirect.</p>
+          <form>
+            <div class="form-grid">
+              <input type="text" placeholder="Your name" required />
+              <input type="email" placeholder="Your email" required />
+              <textarea class="full" placeholder="Tell me about your project" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Send Message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p><strong>© 2026 Yenkasa Portfolio.</strong> Built under Yenkasa Soft O Tech.</p>
+  </footer>
 </body>
 </html>

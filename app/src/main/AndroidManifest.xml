@@ -73,7 +73,9 @@
 
 
         <!-- App Activities -->
-        <activity android:name=".ui.LoginActivity" />
+        <activity
+            android:name=".ui.LoginActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
 
         <activity android:name=".ui.MenuActivity"
             android:exported="false"

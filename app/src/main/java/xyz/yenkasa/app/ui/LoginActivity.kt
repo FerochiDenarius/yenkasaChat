@@ -32,6 +32,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var textRegisterLink: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var loginCard: View
+    private lateinit var loginScroll: ScrollView
 
 
     private val userViewModel: UserViewModel by viewModels()
@@ -64,6 +65,7 @@ class LoginActivity : AppCompatActivity() {
         textRegisterLink = findViewById(R.id.textRegisterLink)
         progressBar = findViewById(R.id.loginProgress)
         loginCard = findViewById(R.id.loginCard)
+        loginScroll = findViewById(R.id.loginScroll)
 
         // Entrance animation
         loginCard.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_up_fade))
@@ -73,6 +75,7 @@ class LoginActivity : AppCompatActivity() {
 
         // Click events
         btnLogin.setOnClickListener { handleLogin() }
+        setupKeyboardAwareScrolling()
         findViewById<TextView>(R.id.textRegisterLink)
             .setOnClickListener { startActivity(Intent(this, RegisterActivity::class.java)) }
         findViewById<TextView>(R.id.textForgotPassword)
@@ -82,6 +85,19 @@ class LoginActivity : AppCompatActivity() {
         userViewModel.playerIdUpdateResult.observe(this, Observer { success ->
             if (success) Log.i("LoginActivity", "Player ID updated.")
         })
+    }
+
+    private fun setupKeyboardAwareScrolling() {
+        val focusListener = View.OnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                loginScroll.postDelayed({
+                    loginScroll.smoothScrollTo(0, loginCard.top + view.top)
+                }, 250)
+            }
+        }
+
+        editIdentifier.onFocusChangeListener = focusListener
+        editPassword.onFocusChangeListener = focusListener
     }
 
     private fun addStarSparkle() {

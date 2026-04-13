@@ -68,6 +68,8 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
 document.getElementById("resendVerificationBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
+  const resendButton = document.getElementById("resendVerificationBtn");
+  const originalText = resendButton.textContent;
 
   if (!email) {
     alert("Enter your email address first.");
@@ -75,6 +77,10 @@ document.getElementById("resendVerificationBtn").addEventListener("click", async
   }
 
   try {
+    console.info("[Yenkasa Store] Resend verification requested", { email });
+    resendButton.disabled = true;
+    resendButton.textContent = "Sending verification email...";
+
     const response = await fetch(
       "/triciabales-api/api/users/resend-verification",
       {
@@ -87,6 +93,11 @@ document.getElementById("resendVerificationBtn").addEventListener("click", async
     );
 
     const data = await response.json();
+    console.info("[Yenkasa Store] Resend verification response", {
+      status: response.status,
+      ok: response.ok,
+      actionUrlReturned: Boolean(data.actionUrl)
+    });
 
     if (!response.ok) {
       throw new Error(data.message || data.error || "Could not resend verification email");
@@ -98,7 +109,14 @@ document.getElementById("resendVerificationBtn").addEventListener("click", async
 
     alert(message);
   } catch (err) {
-    console.error(err);
-    alert(err.message);
+    console.error("[Yenkasa Store] Resend verification failed", err);
+    alert(
+      err instanceof TypeError
+        ? "Network error. Your browser could not reach yenkasa.xyz. Check your internet/DNS and try again."
+        : err.message
+    );
+  } finally {
+    resendButton.disabled = false;
+    resendButton.textContent = originalText;
   }
 });

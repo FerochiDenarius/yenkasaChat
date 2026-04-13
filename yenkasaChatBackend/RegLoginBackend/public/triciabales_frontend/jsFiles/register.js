@@ -5,6 +5,8 @@ function getInputValue(id) {
 
 document.getElementById("register-form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const submitButton = e.target.querySelector('button[type="submit"]');
+  const originalText = submitButton ? submitButton.textContent : "";
 
   const payload = {
     name: getInputValue("name").trim(),
@@ -17,6 +19,16 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
   };
 
   try {
+    console.info("[Yenkasa Store] Registration submitted", {
+      email: payload.email,
+      role: payload.role
+    });
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Creating account...";
+    }
+
     const response = await fetch(
       "/triciabales-api/api/users/register",
       {
@@ -29,6 +41,11 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
     );
 
     const data = await response.json();
+    console.info("[Yenkasa Store] Registration response", {
+      status: response.status,
+      ok: response.ok,
+      actionUrlReturned: Boolean(data.actionUrl)
+    });
 
     if (!response.ok) {
       throw new Error(data.message || data.error || "Registration failed");
@@ -45,7 +62,16 @@ document.getElementById("register-form").addEventListener("submit", async (e) =>
     alert(message);
     window.location.href = "/store/buyer-login";
   } catch (err) {
-    console.error(err);
-    alert(err.message);
+    console.error("[Yenkasa Store] Registration failed", err);
+    alert(
+      err instanceof TypeError
+        ? "Network error. Your browser could not reach yenkasa.xyz. Check your internet/DNS and try again."
+        : err.message
+    );
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
   }
 });

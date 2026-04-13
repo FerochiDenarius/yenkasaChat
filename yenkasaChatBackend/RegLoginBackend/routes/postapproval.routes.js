@@ -195,10 +195,17 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
     if (!approvalEntry)
       return res.status(404).json({ error: "Approval item not found" });
 
+    const post = await Post.findByIdAndUpdate(
+      approvalEntry.post,
+      { status: "rejected" },
+      { new: true }
+    );
+    if (!post)
+      return res.status(404).json({ error: "Post not found" });
+
     approvalEntry.status = "rejected";
     await approvalEntry.save();
 
-    const post = await Post.findById(approvalEntry.post);
     const owner = await User.findById(post.userId);
 
     if (owner) {

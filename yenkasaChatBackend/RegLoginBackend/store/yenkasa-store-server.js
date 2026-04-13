@@ -7,6 +7,18 @@ const FormData = require('form-data');
 const upload = multer();
 const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
 
+function maskEmail(email) {
+  const raw = String(email || '').trim();
+  const [name, domain] = raw.split('@');
+
+  if (!name || !domain) {
+    return raw || '-';
+  }
+
+  const visible = name.slice(0, 2);
+  return `${visible}${'*'.repeat(Math.max(name.length - 2, 2))}@${domain}`;
+}
+
 function getAuthorizationHeader(req) {
   return req.headers.authorization || req.get?.('Authorization') || '';
 }
@@ -26,6 +38,9 @@ module.exports = function (app) {
 
   // USER REGISTER
   app.post('/triciabales-api/api/users/register', async (req, res) => {
+    const email = req.body?.email;
+    console.log(`[Yenkasa Store] Register request received for ${maskEmail(email)}`);
+
     try {
       const response = await axios.post(
         `${API_BASE}/api/users/register`,
@@ -37,11 +52,14 @@ module.exports = function (app) {
         }
       );
 
+      console.log(
+        `[Yenkasa Store] Register success for ${maskEmail(email)} status=${response.status} actionUrl=${response.data?.actionUrl ? 'yes' : 'no'}`
+      );
       res.json(response.data);
 
     } catch (err) {
       console.error(
-        'REGISTER ERROR:',
+        `[Yenkasa Store] REGISTER ERROR for ${maskEmail(email)}:`,
         err.response?.status,
         err.response?.data || err.message
       );
@@ -54,6 +72,9 @@ module.exports = function (app) {
 
   // USER LOGIN
   app.post('/triciabales-api/api/users/login', async (req, res) => {
+    const email = req.body?.email;
+    console.log(`[Yenkasa Store] Login request received for ${maskEmail(email)}`);
+
     try {
       const response = await axios.post(
         `${API_BASE}/api/users/login`,
@@ -65,11 +86,12 @@ module.exports = function (app) {
         }
       );
 
+      console.log(`[Yenkasa Store] Login success for ${maskEmail(email)} role=${response.data?.user?.role || '-'}`);
       res.json(response.data);
 
     } catch (err) {
       console.error(
-        'USER LOGIN ERROR:',
+        `[Yenkasa Store] USER LOGIN ERROR for ${maskEmail(email)}:`,
         err.response?.status,
         err.response?.data || err.message
       );
@@ -132,6 +154,9 @@ module.exports = function (app) {
   });
 
   app.post('/triciabales-api/api/users/resend-verification', async (req, res) => {
+    const email = req.body?.email;
+    console.log(`[Yenkasa Store] Resend verification request received for ${maskEmail(email)}`);
+
     try {
       const response = await axios.post(
         `${API_BASE}/api/users/resend-verification`,
@@ -143,10 +168,13 @@ module.exports = function (app) {
         }
       );
 
+      console.log(
+        `[Yenkasa Store] Resend verification completed for ${maskEmail(email)} status=${response.status} actionUrl=${response.data?.actionUrl ? 'yes' : 'no'}`
+      );
       res.json(response.data);
     } catch (err) {
       console.error(
-        'RESEND VERIFICATION ERROR:',
+        `[Yenkasa Store] RESEND VERIFICATION ERROR for ${maskEmail(email)}:`,
         err.response?.status,
         err.response?.data || err.message
       );

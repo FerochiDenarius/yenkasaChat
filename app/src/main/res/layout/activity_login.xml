@@ -15,9 +15,14 @@
         android:layout_height="match_parent" />
 
     <ScrollView
+        android:id="@+id/loginScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="24dp"
+        android:paddingBottom="40dp"
+        android:clipToPadding="false"
+        android:isScrollContainer="true"
+        android:scrollbars="none"
         android:fillViewport="true">
 
         <LinearLayout
@@ -68,44 +73,68 @@
 
                 <!-- USERNAME FIELD  -->
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutLoginIdentifier"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:boxBackgroundMode="none"
-                    app:boxStrokeColor="@color/yellowAccent"
-                    app:hintTextColor="@color/yellowAccent"
+                    app:boxBackgroundMode="outline"
+                    app:boxBackgroundColor="#111F17"
+                    app:boxStrokeColor="@color/login_input_stroke"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="2dp"
+                    app:boxCornerRadiusTopStart="8dp"
+                    app:boxCornerRadiusTopEnd="8dp"
+                    app:boxCornerRadiusBottomStart="8dp"
+                    app:boxCornerRadiusBottomEnd="8dp"
+                    app:hintTextColor="@color/login_input_hint"
                     android:layout_marginTop="10dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/editLoginIdentifier"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="56dp"
                         android:hint="Email"
+                        android:inputType="textEmailAddress"
+                        android:singleLine="true"
+                        android:imeOptions="actionNext"
                         android:textColor="#E5B326"
-                        android:textColorHint="#E5B326"
-                        android:padding="14dp"
+                        android:textColorHint="#C9A647"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
                         android:background="@null" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- PASSWORD FIELD -->
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutLoginPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     app:passwordToggleEnabled="true"
-                    app:boxBackgroundMode="none"
-                    app:boxStrokeColor="@color/yellowAccent"
-                    app:hintTextColor="@color/yellowAccent">
+                    app:passwordToggleTint="@color/login_input_hint"
+                    app:boxBackgroundMode="outline"
+                    app:boxBackgroundColor="#111F17"
+                    app:boxStrokeColor="@color/login_input_stroke"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="2dp"
+                    app:boxCornerRadiusTopStart="8dp"
+                    app:boxCornerRadiusTopEnd="8dp"
+                    app:boxCornerRadiusBottomStart="8dp"
+                    app:boxCornerRadiusBottomEnd="8dp"
+                    app:hintTextColor="@color/login_input_hint">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/editLoginPassword"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="56dp"
                         android:hint="Password"
                         android:inputType="textPassword"
+                        android:singleLine="true"
+                        android:imeOptions="actionDone"
                         android:textColor="#E5B326"
-                        android:textColorHint="#E5B326"
-                        android:padding="14dp"
+                        android:textColorHint="#C9A647"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
                         android:background="@null" />
 
                 </com.google.android.material.textfield.TextInputLayout>

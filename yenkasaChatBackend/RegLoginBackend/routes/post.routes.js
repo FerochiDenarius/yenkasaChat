@@ -53,11 +53,33 @@ function getPostWindowStart() {
 }
 
 function isDeveloperRole(role) {
-  return Permission.normalize(role) === "developer";
+  return ["developer", "junior_developer", "senior_developer"].includes(Permission.normalize(role));
 }
 
 function isAutoApprovedRole(role) {
-  return Permission.canApprove(role) || isDeveloperRole(role);
+  const normalized = Permission.normalize(role);
+  return ["admin", "moderator"].includes(normalized) || isDeveloperRole(normalized);
+}
+
+async function getNormalizedUserRole(user) {
+  const roleName = Permission.normalize(user.roleName || "");
+  if (roleName && roleName !== "user") {
+    return roleName;
+  }
+
+  if (user.role) {
+    const roleDoc = await Permission.findById(user.role).lean().catch(() => null);
+    if (roleDoc?.role) {
+      return Permission.normalize(roleDoc.role);
+    }
+
+    const normalizedRole = Permission.normalize(user.role);
+    if (normalizedRole && normalizedRole !== "user") {
+      return normalizedRole;
+    }
+  }
+
+  return roleName || "user";
 }
 
 /* ------------------------------------
@@ -80,7 +102,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const normalizedRole = Permission.normalize(user.roleName || user.role);
+    const normalizedRole = await getNormalizedUserRole(user);
 
     if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
       return res.status(403).json({
@@ -91,7 +113,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       });
     }
 
-    const isPrivileged = isAutoApprovedRole(normalizedRole);
+    const isAutoPublished = isAutoApprovedRole(normalizedRole);
     const isVerifiedUser = user.verified === true;
     const windowStart = getPostWindowStart();
     let recentPostsCount = 0;
@@ -118,7 +140,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       });
     }
 
-    if (!isPrivileged && !isVerifiedUser) {
+    if (!isAutoPublished && !isVerifiedUser) {
       recentPostsCount = await Post.countDocuments({
         userId: user._id,
         createdAt: { $gte: windowStart }
@@ -180,7 +202,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       }
     }
 
-    const postStatus = isPrivileged ? "approved" : "pending";
+    const postStatus = isAutoPublished ? "approved" : "pending";
 
     const post = await Post.create({
       userId,
@@ -201,11 +223,15 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     /* ------------------------------------
      * PENDING POST → APPROVAL WORKFLOW
      * ------------------------------------ */
-    if (!isPrivileged) {
+    if (!isAutoPublished) {
 
       await PostApproval.create({
         post: post._id,
         user: userId,
+        caption: post.text,
+        imageUrl: post.imageUrl,
+        videoUrl: post.videoUrl,
+        audioUrl: post.audioUrl,
         submittedAt: new Date(),
         status: "pending"
       });
@@ -292,12 +318,12 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
         : "Post submitted for approval.",
       postingAccess: {
         verified: isVerifiedUser,
-        privileged: isPrivileged,
+        privileged: isAutoPublished,
         postWindowHours: POST_WINDOW_HOURS,
-        postingLimit: isPrivileged || isVerifiedUser ? null : UNVERIFIED_POST_LIMIT,
-        postsUsed: isPrivileged || isVerifiedUser ? null : recentPostsCount + 1,
-        remainingPosts: isPrivileged || isVerifiedUser ? null : remainingPosts,
-        requiresReview: !isPrivileged
+        postingLimit: isAutoPublished || isVerifiedUser ? null : UNVERIFIED_POST_LIMIT,
+        postsUsed: isAutoPublished || isVerifiedUser ? null : recentPostsCount + 1,
+        remainingPosts: isAutoPublished || isVerifiedUser ? null : remainingPosts,
+        requiresReview: !isAutoPublished
       }
     });
 

@@ -3771,3 +3771,51 @@ footer a {
     height: 190px;
   }
 }
+
+/* Final nav contrast override: keep menu readable on light flyer backgrounds. */
+.market-hero .nav-links a {
+  background: rgba(255, 248, 239, 0.92);
+  color: var(--yk-brown) !important;
+  border: 1px solid rgba(60, 36, 21, 0.10);
+}
+
+.market-hero .nav-links a:hover {
+  background: #f4e5cf;
+}
+
+.market-hero .seller-btn,
+.market-hero .admin-btn,
+.market-hero .logout-btn {
+  color: #ffffff !important;
+  border: none;
+}
+
+.market-hero .seller-btn {
+  background: #5f381c !important;
+}
+
+.market-hero .admin-btn {
+  background: #b7791f !important;
+}
+
+.market-hero .logout-btn {
+  background: #7f1d1d !important;
+}
+
+@media (min-width: 980px) {
+  .market-hero .nav-links a {
+    background: rgba(255, 248, 239, 0.18);
+    color: #fff8ef !important;
+    border-color: rgba(255, 248, 239, 0.20);
+  }
+
+  .market-hero .nav-links a:hover {
+    background: rgba(255, 248, 239, 0.30);
+  }
+
+  .market-hero .seller-btn,
+  .market-hero .admin-btn,
+  .market-hero .logout-btn {
+    color: #ffffff !important;
+  }
+}

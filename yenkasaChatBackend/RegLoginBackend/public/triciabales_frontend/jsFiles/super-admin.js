@@ -65,6 +65,23 @@ function formatStatus(status) {
     .join(" ");
 }
 
+function isPayoutReleaseEligible(order) {
+  return order.confirmedByBuyer === true
+    || String(order.deliveryStatus || "").toLowerCase() === "delivered";
+}
+
+function isPendingPayoutOrder(order) {
+  const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+
+  if (!isPayoutReleaseEligible(order) || order.payoutReleased === true) {
+    return false;
+  }
+
+  return paymentStatus === "paid"
+    || paymentStatus === "ready_for_payout"
+    || paymentStatus === "payout_on_hold";
+}
+
 function closeMenu() {
   dashboardMenu.classList.remove("open");
 }
@@ -100,6 +117,9 @@ function renderPendingPayoutItems(target, orders) {
       ? Number(order.sellerPayoutAmount)
       : total - commission;
     const isOnHold = order.paymentStatus === "payout_on_hold";
+    const payoutStatusLabel = order.paymentStatus === "paid"
+      ? "Paid - Ready For Payout"
+      : formatStatus(order.paymentStatus);
     const primaryAction = isOnHold
       ? `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="resume">
           Mark Ready
@@ -125,11 +145,12 @@ function renderPendingPayoutItems(target, orders) {
         <p><strong>Seller Name:</strong> ${order.sellerName || "Seller"}</p>
         <p><strong>Order #:</strong> ${order.id}</p>
         <p><strong>Buyer:</strong> ${order.customerName || "-"}</p>
-        <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
+        <p><strong>Delivery:</strong> ${formatStatus(order.deliveryStatus)}</p>
+        <p><strong>Payout Trigger:</strong> ${order.confirmedByBuyer ? "Buyer confirmed" : "Seller marked delivered"}</p>
         <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
         <p><strong>Commission:</strong> GH₵${commission.toFixed(2)}</p>
         <p><strong>Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
-        <p><strong>Payout Status:</strong> ${formatStatus(order.paymentStatus)}</p>
+        <p><strong>Payout Status:</strong> ${payoutStatusLabel}</p>
         ${order.payoutHeldAt ? `<p><strong>Held At:</strong> ${formatDateTime(order.payoutHeldAt)}</p>` : ""}
         ${order.payoutHoldReason ? `<p><strong>Hold Reason:</strong> ${order.payoutHoldReason}</p>` : ""}
         <div class="super-admin-actions">
@@ -386,12 +407,9 @@ async function loadDashboard() {
     }
 
     const readyPayouts = orders.filter(order =>
-      order.paymentStatus === "ready_for_payout" && order.confirmedByBuyer === true
+      isPendingPayoutOrder(order) && order.paymentStatus !== "payout_on_hold"
     );
-    const pendingPayouts = orders.filter(order =>
-      (order.paymentStatus === "ready_for_payout" || order.paymentStatus === "payout_on_hold")
-      && order.confirmedByBuyer === true
-    );
+    const pendingPayouts = orders.filter(isPendingPayoutOrder);
     const releasedPayouts = orders.filter(order => order.paymentStatus === "payout_released");
     const totalCommission = releasedPayouts.reduce(
       (sum, order) => sum + Number(order.commissionAmount || 0),

@@ -36,7 +36,8 @@ class PostAdapter(
     private val onCommentClick: (Post, Int) -> Unit,
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit,
-    private val onShareClick: (Post) -> Unit
+    private val onShareClick: (Post) -> Unit,
+    private val onViewCountUpdated: (String, Int) -> Unit = { _, _ -> }
 
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
@@ -481,10 +482,7 @@ class PostAdapter(
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
                         if (body.success) {
-                            post.viewCount = body.viewsCount
-                            CoroutineScope(Dispatchers.Main).launch {
-                                notifyItemChanged(posts.indexOfFirst { it._id == post._id })
-                            }
+                            applyViewCount(post._id, maxOf(body.viewsCount, body.viewCount))
                         }
                     }
                 }
@@ -536,10 +534,7 @@ class PostAdapter(
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
                         if (body.success) {
-                            post?.viewCount = body.viewsCount
-                            CoroutineScope(Dispatchers.Main).launch {
-                                notifyItemChanged(posts.indexOfFirst { it._id == postId })
-                            }
+                            applyViewCount(postId, maxOf(body.viewsCount, body.viewCount))
                         }
                     }
                 }
@@ -567,14 +562,23 @@ class PostAdapter(
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
                         if (body.success) {
-                            post?.viewCount = body.viewsCount
-                            CoroutineScope(Dispatchers.Main).launch {
-                                notifyItemChanged(posts.indexOfFirst { it._id == postId })
-                            }
+                            applyViewCount(postId, maxOf(body.viewsCount, body.viewCount))
                         }
                     }
                 }
             } catch (_: Exception) {}
+        }
+    }
+
+    private fun applyViewCount(postId: String, viewsCount: Int) {
+        val index = posts.indexOfFirst { it._id == postId }
+        if (index >= 0) {
+            posts[index].viewCount = viewsCount
+        }
+
+        CoroutineScope(Dispatchers.Main).launch {
+            onViewCountUpdated(postId, viewsCount)
+            if (index >= 0) notifyItemChanged(index)
         }
     }
 

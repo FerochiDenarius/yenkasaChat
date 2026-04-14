@@ -4062,6 +4062,43 @@ footer a {
   gap: 14px;
 }
 
+.notification-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.notification-filter-btn {
+  border: 1px solid rgba(60, 36, 21, 0.12);
+  background: #fff8ef;
+  color: #3c2415;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.notification-filter-btn.active {
+  background: #3c2415;
+  color: #ebc988;
+}
+
+.notification-group {
+  display: grid;
+  gap: 14px;
+}
+
+.notification-group-title {
+  color: #3c2415;
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin: 6px 0 -2px;
+  text-transform: uppercase;
+}
+
 .notification-card {
   display: grid;
   grid-template-columns: 48px 1fr;
@@ -4148,6 +4185,16 @@ footer a {
   cursor: pointer;
 }
 
+.mark-read-btn.muted {
+  background: #f3e2c8;
+  color: #3c2415;
+}
+
+.mark-read-btn.danger {
+  background: #9f1d1d;
+  color: #ffffff;
+}
+
 .notification-empty {
   text-align: center;
 }
@@ -4161,6 +4208,11 @@ footer a {
   .notification-toolbar .primary-btn {
     width: 100%;
     text-align: center;
+  }
+
+  .notification-filter-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .notification-card {

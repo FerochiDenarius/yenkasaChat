@@ -132,6 +132,9 @@ class FeedFragment : Fragment() {
                 }
             },
             onShareClick = { post -> sharePost(post) },
+            onViewCountUpdated = { postId, viewsCount ->
+                updateSourcePostViewCount(postId, viewsCount)
+            },
             adAdapterCallbacks = AdBinder(requireContext())
         )
 // 🔥 CONNECT POST OPTIONS (delete / hide / flag / download)
@@ -440,6 +443,13 @@ class FeedFragment : Fragment() {
         progressBar.visibility = if (show && currentPage == 1) View.VISIBLE else View.GONE
     }
 
+    private fun updateSourcePostViewCount(postId: String, viewsCount: Int) {
+        val index = posts.indexOfFirst { it._id == postId }
+        if (index >= 0) {
+            posts[index] = posts[index].copy(viewCount = viewsCount)
+        }
+    }
+
 
     private fun setupSocketListeners() {
         SocketManager.on("newPost") { data ->
@@ -464,12 +474,8 @@ class FeedFragment : Fragment() {
                 val viewsCount = json.getInt("viewsCount")
 
                 lifecycleScope.launch {
-                    val index = posts.indexOfFirst { it._id == postId }
-                    if (index >= 0) {
-                        posts[index] = posts[index].copy(viewCount = viewsCount)
-                        val mixed = buildMixedFeed(posts)
-                        feedAdapter.updateItems(mixed)
-                    }
+                    updateSourcePostViewCount(postId, viewsCount)
+                    feedAdapter.updatePostViewCount(postId, viewsCount)
                 }
             } catch (e: Exception) {
                 Log.e("FeedFragment", "Error parsing viewUpdate: ${e.message}")

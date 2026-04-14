@@ -977,6 +977,29 @@ module.exports = function (app) {
     }
   });
 
+  app.delete('/triciabales-api/api/notifications/:id', async (req, res) => {
+    try {
+      const response = await axios.delete(
+        `${API_BASE}/api/notifications/${req.params.id}`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.status(response.status).json(response.data);
+    } catch (err) {
+      console.error(
+        'NOTIFICATION DELETE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // UBER DIRECT DELIVERY CONFIG
   app.get('/triciabales-api/api/deliveries/uber/config', async (req, res) => {
     try {

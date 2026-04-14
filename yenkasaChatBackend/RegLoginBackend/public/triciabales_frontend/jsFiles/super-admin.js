@@ -15,8 +15,13 @@ const superAdminNotificationsFeedback = document.getElementById("superAdminNotif
 const superAdminNotificationsList = document.getElementById("superAdminNotificationsList");
 const refreshSuperAdminNotificationsBtn = document.getElementById("refreshSuperAdminNotificationsBtn");
 const markAllSuperAdminNotificationsReadBtn = document.getElementById("markAllSuperAdminNotificationsReadBtn");
+const superAdminNotificationFilterBar = document.getElementById("superAdminNotificationFilterBar");
 const API_BASE = "/triciabales-api";
 let loadedSuperAdminNotifications = [];
+let activeSuperAdminNotificationFilter = "all";
+const hiddenSuperAdminNotificationIds = new Set(
+  JSON.parse(localStorage.getItem("hiddenSuperAdminNotificationIds") || "[]").map(String)
+);
 
 if (!currentUser || currentUser.role !== "SUPER_ADMIN" || !authToken) {
   window.location.href = "/store/buyer-login";
@@ -97,6 +102,53 @@ function notificationIcon(type) {
   return "•";
 }
 
+function saveHiddenSuperAdminNotifications() {
+  localStorage.setItem("hiddenSuperAdminNotificationIds", JSON.stringify([...hiddenSuperAdminNotificationIds]));
+}
+
+function notificationDayGroup(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "older";
+  }
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfToday.getDate() - 1);
+
+  if (date >= startOfToday) {
+    return "today";
+  }
+
+  if (date >= startOfYesterday) {
+    return "yesterday";
+  }
+
+  return "older";
+}
+
+function notificationGroupTitle(group) {
+  if (group === "today") return "Today";
+  if (group === "yesterday") return "Yesterday";
+  return "Older";
+}
+
+function visibleSuperAdminNotifications() {
+  return loadedSuperAdminNotifications.filter(notification => {
+    if (hiddenSuperAdminNotificationIds.has(String(notification.id))) {
+      return false;
+    }
+
+    if (activeSuperAdminNotificationFilter === "all") {
+      return true;
+    }
+
+    return notificationDayGroup(notification.createdAt) === activeSuperAdminNotificationFilter;
+  });
+}
+
 function isPayoutReleaseEligible(order) {
   return order.confirmedByBuyer === true
     || String(order.deliveryStatus || "").toLowerCase() === "delivered";
@@ -157,16 +209,19 @@ function renderSuperAdminNotifications(notifications = []) {
     return;
   }
 
-  const unreadCount = notifications.filter(notification => !notification.readAt).length;
+  const filteredNotifications = visibleSuperAdminNotifications();
+  const unreadCount = notifications.filter(notification => (
+    !notification.readAt && !hiddenSuperAdminNotificationIds.has(String(notification.id))
+  )).length;
   superAdminNotificationCountText.textContent = notifications.length
     ? `${notifications.length} notification${notifications.length === 1 ? "" : "s"} loaded. ${unreadCount} unread.`
     : "No notifications yet.";
 
-  if (!notifications.length) {
+  if (!filteredNotifications.length) {
     superAdminNotificationsList.innerHTML = `
       <div class="notification-empty card">
         <div class="card-content">
-          <h3>No notifications yet</h3>
+          <h3>No ${activeSuperAdminNotificationFilter === "all" ? "" : activeSuperAdminNotificationFilter} notifications</h3>
           <p>Order, payment, delivery, payout and sensitive admin activity will appear here.</p>
         </div>
       </div>
@@ -174,24 +229,43 @@ function renderSuperAdminNotifications(notifications = []) {
     return;
   }
 
-  superAdminNotificationsList.innerHTML = notifications.map(notification => {
-    const isUnread = !notification.readAt;
+  const groups = ["today", "yesterday", "older"];
+
+  superAdminNotificationsList.innerHTML = groups.map(group => {
+    const groupNotifications = filteredNotifications.filter(notification => (
+      notificationDayGroup(notification.createdAt) === group
+    ));
+
+    if (!groupNotifications.length) {
+      return "";
+    }
 
     return `
-      <article class="notification-card ${isUnread ? "unread" : ""}" data-notification-id="${notification.id}">
-        <div class="notification-icon">${notificationIcon(notification.type)}</div>
-        <div class="notification-body">
-          <div class="notification-card-head">
-            <h3>${notification.title || "Notification"}</h3>
-            <span>${formatNotificationDate(notification.createdAt)}</span>
-          </div>
-          <p>${notification.message || ""}</p>
-          <div class="notification-meta">
-            <span>${notification.type || "GENERAL"}</span>
-            ${isUnread ? `<button type="button" class="mark-read-btn" data-read-id="${notification.id}">Mark read</button>` : `<span>Read</span>`}
-          </div>
-        </div>
-      </article>
+      <section class="notification-group">
+        <div class="notification-group-title">${notificationGroupTitle(group)}</div>
+        ${groupNotifications.map(notification => {
+          const isUnread = !notification.readAt;
+
+          return `
+            <article class="notification-card ${isUnread ? "unread" : ""}" data-notification-id="${notification.id}">
+              <div class="notification-icon">${notificationIcon(notification.type)}</div>
+              <div class="notification-body">
+                <div class="notification-card-head">
+                  <h3>${notification.title || "Notification"}</h3>
+                  <span>${formatNotificationDate(notification.createdAt)}</span>
+                </div>
+                <p>${notification.message || ""}</p>
+                <div class="notification-meta">
+                  <span>${notification.type || "GENERAL"}</span>
+                  ${isUnread ? `<button type="button" class="mark-read-btn" data-action="read" data-notification-id="${notification.id}">Mark read</button>` : `<span>Read</span>`}
+                  <button type="button" class="mark-read-btn muted" data-action="hide" data-notification-id="${notification.id}">Hide</button>
+                  <button type="button" class="mark-read-btn danger" data-action="delete" data-notification-id="${notification.id}">Delete</button>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </section>
     `;
   }).join("");
 }
@@ -259,10 +333,58 @@ async function markSuperAdminNotificationRead(notificationId) {
 }
 
 async function markAllSuperAdminNotificationsRead() {
-  const unreadNotifications = loadedSuperAdminNotifications.filter(notification => !notification.readAt);
+  const unreadNotifications = visibleSuperAdminNotifications().filter(notification => !notification.readAt);
 
   for (const notification of unreadNotifications) {
     await markSuperAdminNotificationRead(notification.id);
+  }
+}
+
+function hideSuperAdminNotification(notificationId) {
+  if (!notificationId) {
+    return;
+  }
+
+  hiddenSuperAdminNotificationIds.add(String(notificationId));
+  saveHiddenSuperAdminNotifications();
+  renderSuperAdminNotifications(loadedSuperAdminNotifications);
+}
+
+async function deleteSuperAdminNotification(notificationId) {
+  if (!notificationId) {
+    return;
+  }
+
+  const confirmed = confirm("Delete this notification permanently?");
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/notifications/${notificationId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders()
+    });
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Could not delete notification");
+    }
+
+    loadedSuperAdminNotifications = loadedSuperAdminNotifications.filter(notification => (
+      String(notification.id) !== String(notificationId)
+    ));
+    hiddenSuperAdminNotificationIds.delete(String(notificationId));
+    saveHiddenSuperAdminNotifications();
+    renderSuperAdminNotifications(loadedSuperAdminNotifications);
+  } catch (error) {
+    console.error("[Yenkasa Store] Could not delete super admin notification", error);
+    showSuperAdminNotificationFeedback(error.message, "error");
   }
 }
 
@@ -619,11 +741,33 @@ menuButtons.forEach(button => {
 
 refreshSuperAdminNotificationsBtn?.addEventListener("click", loadSuperAdminNotifications);
 markAllSuperAdminNotificationsReadBtn?.addEventListener("click", markAllSuperAdminNotificationsRead);
-superAdminNotificationsList?.addEventListener("click", event => {
-  const button = event.target.closest("[data-read-id]");
+superAdminNotificationFilterBar?.addEventListener("click", event => {
+  const button = event.target.closest("[data-notification-filter]");
+  if (!button) return;
 
-  if (button) {
-    markSuperAdminNotificationRead(button.dataset.readId);
+  activeSuperAdminNotificationFilter = button.dataset.notificationFilter || "all";
+  superAdminNotificationFilterBar.querySelectorAll("[data-notification-filter]").forEach(filterButton => {
+    filterButton.classList.toggle("active", filterButton === button);
+  });
+  renderSuperAdminNotifications(loadedSuperAdminNotifications);
+});
+superAdminNotificationsList?.addEventListener("click", event => {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+
+  const notificationId = button.dataset.notificationId;
+  const action = button.dataset.action;
+
+  if (action === "read") {
+    markSuperAdminNotificationRead(notificationId);
+  }
+
+  if (action === "hide") {
+    hideSuperAdminNotification(notificationId);
+  }
+
+  if (action === "delete") {
+    deleteSuperAdminNotification(notificationId);
   }
 });
 

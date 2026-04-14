@@ -16,6 +16,7 @@ class FeedAdapter(
     private val onUserClick: (String) -> Unit,
     private val onPostClick: (Post) -> Unit,
     private val onShareClick: (Post) -> Unit,
+    private val onViewCountUpdated: (String, Int) -> Unit = { _, _ -> },
     private val adAdapterCallbacks: AdAdapterCallbacks
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -38,7 +39,11 @@ class FeedAdapter(
         onCommentClick = { post, position -> onCommentClick(post, position) },
         onUserClick = { id -> onUserClick(id) },
         onPostClick = { post -> onPostClick(post) },
-        onShareClick = { post -> onShareClick(post) }
+        onShareClick = { post -> onShareClick(post) },
+        onViewCountUpdated = { postId, viewsCount ->
+            updatePostViewCount(postId, viewsCount)
+            onViewCountUpdated(postId, viewsCount)
+        }
     ).apply {
         // 🔥 FORWARD PostAdapter option buttons to FeedFragment
         setOnDeleteClickListener { post -> onDelete?.invoke(post) }
@@ -118,6 +123,22 @@ class FeedAdapter(
         items = newItems
         currentPostsForInternal = emptyList()
         notifyDataSetChanged()
+    }
+
+    fun updatePostViewCount(postId: String, viewsCount: Int) {
+        val index = items.indexOfFirst { it is Post && it._id == postId }
+        if (index < 0) return
+
+        items = items.map { item ->
+            if (item is Post && item._id == postId) {
+                item.copy(viewCount = viewsCount)
+            } else {
+                item
+            }
+        }
+        currentPostsForInternal = extractPosts(items)
+        internalPostAdapter.updatePosts(currentPostsForInternal)
+        notifyItemChanged(index)
     }
 
     // 🔥 NEW → Allow FeedFragment to pause videos safely

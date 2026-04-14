@@ -1,5 +1,9 @@
 const imageModal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
+const modalCloseBtn = document.getElementById("modalCloseBtn");
+const modalPrevBtn = document.getElementById("modalPrevBtn");
+const modalNextBtn = document.getElementById("modalNextBtn");
+const modalImageCounter = document.getElementById("modalImageCounter");
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const logoutLink = document.getElementById("logoutLink");
 const registerLink = document.getElementById("registerLink");
@@ -12,6 +16,8 @@ const mainNav = document.getElementById("mainNav");
 const promoSlides = document.querySelectorAll(".promo-slide");
 let allProducts = [];
 let currentPromoIndex = 0;
+let modalImages = [];
+let modalImageIndex = 0;
 const productDisplayLabels = {
   bale: "Bale",
   dress: "Dress",
@@ -208,22 +214,6 @@ function createProductCard(item) {
                 data-gallery-main
               >
               <span class="product-image-count">${productImages.length} photos</span>
-              <button
-                type="button"
-                class="gallery-arrow gallery-arrow-prev"
-                data-gallery-direction="prev"
-                aria-label="Previous product photo"
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                class="gallery-arrow gallery-arrow-next"
-                data-gallery-direction="next"
-                aria-label="Next product photo"
-              >
-                ›
-              </button>
             </div>
 
             <div class="product-grid-photo-stack">
@@ -294,69 +284,16 @@ function createProductCard(item) {
   const productImage = card.querySelector("[data-gallery-main]");
   const addCartBtn = card.querySelector(".add-cart-btn");
   const galleryButtons = card.querySelectorAll("[data-product-image]");
-  const galleryArrows = card.querySelectorAll("[data-gallery-direction]");
-  const photoCountBadge = card.querySelector(".product-image-count");
-  const photoStack = card.querySelector(".product-grid-photo-stack");
-  let activeImageIndex = 0;
 
   if (productImage) {
     productImage.addEventListener("click", () => {
-      openImage(productImage.src);
+      openImage(productImage.src, productImages);
     });
-  }
-
-  function renderGalleryState() {
-    if (!productImage || !productImages.length) {
-      return;
-    }
-
-    const currentImage = productImages[activeImageIndex];
-    productImage.src = currentImage;
-
-    if (photoCountBadge) {
-      photoCountBadge.textContent = `${activeImageIndex + 1} / ${productImages.length}`;
-    }
-
-    if (photoStack) {
-      const nextImages = [];
-
-      for (let offset = 1; offset <= Math.min(3, productImages.length - 1); offset += 1) {
-        nextImages.push((activeImageIndex + offset) % productImages.length);
-      }
-
-      photoStack.innerHTML = nextImages.map((imageIndex, stackIndex) => `
-        <button
-          type="button"
-          class="product-grid-photo"
-          data-product-image="${productImages[imageIndex]}"
-          data-grid-index="${imageIndex}"
-          aria-label="Open product photo ${imageIndex + 1}"
-        >
-          <img src="${productImages[imageIndex]}" alt="">
-          ${stackIndex === nextImages.length - 1 && productImages.length > 4 ? `<span class="more-photo-badge">+${productImages.length - nextImages.length - 1}</span>` : ""}
-        </button>
-      `).join("");
-
-      photoStack.querySelectorAll("[data-product-image]").forEach(button => {
-        button.addEventListener("click", event => {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const nextIndex = Number(button.dataset.gridIndex);
-          if (Number.isNaN(nextIndex)) {
-            return;
-          }
-
-          activeImageIndex = nextIndex;
-          renderGalleryState();
-        });
-      });
-    }
   }
 
   card.querySelector(".product-grid-photo-main")?.addEventListener("click", () => {
     if (productImage) {
-      openImage(productImage.src);
+      openImage(productImage.src, productImages);
     }
   });
 
@@ -368,31 +305,9 @@ function createProductCard(item) {
         return;
       }
 
-      openImage(nextImage);
+      openImage(nextImage, productImages);
     });
   });
-
-  galleryArrows.forEach(button => {
-    button.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (!productImages.length) {
-        return;
-      }
-
-      const direction = button.dataset.galleryDirection;
-      activeImageIndex = direction === "prev"
-        ? (activeImageIndex - 1 + productImages.length) % productImages.length
-        : (activeImageIndex + 1) % productImages.length;
-
-      renderGalleryState();
-    });
-  });
-
-  if (productImages.length > 1) {
-    renderGalleryState();
-  }
 
   if (!item.imageUrl && firstImage) {
     item.imageUrl = firstImage;
@@ -430,13 +345,14 @@ function renderIntoContainer(container, products, emptyTitle, emptyMessage) {
   });
 }
 
-function renderMarketplaceProducts(products) {
+function renderMarketplaceProducts(products, options = {}) {
   const baleContainer = document.getElementById("bale-container");
   const dressContainer = document.getElementById("dress-container");
   const fabricContainer = document.getElementById("fabric-container");
   const accessoryContainer = document.getElementById("accessory-container");
   const importContainer = document.getElementById("import-container");
   const availableProducts = products.filter(item => String(item.status || "").toLowerCase() !== "sold");
+  const featuredProducts = options.featuredProducts || availableProducts.slice(0, 6);
   const categoryGroups = {
     bale: products.filter(item => getProductCategory(item) === "bale"),
     dress: products.filter(item => getProductCategory(item) === "dress"),
@@ -447,9 +363,9 @@ function renderMarketplaceProducts(products) {
 
   renderIntoContainer(
     featuredContainer,
-    availableProducts.slice(0, 6),
-    "No featured products yet",
-    "Active products will appear here as sellers upload more items."
+    featuredProducts,
+    options.featuredEmptyTitle || "No featured products yet",
+    options.featuredEmptyMessage || "Active products will appear here as sellers upload more items."
   );
 
   renderIntoContainer(
@@ -488,40 +404,83 @@ function renderMarketplaceProducts(products) {
   );
 }
 
-function applySearch() {
-  const query = String(siteSearch?.value || "").trim().toLowerCase();
+function normalizeSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
-  if (!query) {
+function getSearchHaystack(item) {
+  return normalizeSearchText([
+    item.name,
+    item.description,
+    item.category,
+    item.categoryType,
+    item.status,
+    item.weight,
+    item.size,
+    item.type,
+    item.brand,
+    item.color,
+    item.material,
+    item.condition,
+    item.length,
+    item.model,
+    item.year,
+    item.metadataJson
+  ].join(" "));
+}
+
+function productMatchesQuery(item, query) {
+  const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+
+  if (!terms.length) {
+    return true;
+  }
+
+  const haystack = getSearchHaystack(item);
+  return terms.every(term => haystack.includes(term));
+}
+
+function applySearch(options = {}) {
+  const rawQuery = String(siteSearch?.value || "").trim();
+
+  if (!rawQuery) {
     renderMarketplaceProducts(allProducts);
     return;
   }
 
-  const filtered = allProducts.filter(item => {
-    return [
-      item.name,
-      item.description,
-      item.category,
-      item.status,
-      item.weight,
-      item.size,
-      item.type
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(query);
+  const filtered = allProducts.filter(item => productMatchesQuery(item, rawQuery));
+
+  renderMarketplaceProducts(filtered, {
+    featuredProducts: filtered,
+    featuredEmptyTitle: `No results for "${rawQuery}"`,
+    featuredEmptyMessage: "Try searching by product name, category, fabric, dress, bale, shoe, bag, colour or other details."
   });
 
-  renderMarketplaceProducts(filtered);
+  if (options.scrollToResults) {
+    document.getElementById("featured")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
 }
 
-searchBtn?.addEventListener("click", applySearch);
+searchBtn?.addEventListener("click", () => applySearch({ scrollToResults: true }));
 siteSearch?.addEventListener("input", applySearch);
+siteSearch?.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    applySearch({ scrollToResults: true });
+  }
+});
 
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
   .then(res => res.json())
   .then(data => {
     allProducts = Array.isArray(data) ? data : [];
-    renderMarketplaceProducts(allProducts);
+    applySearch();
   })
   .catch(err => {
     console.error(err);
@@ -549,11 +508,56 @@ imageModal.addEventListener("click", event => {
   }
 });
 
-function openImage(src) {
-  modalImage.src = src;
+modalCloseBtn?.addEventListener("click", closeImage);
+modalPrevBtn?.addEventListener("click", () => moveModalImage(-1));
+modalNextBtn?.addEventListener("click", () => moveModalImage(1));
+
+document.addEventListener("keydown", event => {
+  if (imageModal.style.display !== "flex") {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    closeImage();
+  }
+  if (event.key === "ArrowLeft") {
+    moveModalImage(-1);
+  }
+  if (event.key === "ArrowRight") {
+    moveModalImage(1);
+  }
+});
+
+function openImage(src, images = []) {
+  modalImages = Array.isArray(images) && images.length ? images : [src];
+  modalImageIndex = Math.max(0, modalImages.indexOf(src));
+  renderModalImage();
   imageModal.style.display = "flex";
+}
+
+function renderModalImage() {
+  modalImage.src = modalImages[modalImageIndex] || "";
+
+  const hasMultipleImages = modalImages.length > 1;
+  modalPrevBtn.style.display = hasMultipleImages ? "grid" : "none";
+  modalNextBtn.style.display = hasMultipleImages ? "grid" : "none";
+  modalImageCounter.style.display = hasMultipleImages ? "block" : "none";
+  modalImageCounter.textContent = hasMultipleImages
+    ? `${modalImageIndex + 1} / ${modalImages.length}`
+    : "";
+}
+
+function moveModalImage(direction) {
+  if (modalImages.length <= 1) {
+    return;
+  }
+
+  modalImageIndex = (modalImageIndex + direction + modalImages.length) % modalImages.length;
+  renderModalImage();
 }
 
 function closeImage() {
   imageModal.style.display = "none";
+  modalImages = [];
+  modalImageIndex = 0;
 }

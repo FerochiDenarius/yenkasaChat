@@ -1162,6 +1162,30 @@ module.exports = function (app) {
     }
   });
 
+  // DELETE UNPAID ORDER
+  app.delete('/triciabales-api/api/orders/:id', async (req, res) => {
+    try {
+      const response = await axios.delete(
+        `${API_BASE}/api/orders/${req.params.id}`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.status(response.status).json(response.data);
+    } catch (err) {
+      console.error(
+        'ORDER DELETE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // BUYER ORDER CONFIRMATION
   app.put('/triciabales-api/api/orders/:id/confirm-received', async (req, res) => {
     try {

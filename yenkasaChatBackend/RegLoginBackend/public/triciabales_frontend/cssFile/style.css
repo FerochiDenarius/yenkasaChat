@@ -2854,6 +2854,41 @@ footer {
   object-fit: cover;
 }
 
+.gallery-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(36, 21, 13, 0.78);
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: translateY(-50%);
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(36, 21, 13, 0.24);
+}
+
+.gallery-arrow-prev {
+  left: 10px;
+}
+
+.gallery-arrow-next {
+  right: 10px;
+}
+
+.gallery-arrow:hover {
+  background: rgba(180, 121, 31, 0.96);
+}
+
 .more-photo-badge {
   position: absolute;
   inset: 0;
@@ -3529,6 +3564,12 @@ body {
   background: linear-gradient(135deg, var(--yk-gold), #b9802d);
   color: var(--yk-dark);
   font-size: 0.92rem;
+}
+
+.marketplace-product-card .gallery-arrow {
+  margin: 0;
+  padding: 0;
+  color: #ffffff;
 }
 
 .marketplace-product-card .card-actions {

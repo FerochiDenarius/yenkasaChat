@@ -191,17 +191,16 @@ function createProductCard(item) {
   const status = String(item.status || "available").toLowerCase();
   const productImages = getProductImages(item);
   const firstImage = productImages[0];
+  const visibleGridImages = productImages.slice(1, 4);
 
   card.innerHTML = `
     ${firstImage ? `
       <div class="product-gallery ${productImages.length > 1 ? "multi-photo-gallery" : ""}">
         ${productImages.length > 1 ? `
           <div class="product-image-grid">
-            <button
-              type="button"
+            <div
               class="product-grid-photo product-grid-photo-main"
               data-product-image="${firstImage}"
-              aria-label="Open main product photo"
             >
               <img
                 src="${firstImage}"
@@ -209,18 +208,34 @@ function createProductCard(item) {
                 data-gallery-main
               >
               <span class="product-image-count">${productImages.length} photos</span>
-            </button>
+              <button
+                type="button"
+                class="gallery-arrow gallery-arrow-prev"
+                data-gallery-direction="prev"
+                aria-label="Previous product photo"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                class="gallery-arrow gallery-arrow-next"
+                data-gallery-direction="next"
+                aria-label="Next product photo"
+              >
+                ›
+              </button>
+            </div>
 
             <div class="product-grid-photo-stack">
-              ${productImages.slice(1, 4).map((imageUrl, index) => `
+              ${visibleGridImages.map((imageUrl, index) => `
                 <button
                   type="button"
                   class="product-grid-photo"
                   data-product-image="${imageUrl}"
+                  data-grid-index="${index + 1}"
                   aria-label="Open product photo ${index + 2}"
                 >
                   <img src="${imageUrl}" alt="">
-                  ${index === 2 && productImages.length > 4 ? `<span class="more-photo-badge">+${productImages.length - 4}</span>` : ""}
                 </button>
               `).join("")}
             </div>
@@ -279,12 +294,71 @@ function createProductCard(item) {
   const productImage = card.querySelector("[data-gallery-main]");
   const addCartBtn = card.querySelector(".add-cart-btn");
   const galleryButtons = card.querySelectorAll("[data-product-image]");
+  const galleryArrows = card.querySelectorAll("[data-gallery-direction]");
+  const photoCountBadge = card.querySelector(".product-image-count");
+  const photoStack = card.querySelector(".product-grid-photo-stack");
+  let activeImageIndex = 0;
 
   if (productImage) {
     productImage.addEventListener("click", () => {
       openImage(productImage.src);
     });
   }
+
+  function renderGalleryState() {
+    if (!productImage || !productImages.length) {
+      return;
+    }
+
+    const currentImage = productImages[activeImageIndex];
+    productImage.src = currentImage;
+
+    if (photoCountBadge) {
+      photoCountBadge.textContent = `${activeImageIndex + 1} / ${productImages.length}`;
+    }
+
+    if (photoStack) {
+      const nextImages = [];
+
+      for (let offset = 1; offset <= Math.min(3, productImages.length - 1); offset += 1) {
+        nextImages.push((activeImageIndex + offset) % productImages.length);
+      }
+
+      photoStack.innerHTML = nextImages.map((imageIndex, stackIndex) => `
+        <button
+          type="button"
+          class="product-grid-photo"
+          data-product-image="${productImages[imageIndex]}"
+          data-grid-index="${imageIndex}"
+          aria-label="Open product photo ${imageIndex + 1}"
+        >
+          <img src="${productImages[imageIndex]}" alt="">
+          ${stackIndex === nextImages.length - 1 && productImages.length > 4 ? `<span class="more-photo-badge">+${productImages.length - nextImages.length - 1}</span>` : ""}
+        </button>
+      `).join("");
+
+      photoStack.querySelectorAll("[data-product-image]").forEach(button => {
+        button.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const nextIndex = Number(button.dataset.gridIndex);
+          if (Number.isNaN(nextIndex)) {
+            return;
+          }
+
+          activeImageIndex = nextIndex;
+          renderGalleryState();
+        });
+      });
+    }
+  }
+
+  card.querySelector(".product-grid-photo-main")?.addEventListener("click", () => {
+    if (productImage) {
+      openImage(productImage.src);
+    }
+  });
 
   galleryButtons.forEach(button => {
     button.addEventListener("click", () => {
@@ -297,6 +371,28 @@ function createProductCard(item) {
       openImage(nextImage);
     });
   });
+
+  galleryArrows.forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!productImages.length) {
+        return;
+      }
+
+      const direction = button.dataset.galleryDirection;
+      activeImageIndex = direction === "prev"
+        ? (activeImageIndex - 1 + productImages.length) % productImages.length
+        : (activeImageIndex + 1) % productImages.length;
+
+      renderGalleryState();
+    });
+  });
+
+  if (productImages.length > 1) {
+    renderGalleryState();
+  }
 
   if (!item.imageUrl && firstImage) {
     item.imageUrl = firstImage;

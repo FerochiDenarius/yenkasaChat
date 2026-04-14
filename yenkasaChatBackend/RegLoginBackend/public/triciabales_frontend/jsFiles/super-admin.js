@@ -369,42 +369,24 @@ async function loadDashboard() {
       throw new Error("Could not load platform orders");
     }
 
-    let sellers = [];
-    const sellersResponse = await fetch(
-      `${API_BASE}/api/users/sellers`,
+    const usersResponse = await fetch(
+      `${API_BASE}/api/users`,
       {
         headers: getAuthHeaders()
       }
     );
-    const sellersPayload = await readResponseData(sellersResponse);
+    const usersPayload = await readResponseData(usersResponse);
 
-    if (isAuthFailure(sellersResponse.status)) {
-      handleUnauthorized(sellersPayload);
+    if (isAuthFailure(usersResponse.status)) {
+      handleUnauthorized(usersPayload);
       return;
     }
 
-    if (sellersResponse.ok && Array.isArray(sellersPayload)) {
-      sellers = sellersPayload;
-    } else {
-      const usersResponse = await fetch(
-        `${API_BASE}/api/users`,
-        {
-          headers: getAuthHeaders()
-        }
-      );
-      const usersPayload = await readResponseData(usersResponse);
-
-      if (isAuthFailure(usersResponse.status)) {
-        handleUnauthorized(usersPayload);
-        return;
-      }
-
-      if (!usersResponse.ok || !Array.isArray(usersPayload)) {
-        throw new Error("Could not load seller accounts");
-      }
-
-      sellers = usersPayload.filter(user => (user.role || "").toUpperCase() === "SELLER");
+    if (!usersResponse.ok || !Array.isArray(usersPayload)) {
+      throw new Error("Could not load seller accounts");
     }
+
+    const sellers = usersPayload.filter(user => (user.role || "").toUpperCase() === "SELLER");
 
     const readyPayouts = orders.filter(order =>
       isPendingPayoutOrder(order) && order.paymentStatus !== "payout_on_hold"

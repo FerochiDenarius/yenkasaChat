@@ -263,6 +263,17 @@
                         android:paddingStart="4dp" />
                 </LinearLayout>
 
+                <TextView
+                    android:id="@+id/textRegisterError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="#FFF3F3"
+                    android:padding="10dp"
+                    android:textColor="#B00020"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
                 <!-- Loading -->
                 <ProgressBar
                     android:id="@+id/progressBar"

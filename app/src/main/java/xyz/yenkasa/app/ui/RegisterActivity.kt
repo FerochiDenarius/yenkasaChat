@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Patterns
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.*
@@ -12,14 +13,20 @@ import xyz.yenkasa.app.model.LoginResponse
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.network.ApiClient
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.IOException
 
 class RegisterActivity : AppCompatActivity() {
 
+    private lateinit var radioGroup: RadioGroup
     private lateinit var radioEmail: RadioButton
     private lateinit var radioPhone: RadioButton
+    private lateinit var layoutEmail: TextInputLayout
+    private lateinit var layoutPhone: TextInputLayout
     private lateinit var editEmail: EditText
     private lateinit var editPhone: EditText
     private lateinit var editUsername: EditText
@@ -31,6 +38,8 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var checkTerms: CheckBox
     private lateinit var textTermsLink: TextView
     private lateinit var spinnerCommunities: Spinner
+    private lateinit var spinnerCountry: Spinner
+    private lateinit var textRegisterError: TextView
     private lateinit var progressBar: ProgressBar
 
     // NEW — animated card + icon + stars
@@ -45,8 +54,11 @@ class RegisterActivity : AppCompatActivity() {
         setContentView(R.layout.activity_register)
 
         // Original views
+        radioGroup = findViewById(R.id.radioGroup)
         radioEmail = findViewById(R.id.radioEmail)
         radioPhone = findViewById(R.id.radioPhone)
+        layoutEmail = findViewById(R.id.layoutEmail)
+        layoutPhone = findViewById(R.id.layoutPhone)
         editEmail = findViewById(R.id.editEmail)
         editPhone = findViewById(R.id.editPhone)
         editUsername = findViewById(R.id.editUsername)
@@ -57,6 +69,8 @@ class RegisterActivity : AppCompatActivity() {
         textLoginLink = findViewById(R.id.textLoginLink)
         checkTerms = findViewById(R.id.checkTerms)
         textTermsLink = findViewById(R.id.textTermsLink)
+        textRegisterError = findViewById(R.id.textRegisterError)
+        spinnerCountry = findViewById(R.id.spinnerCountry)
         spinnerCommunities = findViewById(R.id.spinnerCommunities)
         progressBar = findViewById(R.id.progressBar)
 
@@ -71,10 +85,11 @@ class RegisterActivity : AppCompatActivity() {
         addStarSparkle()
 
         // Email/phone switching
-        radioEmail.setOnCheckedChangeListener { _, isChecked ->
-            editEmail.visibility = if (isChecked) View.VISIBLE else View.GONE
-            editPhone.visibility = if (!isChecked) View.VISIBLE else View.GONE
+        radioGroup.setOnCheckedChangeListener { _, _ ->
+            updateContactInputVisibility()
+            clearContactFieldErrors()
         }
+        updateContactInputVisibility()
 
         textTermsLink.setOnClickListener {
             startActivity(Intent(this, UserAgreementActivity::class.java))
@@ -114,6 +129,100 @@ class RegisterActivity : AppCompatActivity() {
     // ❗ SHAKE CARD ON ERROR
     private fun shakeCard() {
         registerCard.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake))
+    }
+
+    private fun updateContactInputVisibility() {
+        layoutEmail.visibility = if (radioEmail.isChecked) View.VISIBLE else View.GONE
+        layoutPhone.visibility = if (radioPhone.isChecked) View.VISIBLE else View.GONE
+    }
+
+    private fun clearContactFieldErrors() {
+        editEmail.error = null
+        editPhone.error = null
+    }
+
+    private fun clearValidationErrors() {
+        textRegisterError.visibility = View.GONE
+        textRegisterError.text = ""
+        editEmail.error = null
+        editPhone.error = null
+        editUsername.error = null
+        editLocation.error = null
+        editPassword.error = null
+        editConfirmPassword.error = null
+    }
+
+    private fun showFormError(message: String) {
+        textRegisterError.text = message
+        textRegisterError.visibility = View.VISIBLE
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun isValidPhone(phone: String): Boolean {
+        val compact = phone.replace("\\s+".toRegex(), "")
+        return compact.matches(Regex("^\\+?[0-9]{9,15}$"))
+    }
+
+    private fun parseApiErrorMessage(response: Response<*>): String? {
+        val rawError = try {
+            response.errorBody()?.string()
+        } catch (_: IOException) {
+            null
+        } ?: return null
+
+        if (rawError.isBlank()) return null
+
+        return try {
+            val json = JSONObject(rawError)
+            val message = json.optString("message").takeIf { it.isNotBlank() }
+            val error = json.optString("error").takeIf { it.isNotBlank() }
+            message ?: error ?: rawError
+        } catch (_: Exception) {
+            rawError
+        }
+    }
+
+    private fun getFriendlyRegistrationError(statusCode: Int, serverMessage: String?): String {
+        val message = serverMessage?.trim().orEmpty()
+        val lower = message.lowercase()
+
+        return when {
+            statusCode == 409 || lower.contains("already exists") || lower.contains("duplicate") -> {
+                val contactLabel = if (radioEmail.isChecked) "email address" else "phone number"
+                "That $contactLabel or username is already in use. Try different details or log in instead."
+            }
+            lower.contains("community") -> {
+                "The selected community is unavailable or not approved. Choose another community and try again."
+            }
+            lower.contains("missing required") -> {
+                "Some required details are missing. Check your contact, username, location, password, and community."
+            }
+            lower.contains("only in ghana") || lower.contains("invalid country") -> {
+                "Registration is currently available only in Ghana."
+            }
+            statusCode in 500..599 -> {
+                "We could not register your account due to a server issue. Please try again shortly."
+            }
+            message.isNotBlank() -> message
+            else -> "Registration failed. Please review your details and try again."
+        }
+    }
+
+    private fun getFriendlyNetworkError(t: Throwable): String {
+        val error = t.message?.lowercase().orEmpty()
+        return when {
+            error.contains("unable to resolve host") ||
+                error.contains("failed to connect") ||
+                error.contains("network is unreachable") -> {
+                "No internet connection. Check your network and try again."
+            }
+            error.contains("timeout") -> {
+                "The registration request timed out. Please try again."
+            }
+            else -> {
+                "We could not reach the server. Please try again."
+            }
+        }
     }
 
     // ⬇️ YOUR ORIGINAL LOGIC (UNCHANGED)
@@ -195,8 +304,8 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun handleRegister() {
+        clearValidationErrors()
 
-        // ORIGINAL VALIDATION LOGIC
         val email = editEmail.text.toString().trim()
         val phone = editPhone.text.toString().trim()
         val username = editUsername.text.toString().trim()
@@ -204,25 +313,47 @@ class RegisterActivity : AppCompatActivity() {
         val password = editPassword.text.toString()
         val confirmPassword = editConfirmPassword.text.toString()
 
-        if (radioEmail.isChecked && email.isEmpty()) {
-            editEmail.error = "Email is required"
+        if (radioEmail.isChecked) {
+            when {
+                email.isEmpty() -> {
+                    editEmail.error = "Email is required"
+                    shakeCard()
+                    return
+                }
+                !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                    editEmail.error = "Enter a valid email address"
+                    shakeCard()
+                    return
+                }
+            }
+        } else {
+            when {
+                phone.isEmpty() -> {
+                    editPhone.error = "Phone is required"
+                    shakeCard()
+                    return
+                }
+                !isValidPhone(phone) -> {
+                    editPhone.error = "Enter a valid phone number"
+                    shakeCard()
+                    return
+                }
+            }
+        }
+
+        if (username.length < 3) {
+            editUsername.error = "Username must be at least 3 characters"
             shakeCard()
             return
         }
 
-        if (radioPhone.isChecked && phone.isEmpty()) {
-            editPhone.error = "Phone is required"
+        if (!username.matches(Regex("^[a-zA-Z0-9._]{3,30}$"))) {
+            editUsername.error = "Use 3-30 letters, numbers, dot or underscore"
             shakeCard()
             return
         }
 
-        if (username.isEmpty()) {
-            editUsername.error = "Username is required"
-            shakeCard()
-            return
-        }
-
-        if (location.isEmpty()) {
+        if (location.length < 2) {
             editLocation.error = "Location is required"
             shakeCard()
             return
@@ -242,21 +373,21 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         if (!checkTerms.isChecked) {
-            Toast.makeText(this, "You must agree to the User Agreement before continuing.", Toast.LENGTH_LONG).show()
+            showFormError("You must agree to the User Agreement before continuing.")
             shakeCard()
             return
         }
 
-        if (selectedCommunityId == null) {
-            Toast.makeText(this, "Please select a community", Toast.LENGTH_SHORT).show()
+        if (selectedCommunityId.isNullOrBlank()) {
+            showFormError("Please select a community.")
             shakeCard()
             return
         }
 
-        val selectedCountry = findViewById<Spinner>(R.id.spinnerCountry).selectedItem.toString()
+        val selectedCountry = spinnerCountry.selectedItem.toString()
 
         if (!selectedCountry.equals("Ghana", ignoreCase = true)) {
-            Toast.makeText(this, "Registration is only allowed for Ghanaians.", Toast.LENGTH_LONG).show()
+            showFormError("Registration is currently available only in Ghana.")
             shakeCard()
             return
         }
@@ -285,7 +416,9 @@ class RegisterActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
 
-                    if (response.isSuccessful && response.body() != null) {
+                    if (response.isSuccessful) {
+                        textRegisterError.visibility = View.GONE
+                        textRegisterError.text = ""
                         Toast.makeText(this@RegisterActivity, "Registered successfully", Toast.LENGTH_SHORT).show()
 
                         val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
@@ -293,7 +426,19 @@ class RegisterActivity : AppCompatActivity() {
                         finish()
 
                     } else {
-                        Toast.makeText(this@RegisterActivity, "Registration failed", Toast.LENGTH_SHORT).show()
+                        val serverMessage = parseApiErrorMessage(response)
+                        val friendlyMessage = getFriendlyRegistrationError(response.code(), serverMessage)
+
+                        if (response.code() == 409) {
+                            editUsername.error = "Username may already be taken"
+                            if (radioEmail.isChecked) {
+                                editEmail.error = "Email may already be registered"
+                            } else {
+                                editPhone.error = "Phone may already be registered"
+                            }
+                        }
+
+                        showFormError(friendlyMessage)
                         shakeCard()
                     }
                 }
@@ -301,8 +446,8 @@ class RegisterActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
+                    showFormError(getFriendlyNetworkError(t))
                     shakeCard()
-                    Toast.makeText(this@RegisterActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -321,6 +466,6 @@ class RegisterActivity : AppCompatActivity() {
 
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
-        findViewById<Spinner>(R.id.spinnerCountry).adapter = adapter
+        spinnerCountry.adapter = adapter
     }
 }

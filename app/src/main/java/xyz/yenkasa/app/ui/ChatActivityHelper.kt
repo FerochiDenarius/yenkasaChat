@@ -39,8 +39,8 @@ interface ChatHelperCallback {
     fun requestSendChatMessage(messageData: Map<String, Any>)
     fun checkAndRequestPermission(permission: String): Boolean
     fun requestDeleteConfirmation(messageToDelete: ChatMessage)
-    fun requestEditMessage(messageToEdit: ChatMessage, positionInAdapter: Int)
-    fun requestReplyToMessage(message: ChatMessage)
+    fun requestEditMessage(messageToEdit: ChatMessage, positionInAdapter: Int) {}
+    fun requestReplyToMessage(message: ChatMessage) {}
     fun onReceiverParticipantDetailsReady(participant: Participant)
     fun onReceiverParticipantStatusUpdate(isOnline: Boolean, statusText: String)
     fun showDefaultReceiverHeader(defaultName: String?)

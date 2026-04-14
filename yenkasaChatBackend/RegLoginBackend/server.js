@@ -346,6 +346,10 @@ app.get('/ads-disclosure.html', servePolicy('ads-disclosure.html'));
 
 app.get('/delete-data', servePolicy('delete-data.html'));
 app.get('/delete-data.html', servePolicy('delete-data.html'));
+app.get('/data-deletion', servePolicy('delete-data.html'));
+app.get('/data-deletion.html', servePolicy('delete-data.html'));
+app.get('/account-data-deletion', servePolicy('delete-data.html'));
+app.get('/account-data-deletion.html', servePolicy('delete-data.html'));
 
 
 // Google Play App-Ads.txt

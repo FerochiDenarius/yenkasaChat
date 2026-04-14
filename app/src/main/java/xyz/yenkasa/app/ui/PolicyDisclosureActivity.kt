@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.AppUrls
 import xyz.yenkasa.app.util.TokenManager
 
 class PolicyDisclosureActivity : AppCompatActivity() {
@@ -22,23 +23,23 @@ class PolicyDisclosureActivity : AppCompatActivity() {
 
         // Open WebViews
         privacy.setOnClickListener {
-            openWeb("https://yenkasa.xyz/privacy-policy.html")
+            openWeb(AppUrls.privacyPolicy)
         }
 
         terms.setOnClickListener {
-            openWeb("https://yenkasa.xyz/user-agreement.html")
+            openWeb(AppUrls.userAgreement)
         }
 
         guidelines.setOnClickListener {
-            openWeb("https://yenkasa.xyz/community-guidelines.html")
+            openWeb(AppUrls.communityGuidelines)
         }
 
         safety.setOnClickListener {
-            openWeb("https://yenkasa.xyz/safety-policy.html")
+            openWeb(AppUrls.safetyPolicy)
         }
 
         ads.setOnClickListener {
-            openWeb("https://yenkasa.xyz/ads-disclosure.html")
+            openWeb(AppUrls.adsDisclosure)
         }
 
         val btnAccept: Button = findViewById(R.id.btnAccept)

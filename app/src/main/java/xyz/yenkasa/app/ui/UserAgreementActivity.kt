@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.AppUrls
 
 class UserAgreementActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,7 +14,7 @@ class UserAgreementActivity : AppCompatActivity() {
 
         val webView: WebView = findViewById(R.id.webView)
         webView.settings.javaScriptEnabled = false
-        webView.loadUrl("https://yenkasa.xyz/user-agreement.html")
+        webView.loadUrl(AppUrls.userAgreement)
         // or "file:///android_asset/user_agreement.html"
     }
 }

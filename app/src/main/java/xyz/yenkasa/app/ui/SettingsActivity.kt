@@ -11,6 +11,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.model.UserPrivacyModel
+import xyz.yenkasa.app.util.AppUrls
 import android.widget.Switch
 import androidx.appcompat.app.AlertDialog
 import android.media.MediaPlayer
@@ -147,7 +148,7 @@ class SettingsActivity : AppCompatActivity() {
         itemModerationDashboard.setOnClickListener {
             val intent = Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse("https://yenkasa-bldrv.ondigitalocean.app/moderation")
+                Uri.parse(AppUrls.moderationDashboard)
             )
             startActivity(intent)
         }
@@ -191,7 +192,7 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
     private fun openDeleteAccountPage() {
-        val url = "https://yenkasa-bldrv.ondigitalocean.app/delete-account"
+        val url = AppUrls.deleteAccount
         val intent = Intent(Intent.ACTION_VIEW)
         intent.data = android.net.Uri.parse(url)
         startActivity(intent)

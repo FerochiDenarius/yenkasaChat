@@ -2,10 +2,9 @@ const express = require("express");
 const router = express.Router();
 
 /**
- * GET /delete-account
- * Public deletion request page (Google Play requirement)
+ * Public account deletion request page (Google Play requirement)
  */
-router.get("/delete-account", (req, res) => {
+function renderDeleteAccountPage(req, res) {
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
@@ -69,6 +68,17 @@ router.get("/delete-account", (req, res) => {
 </body>
 </html>
   `);
+}
+
+[
+  "/delete-account",
+  "/delete-account.html",
+  "/account-deletion",
+  "/account-deletion.html",
+  "/account-delete",
+  "/account-delete.html",
+].forEach((path) => {
+  router.get(path, renderDeleteAccountPage);
 });
 
 module.exports = router;

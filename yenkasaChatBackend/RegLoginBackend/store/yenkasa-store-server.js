@@ -906,6 +906,184 @@ module.exports = function (app) {
     }
   });
 
+  // NOTIFICATIONS
+  app.get('/triciabales-api/api/notifications/me', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/notifications/me`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'NOTIFICATIONS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.put('/triciabales-api/api/notifications/:id/read', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `${API_BASE}/api/notifications/${req.params.id}/read`,
+        {},
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'NOTIFICATION READ ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // UBER DIRECT DELIVERY CONFIG
+  app.get('/triciabales-api/api/deliveries/uber/config', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/deliveries/uber/config`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'UBER CONFIG ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/deliveries/uber/orders/:orderId/quote', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/deliveries/uber/orders/${req.params.orderId}/quote`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'UBER QUOTE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/deliveries/uber/orders/:orderId/create', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/deliveries/uber/orders/${req.params.orderId}/create`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'UBER CREATE DELIVERY ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.get('/triciabales-api/api/deliveries/uber/orders/:orderId/status', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/deliveries/uber/orders/${req.params.orderId}/status`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'UBER DELIVERY STATUS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/deliveries/uber/webhook', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/deliveries/uber/webhook`,
+        req.rawBody || JSON.stringify(req.body || {}),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-uber-signature': req.get('x-uber-signature') || ''
+          },
+          transformRequest: [(data) => {
+            if (typeof data === 'string') return data;
+            return JSON.stringify(data);
+          }]
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'UBER WEBHOOK ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // USER ORDER HISTORY
   app.get('/triciabales-api/api/orders/user/:userId', async (req, res) => {
     try {

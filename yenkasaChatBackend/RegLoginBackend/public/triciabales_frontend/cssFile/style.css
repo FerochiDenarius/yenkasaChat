@@ -3819,3 +3819,82 @@ footer a {
     color: #ffffff !important;
   }
 }
+
+/* UI visibility guard: avoid hidden or white-on-white menu controls. */
+.market-hero .topbar {
+  position: relative;
+  z-index: 1301;
+}
+
+.market-hero .nav-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.market-hero .nav-links .hidden-nav-link {
+  display: none !important;
+}
+
+.market-hero .nav-links .admin-btn,
+.market-hero .nav-links .seller-btn {
+  display: inline-flex !important;
+  font-weight: 800;
+}
+
+@media (max-width: 979px) {
+  .market-hero .nav-links {
+    background: #fff8ef !important;
+    border: 1px solid rgba(60, 36, 21, 0.16);
+  }
+
+  .market-hero .nav-links a {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 12px;
+    background: #f3e2c8 !important;
+    color: #3c2415 !important;
+    border: 1px solid rgba(60, 36, 21, 0.12);
+    box-shadow: none;
+  }
+
+  .market-hero .nav-links .seller-btn {
+    background: #5f381c !important;
+    color: #ffffff !important;
+  }
+
+  .market-hero .nav-links .admin-btn {
+    background: #b7791f !important;
+    color: #ffffff !important;
+  }
+
+  .market-hero .nav-links .logout-btn {
+    background: #7f1d1d !important;
+    color: #ffffff !important;
+  }
+
+  .mobile-menu-btn {
+    background: #fff8ef !important;
+    color: #3c2415 !important;
+    border-color: rgba(60, 36, 21, 0.22);
+  }
+}
+
+@media (min-width: 980px) {
+  .market-hero .nav-links a {
+    background: rgba(36, 21, 13, 0.46) !important;
+    color: #fff8ef !important;
+    border: 1px solid rgba(255, 248, 239, 0.22);
+  }
+
+  .market-hero .nav-links .seller-btn {
+    background: #5f381c !important;
+  }
+
+  .market-hero .nav-links .admin-btn {
+    background: #b7791f !important;
+  }
+}

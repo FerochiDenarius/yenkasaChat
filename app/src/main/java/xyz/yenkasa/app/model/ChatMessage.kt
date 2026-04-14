@@ -25,6 +25,12 @@ data class ChatMessage(
     @SerializedName("status")
     val status: String? = null,
 
+    @SerializedName("isEdited")
+    val isEdited: Boolean = false,
+
+    @SerializedName("editedAt")
+    val editedAt: String? = null,
+
     @SerializedName("repliedTo")
     val repliedTo: ChatMessage? = null,
 

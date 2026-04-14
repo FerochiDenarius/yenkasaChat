@@ -128,6 +128,13 @@ interface ApiService {
     @GET("messages/{roomId}")
     fun getMessages(@Path("roomId") roomId: String): Call<List<ChatMessage>>
 
+    @PATCH("messages/{messageId}")
+    suspend fun editMessage(
+        @Path("messageId") messageId: String,
+        @Body body: Map<String, String>,
+        @Header("Authorization") authToken: String
+    ): Response<ChatMessage>
+
     @DELETE("messages/{messageId}")
     suspend fun deleteMessage(
         @Path("messageId") messageId: String,

@@ -39,6 +39,8 @@ interface ChatHelperCallback {
     fun requestSendChatMessage(messageData: Map<String, Any>)
     fun checkAndRequestPermission(permission: String): Boolean
     fun requestDeleteConfirmation(messageToDelete: ChatMessage)
+    fun requestEditMessage(messageToEdit: ChatMessage, positionInAdapter: Int)
+    fun requestReplyToMessage(message: ChatMessage)
     fun onReceiverParticipantDetailsReady(participant: Participant)
     fun onReceiverParticipantStatusUpdate(isOnline: Boolean, statusText: String)
     fun showDefaultReceiverHeader(defaultName: String?)
@@ -216,7 +218,7 @@ class ChatActivityHelper(
         }
 
         try {
-            val response = ApiClient.apiService.deleteMessage("Bearer $token", messageId)
+            val response = ApiClient.apiService.deleteMessage(messageId, "Bearer $token")
             if (response.isSuccessful) {
                 withContext(Dispatchers.Main) {
                     val updatedList = callback.getCurrentMessageList().filter { it.id != messageId }
@@ -235,14 +237,54 @@ class ChatActivityHelper(
         }
     }
 
+    suspend fun confirmEditMessageOnServer(messageToEdit: ChatMessage, newText: String) {
+        val messageId = messageToEdit.id ?: return withContext(Dispatchers.Main) {
+            callback.showToast("Error: Message ID missing for editing.", Toast.LENGTH_SHORT)
+        }
+
+        val trimmedText = newText.trim()
+        if (trimmedText.isBlank()) {
+            return withContext(Dispatchers.Main) {
+                callback.showToast("Message cannot be empty.", Toast.LENGTH_SHORT)
+            }
+        }
+
+        try {
+            val response = ApiClient.apiService.editMessage(
+                messageId,
+                mapOf("text" to trimmedText),
+                "Bearer $token"
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val editedMessage = response.body()!!
+                withContext(Dispatchers.Main) {
+                    val updatedList = callback.getCurrentMessageList().map { current ->
+                        if (current.id == messageId) editedMessage else current
+                    }
+                    callback.updateMessages(updatedList)
+                    callback.showToast("Message updated", Toast.LENGTH_SHORT)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    callback.showToast("Failed to edit: ${parseError(response)}", Toast.LENGTH_LONG)
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                callback.showToast("Error editing message: ${e.message}", Toast.LENGTH_LONG)
+            }
+        }
+    }
+
     override fun onReplyToMessage(message: ChatMessage) =
-        callback.showToast("Reply to: ${message.text ?: "Media Message"}.", Toast.LENGTH_SHORT)
+        callback.requestReplyToMessage(message)
 
     override fun onForwardMessage(message: ChatMessage) =
         callback.showToast("Forward: ${message.text ?: "Media Message"}.", Toast.LENGTH_SHORT)
 
     override fun onEditMessage(message: ChatMessage, positionInAdapter: Int) =
-        callback.showToast("Edit feature coming soon.", Toast.LENGTH_SHORT)
+        callback.requestEditMessage(message, positionInAdapter)
 
     override fun onPinMessage(message: ChatMessage, positionInAdapter: Int) =
         callback.showToast("Pin feature coming soon.", Toast.LENGTH_SHORT)

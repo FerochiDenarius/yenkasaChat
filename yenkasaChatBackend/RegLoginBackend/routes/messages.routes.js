@@ -184,6 +184,90 @@ router.get('/:roomId', auth, async (req, res) => {
   }
 });
 
+// ✅ PATCH: Edit a text message owned by the logged-in user
+router.patch('/:messageId', auth, async (req, res) => {
+  const { messageId } = req.params;
+  const { text } = req.body;
+  const userId = req.user.id.toString();
+
+  if (!mongoose.Types.ObjectId.isValid(messageId)) {
+    return res.status(400).json({ error: 'Invalid message ID' });
+  }
+
+  const nextText = typeof text === 'string' ? text.trim().substring(0, 2000) : '';
+  if (!nextText) {
+    return res.status(400).json({ error: 'Edited message text is required' });
+  }
+
+  try {
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ error: 'Message not found' });
+
+    if (message.senderId?.toString() !== userId) {
+      return res.status(403).json({ error: 'You can only edit your own messages' });
+    }
+
+    if (message.imageUrl || message.audioUrl || message.videoUrl || message.fileUrl || message.location || message.contactInfo) {
+      return res.status(400).json({ error: 'Only plain text messages can be edited' });
+    }
+
+    message.text = nextText;
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    const updatedMessage = await Message.findById(message._id)
+      .populate({ path: 'sender' })
+      .populate({
+        path: 'repliedTo',
+        populate: { path: 'sender', select: 'username profileImage _id' },
+      })
+      .lean();
+
+    if (global.io) {
+      global.io.to(message.roomId.toString()).emit('messageEdited', updatedMessage);
+    }
+
+    res.json(updatedMessage);
+  } catch (err) {
+    console.error('[MessagesRoute] ❌ Error editing message:', err.message);
+    res.status(500).json({ error: 'Failed to edit message' });
+  }
+});
+
+// ✅ DELETE: Delete a message owned by the logged-in user
+router.delete('/:messageId', auth, async (req, res) => {
+  const { messageId } = req.params;
+  const userId = req.user.id.toString();
+
+  if (!mongoose.Types.ObjectId.isValid(messageId)) {
+    return res.status(400).json({ error: 'Invalid message ID' });
+  }
+
+  try {
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ error: 'Message not found' });
+
+    if (message.senderId?.toString() !== userId) {
+      return res.status(403).json({ error: 'You can only delete your own messages' });
+    }
+
+    await message.deleteOne();
+
+    if (global.io) {
+      global.io.to(message.roomId.toString()).emit('messageDeleted', {
+        messageId,
+        roomId: message.roomId.toString()
+      });
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    console.error('[MessagesRoute] ❌ Error deleting message:', err.message);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
 // --- Mark as Read (unchanged) ---
 router.post('/:roomId/mark-as-read', auth, async (req, res) => {
   const { roomId } = req.params;

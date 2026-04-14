@@ -16,6 +16,7 @@ class SwipeToReplyCallback(
 
     private val replyIcon = ContextCompat.getDrawable(context, R.drawable.ic_reply)
     private val background = ColorDrawable(Color.LTGRAY)
+    private val maxSwipeDistance = context.resources.displayMetrics.density * 96
 
     override fun onMove(
         recyclerView: RecyclerView,
@@ -29,6 +30,21 @@ class SwipeToReplyCallback(
         onSwiped(viewHolder)
     }
 
+    override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+        return 0.25f
+    }
+
+    override fun getSwipeEscapeVelocity(defaultValue: Float): Float {
+        return defaultValue * 8
+    }
+
+    override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+        super.clearView(recyclerView, viewHolder)
+        viewHolder.itemView.translationX = 0f
+        background.setBounds(0, 0, 0, 0)
+        replyIcon?.setBounds(0, 0, 0, 0)
+    }
+
     override fun onChildDraw(
         c: Canvas,
         recyclerView: RecyclerView,
@@ -38,21 +54,20 @@ class SwipeToReplyCallback(
         actionState: Int,
         isCurrentlyActive: Boolean
     ) {
-        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
-
         val itemView = viewHolder.itemView
+        val clampedDx = dX.coerceIn(-maxSwipeDistance, 0f)
         val iconMargin = (itemView.height - (replyIcon?.intrinsicHeight ?: 0)) / 2
         val iconTop = itemView.top + iconMargin
         val iconBottom = iconTop + (replyIcon?.intrinsicHeight ?: 0)
 
         // Swiping to the left
-        if (dX < 0) {
+        if (clampedDx < 0) {
             val iconRight = itemView.right - iconMargin
             val iconLeft = iconRight - (replyIcon?.intrinsicWidth ?: 0)
             replyIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
 
             background.setBounds(
-                itemView.right + dX.toInt(),
+                itemView.right + clampedDx.toInt(),
                 itemView.top,
                 itemView.right,
                 itemView.bottom
@@ -63,5 +78,6 @@ class SwipeToReplyCallback(
 
         background.draw(c)
         replyIcon?.draw(c)
+        super.onChildDraw(c, recyclerView, viewHolder, clampedDx, dY, actionState, isCurrentlyActive)
     }
 }

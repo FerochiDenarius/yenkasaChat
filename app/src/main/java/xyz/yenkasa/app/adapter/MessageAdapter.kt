@@ -65,7 +65,7 @@ class MessageAdapter(
         val message = getItem(position)
 
         holder.itemView.setOnLongClickListener {
-            longClickListener?.onMessageLongClicked(message, it, holder.adapterPosition)
+            longClickListener?.onMessageLongClicked(message, it, holder.bindingAdapterPosition)
             true
         }
 
@@ -268,7 +268,12 @@ class MessageAdapter(
             }
 
             // ---------------- Timestamp ----------------
-            timestampText.text = formatTimestamp(message.timestamp)
+            val timestampLabel = formatTimestamp(message.timestamp)
+            timestampText.text = if (message.isEdited && timestampLabel.isNotBlank()) {
+                "$timestampLabel - edited"
+            } else {
+                timestampLabel
+            }
         }
 
         // ------------------------------------------------------------

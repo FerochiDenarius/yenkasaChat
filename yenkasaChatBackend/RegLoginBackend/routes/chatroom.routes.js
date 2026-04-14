@@ -52,6 +52,7 @@ router.post('/', authMiddleware, async (req, res) => {
           username: otherUser.username,
           avatar: otherUser.avatar || otherUser.profileImage || null,
           online: otherUser.online || false,
+          isOnline: otherUser.online || false,
           lastSeen: otherUser.lastSeen || null
         }
       });
@@ -71,6 +72,7 @@ router.post('/', authMiddleware, async (req, res) => {
         username: otherUser.username,
         avatar: otherUser.avatar || otherUser.profileImage || null,
         online: otherUser.online || false,
+        isOnline: otherUser.online || false,
         lastSeen: otherUser.lastSeen || null
       }
     });
@@ -88,7 +90,7 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
 
   try {
     const room = await ChatRoom.findById(roomId)
-      .populate('participants', 'username avatar profileImage isOnline _id')
+      .populate('participants', 'username avatar profileImage online lastSeen _id')
       .lean();
 
     if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
@@ -105,7 +107,9 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
         username: otherParticipant.username,
         avatar: otherParticipant.avatar || otherParticipant.profileImage || null,
         profileImage: otherParticipant.profileImage || otherParticipant.avatar || null,
-        isOnline: otherParticipant.isOnline || false
+        isOnline: otherParticipant.online || false,
+        online: otherParticipant.online || false,
+        lastSeen: otherParticipant.lastSeen || null
       }
     });
   } catch (err) {
@@ -120,7 +124,7 @@ router.get('/:roomId/receiver', authMiddleware, async (req, res) => {
 
   try {
     const room = await ChatRoom.findById(roomId)
-      .populate('participants', 'username profileImage isOnline _id')
+      .populate('participants', 'username profileImage online lastSeen _id')
       .lean();
 
     if (!room) {
@@ -138,7 +142,9 @@ router.get('/:roomId/receiver', authMiddleware, async (req, res) => {
         _id: receiver._id,
         username: receiver.username,
         profileImage: receiver.profileImage || null,
-        isOnline: receiver.isOnline || false
+        isOnline: receiver.online || false,
+        online: receiver.online || false,
+        lastSeen: receiver.lastSeen || null
       }
     });
   } catch (err) {
@@ -154,7 +160,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
   try {
     const chatRoomsFromDB = await ChatRoom.find({ participants: new mongoose.Types.ObjectId(userId) })
-      .populate('participants', 'username profileImage avatar isOnline lastSeen _id')
+      .populate('participants', 'username profileImage avatar online lastSeen _id')
       .lean();
 
     if (!chatRoomsFromDB || chatRoomsFromDB.length === 0) {
@@ -170,7 +176,8 @@ router.get('/', authMiddleware, async (req, res) => {
           _id: otherParticipantObject._id,
           username: otherParticipantObject.username || null,
           profileImage: otherParticipantObject.profileImage || otherParticipantObject.avatar || null,
-          isOnline: otherParticipantObject.isOnline || otherParticipantObject.online || false,
+          isOnline: otherParticipantObject.online || false,
+          online: otherParticipantObject.online || false,
           lastSeen: otherParticipantObject.lastSeen || null
         };
       }

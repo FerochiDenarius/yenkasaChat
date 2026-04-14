@@ -10,10 +10,12 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -35,12 +37,15 @@ import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.adapter.MessageAdapter
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.Participant
+import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.webrtc.WebSocketProvider
 import xyz.yenkasa.app.webrtc.SignalingMessageType
 import com.google.android.gms.location.LocationServices
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
@@ -156,6 +161,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         // --- Connect WebSocket once (shared via WebSocketProvider) ---
         webSocketManager.connect(this)
+        setupPresenceListeners()
 
         // --- Listen for signaling messages (CALL_REQUEST / ACCEPT / REJECT) ---
         lifecycleScope.launch {
@@ -200,6 +206,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.cleanup()
         }
+        SocketManager.off("getOnlineUsers")
+        SocketManager.off("userStatusChanged")
         super.onDestroy()
     }
 
@@ -366,15 +374,72 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         recyclerView.adapter = messageAdapter
 
         val swipeToReplyCallback = SwipeToReplyCallback(this) { viewHolder: RecyclerView.ViewHolder ->
-            val position = viewHolder.adapterPosition
+            val position = viewHolder.bindingAdapterPosition
             if (position != RecyclerView.NO_POSITION) {
                 val message = messageAdapter.currentList[position]
                 showReplyPreview(message)
+                messageAdapter.notifyItemChanged(position)
             }
         }
 
         val itemTouchHelper = ItemTouchHelper(swipeToReplyCallback)
         itemTouchHelper.attachToRecyclerView(recyclerView)
+    }
+
+    private fun setupPresenceListeners() {
+        SocketManager.ensureConnected(senderId)
+        SocketManager.emitUserConnected(senderId)
+
+        SocketManager.on("getOnlineUsers") { data ->
+            val receiverId = receiverParticipant?._id ?: return@on
+            val isOnline = isReceiverOnline(data, receiverId)
+            runOnUiThread {
+                onReceiverParticipantStatusUpdate(
+                    isOnline,
+                    if (isOnline) "Online" else "Offline"
+                )
+            }
+        }
+
+        SocketManager.on("userStatusChanged") { data ->
+            val json = when (data) {
+                is JSONObject -> data
+                else -> runCatching { JSONObject(data.toString()) }.getOrNull()
+            } ?: return@on
+
+            val updatedUserId = json.optString("userId", "")
+            val receiverId = receiverParticipant?._id ?: return@on
+            if (updatedUserId != receiverId) return@on
+
+            val isOnline = json.optBoolean("isOnline", false)
+            val statusText = json.optString(
+                "statusText",
+                if (isOnline) "Online" else "Offline"
+            )
+
+            runOnUiThread {
+                onReceiverParticipantStatusUpdate(isOnline, statusText)
+            }
+        }
+    }
+
+    private fun isReceiverOnline(data: Any, receiverId: String): Boolean {
+        return when (data) {
+            is JSONArray -> {
+                for (i in 0 until data.length()) {
+                    if (data.optString(i) == receiverId) return true
+                }
+                false
+            }
+            is List<*> -> data.any { it?.toString() == receiverId }
+            is Array<*> -> data.any { it?.toString() == receiverId }
+            else -> data.toString()
+                .removePrefix("[")
+                .removeSuffix("]")
+                .split(",")
+                .map { it.trim().trim('"') }
+                .contains(receiverId)
+        }
     }
 
     private fun showReplyPreview(message: ChatMessage) {
@@ -482,6 +547,62 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
             .setCancelable(true)
             .show()
+    }
+
+    override fun requestEditMessage(messageToEdit: ChatMessage, positionInAdapter: Int) {
+        if (messageToEdit.sender?._id != senderId && messageToEdit.senderId != senderId) {
+            Toast.makeText(this, "You can only edit your own messages.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val currentText = messageToEdit.text.orEmpty()
+        if (currentText.isBlank()) {
+            Toast.makeText(this, "Only text messages can be edited.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val editText = EditText(this).apply {
+            setText(currentText)
+            setSelection(text.length)
+            minLines = 2
+            maxLines = 5
+            inputType = InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Edit message")
+            .setView(editText)
+            .setPositiveButton("Save", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val nextText = editText.text.toString().trim()
+                when {
+                    nextText.isBlank() -> {
+                        Toast.makeText(this, "Message cannot be empty.", Toast.LENGTH_SHORT).show()
+                    }
+                    nextText == currentText -> dialog.dismiss()
+                    else -> {
+                        lifecycleScope.launch {
+                            chatActivityHelper.confirmEditMessageOnServer(messageToEdit, nextText)
+                        }
+                        dialog.dismiss()
+                    }
+                }
+            }
+        }
+
+        dialog.show()
+        editText.requestFocus()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+    }
+
+    override fun requestReplyToMessage(message: ChatMessage) {
+        showReplyPreview(message)
     }
 
     override fun onMessageSent(message: ChatMessage) {

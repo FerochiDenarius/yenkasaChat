@@ -116,18 +116,64 @@ console.log("server.js: Core middlewares configured.");
 // ---------------------------------
 const onlineUsers = new Map();
 
+function getOnlineUserIds() {
+  return Array.from(onlineUsers.keys());
+}
+
 io.on('connection', (socket) => {
   console.log(`💡 Client connected: ${socket.id}`);
 
   const markUserOnline = async (userId) => {
     if (!userId) return;
 
-    console.log(`🟢 User ${userId} is online`);
-    onlineUsers.set(userId, socket.id);
-    socket.join(userId.toString());
+    const normalizedUserId = userId.toString();
+    const socketIds = onlineUsers.get(normalizedUserId) || new Set();
+    socketIds.add(socket.id);
+    onlineUsers.set(normalizedUserId, socketIds);
+    socket.data.userId = normalizedUserId;
+    socket.join(normalizedUserId);
 
-    await User.findByIdAndUpdate(userId, { online: true }, { new: true });
-    io.emit('getOnlineUsers', Array.from(onlineUsers.keys()));
+    console.log(`🟢 User ${normalizedUserId} is online`);
+
+    await User.findByIdAndUpdate(normalizedUserId, { online: true }, { new: true });
+    io.emit('getOnlineUsers', getOnlineUserIds());
+    io.emit('userStatusChanged', {
+      userId: normalizedUserId,
+      isOnline: true,
+      statusText: 'Online'
+    });
+  };
+
+  const markUserOffline = async (userId) => {
+    if (!userId) return;
+
+    const normalizedUserId = userId.toString();
+    const socketIds = onlineUsers.get(normalizedUserId);
+
+    if (socketIds) {
+      socketIds.delete(socket.id);
+      if (socketIds.size > 0) {
+        onlineUsers.set(normalizedUserId, socketIds);
+        io.emit('getOnlineUsers', getOnlineUserIds());
+        return;
+      }
+    }
+
+    console.log(`🔴 User ${normalizedUserId} went offline.`);
+    onlineUsers.delete(normalizedUserId);
+
+    await User.findByIdAndUpdate(
+      normalizedUserId,
+      { online: false, lastSeen: new Date() },
+      { new: true }
+    );
+
+    io.emit('getOnlineUsers', getOnlineUserIds());
+    io.emit('userStatusChanged', {
+      userId: normalizedUserId,
+      isOnline: false,
+      statusText: 'Offline'
+    });
   };
 
   // ✅ User connects
@@ -147,27 +193,30 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('userOffline', async (userId) => {
+    try {
+      await markUserOffline(userId);
+    } catch (err) {
+      console.error('❌ Error setting user offline:', err.message);
+    }
+  });
+
   // ✅ User disconnects
   socket.on('disconnect', async () => {
     try {
       console.log(`🔥 Client disconnected: ${socket.id}`);
 
-      for (let [userId, socketId] of onlineUsers.entries()) {
-        if (socketId === socket.id) {
-          console.log(`🔴 User ${userId} went offline.`);
-          onlineUsers.delete(userId);
+      if (socket.data.userId) {
+        await markUserOffline(socket.data.userId);
+        return;
+      }
 
-          await User.findByIdAndUpdate(
-            userId,
-            { online: false, lastSeen: new Date() },
-            { new: true }
-          );
+      for (let [userId, socketIds] of onlineUsers.entries()) {
+        if (socketIds.has(socket.id)) {
+          await markUserOffline(userId);
           break;
         }
       }
-
-      // Broadcast updated list
-      io.emit('getOnlineUsers', Array.from(onlineUsers.keys()));
     } catch (err) {
       console.error('❌ Error handling disconnect:', err.message);
     }

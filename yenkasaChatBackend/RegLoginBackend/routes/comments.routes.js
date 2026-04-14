@@ -42,7 +42,7 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!postId || !text?.trim())
       return res.status(400).json({ error: "Post ID and text are required" });
 
-    const post = await Post.findById(postId).populate('userId', 'username oneSignalPlayerId');
+    const post = await Post.findById(postId).populate('userId', 'username playerId');
     if (!post) return res.status(404).json({ error: "Post not found" });
 
     // BLOCK CHECK (viewer vs post owner)
@@ -91,7 +91,7 @@ if (parentCommentId) {
 
   // 1️⃣ Load parent comment FIRST
   parentComment = await Comment.findById(parentCommentId)
-    .populate("userId", "username oneSignalPlayerId");
+    .populate("userId", "username playerId");
 
   if (!parentComment) {
     return res.status(404).json({ error: "Parent comment not found" });
@@ -211,7 +211,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
 
     const comment = await Comment.findById(commentId).populate(
       "userId",
-      "username oneSignalPlayerId"
+      "username playerId"
     );
 
     if (!comment)

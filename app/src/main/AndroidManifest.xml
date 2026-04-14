@@ -119,7 +119,9 @@
         <activity android:name=".ui.RegisterActivity" />
         <activity android:name=".ui.ForgotPasswordActivity" />
         <activity android:name=".ui.MainActivity" />
-        <activity android:name=".ui.ChatActivity" />
+        <activity
+            android:name=".ui.ChatActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.AudioRecActivity" />
         <activity android:name=".ui.ContactsActivity" />
         <activity android:name=".ui.ChatRoomsActivity" />

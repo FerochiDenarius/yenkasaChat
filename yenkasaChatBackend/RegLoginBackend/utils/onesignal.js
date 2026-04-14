@@ -1,17 +1,60 @@
-// utils/onesignal.js
 const axios = require('axios');
 
-// Load correct env vars
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
-const ONESIGNAL_REST_API_KEY =
-    process.env.yenkasachatOneSignalKey ||
-    process.env.ONESIGNAL_KEY ||
-    process.env.ONESIGNAL_REST_API_KEY;
-
 const ONESIGNAL_API_BASE_URL = 'https://onesignal.com/api/v1';
+const APP_ID_ENV_NAMES = ['ONESIGNAL_APP_ID'];
+const REST_API_KEY_ENV_NAMES = [
+    'ONESIGNAL_REST_API_KEY',
+    'ONESIGNAL_API_KEY',
+    'ONESIGNAL_KEY',
+    'yenkasachatOneSignalKey'
+];
 
-if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-    console.error('❌ CRITICAL: OneSignal App ID or REST API Key is missing in environment variables. Notifications will FAIL.');
+function readFirstEnv(names) {
+    for (const name of names) {
+        const value = process.env[name];
+        if (typeof value === 'string' && value.trim()) {
+            return { name, value: value.trim() };
+        }
+    }
+    return null;
+}
+
+function maskSecret(value) {
+    if (!value) return 'missing';
+    if (value.length <= 10) return 'set-but-too-short';
+    return `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
+
+function getOneSignalConfig() {
+    const appId = readFirstEnv(APP_ID_ENV_NAMES);
+    const apiKey = readFirstEnv(REST_API_KEY_ENV_NAMES);
+
+    return {
+        appId: appId?.value || '',
+        appIdEnvName: appId?.name || null,
+        apiKey: apiKey?.value || '',
+        apiKeyEnvName: apiKey?.name || null
+    };
+}
+
+function buildAuthorizationHeader(apiKey) {
+    if (!apiKey) return null;
+    if (/^(Basic|Key)\s+/i.test(apiKey)) return apiKey;
+    return `Basic ${apiKey}`;
+}
+
+function getConfigHint(config) {
+    const keyName = config.apiKeyEnvName || 'ONESIGNAL_REST_API_KEY';
+    const appLabel = config.appId ? ` app ${config.appId}` : ' your OneSignal app';
+    return `Check ${keyName} on the server. It must be the OneSignal REST API key for${appLabel}, not the App ID, client key, or a key from another app.`;
+}
+
+function createOneSignalError(message, status, response) {
+    const error = new Error(message);
+    error.isOneSignalError = true;
+    if (status) error.status = status;
+    if (response) error.response = response;
+    return error;
 }
 
 async function sendPushNotification({
@@ -26,14 +69,20 @@ async function sendPushNotification({
     web_url,
     buttons
 }) {
-    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-        throw new Error('OneSignal configuration is missing. Cannot send notification.');
+    const config = getOneSignalConfig();
+    const authorization = buildAuthorizationHeader(config.apiKey);
+
+    if (!config.appId || !authorization) {
+        throw createOneSignalError(
+            `OneSignal configuration is missing. Set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY. ${getConfigHint(config)}`,
+            500
+        );
     }
 
     const targetIds = playerId || targetPlayerIds;
 
     if (!targetIds || !title || !body) {
-        throw new Error('Missing required parameters: playerId, title, and body are all required.');
+        throw new Error('Missing required parameters: playerId or targetPlayerIds, title, and body are required.');
     }
 
     const playerIdsToSend = (Array.isArray(targetIds) ? targetIds : [targetIds])
@@ -45,7 +94,7 @@ async function sendPushNotification({
     }
 
     const payload = {
-        app_id: ONESIGNAL_APP_ID,
+        app_id: config.appId,
         include_player_ids: playerIdsToSend,
         headings: { en: title },
         contents: { en: body },
@@ -59,7 +108,7 @@ async function sendPushNotification({
 
     const headers = {
         'Content-Type': 'application/json; charset=utf-8',
-        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}` // ✅ Uses updated variable
+        Authorization: authorization
     };
 
     try {
@@ -71,21 +120,38 @@ async function sendPushNotification({
 
         if (response.data && (response.status >= 200 && response.status < 300)) {
             return response.data;
-        } else {
-            throw new Error(`Failed to send notification. Status: ${response.status}`);
         }
 
+        throw createOneSignalError(`Failed to send notification. Status: ${response.status}`, response.status, response);
+
     } catch (error) {
-        if (error.response) {
-            throw new Error(`OneSignal API Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-        } else if (error.request) {
-            throw new Error('OneSignal API Error: No response received from server.');
-        } else {
-            throw new Error(`OneSignal API Error: ${error.message}`);
+        if (error.isOneSignalError) {
+            throw error;
         }
+
+        if (error.response) {
+            const detail = JSON.stringify(error.response.data);
+            const authHint = [401, 403].includes(error.response.status)
+                ? ` ${getConfigHint(config)}`
+                : '';
+
+            throw createOneSignalError(
+                `OneSignal API Error: ${error.response.status} - ${detail}.${authHint}`,
+                error.response.status,
+                error.response
+            );
+        }
+
+        if (error.request) {
+            throw createOneSignalError('OneSignal API Error: No response received from server.', 502);
+        }
+
+        throw createOneSignalError(`OneSignal API Error: ${error.message}`, 500);
     }
 }
 
 module.exports = {
     sendPushNotification,
+    getOneSignalConfig,
+    maskSecret,
 };

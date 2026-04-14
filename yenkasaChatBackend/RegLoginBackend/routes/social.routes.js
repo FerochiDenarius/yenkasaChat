@@ -105,7 +105,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
 
     const post = await Post.findById(postId)
       .select("likes likeCount userId")
-      .populate("userId", "username oneSignalPlayerId");
+      .populate("userId", "username playerId");
     
     if (!post) return res.status(404).json({ message: "Post not found" });
 

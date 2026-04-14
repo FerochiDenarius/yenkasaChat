@@ -9,6 +9,7 @@ const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require("../services/notification.service");
 const { toObjectId } = require("../utils/postViewCounts");
+const { sendPushNotification } = require("../utils/onesignal");
 
 
 
@@ -185,22 +186,12 @@ const ownerActivityId = `owner_${activityId}`;
           });
 
           // PUSH NOTIFICATION
-          if (owner.oneSignalPlayerId) {
-            const payload = {
-              app_id: process.env.ONESIGNAL_APP_ID,
-              include_player_ids: [owner.oneSignalPlayerId],
-              headings: { en: "🎉 Post Milestone!" },
-              contents: { en: `Your post reached ${milestone.toLocaleString()} views.` },
+          if (owner.playerId) {
+            await sendPushNotification({
+              playerId: owner.playerId,
+              title: "🎉 Post Milestone!",
+              body: `Your post reached ${milestone.toLocaleString()} views.`,
               data: { postId }
-            };
-
-            await fetch("https://onesignal.com/api/v1/notifications", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json; charset=utf-8",
-                Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
-              },
-              body: JSON.stringify(payload)
             });
           }
         }

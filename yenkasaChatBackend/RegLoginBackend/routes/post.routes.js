@@ -11,6 +11,7 @@ const Permission = require('../models/permissions.model');
 const PostApproval = require("../models/postapproval.model");
 const { sendNotification } = require("../services/notification.service");
 const { SYSTEM_USER_ID } = require('../config/system');
+const { sendPushNotification } = require("../utils/onesignal");
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -251,7 +252,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       // Load approvers ONCE
       const approvers = await User.find({
         roleName: { $in: ["admin", "moderator", "senior_developer", "junior_developer"] }
-      }).select("_id oneSignalPlayerId username");
+      }).select("_id playerId username");
 
       // 🔔 Notify approvers — ONLY ONE LOOP
       for (const mod of approvers) {
@@ -266,21 +267,12 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
           message: "A new post is awaiting approval."
         });
 
-        // OneSignal push stays untouched
-        if (mod.oneSignalPlayerId) {
-          await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json; charset=utf-8",
-              Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
-            },
-            body: JSON.stringify({
-              app_id: process.env.ONESIGNAL_APP_ID,
-              include_player_ids: [mod.oneSignalPlayerId],
-              headings: { en: "Pending Post" },
-              contents: { en: "A new post requires your approval." },
-              data: { postId: post._id.toString() }
-            })
+        if (mod.playerId) {
+          await sendPushNotification({
+            playerId: mod.playerId,
+            title: "Pending Post",
+            body: "A new post requires your approval.",
+            data: { postId: post._id.toString() }
           });
         }
       }

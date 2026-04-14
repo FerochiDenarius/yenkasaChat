@@ -14,6 +14,7 @@ import android.text.InputType
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
+import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageButton
@@ -121,6 +122,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
         setContentView(R.layout.activity_chat)
 
         initViews()
@@ -194,6 +199,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         setupChatRecyclerView()
         setupListeners()
+        setupKeyboardAwareChatInput()
 
         // ✅ Now safe: only called after helper initialized
         chatActivityHelper.initializeHeaderInformation()
@@ -384,6 +390,29 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         val itemTouchHelper = ItemTouchHelper(swipeToReplyCallback)
         itemTouchHelper.attachToRecyclerView(recyclerView)
+    }
+
+    private fun setupKeyboardAwareChatInput() {
+        messageInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                attachMenu.visibility = View.GONE
+                scrollMessagesToBottomSoon()
+            }
+        }
+
+        messageInput.setOnClickListener {
+            attachMenu.visibility = View.GONE
+            scrollMessagesToBottomSoon()
+        }
+    }
+
+    private fun scrollMessagesToBottomSoon() {
+        recyclerView.postDelayed({
+            val lastIndex = messageAdapter.itemCount - 1
+            if (lastIndex >= 0) {
+                recyclerView.smoothScrollToPosition(lastIndex)
+            }
+        }, 300)
     }
 
     private fun setupPresenceListeners() {

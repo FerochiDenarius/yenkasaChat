@@ -8,6 +8,7 @@ const User = require("../models/user.model");
 const authMiddleware = require("../middleware/auth");
 const { sendNotification } = require("../services/notification.service");
 const rewardService = require("../services/reward.service");
+const { sendPushNotification } = require("../utils/onesignal");
 
 const ALLOWED_ROLES = ["admin", "moderator", "senior_developer", "junior_developer"];
 
@@ -19,7 +20,7 @@ function canApprove(roleName) {
 async function getApprovers() {
   return User.find({
     roleName: { $in: ALLOWED_ROLES }
-  }).select("_id username oneSignalPlayerId");
+  }).select("_id username playerId");
 }
 
 // ================================
@@ -59,22 +60,12 @@ router.get("/pending", authMiddleware, async (req, res) => {
             targetId: item.post._id.toString()
         });
 
-        if (moderator.oneSignalPlayerId) {
-          const payload = {
-            app_id: process.env.ONESIGNAL_APP_ID,
-            include_player_ids: [moderator.oneSignalPlayerId],
-            headings: { en: "Pending Post" },
-            contents: { en: "A new post is waiting for approval." },
+        if (moderator.playerId) {
+          await sendPushNotification({
+            playerId: moderator.playerId,
+            title: "Pending Post",
+            body: "A new post is waiting for approval.",
             data: { approvalId: item._id }
-          };
-
-          await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json; charset=utf-8",
-              Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
-            },
-            body: JSON.stringify(payload)
           });
         }
       }
@@ -148,22 +139,12 @@ await rewardService.reward(owner._id, 10, {
 
 
       // 📱 Push notification
-      if (owner.oneSignalPlayerId) {
-        const payload = {
-          app_id: process.env.ONESIGNAL_APP_ID,
-          include_player_ids: [owner.oneSignalPlayerId],
-          headings: { en: "Post Approved 🎉" },
-          contents: { en: "Your post is now live!" },
+      if (owner.playerId) {
+        await sendPushNotification({
+          playerId: owner.playerId,
+          title: "Post Approved 🎉",
+          body: "Your post is now live!",
           data: { postId: post._id.toString() }
-        };
-
-        await fetch("https://onesignal.com/api/v1/notifications", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
-          },
-          body: JSON.stringify(payload)
         });
       }
     }
@@ -233,22 +214,12 @@ await rewardService.reward(approver._id, 10, {
 
 
       // 📱 Push notification
-      if (owner.oneSignalPlayerId) {
-        const payload = {
-          app_id: process.env.ONESIGNAL_APP_ID,
-          include_player_ids: [owner.oneSignalPlayerId],
-          headings: { en: "Post Rejected" },
-          contents: { en: "Your post was rejected, but you earned 10 coins." },
+      if (owner.playerId) {
+        await sendPushNotification({
+          playerId: owner.playerId,
+          title: "Post Rejected",
+          body: "Your post was rejected, but you earned 10 coins.",
           data: { postId: post._id.toString() }
-        };
-
-        await fetch("https://onesignal.com/api/v1/notifications", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            Authorization: `Basic ${process.env.ONESIGNAL_KEY}`
-          },
-          body: JSON.stringify(payload)
         });
       }
     }

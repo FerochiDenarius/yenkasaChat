@@ -7,7 +7,7 @@ const User = require("../models/user.model");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
-const axios = require("axios");
+const { sendPushNotification } = require("../utils/onesignal");
 
 // ✅ Cloudinary configuration
 cloudinary.config({
@@ -22,27 +22,11 @@ const upload = multer({ storage });
 
 // ✅ Push Notification via OneSignal
 const sendNotification = async (playerId, title, body) => {
-  const notificationData = {
-    app_id: process.env.ONESIGNAL_APP_ID,
-    include_player_ids: [playerId],
-    headings: { en: title },
-    contents: { en: body },
-  };
-
   try {
-    const response = await axios.post(
-      "https://onesignal.com/api/v1/notifications",
-      notificationData,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${process.env.yenkasachatOneSignalKey}`,
-        },
-      }
-    );
-    console.log("✅ Push notification sent:", response.data);
+    const response = await sendPushNotification({ playerId, title, body });
+    console.log("✅ Push notification sent:", response);
   } catch (error) {
-    console.error("❌ Error sending notification:", error.response?.data || error.message);
+    console.error("❌ Error sending notification:", error.message);
   }
 };
 

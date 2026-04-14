@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.animation.AnimationUtils
+import android.view.WindowManager
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -57,6 +58,10 @@ class LoginActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_login)
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
 
         // UI elements
         editIdentifier = findViewById(R.id.editLoginIdentifier)
@@ -90,14 +95,26 @@ class LoginActivity : AppCompatActivity() {
     private fun setupKeyboardAwareScrolling() {
         val focusListener = View.OnFocusChangeListener { view, hasFocus ->
             if (hasFocus) {
-                loginScroll.postDelayed({
-                    loginScroll.smoothScrollTo(0, loginCard.top + view.top)
-                }, 250)
+                scrollFocusedFieldIntoView(view)
             }
         }
 
         editIdentifier.onFocusChangeListener = focusListener
         editPassword.onFocusChangeListener = focusListener
+        editIdentifier.setOnClickListener { scrollFocusedFieldIntoView(editIdentifier) }
+        editPassword.setOnClickListener { scrollFocusedFieldIntoView(editPassword) }
+    }
+
+    private fun scrollFocusedFieldIntoView(view: View) {
+        loginScroll.postDelayed({
+            val visibleArea = android.graphics.Rect()
+            view.getDrawingRect(visibleArea)
+            loginScroll.offsetDescendantRectToMyCoords(view, visibleArea)
+
+            val topSpacing = (24 * resources.displayMetrics.density).toInt()
+            val targetScrollY = (visibleArea.top - topSpacing).coerceAtLeast(0)
+            loginScroll.smoothScrollTo(0, targetScrollY)
+        }, 300)
     }
 
     private fun addStarSparkle() {

@@ -194,31 +194,48 @@ function createProductCard(item) {
 
   card.innerHTML = `
     ${firstImage ? `
-      <div class="product-gallery">
-        <div class="product-image-wrap">
-          ${productImages.length > 1 ? `<span class="product-image-count">${productImages.length} photos</span>` : ""}
-        <img
-            src="${firstImage}"
-          alt="${item.name || "Yenkasa Store product"}"
-          class="product-image"
-            data-gallery-main
-        >
-        </div>
-
+      <div class="product-gallery ${productImages.length > 1 ? "multi-photo-gallery" : ""}">
         ${productImages.length > 1 ? `
-          <div class="product-image-thumbs">
-            ${productImages.map((imageUrl, index) => `
-              <button
-                type="button"
-                class="product-image-thumb ${index === 0 ? "active" : ""}"
-                data-product-image="${imageUrl}"
-                aria-label="Show product photo ${index + 1}"
+          <div class="product-image-grid">
+            <button
+              type="button"
+              class="product-grid-photo product-grid-photo-main"
+              data-product-image="${firstImage}"
+              aria-label="Open main product photo"
+            >
+              <img
+                src="${firstImage}"
+                alt="${item.name || "Yenkasa Store product"}"
+                data-gallery-main
               >
-                <img src="${imageUrl}" alt="">
-              </button>
-            `).join("")}
+              <span class="product-image-count">${productImages.length} photos</span>
+            </button>
+
+            <div class="product-grid-photo-stack">
+              ${productImages.slice(1, 4).map((imageUrl, index) => `
+                <button
+                  type="button"
+                  class="product-grid-photo"
+                  data-product-image="${imageUrl}"
+                  aria-label="Open product photo ${index + 2}"
+                >
+                  <img src="${imageUrl}" alt="">
+                  ${index === 2 && productImages.length > 4 ? `<span class="more-photo-badge">+${productImages.length - 4}</span>` : ""}
+                </button>
+              `).join("")}
+            </div>
           </div>
-        ` : ""}
+        ` : `
+        <div class="product-image-wrap single-product-image">
+          ${productImages.length > 1 ? `<span class="product-image-count">${productImages.length} photos</span>` : ""}
+          <img
+            src="${firstImage}"
+            alt="${item.name || "Yenkasa Store product"}"
+            class="product-image"
+            data-gallery-main
+          >
+        </div>
+        `}
       </div>
     ` : `
       <div class="product-image-wrap product-image-placeholder">
@@ -261,7 +278,7 @@ function createProductCard(item) {
 
   const productImage = card.querySelector("[data-gallery-main]");
   const addCartBtn = card.querySelector(".add-cart-btn");
-  const imageThumbs = card.querySelectorAll(".product-image-thumb");
+  const galleryButtons = card.querySelectorAll("[data-product-image]");
 
   if (productImage) {
     productImage.addEventListener("click", () => {
@@ -269,17 +286,15 @@ function createProductCard(item) {
     });
   }
 
-  imageThumbs.forEach(thumb => {
-    thumb.addEventListener("click", () => {
-      const nextImage = thumb.dataset.productImage;
+  galleryButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const nextImage = button.dataset.productImage;
 
-      if (!nextImage || !productImage) {
+      if (!nextImage) {
         return;
       }
 
-      productImage.src = nextImage;
-      imageThumbs.forEach(item => item.classList.remove("active"));
-      thumb.classList.add("active");
+      openImage(nextImage);
     });
   });
 

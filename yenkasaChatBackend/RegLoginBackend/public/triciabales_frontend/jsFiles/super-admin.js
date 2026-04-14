@@ -10,7 +10,13 @@ const allOrdersList = document.getElementById("allOrdersList");
 const releasedPayoutsList = document.getElementById("releasedPayoutsList");
 const sellersList = document.getElementById("sellersList");
 const usersList = document.getElementById("usersList");
+const superAdminNotificationCountText = document.getElementById("superAdminNotificationCountText");
+const superAdminNotificationsFeedback = document.getElementById("superAdminNotificationsFeedback");
+const superAdminNotificationsList = document.getElementById("superAdminNotificationsList");
+const refreshSuperAdminNotificationsBtn = document.getElementById("refreshSuperAdminNotificationsBtn");
+const markAllSuperAdminNotificationsReadBtn = document.getElementById("markAllSuperAdminNotificationsReadBtn");
 const API_BASE = "/triciabales-api";
+let loadedSuperAdminNotifications = [];
 
 if (!currentUser || currentUser.role !== "SUPER_ADMIN" || !authToken) {
   window.location.href = "/store/buyer-login";
@@ -65,6 +71,32 @@ function formatStatus(status) {
     .join(" ");
 }
 
+function formatNotificationDate(value) {
+  if (!value) return "Just now";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Just now";
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function notificationIcon(type) {
+  const normalizedType = String(type || "").toUpperCase();
+
+  if (normalizedType.includes("PAYMENT")) return "₵";
+  if (normalizedType.includes("ORDER")) return "#";
+  if (normalizedType.includes("PAYOUT")) return "%";
+  if (normalizedType.includes("DELIVERY")) return "→";
+  if (normalizedType.includes("SENSITIVE")) return "!";
+  return "•";
+}
+
 function isPayoutReleaseEligible(order) {
   return order.confirmedByBuyer === true
     || String(order.deliveryStatus || "").toLowerCase() === "delivered";
@@ -96,10 +128,142 @@ function showPanel(panelName) {
   });
 
   closeMenu();
+
+  if (panelName === "notifications") {
+    loadSuperAdminNotifications();
+  }
 }
 
 function renderEmpty(target, message) {
   target.innerHTML = `<p>${message}</p>`;
+}
+
+function showSuperAdminNotificationFeedback(message, type = "info") {
+  if (!superAdminNotificationsFeedback) return;
+
+  superAdminNotificationsFeedback.textContent = message;
+  superAdminNotificationsFeedback.className = `orders-feedback ${type}`;
+  superAdminNotificationsFeedback.classList.remove("hidden");
+}
+
+function clearSuperAdminNotificationFeedback() {
+  superAdminNotificationsFeedback?.classList.add("hidden");
+}
+
+function renderSuperAdminNotifications(notifications = []) {
+  loadedSuperAdminNotifications = notifications;
+
+  if (!superAdminNotificationsList || !superAdminNotificationCountText) {
+    return;
+  }
+
+  const unreadCount = notifications.filter(notification => !notification.readAt).length;
+  superAdminNotificationCountText.textContent = notifications.length
+    ? `${notifications.length} notification${notifications.length === 1 ? "" : "s"} loaded. ${unreadCount} unread.`
+    : "No notifications yet.";
+
+  if (!notifications.length) {
+    superAdminNotificationsList.innerHTML = `
+      <div class="notification-empty card">
+        <div class="card-content">
+          <h3>No notifications yet</h3>
+          <p>Order, payment, delivery, payout and sensitive admin activity will appear here.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  superAdminNotificationsList.innerHTML = notifications.map(notification => {
+    const isUnread = !notification.readAt;
+
+    return `
+      <article class="notification-card ${isUnread ? "unread" : ""}" data-notification-id="${notification.id}">
+        <div class="notification-icon">${notificationIcon(notification.type)}</div>
+        <div class="notification-body">
+          <div class="notification-card-head">
+            <h3>${notification.title || "Notification"}</h3>
+            <span>${formatNotificationDate(notification.createdAt)}</span>
+          </div>
+          <p>${notification.message || ""}</p>
+          <div class="notification-meta">
+            <span>${notification.type || "GENERAL"}</span>
+            ${isUnread ? `<button type="button" class="mark-read-btn" data-read-id="${notification.id}">Mark read</button>` : `<span>Read</span>`}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+async function loadSuperAdminNotifications() {
+  if (!superAdminNotificationsList) {
+    return;
+  }
+
+  clearSuperAdminNotificationFeedback();
+  superAdminNotificationCountText.textContent = "Loading notifications...";
+
+  try {
+    const response = await fetch(`${API_BASE}/api/notifications/me`, {
+      headers: getAuthHeaders()
+    });
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Could not load notifications");
+    }
+
+    renderSuperAdminNotifications(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error("[Yenkasa Store] Could not load super admin notifications", error);
+    showSuperAdminNotificationFeedback(error.message, "error");
+    renderSuperAdminNotifications([]);
+  }
+}
+
+async function markSuperAdminNotificationRead(notificationId) {
+  if (!notificationId) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/notifications/${notificationId}/read`, {
+      method: "PUT",
+      headers: getAuthHeaders()
+    });
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Could not mark notification as read");
+    }
+
+    loadedSuperAdminNotifications = loadedSuperAdminNotifications.map(notification => (
+      String(notification.id) === String(notificationId) ? data : notification
+    ));
+    renderSuperAdminNotifications(loadedSuperAdminNotifications);
+  } catch (error) {
+    console.error("[Yenkasa Store] Could not mark notification read", error);
+    showSuperAdminNotificationFeedback(error.message, "error");
+  }
+}
+
+async function markAllSuperAdminNotificationsRead() {
+  const unreadNotifications = loadedSuperAdminNotifications.filter(notification => !notification.readAt);
+
+  for (const notification of unreadNotifications) {
+    await markSuperAdminNotificationRead(notification.id);
+  }
 }
 
 function renderPendingPayoutItems(target, orders) {
@@ -451,6 +615,16 @@ menuButtons.forEach(button => {
   button.addEventListener("click", () => {
     showPanel(button.dataset.panel);
   });
+});
+
+refreshSuperAdminNotificationsBtn?.addEventListener("click", loadSuperAdminNotifications);
+markAllSuperAdminNotificationsReadBtn?.addEventListener("click", markAllSuperAdminNotificationsRead);
+superAdminNotificationsList?.addEventListener("click", event => {
+  const button = event.target.closest("[data-read-id]");
+
+  if (button) {
+    markSuperAdminNotificationRead(button.dataset.readId);
+  }
 });
 
 function attachReleaseHandler(target) {

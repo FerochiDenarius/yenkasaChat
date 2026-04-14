@@ -28,7 +28,7 @@
       <button class="tab-btn" data-panel="released-payouts">Released Payouts</button>
       <button class="tab-btn" data-panel="sellers">Sellers</button>
       <button class="tab-btn" data-panel="users">Users</button>
-      <a href="/store/notifications" class="tab-btn dashboard-menu-link">Notifications</a>
+      <button class="tab-btn" data-panel="notifications">Notifications</button>
     </div>
 
     <div class="orders-summary">
@@ -108,9 +108,29 @@
           </div>
         </div>
       </section>
+
+      <section class="super-admin-panel" id="panel-notifications">
+        <div class="card notification-toolbar">
+          <div class="card-content">
+            <div>
+              <h2 style="margin-bottom:8px;">Super Admin Notifications</h2>
+              <p class="stats-note" id="superAdminNotificationCountText">
+                Order, payment, payout and sensitive platform activity will appear here.
+              </p>
+            </div>
+            <div class="super-admin-actions">
+              <button type="button" class="primary-btn" id="refreshSuperAdminNotificationsBtn">Refresh</button>
+              <button type="button" class="secondary-btn" id="markAllSuperAdminNotificationsReadBtn">Mark All Read</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="superAdminNotificationsFeedback" class="orders-feedback hidden"></div>
+        <div id="superAdminNotificationsList" class="notifications-list"></div>
+      </section>
     </div>
   </section>
 
-  <script src="/triciabales_frontend/jsFiles/super-admin.js?v=20260414-payout-sellers"></script>
+  <script src="/triciabales_frontend/jsFiles/super-admin.js?v=20260414-admin-notifications"></script>
 </body>
 </html>

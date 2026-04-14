@@ -2,6 +2,14 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Phone-only targeting -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="false"
+        android:xlargeScreens="false"
+        android:resizeable="false" />
+
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -30,8 +38,8 @@
         android:required="true" />
 
     <uses-feature
-        android:name="android.software.leanback"
-        android:required="false" />
+        android:name="android.hardware.telephony"
+        android:required="true" />
 
     <application
         android:name=".MyApplication"

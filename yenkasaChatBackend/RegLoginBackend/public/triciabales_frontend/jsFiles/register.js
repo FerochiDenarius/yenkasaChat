@@ -1,77 +1,90 @@
 function getInputValue(id) {
   const element = document.getElementById(id);
-  return element ? element.value : "";
+  return element ? element.value.trim() : "";
 }
 
-document.getElementById("register-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const submitButton = e.target.querySelector('button[type="submit"]');
-  const originalText = submitButton ? submitButton.textContent : "";
+const roleSelect = document.getElementById("role");
+const sellerKycSection = document.getElementById("seller-kyc-section");
 
-  const payload = {
-    name: getInputValue("name").trim(),
-    email: getInputValue("email").trim(),
-    phone: getInputValue("phone").trim(),
-    address: getInputValue("address").trim(),
-    role: getInputValue("role").trim(),
-    referralCode: getInputValue("referralCode").trim() || null,
-    password: getInputValue("password")
-  };
+function toggleSellerFields() {
+  const isSeller = roleSelect.value === "SELLER";
 
-  try {
-    console.info("[Yenkasa Store] Registration submitted", {
-      email: payload.email,
-      role: payload.role
-    });
+  if (sellerKycSection) {
+    sellerKycSection.style.display = isSeller ? "flex" : "none";
+  }
 
-    if (submitButton) {
+  const sellerFields = sellerKycSection.querySelectorAll(
+    "input, select, textarea"
+  );
+
+  sellerFields.forEach((field) => {
+    field.required = isSeller;
+  });
+}
+
+if (roleSelect && sellerKycSection) {
+  roleSelect.addEventListener("change", toggleSellerFields);
+  toggleSellerFields();
+}
+
+document
+  .getElementById("register-form")
+  .addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+
+    const formData = new FormData();
+
+    formData.append("name", getInputValue("name"));
+    formData.append("email", getInputValue("email"));
+    formData.append("phone", getInputValue("phone"));
+    formData.append("address", getInputValue("address"));
+    formData.append("role", getInputValue("role"));
+    formData.append("referralCode", getInputValue("referralCode"));
+    formData.append("password", document.getElementById("password").value);
+
+    if (getInputValue("role") === "SELLER") {
+      formData.append("dob", getInputValue("dob"));
+      formData.append("idType", getInputValue("idType"));
+      formData.append("idNumber", getInputValue("idNumber"));
+      formData.append("shopName", getInputValue("shopName"));
+      formData.append("shopLocation", getInputValue("shopLocation"));
+      formData.append("proofOfOperation", getInputValue("proofOfOperation"));
+
+      const idImage = document.getElementById("idImage").files[0];
+      if (idImage) {
+        formData.append("idImage", idImage);
+      }
+    }
+
+    try {
       submitButton.disabled = true;
       submitButton.textContent = "Creating account...";
-    }
 
-    const response = await fetch(
-      "/triciabales-api/api/users/register",
-      {
+      const response = await fetch("/triciabales-api/api/users/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
       }
-    );
 
-    const data = await response.json();
-    console.info("[Yenkasa Store] Registration response", {
-      status: response.status,
-      ok: response.ok,
-      actionUrlReturned: Boolean(data.actionUrl)
-    });
+      alert(
+        data.message ||
+          "Account created successfully. Please verify your email."
+      );
 
-    if (!response.ok) {
-      throw new Error(data.message || data.error || "Registration failed");
-    }
-
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("loggedIn");
-
-    const message = data.actionUrl
-      ? `${data.message}\n\nUse this verification link if email delivery is not configured yet:\n${data.actionUrl}`
-      : (data.message || "Account created successfully. Please verify your email.");
-
-    alert(message);
-    window.location.href = "/store/buyer-login";
-  } catch (err) {
-    console.error("[Yenkasa Store] Registration failed", err);
-    alert(
-      err instanceof TypeError
-        ? "Network error. Your browser could not reach yenkasa.xyz. Check your internet/DNS and try again."
-        : err.message
-    );
-  } finally {
-    if (submitButton) {
+      window.location.href = "/store/buyer-login";
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Something went wrong");
+    } finally {
       submitButton.disabled = false;
       submitButton.textContent = originalText;
     }
-  }
-});
+  });

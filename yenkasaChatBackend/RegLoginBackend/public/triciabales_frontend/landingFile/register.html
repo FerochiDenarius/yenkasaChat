@@ -19,59 +19,157 @@
       <p>Register as a buyer or seller</p>
     </div>
 
-    <div class="card" style="max-width:700px;margin:0 auto;">
+    <div class="card register-card-shell" style="max-width:780px;margin:0 auto;">
       <div class="card-content">
 
-        <form id="register-form" style="display:flex;flex-direction:column;gap:18px;">
+        <form id="register-form" class="register-form-modern">
 
-          <input
-            type="text"
-            id="name"
-            placeholder="Full Name"
-            required
-          >
+          <div class="register-grid">
+            <div class="modern-field">
+              <label for="name">Full Name</label>
+              <input
+                type="text"
+                id="name"
+                placeholder="Enter your full name"
+                required
+              >
+            </div>
 
-          <input
-            type="email"
-            id="email"
-            placeholder="Email Address"
-            required
-          >
+            <div class="modern-field">
+              <label for="email">Email Address</label>
+              <input
+                type="email"
+                id="email"
+                placeholder="Enter your email address"
+                required
+              >
+            </div>
 
-          <input
-            type="tel"
-            id="phone"
-            placeholder="Phone Number"
-            required
-          >
+            <div class="modern-field">
+              <label for="phone">Phone Number</label>
+              <input
+                type="tel"
+                id="phone"
+                placeholder="Enter your phone number"
+                required
+              >
+            </div>
 
-          <textarea
-            id="address"
-            placeholder="Address"
-            rows="3"
-            required
-          ></textarea>
+            <div class="modern-field">
+              <label for="role">Account Type</label>
+              <select id="role" required>
+                <option value="">Choose account type</option>
+                <option value="BUYER">Buyer</option>
+                <option value="SELLER">Seller</option>
+              </select>
+            </div>
 
-          <select id="role" required>
-            <option value="">Choose Account Type</option>
-            <option value="BUYER">Buyer</option>
-            <option value="SELLER">Seller</option>
-          </select>
+            <div class="modern-field full">
+              <label for="address">Residential Address</label>
+              <textarea
+                id="address"
+                placeholder="Enter your residential address"
+                rows="3"
+                required
+              ></textarea>
+            </div>
 
-          <input
-            type="text"
-            id="referralCode"
-            placeholder="Referral Code (Optional)"
-          >
+            <div class="modern-field">
+              <label for="referralCode">Referral Code</label>
+              <input
+                type="text"
+                id="referralCode"
+                placeholder="Optional referral code"
+              >
+            </div>
 
-          <input
-            type="password"
-            id="password"
-            placeholder="Password"
-            required
-          >
+            <div class="modern-field">
+              <label for="password">Password</label>
+              <div class="password-field">
+                <input
+                  type="password"
+                  id="password"
+                  placeholder="Create a password"
+                  required
+                >
+              </div>
+            </div>
+          </div>
 
-          <button type="submit">
+          <div id="seller-kyc-fields" class="seller-kyc-panel hidden" aria-hidden="true">
+            <div class="seller-kyc-header">
+              <span>Seller KYC</span>
+              <h3>Business verification details</h3>
+              <p>These details are required for sellers before payouts can be approved.</p>
+            </div>
+
+            <div class="register-grid">
+              <div class="modern-field">
+                <label for="dateOfBirth">Date of Birth</label>
+                <input type="date" id="dateOfBirth">
+              </div>
+
+              <div class="modern-field">
+                <label for="idType">ID Type</label>
+                <select id="idType">
+                  <option value="">Choose ID type</option>
+                  <option value="GHANA_CARD">Ghana Card</option>
+                  <option value="PASSPORT">Passport</option>
+                  <option value="DRIVERS_LICENSE">Driver's License</option>
+                  <option value="VOTER_ID">Voter ID</option>
+                  <option value="OTHER_GOVERNMENT_ID">Other Government ID</option>
+                </select>
+              </div>
+
+              <div class="modern-field">
+                <label for="idNumber">ID Number</label>
+                <input
+                  type="text"
+                  id="idNumber"
+                  placeholder="Enter ID number"
+                >
+              </div>
+
+              <div class="modern-field">
+                <label for="idImage">Upload ID Picture</label>
+                <input
+                  type="file"
+                  id="idImage"
+                  accept="image/*,.pdf"
+                >
+                <small class="register-field-help">Upload a clear photo or scan of the ID card.</small>
+              </div>
+
+              <div class="modern-field">
+                <label for="shopName">Shop Name</label>
+                <input
+                  type="text"
+                  id="shopName"
+                  placeholder="Enter shop or business name"
+                >
+              </div>
+
+              <div class="modern-field full">
+                <label for="shopAddress">Shop Address / Location</label>
+                <textarea
+                  id="shopAddress"
+                  placeholder="Enter the shop address, landmark, or location details"
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div class="modern-field full">
+                <label for="proofOfOperation">Proof of Operation</label>
+                <textarea
+                  id="proofOfOperation"
+                  placeholder="Describe how the shop operates, years in business, landmarks, or any verification notes"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn">
             Create Account
           </button>
 

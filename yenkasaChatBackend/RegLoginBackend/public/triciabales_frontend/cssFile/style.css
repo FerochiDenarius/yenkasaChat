@@ -4231,4 +4231,123 @@ footer a {
     flex-direction: column;
     gap: 4px;
   }
+
+  /* =========================
+   REGISTRATION PAGE ONLY
+   Paste below your existing CSS
+========================= */
+
+.register-card-shell {
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.register-form-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.register-grid .full {
+  grid-column: 1 / -1;
+}
+
+.seller-kyc-panel {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid rgba(60, 36, 21, 0.12);
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fffdf8 0%, #f8efe2 100%);
+}
+
+.seller-kyc-header span {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #b7791f;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.seller-kyc-header h3 {
+  margin: 0 0 6px;
+  color: #3c2415;
+  font-size: 1.2rem;
+}
+
+.seller-kyc-header p {
+  margin: 0;
+  color: #7b604a;
+  line-height: 1.6;
+}
+
+.register-form-modern .modern-field small.register-field-help {
+  display: block;
+  margin-top: 8px;
+  color: #7b604a;
+  line-height: 1.5;
+  font-size: 0.86rem;
+}
+
+.register-form-modern input[type="file"] {
+  width: 100%;
+  min-height: 52px;
+  border: 1px dashed #c89a4a;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fffaf3;
+  color: #3c2415;
+}
+
+.register-form-modern input[type="file"]::file-selector-button {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-right: 12px;
+  background: #3c2415;
+  color: #fff8ef;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.register-form-modern .submit-btn {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 15px 18px;
+  background: linear-gradient(135deg, #d4a24c, #b9802d);
+  color: #24150d;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.register-form-modern .submit-btn:hover {
+  transform: translateY(-1px);
+}
+
+.register-form-modern .submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 700px) {
+  .register-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-kyc-panel {
+    padding: 18px;
+    border-radius: 20px;
+  }
+}
 }

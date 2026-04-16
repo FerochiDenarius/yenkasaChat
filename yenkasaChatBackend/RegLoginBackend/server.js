@@ -5,6 +5,7 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const fs = require('fs');
+const axios = require('axios');
 const multer = require('multer');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -421,6 +422,7 @@ app.use((err, req, res, next) => {
 // ---------------------------------
 const STORE_PUBLIC_DIR = path.join(__dirname, 'public', 'triciabales_frontend');
 const STORE_LANDING_DIR = path.join(STORE_PUBLIC_DIR, 'landingFile');
+const STORE_LOGO_PATH = path.join(STORE_PUBLIC_DIR, 'images', 'YenkasaStoreLogo.png');
 const STORE_PAGE_ALIASES = new Map(Object.entries({
   '': 'index.html',
   'home': 'index.html',
@@ -484,6 +486,59 @@ function serveStorePage(fileName) {
     res.sendFile(path.join(STORE_LANDING_DIR, fileName));
   };
 }
+
+function isGitLfsPointer(buffer) {
+  return buffer
+    .slice(0, 48)
+    .toString('utf8')
+    .startsWith('version https://git-lfs.github.com/spec/v1');
+}
+
+async function loadStoreLogoBuffer() {
+  const localLogo = await fs.promises.readFile(STORE_LOGO_PATH);
+
+  if (!isGitLfsPointer(localLogo)) {
+    return localLogo;
+  }
+
+  const remoteLogoUrl = process.env.YENKASA_STORE_LOGO_URL || process.env.STORE_LOGO_URL;
+
+  if (!remoteLogoUrl) {
+    throw new Error(
+      'Yenkasa Store logo file is a Git LFS pointer. Deploy the real PNG or set YENKASA_STORE_LOGO_URL.'
+    );
+  }
+
+  const response = await axios.get(remoteLogoUrl, {
+    responseType: 'arraybuffer',
+    timeout: 10000
+  });
+  const remoteLogo = Buffer.from(response.data);
+
+  if (isGitLfsPointer(remoteLogo)) {
+    throw new Error('Remote Yenkasa Store logo URL returned a Git LFS pointer instead of a PNG.');
+  }
+
+  return remoteLogo;
+}
+
+app.get([
+  '/store/assets/images/YenkasaStoreLogo.png',
+  '/store-assets/images/YenkasaStoreLogo.png',
+  '/triciabales_frontend/images/YenkasaStoreLogo.png'
+], async (req, res, next) => {
+  try {
+    const logo = await loadStoreLogoBuffer();
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Length', logo.length);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(logo);
+  } catch (err) {
+    console.error('Yenkasa Store logo error:', err.message);
+    next(err);
+  }
+});
 
 app.use('/store/assets', express.static(STORE_PUBLIC_DIR));
 app.use('/store-assets', express.static(STORE_PUBLIC_DIR));

@@ -32,6 +32,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 56px;
   font-size: 1.6rem;
   font-weight: 700;
 }
@@ -39,8 +40,14 @@ body {
 .logo img,
 .page-brand img {
   display: block;
-  height: 52px;
-  width: auto;
+  width: 56px;
+  height: 56px;
+  padding: 6px;
+  object-fit: contain;
+  border: 1px solid rgba(60, 36, 21, 0.12);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
 }
 
 .page-brand {
@@ -48,6 +55,13 @@ body {
   margin: 36px auto 16px;
   display: flex;
   justify-content: center;
+  min-height: 96px;
+}
+
+.page-brand img {
+  width: 96px;
+  height: 96px;
+  padding: 10px;
 }
 
 .nav-links {
@@ -3078,6 +3092,7 @@ footer {
   }
 
   .market-hero .logo img {
+    width: 42px;
     height: 42px;
   }
 
@@ -3219,8 +3234,8 @@ body {
 
 .market-hero .logo img {
   display: block;
-  height: 40px;
-  width: auto;
+  width: 48px;
+  height: 48px;
   max-width: 100%;
   object-fit: contain;
 }
@@ -3859,6 +3874,7 @@ footer a {
   }
 
   .market-hero .logo img {
+    width: 34px;
     height: 34px;
   }
 

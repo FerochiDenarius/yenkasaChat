@@ -55,38 +55,70 @@ function appendOptionalProductFields(form, body) {
 module.exports = function (app) {
 
   // USER REGISTER
-  app.post('/triciabales-api/api/users/register', async (req, res) => {
-    const email = req.body?.email;
-    console.log(`[Yenkasa Store] Register request received for ${maskEmail(email)}`);
+  app.post(
+    '/triciabales-api/api/users/register',
+    upload.single('idImage'),
+    async (req, res) => {
+      const email = req.body?.email;
+      console.log(`[Yenkasa Store] Register request received for ${maskEmail(email)}`);
 
-    try {
-      const response = await axios.post(
-        `${API_BASE}/api/users/register`,
-        req.body,
-        {
-          headers: {
-            'Content-Type': 'application/json'
+      try {
+        const form = new FormData();
+
+        [
+          'name',
+          'email',
+          'phone',
+          'address',
+          'role',
+          'referralCode',
+          'password',
+          'dateOfBirth',
+          'dob',
+          'idType',
+          'idNumber',
+          'shopName',
+          'shopAddress',
+          'shopLocation',
+          'proofOfOperation'
+        ].forEach(field => {
+          if (req.body?.[field] !== undefined && req.body[field] !== null) {
+            form.append(field, req.body[field]);
           }
+        });
+
+        if (req.file) {
+          form.append('idImage', req.file.buffer, req.file.originalname);
         }
-      );
 
-      console.log(
-        `[Yenkasa Store] Register success for ${maskEmail(email)} status=${response.status} actionUrl=${response.data?.actionUrl ? 'yes' : 'no'}`
-      );
-      res.json(response.data);
+        const response = await axios.post(
+          `${API_BASE}/api/users/register`,
+          form,
+          {
+            headers: form.getHeaders(),
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity
+          }
+        );
 
-    } catch (err) {
-      console.error(
-        `[Yenkasa Store] REGISTER ERROR for ${maskEmail(email)}:`,
-        err.response?.status,
-        err.response?.data || err.message
-      );
+        console.log(
+          `[Yenkasa Store] Register success for ${maskEmail(email)} status=${response.status} actionUrl=${response.data?.actionUrl ? 'yes' : 'no'}`
+        );
+        res.json(response.data);
 
-      res.status(err.response?.status || 500).json(
-        err.response?.data || { error: err.message }
-      );
+      } catch (err) {
+        console.error(
+          `[Yenkasa Store] REGISTER ERROR for ${maskEmail(email)}:`,
+          err.response?.status,
+          err.response?.data || err.message
+        );
+
+        res.status(err.response?.status || 500).json(
+          err.response?.data || { error: err.message }
+        );
+      }
     }
-  });
+  );
 
   // USER LOGIN
   app.post('/triciabales-api/api/users/login', async (req, res) => {

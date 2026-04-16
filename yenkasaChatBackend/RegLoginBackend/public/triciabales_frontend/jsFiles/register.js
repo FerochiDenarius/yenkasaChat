@@ -4,22 +4,24 @@ function getInputValue(id) {
 }
 
 const roleSelect = document.getElementById("role");
-const sellerKycSection = document.getElementById("seller-kyc-section");
+const sellerKycSection = document.getElementById("seller-kyc-fields");
+const registerForm = document.getElementById("register-form");
 
 function toggleSellerFields() {
-  const isSeller = roleSelect.value === "SELLER";
-
-  if (sellerKycSection) {
-    sellerKycSection.style.display = isSeller ? "flex" : "none";
+  if (!roleSelect || !sellerKycSection) {
+    return;
   }
 
-  const sellerFields = sellerKycSection.querySelectorAll(
-    "input, select, textarea"
-  );
+  const isSeller = roleSelect.value === "SELLER";
 
-  sellerFields.forEach((field) => {
-    field.required = isSeller;
-  });
+  sellerKycSection.classList.toggle("hidden", !isSeller);
+  sellerKycSection.setAttribute("aria-hidden", String(!isSeller));
+
+  sellerKycSection
+    .querySelectorAll("input, select, textarea")
+    .forEach((field) => {
+      field.required = isSeller;
+    });
 }
 
 if (roleSelect && sellerKycSection) {
@@ -27,13 +29,13 @@ if (roleSelect && sellerKycSection) {
   toggleSellerFields();
 }
 
-document
-  .getElementById("register-form")
-  .addEventListener("submit", async (e) => {
+if (registerForm) {
+  registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalText = submitButton.textContent;
+    const role = getInputValue("role");
 
     const formData = new FormData();
 
@@ -41,19 +43,24 @@ document
     formData.append("email", getInputValue("email"));
     formData.append("phone", getInputValue("phone"));
     formData.append("address", getInputValue("address"));
-    formData.append("role", getInputValue("role"));
+    formData.append("role", role);
     formData.append("referralCode", getInputValue("referralCode"));
     formData.append("password", document.getElementById("password").value);
 
-    if (getInputValue("role") === "SELLER") {
-      formData.append("dob", getInputValue("dob"));
+    if (role === "SELLER") {
+      const dateOfBirth = getInputValue("dateOfBirth");
+      const shopAddress = getInputValue("shopAddress");
+
+      formData.append("dateOfBirth", dateOfBirth);
+      formData.append("dob", dateOfBirth);
       formData.append("idType", getInputValue("idType"));
       formData.append("idNumber", getInputValue("idNumber"));
       formData.append("shopName", getInputValue("shopName"));
-      formData.append("shopLocation", getInputValue("shopLocation"));
+      formData.append("shopAddress", shopAddress);
+      formData.append("shopLocation", shopAddress);
       formData.append("proofOfOperation", getInputValue("proofOfOperation"));
 
-      const idImage = document.getElementById("idImage").files[0];
+      const idImage = document.getElementById("idImage")?.files?.[0];
       if (idImage) {
         formData.append("idImage", idImage);
       }
@@ -71,7 +78,7 @@ document
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
+        throw new Error(data.message || data.error || "Registration failed");
       }
 
       alert(
@@ -88,3 +95,4 @@ document
       submitButton.textContent = originalText;
     }
   });
+}

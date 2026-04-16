@@ -4231,10 +4231,10 @@ footer a {
     flex-direction: column;
     gap: 4px;
   }
+}
 
-  /* =========================
+/* =========================
    REGISTRATION PAGE ONLY
-   Paste below your existing CSS
 ========================= */
 
 .register-card-shell {
@@ -4265,6 +4265,10 @@ footer a {
   border: 1px solid rgba(60, 36, 21, 0.12);
   border-radius: 24px;
   background: linear-gradient(180deg, #fffdf8 0%, #f8efe2 100%);
+}
+
+.seller-kyc-panel.hidden {
+  display: none;
 }
 
 .seller-kyc-header span {
@@ -4349,5 +4353,4 @@ footer a {
     padding: 18px;
     border-radius: 20px;
   }
-}
 }

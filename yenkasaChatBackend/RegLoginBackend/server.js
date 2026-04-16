@@ -419,7 +419,8 @@ app.use((err, req, res, next) => {
 // ---------------------------------
 // Clean Store URLs
 // ---------------------------------
-const STORE_LANDING_DIR = path.join(__dirname, 'public', 'triciabales_frontend', 'landingFile');
+const STORE_PUBLIC_DIR = path.join(__dirname, 'public', 'triciabales_frontend');
+const STORE_LANDING_DIR = path.join(STORE_PUBLIC_DIR, 'landingFile');
 const STORE_PAGE_ALIASES = new Map(Object.entries({
   '': 'index.html',
   'home': 'index.html',
@@ -483,6 +484,9 @@ function serveStorePage(fileName) {
     res.sendFile(path.join(STORE_LANDING_DIR, fileName));
   };
 }
+
+app.use('/store/assets', express.static(STORE_PUBLIC_DIR));
+app.use('/store-assets', express.static(STORE_PUBLIC_DIR));
 
 app.get('/store', serveStorePage('index.html'));
 app.get('/privacy', serveStorePage('privacy.html'));

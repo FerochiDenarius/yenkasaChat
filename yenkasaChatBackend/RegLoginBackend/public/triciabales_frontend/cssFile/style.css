@@ -42,8 +42,8 @@ body {
   display: block;
   width: 84px;
   height: 84px;
-  padding: 9px;
-  object-fit: contain;
+  padding: 0;
+  object-fit: cover;
   border: 1px solid rgba(60, 36, 21, 0.12);
   border-radius: 50%;
   background: #ffffff;
@@ -61,7 +61,7 @@ body {
 .page-brand img {
   width: 144px;
   height: 144px;
-  padding: 15px;
+  padding: 0;
 }
 
 .nav-links {
@@ -3430,7 +3430,7 @@ body {
   width: 72px;
   height: 72px;
   max-width: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .market-hero .logo span {

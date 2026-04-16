@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Admin | Yenkasa Store</title>
-  <link rel="stylesheet" href="/store/assets/cssFile/style.css">
+  <link rel="stylesheet" href="/store/assets/cssFile/style.css?v=20260416-store-profile">
 </head>
 <body>
 
@@ -28,6 +28,7 @@
       <button class="tab-btn" data-panel="released-payouts">Released Payouts</button>
       <button class="tab-btn" data-panel="sellers">Sellers</button>
       <button class="tab-btn" data-panel="users">Users</button>
+      <button class="tab-btn" data-panel="store-profile">Store Profile</button>
       <button class="tab-btn" data-panel="notifications">Notifications</button>
     </div>
 
@@ -109,6 +110,64 @@
         </div>
       </section>
 
+      <section class="super-admin-panel" id="panel-store-profile">
+        <div class="card store-profile-card">
+          <div class="card-content">
+            <div class="store-profile-head">
+              <div>
+                <h2>Store Profile</h2>
+                <p class="stats-note">
+                  Upload the company logo and publish a store announcement for shoppers.
+                </p>
+              </div>
+              <div class="store-logo-preview">
+                <img id="storeLogoPreview" src="/store/assets/images/YenkasaStoreLogo.png" alt="Yenkasa Store logo preview">
+              </div>
+            </div>
+
+            <form id="storeProfileForm" class="store-profile-form">
+              <div class="settings-grid">
+                <div class="modern-field">
+                  <label for="storeName">Store Name</label>
+                  <input type="text" id="storeName" name="storeName" placeholder="Yenkasa Store">
+                </div>
+
+                <div class="modern-field">
+                  <label for="storeLogo">Company Logo</label>
+                  <input type="file" id="storeLogo" name="logo" accept="image/png,image/jpeg,image/webp">
+                  <small class="field-help">Use a clear PNG, JPG or WebP logo. It will display in a rounded holder.</small>
+                </div>
+
+                <div class="modern-field">
+                  <label for="announcementTitle">Announcement Title</label>
+                  <input type="text" id="announcementTitle" name="announcementTitle" placeholder="New arrivals available">
+                </div>
+
+                <div class="modern-field">
+                  <label for="announcementEnabled">Announcement Status</label>
+                  <select id="announcementEnabled" name="announcementEnabled">
+                    <option value="false">Hidden</option>
+                    <option value="true">Visible</option>
+                  </select>
+                </div>
+
+                <div class="modern-field full">
+                  <label for="announcementText">Announcement Message</label>
+                  <textarea id="announcementText" name="announcementText" placeholder="Write a short message for customers." rows="4"></textarea>
+                </div>
+              </div>
+
+              <div id="storeProfileFeedback" class="orders-feedback hidden"></div>
+
+              <div class="super-admin-actions">
+                <button type="submit" class="primary-btn" id="storeProfileSaveBtn">Save Store Profile</button>
+                <button type="button" class="secondary-btn" id="storeProfileRefreshBtn">Refresh</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
       <section class="super-admin-panel" id="panel-notifications">
         <div class="card notification-toolbar">
           <div class="card-content">
@@ -136,7 +195,7 @@
       </section>
     </div>
   </section>
-
-  <script src="/store/assets/jsFiles/super-admin.js?v=20260414-notification-groups"></script>
+  <script src="/store/assets/jsFiles/store-settings.js"></script>
+  <script src="/store/assets/jsFiles/super-admin.js?v=20260416-store-profile"></script>
 </body>
 </html>

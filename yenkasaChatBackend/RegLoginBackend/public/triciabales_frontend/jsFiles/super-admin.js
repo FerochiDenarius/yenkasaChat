@@ -16,6 +16,12 @@ const superAdminNotificationsList = document.getElementById("superAdminNotificat
 const refreshSuperAdminNotificationsBtn = document.getElementById("refreshSuperAdminNotificationsBtn");
 const markAllSuperAdminNotificationsReadBtn = document.getElementById("markAllSuperAdminNotificationsReadBtn");
 const superAdminNotificationFilterBar = document.getElementById("superAdminNotificationFilterBar");
+const storeProfileForm = document.getElementById("storeProfileForm");
+const storeProfileFeedback = document.getElementById("storeProfileFeedback");
+const storeProfileSaveBtn = document.getElementById("storeProfileSaveBtn");
+const storeProfileRefreshBtn = document.getElementById("storeProfileRefreshBtn");
+const storeLogoInput = document.getElementById("storeLogo");
+const storeLogoPreview = document.getElementById("storeLogoPreview");
 const API_BASE = "/triciabales-api";
 let loadedSuperAdminNotifications = [];
 let activeSuperAdminNotificationFilter = "all";
@@ -184,6 +190,10 @@ function showPanel(panelName) {
   if (panelName === "notifications") {
     loadSuperAdminNotifications();
   }
+
+  if (panelName === "store-profile") {
+    loadStoreProfile();
+  }
 }
 
 function renderEmpty(target, message) {
@@ -200,6 +210,101 @@ function showSuperAdminNotificationFeedback(message, type = "info") {
 
 function clearSuperAdminNotificationFeedback() {
   superAdminNotificationsFeedback?.classList.add("hidden");
+}
+
+function showStoreProfileFeedback(message, type = "info") {
+  if (!storeProfileFeedback) return;
+
+  storeProfileFeedback.textContent = message;
+  storeProfileFeedback.className = `orders-feedback ${type}`;
+  storeProfileFeedback.classList.remove("hidden");
+}
+
+function clearStoreProfileFeedback() {
+  storeProfileFeedback?.classList.add("hidden");
+}
+
+function renderStoreProfile(profile = {}) {
+  const storeName = document.getElementById("storeName");
+  const announcementTitle = document.getElementById("announcementTitle");
+  const announcementText = document.getElementById("announcementText");
+  const announcementEnabled = document.getElementById("announcementEnabled");
+
+  if (storeName) storeName.value = profile.storeName || "Yenkasa Store";
+  if (announcementTitle) announcementTitle.value = profile.announcementTitle || "";
+  if (announcementText) announcementText.value = profile.announcementText || "";
+  if (announcementEnabled) announcementEnabled.value = String(Boolean(profile.announcementEnabled));
+  if (storeLogoPreview) {
+    storeLogoPreview.src = profile.logoUrl || "/store/assets/images/YenkasaStoreLogo.png";
+  }
+}
+
+async function loadStoreProfile() {
+  if (!storeProfileForm) {
+    return;
+  }
+
+  clearStoreProfileFeedback();
+
+  try {
+    const response = await fetch(`${API_BASE}/api/store-profile`);
+    const data = await readResponseData(response);
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Could not load store profile");
+    }
+
+    renderStoreProfile(data || {});
+  } catch (error) {
+    console.error("[Yenkasa Store] Could not load store profile", error);
+    showStoreProfileFeedback(error.message, "error");
+  }
+}
+
+async function saveStoreProfile(event) {
+  event.preventDefault();
+
+  if (!storeProfileForm) {
+    return;
+  }
+
+  const originalText = storeProfileSaveBtn?.textContent || "Save Store Profile";
+  const formData = new FormData(storeProfileForm);
+
+  try {
+    clearStoreProfileFeedback();
+    if (storeProfileSaveBtn) {
+      storeProfileSaveBtn.disabled = true;
+      storeProfileSaveBtn.textContent = "Saving...";
+    }
+
+    const response = await fetch(`${API_BASE}/api/store-profile`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: formData
+    });
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Could not save store profile");
+    }
+
+    renderStoreProfile(data.profile || {});
+    showStoreProfileFeedback(data.message || "Store profile saved.", "success");
+  } catch (error) {
+    console.error("[Yenkasa Store] Could not save store profile", error);
+    showStoreProfileFeedback(error.message, "error");
+  } finally {
+    if (storeProfileSaveBtn) {
+      storeProfileSaveBtn.disabled = false;
+      storeProfileSaveBtn.textContent = originalText;
+    }
+  }
 }
 
 function renderSuperAdminNotifications(notifications = []) {
@@ -741,6 +846,14 @@ menuButtons.forEach(button => {
 
 refreshSuperAdminNotificationsBtn?.addEventListener("click", loadSuperAdminNotifications);
 markAllSuperAdminNotificationsReadBtn?.addEventListener("click", markAllSuperAdminNotificationsRead);
+storeProfileForm?.addEventListener("submit", saveStoreProfile);
+storeProfileRefreshBtn?.addEventListener("click", loadStoreProfile);
+storeLogoInput?.addEventListener("change", () => {
+  const file = storeLogoInput.files?.[0];
+  if (!file || !storeLogoPreview) return;
+
+  storeLogoPreview.src = URL.createObjectURL(file);
+});
 superAdminNotificationFilterBar?.addEventListener("click", event => {
   const button = event.target.closest("[data-notification-filter]");
   if (!button) return;
@@ -952,3 +1065,4 @@ usersList.addEventListener("click", async event => {
 
 loadDashboard();
 loadUsers();
+loadStoreProfile();

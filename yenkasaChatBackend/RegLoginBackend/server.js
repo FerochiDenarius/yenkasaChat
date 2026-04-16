@@ -14,6 +14,7 @@ const morgan = require('morgan');
 const http = require('http');
 const { Server } = require("socket.io");
 const User = require('./models/user.model'); // ✅ Add this
+const StoreProfile = require('./models/storeProfile.model');
 // 🪙 Coins & Verification system
 const CoinSupply = require('./models/coinSupply');
 const CoinTransaction = require('./models/cointransaction.model');
@@ -528,6 +529,17 @@ app.get([
   '/triciabales_frontend/images/YenkasaStoreLogo.png'
 ], async (req, res, next) => {
   try {
+    const profile = await StoreProfile.findOne({ key: 'default' }).lean();
+    const configuredLogoUrl = profile?.logoUrl || '';
+
+    if (
+      configuredLogoUrl &&
+      !configuredLogoUrl.includes('/store/assets/images/YenkasaStoreLogo.png') &&
+      !configuredLogoUrl.includes('/triciabales_frontend/images/YenkasaStoreLogo.png')
+    ) {
+      return res.redirect(302, configuredLogoUrl);
+    }
+
     const logo = await loadStoreLogoBuffer();
 
     res.setHeader('Content-Type', 'image/png');
@@ -542,6 +554,7 @@ app.get([
 
 app.use('/store/assets', express.static(STORE_PUBLIC_DIR));
 app.use('/store-assets', express.static(STORE_PUBLIC_DIR));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/store', serveStorePage('index.html'));
 app.get('/privacy', serveStorePage('privacy.html'));

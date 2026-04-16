@@ -3,9 +3,23 @@ console.log('✅ yenkasa-store-server loaded');
 const axios = require('axios');
 const multer = require('multer');
 const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
+const StoreProfile = require('../models/storeProfile.model');
+const cloudinaryConfig = require('../config/cloudinary');
 
 const upload = multer();
 const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
+const PROJECT_ROOT = path.join(__dirname, '..');
+const LOCAL_STORE_UPLOAD_DIR = path.join(PROJECT_ROOT, 'uploads', 'store');
+const STORE_PROFILE_DEFAULTS = {
+  key: 'default',
+  storeName: 'Yenkasa Store',
+  logoUrl: '/store/assets/images/YenkasaStoreLogo.png',
+  announcementTitle: '',
+  announcementText: '',
+  announcementEnabled: false
+};
 
 function maskEmail(email) {
   const raw = String(email || '').trim();
@@ -52,7 +66,146 @@ function appendOptionalProductFields(form, body) {
   });
 }
 
+function serializeStoreProfile(profile) {
+  const source = profile || STORE_PROFILE_DEFAULTS;
+
+  return {
+    storeName: source.storeName || STORE_PROFILE_DEFAULTS.storeName,
+    logoUrl: source.logoUrl || STORE_PROFILE_DEFAULTS.logoUrl,
+    announcementTitle: source.announcementTitle || '',
+    announcementText: source.announcementText || '',
+    announcementEnabled: Boolean(source.announcementEnabled),
+    updatedAt: source.updatedAt || null
+  };
+}
+
+function getRoleName(user) {
+  const rawRole = user?.role?.role || user?.roleName || user?.role;
+  return String(rawRole || '').toUpperCase();
+}
+
+async function assertSuperAdmin(req) {
+  const authorization = getAuthorizationHeader(req);
+
+  if (!authorization) {
+    const err = new Error('Authentication token is missing');
+    err.status = 401;
+    throw err;
+  }
+
+  const response = await axios.get(`${API_BASE}/api/users/me`, {
+    headers: {
+      Authorization: authorization
+    }
+  });
+
+  const user = response.data?.user || response.data;
+
+  if (getRoleName(user) !== 'SUPER_ADMIN') {
+    const err = new Error('Super admin access is required');
+    err.status = 403;
+    throw err;
+  }
+
+  return user;
+}
+
+function hasCloudinaryConfig() {
+  return Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+}
+
+async function saveStoreLogo(file) {
+  if (!file) {
+    return '';
+  }
+
+  if (hasCloudinaryConfig()) {
+    const dataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    const result = await cloudinaryConfig.cloudinary.uploader.upload(dataUri, {
+      folder: 'yenkasa/store',
+      resource_type: 'image',
+      overwrite: true,
+      quality: 'auto:good',
+      fetch_format: 'auto'
+    });
+
+    return result.secure_url;
+  }
+
+  await fs.promises.mkdir(LOCAL_STORE_UPLOAD_DIR, { recursive: true });
+
+  const extension = path.extname(file.originalname || '') || '.png';
+  const fileName = `logo-${Date.now()}${extension}`;
+  const filePath = path.join(LOCAL_STORE_UPLOAD_DIR, fileName);
+  await fs.promises.writeFile(filePath, file.buffer);
+
+  return `/uploads/store/${fileName}`;
+}
+
 module.exports = function (app) {
+
+  app.get('/triciabales-api/api/store-profile', async (req, res) => {
+    try {
+      const profile = await StoreProfile.findOne({ key: 'default' }).lean();
+      res.json(serializeStoreProfile(profile));
+    } catch (err) {
+      console.error('STORE PROFILE LOAD ERROR:', err.message);
+      res.json(serializeStoreProfile(null));
+    }
+  });
+
+  app.put(
+    '/triciabales-api/api/store-profile',
+    upload.single('logo'),
+    async (req, res) => {
+      try {
+        const user = await assertSuperAdmin(req);
+        const update = {
+          storeName: String(req.body?.storeName || STORE_PROFILE_DEFAULTS.storeName).trim(),
+          announcementTitle: String(req.body?.announcementTitle || '').trim(),
+          announcementText: String(req.body?.announcementText || '').trim(),
+          announcementEnabled: String(req.body?.announcementEnabled || '') === 'true',
+          updatedBy: user.id || user._id || user.email || ''
+        };
+
+        if (req.file) {
+          update.logoUrl = await saveStoreLogo(req.file);
+        }
+
+        const profile = await StoreProfile.findOneAndUpdate(
+          { key: 'default' },
+          {
+            $set: update,
+            $setOnInsert: { key: 'default' }
+          },
+          {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true
+          }
+        ).lean();
+
+        res.json({
+          message: 'Store profile updated',
+          profile: serializeStoreProfile(profile)
+        });
+      } catch (err) {
+        console.error(
+          'STORE PROFILE UPDATE ERROR:',
+          err.response?.status || err.status,
+          err.response?.data || err.message
+        );
+
+        res.status(err.response?.status || err.status || 500).json(
+          err.response?.data || { error: err.message }
+        );
+      }
+    }
+  );
 
   // USER REGISTER
   app.post(

@@ -32,7 +32,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 56px;
+  min-height: 84px;
   font-size: 1.6rem;
   font-weight: 700;
 }
@@ -40,9 +40,9 @@ body {
 .logo img,
 .page-brand img {
   display: block;
-  width: 56px;
-  height: 56px;
-  padding: 6px;
+  width: 84px;
+  height: 84px;
+  padding: 9px;
   object-fit: contain;
   border: 1px solid rgba(60, 36, 21, 0.12);
   border-radius: 50%;
@@ -55,13 +55,13 @@ body {
   margin: 36px auto 16px;
   display: flex;
   justify-content: center;
-  min-height: 96px;
+  min-height: 144px;
 }
 
 .page-brand img {
-  width: 96px;
-  height: 96px;
-  padding: 10px;
+  width: 144px;
+  height: 144px;
+  padding: 15px;
 }
 
 .nav-links {
@@ -3204,8 +3204,8 @@ footer {
   }
 
   .market-hero .logo img {
-    width: 42px;
-    height: 42px;
+    width: 63px;
+    height: 63px;
   }
 
   .hero-copy h1 {
@@ -3346,8 +3346,8 @@ body {
 
 .market-hero .logo img {
   display: block;
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
   max-width: 100%;
   object-fit: contain;
 }
@@ -3986,8 +3986,8 @@ footer a {
   }
 
   .market-hero .logo img {
-    width: 34px;
-    height: 34px;
+    width: 51px;
+    height: 51px;
   }
 
   .hero-copy h1 {

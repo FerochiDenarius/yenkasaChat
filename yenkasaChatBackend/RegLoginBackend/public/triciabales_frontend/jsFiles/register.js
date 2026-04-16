@@ -12,10 +12,11 @@ function toggleSellerFields() {
     return;
   }
 
-  const isSeller = roleSelect.value === "SELLER";
+  const isSeller = String(roleSelect.value || "").toUpperCase() === "SELLER";
 
   sellerKycSection.classList.toggle("hidden", !isSeller);
   sellerKycSection.setAttribute("aria-hidden", String(!isSeller));
+  sellerKycSection.style.display = isSeller ? "grid" : "none";
 
   sellerKycSection
     .querySelectorAll("input, select, textarea")
@@ -26,7 +27,10 @@ function toggleSellerFields() {
 
 if (roleSelect && sellerKycSection) {
   roleSelect.addEventListener("change", toggleSellerFields);
+  roleSelect.addEventListener("input", toggleSellerFields);
   toggleSellerFields();
+  window.addEventListener("pageshow", toggleSellerFields);
+  setTimeout(toggleSellerFields, 250);
 }
 
 if (registerForm) {

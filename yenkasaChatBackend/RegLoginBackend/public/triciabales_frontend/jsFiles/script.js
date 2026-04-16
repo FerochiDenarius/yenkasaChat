@@ -13,17 +13,73 @@ const siteSearch = document.getElementById("siteSearch");
 const searchBtn = document.getElementById("searchBtn");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const mainNav = document.getElementById("mainNav");
+const categoryMenuBtn = document.getElementById("categoryMenuBtn");
+const categoryMenuPanel = document.getElementById("categoryMenuPanel");
+const browseSection = document.getElementById("browse-products");
+const categoryResults = document.getElementById("category-results");
+const browseKicker = document.getElementById("browseKicker");
+const browseTitle = document.getElementById("browseTitle");
+const browseDescription = document.getElementById("browseDescription");
+const browseCount = document.getElementById("browseCount");
+const clearBrowseBtn = document.getElementById("clearBrowseBtn");
 const promoSlides = document.querySelectorAll(".promo-slide");
 let allProducts = [];
 let currentPromoIndex = 0;
 let modalImages = [];
 let modalImageIndex = 0;
+let activeCategoryFilter = "";
 const productDisplayLabels = {
   bale: "Bale",
   dress: "Dress",
+  ladies_wear: "Ladies Wear",
   fabric: "Fabric",
   accessory: "Accessory",
+  shoe: "Shoes",
+  bag: "Bags",
+  beauty: "Beauty",
   car_importation: "Cars Importation"
+};
+const categoryConfig = {
+  all: {
+    title: "All Products",
+    description: "Browse active products across all store categories."
+  },
+  dress: {
+    title: "Dresses",
+    description: "Dresses and single fashion pieces from active sellers."
+  },
+  ladies_wear: {
+    title: "Ladies Wear",
+    description: "Women and ladies fashion, including dresses, tops, gowns and related pieces."
+  },
+  bale: {
+    title: "Bales",
+    description: "Bulk fashion bundles and bale arrivals."
+  },
+  fabric: {
+    title: "Fabrics",
+    description: "Fabric, textile and material listings."
+  },
+  accessory: {
+    title: "Accessories",
+    description: "Fashion add-ons and accessories."
+  },
+  shoe: {
+    title: "Shoes",
+    description: "Shoes, heels, sandals and footwear listings."
+  },
+  bag: {
+    title: "Bags",
+    description: "Bags, purses and handbags."
+  },
+  beauty: {
+    title: "Beauty",
+    description: "Cosmetics, beauty and personal care items."
+  },
+  car_importation: {
+    title: "Cars Importation",
+    description: "Vehicle and import listings when available."
+  }
 };
 
 function getCart() {
@@ -93,6 +149,17 @@ mainNav?.querySelectorAll("a").forEach(link => {
   });
 });
 
+categoryMenuBtn?.addEventListener("click", event => {
+  event.stopPropagation();
+  categoryMenuPanel?.classList.toggle("open");
+});
+
+document.addEventListener("click", event => {
+  if (!event.target.closest(".category-menu")) {
+    categoryMenuPanel?.classList.remove("open");
+  }
+});
+
 function rotatePromoSlides() {
   if (!promoSlides.length) {
     return;
@@ -135,7 +202,8 @@ function getProductCategory(item) {
   const category = String(item.category || "").toLowerCase();
   const categoryType = String(item.categoryType || "").toLowerCase();
   const name = String(item.name || "").toLowerCase();
-  const combined = `${type} ${categoryType} ${category} ${name}`;
+  const description = String(item.description || "").toLowerCase();
+  const combined = `${type} ${categoryType} ${category} ${name} ${description}`;
 
   if (
     type === "car_importation" ||
@@ -147,7 +215,25 @@ function getProductCategory(item) {
     return "car_importation";
   }
 
-  if (type === "single" || combined.includes("dress")) {
+  if (combined.includes("shoe") || combined.includes("heel") || combined.includes("sandal") || combined.includes("footwear")) {
+    return "shoe";
+  }
+
+  if (combined.includes("bag") || combined.includes("purse") || combined.includes("handbag")) {
+    return "bag";
+  }
+
+  if (
+    combined.includes("cosmetic") ||
+    combined.includes("beauty") ||
+    combined.includes("makeup") ||
+    combined.includes("skin care") ||
+    combined.includes("skincare")
+  ) {
+    return "beauty";
+  }
+
+  if (type === "single" || combined.includes("dress") || combined.includes("gown")) {
     return "dress";
   }
 
@@ -166,6 +252,44 @@ function getProductCategory(item) {
   }
 
   return "bale";
+}
+
+function productMatchesCategory(item, categoryKey) {
+  if (!categoryKey || categoryKey === "all") {
+    return true;
+  }
+
+  const productCategory = getProductCategory(item);
+  const haystack = getSearchHaystack(item);
+
+  if (categoryKey === productCategory) {
+    return true;
+  }
+
+  if (categoryKey === "ladies_wear") {
+    return [
+      "ladies",
+      "lady",
+      "women",
+      "woman",
+      "female",
+      "dress",
+      "gown",
+      "skirt",
+      "blouse",
+      "top",
+      "jumpsuit",
+      "leggings",
+      "bra",
+      "lingerie"
+    ].some(term => haystack.includes(term));
+  }
+
+  if (categoryKey === "accessory") {
+    return ["accessory", "jewelry", "jewellery", "watch", "belt", "cap", "hat"].some(term => haystack.includes(term));
+  }
+
+  return false;
 }
 
 function getEmptyCategoryCard(title, message) {
@@ -346,20 +470,8 @@ function renderIntoContainer(container, products, emptyTitle, emptyMessage) {
 }
 
 function renderMarketplaceProducts(products, options = {}) {
-  const baleContainer = document.getElementById("bale-container");
-  const dressContainer = document.getElementById("dress-container");
-  const fabricContainer = document.getElementById("fabric-container");
-  const accessoryContainer = document.getElementById("accessory-container");
-  const importContainer = document.getElementById("import-container");
   const availableProducts = products.filter(item => String(item.status || "").toLowerCase() !== "sold");
   const featuredProducts = options.featuredProducts || availableProducts.slice(0, 6);
-  const categoryGroups = {
-    bale: products.filter(item => getProductCategory(item) === "bale"),
-    dress: products.filter(item => getProductCategory(item) === "dress"),
-    fabric: products.filter(item => getProductCategory(item) === "fabric"),
-    accessory: products.filter(item => getProductCategory(item) === "accessory"),
-    car_importation: products.filter(item => getProductCategory(item) === "car_importation")
-  };
 
   renderIntoContainer(
     featuredContainer,
@@ -367,41 +479,32 @@ function renderMarketplaceProducts(products, options = {}) {
     options.featuredEmptyTitle || "No featured products yet",
     options.featuredEmptyMessage || "Active products will appear here as sellers upload more items."
   );
+}
+
+function showBrowseResults(products, options = {}) {
+  if (!browseSection || !categoryResults) {
+    return;
+  }
+
+  const config = categoryConfig[options.categoryKey] || {};
+  browseSection.classList.remove("hidden");
+  browseKicker.textContent = options.kicker || "Browse";
+  browseTitle.textContent = options.title || config.title || "Shop Products";
+  browseDescription.textContent = options.description || config.description || "Browse active products from sellers.";
+  browseCount.textContent = `${products.length} product${products.length === 1 ? "" : "s"}`;
 
   renderIntoContainer(
-    baleContainer,
-    categoryGroups.bale,
-    "No bales available yet",
-    "Bale listings will appear here as sellers upload them."
+    categoryResults,
+    products,
+    options.emptyTitle || "No products found",
+    options.emptyMessage || "Try another category or search term."
   );
+}
 
-  renderIntoContainer(
-    dressContainer,
-    categoryGroups.dress,
-    "No dresses available yet",
-    "Dress listings will appear here as sellers upload them."
-  );
-
-  renderIntoContainer(
-    fabricContainer,
-    categoryGroups.fabric,
-    "Fabric listings coming soon",
-    "This section is ready for textile and material sellers."
-  );
-
-  renderIntoContainer(
-    accessoryContainer,
-    categoryGroups.accessory,
-    "Accessories section ready",
-    "Bags, beauty items, shoes and other accessories can appear here later."
-  );
-
-  renderIntoContainer(
-    importContainer,
-    categoryGroups.car_importation,
-    "Cars importation listings coming soon",
-    "Future car importation listings will appear in this premium section."
-  );
+function hideBrowseResults() {
+  activeCategoryFilter = "";
+  browseSection?.classList.add("hidden");
+  clearContainer(categoryResults);
 }
 
 function normalizeSearchText(value) {
@@ -446,25 +549,46 @@ function productMatchesQuery(item, query) {
 function applySearch(options = {}) {
   const rawQuery = String(siteSearch?.value || "").trim();
 
-  if (!rawQuery) {
+  if (!rawQuery && !activeCategoryFilter) {
     renderMarketplaceProducts(allProducts);
+    hideBrowseResults();
     return;
   }
 
-  const filtered = allProducts.filter(item => productMatchesQuery(item, rawQuery));
+  const browseableProducts = allProducts.filter(item => String(item.status || "").toLowerCase() !== "sold");
+  const filtered = browseableProducts.filter(item => (
+    productMatchesQuery(item, rawQuery) && productMatchesCategory(item, activeCategoryFilter)
+  ));
+  const categoryInfo = categoryConfig[activeCategoryFilter] || {};
+  const title = rawQuery
+    ? `Results for "${rawQuery}"`
+    : categoryInfo.title || "Browse Products";
 
-  renderMarketplaceProducts(filtered, {
-    featuredProducts: filtered,
-    featuredEmptyTitle: `No results for "${rawQuery}"`,
-    featuredEmptyMessage: "Try searching by product name, category, fabric, dress, bale, shoe, bag, colour or other details."
+  renderMarketplaceProducts(allProducts);
+  showBrowseResults(filtered, {
+    categoryKey: activeCategoryFilter,
+    kicker: rawQuery ? "Search Results" : "Category",
+    title,
+    description: rawQuery
+      ? "Matching products from active listings."
+      : categoryInfo.description,
+    emptyTitle: rawQuery ? `No results for "${rawQuery}"` : `No ${title.toLowerCase()} found`,
+    emptyMessage: "Try another category, search by product name, or check back as sellers upload more items."
   });
 
   if (options.scrollToResults) {
-    document.getElementById("featured")?.scrollIntoView({
+    browseSection?.scrollIntoView({
       behavior: "smooth",
       block: "start"
     });
   }
+}
+
+function applyCategoryFilter(categoryKey) {
+  activeCategoryFilter = categoryKey || "all";
+  categoryMenuPanel?.classList.remove("open");
+  mainNav?.classList.remove("open");
+  applySearch({ scrollToResults: true });
 }
 
 searchBtn?.addEventListener("click", () => applySearch({ scrollToResults: true }));
@@ -474,6 +598,24 @@ siteSearch?.addEventListener("keydown", event => {
     event.preventDefault();
     applySearch({ scrollToResults: true });
   }
+});
+categoryMenuPanel?.addEventListener("click", event => {
+  const button = event.target.closest("[data-category-filter]");
+  if (!button) return;
+
+  applyCategoryFilter(button.dataset.categoryFilter || "all");
+});
+clearBrowseBtn?.addEventListener("click", () => {
+  if (siteSearch) {
+    siteSearch.value = "";
+  }
+
+  activeCategoryFilter = "";
+  applySearch({ scrollToResults: true });
+  document.getElementById("featured")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 });
 
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
@@ -492,13 +634,12 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
       </div>
     `;
 
-    document.getElementById("bale-container").innerHTML = errorHtml;
-    document.getElementById("dress-container").innerHTML = errorHtml;
-    document.getElementById("fabric-container").innerHTML = errorHtml;
-    document.getElementById("accessory-container").innerHTML = errorHtml;
-    document.getElementById("import-container").innerHTML = errorHtml;
     if (featuredContainer) {
       featuredContainer.innerHTML = errorHtml;
+    }
+    if (categoryResults) {
+      browseSection?.classList.remove("hidden");
+      categoryResults.innerHTML = errorHtml;
     }
   });
 

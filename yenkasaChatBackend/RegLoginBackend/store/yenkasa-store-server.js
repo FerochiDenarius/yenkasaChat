@@ -6,7 +6,6 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 const StoreProfile = require('../models/storeProfile.model');
-const StoreRefund = require('../models/storeRefund.model');
 const cloudinaryConfig = require('../config/cloudinary');
 
 const upload = multer();
@@ -77,22 +76,6 @@ function serializeStoreProfile(profile) {
     announcementText: source.announcementText || '',
     announcementEnabled: Boolean(source.announcementEnabled),
     updatedAt: source.updatedAt || null
-  };
-}
-
-function serializeRefund(refund) {
-  return {
-    id: refund._id,
-    orderId: refund.orderId,
-    amount: refund.amount,
-    reason: refund.reason,
-    status: refund.status,
-    requestedBy: refund.requestedBy,
-    reviewedBy: refund.reviewedBy,
-    reviewedAt: refund.reviewedAt,
-    processedAt: refund.processedAt,
-    createdAt: refund.createdAt,
-    updatedAt: refund.updatedAt
   };
 }
 
@@ -226,13 +209,11 @@ module.exports = function (app) {
 
   app.get('/triciabales-api/api/refunds', async (req, res) => {
     try {
-      await assertSuperAdmin(req);
+      const response = await axios.get(`${API_BASE}/api/refunds`, {
+        headers: forwardHeaders(req)
+      });
 
-      const refunds = await StoreRefund.find()
-        .sort({ createdAt: -1 })
-        .lean();
-
-      res.json(refunds.map(serializeRefund));
+      res.json(response.data);
     } catch (err) {
       console.error(
         'REFUNDS LOAD ERROR:',
@@ -248,71 +229,17 @@ module.exports = function (app) {
 
   app.post('/triciabales-api/api/orders/:id/refund', async (req, res) => {
     try {
-      const user = await assertSuperAdmin(req);
-      const orderId = String(req.params.id || '').trim();
-
-      if (!orderId) {
-        return res.status(400).json({ error: 'Order ID is required' });
-      }
-
-      const amount = Number(req.body?.amount || 0);
-      const reason = String(req.body?.reason || '').trim();
-
-      if (!Number.isFinite(amount) || amount <= 0) {
-        return res.status(400).json({ error: 'A valid refund amount is required' });
-      }
-
-      if (!reason) {
-        return res.status(400).json({ error: 'Refund reason is required' });
-      }
-
-      const refund = await StoreRefund.findOneAndUpdate(
+      const response = await axios.post(
+        `${API_BASE}/api/orders/${req.params.id}/refund`,
+        req.body,
         {
-          orderId,
-          status: { $in: ['REQUESTED', 'APPROVED'] }
-        },
-        {
-          $setOnInsert: {
-            orderId,
-            amount,
-            reason,
-            requestedBy: user.id || user._id || user.email || '',
-            status: 'REQUESTED'
-          }
-        },
-        {
-          new: true,
-          upsert: true,
-          setDefaultsOnInsert: true
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
         }
-      ).lean();
+      );
 
-      try {
-        await axios.put(
-          `${API_BASE}/api/orders/${orderId}/status`,
-          {
-            refundRequested: 'true',
-            refundReason: reason,
-            refundAmount: amount
-          },
-          {
-            headers: forwardHeaders(req, {
-              'Content-Type': 'application/json'
-            })
-          }
-        );
-      } catch (statusErr) {
-        console.warn(
-          'ORDER REFUND STATUS SYNC WARNING:',
-          statusErr.response?.status,
-          statusErr.response?.data || statusErr.message
-        );
-      }
-
-      res.status(201).json({
-        message: 'Refund request recorded',
-        refund: serializeRefund(refund)
-      });
+      res.status(response.status).json(response.data);
     } catch (err) {
       console.error(
         'REFUND REQUEST ERROR:',
@@ -328,37 +255,17 @@ module.exports = function (app) {
 
   app.put('/triciabales-api/api/refunds/:id/status', async (req, res) => {
     try {
-      const user = await assertSuperAdmin(req);
-      const status = String(req.body?.status || '').toUpperCase();
+      const response = await axios.put(
+        `${API_BASE}/api/refunds/${req.params.id}/status`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
 
-      if (!['APPROVED', 'REJECTED', 'PROCESSED'].includes(status)) {
-        return res.status(400).json({ error: 'Invalid refund status' });
-      }
-
-      const update = {
-        status,
-        reviewedBy: user.id || user._id || user.email || '',
-        reviewedAt: new Date()
-      };
-
-      if (status === 'PROCESSED') {
-        update.processedAt = new Date();
-      }
-
-      const refund = await StoreRefund.findByIdAndUpdate(
-        req.params.id,
-        { $set: update },
-        { new: true }
-      ).lean();
-
-      if (!refund) {
-        return res.status(404).json({ error: 'Refund request not found' });
-      }
-
-      res.json({
-        message: 'Refund status updated',
-        refund: serializeRefund(refund)
-      });
+      res.status(response.status).json(response.data);
     } catch (err) {
       console.error(
         'REFUND STATUS ERROR:',

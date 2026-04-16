@@ -180,6 +180,10 @@ function getCategoryPlaceholder(mode) {
   return placeholders[mode] || "Product subcategory";
 }
 
+function getUploadActionLabel(mode) {
+  return mode === "bale" ? "Product" : (productCatalogueLabels[mode] || "Product");
+}
+
 function setUploadMode(mode) {
   const nextMode = mode === "single" ? "dress" : (mode || "bale");
   productType.value = nextMode;
@@ -188,17 +192,18 @@ function setUploadMode(mode) {
   const isBale = nextMode === "bale";
   const isDress = nextMode === "dress";
   const label = productCatalogueLabels[nextMode] || "Product";
+  const uploadLabel = getUploadActionLabel(nextMode);
 
   weightField.style.display = isBale ? "flex" : "none";
   sizeField.style.display = isDress ? "flex" : "none";
   updateCatalogueFieldVisibility(nextMode);
 
-  panelTitle.textContent = `Upload ${label}`;
+  panelTitle.textContent = `Upload ${uploadLabel}`;
   panelDescription.textContent = "Choose the product type first, then complete the fields buyers need for that catalogue.";
-  document.querySelector("label[for='name']").textContent = `${label} Name`;
+  document.querySelector("label[for='name']").textContent = `${uploadLabel} Name`;
   document.getElementById("name").placeholder = getProductNamePlaceholder(nextMode);
   document.getElementById("category").placeholder = getCategoryPlaceholder(nextMode);
-  addBaleBtn.textContent = `Upload ${label}`;
+  addBaleBtn.textContent = `Upload ${uploadLabel}`;
 }
 
 function formatStatus(status) {
@@ -1049,7 +1054,7 @@ addBaleBtn.addEventListener("click", async () => {
     alert(`Upload failed.\n\n${err.message}`);
   } finally {
     addBaleBtn.disabled = false;
-    addBaleBtn.textContent = `Upload ${productCatalogueLabels[productType.value] || "Product"}`;
+    addBaleBtn.textContent = `Upload ${getUploadActionLabel(productType.value)}`;
     progressWrap.style.display = "none";
     statusText.style.display = "none";
   }

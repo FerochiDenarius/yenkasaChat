@@ -22,6 +22,7 @@ const browseTitle = document.getElementById("browseTitle");
 const browseDescription = document.getElementById("browseDescription");
 const browseCount = document.getElementById("browseCount");
 const clearBrowseBtn = document.getElementById("clearBrowseBtn");
+const liveChatLauncher = document.getElementById("liveChatLauncher");
 const promoSlides = document.querySelectorAll(".promo-slide");
 let allProducts = [];
 let currentPromoIndex = 0;
@@ -81,6 +82,7 @@ const categoryConfig = {
     description: "Vehicle and import listings when available."
   }
 };
+const supportEmail = "support@store.yenkas.xyz";
 
 function getCart() {
   return JSON.parse(localStorage.getItem("cart") || "[]");
@@ -652,6 +654,14 @@ imageModal.addEventListener("click", event => {
 modalCloseBtn?.addEventListener("click", closeImage);
 modalPrevBtn?.addEventListener("click", () => moveModalImage(-1));
 modalNextBtn?.addEventListener("click", () => moveModalImage(1));
+liveChatLauncher?.addEventListener("click", () => {
+  if (window.yenkasaLiveChat && typeof window.yenkasaLiveChat.open === "function") {
+    window.yenkasaLiveChat.open();
+    return;
+  }
+
+  window.location.href = `mailto:${supportEmail}?subject=Yenkasa%20Store%20Support`;
+});
 
 document.addEventListener("keydown", event => {
   if (imageModal.style.display !== "flex") {

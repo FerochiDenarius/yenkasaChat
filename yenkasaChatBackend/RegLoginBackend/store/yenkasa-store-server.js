@@ -6,6 +6,7 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 const StoreProfile = require('../models/storeProfile.model');
+const StoreRefund = require('../models/storeRefund.model');
 const cloudinaryConfig = require('../config/cloudinary');
 
 const upload = multer();
@@ -76,6 +77,22 @@ function serializeStoreProfile(profile) {
     announcementText: source.announcementText || '',
     announcementEnabled: Boolean(source.announcementEnabled),
     updatedAt: source.updatedAt || null
+  };
+}
+
+function serializeRefund(refund) {
+  return {
+    id: refund._id,
+    orderId: refund.orderId,
+    amount: refund.amount,
+    reason: refund.reason,
+    status: refund.status,
+    requestedBy: refund.requestedBy,
+    reviewedBy: refund.reviewedBy,
+    reviewedAt: refund.reviewedAt,
+    processedAt: refund.processedAt,
+    createdAt: refund.createdAt,
+    updatedAt: refund.updatedAt
   };
 }
 
@@ -206,6 +223,154 @@ module.exports = function (app) {
       }
     }
   );
+
+  app.get('/triciabales-api/api/refunds', async (req, res) => {
+    try {
+      await assertSuperAdmin(req);
+
+      const refunds = await StoreRefund.find()
+        .sort({ createdAt: -1 })
+        .lean();
+
+      res.json(refunds.map(serializeRefund));
+    } catch (err) {
+      console.error(
+        'REFUNDS LOAD ERROR:',
+        err.response?.status || err.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || err.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/orders/:id/refund', async (req, res) => {
+    try {
+      const user = await assertSuperAdmin(req);
+      const orderId = String(req.params.id || '').trim();
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'Order ID is required' });
+      }
+
+      const amount = Number(req.body?.amount || 0);
+      const reason = String(req.body?.reason || '').trim();
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'A valid refund amount is required' });
+      }
+
+      if (!reason) {
+        return res.status(400).json({ error: 'Refund reason is required' });
+      }
+
+      const refund = await StoreRefund.findOneAndUpdate(
+        {
+          orderId,
+          status: { $in: ['REQUESTED', 'APPROVED'] }
+        },
+        {
+          $setOnInsert: {
+            orderId,
+            amount,
+            reason,
+            requestedBy: user.id || user._id || user.email || '',
+            status: 'REQUESTED'
+          }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      ).lean();
+
+      try {
+        await axios.put(
+          `${API_BASE}/api/orders/${orderId}/status`,
+          {
+            refundRequested: 'true',
+            refundReason: reason,
+            refundAmount: amount
+          },
+          {
+            headers: forwardHeaders(req, {
+              'Content-Type': 'application/json'
+            })
+          }
+        );
+      } catch (statusErr) {
+        console.warn(
+          'ORDER REFUND STATUS SYNC WARNING:',
+          statusErr.response?.status,
+          statusErr.response?.data || statusErr.message
+        );
+      }
+
+      res.status(201).json({
+        message: 'Refund request recorded',
+        refund: serializeRefund(refund)
+      });
+    } catch (err) {
+      console.error(
+        'REFUND REQUEST ERROR:',
+        err.response?.status || err.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || err.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.put('/triciabales-api/api/refunds/:id/status', async (req, res) => {
+    try {
+      const user = await assertSuperAdmin(req);
+      const status = String(req.body?.status || '').toUpperCase();
+
+      if (!['APPROVED', 'REJECTED', 'PROCESSED'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid refund status' });
+      }
+
+      const update = {
+        status,
+        reviewedBy: user.id || user._id || user.email || '',
+        reviewedAt: new Date()
+      };
+
+      if (status === 'PROCESSED') {
+        update.processedAt = new Date();
+      }
+
+      const refund = await StoreRefund.findByIdAndUpdate(
+        req.params.id,
+        { $set: update },
+        { new: true }
+      ).lean();
+
+      if (!refund) {
+        return res.status(404).json({ error: 'Refund request not found' });
+      }
+
+      res.json({
+        message: 'Refund status updated',
+        refund: serializeRefund(refund)
+      });
+    } catch (err) {
+      console.error(
+        'REFUND STATUS ERROR:',
+        err.response?.status || err.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || err.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
 
   // USER REGISTER
   app.post(

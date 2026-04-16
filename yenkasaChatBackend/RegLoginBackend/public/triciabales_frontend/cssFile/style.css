@@ -723,6 +723,11 @@ body {
   color: white;
 }
 
+.manage-btn.refund {
+  background: #0f766e;
+  color: white;
+}
+
 .manage-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -3858,6 +3863,40 @@ body {
 .contact-banner .primary-btn {
   width: 100%;
   text-align: center;
+}
+
+.support-launcher {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1000;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.support-launcher-btn,
+.support-live-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 10px 15px;
+  background: #0f766e;
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.25);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.support-live-chat-btn {
+  background: #ffffff;
+  color: #0f766e;
+  border-color: rgba(15, 118, 110, 0.35);
 }
 
 footer {

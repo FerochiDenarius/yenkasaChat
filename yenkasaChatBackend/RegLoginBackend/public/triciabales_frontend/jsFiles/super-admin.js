@@ -7,6 +7,7 @@ const panels = document.querySelectorAll(".super-admin-panel");
 const pendingPayoutsList = document.getElementById("pendingPayoutsList");
 const pendingPayoutsSectionList = document.getElementById("pendingPayoutsSectionList");
 const allOrdersList = document.getElementById("allOrdersList");
+const refundRequestsList = document.getElementById("refundRequestsList");
 const releasedPayoutsList = document.getElementById("releasedPayoutsList");
 const sellersList = document.getElementById("sellersList");
 const usersList = document.getElementById("usersList");
@@ -193,6 +194,10 @@ function showPanel(panelName) {
 
   if (panelName === "store-profile") {
     loadStoreProfile();
+  }
+
+  if (panelName === "refunds") {
+    loadRefundRequests();
   }
 }
 
@@ -559,24 +564,102 @@ function renderAllOrders(orders) {
     return;
   }
 
-  allOrdersList.innerHTML = orders.map(order => `
-    <div class="super-admin-item">
-      <div class="super-admin-item-header">
-        <div>
-          <strong>Order #${order.id}</strong>
-          <p>${order.sellerName || "Seller"} • ${order.buyerName || order.customerName || "Customer"}</p>
+  allOrdersList.innerHTML = orders.map(order => {
+    const total = Number(order.total || 0);
+    const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+    const canRequestRefund = total > 0 && paymentStatus !== "payment_failed" && paymentStatus !== "cancelled";
+
+    return `
+      <div class="super-admin-item">
+        <div class="super-admin-item-header">
+          <div>
+            <strong>Order #${order.id}</strong>
+            <p>${order.sellerName || "Seller"} • ${order.buyerName || order.customerName || "Customer"}</p>
+          </div>
+          <strong>GH₵${total.toFixed(2)}</strong>
         </div>
-        <strong>GH₵${Number(order.total || 0).toFixed(2)}</strong>
+        <p><strong>Seller ID:</strong> ${order.sellerId || "-"}</p>
+        <p><strong>Buyer ID:</strong> ${order.buyerId || "-"}</p>
+        <p><strong>Buyer:</strong> ${order.buyerName || order.customerName || "-"}</p>
+        <p><strong>Buyer Email:</strong> ${order.buyerEmail || "-"}</p>
+        <p><strong>Payment:</strong> ${formatStatus(order.paymentStatus)}</p>
+        <p><strong>Delivery:</strong> ${formatStatus(order.deliveryStatus)}</p>
+        <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
+        <div class="super-admin-actions">
+          <button
+            type="button"
+            class="manage-btn refund refund-request-btn"
+            data-id="${order.id}"
+            data-total="${total.toFixed(2)}"
+            ${canRequestRefund ? "" : "disabled"}
+          >
+            Request Refund
+          </button>
+        </div>
       </div>
-      <p><strong>Seller ID:</strong> ${order.sellerId || "-"}</p>
-      <p><strong>Buyer ID:</strong> ${order.buyerId || "-"}</p>
-      <p><strong>Buyer:</strong> ${order.buyerName || order.customerName || "-"}</p>
-      <p><strong>Buyer Email:</strong> ${order.buyerEmail || "-"}</p>
-      <p><strong>Payment:</strong> ${formatStatus(order.paymentStatus)}</p>
-      <p><strong>Delivery:</strong> ${formatStatus(order.deliveryStatus)}</p>
-      <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
-    </div>
-  `).join("");
+    `;
+  }).join("");
+}
+
+function renderRefundRequests(refunds) {
+  if (!refundRequestsList) return;
+
+  if (!Array.isArray(refunds) || !refunds.length) {
+    renderEmpty(refundRequestsList, "No refund requests recorded yet.");
+    return;
+  }
+
+  refundRequestsList.innerHTML = refunds.map(refund => {
+    const status = String(refund.status || "REQUESTED").toUpperCase();
+    const canReview = status === "REQUESTED";
+    const canProcess = status === "APPROVED";
+
+    return `
+      <div class="super-admin-item refund-item">
+        <div class="super-admin-item-header">
+          <div>
+            <strong>Order #${refund.orderId}</strong>
+            <p>${formatStatus(status)} • ${formatDateTime(refund.createdAt)}</p>
+          </div>
+          <strong>GH₵${Number(refund.amount || 0).toFixed(2)}</strong>
+        </div>
+        <p><strong>Reason:</strong> ${refund.reason || "-"}</p>
+        <p><strong>Requested By:</strong> ${refund.requestedBy || "-"}</p>
+        <p><strong>Reviewed By:</strong> ${refund.reviewedBy || "-"}</p>
+        <p><strong>Reviewed At:</strong> ${formatDateTime(refund.reviewedAt)}</p>
+        <p><strong>Processed At:</strong> ${formatDateTime(refund.processedAt)}</p>
+        <div class="super-admin-actions">
+          <button
+            type="button"
+            class="manage-btn status refund-status-btn"
+            data-id="${refund.id}"
+            data-status="APPROVED"
+            ${canReview ? "" : "disabled"}
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            class="manage-btn delete refund-status-btn"
+            data-id="${refund.id}"
+            data-status="REJECTED"
+            ${canReview ? "" : "disabled"}
+          >
+            Reject
+          </button>
+          <button
+            type="button"
+            class="manage-btn refund refund-status-btn"
+            data-id="${refund.id}"
+            data-status="PROCESSED"
+            ${canProcess ? "" : "disabled"}
+          >
+            Mark Processed
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function renderReleasedPayouts(orders) {
@@ -798,6 +881,7 @@ async function loadDashboard() {
     renderAllOrders(orders);
     renderReleasedPayouts(releasedPayouts);
     renderSellers(sellers, orders);
+    loadRefundRequests();
   } catch (err) {
     console.error(err);
     renderEmpty(pendingPayoutsList, "Unable to load dashboard.");
@@ -805,6 +889,34 @@ async function loadDashboard() {
     renderEmpty(allOrdersList, "Unable to load orders.");
     renderEmpty(releasedPayoutsList, "Unable to load released payouts.");
     renderEmpty(sellersList, "Unable to load sellers.");
+    renderEmpty(refundRequestsList, "Unable to load refunds.");
+  }
+}
+
+async function loadRefundRequests() {
+  if (!refundRequestsList) return;
+
+  try {
+    refundRequestsList.innerHTML = "<p>Loading refund requests...</p>";
+
+    const response = await fetch(`${API_BASE}/api/refunds`, {
+      headers: getAuthHeaders()
+    });
+    const refunds = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(refunds);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(refunds?.error || "Could not load refunds");
+    }
+
+    renderRefundRequests(refunds);
+  } catch (err) {
+    console.error(err);
+    renderEmpty(refundRequestsList, "Unable to load refund requests.");
   }
 }
 
@@ -853,6 +965,106 @@ storeLogoInput?.addEventListener("change", () => {
   if (!file || !storeLogoPreview) return;
 
   storeLogoPreview.src = URL.createObjectURL(file);
+});
+allOrdersList?.addEventListener("click", async event => {
+  const button = event.target.closest(".refund-request-btn");
+  if (!button || button.disabled) return;
+
+  const orderId = button.dataset.id;
+  const defaultAmount = Number(button.dataset.total || 0).toFixed(2);
+  const amountInput = prompt("Refund amount in GH₵", defaultAmount);
+  if (amountInput === null) return;
+
+  const amount = Number(amountInput);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    alert("Enter a valid refund amount.");
+    return;
+  }
+
+  const reason = prompt("Reason for this refund");
+  if (reason === null) return;
+
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) {
+    alert("Refund reason is required.");
+    return;
+  }
+
+  try {
+    button.disabled = true;
+    button.textContent = "Saving...";
+
+    const response = await fetch(
+      `${API_BASE}/api/orders/${encodeURIComponent(orderId)}/refund`,
+      {
+        method: "POST",
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({
+          amount,
+          reason: trimmedReason
+        })
+      }
+    );
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.error || "Could not record refund request");
+    }
+
+    alert("Refund request recorded. Review it from the Refunds tab.");
+    loadDashboard();
+    showPanel("refunds");
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Unable to record refund request.");
+    button.disabled = false;
+    button.textContent = "Request Refund";
+  }
+});
+refundRequestsList?.addEventListener("click", async event => {
+  const button = event.target.closest(".refund-status-btn");
+  if (!button || button.disabled) return;
+
+  const refundId = button.dataset.id;
+  const status = button.dataset.status;
+  const confirmed = confirm(`Update this refund to ${formatStatus(status)}?`);
+  if (!confirmed) return;
+
+  try {
+    button.disabled = true;
+    button.textContent = "Saving...";
+
+    const response = await fetch(
+      `${API_BASE}/api/refunds/${encodeURIComponent(refundId)}/status`,
+      {
+        method: "PUT",
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify({ status })
+      }
+    );
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.error || "Could not update refund status");
+    }
+
+    alert("Refund status updated.");
+    loadRefundRequests();
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Unable to update refund status.");
+    loadRefundRequests();
+  }
 });
 superAdminNotificationFilterBar?.addEventListener("click", event => {
   const button = event.target.closest("[data-notification-filter]");

@@ -37,7 +37,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
     // Define your channel ID as a constant for clarity
     companion object {
-        const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_new_messages_channel"
+        const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_chat_messages_v2"
 
         private lateinit var mSocket: Socket
 

@@ -15,6 +15,7 @@ import xyz.yenkasa.app.model.LoginRequest
 import xyz.yenkasa.app.model.LoginResponse
 import com.google.android.material.textfield.TextInputEditText
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.OneSignalHelper
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.viewmodel.UserViewModel
 import xyz.yenkasa.app.network.SocketManager
@@ -192,7 +193,13 @@ class LoginActivity : AppCompatActivity() {
                     TokenManager.saveUserJson(this@LoginActivity, userJson)
 
                     val oneSignalId = OneSignal.getDeviceState()?.userId
-                    if (!oneSignalId.isNullOrEmpty()) userViewModel.updateUserPlayerId(oneSignalId)
+                        ?: TokenManager.getOneSignalPlayerId(this@LoginActivity)
+                    if (!oneSignalId.isNullOrEmpty()) {
+                        userViewModel.updateUserPlayerId(oneSignalId)
+                        OneSignalHelper.setOneSignalExternalUserId(this@LoginActivity, user._id)
+                    } else {
+                        Log.w("LoginActivity", "OneSignal Player ID not available at login; app startup/subscription observer will retry.")
+                    }
 
                     SocketManager.connect(user._id)
 

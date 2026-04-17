@@ -12,6 +12,13 @@ const { sendPushNotification } = require('../utils/onesignal');
 
 // --- OneSignal Config ---
 const ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID;
+const ONE_SIGNAL_EXISTING_ANDROID_CHANNEL_ID =
+  process.env.ONESIGNAL_EXISTING_ANDROID_CHANNEL_ID ||
+  process.env.ONESIGNAL_ANDROID_EXISTING_CHANNEL_ID ||
+  'yenkasachat_new_messages_channel';
+const isOneSignalDashboardChannelId = (value) =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
 
 // ✅ POST: Send a message (supports repliedTo)
 router.post('/', auth, async (req, res) => {
@@ -104,7 +111,12 @@ router.post('/', auth, async (req, res) => {
             targetPlayerIds: validPlayerIds,
             title: notificationTitle,
             body: notificationBody,
-            android_channel_id: ONE_SIGNAL_ANDROID_CHANNEL_ID,
+            android_channel_id: isOneSignalDashboardChannelId(ONE_SIGNAL_ANDROID_CHANNEL_ID)
+              ? ONE_SIGNAL_ANDROID_CHANNEL_ID.trim()
+              : undefined,
+            existing_android_channel_id: isOneSignalDashboardChannelId(ONE_SIGNAL_ANDROID_CHANNEL_ID)
+              ? undefined
+              : (ONE_SIGNAL_ANDROID_CHANNEL_ID || ONE_SIGNAL_EXISTING_ANDROID_CHANNEL_ID)?.trim(),
             data: {
               roomId: newMessage.roomId.toString(),
               senderId: senderAppUserId,

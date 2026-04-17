@@ -144,6 +144,12 @@ class MyApplication : Application(), OSSubscriptionObserver {
             // You are already saving it, which is good. Consider if you need to update backend here as well,
             // but onOSSubscriptionChanged is usually the primary place for that.
             TokenManager.saveOneSignalPlayerId(this, initialPlayerId)
+            val authToken = TokenManager.getToken(this)
+            val appUserId = TokenManager.getUserId(this)
+            if (!authToken.isNullOrEmpty() && !appUserId.isNullOrEmpty()) {
+                Log.i(ONE_SIGNAL_TAG, "User '$appUserId' is logged in during app start. Syncing Player ID to backend.")
+                OneSignalHelper.updatePlayerIdToBackend(applicationContext, initialPlayerId)
+            }
         } else {
             Log.w(ONE_SIGNAL_TAG, "Initial check in onCreate: OneSignal Player ID not yet available or device state is null. Waiting for OSSubscriptionObserver.")
         }

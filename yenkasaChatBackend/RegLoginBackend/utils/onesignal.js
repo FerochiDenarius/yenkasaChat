@@ -1,8 +1,10 @@
 const axios = require('axios');
 
-const ONESIGNAL_API_BASE_URL = 'https://onesignal.com/api/v1';
+const LEGACY_ONESIGNAL_API_BASE_URL = 'https://onesignal.com/api/v1';
+const CURRENT_ONESIGNAL_API_BASE_URL = 'https://api.onesignal.com';
 const APP_ID_ENV_NAMES = ['ONESIGNAL_APP_ID'];
 const REST_API_KEY_ENV_NAMES = [
+    'YenkasaApiKey',
     'ONESIGNAL_REST_API_KEY',
     'ONESIGNAL_API_KEY',
     'ONESIGNAL_KEY',
@@ -40,7 +42,12 @@ function getOneSignalConfig() {
 function buildAuthorizationHeader(apiKey) {
     if (!apiKey) return null;
     if (/^(Basic|Key)\s+/i.test(apiKey)) return apiKey;
+    if (/^os_v2_/i.test(apiKey)) return `Key ${apiKey}`;
     return `Basic ${apiKey}`;
+}
+
+function isCurrentApiKey(apiKey) {
+    return /^os_v2_/i.test(apiKey) || /^Key\s+/i.test(apiKey);
 }
 
 function getConfigHint(config) {
@@ -64,6 +71,9 @@ async function sendPushNotification({
     body,
     data,
     android_channel_id,
+    existing_android_channel_id,
+    priority,
+    ttl,
     small_icon,
     large_icon,
     web_url,
@@ -71,6 +81,7 @@ async function sendPushNotification({
 }) {
     const config = getOneSignalConfig();
     const authorization = buildAuthorizationHeader(config.apiKey);
+    const useCurrentApi = isCurrentApiKey(config.apiKey);
 
     if (!config.appId || !authorization) {
         throw createOneSignalError(
@@ -95,11 +106,16 @@ async function sendPushNotification({
 
     const payload = {
         app_id: config.appId,
-        include_player_ids: playerIdsToSend,
+        ...(useCurrentApi
+            ? { include_subscription_ids: playerIdsToSend, target_channel: 'push' }
+            : { include_player_ids: playerIdsToSend }),
         headings: { en: title },
         contents: { en: body },
         ...(data && { data }),
         ...(android_channel_id && { android_channel_id }),
+        ...(existing_android_channel_id && { existing_android_channel_id }),
+        priority: Number.isInteger(priority) ? priority : 10,
+        ttl: Number.isInteger(ttl) ? ttl : 60,
         ...(small_icon && { small_icon }),
         ...(large_icon && { large_icon }),
         ...(web_url && { web_url }),
@@ -113,7 +129,7 @@ async function sendPushNotification({
 
     try {
         const response = await axios.post(
-            `${ONESIGNAL_API_BASE_URL}/notifications`,
+            `${useCurrentApi ? CURRENT_ONESIGNAL_API_BASE_URL : LEGACY_ONESIGNAL_API_BASE_URL}/notifications`,
             payload,
             { headers }
         );

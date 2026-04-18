@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.UserAdapter
+import xyz.yenkasa.app.model.FollowListResponse
 import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
@@ -46,9 +47,20 @@ class FollowFeedActivity : AppCompatActivity() {
         recyclerUsers.layoutManager = LinearLayoutManager(this)
 
         // ✅ Make sure UserAdapter’s callback actually sends (user, isFollowing: Boolean)
-        adapter = UserAdapter(users) { user, isFollowing ->
-            handleFollowAction(user, isFollowing)
-        }
+        adapter = UserAdapter(
+            users,
+            onFollowClick = { user, isFollowing ->
+                handleFollowAction(user, isFollowing)
+            },
+            isFollowingResolver = { user ->
+                val currentUserId = TokenManager.getUserId(this)
+                when {
+                    user._id == currentUserId -> true
+                    listType == "following" && userId == currentUserId -> true
+                    else -> user.followers?.contains(currentUserId) == true
+                }
+            }
+        )
 
         recyclerUsers.adapter = adapter
 
@@ -128,17 +140,18 @@ class FollowFeedActivity : AppCompatActivity() {
             return
         }
 
-        val call: Call<List<User>> = if (listType == "followers") {
+        val call: Call<FollowListResponse> = if (listType == "followers") {
             ApiClient.apiService.getFollowers(userId, "Bearer $token")
         } else {
             ApiClient.apiService.getFollowing(userId, "Bearer $token")
         }
 
-        call.enqueue(object : Callback<List<User>> {
-            override fun onResponse(call: Call<List<User>>, response: Response<List<User>>) {
-                if (response.isSuccessful && response.body() != null) {
+        call.enqueue(object : Callback<FollowListResponse> {
+            override fun onResponse(call: Call<FollowListResponse>, response: Response<FollowListResponse>) {
+                val body = response.body()
+                if (response.isSuccessful && body != null) {
                     users.clear()
-                    users.addAll(response.body()!!)
+                    users.addAll(if (listType == "followers") body.followers else body.following)
                     adapter.notifyDataSetChanged()
 
                     val title = if (listType == "followers") "Followers" else "Following"
@@ -152,7 +165,7 @@ class FollowFeedActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onFailure(call: Call<List<User>>, t: Throwable) {
+            override fun onFailure(call: Call<FollowListResponse>, t: Throwable) {
                 Toast.makeText(
                     this@FollowFeedActivity,
                     "Network error: ${t.message}",

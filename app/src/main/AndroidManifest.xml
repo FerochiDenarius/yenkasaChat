@@ -89,6 +89,9 @@
         <activity
             android:name=".ui.LoginActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.ChangePasswordActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
 
         <activity android:name=".ui.MenuActivity"
             android:exported="false"
@@ -96,7 +99,9 @@
         <activity android:name=".ui.SettingsActivity" />
         <activity android:name=".ui.WebViewActivity" />
         <activity android:name=".ui.PolicyDisclosureActivity" />
-        <activity android:name=".ui.CreateAdActivity" />
+        <activity
+            android:name=".ui.CreateAdActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.PrivacySettingsActivity" />
         <activity android:name=".ui.BlockedUsersActivity" />
         <activity android:name=".ui.WhoBlockedYouActivity" />
@@ -105,35 +110,59 @@
         <activity android:name=".ui.HiddenUsersActivity" />
         <activity android:name=".ui.UserNotificationsActivity" />
 
-        <activity android:name=".ui.AppVerificationActivity" />
+        <activity
+            android:name=".ui.AppVerificationActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.FollowFeedActivity" />
-        <activity android:name=".ui.CreateTransactionActivity" />
-        <activity android:name=".ui.CommunitiesActivity" />
+        <activity
+            android:name=".ui.CreateTransactionActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.CommunitiesActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.CoinWalletActivity" />
         <activity android:name=".ui.PostApprovalActivity" />
         <activity android:name=".ui.PostMediaActivity" />
         <activity android:name=".ui.ProfileImagePreviewActivity" />
         <activity android:name=".ui.UserProfileActivity" />
-        <activity android:name=".ui.CreateCommunityActivity" />
-        <activity android:name=".ui.EditProfileActivity" />
+        <activity
+            android:name=".ui.CreateCommunityActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.EditProfileActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.PostPreviewActivity" />
-        <activity android:name=".ui.PostActivity" />
+        <activity
+            android:name=".ui.PostActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name=".ui.CommentsActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
-        <activity android:name=".ui.RegisterActivity" />
-        <activity android:name=".ui.ForgotPasswordActivity" />
+        <activity
+            android:name=".ui.RegisterActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.ForgotPasswordActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.MainActivity" />
         <activity
             android:name=".ui.ChatActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.AudioRecActivity" />
-        <activity android:name=".ui.ContactsActivity" />
-        <activity android:name=".ui.ChatRoomsActivity" />
+        <activity
+            android:name=".ui.ContactsActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.ChatRoomsActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />
-        <activity android:name=".ui.VerificationActivity" />
-        <activity android:name=".ui.PhoneVerificationActivity" />
+        <activity
+            android:name=".ui.VerificationActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.PhoneVerificationActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.ImagePreviewActivity" />
         <activity
             android:name=".ui.IncomingCallActivity"
@@ -149,7 +178,8 @@
 
         <activity
             android:name=".ui.ResetPasswordActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize|stateHidden">
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT"/>

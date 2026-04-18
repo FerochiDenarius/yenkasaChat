@@ -203,6 +203,10 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('requestOnlineUsers', () => {
+    socket.emit('getOnlineUsers', getOnlineUserIds());
+  });
+
   // ✅ User disconnects
   socket.on('disconnect', async () => {
     try {

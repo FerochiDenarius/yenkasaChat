@@ -84,6 +84,9 @@ interface ApiService {
     @GET("users/me")
     fun getUserProfile(): Call<User>
 
+    @GET("users/{userId}/presence")
+    fun getUserPresence(@Path("userId") userId: String): Call<PresenceResponse>
+
     @PATCH("users/{userId}/player-id")
     fun updatePlayerId(
         @Path("userId") userId: String,
@@ -352,14 +355,14 @@ interface ApiService {
     fun getFollowers(
         @Path("userId") userId: String,
         @Header("Authorization") token: String
-    ): Call<List<User>>
+    ): Call<FollowListResponse>
 
     // 🔹 Get following
     @GET("follow/{userId}/following")
     fun getFollowing(
         @Path("userId") userId: String,
         @Header("Authorization") token: String
-    ): Call<List<User>>
+    ): Call<FollowListResponse>
 
     // 🔹 Get follower/following counts
     @GET("follow/{userId}/follow-stats")

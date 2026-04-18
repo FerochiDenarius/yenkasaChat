@@ -50,6 +50,38 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
     if (!targetUser)
       return res.status(404).json({ error: "User not found" });
 
+    const existingActiveFollow = await Follow.findOne({
+      follower: followerId,
+      following: targetId,
+      status: "active"
+    }).lean();
+
+    if (existingActiveFollow) {
+      const [followersCount, followingCount] = await Promise.all([
+        Follow.countDocuments({ following: targetId, status: "active" }),
+        Follow.countDocuments({ follower: followerId, status: "active" })
+      ]);
+
+      await Promise.all([
+        User.findByIdAndUpdate(targetId, {
+          $set: { followersCount },
+          $addToSet: { followers: followerId }
+        }),
+        User.findByIdAndUpdate(followerId, {
+          $set: { followingCount },
+          $addToSet: { following: targetId }
+        })
+      ]);
+
+      return res.json({
+        success: true,
+        message: `You are already following ${targetUser.username}`,
+        isFollowing: true,
+        followersCount,
+        followingCount
+      });
+    }
+
     // activityId
     const activityId = `follow_${followerId}_${targetId}_${uuidv4()}`;
 
@@ -71,8 +103,16 @@ router.post('/:userId/follow', authMiddleware, async (req, res) => {
       status: "active"
     });
 
-    await User.findByIdAndUpdate(targetId, { followersCount });
-    await User.findByIdAndUpdate(followerId, { followingCount });
+    await Promise.all([
+      User.findByIdAndUpdate(targetId, {
+        $set: { followersCount },
+        $addToSet: { followers: followerId }
+      }),
+      User.findByIdAndUpdate(followerId, {
+        $set: { followingCount },
+        $addToSet: { following: targetId }
+      })
+    ]);
 
     /* ---------------------------------------------------
      * REWARD FOLLOWER
@@ -174,8 +214,16 @@ router.post('/:userId/unfollow', authMiddleware, async (req, res) => {
       status: "active"
     });
 
-    await User.findByIdAndUpdate(targetId, { followersCount });
-    await User.findByIdAndUpdate(followerId, { followingCount });
+    await Promise.all([
+      User.findByIdAndUpdate(targetId, {
+        $set: { followersCount },
+        $pull: { followers: followerId }
+      }),
+      User.findByIdAndUpdate(followerId, {
+        $set: { followingCount },
+        $pull: { following: targetId }
+      })
+    ]);
 
     return res.json({
       success: true,

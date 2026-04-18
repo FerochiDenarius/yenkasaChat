@@ -17,14 +17,19 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.scheduleAtFixedRate
@@ -83,6 +88,7 @@ class PostAdapter(
         val commentCount: TextView = itemRoot.findViewById(R.id.textCommentCount)
         val coinsEarned: TextView = itemRoot.findViewById(R.id.textCoinsEarned)
         val viewCount: TextView = itemRoot.findViewById(R.id.textViewCount)
+        val fabFollow: FloatingActionButton = itemRoot.findViewById(R.id.fabFollow)
 
         // IMAGE
         val postImage: ImageView = itemRoot.findViewById(R.id.imagePostContent)
@@ -289,6 +295,12 @@ class PostAdapter(
         holder.btnLike.setOnClickListener { onLikeClick(post, position) }
         holder.btnComment.setOnClickListener { onCommentClick(post, position) }
         holder.btnShare.setOnClickListener { onShareClick(post) }
+
+        val currentUserId = TokenManager.getUserId(context)
+        holder.fabFollow.visibility = if (post.userId.id == currentUserId) View.GONE else View.VISIBLE
+        holder.fabFollow.setOnClickListener {
+            followPostAuthor(post, holder.fabFollow)
+        }
 
         // Media
         val hasImage = !post.imageUrl.isNullOrEmpty()
@@ -580,6 +592,39 @@ class PostAdapter(
             onViewCountUpdated(postId, viewsCount)
             if (index >= 0) notifyItemChanged(index)
         }
+    }
+
+    private fun followPostAuthor(post: Post, followButton: FloatingActionButton) {
+        val token = TokenManager.getToken(context)
+        val targetUserId = post.userId.id
+
+        if (token.isNullOrBlank()) {
+            Toast.makeText(context, "Please log in first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (targetUserId.isBlank() || targetUserId == TokenManager.getUserId(context)) {
+            return
+        }
+
+        followButton.isEnabled = false
+        ApiClient.apiService.followUser(targetUserId, "Bearer $token")
+            .enqueue(object : Callback<FollowResponse> {
+                override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
+                    followButton.isEnabled = true
+                    val body = response.body()
+                    if (response.isSuccessful && body != null) {
+                        Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Could not follow ${post.userId.username}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                    followButton.isEnabled = true
+                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
     // Helpers for ViewHolder (small extension function)

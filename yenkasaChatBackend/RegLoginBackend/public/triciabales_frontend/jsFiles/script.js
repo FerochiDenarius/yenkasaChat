@@ -22,7 +22,14 @@ const browseTitle = document.getElementById("browseTitle");
 const browseDescription = document.getElementById("browseDescription");
 const browseCount = document.getElementById("browseCount");
 const clearBrowseBtn = document.getElementById("clearBrowseBtn");
+const supportEmailBtn = document.getElementById("supportEmailBtn");
 const liveChatLauncher = document.getElementById("liveChatLauncher");
+const supportModal = document.getElementById("supportModal");
+const supportForm = document.getElementById("supportForm");
+const supportCloseBtn = document.getElementById("supportCloseBtn");
+const supportCancelBtn = document.getElementById("supportCancelBtn");
+const supportFeedback = document.getElementById("supportFeedback");
+const supportSubmitBtn = document.getElementById("supportSubmitBtn");
 const promoSlides = document.querySelectorAll(".promo-slide");
 let allProducts = [];
 let currentPromoIndex = 0;
@@ -83,6 +90,7 @@ const categoryConfig = {
   }
 };
 const supportEmail = "support@store.yenkas.xyz";
+const supportContactEndpoint = "/triciabales-api/api/support/contact";
 
 function getCart() {
   return JSON.parse(localStorage.getItem("cart") || "[]");
@@ -654,16 +662,30 @@ imageModal.addEventListener("click", event => {
 modalCloseBtn?.addEventListener("click", closeImage);
 modalPrevBtn?.addEventListener("click", () => moveModalImage(-1));
 modalNextBtn?.addEventListener("click", () => moveModalImage(1));
+supportEmailBtn?.addEventListener("click", openSupportForm);
 liveChatLauncher?.addEventListener("click", () => {
   if (window.yenkasaLiveChat && typeof window.yenkasaLiveChat.open === "function") {
     window.yenkasaLiveChat.open();
     return;
   }
 
-  window.location.href = `mailto:${supportEmail}?subject=Yenkasa%20Store%20Support`;
+  openSupportForm();
 });
+supportCloseBtn?.addEventListener("click", closeSupportForm);
+supportCancelBtn?.addEventListener("click", closeSupportForm);
+supportModal?.addEventListener("click", event => {
+  if (event.target === supportModal) {
+    closeSupportForm();
+  }
+});
+supportForm?.addEventListener("submit", submitSupportMessage);
 
 document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && supportModal?.classList.contains("show")) {
+    closeSupportForm();
+    return;
+  }
+
   if (imageModal.style.display !== "flex") {
     return;
   }
@@ -711,4 +733,88 @@ function closeImage() {
   imageModal.style.display = "none";
   modalImages = [];
   modalImageIndex = 0;
+}
+
+function openSupportForm() {
+  if (!supportModal) return;
+
+  supportModal.classList.add("show");
+  supportModal.setAttribute("aria-hidden", "false");
+  setSupportFeedback("", "");
+
+  const nameField = document.getElementById("supportName");
+  const emailField = document.getElementById("supportEmail");
+  if (currentUser?.name && nameField && !nameField.value) {
+    nameField.value = currentUser.name;
+  }
+  if (currentUser?.email && emailField && !emailField.value) {
+    emailField.value = currentUser.email;
+  }
+
+  setTimeout(() => nameField?.focus(), 50);
+}
+
+function closeSupportForm() {
+  if (!supportModal) return;
+
+  supportModal.classList.remove("show");
+  supportModal.setAttribute("aria-hidden", "true");
+}
+
+function setSupportFeedback(message, type) {
+  if (!supportFeedback) return;
+
+  supportFeedback.textContent = message;
+  supportFeedback.className = `support-feedback ${type || "hidden"}`;
+}
+
+async function submitSupportMessage(event) {
+  event.preventDefault();
+  if (!supportForm || !supportSubmitBtn) return;
+
+  const formData = new FormData(supportForm);
+  const payload = {
+    name: String(formData.get("name") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    phone: String(formData.get("phone") || "").trim(),
+    subject: String(formData.get("subject") || "").trim(),
+    message: String(formData.get("message") || "").trim(),
+    website: String(formData.get("website") || "").trim(),
+    pageUrl: window.location.href
+  };
+
+  if (payload.name.length < 2 || payload.message.length < 10 || !payload.email.includes("@")) {
+    setSupportFeedback("Please enter your name, a valid email, and a clear message.", "error");
+    return;
+  }
+
+  try {
+    supportSubmitBtn.disabled = true;
+    supportSubmitBtn.textContent = "Sending...";
+    setSupportFeedback("Sending your message...", "info");
+
+    const response = await fetch(supportContactEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Unable to send your message.");
+    }
+
+    setSupportFeedback(`Message sent. We will reply from ${supportEmail}.`, "success");
+    supportForm.reset();
+
+    setTimeout(closeSupportForm, 1600);
+  } catch (err) {
+    console.error(err);
+    setSupportFeedback(err.message || "Unable to send your message right now.", "error");
+  } finally {
+    supportSubmitBtn.disabled = false;
+    supportSubmitBtn.textContent = "Send Message";
+  }
 }

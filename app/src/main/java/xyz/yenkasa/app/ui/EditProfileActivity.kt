@@ -34,6 +34,7 @@ import java.util.Calendar
 import com.google.android.material.datepicker.MaterialDatePicker
 import java.time.*
 import android.view.View
+import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 
 
@@ -343,7 +344,7 @@ class EditProfileActivity : AppCompatActivity() {
         val oldPass = view.findViewById<TextInputEditText>(R.id.editOldPassword)
         val newPass = view.findViewById<TextInputEditText>(R.id.editNewPassword)
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Change Password")
             .setView(view)
             .setPositiveButton("Update") { _, _ ->
@@ -359,6 +360,11 @@ class EditProfileActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+
+        dialog.window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
     }
     private fun changePassword(oldPass: String, newPass: String) {
         lifecycleScope.launch {

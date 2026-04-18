@@ -38,6 +38,8 @@ import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.adapter.MessageAdapter
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.Participant
+import xyz.yenkasa.app.model.PresenceResponse
+import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.webrtc.WebSocketProvider
@@ -47,6 +49,9 @@ import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.io.File
 import java.io.IOException
 
@@ -431,35 +436,104 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         SocketManager.on("userStatusChanged") { data ->
-            val json = when (data) {
-                is JSONObject -> data
-                else -> runCatching { JSONObject(data.toString()) }.getOrNull()
-            } ?: return@on
+            handlePresenceChangedEvent(data)
+        }
 
-            val updatedUserId = json.optString("userId", "")
-            val receiverId = receiverParticipant?._id ?: return@on
-            if (updatedUserId != receiverId) return@on
+        SocketManager.on("presence:update") { data ->
+            handlePresenceChangedEvent(data)
+        }
 
-            val isOnline = json.optBoolean("isOnline", false)
-            val statusText = json.optString(
-                "statusText",
-                if (isOnline) "Online" else "Offline"
-            )
+        SocketManager.requestOnlineUsers()
+    }
 
-            runOnUiThread {
-                onReceiverParticipantStatusUpdate(isOnline, statusText)
+    private fun handlePresenceChangedEvent(data: Any) {
+        val json = when (data) {
+            is JSONObject -> data
+            else -> runCatching { JSONObject(data.toString()) }.getOrNull()
+        } ?: return
+
+        val updatedUserId = json.optString("userId", json.optString("_id", ""))
+        val receiverId = receiverParticipant?._id ?: return
+        if (updatedUserId != receiverId) return
+
+        val isOnline = json.optBoolean("isOnline", json.optBoolean("online", false))
+        val statusText = json.optString(
+            "statusText",
+            if (isOnline) "Online" else "Offline"
+        )
+
+        runOnUiThread {
+            onReceiverParticipantStatusUpdate(isOnline, statusText)
+        }
+    }
+
+    private fun refreshReceiverPresence() {
+        val receiverId = receiverParticipant?._id ?: return
+
+        ApiClient.apiService.getUserPresence(receiverId)
+            .enqueue(object : Callback<PresenceResponse> {
+                override fun onResponse(
+                    call: Call<PresenceResponse>,
+                    response: Response<PresenceResponse>
+                ) {
+                    val presence = response.body()
+                    if (!response.isSuccessful || presence == null) {
+                        Log.w("ChatActivity", "Presence refresh failed: ${response.code()}")
+                        return
+                    }
+
+                    val isOnline = presence.resolvedOnline
+                    runOnUiThread {
+                        onReceiverParticipantStatusUpdate(
+                            isOnline,
+                            presence.statusText ?: if (isOnline) "Online" else "Offline"
+                        )
+                    }
+                }
+
+                override fun onFailure(
+                    call: Call<PresenceResponse>,
+                    t: Throwable
+                ) {
+                    Log.w("ChatActivity", "Presence refresh error: ${t.message}")
+                }
+            })
+    }
+
+    private fun parseOnlineUsersArray(data: Any): JSONArray? {
+        return when (data) {
+            is JSONArray -> data
+            is JSONObject -> {
+                data.optJSONArray("onlineUsers")
+                    ?: data.optJSONArray("users")
+                    ?: data.optJSONArray("userIds")
             }
+            else -> runCatching { JSONArray(data.toString()) }.getOrNull()
         }
     }
 
     private fun isReceiverOnline(data: Any, receiverId: String): Boolean {
-        return when (data) {
-            is JSONArray -> {
-                for (i in 0 until data.length()) {
-                    if (data.optString(i) == receiverId) return true
-                }
-                false
+        if (data is JSONObject) {
+            val eventUserId = data.optString("userId", data.optString("_id", ""))
+            if (eventUserId == receiverId) {
+                return data.optBoolean("isOnline", data.optBoolean("online", false))
             }
+        }
+
+        parseOnlineUsersArray(data)?.let { onlineUsers ->
+            for (i in 0 until onlineUsers.length()) {
+                when (val item = onlineUsers.opt(i)) {
+                    is JSONObject -> {
+                        val id = item.optString("userId", item.optString("_id", item.optString("id", "")))
+                        if (id == receiverId) return true
+                    }
+                    else -> if (item?.toString() == receiverId) return true
+                }
+            }
+            return false
+        }
+
+        return when (data) {
             is List<*> -> data.any { it?.toString() == receiverId }
             is Array<*> -> data.any { it?.toString() == receiverId }
             else -> data.toString()
@@ -492,8 +566,14 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     // --- Callback Implementations & Other Methods ---
 
     override fun onReceiverParticipantDetailsReady(participant: Participant) {
-        updateReceiverHeader(participant)
         receiverParticipant = participant // <-- Save the participant
+        updateReceiverHeader(participant)
+        onReceiverParticipantStatusUpdate(
+            participant.resolvedOnline,
+            if (participant.resolvedOnline) "Online" else "Offline"
+        )
+        refreshReceiverPresence()
+        SocketManager.requestOnlineUsers()
     }
 
     private fun updateReceiverHeader(participant: Participant) {

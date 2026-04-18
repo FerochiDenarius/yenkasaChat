@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yenkasa Store | Ghana Marketplace for Fashion, Fabrics and More</title>
 
-  <link rel="stylesheet" href="/store/assets/cssFile/style.css?v=20260416-support-refunds">
+  <link rel="stylesheet" href="/store/assets/cssFile/style.css?v=20260418-support-form">
 </head>
 <body>
 
@@ -63,7 +63,7 @@
 
         <div class="hero-quick-links">
           <a href="#featured" class="primary-btn">Shop Now</a>
-          <a href="https://wa.me/233551699010" target="_blank" class="secondary-btn">WhatsApp Us</a>
+          <a href="https://wa.me/233551699010" target="_blank" rel="noopener noreferrer" class="secondary-btn">WhatsApp Us</a>
         </div>
       </div>
 
@@ -164,7 +164,7 @@
       <p>Message Yenkasa Store directly for quick support and seller guidance.</p>
     </div>
 
-    <a href="https://wa.me/233551699010" target="_blank" class="primary-btn white-btn">
+    <a href="https://wa.me/233551699010" target="_blank" rel="noopener noreferrer" class="primary-btn white-btn">
       Contact on WhatsApp
     </a>
   </section>
@@ -184,18 +184,65 @@
     <div class="modal-image-counter" id="modalImageCounter"></div>
   </div>
   <div class="support-launcher" data-live-chat-root>
-    <a
-      href="mailto:support@store.yenkas.xyz?subject=Yenkasa%20Store%20Support"
+    <button
+      type="button"
       class="support-launcher-btn"
       id="supportEmailBtn"
     >
       Support
-    </a>
+    </button>
     <button type="button" class="support-live-chat-btn" id="liveChatLauncher" data-live-chat-launcher>
       Live chat soon
     </button>
   </div>
+  <div class="support-modal" id="supportModal" aria-hidden="true">
+    <div class="support-modal-card" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle">
+      <div class="support-modal-head">
+        <div>
+          <span>Yenkasa Store Support</span>
+          <h2 id="supportModalTitle">Send a message</h2>
+        </div>
+        <button type="button" class="support-close-btn" id="supportCloseBtn" aria-label="Close support form">×</button>
+      </div>
+
+      <form id="supportForm" class="support-form">
+        <input type="text" id="supportWebsite" name="website" autocomplete="off" tabindex="-1" aria-hidden="true">
+
+        <div class="support-field">
+          <label for="supportName">Name</label>
+          <input type="text" id="supportName" name="name" maxlength="80" required>
+        </div>
+
+        <div class="support-field">
+          <label for="supportEmail">Email</label>
+          <input type="email" id="supportEmail" name="email" maxlength="160" required>
+        </div>
+
+        <div class="support-field">
+          <label for="supportPhone">Phone</label>
+          <input type="tel" id="supportPhone" name="phone" maxlength="40">
+        </div>
+
+        <div class="support-field">
+          <label for="supportSubject">Subject</label>
+          <input type="text" id="supportSubject" name="subject" maxlength="120" placeholder="Order issue, payment, delivery, seller support">
+        </div>
+
+        <div class="support-field">
+          <label for="supportMessage">Message</label>
+          <textarea id="supportMessage" name="message" maxlength="2000" rows="5" required></textarea>
+        </div>
+
+        <div id="supportFeedback" class="support-feedback hidden"></div>
+
+        <div class="support-actions">
+          <button type="button" class="support-secondary-btn" id="supportCancelBtn">Cancel</button>
+          <button type="submit" class="support-submit-btn" id="supportSubmitBtn">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
   <script src="/store/assets/jsFiles/store-settings.js"></script>
-  <script src="/store/assets/jsFiles/script.js?v=20260416-support-refunds"></script>
+  <script src="/store/assets/jsFiles/script.js?v=20260418-support-form"></script>
 </body>
 </html>

@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 
 class UserAdapter(
     private val users: List<User>,
-    private val onFollowClick: (User, Boolean) -> Unit // ✅ Boolean instead of View
+    private val onFollowClick: (User, Boolean) -> Unit, // ✅ Boolean instead of View
+    private val isFollowingResolver: ((User) -> Boolean)? = null
 ) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
     inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -35,7 +36,8 @@ class UserAdapter(
                 .into(imageProfile)
 
             val currentUserId = TokenManager.getUserId(itemView.context)
-            val isFollowing = user.followers?.contains(currentUserId) == true
+            val isFollowing = isFollowingResolver?.invoke(user)
+                ?: (user.followers?.contains(currentUserId) == true)
 
             btnFollow.text = if (isFollowing) "Following" else "Follow"
 

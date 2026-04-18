@@ -145,6 +145,39 @@ router.get('/me', authMiddleware, async (req, res) => {
 });
 
 // ======================================================================
+// USER PRESENCE
+// ======================================================================
+router.get('/:userId/presence', authMiddleware, async (req, res) => {
+    const { userId } = req.params;
+
+    if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    try {
+        const user = await User.findById(userId)
+            .select('_id username online lastSeen')
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.status(200).json({
+            userId: user._id,
+            username: user.username,
+            isOnline: user.online || false,
+            online: user.online || false,
+            lastSeen: user.lastSeen || null,
+            statusText: user.online ? "Online" : "Offline"
+        });
+    } catch (err) {
+        logger.error(`❌ Presence lookup failed for ${userId}: ${err.message}`);
+        res.status(500).json({ error: "Failed to retrieve user presence" });
+    }
+});
+
+// ======================================================================
 // TOGGLE FOLLOW
 // ======================================================================
 router.post('/toggle-follow/:targetUserId', authMiddleware, async (req, res) => {

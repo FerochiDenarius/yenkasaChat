@@ -175,11 +175,15 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 timeout = 20000
             }
 
-            // ⚠️ IMPORTANT: update URL to your backend
-            mSocket = IO.socket("https://yenkasa.onrender.com", options)
+            val socketBaseUrl = ApiClient.BASE_URL
+                .removeSuffix("/api/")
+                .removeSuffix("/api")
+                .removeSuffix("api/")
+
+            mSocket = IO.socket(socketBaseUrl, options)
 
             mSocket.connect()
-            Log.d("MyApplication", "Socket.IO connected.")
+            Log.d("MyApplication", "Socket.IO connected to $socketBaseUrl.")
         } catch (e: Exception) {
             Log.e("MyApplication", "Socket initialization failed: ${e.message}")
         }

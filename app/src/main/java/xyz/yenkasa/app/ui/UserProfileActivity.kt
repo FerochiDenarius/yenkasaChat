@@ -225,8 +225,8 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun updateUI(profile: ProfileResponse) {
         usernameView.text = profile.username
-        followersCountView.text = "${profile.followers?.size ?: 0}\nFollowers"
-        followingCountView.text = "${profile.following?.size ?: 0}\nFollowing"
+        followersCountView.text = "${profile.followersCount ?: profile.followers.size}\nFollowers"
+        followingCountView.text = "${profile.followingCount ?: profile.following.size}\nFollowing"
         postsCountView.text = "${profile.posts?.size ?: 0}\nPosts"
 
         val imageUrl = if (profile.profileImage?.startsWith("http") == true)
@@ -253,6 +253,7 @@ class UserProfileActivity : AppCompatActivity() {
         val token = TokenManager.getToken(this) ?: return
         if (userId.isNullOrEmpty()) return
 
+        btnFollow.isEnabled = false
         val call = if (isFollowing) {
             ApiClient.apiService.unfollowUser(userId!!, "Bearer $token")
         } else {
@@ -261,27 +262,31 @@ class UserProfileActivity : AppCompatActivity() {
 
         call.enqueue(object : Callback<FollowResponse> {
             override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
-                if (response.isSuccessful && response.body() != null) {
-                    isFollowing = !isFollowing
+                val result = response.body()
+                if (response.isSuccessful && result != null) {
+                    isFollowing = result.isFollowing ?: !isFollowing
                     btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
 
                     Toast.makeText(
                         this@UserProfileActivity,
-                        response.body()!!.message,
+                        result.message,
                         Toast.LENGTH_SHORT
                     ).show()
 
                     fetchUserProfile()
                 } else {
+                    Log.e(TAG, "Follow update failed: ${response.code()} ${response.errorBody()?.string()}")
                     Toast.makeText(
                         this@UserProfileActivity,
                         "Failed to update follow",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+                btnFollow.isEnabled = true
             }
 
             override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                btnFollow.isEnabled = true
                 Toast.makeText(
                     this@UserProfileActivity,
                     "Network error: ${t.message}",
@@ -332,7 +337,7 @@ class UserProfileActivity : AppCompatActivity() {
     private fun openFollowList(type: String) {
         val intent = Intent(this, FollowFeedActivity::class.java)
         intent.putExtra("LIST_TYPE", type) // "followers" or "following"
-        intent.putExtra("USER_ID", TokenManager.getUserId(this))
+        intent.putExtra("USER_ID", userId ?: TokenManager.getUserId(this))
         startActivity(intent)
     }
 }

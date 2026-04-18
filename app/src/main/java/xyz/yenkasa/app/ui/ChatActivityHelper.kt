@@ -162,8 +162,8 @@ class ChatActivityHelper(
                     if (receiver != null) {
                         callback.onReceiverParticipantDetailsReady(receiver)
                         callback.onReceiverParticipantStatusUpdate(
-                            receiver.isOnline ?: false,
-                            if (receiver.isOnline == true) "Online" else "Offline"
+                            receiver.resolvedOnline,
+                            if (receiver.resolvedOnline) "Online" else "Offline"
                         )
                     } else {
                         callback.showDefaultReceiverHeader("Chat")

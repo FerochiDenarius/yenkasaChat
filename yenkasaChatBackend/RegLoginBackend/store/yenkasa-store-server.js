@@ -48,6 +48,24 @@ function forwardHeaders(req, extraHeaders = {}) {
   return headers;
 }
 
+function clientForwardHeaders(req, extraHeaders = {}) {
+  const headers = forwardHeaders(req, extraHeaders);
+  const existingForwardedFor = req.headers['x-forwarded-for'];
+  const clientIp = Array.isArray(existingForwardedFor)
+    ? existingForwardedFor[0]
+    : existingForwardedFor || req.ip || req.socket?.remoteAddress || '';
+
+  if (clientIp) {
+    headers['X-Forwarded-For'] = clientIp;
+  }
+
+  if (req.headers['user-agent']) {
+    headers['User-Agent'] = req.headers['user-agent'];
+  }
+
+  return headers;
+}
+
 function appendOptionalProductFields(form, body) {
   [
     'categoryType',
@@ -269,6 +287,32 @@ module.exports = function (app) {
     } catch (err) {
       console.error(
         'REFUND STATUS ERROR:',
+        err.response?.status || err.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || err.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  app.post('/triciabales-api/api/support/contact', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/support/contact`,
+        req.body,
+        {
+          headers: clientForwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.status(response.status).json(response.data);
+    } catch (err) {
+      console.error(
+        'SUPPORT CONTACT ERROR:',
         err.response?.status || err.status,
         err.response?.data || err.message
       );

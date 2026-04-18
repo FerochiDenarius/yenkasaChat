@@ -18,9 +18,18 @@ data class Participant(
 
     // Prepare for online status
     @SerializedName("isOnline")
-    val isOnline: Boolean = false
+    val isOnline: Boolean = false,
+
+    @SerializedName("online")
+    val online: Boolean = false,
+
+    @SerializedName("lastSeen")
+    val lastSeen: String? = null
 ) {
     // Always prefer profileImage if available, else fallback to avatar
     val displayImage: String?
         get() = profileImage ?: avatar
+
+    val resolvedOnline: Boolean
+        get() = isOnline || online
 }

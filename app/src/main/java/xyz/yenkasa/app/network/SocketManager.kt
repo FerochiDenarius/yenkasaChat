@@ -11,7 +11,10 @@ object SocketManager {
 
     private var socket: Socket? = null
     private const val TAG = "SocketManager"
-    private const val SOCKET_URL = "https://yenkasa-bldrv.ondigitalocean.app"
+    private val SOCKET_URL = ApiClient.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .removeSuffix("api/")
 
     val instance: Socket?
         get() = socket
@@ -37,14 +40,17 @@ object SocketManager {
             }
 
             if (!(socket?.connected() ?: false)) {
-                socket?.connect()
+                socket?.off(Socket.EVENT_CONNECT)
+                socket?.off(Socket.EVENT_DISCONNECT)
                 socket?.on(Socket.EVENT_CONNECT) {
-                    Log.i(TAG, "✅ Socket connected.")
+                    Log.i(TAG, "✅ Socket connected to $SOCKET_URL.")
                     emitUserConnected(userId)
+                    requestOnlineUsers()
                 }
                 socket?.on(Socket.EVENT_DISCONNECT) {
                     Log.w(TAG, "⚠️ Socket disconnected.")
                 }
+                socket?.connect()
             }
         } catch (e: URISyntaxException) {
             Log.e(TAG, "Socket connection failed: ${e.message}", e)
@@ -119,6 +125,15 @@ object SocketManager {
             Log.d(TAG, "👤 User disconnected: $userId")
         } catch (e: Exception) {
             Log.e(TAG, "Error emitting userOffline", e)
+        }
+    }
+
+    fun requestOnlineUsers() {
+        try {
+            socket?.emit("requestOnlineUsers")
+            Log.d(TAG, "📡 Requested online users")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error requesting online users", e)
         }
     }
 

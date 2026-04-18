@@ -7,11 +7,13 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.TrackAdViewResponse
 import xyz.yenkasa.app.model.ViewResponse
@@ -29,6 +31,7 @@ import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -44,6 +47,7 @@ class ViewActivity : AppCompatActivity() {
     private lateinit var imageContent: ImageView
     private lateinit var videoContent: VideoView
     private lateinit var audioIcon: ImageView
+    private lateinit var fabFollow: FloatingActionButton
     private var rewardedAd: RewardedAd? = null
 
 
@@ -62,6 +66,7 @@ class ViewActivity : AppCompatActivity() {
         imageContent = findViewById(R.id.imageMedia)
         videoContent = findViewById(R.id.videoContent)
         audioIcon = findViewById(R.id.audioIcon)
+        fabFollow = findViewById(R.id.fabFollow)
 
         token = TokenManager.getToken(this)
         post = intent.getParcelableExtra("POST_DATA")
@@ -80,6 +85,14 @@ class ViewActivity : AppCompatActivity() {
         textUsername.text = post?.userId?.username ?: "Unknown"
         textCaption.text = post?.caption ?: ""
         fetchTotalViews()
+
+        val authorId = post?.userId?.id
+        fabFollow.visibility = if (authorId.isNullOrBlank() || authorId == TokenManager.getUserId(this)) {
+            View.GONE
+        } else {
+            View.VISIBLE
+        }
+        fabFollow.setOnClickListener { followPostAuthor() }
 
         imageContent.visibility = View.GONE
         videoContent.visibility = View.GONE
@@ -116,6 +129,41 @@ class ViewActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun followPostAuthor() {
+        val rawToken = token ?: TokenManager.getToken(this)
+        val author = post?.userId ?: return
+
+        if (rawToken.isNullOrBlank()) {
+            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (author.id.isBlank() || author.id == TokenManager.getUserId(this)) {
+            return
+        }
+
+        val authToken = if (rawToken.startsWith("Bearer")) rawToken else "Bearer $rawToken"
+        fabFollow.isEnabled = false
+
+        ApiClient.apiService.followUser(author.id, authToken)
+            .enqueue(object : Callback<FollowResponse> {
+                override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
+                    fabFollow.isEnabled = true
+                    val body = response.body()
+                    if (response.isSuccessful && body != null) {
+                        Toast.makeText(this@ViewActivity, body.message, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ViewActivity, "Could not follow ${author.username}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
+                    fabFollow.isEnabled = true
+                    Toast.makeText(this@ViewActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
     private fun setupVideoView(uri: Uri) {

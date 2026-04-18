@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const User = require('../models/user.model');
 const Message = require('../models/message.model');
+const Follow = require('../models/follow.model');
 
 // ✅ Controllers
 const { getProfile, updateProfile } = require('../Controller/profileController');
@@ -23,23 +24,45 @@ router.put('/', authMiddleware, updateProfile);
 // ===============================
 router.get('/users/:userId/profile', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId)
-      .populate('followers', 'username profileImage')
-      .populate('following', 'username profileImage');
+    const profileUserId = req.params.userId;
+    const viewerId = req.user.id;
+
+    const user = await User.findById(profileUserId);
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Include whether current user follows this profile
-    const isFollowing = user.followers.some(f => f._id.toString() === req.user.id);
+    const [followersDocs, followingDocs, isFollowingDoc, followersCount, followingCount] =
+      await Promise.all([
+        Follow.find({ following: profileUserId, status: 'active' })
+          .populate('follower', 'username profileImage')
+          .sort({ followedAt: -1 })
+          .lean(),
+        Follow.find({ follower: profileUserId, status: 'active' })
+          .populate('following', 'username profileImage')
+          .sort({ followedAt: -1 })
+          .lean(),
+        Follow.findOne({
+          follower: viewerId,
+          following: profileUserId,
+          status: 'active'
+        }).lean(),
+        Follow.countDocuments({ following: profileUserId, status: 'active' }),
+        Follow.countDocuments({ follower: profileUserId, status: 'active' })
+      ]);
+
+    const followers = followersDocs.map(doc => doc.follower).filter(Boolean);
+    const following = followingDocs.map(doc => doc.following).filter(Boolean);
 
     res.json({
       _id: user._id,
       username: user.username,
       bio: user.bio || '',
       profileImage: user.profileImage,
-      followers: user.followers,
-      following: user.following,
-      isFollowing
+      followers,
+      following,
+      followersCount,
+      followingCount,
+      isFollowing: !!isFollowingDoc
     });
   } catch (err) {
     console.error('Error fetching user profile:', err);

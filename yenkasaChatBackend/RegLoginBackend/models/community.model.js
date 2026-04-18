@@ -78,6 +78,36 @@ const communitySchema = new Schema({
     default: ''
   },
 
+  country: {
+    type: String,
+    default: 'Ghana',
+    trim: true
+  },
+
+  state: {
+    type: String,
+    default: '',
+    trim: true
+  },
+
+  city: {
+    type: String,
+    default: '',
+    trim: true
+  },
+
+  town: {
+    type: String,
+    default: '',
+    trim: true
+  },
+
+  communityLevel: {
+    type: String,
+    enum: ['state', 'city', 'town', 'interest', null],
+    default: null
+  },
+
   pinnedPosts: [{
     type: Schema.Types.ObjectId,
     ref: 'Post'
@@ -112,6 +142,8 @@ communitySchema.index({ memberCount: -1 });
 communitySchema.index({ isActive: 1 });
 communitySchema.index({ isApproved: 1 });
 communitySchema.index({ createdBy: 1 });
+communitySchema.index({ country: 1, state: 1, city: 1, town: 1 });
+communitySchema.index({ country: 1, communityLevel: 1 });
 
 // Helpers (unchanged)
 communitySchema.methods.incrementMemberCount = async function () {

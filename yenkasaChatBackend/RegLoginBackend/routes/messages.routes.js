@@ -20,6 +20,19 @@ const isOneSignalDashboardChannelId = (value) =>
   typeof value === 'string' &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
 
+const cleanPushId = (value) =>
+  typeof value === 'string' && value.trim() ? value.trim() : null;
+
+const maskPushId = (value) => {
+  const id = cleanPushId(value);
+  if (!id) return null;
+  if (id.length <= 12) return `${id.slice(0, 3)}...${id.slice(-3)}`;
+  return `${id.slice(0, 8)}...${id.slice(-6)}`;
+};
+
+const firstValidPushId = (...values) =>
+  values.map(cleanPushId).find(Boolean) || null;
+
 // ✅ POST: Send a message (supports repliedTo)
 router.post('/', auth, async (req, res) => {
   console.log('[MessagesRoute] POST / - Received message from:', req.user.id);
@@ -34,6 +47,11 @@ router.post('/', auth, async (req, res) => {
     contactInfo,
     location,
     repliedTo, // ✅ added
+    playerId,
+    receiverPlayerId,
+    recipientPlayerId,
+    targetPlayerId,
+    onesignalPlayerId,
   } = req.body;
 
   if (!roomId || !mongoose.Types.ObjectId.isValid(roomId)) {
@@ -59,6 +77,29 @@ router.post('/', auth, async (req, res) => {
 
     const senderAppUserId = req.user.id.toString();
     const senderUsername = req.user.username || 'A user';
+    const senderPlayerIdFromPayload = cleanPushId(playerId);
+
+    if (senderPlayerIdFromPayload) {
+      try {
+        await User.updateOne(
+          { _id: senderAppUserId },
+          {
+            $set: {
+              playerId: senderPlayerIdFromPayload,
+              updatedAt: new Date()
+            }
+          }
+        );
+        console.log('[MessagesRoute] ✅ Synced sender OneSignal playerId from message payload:', {
+          senderId: senderAppUserId,
+          playerId: maskPushId(senderPlayerIdFromPayload)
+        });
+      } catch (syncErr) {
+        console.warn('[MessagesRoute] ⚠️ Failed to sync sender playerId from message payload:', syncErr.message);
+      }
+    } else {
+      console.warn('[MessagesRoute] ⚠️ Message payload did not include sender playerId. Push fallback may rely only on stored user.playerId.');
+    }
 
     // ✅ Create message object with repliedTo reference
     const newMessage = new Message({
@@ -94,9 +135,34 @@ router.post('/', auth, async (req, res) => {
         'username playerId'
       ).lean();
 
-      const validPlayerIds = recipients
-        .filter(u => u.playerId && u.playerId.trim() !== '')
-        .map(u => u.playerId.trim());
+      const payloadRecipientPlayerId = firstValidPushId(
+        receiverPlayerId,
+        recipientPlayerId,
+        targetPlayerId,
+        onesignalPlayerId
+      );
+
+      const validPlayerIds = Array.from(new Set([
+        ...recipients
+          .filter(u => cleanPushId(u.playerId))
+          .map(u => cleanPushId(u.playerId)),
+        ...(recipientAppUserIds.length === 1 && payloadRecipientPlayerId
+          ? [payloadRecipientPlayerId]
+          : [])
+      ].filter(Boolean)));
+
+      console.log('[MessagesRoute] Push target debug:', {
+        roomId,
+        senderId: senderAppUserId,
+        recipientIds: recipientAppUserIds,
+        recipientDbPlayerIds: recipients.map(u => ({
+          userId: u._id.toString(),
+          hasPlayerId: Boolean(cleanPushId(u.playerId)),
+          playerId: maskPushId(u.playerId)
+        })),
+        payloadRecipientPlayerId: maskPushId(payloadRecipientPlayerId),
+        chosenPlayerIds: validPlayerIds.map(maskPushId)
+      });
 
       if (validPlayerIds.length > 0) {
         let notificationTitle = `New message from ${senderUsername}`;
@@ -122,11 +188,27 @@ router.post('/', auth, async (req, res) => {
               senderId: senderAppUserId,
               messageId: newMessage._id.toString(),
               type: 'new_chat_message',
+              targetType: 'chat',
+              targetId: newMessage.roomId.toString(),
+              chatId: newMessage.roomId.toString(),
             },
+          });
+          console.log('[MessagesRoute] ✅ OneSignal chat notification sent:', {
+            roomId,
+            messageId: newMessage._id.toString(),
+            recipientCount: recipientAppUserIds.length,
+            playerIdCount: validPlayerIds.length
           });
         } catch (err) {
           console.error('OneSignal chat notification error:', err.message);
         }
+      } else {
+        console.warn('[MessagesRoute] ⚠️ No push target available for message notification:', {
+          roomId,
+          messageId: newMessage._id.toString(),
+          recipientIds: recipientAppUserIds,
+          senderPayloadPlayerId: maskPushId(senderPlayerIdFromPayload)
+        });
       }
     }
 

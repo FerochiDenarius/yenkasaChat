@@ -401,7 +401,9 @@ interface ApiService {
     ): Call<List<Community>>
 
     @GET("communities/public")
-    fun getPublicCommunities(): Call<List<Community>>
+    fun getPublicCommunities(
+        @Query("country") country: String? = null
+    ): Call<List<Community>>
 
 
 
@@ -413,7 +415,7 @@ interface ApiService {
     ): Call<CreateCommunityResponse>
 
     // ✅ Get the communities created by the logged-in user
-    @GET("/communities/user/my-communities")
+    @GET("communities/user/my-communities")
     fun getMyCommunities(
         @Header("Authorization") token: String
     ): Call<List<Community>>
@@ -437,7 +439,7 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<JoinedCommunitiesResponse>
 
-    @GET("user/all-communities")
+    @GET("communities/user/all-communities")
     fun getAllUserCommunities(@Header("Authorization") token: String): Call<JoinedCommunitiesResponse>
 
 
@@ -448,7 +450,7 @@ interface ApiService {
         @Path("communityId") communityId: String
     ): Call<JoinCommunityResponse>
 
-    @GET("/api/communities/user/community")
+    @GET("communities/user/community")
     fun getUserPrimaryCommunity(
         @Header("Authorization") token: String
     ): Call<UserPrimaryCommunityResponse>

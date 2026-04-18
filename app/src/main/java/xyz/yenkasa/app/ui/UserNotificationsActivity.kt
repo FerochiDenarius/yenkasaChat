@@ -15,8 +15,8 @@ import xyz.yenkasa.app.model.ApiResponse
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.model.NotificationModel
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.network.SocketManager
 import com.google.gson.Gson
-import io.socket.client.Socket
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -29,7 +29,6 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private lateinit var adapter: NotificationAdapter
     private lateinit var rvNotifications: RecyclerView
-    private lateinit var socket: Socket
 
     private var previousList: List<NotificationModel> = emptyList()
 
@@ -37,8 +36,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_notifications)
 
-        // Socket
-        socket = MyApplication.getSocket()
+        TokenManager.getUserId(this)?.let { SocketManager.ensureConnected(it) }
 
         // RecyclerView
         rvNotifications = findViewById(R.id.rvNotifications)
@@ -59,8 +57,8 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        socket.off("notificationCreated")
-        socket.off("notificationRead")
+        SocketManager.off("notificationCreated")
+        SocketManager.off("notificationRead")
     }
 
     // ============================================================
@@ -96,10 +94,10 @@ class UserNotificationsActivity : AppCompatActivity() {
     private fun initSocketListeners() {
 
         // Push new notification
-        socket.on("notificationCreated") { args ->
+        SocketManager.on("notificationCreated") { data ->
             runOnUiThread {
                 try {
-                    val notif = parseNotification(args[0].toString())
+                    val notif = parseNotification(data.toString())
                     val updated = adapter.itemsList.toMutableList()
                     updated.add(0, notif)
 
@@ -110,10 +108,10 @@ class UserNotificationsActivity : AppCompatActivity() {
             }
         }
 
-        socket.on("notificationRead") { args ->
+        SocketManager.on("notificationRead") { data ->
             runOnUiThread {
                 try {
-                    val json = JSONObject(args[0].toString())
+                    val json = JSONObject(data.toString())
                     val id = json.getString("id")
                     adapter.removeById(id)
                 } catch (_: Exception) {}

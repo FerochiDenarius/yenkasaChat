@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -17,9 +20,11 @@ import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -28,6 +33,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -41,6 +48,7 @@ import xyz.yenkasa.app.model.Participant
 import xyz.yenkasa.app.model.PresenceResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
+import xyz.yenkasa.app.util.ChatBackgroundManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.webrtc.WebSocketProvider
 import xyz.yenkasa.app.webrtc.SignalingMessageType
@@ -63,6 +71,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private lateinit var micButton: ImageButton
     private lateinit var attachButton: ImageButton
     private lateinit var attachMenu: LinearLayout
+    private lateinit var chatRootLayout: FrameLayout
+    private lateinit var moreOptionsButton: ImageView
 
     private lateinit var textViewReceiverName: TextView
     private lateinit var imageViewReceiverPicture: CircleImageView
@@ -91,6 +101,58 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var receiverParticipant: Participant? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
+
+    private data class ChatThemePreset(
+        val key: String,
+        val label: String,
+        val colors: IntArray?,
+        val orientation: GradientDrawable.Orientation = GradientDrawable.Orientation.TL_BR,
+        val solidColor: Int? = null
+    )
+
+    private val chatThemePresets = listOf(
+        ChatThemePreset(
+            "default",
+            "Yenkasa default",
+            null
+        ),
+        ChatThemePreset(
+            "whatsapp_light",
+            "WhatsApp light",
+            intArrayOf(Color.parseColor("#EFE7DC"), Color.parseColor("#DDEEDB")),
+            GradientDrawable.Orientation.TL_BR
+        ),
+        ChatThemePreset(
+            "whatsapp_dark",
+            "WhatsApp dark",
+            intArrayOf(Color.parseColor("#0B141A"), Color.parseColor("#1F2C34")),
+            GradientDrawable.Orientation.TL_BR
+        ),
+        ChatThemePreset(
+            "cool_mint",
+            "Cool mint",
+            intArrayOf(Color.parseColor("#D9F7E8"), Color.parseColor("#EAF8FF")),
+            GradientDrawable.Orientation.TOP_BOTTOM
+        ),
+        ChatThemePreset(
+            "ocean",
+            "Ocean",
+            intArrayOf(Color.parseColor("#D8F3F5"), Color.parseColor("#BFD7EA")),
+            GradientDrawable.Orientation.TL_BR
+        ),
+        ChatThemePreset(
+            "sunset",
+            "Sunset",
+            intArrayOf(Color.parseColor("#FDE2D2"), Color.parseColor("#F7D6E0")),
+            GradientDrawable.Orientation.TL_BR
+        ),
+        ChatThemePreset(
+            "graphite",
+            "Graphite",
+            intArrayOf(Color.parseColor("#202124"), Color.parseColor("#3C4043")),
+            GradientDrawable.Orientation.TOP_BOTTOM
+        )
+    )
 
     // --- Activity Result Launchers ---
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -203,6 +265,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         setupChatRecyclerView()
+        applySavedChatBackground()
         setupListeners()
         setupKeyboardAwareChatInput()
 
@@ -225,6 +288,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
 
     private fun initViews() {
+        chatRootLayout = findViewById(R.id.chatRootLayout)
         recyclerView = findViewById(R.id.recyclerViewMessages)
         messageInput = findViewById(R.id.editTextMessage)
         sendButton = findViewById(R.id.btnSend)
@@ -233,6 +297,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         attachMenu = findViewById(R.id.attachmentMenu)
         callButton = findViewById(R.id.imageViewCall)
         videoCallButton = findViewById(R.id.imageViewVideoCall)
+        moreOptionsButton = findViewById(R.id.imageViewMoreOptions)
 
         textViewReceiverName = findViewById(R.id.textViewReceiverName)
         imageViewReceiverPicture = findViewById(R.id.imageViewReceiverPicture)
@@ -251,6 +316,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun setupListeners() {
         findViewById<ImageView>(R.id.imageViewBackButton).setOnClickListener { finish() }
+        moreOptionsButton.setOnClickListener { showChatOptionsMenu(it) }
 
         buttonCancelReply.setOnClickListener { clearReplyingTo() }
 
@@ -346,6 +412,83 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
     }
 
+    private fun showChatOptionsMenu(anchorView: View) {
+        val popup = PopupMenu(this, anchorView)
+        popup.menu.add(0, MENU_CHANGE_BACKGROUND, 0, "Change chat background")
+        popup.menu.add(0, MENU_VIEW_CONTACT, 1, "View contact")
+        popup.menu.add(0, MENU_MUTE_NOTIFICATIONS, 2, "Mute notifications")
+        popup.menu.add(0, MENU_CLEAR_CHAT, 3, "Clear chat")
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                MENU_CHANGE_BACKGROUND -> {
+                    showChatBackgroundPicker()
+                    true
+                }
+                MENU_VIEW_CONTACT -> {
+                    Toast.makeText(this, "View contact will be added next.", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                MENU_MUTE_NOTIFICATIONS -> {
+                    Toast.makeText(this, "Mute notifications will be added next.", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                MENU_CLEAR_CHAT -> {
+                    Toast.makeText(this, "Clear chat will be added next.", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    private fun showChatBackgroundPicker() {
+        val labels = chatThemePresets.map { it.label }.toTypedArray()
+        val currentPreset = ChatBackgroundManager.getPreset(this) ?: "default"
+        val checkedIndex = chatThemePresets.indexOfFirst { it.key == currentPreset }
+            .takeIf { it >= 0 } ?: 0
+
+        AlertDialog.Builder(this)
+            .setTitle("Change chat background")
+            .setSingleChoiceItems(labels, checkedIndex) { dialog, which ->
+                val selectedPreset = chatThemePresets[which]
+                if (selectedPreset.key == "default") {
+                    ChatBackgroundManager.clearBackground(this)
+                } else {
+                    ChatBackgroundManager.savePreset(this, selectedPreset.key)
+                }
+                applyChatBackground(selectedPreset.key)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun applySavedChatBackground() {
+        applyChatBackground(ChatBackgroundManager.getPreset(this) ?: "default")
+    }
+
+    private fun applyChatBackground(presetKey: String) {
+        val preset = chatThemePresets.firstOrNull { it.key == presetKey }
+            ?: chatThemePresets.first()
+
+        if (preset.key == "default") {
+            chatRootLayout.background = ContextCompat.getDrawable(this, R.drawable.yenkasa_gradient)
+            return
+        }
+
+        val drawable = if (preset.colors != null) {
+            GradientDrawable(preset.orientation, preset.colors)
+        } else {
+            GradientDrawable().apply {
+                setColor(preset.solidColor ?: Color.WHITE)
+            }
+        }
+
+        chatRootLayout.background = drawable
+    }
+
     private fun startVideoCall(isVideo: Boolean) {
         val receiverId = receiverParticipant?._id
         val receiverName = receiverParticipant?.username
@@ -398,6 +541,38 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun setupKeyboardAwareChatInput() {
+        val messageInputLayout = findViewById<View>(R.id.messageInputLayout)
+        val originalRecyclerBottomPadding = recyclerView.paddingBottom
+        var wasKeyboardVisible = false
+
+        ViewCompat.setOnApplyWindowInsetsListener(chatRootLayout) { _, insets ->
+            val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            val keyboardOffset = if (isKeyboardVisible) {
+                getKeyboardOverlapHeight()
+            } else {
+                0
+            }
+            val translationY = -keyboardOffset.toFloat()
+
+            messageInputLayout.translationY = translationY
+            replyPreviewLayout.translationY = translationY
+            attachMenu.translationY = translationY
+            recyclerView.setPadding(
+                recyclerView.paddingLeft,
+                recyclerView.paddingTop,
+                recyclerView.paddingRight,
+                originalRecyclerBottomPadding + keyboardOffset
+            )
+
+            if (isKeyboardVisible && !wasKeyboardVisible) {
+                scrollMessagesToBottomSoon()
+            }
+            wasKeyboardVisible = isKeyboardVisible
+
+            insets
+        }
+        ViewCompat.requestApplyInsets(chatRootLayout)
+
         messageInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 attachMenu.visibility = View.GONE
@@ -409,6 +584,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             attachMenu.visibility = View.GONE
             scrollMessagesToBottomSoon()
         }
+    }
+
+    private fun getKeyboardOverlapHeight(): Int {
+        val visibleFrame = Rect()
+        chatRootLayout.getWindowVisibleDisplayFrame(visibleFrame)
+
+        val rootLocation = IntArray(2)
+        chatRootLayout.getLocationOnScreen(rootLocation)
+        val rootBottom = rootLocation[1] + chatRootLayout.height
+
+        return (rootBottom - visibleFrame.bottom).coerceAtLeast(0)
     }
 
     private fun scrollMessagesToBottomSoon() {
@@ -764,5 +950,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (permissionsToRequest.isNotEmpty()) {
             permissionsLauncher.launch(permissionsToRequest.toTypedArray())
         }
+    }
+
+    companion object {
+        private const val MENU_CHANGE_BACKGROUND = 1
+        private const val MENU_VIEW_CONTACT = 2
+        private const val MENU_MUTE_NOTIFICATIONS = 3
+        private const val MENU_CLEAR_CHAT = 4
     }
 }

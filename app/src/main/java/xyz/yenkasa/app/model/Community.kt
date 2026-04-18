@@ -10,6 +10,11 @@ data class Community(
     val displayName: String? = null,
     val description: String? = null,
     val location: String? = null,
+    val country: String? = null,
+    val state: String? = null,
+    val city: String? = null,
+    val town: String? = null,
+    val communityLevel: String? = null,
     val categories: List<String> = emptyList(),
 
     val coverImage: String? = null,

@@ -23,6 +23,7 @@ class CommunityAdapter(
     var onJoinCommunity: ((Community) -> Unit)? = null
     var onViewCommunity: ((Community) -> Unit)? = null
     var onLeaveCommunity: ((Community) -> Unit)? = null // NEW: Leave callback
+    var isCommunityJoined: ((Community) -> Boolean)? = null
 
 
     inner class CommunityViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -51,9 +52,10 @@ class CommunityAdapter(
                 community.categories.joinToString(" • ")
             else "Uncategorized"
 
-            // Make leave button always visible
-            btnLeaveCommunity.visibility = View.VISIBLE
-            btnJoinCommunity.visibility = View.VISIBLE
+            val isJoined = isCommunityJoined?.invoke(community) ?: community.isUserMember()
+
+            btnLeaveCommunity.visibility = if (isJoined) View.VISIBLE else View.GONE
+            btnJoinCommunity.visibility = if (isJoined) View.GONE else View.VISIBLE
             btnViewCommunity.visibility = View.VISIBLE
 
             btnJoinCommunity.setOnClickListener {
@@ -66,6 +68,8 @@ class CommunityAdapter(
 
             btnViewCommunity.setOnClickListener {
                 onViewCommunity?.invoke(community)
+                    ?: onCommunitySelected?.invoke(community)
+                    ?: onCommunityClick(community)
             }
 
             // Load image safely
@@ -88,10 +92,6 @@ class CommunityAdapter(
             // Entire item click → open community feed
             itemView.setOnClickListener { onCommunityClick(community) }
 
-            // "View" button click → call secondary callback (dialog or join)
-            btnViewCommunity.setOnClickListener {
-                onCommunitySelected?.invoke(community)
-            }
         }
     }
 

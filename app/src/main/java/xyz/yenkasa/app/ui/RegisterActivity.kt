@@ -48,6 +48,7 @@ class RegisterActivity : AppCompatActivity() {
 
     private var selectedCommunityId: String? = null
     private var communityList: List<Community> = emptyList()
+    private val registrationCountries = listOf("Ghana", "Nigeria")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,7 +112,6 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         setupCountrySpinner()
-        fetchCommunities()
     }
 
     // ✨ STAR SPARKLE ANIMATION
@@ -197,8 +197,10 @@ class RegisterActivity : AppCompatActivity() {
             lower.contains("missing required") -> {
                 "Some required details are missing. Check your contact, username, location, password, and community."
             }
-            lower.contains("only in ghana") || lower.contains("invalid country") -> {
-                "Registration is currently available only in Ghana."
+            lower.contains("only in ghana") ||
+                lower.contains("ghana and nigeria") ||
+                lower.contains("invalid country") -> {
+                "Registration is currently available only in Ghana and Nigeria."
             }
             statusCode in 500..599 -> {
                 "We could not register your account due to a server issue. Please try again shortly."
@@ -226,10 +228,12 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     // ⬇️ YOUR ORIGINAL LOGIC (UNCHANGED)
-    private fun fetchCommunities() {
+    private fun fetchCommunities(country: String = selectedCountry()) {
         progressBar.visibility = View.VISIBLE
+        selectedCommunityId = null
+        communityList = emptyList()
 
-        ApiClient.apiService.getPublicCommunities()
+        ApiClient.apiService.getPublicCommunities(country)
             .enqueue(object : Callback<List<Community>> {
                 override fun onResponse(
                     call: Call<List<Community>>,
@@ -247,12 +251,21 @@ class RegisterActivity : AppCompatActivity() {
                         return
                     }
 
-                    val communities = response.body()
+                    val communities = response.body().orEmpty()
+                        .filter { community ->
+                            community.country.equals(country, ignoreCase = true) ||
+                                (country.equals("Ghana", ignoreCase = true) && community.country.isNullOrBlank())
+                        }
 
-                    if (communities.isNullOrEmpty()) {
+                    if (communities.isEmpty()) {
+                        spinnerCommunities.adapter = ArrayAdapter(
+                            this@RegisterActivity,
+                            android.R.layout.simple_spinner_item,
+                            listOf("No communities available for $country")
+                        )
                         Toast.makeText(
                             this@RegisterActivity,
-                            "No approved communities found",
+                            "No approved communities found for $country",
                             Toast.LENGTH_SHORT
                         ).show()
                         shakeCard()
@@ -265,7 +278,7 @@ class RegisterActivity : AppCompatActivity() {
                     val adapter = ArrayAdapter(
                         this@RegisterActivity,
                         android.R.layout.simple_spinner_item,
-                        communities.map { it.displayName ?: it.name ?: "Unnamed" }
+                        communities.map { formatCommunityOption(it) }
                     )
 
                     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -280,9 +293,13 @@ class RegisterActivity : AppCompatActivity() {
                                 position: Int,
                                 id: Long
                             ) {
-                                // NOTE: Community model may use id or _id
-                                selectedCommunityId = communityList[position].id
-                                    ?: communityList[position].id
+                                val selectedCommunity = communityList.getOrNull(position)
+                                selectedCommunityId = selectedCommunity?.id
+                                selectedCommunity?.location?.takeIf { it.isNotBlank() }?.let { location ->
+                                    if (editLocation.text.isNullOrBlank()) {
+                                        editLocation.setText(location)
+                                    }
+                                }
                             }
 
                             override fun onNothingSelected(parent: AdapterView<*>) {
@@ -384,10 +401,10 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        val selectedCountry = spinnerCountry.selectedItem.toString()
+        val selectedCountry = selectedCountry()
 
-        if (!selectedCountry.equals("Ghana", ignoreCase = true)) {
-            showFormError("Registration is currently available only in Ghana.")
+        if (registrationCountries.none { it.equals(selectedCountry, ignoreCase = true) }) {
+            showFormError("Registration is currently available only in Ghana and Nigeria.")
             shakeCard()
             return
         }
@@ -453,19 +470,45 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun setupCountrySpinner() {
-        val countries = listOf(
-            "Ghana", "Nigeria", "Kenya", "South Africa", "Uganda", "Cameroon",
-            "Tanzania", "Ethiopia", "Rwanda", "Senegal", "Ivory Coast", "Benin"
-        )
-
         val adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_item,
-            countries
+            registrationCountries
         )
 
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
         spinnerCountry.adapter = adapter
+        spinnerCountry.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                editLocation.setText("")
+                fetchCommunities(registrationCountries[position])
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                selectedCommunityId = null
+            }
+        }
+    }
+
+    private fun selectedCountry(): String {
+        return spinnerCountry.selectedItem?.toString()?.trim().orEmpty().ifBlank { "Ghana" }
+    }
+
+    private fun formatCommunityOption(community: Community): String {
+        val name = community.displayName ?: community.name ?: "Unnamed"
+        val details = listOfNotNull(
+            community.town?.takeIf { it.isNotBlank() && !it.equals(name, ignoreCase = true) },
+            community.city?.takeIf { it.isNotBlank() && !it.equals(name, ignoreCase = true) },
+            community.state?.takeIf { it.isNotBlank() },
+            community.country?.takeIf { it.isNotBlank() }
+        ).distinct()
+
+        return if (details.isEmpty()) name else "$name - ${details.joinToString(", ")}"
     }
 }

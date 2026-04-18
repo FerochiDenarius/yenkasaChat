@@ -274,8 +274,183 @@ const interestCommunities = [
   }
 ];
 
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function parseGhanaLocation(location = '') {
+  const parts = location.split(',').map(part => part.trim()).filter(Boolean);
+  const town = parts[0] || '';
+  const state = parts[parts.length - 1] || 'Greater Accra';
+  return { state, city: town, town };
+}
+
+const ghanaLocalCommunities = yenkasaCommunities.map(community => {
+  const parsed = parseGhanaLocation(community.location);
+  return {
+    ...community,
+    country: 'Ghana',
+    state: parsed.state,
+    city: parsed.city,
+    town: parsed.town,
+    communityLevel: 'town',
+    communityType: 'local'
+  };
+});
+
+const ghanaInterestCommunities = interestCommunities.map(community => ({
+  ...community,
+  country: 'Ghana',
+  state: '',
+  city: '',
+  town: '',
+  communityLevel: 'interest',
+  communityType: 'interest'
+}));
+
+const nigeriaStates = [
+  ['Abia', 'Umuahia'],
+  ['Adamawa', 'Yola'],
+  ['Akwa Ibom', 'Uyo'],
+  ['Anambra', 'Awka'],
+  ['Bauchi', 'Bauchi'],
+  ['Bayelsa', 'Yenagoa'],
+  ['Benue', 'Makurdi'],
+  ['Borno', 'Maiduguri'],
+  ['Cross River', 'Calabar'],
+  ['Delta', 'Asaba'],
+  ['Ebonyi', 'Abakaliki'],
+  ['Edo', 'Benin City'],
+  ['Ekiti', 'Ado-Ekiti'],
+  ['Enugu', 'Enugu'],
+  ['FCT', 'Abuja'],
+  ['Gombe', 'Gombe'],
+  ['Imo', 'Owerri'],
+  ['Jigawa', 'Dutse'],
+  ['Kaduna', 'Kaduna'],
+  ['Kano', 'Kano'],
+  ['Katsina', 'Katsina'],
+  ['Kebbi', 'Birnin Kebbi'],
+  ['Kogi', 'Lokoja'],
+  ['Kwara', 'Ilorin'],
+  ['Lagos', 'Ikeja'],
+  ['Nasarawa', 'Lafia'],
+  ['Niger', 'Minna'],
+  ['Ogun', 'Abeokuta'],
+  ['Ondo', 'Akure'],
+  ['Osun', 'Osogbo'],
+  ['Oyo', 'Ibadan'],
+  ['Plateau', 'Jos'],
+  ['Rivers', 'Port Harcourt'],
+  ['Sokoto', 'Sokoto'],
+  ['Taraba', 'Jalingo'],
+  ['Yobe', 'Damaturu'],
+  ['Zamfara', 'Gusau']
+];
+
+const nigeriaStateCommunities = nigeriaStates.map(([state, capital]) => ({
+  name: `nigeria-${slugify(state)}-state`,
+  displayName: `${state} State`,
+  description: `State-level community for people living in or connected to ${state} State, Nigeria.`,
+  location: `${state} State, Nigeria`,
+  country: 'Nigeria',
+  state,
+  city: capital,
+  town: '',
+  communityLevel: 'state',
+  communityType: 'local',
+  categories: ['Local', 'State', 'Nigeria']
+}));
+
+const nigeriaCityTownSeeds = [
+  ['Lagos', 'Ikeja', 'Ikeja'],
+  ['Lagos', 'Lagos Island', 'Lagos Island'],
+  ['Lagos', 'Lekki', 'Lekki'],
+  ['Lagos', 'Victoria Island', 'Victoria Island'],
+  ['Lagos', 'Surulere', 'Surulere'],
+  ['Lagos', 'Yaba', 'Yaba'],
+  ['Lagos', 'Ajah', 'Ajah'],
+  ['FCT', 'Abuja', 'Wuse'],
+  ['FCT', 'Abuja', 'Garki'],
+  ['FCT', 'Abuja', 'Maitama'],
+  ['FCT', 'Abuja', 'Gwarinpa'],
+  ['FCT', 'Abuja', 'Kubwa'],
+  ['FCT', 'Abuja', 'Nyanya'],
+  ['Oyo', 'Ibadan', 'Ibadan'],
+  ['Oyo', 'Ogbomosho', 'Ogbomosho'],
+  ['Oyo', 'Oyo', 'Oyo'],
+  ['Kano', 'Kano', 'Kano'],
+  ['Kano', 'Wudil', 'Wudil'],
+  ['Rivers', 'Port Harcourt', 'Port Harcourt'],
+  ['Rivers', 'Bonny', 'Bonny'],
+  ['Rivers', 'Obio-Akpor', 'Obio-Akpor'],
+  ['Anambra', 'Onitsha', 'Onitsha'],
+  ['Anambra', 'Nnewi', 'Nnewi'],
+  ['Anambra', 'Awka', 'Awka'],
+  ['Abia', 'Aba', 'Aba'],
+  ['Abia', 'Umuahia', 'Umuahia'],
+  ['Enugu', 'Enugu', 'Enugu'],
+  ['Imo', 'Owerri', 'Owerri'],
+  ['Edo', 'Benin City', 'Benin City'],
+  ['Delta', 'Warri', 'Warri'],
+  ['Delta', 'Asaba', 'Asaba'],
+  ['Ogun', 'Abeokuta', 'Abeokuta'],
+  ['Ogun', 'Sango Ota', 'Sango Ota'],
+  ['Ogun', 'Ijebu Ode', 'Ijebu Ode'],
+  ['Osun', 'Osogbo', 'Osogbo'],
+  ['Ondo', 'Akure', 'Akure'],
+  ['Ekiti', 'Ado-Ekiti', 'Ado-Ekiti'],
+  ['Kwara', 'Ilorin', 'Ilorin'],
+  ['Plateau', 'Jos', 'Jos'],
+  ['Kaduna', 'Kaduna', 'Kaduna'],
+  ['Kaduna', 'Zaria', 'Zaria'],
+  ['Niger', 'Minna', 'Minna'],
+  ['Niger', 'Suleja', 'Suleja'],
+  ['Benue', 'Makurdi', 'Makurdi'],
+  ['Cross River', 'Calabar', 'Calabar'],
+  ['Akwa Ibom', 'Uyo', 'Uyo'],
+  ['Bayelsa', 'Yenagoa', 'Yenagoa'],
+  ['Borno', 'Maiduguri', 'Maiduguri'],
+  ['Adamawa', 'Yola', 'Yola'],
+  ['Bauchi', 'Bauchi', 'Bauchi'],
+  ['Gombe', 'Gombe', 'Gombe'],
+  ['Taraba', 'Jalingo', 'Jalingo'],
+  ['Jigawa', 'Dutse', 'Dutse'],
+  ['Katsina', 'Katsina', 'Katsina'],
+  ['Kebbi', 'Birnin Kebbi', 'Birnin Kebbi'],
+  ['Kogi', 'Lokoja', 'Lokoja'],
+  ['Nasarawa', 'Lafia', 'Lafia'],
+  ['Sokoto', 'Sokoto', 'Sokoto'],
+  ['Yobe', 'Damaturu', 'Damaturu'],
+  ['Zamfara', 'Gusau', 'Gusau'],
+  ['Ebonyi', 'Abakaliki', 'Abakaliki']
+];
+
+const nigeriaCityTownCommunities = nigeriaCityTownSeeds.map(([state, city, town]) => ({
+  name: `nigeria-${slugify(state)}-${slugify(town)}`,
+  displayName: town,
+  description: `Local community for people in ${town}, ${state} State, Nigeria.`,
+  location: `${town}, ${state} State, Nigeria`,
+  country: 'Nigeria',
+  state,
+  city,
+  town,
+  communityLevel: town === city ? 'city' : 'town',
+  communityType: 'local',
+  categories: ['Local', 'City', 'Town', 'Nigeria']
+}));
+
 // 🔁 Combine and add default flags
-const communities = [...yenkasaCommunities, ...interestCommunities].map(c => ({
+const communities = [
+  ...ghanaLocalCommunities,
+  ...ghanaInterestCommunities,
+  ...nigeriaStateCommunities,
+  ...nigeriaCityTownCommunities
+].map(c => ({
   ...c,
   isActive: true,
   isApproved: true
@@ -290,15 +465,34 @@ async function seedCommunities() {
     });
     console.log('✅ Connected to MongoDB');
 
-    console.log('🌱 Seeding Ghana communities (add only missing)...');
+    console.log('🌱 Seeding Ghana and Nigeria communities...');
 
     for (const community of communities) {
-      const exists = await Community.findOne({ name: community.name });
-      if (!exists) {
-        await Community.create(community);
+      const result = await Community.findOneAndUpdate(
+        { name: community.name },
+        {
+          $set: {
+            displayName: community.displayName,
+            description: community.description || '',
+            location: community.location || '',
+            categories: community.categories || [],
+            country: community.country || 'Ghana',
+            state: community.state || '',
+            city: community.city || '',
+            town: community.town || '',
+            communityLevel: community.communityLevel || null,
+            communityType: community.communityType || null,
+            isActive: true,
+            isApproved: true
+          }
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+
+      if (result.createdAt?.getTime?.() === result.updatedAt?.getTime?.()) {
         console.log(`🌟 Created community: ${community.displayName}`);
       } else {
-        console.log(`⚡ Already exists, skipped: ${community.displayName}`);
+        console.log(`⚡ Synced community: ${community.displayName}`);
       }
     }
 
@@ -312,5 +506,4 @@ async function seedCommunities() {
 
 // Automatically seed on server start
 seedCommunities();
-
 

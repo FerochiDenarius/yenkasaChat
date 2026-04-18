@@ -200,6 +200,8 @@ class LoginActivity : AppCompatActivity() {
                     } else {
                         Log.w("LoginActivity", "OneSignal Player ID not available at login; app startup/subscription observer will retry.")
                     }
+                    OneSignalHelper.syncCurrentPlayerIdToBackend(this@LoginActivity, "login_success")
+                    OneSignalHelper.schedulePlayerIdSyncRetries(this@LoginActivity, "login_success")
 
                     SocketManager.connect(user._id)
 

@@ -1,6 +1,8 @@
 package xyz.yenkasa.app.util
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import xyz.yenkasa.app.network.ApiClient
 import com.onesignal.OneSignal // <-- Import OneSignal
@@ -12,6 +14,49 @@ import retrofit2.Response
 
 object OneSignalHelper {
     private const val TAG = "OneSignalHelper"
+
+    fun syncCurrentPlayerIdToBackend(context: Context, reason: String = "manual"): Boolean {
+        val appContext = context.applicationContext
+        val currentOneSignalPlayerId = OneSignal.getDeviceState()?.userId
+        val savedPlayerId = TokenManager.getOneSignalPlayerId(appContext)
+        val playerIdToSync = currentOneSignalPlayerId
+            ?.takeIf { it.isNotBlank() }
+            ?: savedPlayerId?.takeIf { it.isNotBlank() }
+
+        Log.i(
+            TAG,
+            "syncCurrentPlayerIdToBackend called. reason=$reason, current=${!currentOneSignalPlayerId.isNullOrBlank()}, saved=${!savedPlayerId.isNullOrBlank()}"
+        )
+
+        if (!currentOneSignalPlayerId.isNullOrBlank()) {
+            TokenManager.saveOneSignalPlayerId(appContext, currentOneSignalPlayerId)
+        }
+
+        if (playerIdToSync.isNullOrBlank()) {
+            Log.w(TAG, "No OneSignal Player ID available to sync yet. reason=$reason")
+            return false
+        }
+
+        val appUserId = TokenManager.getUserId(appContext)
+        val token = TokenManager.getToken(appContext)
+        if (appUserId.isNullOrBlank() || token.isNullOrBlank()) {
+            Log.w(TAG, "Cannot sync OneSignal Player ID yet. userId/token missing. reason=$reason")
+            return false
+        }
+
+        updatePlayerIdToBackend(appContext, playerIdToSync)
+        return true
+    }
+
+    fun schedulePlayerIdSyncRetries(context: Context, reason: String) {
+        val appContext = context.applicationContext
+        val delays = listOf(1_500L, 5_000L, 15_000L)
+        delays.forEach { delay ->
+            Handler(Looper.getMainLooper()).postDelayed({
+                syncCurrentPlayerIdToBackend(appContext, "$reason retry ${delay}ms")
+            }, delay)
+        }
+    }
 
     /**
      * Sets the External User ID for the current OneSignal user/device.

@@ -254,7 +254,9 @@ class CommunitiesActivity : AppCompatActivity() {
 
                     if (!alreadyExists) {
                         joinedCommunities.add(0, primary)
+                        primary.id?.let { joinedCommunityIds.add(it) }
                         joinedAdapter.notifyItemInserted(0)
+                        adapter.notifyDataSetChanged()
                         Log.d("PRIMARY_COMMUNITY", "✅ Primary added to joinedCommunities at position 0")
                     }
 
@@ -283,6 +285,12 @@ class CommunitiesActivity : AppCompatActivity() {
             intent.putExtra("communityId", community.id)
             intent.putExtra("communityName", community.displayName)
             startActivity(intent)
+        }
+
+        adapter.isCommunityJoined = { community ->
+            community.id?.let { joinedCommunityIds.contains(it) } == true ||
+                community.id == TokenManager.getPrimaryCommunityId(this) ||
+                community.isUserMember()
         }
 
         adapter.onJoinCommunity = { community ->
@@ -597,7 +605,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
                         response.code() == 403 -> {
                             Log.e("JOIN_COMMUNITY", "❌ ERROR: Join limit reached")
-                            Toast.makeText(this@CommunitiesActivity, "You can only join 2 more communities.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@CommunitiesActivity, "You can only join up to 2 communities.", Toast.LENGTH_LONG).show()
                         }
 
                         else -> {

@@ -35,6 +35,7 @@ class WebSocketManager {
     private var currentUserPhoto: String? = null
     private var heartbeatJob: Job? = null
     private var reconnectJob: Job? = null
+    private var isConnecting = false
 
     companion object {
         private const val TAG = "WebSocketManager"
@@ -46,20 +47,32 @@ class WebSocketManager {
     // 🔌 CONNECT / DISCONNECT
     // ----------------------------------------------------------
     fun connect(context: Context) {
-        if (isConnected) {
-            Log.w(TAG, "⚠️ Already connected as $currentUserId")
-            return
-        }
-
-        val userId = TokenManager.getUserId(context)
+        val appContext = context.applicationContext
+        val userId = TokenManager.getUserId(appContext)
         if (userId.isNullOrBlank()) {
             Log.e(TAG, "❌ Cannot connect: No userId found in TokenManager")
             return
         }
 
+        if (isConnected && currentUserId == userId) {
+            Log.w(TAG, "⚠️ Already connected as $currentUserId")
+            return
+        }
+
+        if (isConnecting && currentUserId == userId) {
+            Log.w(TAG, "⚠️ WebSocket connect already in progress for $currentUserId")
+            return
+        }
+
+        if (currentUserId != null && currentUserId != userId) {
+            disconnect()
+        }
+
+        stopReconnect()
+        isConnecting = true
         currentUserId = userId
-        currentUserName = TokenManager.getUsername(context)
-        currentUserPhoto = TokenManager.getProfilePicUrl(context)
+        currentUserName = TokenManager.getUsername(appContext)
+        currentUserPhoto = TokenManager.getProfilePicUrl(appContext)
 
         val request = Request.Builder()
             .url("$webSocketUrl?_id=$userId") // ✅ Backend expects _id param
@@ -70,6 +83,7 @@ class WebSocketManager {
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
 
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                isConnecting = false
                 isConnected = true
                 _connectionState.tryEmit(true)
                 Log.i(TAG, "✅ Connected to signaling server.")
@@ -104,6 +118,7 @@ class WebSocketManager {
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 Log.w(TAG, "🧩 WebSocket closing: $code / $reason")
+                isConnecting = false
                 isConnected = false
                 _connectionState.tryEmit(false)
                 stopHeartbeat()
@@ -112,30 +127,35 @@ class WebSocketManager {
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 Log.i(TAG, "🔌 WebSocket closed: $code / $reason")
+                isConnecting = false
                 isConnected = false
+                this@WebSocketManager.webSocket = null
                 _connectionState.tryEmit(false)
                 stopHeartbeat()
-                scheduleReconnect(context)
+                scheduleReconnect(appContext)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e(TAG, "⚠️ WebSocket error: ${t.message}", t)
+                isConnecting = false
                 isConnected = false
+                this@WebSocketManager.webSocket = null
                 _connectionState.tryEmit(false)
                 stopHeartbeat()
-                scheduleReconnect(context)
+                scheduleReconnect(appContext)
             }
         })
     }
 
     fun disconnect() {
-        if (isConnected) {
+        if (webSocket != null) {
             Log.i(TAG, "🔌 Disconnecting WebSocket.")
             webSocket?.close(1000, "User left call")
         }
         stopHeartbeat()
         stopReconnect()
         webSocket = null
+        isConnecting = false
         isConnected = false
         _connectionState.tryEmit(false)
     }

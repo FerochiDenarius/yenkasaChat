@@ -78,6 +78,7 @@ class ViewActivity : AppCompatActivity() {
         }
 
         setupUI()
+        SocketManager.ensureConnected(TokenManager.getUserId(this))
         setupSocketListener()
     }
 

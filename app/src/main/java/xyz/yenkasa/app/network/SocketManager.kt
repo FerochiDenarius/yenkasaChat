@@ -10,6 +10,8 @@ import java.net.URISyntaxException
 object SocketManager {
 
     private var socket: Socket? = null
+    private var currentUserId: String? = null
+    private var coreListenersAttached = false
     private const val TAG = "SocketManager"
     private val SOCKET_URL = ApiClient.BASE_URL
         .removeSuffix("/api/")
@@ -29,32 +31,69 @@ object SocketManager {
         }
 
         try {
+            if (currentUserId != null && currentUserId != userId) {
+                disconnect()
+            }
+
+            currentUserId = userId
+
             if (socket == null) {
                 val opts = IO.Options().apply {
                     reconnection = true
-                    reconnectionAttempts = 5
-                    reconnectionDelay = 2000
-                    forceNew = true
+                    reconnectionAttempts = Int.MAX_VALUE
+                    reconnectionDelay = 1000
+                    reconnectionDelayMax = 10000
+                    timeout = 20000
+                    forceNew = false
+                    transports = arrayOf("websocket", "polling")
                 }
                 socket = IO.socket(SOCKET_URL, opts)
+                coreListenersAttached = false
             }
 
-            if (!(socket?.connected() ?: false)) {
-                socket?.off(Socket.EVENT_CONNECT)
-                socket?.off(Socket.EVENT_DISCONNECT)
-                socket?.on(Socket.EVENT_CONNECT) {
+            attachCoreListeners()
+
+            if (socket?.connected() == true) {
+                emitUserConnected(userId)
+                requestOnlineUsers()
+                return
+            }
+
+            socket?.connect()
+        } catch (e: URISyntaxException) {
+            Log.e(TAG, "Socket connection failed: ${e.message}", e)
+        }
+    }
+
+    private fun attachCoreListeners() {
+        if (coreListenersAttached) return
+
+        socket?.apply {
+            off(Socket.EVENT_CONNECT)
+            off(Socket.EVENT_DISCONNECT)
+            off(Socket.EVENT_CONNECT_ERROR)
+
+            on(Socket.EVENT_CONNECT) {
+                val userId = currentUserId
+                if (!userId.isNullOrEmpty()) {
                     Log.i(TAG, "✅ Socket connected to $SOCKET_URL.")
                     emitUserConnected(userId)
                     requestOnlineUsers()
                 }
-                socket?.on(Socket.EVENT_DISCONNECT) {
-                    Log.w(TAG, "⚠️ Socket disconnected.")
-                }
-                socket?.connect()
             }
-        } catch (e: URISyntaxException) {
-            Log.e(TAG, "Socket connection failed: ${e.message}", e)
+
+            on(Socket.EVENT_DISCONNECT) { args ->
+                val reason = args.firstOrNull()?.toString().orEmpty()
+                Log.w(TAG, "⚠️ Socket disconnected. reason=$reason")
+            }
+
+            on(Socket.EVENT_CONNECT_ERROR) { args ->
+                val reason = args.firstOrNull()?.toString().orEmpty()
+                Log.e(TAG, "❌ Socket connect error: $reason")
+            }
         }
+
+        coreListenersAttached = true
     }
 
     fun ensureConnected(userId: String?) {
@@ -67,7 +106,10 @@ object SocketManager {
                 socket?.disconnect()
                 Log.i(TAG, "🔌 Socket disconnected manually.")
             }
+            socket?.off()
             socket = null
+            currentUserId = null
+            coreListenersAttached = false
         } catch (e: Exception) {
             Log.e(TAG, "Error disconnecting socket", e)
         }
@@ -89,6 +131,9 @@ object SocketManager {
     // 🔹 Event Handling
     // ------------------------------------------------------------------
     fun on(event: String, listener: (data: Any) -> Unit) {
+        if (socket == null && !currentUserId.isNullOrEmpty()) {
+            connect(currentUserId)
+        }
         socket?.on(event) { args ->
             if (args.isNotEmpty()) listener(args[0])
         }
@@ -100,6 +145,9 @@ object SocketManager {
 
     fun emit(event: String, data: Any) {
         try {
+            if (socket?.connected() != true && !currentUserId.isNullOrEmpty()) {
+                connect(currentUserId)
+            }
             socket?.emit(event, data)
             Log.d(TAG, "📡 Emitted $event with $data")
         } catch (e: Exception) {

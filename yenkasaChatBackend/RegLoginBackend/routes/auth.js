@@ -41,40 +41,22 @@ router.post('/register', async (req, res) => {
     console.log("✨ After sanitize:", { email, phoneNumber, username, location, password, communityId, country });
 
     // 🌍 COUNTRY VALIDATION
-const allowedCountries = [
-  "Ghana",
-  "Nigeria",
-  "Kenya",
-  "South Africa",
-  "Uganda",
-  "Cameroon",
-  "Tanzania",
-  "Ethiopia",
-  "Rwanda",
-  "Senegal",
-  "Ivory Coast",
-  "Benin"
-];
+    const allowedCountries = ["Ghana", "Nigeria"];
 
     country = country ? sanitize(country) : "Ghana";
     console.log("🌍 Normalized country (raw):", country);
 
     const normalizedCountry = country.trim().toLowerCase();
+    const selectedCountry = allowedCountries.find(
+      allowedCountry => allowedCountry.toLowerCase() === normalizedCountry
+    );
     console.log("🌍 Normalized country (lowercase):", normalizedCountry);
 
-    if (!allowedCountries.includes(country.trim())) {
+    if (!selectedCountry) {
       console.log("❌ Country not in allowed list:", country);
       return res.status(400).json({
         success: false,
-        message: "Invalid country. African countries only."
-      });
-    }
-
-    if (normalizedCountry !== "ghana") {
-      console.log("❌ Rejected: NOT Ghana:", normalizedCountry);
-      return res.status(403).json({
-        success: false,
-        message: "Registration is currently available only in Ghana."
+        message: "Registration is currently available only in Ghana and Nigeria."
       });
     }
 
@@ -90,6 +72,19 @@ const allowedCountries = [
     if (!community || !community.isApproved) {
       console.log("❌ Community invalid:", communityId);
       return res.status(403).json({ message: 'Community not valid or not approved' });
+    }
+
+    const communityCountry = (community.country || "Ghana").trim().toLowerCase();
+    if (communityCountry !== selectedCountry.toLowerCase()) {
+      console.log("❌ Community country mismatch:", {
+        selectedCountry,
+        communityCountry: community.country,
+        communityId
+      });
+      return res.status(400).json({
+        success: false,
+        message: `Selected community is not available for ${selectedCountry}.`
+      });
     }
 
     console.log("🔍 Checking duplicates...");
@@ -113,7 +108,7 @@ const allowedCountries = [
     const newUser = new User({
       username,
       location,
-      country: "Ghana",
+      country: selectedCountry,
       password: hashedPassword,
       community: communityId,
       joinedCommunities: [communityId],

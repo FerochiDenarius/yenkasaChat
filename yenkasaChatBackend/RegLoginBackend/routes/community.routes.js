@@ -12,6 +12,10 @@ const rewardService = require('../services/reward.service');
 const { getUserCommunities } = require('../helpers/community.helper');
 const allowCommunityCreation = require('../middleware/allowCommunityCreation');
 
+function escapeRegex(value) {
+  return value.toString().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 
 
 // Reward configuration
@@ -40,8 +44,16 @@ const requireVerified = (req, res, next) => {
 
 router.get('/public', async (req, res) => {
   try {
-    const communities = await Community.find({ isApproved: true })
-      .select('id _id name displayName');
+    const { country } = req.query;
+    const query = { isApproved: true, isActive: true };
+
+    if (country) {
+      query.country = new RegExp(`^${escapeRegex(country)}$`, 'i');
+    }
+
+    const communities = await Community.find(query)
+      .sort({ country: 1, state: 1, city: 1, town: 1, displayName: 1 })
+      .select('_id name displayName description location categories country state city town communityLevel communityType memberCount postCount');
 
     res.json(communities);
   } catch (err) {
@@ -54,16 +66,33 @@ router.get('/public', async (req, res) => {
 // ✅ Get all communities (PUBLIC)
 router.get('/', async (req, res) => {
   try {
-    const { search, sort = 'memberCount', order = 'desc' } = req.query;
+    const {
+      search,
+      country,
+      state,
+      city,
+      town,
+      sort = 'memberCount',
+      order = 'desc'
+    } = req.query;
 
     let query = { isActive: true }; // Only active ones
+
+    if (country) query.country = new RegExp(`^${escapeRegex(country)}$`, 'i');
+    if (state) query.state = new RegExp(`^${escapeRegex(state)}$`, 'i');
+    if (city) query.city = new RegExp(`^${escapeRegex(city)}$`, 'i');
+    if (town) query.town = new RegExp(`^${escapeRegex(town)}$`, 'i');
 
     // Optional search filter
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { displayName: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } },
+        { country: { $regex: search, $options: 'i' } },
+        { state: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+        { town: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -91,8 +120,10 @@ router.get('/', async (req, res) => {
 });
 
 // ✅ Get single community details
-router.get('/:communityId', async (req, res) => {
+router.get('/:communityId', async (req, res, next) => {
   try {
+    if (req.params.communityId === 'user') return next();
+
     const community = await Community.findById(req.params.communityId)
       .populate('moderators', 'username profileImage')
       .populate('createdBy', 'username profileImage verified')
@@ -253,7 +284,18 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
 // -----------------------------
 router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
   try {
-    const { name, displayName, description, location, categories } = req.body;
+    const {
+      name,
+      displayName,
+      description,
+      location,
+      categories,
+      country,
+      state,
+      city,
+      town,
+      communityLevel
+    } = req.body;
     const userId = req.user.id;
 
     if (!name || !displayName) {
@@ -276,6 +318,11 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       description: description || "",
       location: location || "",
       categories: categories || [],
+      country: country || user.country || "Ghana",
+      state: state || "",
+      city: city || "",
+      town: town || "",
+      communityLevel: communityLevel || (location ? "town" : "interest"),
       createdBy: userId,
       moderators: [userId],
       isApproved: false, // pending admin approval
@@ -412,7 +459,7 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
       isActive: true
     })
       .sort({ name: 1 })
-      .select('_id name displayName memberCount postCount location categories icon coverImage') // ADDED fields
+      .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel') // ADDED fields
       .lean();
 
     res.json({
@@ -448,7 +495,7 @@ router.get('/user/community', authMiddleware, async (req, res) => {
         console.log("➡️ User primary community ID:", user.community);
 
         const community = await Community.findById(user.community)
-            .select('_id name displayName memberCount location')
+            .select('_id name displayName memberCount location country state city town communityLevel')
             .lean();
 
         console.log("🏛️ Loaded primary community:", community);
@@ -488,7 +535,7 @@ router.get('/user/all-communities', authMiddleware, async (req, res) => {
       console.log("➡️ Fetching registration community:", user.community);
 
       const primary = await Community.findById(user.community)
-        .select('_id name displayName memberCount postCount location categories icon coverImage')
+        .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
         .lean();
 
       console.log("🏛️ Loaded primary:", primary);
@@ -515,7 +562,7 @@ router.get('/user/all-communities', authMiddleware, async (req, res) => {
       isActive: true
     })
       .sort({ name: 1 })
-      .select('_id name displayName memberCount postCount location categories icon coverImage')
+      .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
       .lean();
 
     console.log(`📦 Joined communities found: ${joined.length}`);

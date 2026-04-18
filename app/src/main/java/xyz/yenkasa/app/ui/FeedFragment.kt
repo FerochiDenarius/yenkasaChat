@@ -75,6 +75,7 @@ class FeedFragment : Fragment() {
 
         btnSelectCommunities.setOnClickListener { showCommunitySelectorDialog() }
 
+        SocketManager.ensureConnected(userId)
         setupSocketListeners()
     }
 

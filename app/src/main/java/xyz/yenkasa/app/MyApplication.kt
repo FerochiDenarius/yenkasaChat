@@ -7,8 +7,6 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build // Added
 import android.util.Log
-import io.socket.client.IO
-import io.socket.client.Socket
 import com.cloudinary.android.MediaManager
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
@@ -25,6 +23,7 @@ import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
 import org.json.JSONObject
 import xyz.yenkasa.app.ui.CoinWalletActivity
+import xyz.yenkasa.app.ui.ChatActivity
 import xyz.yenkasa.app.ui.CommentsActivity
 import xyz.yenkasa.app.ui.MainActivity
 import xyz.yenkasa.app.ui.UserProfileActivity
@@ -38,10 +37,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
     // Define your channel ID as a constant for clarity
     companion object {
         const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_chat_messages_v2"
-
-        private lateinit var mSocket: Socket
-
-        fun getSocket(): Socket = mSocket
 
         val notificationSounds = mapOf(
             "sound_default" to R.raw.sound_default,
@@ -153,6 +148,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
         } else {
             Log.w(ONE_SIGNAL_TAG, "Initial check in onCreate: OneSignal Player ID not yet available or device state is null. Waiting for OSSubscriptionObserver.")
         }
+        OneSignalHelper.schedulePlayerIdSyncRetries(applicationContext, "application_start")
         Log.i(ONE_SIGNAL_TAG, "--- OneSignal v4 Setup Complete ---")
         // --- END ONE SIGNAL V4 INITIALIZATION ---
 
@@ -165,29 +161,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         Log.d("MyApplication", "MediaManager initialized.")
 
         Log.d("MyApplication", "Application onCreate finished.")
-
-
-        try {
-            val options = IO.Options().apply {
-                reconnection = true
-                reconnectionAttempts = Int.MAX_VALUE
-                reconnectionDelay = 1000
-                timeout = 20000
-            }
-
-            val socketBaseUrl = ApiClient.BASE_URL
-                .removeSuffix("/api/")
-                .removeSuffix("/api")
-                .removeSuffix("api/")
-
-            mSocket = IO.socket(socketBaseUrl, options)
-
-            mSocket.connect()
-            Log.d("MyApplication", "Socket.IO connected to $socketBaseUrl.")
-        } catch (e: Exception) {
-            Log.e("MyApplication", "Socket initialization failed: ${e.message}")
-        }
-
     }
 
 
@@ -245,6 +218,11 @@ class MyApplication : Application(), OSSubscriptionObserver {
         val activityId = data?.optString("activityId").orEmpty()
 
         val intent = when (targetType) {
+            "chat" -> Intent(this, ChatActivity::class.java).apply {
+                putExtra("roomId", targetId.ifBlank {
+                    data?.optString("roomId").orEmpty().ifBlank { data?.optString("chatId").orEmpty() }
+                })
+            }
             "wallet" -> Intent(this, CoinWalletActivity::class.java)
             "post" -> Intent(this, CommentsActivity::class.java).apply {
                 putExtra("POST_ID", targetId.ifBlank { activityId })

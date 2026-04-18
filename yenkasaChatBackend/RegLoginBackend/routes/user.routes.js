@@ -145,6 +145,66 @@ router.get('/me', authMiddleware, async (req, res) => {
 });
 
 // ======================================================================
+// ONESIGNAL PLAYER ID
+// ======================================================================
+router.patch('/:userId/player-id', authMiddleware, async (req, res) => {
+    const requestId = `req_patch_player_id_${Date.now()}`;
+    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
+    const { userId } = req.params;
+    const { playerId } = req.body;
+
+    logger.info(`[${requestId}] PATCH /:userId/player-id - Authenticated user: ${authenticatedUserId}, target user: ${userId}`);
+
+    if (!authenticatedUserId) {
+        return res.status(401).json({ success: false, message: "Authentication required." });
+    }
+
+    if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json({ success: false, message: "Invalid user ID." });
+    }
+
+    if (authenticatedUserId !== userId.toString()) {
+        return res.status(403).json({ success: false, message: "You can only update your own player ID." });
+    }
+
+    if (!playerId || typeof playerId !== "string" || !playerId.trim()) {
+        return res.status(400).json({ success: false, message: "Valid playerId is required." });
+    }
+
+    try {
+        const trimmedPlayerId = playerId.trim();
+        const user = await User.findByIdAndUpdate(
+            userId,
+            {
+                $set: {
+                    playerId: trimmedPlayerId,
+                    updatedAt: new Date()
+                }
+            },
+            { new: true, runValidators: true }
+        ).select("_id username playerId");
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        logger.info(`[${requestId}] ✅ Player ID updated for user ${user._id}.`);
+        res.status(200).json({
+            success: true,
+            message: "Player ID updated successfully.",
+            user: {
+                id: user._id,
+                username: user.username,
+                playerId: user.playerId
+            }
+        });
+    } catch (err) {
+        logger.error(`[${requestId}] ❌ Failed to update player ID for ${userId}: ${err.message}`);
+        res.status(500).json({ success: false, message: "Failed to update player ID." });
+    }
+});
+
+// ======================================================================
 // USER PRESENCE
 // ======================================================================
 router.get('/:userId/presence', authMiddleware, async (req, res) => {

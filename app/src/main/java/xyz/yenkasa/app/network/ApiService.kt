@@ -657,6 +657,14 @@ interface ApiService {
     @GET("notifications/all")
     fun getNotifications(): Call<List<NotificationModel>>
 
+    @GET("notifications/preferences")
+    fun getNotificationPreferences(): Call<NotificationPreferencesResponse>
+
+    @PUT("notifications/preferences")
+    fun updateNotificationPreferences(
+        @Body request: UpdateNotificationPreferencesRequest
+    ): Call<NotificationPreferencesResponse>
+
     @PUT("notifications/{id}/read")
     fun markNotificationRead(
         @Path("id") id: String,

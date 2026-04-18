@@ -5,8 +5,9 @@ object UserPermissions {
     private val rankOrder = listOf(
         "user",
         "verified",
-        "admin",
         "moderator",
+        "admin",
+        "developer",
         "junior_developer",
         "senior_developer"
     )
@@ -33,7 +34,7 @@ object UserPermissions {
     // 🟢 Can Create Communities
     fun canCreateCommunity(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "moderator", "admin")
+        return r in listOf("senior_developer", "junior_developer", "developer", "moderator", "admin")
     }
 
     // 🟢 Can Assign Roles

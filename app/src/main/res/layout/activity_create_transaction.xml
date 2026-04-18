@@ -21,6 +21,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Receive Coins"
+                android:textColor="@color/amber_300"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:paddingBottom="12dp" />
@@ -30,7 +31,9 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingBottom="24dp">
+                android:background="@drawable/bg_coin_transfer_field"
+                android:padding="10dp"
+                android:layout_marginBottom="24dp">
 
                 <TextView
                     android:id="@+id/tvWalletId"
@@ -39,7 +42,8 @@
                     android:layout_weight="1"
                     android:text="USER_WALLET_ID"
                     android:textSize="16sp"
-                    android:textColor="@color/yenkasa_black" />
+                    android:textColor="@color/yenkasa_black"
+                    android:textIsSelectable="true" />
 
                 <Button
                     android:id="@+id/btnCopyWalletId"
@@ -54,6 +58,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Send Coins"
+                android:textColor="@color/amber_300"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:paddingBottom="12dp" />
@@ -64,7 +69,11 @@
                 android:layout_height="wrap_content"
                 android:hint="Recipient Wallet ID"
                 android:padding="12dp"
-                android:background="@drawable/yenkasa_gradient"
+                android:background="@drawable/bg_coin_transfer_field"
+                android:textColor="@color/yenkasa_black"
+                android:textColorHint="@color/dark_gray"
+                android:inputType="text"
+                android:singleLine="true"
                 android:layout_marginBottom="16dp" />
 
             <EditText
@@ -74,7 +83,10 @@
                 android:hint="Amount"
                 android:inputType="numberDecimal"
                 android:padding="12dp"
-                android:background="@drawable/yenkasa_gradient"
+                android:background="@drawable/bg_coin_transfer_field"
+                android:textColor="@color/yenkasa_black"
+                android:textColorHint="@color/dark_gray"
+                android:singleLine="true"
                 android:layout_marginBottom="24dp" />
 
             <Button
@@ -83,7 +95,7 @@
                 android:layout_height="wrap_content"
                 android:text="Send Coins"
                 android:background="@drawable/btn_login_gold"
-                android:textColor="@color/amber_300" />
+                android:textColor="@color/yenkasa_black" />
 
         </LinearLayout>
     </ScrollView>

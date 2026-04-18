@@ -26,6 +26,8 @@ object NotificationHelper {
     private const val MESSAGE_CHANNEL_ID = "yenkasachat_messages"
     private const val CALL_CHANNEL_ID = "yenkasachat_calls"
     private const val CALL_NOTIFICATION_ID = 9999
+    private const val PREFS_NAME = "settings"
+    private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
 
     private fun hasPostNotificationPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -145,6 +147,13 @@ object NotificationHelper {
         message: String,
         chatId: String? = null
     ) {
+        if (!context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
+        ) {
+            Log.d("NotificationHelper", "Message notification muted by user preferences.")
+            return
+        }
+
         if (!hasPostNotificationPermission(context)) {
             Log.w("NotificationHelper", "Notification permission denied; skipping message notification.")
             return

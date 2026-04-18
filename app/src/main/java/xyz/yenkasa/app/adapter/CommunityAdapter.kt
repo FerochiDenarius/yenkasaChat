@@ -79,15 +79,20 @@ class CommunityAdapter(
                 else -> null
             }
 
-            Glide.with(itemView.context)
-                .load(imageUrl)
-                .apply(
-                    RequestOptions()
-                        .placeholder(R.drawable.ic_community_placeholder)
-                        .error(R.drawable.ic_community_placeholder)
-                        .circleCrop()
-                )
-                .into(communityIcon)
+            if (imageUrl.isNullOrBlank()) {
+                Glide.with(itemView.context).clear(communityIcon)
+                communityIcon.setImageResource(R.drawable.ic_community_placeholder)
+            } else {
+                Glide.with(itemView.context)
+                    .load(imageUrl)
+                    .apply(
+                        RequestOptions()
+                            .placeholder(R.drawable.ic_community_placeholder)
+                            .error(R.drawable.ic_community_placeholder)
+                            .circleCrop()
+                    )
+                    .into(communityIcon)
+            }
 
             // Entire item click → open community feed
             itemView.setOnClickListener { onCommunityClick(community) }

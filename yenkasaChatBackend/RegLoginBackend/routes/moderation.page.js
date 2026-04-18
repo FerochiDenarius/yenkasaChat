@@ -1,18 +1,44 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
 const authMiddleware = require("../middleware/auth");
+const User = require("../models/user.model");
 const { hasMinimumRole } = require("../utils/authority");
+
+async function moderationPageAuth(req, res, next) {
+  const queryToken = req.query.token;
+
+  if (!queryToken) {
+    return authMiddleware(req, res, next);
+  }
+
+  try {
+    const decoded = jwt.verify(String(queryToken), process.env.ACCESS_TOKEN_SECRET);
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res.status(401).send("Access denied");
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).send("Access denied");
+  }
+}
 
 /**
  * Moderation dashboard (WEB)
  * URL: /moderation
  */
-router.get("/moderation", authMiddleware, (req, res) => {
+router.get("/moderation", moderationPageAuth, (req, res) => {
   const role = req.user.roleName || req.user.role;
 
   if (!hasMinimumRole(role, "moderator")) {
     return res.status(403).send("Access denied");
   }
+
+  const bearerToken = JSON.stringify(String(req.query.token || ""));
 
   res.send(`
 <!DOCTYPE html>
@@ -35,8 +61,13 @@ router.get("/moderation", authMiddleware, (req, res) => {
 <div id="items">Loading…</div>
 
 <script>
+const moderationToken = ${bearerToken};
+const authHeaders = moderationToken
+  ? { 'Authorization': 'Bearer ' + moderationToken }
+  : {};
+
 async function loadItems() {
-  const res = await fetch('/api/moderation/pending');
+  const res = await fetch('/api/moderation/pending', { headers: authHeaders });
   const data = await res.json();
 
   if (!data.success) {
@@ -69,12 +100,12 @@ async function loadItems() {
 }
 
 async function approve(id) {
-  await fetch('/api/moderation/' + id + '/approve', { method: 'POST' });
+  await fetch('/api/moderation/' + id + '/approve', { method: 'POST', headers: authHeaders });
   loadItems();
 }
 
 async function reject(id) {
-  await fetch('/api/moderation/' + id + '/reject', { method: 'POST' });
+  await fetch('/api/moderation/' + id + '/reject', { method: 'POST', headers: authHeaders });
   loadItems();
 }
 

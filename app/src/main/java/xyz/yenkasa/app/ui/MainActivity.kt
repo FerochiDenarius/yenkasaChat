@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.commit
@@ -98,24 +99,46 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applySystemBarSpacing() {
+        window.statusBarColor = ContextCompat.getColor(this, R.color.yellowAccent)
+
+        val root = findViewById<View>(R.id.mainRoot)
         val appBar = findViewById<View>(R.id.mainAppBar)
         val initialLeft = appBar.paddingLeft
         val initialTop = appBar.paddingTop
         val initialRight = appBar.paddingRight
         val initialBottom = appBar.paddingBottom
 
-        ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(
-                initialLeft,
-                initialTop + systemBars.top,
-                initialRight,
-                initialBottom
-            )
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+
+            appBar.post {
+                val location = IntArray(2)
+                appBar.getLocationOnScreen(location)
+                val fallbackTop = statusBarHeightFallback()
+                val expectedTop = if (statusBarTop > 0) statusBarTop else fallbackTop
+                val missingTop = maxOf(0, expectedTop - location[1])
+
+                appBar.setPadding(
+                    initialLeft,
+                    initialTop + missingTop,
+                    initialRight,
+                    initialBottom
+                )
+            }
+
             insets
         }
 
-        ViewCompat.requestApplyInsets(appBar)
+        ViewCompat.requestApplyInsets(root)
+    }
+
+    private fun statusBarHeightFallback(): Int {
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        if (resourceId > 0) {
+            return resources.getDimensionPixelSize(resourceId)
+        }
+
+        return (24 * resources.displayMetrics.density).toInt()
     }
 
     // ==================== Load user profile from API ====================

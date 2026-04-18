@@ -44,6 +44,7 @@ class CommunitiesActivity : AppCompatActivity() {
     private lateinit var adapter: CommunityAdapter
     private lateinit var joinedAdapter: JoinedCommunityAdapter // For joined communities
     private var token: String? = null
+    private var primaryCommunityId: String? = null
 
     // ✅ ONLY views that exist in your XML
     private lateinit var textJoinedCommunitiesTitle: TextView
@@ -66,6 +67,8 @@ class CommunitiesActivity : AppCompatActivity() {
             return
         }
 
+        primaryCommunityId = TokenManager.getPrimaryCommunityId(this)
+
         initViews()
         setupRecyclerView()
         setupJoinedCommunitiesRecyclerView() // Setup joined communities
@@ -84,18 +87,6 @@ class CommunitiesActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        fabCreateCommunity.setOnClickListener {
-            val isVerified = TokenManager.isVerified(this)
-            if (isVerified) {
-                startActivity(Intent(this, CreateCommunityActivity::class.java))
-            } else {
-                Toast.makeText(
-                    this,
-                    "You must be verified to create a community",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
     }
 
     private fun initViews() {
@@ -114,20 +105,6 @@ class CommunitiesActivity : AppCompatActivity() {
         recyclerView.isNestedScrollingEnabled = true
         recyclerJoinedCommunities.isNestedScrollingEnabled = true
 
-        // Create button (top of page)
-        val btnCreateCommunity: Button = findViewById(R.id.btnCreateCommunity)
-        btnCreateCommunity.setOnClickListener {
-            val intent = Intent(this, CreateCommunityActivity::class.java)
-            startActivity(intent)
-        }
-
-        // Floating Action Button (bottom corner)
-        val fabCreateCommunity: com.google.android.material.floatingactionbutton.FloatingActionButton =
-            findViewById(R.id.fabCreateCommunity)
-        fabCreateCommunity.setOnClickListener {
-            val intent = Intent(this, CreateCommunityActivity::class.java)
-            startActivity(intent)
-        }
     }
 
     private fun setupJoinedCommunitiesRecyclerView() {
@@ -242,11 +219,15 @@ class CommunitiesActivity : AppCompatActivity() {
 
                     val primary = response.body()?.community
                     if (primary == null) {
-                        Log.e("PRIMARY_COMMUNITY", "❌ Primary community is null in response")
+                        primaryCommunityId = null
+                        TokenManager.savePrimaryCommunityId(this@CommunitiesActivity, null)
+                        Log.d("PRIMARY_COMMUNITY", "No primary community in response; using joined communities only")
                         return
                     }
 
                     Log.d("PRIMARY_COMMUNITY", "Primary community received: ID=${primary.id}, Name=${primary.displayName}")
+                    primaryCommunityId = primary.id
+                    TokenManager.savePrimaryCommunityId(this@CommunitiesActivity, primary.id)
 
                     // Check if primary already exists
                     val alreadyExists = joinedCommunities.any { it.id == primary.id }
@@ -289,7 +270,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
         adapter.isCommunityJoined = { community ->
             community.id?.let { joinedCommunityIds.contains(it) } == true ||
-                community.id == TokenManager.getPrimaryCommunityId(this) ||
+                community.id == primaryCommunityId ||
                 community.isUserMember()
         }
 
@@ -308,7 +289,7 @@ class CommunitiesActivity : AppCompatActivity() {
                 // no return needed
             }
             // Primary community? stop
-            else if (TokenManager.getPrimaryCommunityId(this) == communityId) {
+            else if (primaryCommunityId == communityId) {
                 Toast.makeText(this, "Already your primary community", Toast.LENGTH_SHORT).show()
                 // no return needed
             }
@@ -552,7 +533,6 @@ class CommunitiesActivity : AppCompatActivity() {
         }
 
         // 🔒 Prevent joining the primary community again
-        val primaryCommunityId = TokenManager.getPrimaryCommunityId(this)
         if (primaryCommunityId != null && primaryCommunityId == communityId) {
             Toast.makeText(this, "Already your primary community", Toast.LENGTH_SHORT).show()
             return
@@ -637,6 +617,9 @@ class CommunitiesActivity : AppCompatActivity() {
 
     private fun setupCreateCommunityButtons() {
         val userRole = TokenManager.getUserRole(this)
+            .trim()
+            .lowercase()
+            .replace("\\s+".toRegex(), "_")
         val isVerified = TokenManager.isVerified(this)
 
         // All roles allowed to bypass verification

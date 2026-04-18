@@ -1,11 +1,19 @@
 package xyz.yenkasa.app.ui
 
-import android.app.NotificationManager
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.view.View
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.MyApplication
@@ -21,16 +29,22 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import android.content.Intent
-import android.util.Log
 
 
 class UserNotificationsActivity : AppCompatActivity() {
 
     private lateinit var adapter: NotificationAdapter
     private lateinit var rvNotifications: RecyclerView
+    private lateinit var progressNotifications: ProgressBar
+    private lateinit var textNotificationsState: TextView
 
     private var previousList: List<NotificationModel> = emptyList()
+
+    private companion object {
+        const val PREFS_NAME = "settings"
+        const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +54,8 @@ class UserNotificationsActivity : AppCompatActivity() {
 
         // RecyclerView
         rvNotifications = findViewById(R.id.rvNotifications)
+        progressNotifications = findViewById(R.id.progressNotifications)
+        textNotificationsState = findViewById(R.id.textNotificationsState)
         rvNotifications.layoutManager = LinearLayoutManager(this)
 
         adapter = NotificationAdapter(
@@ -65,24 +81,50 @@ class UserNotificationsActivity : AppCompatActivity() {
     // LOAD EXISTING NOTIFICATIONS
     // ============================================================
     private fun loadNotifications() {
+        showLoadingState()
+
         ApiClient.apiService.getNotifications().enqueue(object : Callback<List<NotificationModel>> {
             override fun onResponse(
                 call: Call<List<NotificationModel>>,
                 res: Response<List<NotificationModel>>
             ) {
-                val newList = res.body() ?: return
+                if (!res.isSuccessful) {
+                    Log.e("NOTIF", "Failed to load notifications: ${res.code()}")
+                    adapter.updateList(emptyList())
+                    previousList = emptyList()
+                    showMessageState("Could not load notifications. Pull back and try again.")
+                    return
+                }
+
+                val body = res.body()
+                if (body == null) {
+                    Log.e("NOTIF", "Notifications response body was empty")
+                    adapter.updateList(emptyList())
+                    previousList = emptyList()
+                    showMessageState("No notifications yet.")
+                    return
+                }
+
+                val newList = filterMutedNotifications(body)
 
                 val newItems = newList.filter { n ->
                     previousList.none { it.id == n.id }
                 }
 
-                newItems.forEach { triggerLocalNotification(it) }
+                if (previousList.isNotEmpty()) {
+                    newItems.forEach { triggerLocalNotification(it) }
+                }
 
                 adapter.updateList(newList)
                 previousList = newList
+                showContentState(newList)
             }
 
             override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
+                Log.e("NOTIF", "Network error loading notifications", t)
+                adapter.updateList(emptyList())
+                previousList = emptyList()
+                showMessageState("Network error. Check your connection and try again.")
                 Toast.makeText(this@UserNotificationsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
@@ -97,14 +139,20 @@ class UserNotificationsActivity : AppCompatActivity() {
         SocketManager.on("notificationCreated") { data ->
             runOnUiThread {
                 try {
-                    val notif = parseNotification(data.toString())
+                    val notif = parseNotification(data)
+                    if (isMutedNotification(notif)) return@runOnUiThread
+
                     val updated = adapter.itemsList.toMutableList()
                     updated.add(0, notif)
 
                     adapter.updateList(updated)
+                    previousList = updated
+                    showContentState(updated)
                     triggerLocalNotification(notif)
 
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) {
+                    Log.e("NOTIF", "Could not handle socket notification", e)
+                }
             }
         }
 
@@ -120,8 +168,56 @@ class UserNotificationsActivity : AppCompatActivity() {
     }
 
     // JSON → Model
-    private fun parseNotification(jsonString: String): NotificationModel {
+    private fun parseNotification(data: Any): NotificationModel {
+        val jsonString = when (data) {
+            is JSONObject -> data.toString()
+            else -> data.toString()
+        }
+
         return Gson().fromJson(jsonString, NotificationModel::class.java)
+    }
+
+    private fun showLoadingState() {
+        progressNotifications.visibility = View.VISIBLE
+        textNotificationsState.visibility = View.GONE
+        rvNotifications.visibility = View.GONE
+    }
+
+    private fun showContentState(items: List<NotificationModel>) {
+        progressNotifications.visibility = View.GONE
+        if (items.isEmpty()) {
+            rvNotifications.visibility = View.GONE
+            textNotificationsState.text = "No notifications yet."
+            textNotificationsState.visibility = View.VISIBLE
+        } else {
+            textNotificationsState.visibility = View.GONE
+            rvNotifications.visibility = View.VISIBLE
+        }
+    }
+
+    private fun showMessageState(message: String) {
+        progressNotifications.visibility = View.GONE
+        rvNotifications.visibility = View.GONE
+        textNotificationsState.text = message
+        textNotificationsState.visibility = View.VISIBLE
+    }
+
+    private fun filterMutedNotifications(items: List<NotificationModel>): List<NotificationModel> {
+        return items.filterNot { isMutedNotification(it) }
+    }
+
+    private fun isMutedNotification(notification: NotificationModel): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val notificationsEnabled = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
+        val rewardNotificationsEnabled = prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
+
+        return !notificationsEnabled || (isRewardNotification(notification) && !rewardNotificationsEnabled)
+    }
+
+    private fun isRewardNotification(notification: NotificationModel): Boolean {
+        val type = notification.type.lowercase()
+        val targetType = notification.targetType?.lowercase()
+        return type == "reward" || type.startsWith("reward_") || targetType == "wallet"
     }
 
     // ============================================================
@@ -337,21 +433,29 @@ class UserNotificationsActivity : AppCompatActivity() {
     // PLAY LOCAL NOTIFICATION SOUND
     // ============================================================
     private fun triggerLocalNotification(notification: NotificationModel) {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        if (isMutedNotification(notification)) return
+        if (!canPostLocalNotification()) return
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val selectedSound = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
         val rawRes = resources.getIdentifier(selectedSound, "raw", packageName)
-        val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
+        val soundUri = if (rawRes > 0) Uri.parse("android.resource://$packageName/$rawRes") else null
 
         val builder = NotificationCompat.Builder(this, MyApplication.NEW_CHAT_MESSAGES_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bell)
             .setContentTitle(notification.type)
             .setContentText(notification.message ?: "")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setSound(soundUri)
             .setAutoCancel(true)
 
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(System.currentTimeMillis().toInt(), builder.build())
+        soundUri?.let { builder.setSound(it) }
+
+        NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), builder.build())
+    }
+
+    private fun canPostLocalNotification(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 }

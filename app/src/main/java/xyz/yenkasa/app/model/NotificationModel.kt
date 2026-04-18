@@ -30,3 +30,18 @@ data class NotificationSound(
     val title: String,
     val rawResId: Int
 )
+
+data class NotificationPreferences(
+    val inAppEnabled: Boolean = true,
+    val rewardEnabled: Boolean = true
+)
+
+data class NotificationPreferencesResponse(
+    val success: Boolean = true,
+    val preferences: NotificationPreferences = NotificationPreferences()
+)
+
+data class UpdateNotificationPreferencesRequest(
+    val inAppEnabled: Boolean? = null,
+    val rewardEnabled: Boolean? = null
+)

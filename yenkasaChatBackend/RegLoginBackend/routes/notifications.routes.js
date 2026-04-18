@@ -22,6 +22,28 @@ function computeTarget(notification) {
   return null;
 }
 
+function getNotificationPreferences(user) {
+  return {
+    inAppEnabled: user?.notificationPreferences?.inAppEnabled !== false,
+    rewardEnabled: user?.notificationPreferences?.rewardEnabled !== false
+  };
+}
+
+function isRewardNotification(type, targetType) {
+  const normalizedType = String(type || "").toLowerCase();
+  const normalizedTargetType = String(targetType || "").toLowerCase();
+  return normalizedType === "reward" ||
+    normalizedType.startsWith("reward_") ||
+    normalizedTargetType === "wallet";
+}
+
+function shouldDeliverNotification(user, type, targetType) {
+  const preferences = getNotificationPreferences(user);
+  if (!preferences.inAppEnabled) return false;
+  if (isRewardNotification(type, targetType) && !preferences.rewardEnabled) return false;
+  return true;
+}
+
 router.post("/create", auth, async (req, res) => {
   try {
     const { type, senderId, receiverId, activityId, message } = req.body;
@@ -107,6 +129,15 @@ router.post("/create", auth, async (req, res) => {
         targetId = null;
     }
 
+    const receiver = await User.findById(receiverId).select("notificationPreferences");
+    if (!receiver) {
+      return res.status(404).json({ message: "Receiver not found" });
+    }
+
+    if (!shouldDeliverNotification(receiver, type, targetType)) {
+      return res.status(200).json({ success: true, muted: true });
+    }
+
     // ------------------------------------
     // CREATE NOTIFICATION
     // ------------------------------------
@@ -170,11 +201,20 @@ router.post("/create", auth, async (req, res) => {
 // GET all notifications for logged-in user (returns array matching Android model)
 router.get("/all", auth, async (req, res) => {
   try {
+    const preferences = getNotificationPreferences(req.user);
+    if (!preferences.inAppEnabled) {
+      return res.json([]);
+    }
+
     const notifications = await Notification.find({ receiverId: req.user.id })
       .sort({ createdAt: -1 })
       .populate("senderId", "username profileImage role roleName");
 
-    const formatted = notifications.map(n => ({
+    const visibleNotifications = preferences.rewardEnabled
+      ? notifications
+      : notifications.filter(n => !isRewardNotification(n.type, n.targetType));
+
+    const formatted = visibleNotifications.map(n => ({
       id: n._id.toString(),
       type: n.type,
       senderId: n.senderId ? n.senderId._id.toString() : null,
@@ -200,6 +240,41 @@ activityId: n.activityId,
     res.json(formatted);
   } catch (err) {
     console.error("NOTIFICATIONS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/preferences", auth, async (req, res) => {
+  res.json({
+    success: true,
+    preferences: getNotificationPreferences(req.user)
+  });
+});
+
+router.put("/preferences", auth, async (req, res) => {
+  try {
+    const allowedUpdates = {};
+
+    if (typeof req.body?.inAppEnabled === "boolean") {
+      allowedUpdates["notificationPreferences.inAppEnabled"] = req.body.inAppEnabled;
+    }
+
+    if (typeof req.body?.rewardEnabled === "boolean") {
+      allowedUpdates["notificationPreferences.rewardEnabled"] = req.body.rewardEnabled;
+    }
+
+    if (Object.keys(allowedUpdates).length > 0) {
+      await User.updateOne({ _id: req.user.id }, { $set: allowedUpdates });
+    }
+
+    const updatedUser = await User.findById(req.user.id).select("notificationPreferences");
+
+    res.json({
+      success: true,
+      preferences: getNotificationPreferences(updatedUser)
+    });
+  } catch (err) {
+    console.error("NOTIFICATION PREFERENCES ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

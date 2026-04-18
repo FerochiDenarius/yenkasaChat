@@ -40,6 +40,12 @@ class CoinWalletActivity : AppCompatActivity() {
 
     private val TAG = "CoinWalletActivity"
 
+    private companion object {
+        const val PREFS_NAME = "settings"
+        const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_coin_wallet)
@@ -161,7 +167,13 @@ class CoinWalletActivity : AppCompatActivity() {
 
     // 🔥 Play sound + show notification for rewards
     private fun triggerRewardNotification(tx: TransactionUiModel) {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true) ||
+            !prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
+        ) {
+            return
+        }
+
         val selectedSound = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
         val rawRes = resources.getIdentifier(selectedSound, "raw", packageName)

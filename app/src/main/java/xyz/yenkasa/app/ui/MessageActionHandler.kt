@@ -43,8 +43,9 @@ class MessageActionHandler(
         val markItem = popup.menu.findItem(R.id.action_mark_message)
 
         copyItem?.isVisible = !message.text.isNullOrBlank()
-        deleteItem?.isVisible = message.sender?._id == currentUserId
-        editItem?.isVisible = message.sender?._id == currentUserId && !message.text.isNullOrBlank()
+        val isOwnMessage = message.sender?._id == currentUserId || message.senderId == currentUserId
+        deleteItem?.isVisible = isOwnMessage
+        editItem?.isVisible = isOwnMessage && !message.text.isNullOrBlank()
 
         // Placeholder for other visibility logic
         // e.g., pinItem?.title = if (message.isPinned) "Unpin" else "Pin"

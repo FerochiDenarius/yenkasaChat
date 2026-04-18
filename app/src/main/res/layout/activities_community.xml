@@ -10,16 +10,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <androidx.core.widget.NestedScrollView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <LinearLayout
-                android:orientation="vertical"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="8dp">
+            android:orientation="vertical"
+            android:padding="8dp">
 
                 <TextView
                     android:id="@+id/textJoinedCommunitiesTitle"
@@ -117,13 +112,13 @@
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recyclerViewCommunities"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
                     android:clipToPadding="false"
                     android:paddingBottom="16dp"
-                    android:nestedScrollingEnabled="false"/>
+                    android:nestedScrollingEnabled="true"/>
 
-            </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
+        </LinearLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton

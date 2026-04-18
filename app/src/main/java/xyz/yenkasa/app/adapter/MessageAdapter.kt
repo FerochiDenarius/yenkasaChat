@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.adapter
 
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
@@ -249,10 +250,17 @@ class MessageAdapter(
                 val fileName = message.fileUrl.substringAfterLast('/', "File")
                 textFileName?.text = fileName
                 layoutFile?.setOnClickListener {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        data = Uri.parse(message.fileUrl)
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            data = Uri.parse(message.fileUrl)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Open file"))
+                    } catch (_: ActivityNotFoundException) {
+                        Toast.makeText(context, "No app found to open this file", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Could not open file", Toast.LENGTH_SHORT).show()
                     }
-                    context.startActivity(intent)
                 }
             } else {
                 layoutFile?.visibility = View.GONE

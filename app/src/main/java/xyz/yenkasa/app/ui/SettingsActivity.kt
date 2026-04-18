@@ -5,12 +5,15 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.model.UserPrivacyModel
+import xyz.yenkasa.app.model.NotificationPreferencesResponse
+import xyz.yenkasa.app.model.UpdateNotificationPreferencesRequest
 import xyz.yenkasa.app.util.AppUrls
 import android.widget.Switch
 import androidx.appcompat.app.AlertDialog
@@ -40,11 +43,20 @@ class SettingsActivity : AppCompatActivity() {
     private val TAG = "SettingsActivity"
     private lateinit var itemNotificationSound: LinearLayout
     private lateinit var itemNotificationToggle: LinearLayout
+    private lateinit var itemRewardNotificationToggle: LinearLayout
     private lateinit var txtSoundCurrent: TextView
     private lateinit var switchNotifications: Switch
+    private lateinit var switchRewardNotifications: Switch
     private lateinit var itemDeleteAccount: LinearLayout
     private lateinit var itemModerationDashboard: LinearLayout
     private lateinit var moderationHeader: TextView
+    private var updatingNotificationSwitches = false
+
+    private companion object {
+        const val PREFS_NAME = "settings"
+        const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+    }
 
 
     private val soundOptions = listOf(
@@ -76,8 +88,10 @@ class SettingsActivity : AppCompatActivity() {
         privacySummaryText = findViewById(R.id.privacySummaryText)
         itemNotificationSound = findViewById(R.id.itemNotificationSound)
         itemNotificationToggle = findViewById(R.id.itemNotificationToggle)
+        itemRewardNotificationToggle = findViewById(R.id.itemRewardNotificationToggle)
         txtSoundCurrent = findViewById(R.id.txtSoundCurrent)
         switchNotifications = findViewById(R.id.switchNotifications)
+        switchRewardNotifications = findViewById(R.id.switchRewardNotifications)
         itemDeleteAccount = findViewById(R.id.itemDeleteAccount)
         itemModerationDashboard = findViewById(R.id.itemModerationDashboard)
         moderationHeader = findViewById(R.id.moderationHeader)
@@ -97,12 +111,15 @@ class SettingsActivity : AppCompatActivity() {
 
 
 
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val savedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
         val savedLabel = soundOptions.firstOrNull { it.first == savedId }?.second ?: "Default"
         txtSoundCurrent.text = savedLabel
 
+        switchNotifications.isChecked = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
+        switchRewardNotifications.isChecked = prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
+        loadNotificationPreferences()
 
     }
 
@@ -141,14 +158,39 @@ class SettingsActivity : AppCompatActivity() {
         itemNotificationSound.setOnClickListener {
             showSoundPickerDialog()
         }
+        itemNotificationToggle.setOnClickListener {
+            switchNotifications.toggle()
+        }
+        itemRewardNotificationToggle.setOnClickListener {
+            switchRewardNotifications.toggle()
+        }
+        switchNotifications.setOnCheckedChangeListener { _, isChecked ->
+            if (updatingNotificationSwitches) return@setOnCheckedChangeListener
+            saveNotificationPreferences(inAppEnabled = isChecked)
+        }
+        switchRewardNotifications.setOnCheckedChangeListener { _, isChecked ->
+            if (updatingNotificationSwitches) return@setOnCheckedChangeListener
+            saveNotificationPreferences(rewardEnabled = isChecked)
+        }
         itemDeleteAccount.setOnClickListener {
             showDeleteAccountDialog()
         }
 
         itemModerationDashboard.setOnClickListener {
+            val authToken = TokenManager.getToken(this)
+            if (authToken.isNullOrBlank()) {
+                Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val url = Uri.parse(AppUrls.moderationDashboard)
+                .buildUpon()
+                .appendQueryParameter("token", authToken)
+                .build()
+
             val intent = Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse(AppUrls.moderationDashboard)
+                url
             )
             startActivity(intent)
         }
@@ -198,8 +240,64 @@ class SettingsActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun loadNotificationPreferences() {
+        api.getNotificationPreferences().enqueue(object : retrofit2.Callback<NotificationPreferencesResponse> {
+            override fun onResponse(
+                call: retrofit2.Call<NotificationPreferencesResponse>,
+                response: retrofit2.Response<NotificationPreferencesResponse>
+            ) {
+                val preferences = response.body()?.preferences ?: return
+                val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                prefs.edit()
+                    .putBoolean(KEY_NOTIFICATIONS_ENABLED, preferences.inAppEnabled)
+                    .putBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, preferences.rewardEnabled)
+                    .apply()
+
+                updatingNotificationSwitches = true
+                switchNotifications.isChecked = preferences.inAppEnabled
+                switchRewardNotifications.isChecked = preferences.rewardEnabled
+                updatingNotificationSwitches = false
+            }
+
+            override fun onFailure(call: retrofit2.Call<NotificationPreferencesResponse>, t: Throwable) {
+                Log.e(TAG, "Failed to load notification preferences", t)
+            }
+        })
+    }
+
+    private fun saveNotificationPreferences(
+        inAppEnabled: Boolean? = null,
+        rewardEnabled: Boolean? = null
+    ) {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().apply {
+            inAppEnabled?.let { putBoolean(KEY_NOTIFICATIONS_ENABLED, it) }
+            rewardEnabled?.let { putBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, it) }
+        }.apply()
+
+        api.updateNotificationPreferences(
+            UpdateNotificationPreferencesRequest(
+                inAppEnabled = inAppEnabled,
+                rewardEnabled = rewardEnabled
+            )
+        ).enqueue(object : retrofit2.Callback<NotificationPreferencesResponse> {
+            override fun onResponse(
+                call: retrofit2.Call<NotificationPreferencesResponse>,
+                response: retrofit2.Response<NotificationPreferencesResponse>
+            ) {
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Failed to save notification preferences: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: retrofit2.Call<NotificationPreferencesResponse>, t: Throwable) {
+                Log.e(TAG, "Failed to save notification preferences", t)
+            }
+        })
+    }
+
     private fun showSoundPickerDialog() {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         val labels = soundOptions.map { it.second }.toTypedArray()
 

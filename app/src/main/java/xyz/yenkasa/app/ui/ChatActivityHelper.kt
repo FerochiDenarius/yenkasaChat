@@ -17,6 +17,8 @@ import xyz.yenkasa.app.model.ReceiverResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.NotificationHelper
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -37,10 +39,12 @@ interface ChatHelperCallback {
     fun getCurrentMessageList(): List<ChatMessage>
     fun requestHideKeyboard()
     fun requestSendChatMessage(messageData: Map<String, Any>)
+    fun hasPermission(permission: String): Boolean = false
     fun checkAndRequestPermission(permission: String): Boolean
     fun requestDeleteConfirmation(messageToDelete: ChatMessage)
     fun requestEditMessage(messageToEdit: ChatMessage, positionInAdapter: Int) {}
     fun requestReplyToMessage(message: ChatMessage) {}
+    fun requestForwardMessage(message: ChatMessage) {}
     fun onReceiverParticipantDetailsReady(participant: Participant)
     fun onReceiverParticipantStatusUpdate(isOnline: Boolean, statusText: String)
     fun showDefaultReceiverHeader(defaultName: String?)
@@ -62,6 +66,15 @@ class ChatActivityHelper(
     private var lastMessageTimestamp: Long = 0L
     private val refreshInterval = 5000L
     private var isFetchingActive = false
+    private var currentMessagesCall: Call<List<ChatMessage>>? = null
+
+    private val refreshMessagesRunnable = object : Runnable {
+        override fun run() {
+            if (!isFetchingActive) return
+            fetchMessages()
+            uiHandler.postDelayed(this, refreshInterval)
+        }
+    }
 
 
     private fun parseTimestamp(timestamp: String?): Long {
@@ -80,20 +93,15 @@ class ChatActivityHelper(
     fun startFetchingMessagesRepeatedly() {
         if (isFetchingActive) return
         isFetchingActive = true
-        fetchMessagesRepeatedlyInternal()
+        uiHandler.removeCallbacks(refreshMessagesRunnable)
+        refreshMessagesRunnable.run()
     }
 
     fun stopFetchingMessages() {
         isFetchingActive = false
-        uiHandler.removeCallbacksAndMessages(null)
-    }
-
-    private fun fetchMessagesRepeatedlyInternal() {
-        if (!isFetchingActive) return
-        fetchMessages()
-        uiHandler.postDelayed({
-            if (isFetchingActive) fetchMessagesRepeatedlyInternal()
-        }, refreshInterval)
+        currentMessagesCall?.cancel()
+        currentMessagesCall = null
+        uiHandler.removeCallbacks(refreshMessagesRunnable)
     }
 
     private fun fetchMessages() {
@@ -102,9 +110,15 @@ class ChatActivityHelper(
             return
         }
 
-        ApiClient.apiService.getMessages(roomId)
-            .enqueue(object : Callback<List<ChatMessage>> {
+        if (currentMessagesCall != null) return
+
+        val call = ApiClient.apiService.getMessages(roomId)
+        currentMessagesCall = call
+        call.enqueue(object : Callback<List<ChatMessage>> {
                 override fun onResponse(call: Call<List<ChatMessage>>, response: Response<List<ChatMessage>>) {
+                    if (currentMessagesCall == call) {
+                        currentMessagesCall = null
+                    }
                     if (!isFetchingActive) return
 
                     if (response.isSuccessful) {
@@ -142,9 +156,11 @@ class ChatActivityHelper(
                 }
 
                 override fun onFailure(call: Call<List<ChatMessage>>, t: Throwable) {
-                    if (!isFetchingActive) return
-                    Log.e("ChatActivityHelper", "Error fetching messages", t)
-                    callback.showToast("Couldn't refresh messages: ${t.message}", Toast.LENGTH_SHORT)
+                    if (currentMessagesCall == call) {
+                        currentMessagesCall = null
+                    }
+                    if (!isFetchingActive || call.isCanceled) return
+                    Log.w("ChatActivityHelper", "Message refresh failed: ${t.message}", t)
                 }
             })
     }
@@ -281,7 +297,7 @@ class ChatActivityHelper(
         callback.requestReplyToMessage(message)
 
     override fun onForwardMessage(message: ChatMessage) =
-        callback.showToast("Forward: ${message.text ?: "Media Message"}.", Toast.LENGTH_SHORT)
+        callback.requestForwardMessage(message)
 
     override fun onEditMessage(message: ChatMessage, positionInAdapter: Int) =
         callback.requestEditMessage(message, positionInAdapter)
@@ -303,21 +319,55 @@ class ChatActivityHelper(
 
     // --- Other Helper Methods ---
     fun sendCurrentLocation() {
-        if (callback.checkAndRequestPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+        val hasLocationPermission =
+            callback.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
+                callback.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+        if (hasLocationPermission || callback.checkAndRequestPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             try {
-                fusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
-                    location?.let {
-                        callback.requestSendChatMessage(
-                            mapOf("location" to mapOf("latitude" to it.latitude, "longitude" to it.longitude))
-                        )
-                    } ?: callback.showToast("Location unavailable.", Toast.LENGTH_LONG)
-                }.addOnFailureListener { e ->
-                    callback.showToast("Failed to get location: ${e.message}", Toast.LENGTH_SHORT)
-                }
+                callback.showToast("Getting location...", Toast.LENGTH_SHORT)
+                val cancellationTokenSource = CancellationTokenSource()
+                fusedLocationProviderClient
+                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.token)
+                    .addOnSuccessListener { location: Location? ->
+                        if (location != null) {
+                            sendLocationMessage(location)
+                        } else {
+                            sendLastKnownLocation()
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.w("ChatActivityHelper", "Current location failed, trying last known location", e)
+                        sendLastKnownLocation()
+                    }
             } catch (se: SecurityException) {
                 callback.showToast("Location permission error.", Toast.LENGTH_LONG)
             }
         }
+    }
+
+    private fun sendLastKnownLocation() {
+        try {
+            fusedLocationProviderClient.lastLocation
+                .addOnSuccessListener { location: Location? ->
+                    if (location != null) {
+                        sendLocationMessage(location)
+                    } else {
+                        callback.showToast("Location unavailable. Turn on location and try again.", Toast.LENGTH_LONG)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    callback.showToast("Failed to get location: ${e.message}", Toast.LENGTH_SHORT)
+                }
+        } catch (se: SecurityException) {
+            callback.showToast("Location permission error.", Toast.LENGTH_LONG)
+        }
+    }
+
+    private fun sendLocationMessage(location: Location) {
+        callback.requestSendChatMessage(
+            mapOf("location" to mapOf("latitude" to location.latitude, "longitude" to location.longitude))
+        )
     }
 
     fun handleContactPickerResult(uri: Uri, contentResolver: android.content.ContentResolver) {
@@ -342,9 +392,6 @@ fun cleanup() {
     try {
         // Stop message fetching safely
         stopFetchingMessages()
-
-        // Remove any UI callbacks
-        uiHandler.removeCallbacksAndMessages(null)
 
         Log.d("ChatActivityHelper", "✅ ChatActivityHelper cleaned up successfully")
     } catch (e: Exception) {

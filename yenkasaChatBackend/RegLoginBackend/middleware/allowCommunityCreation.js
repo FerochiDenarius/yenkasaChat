@@ -3,6 +3,7 @@ const { getUserPerformanceMetrics } = require('../services/userPerformanceMetric
 const PRIVILEGED_ROLES = [
   "admin",
   "moderator",
+  "developer",
   "junior_developer",
   "senior_developer",
 ];
@@ -31,7 +32,11 @@ module.exports = async function allowCommunityCreation(req, res, next) {
       user.role?.role ||
       user.role ||
       ""
-    ).toLowerCase();
+    )
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_");
 
     // 1️⃣ Privileged roles skip all checks
     if (PRIVILEGED_ROLES.includes(roleName)) {

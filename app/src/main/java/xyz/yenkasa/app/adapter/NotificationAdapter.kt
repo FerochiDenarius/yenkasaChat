@@ -154,7 +154,13 @@ class NotificationAdapter(
         val swipe = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
             override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
-                removeAt(vh.adapterPosition)
+                val position = vh.bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) {
+                    notifyDataSetChanged()
+                    return
+                }
+
+                removeAt(position)
             }
         }
         ItemTouchHelper(swipe).attachToRecyclerView(rv)

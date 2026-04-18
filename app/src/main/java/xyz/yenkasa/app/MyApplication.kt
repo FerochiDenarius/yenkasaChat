@@ -39,6 +39,9 @@ class MyApplication : Application(), OSSubscriptionObserver {
     // Define your channel ID as a constant for clarity
     companion object {
         const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_chat_messages_v2"
+        private const val PREFS_NAME = "settings"
+        private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        private const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
 
         val notificationSounds = mapOf(
             "sound_default" to R.raw.sound_default,
@@ -105,7 +108,14 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 return@setNotificationWillShowInForegroundHandler
             }
 
-            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            event.complete(null)
+
+            if (isMutedNotification(notif.additionalData)) {
+                Log.d(ONE_SIGNAL_TAG, "Notification muted by user preferences.")
+                return@setNotificationWillShowInForegroundHandler
+            }
+
+            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
             val rawRes = resources.getIdentifier(selectedId, "raw", packageName)
@@ -114,9 +124,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
             val title = notif.title ?: "Notification"
             val body = notif.body ?: ""
             val contentIntent = buildNotificationPendingIntent(notif.additionalData)
-
-            // ❗ Stop OneSignal from showing its notification
-            event.complete(null)
 
             // 🔔 Build our own custom notification with user-selected sound
             val builder = NotificationCompat.Builder(this, NEW_CHAT_MESSAGES_CHANNEL_ID)
@@ -180,7 +187,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
             val soundRes = notificationSounds[selectedId] ?: R.raw.sound_default
 
@@ -232,6 +239,20 @@ class MyApplication : Application(), OSSubscriptionObserver {
         return targetType.equals("call", ignoreCase = true) ||
             type.equals("call_invite", ignoreCase = true) ||
             type.equals("call_request", ignoreCase = true)
+    }
+
+    private fun isMutedNotification(data: JSONObject?): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val notificationsEnabled = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
+        val rewardNotificationsEnabled = prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
+        return !notificationsEnabled || (isRewardNotification(data) && !rewardNotificationsEnabled)
+    }
+
+    private fun isRewardNotification(data: JSONObject?): Boolean {
+        if (data == null) return false
+        val type = data.optString("type", "").lowercase()
+        val targetType = data.optString("targetType", "").lowercase()
+        return type == "reward" || type.startsWith("reward_") || targetType == "wallet"
     }
 
     private fun buildIncomingCallIntent(data: JSONObject?): Intent {

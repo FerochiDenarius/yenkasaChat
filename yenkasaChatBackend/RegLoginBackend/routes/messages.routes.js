@@ -58,6 +58,11 @@ router.post('/', auth, async (req, res) => {
     return res.status(400).json({ error: 'Valid roomId is required' });
   }
 
+  const hasLocation =
+    location &&
+    typeof location.latitude === 'number' &&
+    typeof location.longitude === 'number';
+
   const hasContent =
     text ||
     imageUrl ||
@@ -65,7 +70,7 @@ router.post('/', auth, async (req, res) => {
     videoUrl ||
     fileUrl ||
     contactInfo ||
-    (location?.latitude && location?.longitude);
+    hasLocation;
 
   if (!hasContent) {
     return res.status(400).json({ error: 'Message must contain some content' });

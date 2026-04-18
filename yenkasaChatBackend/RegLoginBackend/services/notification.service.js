@@ -50,6 +50,28 @@ function formatNotification(notification) {
     };
 }
 
+function getNotificationPreferences(user) {
+    return {
+        inAppEnabled: user?.notificationPreferences?.inAppEnabled !== false,
+        rewardEnabled: user?.notificationPreferences?.rewardEnabled !== false
+    };
+}
+
+function isRewardNotification(type, targetType) {
+    const normalizedType = String(type || "").toLowerCase();
+    const normalizedTargetType = String(targetType || "").toLowerCase();
+    return normalizedType === "reward" ||
+        normalizedType.startsWith("reward_") ||
+        normalizedTargetType === "wallet";
+}
+
+function shouldDeliverNotification(user, type, targetType) {
+    const preferences = getNotificationPreferences(user);
+    if (!preferences.inAppEnabled) return false;
+    if (isRewardNotification(type, targetType) && !preferences.rewardEnabled) return false;
+    return true;
+}
+
 async function sendNotification({ 
     type,
     senderId,
@@ -69,6 +91,16 @@ async function sendNotification({
         if (!type || !senderId || !receiverId || !message) {
             console.error("Missing fields for sendNotification()");
             return false;
+        }
+
+        const receiver = await User.findById(receiverId).select("playerId notificationPreferences");
+        if (!receiver) {
+            console.warn(`Notification receiver ${receiverId} not found`);
+            return false;
+        }
+
+        if (!shouldDeliverNotification(receiver, type, targetType)) {
+            return null;
         }
 
         const notif = await Notification.create({
@@ -93,7 +125,6 @@ async function sendNotification({
 
         if (push) {
             try {
-                const receiver = await User.findById(receiverId).select("playerId");
                 if (receiver?.playerId) {
                     await sendPushNotification({
                         playerId: receiver.playerId,

@@ -162,6 +162,11 @@ const userSchema = new Schema({
   passwordResetToken: String,
   passwordResetExpires: Date,
 
+  notificationPreferences: {
+    inAppEnabled: { type: Boolean, default: true },
+    rewardEnabled: { type: Boolean, default: true }
+  },
+
   playerId: { type: String, default: null }
 
 }, { timestamps: true });

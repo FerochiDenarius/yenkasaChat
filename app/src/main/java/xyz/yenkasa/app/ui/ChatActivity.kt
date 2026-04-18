@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -44,6 +45,9 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.adapter.MessageAdapter
 import xyz.yenkasa.app.model.ChatMessage
+import xyz.yenkasa.app.model.Contact
+import xyz.yenkasa.app.model.CreateChatRoomRequest
+import xyz.yenkasa.app.model.CreateChatRoomResponse
 import xyz.yenkasa.app.model.Participant
 import xyz.yenkasa.app.model.PresenceResponse
 import xyz.yenkasa.app.network.ApiClient
@@ -94,6 +98,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var senderId: String = ""
     private var roomId: String? = null
     private var tempCameraUri: Uri? = null
+    private var pendingPermissionAction: (() -> Unit)? = null
     private var replyingToMessage: ChatMessage? = null
     private lateinit var callButton: ImageView
     private lateinit var videoCallButton: ImageView
@@ -161,7 +166,14 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
-            tempCameraUri?.let { chatMessageHandler.uploadFileToCloudinary(it, "image") }
+            val imageUri = tempCameraUri
+            if (imageUri == null) {
+                Toast.makeText(this, "Camera image was not saved. Try again.", Toast.LENGTH_LONG).show()
+            } else {
+                chatMessageHandler.uploadFileToCloudinary(imageUri, "image")
+            }
+        } else {
+            Toast.makeText(this, "Photo cancelled.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -185,6 +197,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         chatActivityHelper.handlePermissionsResult(permissions)
+        val pendingAction = pendingPermissionAction
+        pendingPermissionAction = null
+        if (pendingAction != null && permissions.values.any { it }) {
+            pendingAction.invoke()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -264,6 +281,20 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         requestNeededPermissions()
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (::chatActivityHelper.isInitialized) {
+            chatActivityHelper.startFetchingMessagesRepeatedly()
+        }
+    }
+
+    override fun onStop() {
+        if (::chatActivityHelper.isInitialized) {
+            chatActivityHelper.stopFetchingMessages()
+        }
+        super.onStop()
+    }
+
     // --- Add this to prevent the crash ---
     override fun onDestroy() {
         if (::chatActivityHelper.isInitialized) {
@@ -315,19 +346,25 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
         findViewById<ImageButton>(R.id.buttonAttachCamera).setOnClickListener {
             attachMenu.visibility = View.GONE
-            try {
-                val photoFile = File.createTempFile("camera_photo_${System.currentTimeMillis()}", ".jpg", cacheDir).apply {
-                    deleteOnExit()
-                }
-                tempCameraUri = FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", photoFile)
-                cameraLauncher.launch(tempCameraUri)
-            } catch (ex: IOException) {
-                Log.e("ChatActivity", "Error creating temp file for camera", ex)
-                Toast.makeText(this, "Could not start camera: error creating image file.", Toast.LENGTH_LONG).show()
+            if (!hasPermission(Manifest.permission.CAMERA)) {
+                pendingPermissionAction = { launchCameraCapture() }
+                permissionsLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+                return@setOnClickListener
             }
+            launchCameraCapture()
         }
         findViewById<ImageButton>(R.id.buttonAttachLocation).setOnClickListener {
             attachMenu.visibility = View.GONE
+            if (!hasAnyPermission(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                pendingPermissionAction = { chatActivityHelper.sendCurrentLocation() }
+                permissionsLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+                return@setOnClickListener
+            }
             chatActivityHelper.sendCurrentLocation()
         }
         findViewById<ImageButton>(R.id.buttonAttachFile).setOnClickListener {
@@ -399,6 +436,25 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             // Use your existing handler to upload it as an "image"
             chatMessageHandler.uploadFileToCloudinary(contentUri, "image")
         }
+    }
+
+    private fun launchCameraCapture() {
+        try {
+            val photoFile = File.createTempFile("camera_photo_${System.currentTimeMillis()}", ".jpg", cacheDir)
+            tempCameraUri = FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", photoFile)
+            cameraLauncher.launch(tempCameraUri)
+        } catch (ex: Exception) {
+            Log.e("ChatActivity", "Error starting camera capture", ex)
+            Toast.makeText(this, "Could not start camera: ${ex.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun hasPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasAnyPermission(vararg permissions: String): Boolean {
+        return permissions.any { hasPermission(it) }
     }
 
     private fun showChatOptionsMenu(anchorView: View) {
@@ -780,6 +836,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     override fun showToast(message: String, length: Int) {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            Log.d("ChatActivity", "Suppressing background toast: $message")
+            return
+        }
         Toast.makeText(this, message, length).show()
     }
 
@@ -889,12 +949,165 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         showReplyPreview(message)
     }
 
+    override fun requestForwardMessage(message: ChatMessage) {
+        if (!hasForwardableContent(message)) {
+            Toast.makeText(this, "This message cannot be forwarded.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Toast.makeText(this, "Loading contacts...", Toast.LENGTH_SHORT).show()
+        ApiClient.apiService.getContacts().enqueue(object : Callback<List<Contact>> {
+            override fun onResponse(call: Call<List<Contact>>, response: Response<List<Contact>>) {
+                if (!response.isSuccessful) {
+                    Toast.makeText(
+                        this@ChatActivity,
+                        "Could not load contacts: ${parseError(response)}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return
+                }
+
+                val contacts = response.body().orEmpty()
+                if (contacts.isEmpty()) {
+                    Toast.makeText(this@ChatActivity, "No contacts to forward to.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                showForwardContactPicker(message, contacts)
+            }
+
+            override fun onFailure(call: Call<List<Contact>>, t: Throwable) {
+                Toast.makeText(this@ChatActivity, "Could not load contacts: ${t.message}", Toast.LENGTH_LONG).show()
+            }
+        })
+    }
+
+    private fun showForwardContactPicker(message: ChatMessage, contacts: List<Contact>) {
+        val labels = contacts.map { contact ->
+            if (contact.location.isBlank()) contact.username else "${contact.username} - ${contact.location}"
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Forward to")
+            .setItems(labels) { dialog, which ->
+                dialog.dismiss()
+                forwardMessageToContact(message, contacts[which])
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun forwardMessageToContact(message: ChatMessage, contact: Contact) {
+        Toast.makeText(this, "Forwarding to ${contact.username}...", Toast.LENGTH_SHORT).show()
+        ApiClient.apiService.createChatRoom(CreateChatRoomRequest(username = contact.username))
+            .enqueue(object : Callback<CreateChatRoomResponse> {
+                override fun onResponse(
+                    call: Call<CreateChatRoomResponse>,
+                    response: Response<CreateChatRoomResponse>
+                ) {
+                    val targetRoomId = response.body()?.roomId
+                    if (!response.isSuccessful || targetRoomId.isNullOrBlank()) {
+                        Toast.makeText(
+                            this@ChatActivity,
+                            "Could not open chat: ${response.body()?.message ?: parseError(response)}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return
+                    }
+
+                    sendForwardedMessage(message, targetRoomId, contact.username)
+                }
+
+                override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
+                    Toast.makeText(this@ChatActivity, "Could not open chat: ${t.message}", Toast.LENGTH_LONG).show()
+                }
+            })
+    }
+
+    private fun sendForwardedMessage(message: ChatMessage, targetRoomId: String, targetName: String) {
+        val payload = buildForwardPayload(message, targetRoomId).toMutableMap()
+        if (payload.isEmpty()) {
+            Toast.makeText(this, "This message cannot be forwarded.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        ApiClient.apiService.sendMessage(payload).enqueue(object : Callback<ChatMessage> {
+            override fun onResponse(call: Call<ChatMessage>, response: Response<ChatMessage>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(this@ChatActivity, "Forwarded to $targetName", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this@ChatActivity,
+                        "Forward failed: ${parseError(response)}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<ChatMessage>, t: Throwable) {
+                Toast.makeText(this@ChatActivity, "Forward failed: ${t.message}", Toast.LENGTH_LONG).show()
+            }
+        })
+    }
+
+    private fun buildForwardPayload(message: ChatMessage, targetRoomId: String?): Map<String, Any?> {
+        val payload = mutableMapOf<String, Any?>()
+        targetRoomId?.let { payload["roomId"] = it }
+        payload["senderId"] = senderId
+        com.onesignal.OneSignal.getDeviceState()?.userId?.let { playerId ->
+            if (playerId.isNotBlank()) payload["playerId"] = playerId
+        }
+
+        message.text?.takeIf { it.isNotBlank() }?.let { payload["text"] = it }
+        message.imageUrl?.takeIf { it.isNotBlank() }?.let { payload["imageUrl"] = it }
+        message.audioUrl?.takeIf { it.isNotBlank() }?.let { payload["audioUrl"] = it }
+        message.videoUrl?.takeIf { it.isNotBlank() }?.let { payload["videoUrl"] = it }
+        message.fileUrl?.takeIf { it.isNotBlank() }?.let { payload["fileUrl"] = it }
+        message.contactInfo?.takeIf { it.isNotBlank() }?.let { payload["contactInfo"] = it }
+        message.location?.let {
+            payload["location"] = mapOf("latitude" to it.latitude, "longitude" to it.longitude)
+        }
+
+        return payload.filterKeys { key ->
+            key == "roomId" ||
+                key == "senderId" ||
+                key == "playerId" ||
+                key == "text" ||
+                key == "imageUrl" ||
+                key == "audioUrl" ||
+                key == "videoUrl" ||
+                key == "fileUrl" ||
+                key == "contactInfo" ||
+                key == "location"
+        }.filterValues { value -> value != null }
+    }
+
+    private fun hasForwardableContent(message: ChatMessage): Boolean {
+        return !message.text.isNullOrBlank() ||
+            !message.imageUrl.isNullOrBlank() ||
+            !message.audioUrl.isNullOrBlank() ||
+            !message.videoUrl.isNullOrBlank() ||
+            !message.fileUrl.isNullOrBlank() ||
+            !message.contactInfo.isNullOrBlank() ||
+            message.location != null
+    }
+
     override fun onMessageSent(message: ChatMessage) {
         chatActivityHelper.onMessageSentByHandler(message)
     }
 
     override fun onError(error: String) {
         chatActivityHelper.onErrorFromHandler(error)
+    }
+
+    override fun onUploadStarted(type: String) {
+        val label = when (type) {
+            "image" -> "photo"
+            "audio" -> "audio"
+            "video" -> "video"
+            else -> "file"
+        }
+        Toast.makeText(this, "Uploading $label...", Toast.LENGTH_SHORT).show()
     }
 
     override fun onMessageLongClicked(message: ChatMessage, itemView: View, position: Int): Boolean {
@@ -929,6 +1142,15 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             view = View(this)
         }
         imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+    private fun parseError(response: Response<*>): String {
+        return try {
+            response.errorBody()?.string()?.ifBlank { null }
+                ?: "Error ${response.code()} ${response.message()}"
+        } catch (e: IOException) {
+            "Error ${response.code()}"
+        }
     }
 
     private fun requestNeededPermissions() {

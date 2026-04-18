@@ -1,8 +1,11 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Context
+import android.database.Cursor
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log // Ensure Log is imported
+import android.webkit.MimeTypeMap
 import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
@@ -24,6 +27,7 @@ class ChatMessageHandler(
     interface ChatMessageCallback {
         fun onMessageSent(message: ChatMessage)
         fun onError(error: String)
+        fun onUploadStarted(type: String) {}
     }
 
     private val apiService: ApiService = ApiClient.apiService
@@ -87,7 +91,7 @@ class ChatMessageHandler(
         Log.d("ChatMessageHandler", "Preparing to upload $type file. Original URI: $uri")
 
         // 1. ✅ THIS IS THE FIX: Copy the file to a safe local directory first.
-        val safeUri = copyFileToCacheDir(uri)
+        val safeUri = copyFileToCacheDir(uri, type)
 
         // 2. ✅ Only proceed if the copy was successful.
         if (safeUri == null) {
@@ -103,6 +107,7 @@ class ChatMessageHandler(
             .callback(object : UploadCallback {
                 override fun onStart(requestId: String?) {
                     Log.d("ChatMessageHandler", "Cloudinary upload started. Request ID: $requestId, Type: $type")
+                    callback.onUploadStarted(type)
                 }
 
                 override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {
@@ -145,10 +150,10 @@ class ChatMessageHandler(
     }
 // Add this new private function inside your ChatMessageHandler class
 
-    private fun copyFileToCacheDir(fileUri: Uri): Uri? {
+    private fun copyFileToCacheDir(fileUri: Uri, type: String): Uri? {
         return try {
             val inputStream = context.contentResolver.openInputStream(fileUri) ?: return null
-            val fileName = "upload_${System.currentTimeMillis()}"
+            val fileName = "upload_${System.currentTimeMillis()}${resolveUploadExtension(fileUri, type)}"
             val outputFile = java.io.File(context.cacheDir, fileName)
             val outputStream = java.io.FileOutputStream(outputFile)
 
@@ -162,6 +167,45 @@ class ChatMessageHandler(
             Log.e("ChatMessageHandler", "Failed to copy file from URI: $fileUri", e)
             callback.onError("Failed to process the selected file.")
             null
+        }
+    }
+
+    private fun resolveUploadExtension(fileUri: Uri, type: String): String {
+        val displayName = queryDisplayName(fileUri)
+        val displayExtension = displayName
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.takeIf { it.isNotBlank() && it.length <= 8 }
+        if (!displayExtension.isNullOrBlank()) return ".$displayExtension"
+
+        val mimeType = context.contentResolver.getType(fileUri)
+        val mimeExtension = mimeType
+            ?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
+            ?.takeIf { it.isNotBlank() }
+        if (!mimeExtension.isNullOrBlank()) return ".$mimeExtension"
+
+        return when (type) {
+            "image" -> ".jpg"
+            "audio" -> ".m4a"
+            "video" -> ".mp4"
+            else -> ""
+        }
+    }
+
+    private fun queryDisplayName(fileUri: Uri): String? {
+        var cursor: Cursor? = null
+        return try {
+            cursor = context.contentResolver.query(fileUri, null, null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0) cursor.getString(nameIndex) else null
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("ChatMessageHandler", "Could not resolve display name for $fileUri", e)
+            null
+        } finally {
+            cursor?.close()
         }
     }
 

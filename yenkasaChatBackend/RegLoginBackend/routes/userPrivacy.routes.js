@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const UserPrivacy = require("../models/userPrivacy.model");
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
+const Community = require("../models/community.model");
 
 
 // ensure privacy doc
@@ -315,8 +316,16 @@ router.post("/unblock-community", auth, async (req, res) => {
 router.get("/community-visibility", auth, async (req, res) => {
     try {
         const doc = await ensurePrivacy(req.user.id);
+        const country = req.user.country || "Ghana";
+        const countryFilter = country.toLowerCase() === "ghana"
+            ? { $or: [{ country: new RegExp(`^${country}$`, "i") }, { country: { $in: [null, ""] } }] }
+            : { country: new RegExp(`^${country}$`, "i") };
 
-        const communities = await Community.find()
+        const communities = await Community.find({
+            isActive: true,
+            isApproved: true,
+            ...countryFilter
+        })
             .select("displayName name")
             .lean();
 

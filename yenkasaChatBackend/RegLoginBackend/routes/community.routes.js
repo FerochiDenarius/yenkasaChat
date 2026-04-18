@@ -16,6 +16,28 @@ function escapeRegex(value) {
   return value.toString().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function normalizeCountry(value) {
+  return (value || 'Ghana').toString().trim().toLowerCase();
+}
+
+function countryRegex(value) {
+  return new RegExp(`^${escapeRegex(value || 'Ghana')}$`, 'i');
+}
+
+function countryScopedQuery(value) {
+  const country = value || 'Ghana';
+  if (normalizeCountry(country) === 'ghana') {
+    return {
+      $or: [
+        { country: countryRegex(country) },
+        { country: { $in: [null, ''] } }
+      ]
+    };
+  }
+
+  return { country: countryRegex(country) };
+}
+
 
 
 // Reward configuration
@@ -63,12 +85,11 @@ router.get('/public', async (req, res) => {
 });
 
 
-// ✅ Get all communities (PUBLIC)
-router.get('/', async (req, res) => {
+// ✅ Get communities for the authenticated user's country
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const {
       search,
-      country,
       state,
       city,
       town,
@@ -76,24 +97,29 @@ router.get('/', async (req, res) => {
       order = 'desc'
     } = req.query;
 
-    let query = { isActive: true }; // Only active ones
+    const userCountry = req.user?.country || 'Ghana';
+    let query = {
+      isActive: true,
+      isApproved: true,
+      $and: [countryScopedQuery(userCountry)]
+    };
 
-    if (country) query.country = new RegExp(`^${escapeRegex(country)}$`, 'i');
     if (state) query.state = new RegExp(`^${escapeRegex(state)}$`, 'i');
     if (city) query.city = new RegExp(`^${escapeRegex(city)}$`, 'i');
     if (town) query.town = new RegExp(`^${escapeRegex(town)}$`, 'i');
 
     // Optional search filter
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { displayName: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { country: { $regex: search, $options: 'i' } },
-        { state: { $regex: search, $options: 'i' } },
-        { city: { $regex: search, $options: 'i' } },
-        { town: { $regex: search, $options: 'i' } }
-      ];
+      query.$and.push({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { displayName: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { state: { $regex: search, $options: 'i' } },
+          { city: { $regex: search, $options: 'i' } },
+          { town: { $regex: search, $options: 'i' } }
+        ]
+      });
     }
 
     const sortOrder = order === 'asc' ? 1 : -1;
@@ -158,6 +184,12 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (normalizeCountry(community.country) !== normalizeCountry(user.country)) {
+      return res.status(403).json({
+        error: `This community is not available for ${user.country || 'your country'}`
+      });
     }
 
     if (user.joinedCommunities.includes(communityId)) {
@@ -290,7 +322,7 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       description,
       location,
       categories,
-      country,
+      country: requestedCountry,
       state,
       city,
       town,
@@ -311,6 +343,13 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    const userCountry = user.country || "Ghana";
+    if (requestedCountry && normalizeCountry(requestedCountry) !== normalizeCountry(userCountry)) {
+      return res.status(403).json({
+        error: `You can only create communities in ${userCountry} for now`
+      });
+    }
+
     // Create new community
     const community = await Community.create({
       name: name.toLowerCase().trim(),
@@ -318,7 +357,7 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
       description: description || "",
       location: location || "",
       categories: categories || [],
-      country: country || user.country || "Ghana",
+      country: userCountry,
       state: state || "",
       city: city || "",
       town: town || "",
@@ -452,11 +491,14 @@ router.delete('/:communityId', authMiddleware, async (req, res) => {
 router.get('/user/joined-communities', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userCountry = req.user.country || 'Ghana';
 
     // Fetch communities where user is a member and community is active
     const joinedCommunities = await Community.find({
       members: userId,
-      isActive: true
+      isActive: true,
+      isApproved: true,
+      ...countryScopedQuery(userCountry)
     })
       .sort({ name: 1 })
       .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel') // ADDED fields
@@ -494,7 +536,12 @@ router.get('/user/community', authMiddleware, async (req, res) => {
 
         console.log("➡️ User primary community ID:", user.community);
 
-        const community = await Community.findById(user.community)
+        const community = await Community.findOne({
+            _id: user.community,
+            isActive: true,
+            isApproved: true,
+            ...countryScopedQuery(user.country || "Ghana")
+        })
             .select('_id name displayName memberCount location country state city town communityLevel')
             .lean();
 
@@ -528,13 +575,19 @@ router.get('/user/all-communities', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
+    const userCountry = user.country || 'Ghana';
     const finalCommunities = [];
 
     // 1️⃣ Registration community
     if (user.community) {
       console.log("➡️ Fetching registration community:", user.community);
 
-      const primary = await Community.findById(user.community)
+      const primary = await Community.findOne({
+        _id: user.community,
+        isActive: true,
+        isApproved: true,
+        ...countryScopedQuery(userCountry)
+      })
         .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
         .lean();
 
@@ -559,7 +612,9 @@ router.get('/user/all-communities', authMiddleware, async (req, res) => {
 
     const joined = await Community.find({
       members: userId,
-      isActive: true
+      isActive: true,
+      isApproved: true,
+      ...countryScopedQuery(userCountry)
     })
       .sort({ name: 1 })
       .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
@@ -604,7 +659,8 @@ router.get('/user/my-communities', authMiddleware, async (req, res) => {
     
     const myCommunities = await Community.find({ 
       createdBy: userId,
-      isActive: true 
+      isActive: true,
+      ...countryScopedQuery(req.user.country || 'Ghana')
     })
       .sort({ createdAt: -1 })
       .lean();

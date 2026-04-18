@@ -62,11 +62,11 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        setContentView(R.layout.activity_login)
         window.setSoftInputMode(
             WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
         )
+        setContentView(R.layout.activity_login)
 
         // UI elements
         editIdentifier = findViewById(R.id.editLoginIdentifier)

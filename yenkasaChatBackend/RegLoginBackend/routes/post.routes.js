@@ -19,6 +19,24 @@ const rewardService = require('../services/reward.service');
 const UserPrivacy = require("../models/userPrivacy.model");
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 
+function normalizeCountry(value) {
+  return (value || "Ghana").toString().trim().toLowerCase();
+}
+
+function countryQuery(value) {
+  const country = value || "Ghana";
+  if (normalizeCountry(country) === "ghana") {
+    return {
+      $or: [
+        { country: new RegExp(`^${country}$`, "i") },
+        { country: { $in: [null, ""] } }
+      ]
+    };
+  }
+
+  return { country: new RegExp(`^${country}$`, "i") };
+}
+
 /* ---------------------------------------------------
  * ONE-WAY BLOCK CHECK (Instagram style)
  * userA = viewer or actor
@@ -139,6 +157,13 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Selected community not found"
+      });
+    }
+
+    if (normalizeCountry(selectedCommunity.country) !== normalizeCountry(user.country)) {
+      return res.status(403).json({
+        success: false,
+        error: `Selected community is not available for ${user.country || "your country"}.`
       });
     }
 
@@ -390,7 +415,35 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: "No community names provided" });
   }
 
-  const communityNames = names.split(",");
+  const communityNames = names.split(",").map(name => name.trim()).filter(Boolean);
+  const allowedCommunities = await Community.find({
+    ...countryQuery(req.user.country || "Ghana"),
+    isActive: true,
+    isApproved: true,
+    $or: [
+      { name: { $in: communityNames } },
+      { displayName: { $in: communityNames } }
+    ]
+  }).select("_id name displayName").lean();
+
+  const allowedCommunityIds = allowedCommunities.map(community => community._id);
+  const allowedCommunityNames = allowedCommunities.flatMap(community => [
+    community.name,
+    community.displayName
+  ]).filter(Boolean);
+
+  if (allowedCommunityIds.length === 0) {
+    return res.json({
+      success: true,
+      posts: [],
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: 0,
+        totalPosts: 0,
+        hasMore: false
+      }
+    });
+  }
 
   page = parseInt(page);
   limit = parseInt(limit);
@@ -399,7 +452,10 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
   const filter = {
     isActive: true,
     status: "approved",
-    communityName: { $in: communityNames }
+    $or: [
+      { communityId: { $in: allowedCommunityIds } },
+      { communityName: { $in: allowedCommunityNames } }
+    ]
   };
 
   const posts = await Post.find(filter)

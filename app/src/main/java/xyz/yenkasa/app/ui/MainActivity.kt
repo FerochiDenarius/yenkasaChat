@@ -3,10 +3,13 @@ package xyz.yenkasa.app.ui
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.commit
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.User
@@ -32,6 +35,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main) // ✅ links to your activity_main.xml
+
+        applySystemBarSpacing()
 
         // ✅ Setup toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -90,6 +95,27 @@ class MainActivity : AppCompatActivity() {
                 replace(R.id.feedContainer, FeedFragment())
             }
         }
+    }
+
+    private fun applySystemBarSpacing() {
+        val appBar = findViewById<View>(R.id.mainAppBar)
+        val initialLeft = appBar.paddingLeft
+        val initialTop = appBar.paddingTop
+        val initialRight = appBar.paddingRight
+        val initialBottom = appBar.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                initialLeft,
+                initialTop + systemBars.top,
+                initialRight,
+                initialBottom
+            )
+            insets
+        }
+
+        ViewCompat.requestApplyInsets(appBar)
     }
 
     // ==================== Load user profile from API ====================

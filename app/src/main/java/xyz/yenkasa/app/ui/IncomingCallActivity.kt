@@ -42,7 +42,6 @@ class IncomingCallActivity : AppCompatActivity() {
         setContentView(R.layout.activity_incoming_call)
 
         webSocketManager = WebSocketProvider.instance
-        webSocketManager.connect(this)
 
         callerId = intent.getStringExtra("CALLER_ID")
         callerName = intent.getStringExtra("CALLER_NAME")
@@ -67,6 +66,16 @@ class IncomingCallActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnRejectCall).setOnClickListener {
             rejectCall()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        webSocketManager.connect(this)
+    }
+
+    override fun onStop() {
+        webSocketManager.release(this)
+        super.onStop()
     }
 
     /**

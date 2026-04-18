@@ -248,8 +248,6 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
-        // --- Connect WebSocket once (shared via WebSocketProvider) ---
-        webSocketManager.connect(this)
         setupPresenceListeners()
 
         // --- Listen for signaling messages (CALL_REQUEST / ACCEPT / REJECT) ---
@@ -283,6 +281,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onStart() {
         super.onStart()
+        webSocketManager.connect(this)
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.startFetchingMessagesRepeatedly()
         }
@@ -292,6 +291,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.stopFetchingMessages()
         }
+        webSocketManager.release(this)
         super.onStop()
     }
 

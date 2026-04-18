@@ -37,6 +37,11 @@ class WebSocketManager {
     private var appContext: Context? = null
     private var heartbeatJob: Job? = null
     private var reconnectJob: Job? = null
+    private var disconnectJob: Job? = null
+    private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val ownerLock = Any()
+    private val activeOwners = mutableSetOf<String>()
+    private var shouldReconnect = false
     private var isConnecting = false
     private var lastIncomingCallKey: String? = null
     private var lastIncomingCallAt: Long = 0L
@@ -45,16 +50,28 @@ class WebSocketManager {
         private const val TAG = "WebSocketManager"
         private const val HEARTBEAT_INTERVAL_MS = 25_000L
         private const val RECONNECT_DELAY_MS = 5_000L
+        private const val RELEASE_DISCONNECT_DELAY_MS = 750L
     }
 
     // ----------------------------------------------------------
     // 🔌 CONNECT / DISCONNECT
     // ----------------------------------------------------------
     fun connect(context: Context) {
+        connectInternal(context, trackOwner = true)
+    }
+
+    private fun connectInternal(context: Context, trackOwner: Boolean) {
         val appContext = context.applicationContext
         val userId = TokenManager.getUserId(appContext)
         if (userId.isNullOrBlank()) {
             Log.e(TAG, "❌ Cannot connect: No userId found in TokenManager")
+            return
+        }
+
+        if (trackOwner) {
+            registerOwner(context)
+        } else if (!canReconnect()) {
+            Log.d(TAG, "Skipping WebSocket reconnect; no active call/chat screen.")
             return
         }
 
@@ -70,6 +87,9 @@ class WebSocketManager {
 
         if (currentUserId != null && currentUserId != userId) {
             disconnect()
+            if (trackOwner) {
+                registerOwner(context)
+            }
         }
 
         stopReconnect()
@@ -140,22 +160,56 @@ class WebSocketManager {
                 this@WebSocketManager.webSocket = null
                 _connectionState.tryEmit(false)
                 stopHeartbeat()
-                scheduleReconnect(appContext)
+                if (canReconnect()) scheduleReconnect(appContext)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "⚠️ WebSocket error: ${t.message}", t)
+                if (canReconnect()) {
+                    Log.w(TAG, "WebSocket unavailable: ${t.message}", t)
+                } else {
+                    Log.d(TAG, "Ignoring WebSocket failure after release: ${t.message}")
+                }
                 isConnecting = false
                 isConnected = false
                 this@WebSocketManager.webSocket = null
                 _connectionState.tryEmit(false)
                 stopHeartbeat()
-                scheduleReconnect(appContext)
+                if (canReconnect()) scheduleReconnect(appContext)
             }
         })
     }
 
+    fun release(context: Context) {
+        val ownerKey = context.javaClass.name
+        val shouldScheduleDisconnect = synchronized(ownerLock) {
+            activeOwners.remove(ownerKey)
+            if (activeOwners.isEmpty()) {
+                shouldReconnect = false
+                true
+            } else {
+                false
+            }
+        }
+
+        if (!shouldScheduleDisconnect) return
+
+        disconnectJob?.cancel()
+        disconnectJob = managerScope.launch {
+            delay(RELEASE_DISCONNECT_DELAY_MS)
+            val noActiveOwners = synchronized(ownerLock) { activeOwners.isEmpty() }
+            if (noActiveOwners) {
+                disconnect()
+            }
+        }
+    }
+
     fun disconnect() {
+        synchronized(ownerLock) {
+            activeOwners.clear()
+            shouldReconnect = false
+        }
+        disconnectJob?.cancel()
+        disconnectJob = null
         if (webSocket != null) {
             Log.i(TAG, "🔌 Disconnecting WebSocket.")
             webSocket?.close(1000, "User left call")
@@ -230,11 +284,14 @@ class WebSocketManager {
     // 🔁 RECONNECT
     // ----------------------------------------------------------
     private fun scheduleReconnect(context: Context) {
+        if (!canReconnect()) return
         if (reconnectJob?.isActive == true) return
-        reconnectJob = CoroutineScope(Dispatchers.IO).launch {
+        reconnectJob = managerScope.launch {
             Log.w(TAG, "⏳ Reconnecting in ${RECONNECT_DELAY_MS / 1000} seconds...")
             delay(RECONNECT_DELAY_MS)
-            connect(context)
+            if (canReconnect()) {
+                connectInternal(context, trackOwner = false)
+            }
         }
     }
 
@@ -242,6 +299,19 @@ class WebSocketManager {
         reconnectJob?.cancel()
         reconnectJob = null
     }
+
+    private fun registerOwner(context: Context) {
+        synchronized(ownerLock) {
+            activeOwners.add(context.javaClass.name)
+            shouldReconnect = true
+        }
+        disconnectJob?.cancel()
+        disconnectJob = null
+    }
+
+    private fun canReconnect(): Boolean =
+        synchronized(ownerLock) { shouldReconnect && activeOwners.isNotEmpty() }
+
     fun sendCallAcceptWithRoom(receiverId: String?, roomUrl: String?, token: String?) {
         if (receiverId.isNullOrEmpty() || roomUrl.isNullOrEmpty() || token.isNullOrEmpty()) {
             Log.e("WebSocketManager", "❌ Skipping CALL_ACCEPT_WITH_ROOM — missing data (receiverId=$receiverId, roomUrl=$roomUrl, token=$token)")

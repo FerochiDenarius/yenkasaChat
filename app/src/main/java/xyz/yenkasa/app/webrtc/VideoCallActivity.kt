@@ -169,8 +169,6 @@ class VideoCallActivity : AppCompatActivity() {
             else -> "Incoming audio call..."
         }
 
-        webSocketManager.connect(this)
-
         btnEndCall.setOnClickListener {
             sendCallRejectedIfNeeded()
             endCall()
@@ -201,6 +199,16 @@ class VideoCallActivity : AppCompatActivity() {
                 requestJoin(url, token, userName)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        webSocketManager.connect(this)
+    }
+
+    override fun onStop() {
+        webSocketManager.release(this)
+        super.onStop()
     }
 
     private fun setupWebView() {
@@ -527,7 +535,6 @@ class VideoCallActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopRingtone()
-        webSocketManager.disconnect() // 👈 add this line
         try {
             webView.apply {
                 loadUrl("about:blank")

@@ -22,9 +22,11 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
 import org.json.JSONObject
+import xyz.yenkasa.app.ui.CallNotificationHandler
 import xyz.yenkasa.app.ui.CoinWalletActivity
 import xyz.yenkasa.app.ui.ChatActivity
 import xyz.yenkasa.app.ui.CommentsActivity
+import xyz.yenkasa.app.ui.IncomingCallActivity
 import xyz.yenkasa.app.ui.MainActivity
 import xyz.yenkasa.app.ui.UserProfileActivity
 
@@ -75,6 +77,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
         // --- Create Notification Channels (For Android 8.0 Oreo and above) ---
         createNotificationChannels()
+        CallNotificationHandler.ensureCallNotificationChannel(this)
 
         // --- ONE SIGNAL V4 INITIALIZATION ---
         Log.i(ONE_SIGNAL_TAG, "--- Starting OneSignal v4 Setup ---")
@@ -95,13 +98,19 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
 
         OneSignal.setNotificationWillShowInForegroundHandler { event ->
+            val notif = event.notification
+            if (isCallNotification(notif.additionalData)) {
+                event.complete(null)
+                CallNotificationHandler.showIncomingCall(this, notif.additionalData ?: JSONObject())
+                return@setNotificationWillShowInForegroundHandler
+            }
+
             val prefs = getSharedPreferences("settings", MODE_PRIVATE)
             val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
             val rawRes = resources.getIdentifier(selectedId, "raw", packageName)
             val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
 
-            val notif = event.notification
             val title = notif.title ?: "Notification"
             val body = notif.body ?: ""
             val contentIntent = buildNotificationPendingIntent(notif.additionalData)
@@ -126,6 +135,10 @@ class MyApplication : Application(), OSSubscriptionObserver {
         OneSignal.setNotificationOpenedHandler { result ->
             val notification = result.notification
             Log.i(ONE_SIGNAL_TAG, "Notification Clicked: ${notification.notificationId}, Title: ${notification.title}")
+            if (isCallNotification(notification.additionalData)) {
+                CallNotificationHandler.handleNotificationOpened(this, notification.additionalData ?: JSONObject())
+                return@setNotificationOpenedHandler
+            }
             openNotificationTarget(notification.additionalData)
         }
 
@@ -212,12 +225,42 @@ class MyApplication : Application(), OSSubscriptionObserver {
         startActivity(buildNotificationIntent(data))
     }
 
+    private fun isCallNotification(data: JSONObject?): Boolean {
+        if (data == null) return false
+        val targetType = data.optString("targetType", "")
+        val type = data.optString("type", "")
+        return targetType.equals("call", ignoreCase = true) ||
+            type.equals("call_invite", ignoreCase = true) ||
+            type.equals("call_request", ignoreCase = true)
+    }
+
+    private fun buildIncomingCallIntent(data: JSONObject?): Intent {
+        val callerId = data?.optString("callerId", data.optString("fromUserId", "")).orEmpty()
+        val callerName = data?.optString("callerName", "Unknown") ?: "Unknown"
+        val isVideo = when {
+            data?.has("isVideo") == true -> data.optBoolean("isVideo", true)
+            data?.has("video") == true -> data.optBoolean("video", true)
+            else -> data?.optString("callType", "video")?.equals("video", ignoreCase = true) ?: true
+        }
+        val roomUrl = data?.optString("roomUrl", "").orEmpty()
+        val token = data?.optString("token", data.optString("roomToken", "")).orEmpty()
+
+        return Intent(this, IncomingCallActivity::class.java).apply {
+            putExtra("CALLER_ID", callerId)
+            putExtra("CALLER_NAME", callerName)
+            putExtra("IS_VIDEO_CALL", isVideo)
+            putExtra("ROOM_URL", roomUrl)
+            putExtra("ROOM_TOKEN", token)
+        }
+    }
+
     private fun buildNotificationIntent(data: JSONObject?): Intent {
         val targetType = data?.optString("targetType").orEmpty()
         val targetId = data?.optString("targetId").orEmpty()
         val activityId = data?.optString("activityId").orEmpty()
 
         val intent = when (targetType) {
+            "call" -> buildIncomingCallIntent(data)
             "chat" -> Intent(this, ChatActivity::class.java).apply {
                 putExtra("roomId", targetId.ifBlank {
                     data?.optString("roomId").orEmpty().ifBlank { data?.optString("chatId").orEmpty() }

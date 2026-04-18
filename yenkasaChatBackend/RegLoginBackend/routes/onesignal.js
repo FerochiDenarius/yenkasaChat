@@ -168,4 +168,105 @@ router.post('/notify', authMiddleware, logRequest, async (req, res) => {
     }
 });
 
+// =========================================================================================
+// ==                                SEND CALL INVITE PUSH                                ==
+// =========================================================================================
+router.post('/call-invite', authMiddleware, logRequest, async (req, res) => {
+    const { requestId } = req;
+    const authenticatedUserId = (req.user?.id || req.user?._id)?.toString();
+    const {
+        receiverId,
+        callerName,
+        callerPhoto,
+        isVideo = true,
+        roomUrl,
+        token
+    } = req.body;
+
+    if (!authenticatedUserId) {
+        logger.warn(`[${requestId}] Authentication failed: No authenticated user ID found for call invite.`);
+        return res.status(401).json({ success: false, message: 'Authentication failed. Please log in.' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+        logger.warn(`[${requestId}] Validation failed: invalid receiverId '${receiverId}'.`);
+        return res.status(400).json({ success: false, message: 'Valid receiverId is required.' });
+    }
+
+    if (!roomUrl || typeof roomUrl !== 'string' || !roomUrl.trim()) {
+        return res.status(400).json({ success: false, message: 'roomUrl is required.' });
+    }
+
+    if (!token || typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ success: false, message: 'token is required.' });
+    }
+
+    try {
+        const [caller, receiver] = await Promise.all([
+            User.findById(authenticatedUserId).select('username profileImage').lean(),
+            User.findById(receiverId).select('username playerId').lean()
+        ]);
+
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'Receiver not found.' });
+        }
+
+        if (!receiver.playerId || typeof receiver.playerId !== 'string' || !receiver.playerId.trim()) {
+            logger.warn(`[${requestId}] Receiver ${receiverId} has no OneSignal playerId; cannot send call invite.`);
+            return res.status(200).json({
+                success: false,
+                message: 'Receiver has no push target registered.'
+            });
+        }
+
+        const resolvedCallerName =
+            (typeof callerName === 'string' && callerName.trim()) ||
+            caller?.username ||
+            'Yenkasa caller';
+        const resolvedIsVideo = isVideo === true || isVideo === 'true';
+        const callType = resolvedIsVideo ? 'video' : 'audio';
+
+        const data = {
+            type: 'call_invite',
+            targetType: 'call',
+            callerId: authenticatedUserId,
+            callerName: resolvedCallerName,
+            callerPhoto: (typeof callerPhoto === 'string' && callerPhoto.trim()) || caller?.profileImage || '',
+            isVideo: resolvedIsVideo,
+            callType,
+            receiverId: receiver._id.toString(),
+            roomUrl: roomUrl.trim(),
+            token: token.trim()
+        };
+
+        const result = await sendPushNotification({
+            playerId: receiver.playerId.trim(),
+            title: `Incoming ${resolvedIsVideo ? 'video' : 'audio'} call`,
+            body: `${resolvedCallerName} is calling you`,
+            data,
+            existing_android_channel_id: 'yenkasachat_calls',
+            priority: 10,
+            ttl: 30,
+            small_icon: 'ic_call'
+        });
+
+        logger.info(`[${requestId}] Call invite sent from ${authenticatedUserId} to ${receiverId}.`, result);
+        return res.status(200).json({
+            success: true,
+            message: 'Call invite sent.',
+            result
+        });
+    } catch (err) {
+        logger.error(`[${requestId}] Error sending call invite to ${receiverId}: ${err.message}`, err.stack);
+        const statusCode = err.status || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: err.isOneSignalError ? err.message : 'Failed to send call invite.',
+            details: err.isOneSignalError ? (err.response?.data || err.message) : err.message
+        });
+    } finally {
+        logger.info(`[${requestId}] Finished ${req.method} ${req.originalUrl}`);
+    }
+});
+
 module.exports = router;

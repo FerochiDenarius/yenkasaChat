@@ -24,6 +24,10 @@ object CallNotificationHandler {
     private const val CALL_CHANNEL_ID = "yenkasachat_calls"
     private const val CALL_NOTIFICATION_ID = 9999
 
+    fun ensureCallNotificationChannel(context: Context) {
+        createCallNotificationChannel(context)
+    }
+
     /**
      * Show an incoming call notification (works in background too).
      */

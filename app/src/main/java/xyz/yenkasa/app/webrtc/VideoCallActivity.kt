@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.GenerateTokenRequest
 import xyz.yenkasa.app.model.CreateRoomRequest
+import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.DailyApiClient
 import xyz.yenkasa.app.util.TokenManager
 import kotlinx.coroutines.Dispatchers
@@ -306,6 +307,7 @@ class VideoCallActivity : AppCompatActivity() {
 
                 Log.i(TAG, "Sending call_request with room info to $receiverId")
                 webSocketManager.sendCallRequest(receiverId!!, isVideoCall, room.roomUrl, token)
+                sendCallInvitePush(room.roomUrl, token)
 
                 val userName = TokenManager.getUsername(this@VideoCallActivity) ?: currentUserId ?: "Caller"
                 withContext(Dispatchers.Main) {
@@ -315,6 +317,35 @@ class VideoCallActivity : AppCompatActivity() {
                 Log.e(TAG, "Error creating room in startOutgoingCall: ${e.message}", e)
                 showToast("Error creating room: ${e.message}")
             }
+        }
+    }
+
+    private suspend fun sendCallInvitePush(roomUrl: String, roomToken: String) {
+        val targetUserId = receiverId
+        if (targetUserId.isNullOrBlank()) {
+            Log.w(TAG, "Skipping call invite push: receiverId is missing.")
+            return
+        }
+
+        try {
+            val response = ApiClient.apiService.sendCallInvite(
+                mapOf(
+                    "receiverId" to targetUserId,
+                    "callerName" to (TokenManager.getUsername(this@VideoCallActivity) ?: currentUserId ?: "Yenkasa caller"),
+                    "callerPhoto" to (TokenManager.getProfilePicUrl(this@VideoCallActivity) ?: ""),
+                    "isVideo" to isVideoCall,
+                    "roomUrl" to roomUrl,
+                    "token" to roomToken
+                )
+            )
+
+            if (response.isSuccessful) {
+                Log.i(TAG, "Call invite push sent to $targetUserId")
+            } else {
+                Log.w(TAG, "Call invite push failed: ${response.code()} ${response.errorBody()?.string()}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Call invite push error: ${e.message}", e)
         }
     }
 

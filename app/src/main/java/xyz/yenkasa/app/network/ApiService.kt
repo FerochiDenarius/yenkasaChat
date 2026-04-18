@@ -162,6 +162,9 @@ interface ApiService {
     @POST("notify")
     fun sendPushNotification(@Body request: PushNotificationRequest): Call<Void>
 
+    @POST("onesignal/call-invite")
+    suspend fun sendCallInvite(@Body body: Map<String, @JvmSuppressWildcards Any?>): Response<ResponseBody>
+
 
     // ==================== VERIFICATION ====================
 

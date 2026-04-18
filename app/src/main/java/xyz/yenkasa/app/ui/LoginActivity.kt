@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 // Keep all your imports
 import android.content.Intent
+import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
 import android.view.animation.AnimationUtils
@@ -9,6 +10,8 @@ import android.view.WindowManager
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Observer
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.LoginRequest
@@ -34,6 +37,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var textRegisterLink: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var loginCard: View
+    private lateinit var loginRoot: View
     private lateinit var loginScroll: ScrollView
 
 
@@ -70,6 +74,7 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         textRegisterLink = findViewById(R.id.textRegisterLink)
         progressBar = findViewById(R.id.loginProgress)
+        loginRoot = findViewById(R.id.login_root)
         loginCard = findViewById(R.id.loginCard)
         loginScroll = findViewById(R.id.loginScroll)
 
@@ -94,6 +99,38 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun setupKeyboardAwareScrolling() {
+        val originalScrollBottomPadding = loginScroll.paddingBottom
+        var wasKeyboardVisible = false
+
+        ViewCompat.setOnApplyWindowInsetsListener(loginRoot) { _, insets ->
+            val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            val keyboardOffset = if (isKeyboardVisible) {
+                getKeyboardOverlapHeight()
+            } else {
+                0
+            }
+
+            loginScroll.setPadding(
+                loginScroll.paddingLeft,
+                loginScroll.paddingTop,
+                loginScroll.paddingRight,
+                originalScrollBottomPadding + keyboardOffset
+            )
+
+            if (isKeyboardVisible) {
+                val focusedField = currentFocus?.takeIf {
+                    it == editIdentifier || it == editPassword
+                }
+                if (focusedField != null && !wasKeyboardVisible) {
+                    scrollFocusedFieldIntoView(focusedField)
+                }
+            }
+            wasKeyboardVisible = isKeyboardVisible
+
+            insets
+        }
+        ViewCompat.requestApplyInsets(loginRoot)
+
         val focusListener = View.OnFocusChangeListener { view, hasFocus ->
             if (hasFocus) {
                 scrollFocusedFieldIntoView(view)
@@ -108,7 +145,7 @@ class LoginActivity : AppCompatActivity() {
 
     private fun scrollFocusedFieldIntoView(view: View) {
         loginScroll.postDelayed({
-            val visibleArea = android.graphics.Rect()
+            val visibleArea = Rect()
             view.getDrawingRect(visibleArea)
             loginScroll.offsetDescendantRectToMyCoords(view, visibleArea)
 
@@ -116,6 +153,17 @@ class LoginActivity : AppCompatActivity() {
             val targetScrollY = (visibleArea.top - topSpacing).coerceAtLeast(0)
             loginScroll.smoothScrollTo(0, targetScrollY)
         }, 300)
+    }
+
+    private fun getKeyboardOverlapHeight(): Int {
+        val visibleFrame = Rect()
+        loginRoot.getWindowVisibleDisplayFrame(visibleFrame)
+
+        val rootLocation = IntArray(2)
+        loginRoot.getLocationOnScreen(rootLocation)
+        val rootBottom = rootLocation[1] + loginRoot.height
+
+        return (rootBottom - visibleFrame.bottom).coerceAtLeast(0)
     }
 
     private fun addStarSparkle() {

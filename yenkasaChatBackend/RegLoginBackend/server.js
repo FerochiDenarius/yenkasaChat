@@ -121,7 +121,7 @@ console.log("server.js: Core middlewares configured.");
 // ---------------------------------
 const onlineUsers = new Map();
 const pendingOfflineTimers = new Map();
-const SOCKET_OFFLINE_GRACE_MS = Number(process.env.SOCKET_OFFLINE_GRACE_MS || 120000);
+const SOCKET_OFFLINE_GRACE_MS = Number(process.env.SOCKET_OFFLINE_GRACE_MS || 600000);
 
 function getOnlineUserIds() {
   return Array.from(onlineUsers.keys());
@@ -642,6 +642,19 @@ app.get('/triciabales_frontend/landingFile/:page', (req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 console.log("server.js: Static file serving configured for /public.");
+
+app.get('/download-app', (req, res) => {
+  const apkPath = path.join(__dirname, 'public', 'yenkasa.0.3.1.apk');
+
+  res.download(apkPath, 'Yenkasa-0.3.1.apk', (err) => {
+    if (err) {
+      console.error('APK download failed:', err.message);
+      if (!res.headersSent) {
+        res.status(404).send('APK file not found');
+      }
+    }
+  });
+});
 
 // ---------------------------------
 // MongoDB Connection + Server Start

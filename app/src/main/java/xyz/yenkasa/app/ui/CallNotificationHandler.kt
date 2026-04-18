@@ -30,10 +30,14 @@ object CallNotificationHandler {
     fun showIncomingCall(context: Context, data: JSONObject) {
         try {
             val callerName = data.optString("callerName", "Unknown")
-            val callerId = data.optString("callerId", "")
-            val isVideo = data.optString("callType", "video") == "video"
+            val callerId = data.optString("callerId", data.optString("fromUserId", ""))
+            val isVideo = when {
+                data.has("isVideo") -> data.optBoolean("isVideo", true)
+                data.has("video") -> data.optBoolean("video", true)
+                else -> data.optString("callType", "video").equals("video", ignoreCase = true)
+            }
             val roomUrl = data.optString("roomUrl", "")
-            val token = data.optString("token", "")
+            val token = data.optString("token", data.optString("roomToken", ""))
 
             Log.d(TAG, "📞 Incoming ${if (isVideo) "Video" else "Audio"} Call from $callerName ($callerId)")
 
@@ -53,18 +57,12 @@ object CallNotificationHandler {
             }
 
             // ✅ Intent to open IncomingCallActivity when ACCEPTED
-            val acceptIntent = Intent(context, IncomingCallActivity::class.java).apply {
-                putExtra("CALLER_ID", callerId)
-                putExtra("CALLER_NAME", callerName)
-                putExtra("IS_VIDEO_CALL", isVideo)
-                putExtra("ROOM_URL", roomUrl)
-                putExtra("ROOM_TOKEN", token)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            }
+            val acceptIntent = buildIncomingCallIntent(context, callerId, callerName, isVideo, roomUrl, token)
 
+            val requestCode = "${callerId}:${roomUrl}".hashCode()
             val acceptPendingIntent = PendingIntent.getActivity(
                 context,
-                1,
+                requestCode,
                 acceptIntent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
@@ -73,7 +71,7 @@ object CallNotificationHandler {
             val rejectIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
             val rejectPendingIntent = PendingIntent.getBroadcast(
                 context,
-                2,
+                requestCode + 1,
                 rejectIntent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
@@ -102,12 +100,31 @@ object CallNotificationHandler {
             ) {
                 NotificationManagerCompat.from(context).notify(CALL_NOTIFICATION_ID, builder.build())
             } else {
-                Log.w(TAG, "🔕 Notification permission not granted; skipping notification display")
+                Log.w(TAG, "🔕 Notification permission not granted; attempting direct call screen launch")
+                context.startActivity(acceptIntent)
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error showing incoming call notification: ${e.message}", e)
         }
+    }
+
+    private fun buildIncomingCallIntent(
+        context: Context,
+        callerId: String,
+        callerName: String,
+        isVideo: Boolean,
+        roomUrl: String,
+        token: String
+    ): Intent {
+        return Intent(context, IncomingCallActivity::class.java).apply {
+                putExtra("CALLER_ID", callerId)
+                putExtra("CALLER_NAME", callerName)
+                putExtra("IS_VIDEO_CALL", isVideo)
+                putExtra("ROOM_URL", roomUrl)
+                putExtra("ROOM_TOKEN", token)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
     }
 
     /**
@@ -117,18 +134,15 @@ object CallNotificationHandler {
         try {
             val callerId = data.optString("callerId", "")
             val callerName = data.optString("callerName", "Unknown")
-            val isVideo = data.optString("callType", "video") == "video"
-            val roomUrl = data.optString("roomUrl", "")
-            val token = data.optString("token", "")
-
-            val intent = Intent(context, IncomingCallActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("CALLER_ID", callerId)
-                putExtra("CALLER_NAME", callerName)
-                putExtra("IS_VIDEO_CALL", isVideo)
-                putExtra("ROOM_URL", roomUrl)
-                putExtra("ROOM_TOKEN", token)
+            val isVideo = when {
+                data.has("isVideo") -> data.optBoolean("isVideo", true)
+                data.has("video") -> data.optBoolean("video", true)
+                else -> data.optString("callType", "video").equals("video", ignoreCase = true)
             }
+            val roomUrl = data.optString("roomUrl", "")
+            val token = data.optString("token", data.optString("roomToken", ""))
+
+            val intent = buildIncomingCallIntent(context, callerId, callerName, isVideo, roomUrl, token)
             context.startActivity(intent)
 
         } catch (e: Exception) {

@@ -42,6 +42,7 @@ class IncomingCallActivity : AppCompatActivity() {
         setContentView(R.layout.activity_incoming_call)
 
         webSocketManager = WebSocketProvider.instance
+        webSocketManager.connect(this)
 
         callerId = intent.getStringExtra("CALLER_ID")
         callerName = intent.getStringExtra("CALLER_NAME")

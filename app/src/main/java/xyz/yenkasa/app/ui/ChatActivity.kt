@@ -240,18 +240,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             webSocketManager.signalingMessages.collect { msg ->
                 when (msg.type) {
                     SignalingMessageType.CALL_REQUEST -> {
-                        Log.i("ChatActivity", "📞 Incoming ${if (msg.isVideo == true) "video" else "audio"} call from ${msg.callerName}")
-
-                        val intent = Intent(this@ChatActivity, IncomingCallActivity::class.java).apply {
-                            putExtra("CALLER_ID", msg.fromUserId)
-                            putExtra("CALLER_NAME", msg.callerName ?: "Unknown")
-                            putExtra("CALLER_PHOTO", msg.callerPhoto ?: "")
-                            putExtra("IS_VIDEO_CALL", msg.isVideo ?: true)
-                            putExtra("ROOM_URL", msg.roomUrl)
-                            putExtra("ROOM_TOKEN", msg.token)
-                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        startActivity(intent)
+                        Log.i("ChatActivity", "📞 Incoming call handled by shared WebSocketManager.")
                     }
                     SignalingMessageType.CALL_ACCEPT -> {
                         Log.d("ChatActivity", "✅ CALL_ACCEPT received — ignoring here (handled in VideoCallActivity)")

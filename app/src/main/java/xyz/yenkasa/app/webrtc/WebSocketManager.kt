@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import okhttp3.*
 import okio.ByteString
 import org.json.JSONObject
+import xyz.yenkasa.app.ui.CallNotificationHandler
 
 class WebSocketManager {
 
@@ -33,9 +34,12 @@ class WebSocketManager {
     private var currentUserId: String? = null
     private var currentUserName: String? = null
     private var currentUserPhoto: String? = null
+    private var appContext: Context? = null
     private var heartbeatJob: Job? = null
     private var reconnectJob: Job? = null
     private var isConnecting = false
+    private var lastIncomingCallKey: String? = null
+    private var lastIncomingCallAt: Long = 0L
 
     companion object {
         private const val TAG = "WebSocketManager"
@@ -70,6 +74,7 @@ class WebSocketManager {
 
         stopReconnect()
         isConnecting = true
+        this.appContext = appContext
         currentUserId = userId
         currentUserName = TokenManager.getUsername(appContext)
         currentUserPhoto = TokenManager.getProfilePicUrl(appContext)
@@ -101,6 +106,9 @@ class WebSocketManager {
                         "offer", "answer", "candidate", "error",
                         "call_request", "call_accept", "call_reject", "user_busy" -> {
                             val msg = parseSignalingMessage(json)
+                            if (msg.type == SignalingMessageType.CALL_REQUEST) {
+                                showIncomingCallFromSignaling(msg)
+                            }
                             _signalingMessages.tryEmit(msg)
                         }
 
@@ -158,6 +166,38 @@ class WebSocketManager {
         isConnecting = false
         isConnected = false
         _connectionState.tryEmit(false)
+    }
+
+    private fun showIncomingCallFromSignaling(message: SignalingMessage) {
+        val context = appContext ?: return
+        val callerId = message.fromUserId ?: return
+        val roomUrl = message.roomUrl
+        val token = message.token
+
+        if (roomUrl.isNullOrBlank() || token.isNullOrBlank()) {
+            Log.e(TAG, "❌ Incoming call missing roomUrl/token; cannot show call screen.")
+            return
+        }
+
+        val callKey = "$callerId:${roomUrl}:${token.take(12)}"
+        val now = System.currentTimeMillis()
+        if (lastIncomingCallKey == callKey && now - lastIncomingCallAt < 10_000L) {
+            Log.d(TAG, "Skipping duplicate incoming call notification for $callerId")
+            return
+        }
+        lastIncomingCallKey = callKey
+        lastIncomingCallAt = now
+
+        val data = JSONObject().apply {
+            put("callerId", callerId)
+            put("callerName", message.callerName ?: "Unknown")
+            put("callerPhoto", message.callerPhoto ?: "")
+            put("callType", if (message.isVideo == false) "audio" else "video")
+            put("roomUrl", roomUrl)
+            put("token", token)
+        }
+
+        CallNotificationHandler.showIncomingCall(context, data)
     }
 
     // ----------------------------------------------------------
@@ -287,7 +327,7 @@ class WebSocketManager {
                 put("fromUserId", currentUserId)
                 put("_id", receiverId)
             }
-            webSocket?.send(json.toString())
+            sendMessage(json.toString())
             Log.i(TAG, "✅ Sent CALL_ACCEPT to $receiverId")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending CALL_ACCEPT: ${e.message}", e)
@@ -301,7 +341,7 @@ class WebSocketManager {
                 put("fromUserId", currentUserId)
                 put("_id", receiverId)
             }
-            webSocket?.send(json.toString())
+            sendMessage(json.toString())
             Log.i(TAG, "🚫 Sent CALL_REJECT to $receiverId")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending CALL_REJECT: ${e.message}", e)
@@ -318,6 +358,12 @@ class WebSocketManager {
         val callerName = json.optString("callerName", null)
         val callerPhoto = json.optString("callerPhoto", null)
         val errorMsg = json.optString("message", null)
+        val isVideo = when {
+            json.has("isVideo") -> json.optBoolean("isVideo", true)
+            json.has("video") -> json.optBoolean("video", true)
+            json.optString("callType", "").equals("audio", ignoreCase = true) -> false
+            else -> true
+        }
 
         val type = try {
             SignalingMessageType.valueOf(typeString)
@@ -341,7 +387,9 @@ class WebSocketManager {
             candidate = candidateData,
             fromUserId = fromUserId,
             error = if (type == SignalingMessageType.ERROR) errorMsg else null,
-            // 👇 ADD THESE FIELDS
+            callerName = callerName,
+            callerPhoto = callerPhoto,
+            isVideo = isVideo,
             roomUrl = json.optString("roomUrl", null),
             token = json.optString("token", null)
         ).apply {

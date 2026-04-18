@@ -328,32 +328,7 @@ class VideoCallActivity : AppCompatActivity() {
                     // 📞 Incoming call request (Receiver side)
                     SignalingMessageType.CALL_REQUEST -> {
                         if (!isCaller) {
-                            val callerId = msg.fromUserId ?: return@collect
-                            val callerName = msg.callerName ?: "Unknown"
-                            val isVideo = msg.isVideo ?: true
-                            val roomUrl = msg.roomUrl
-                            val token = msg.token
-
-                            if (roomUrl.isNullOrEmpty() || token.isNullOrEmpty()) {
-                                Log.e(TAG, "❌ Missing room info in CALL_REQUEST — cannot show accept screen")
-                                return@collect
-                            }
-
-                            Log.i(TAG, "📞 Incoming call from $callerName ($callerId)")
-
-                            val intent = Intent(this@VideoCallActivity,
-                                xyz.yenkasa.app.ui.IncomingCallActivity::class.java
-                            ).apply {
-                                putExtra("CALLER_ID", callerId)
-                                putExtra("CALLER_NAME", callerName)
-                                putExtra("IS_VIDEO_CALL", isVideo)
-                                putExtra("ROOM_URL", roomUrl)
-                                putExtra("ROOM_TOKEN", token)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-
-                            }
-                            startActivity(intent)
+                            Log.i(TAG, "📞 Incoming call handled by shared WebSocketManager.")
                         }
                     }
 

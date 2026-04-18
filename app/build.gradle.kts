@@ -16,8 +16,8 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.3.0"
+        versionCode = 15
+        versionName = "0.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -64,6 +64,12 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("com.facebook.soloader:soloader:0.10.5")
     }
 }
 
@@ -137,9 +143,12 @@ dependencies {
     implementation("com.jakewharton.threetenabp:threetenabp:1.4.6")
 
     implementation("com.google.android.gms:play-services-ads:23.0.0")
+    implementation("com.facebook.soloader:soloader:0.10.5")
 
     implementation("io.socket:socket.io-client:2.1.1") {
         exclude(group = "org.json", module = "json")
+
+
     }
 
 

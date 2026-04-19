@@ -15,6 +15,7 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.PostApprovalItem
+import xyz.yenkasa.app.util.TextPostBackgrounds
 
 
 class PostApprovalAdapter(
@@ -38,6 +39,8 @@ class PostApprovalAdapter(
         val communityName: TextView = view.findViewById(R.id.textCommunityName)
 
         val postText: TextView = view.findViewById(R.id.textPostContent)
+        val mediaContainer: FrameLayout = view.findViewById(R.id.mediaContainer)
+        val textBackgroundPost: TextView = view.findViewById(R.id.textPostBackgroundContent)
         val postImage: ImageView = view.findViewById(R.id.imagePostContent)
         val audioIcon: LinearLayout = view.findViewById(R.id.audioIcon)
 
@@ -65,7 +68,6 @@ class PostApprovalAdapter(
 
             communityName.text = post.communityId?.displayName ?: "General"
             timestamp.text = post.createdAt
-            postText.text = post.caption ?: ""
 
             handleMedia(post, position)
 
@@ -83,11 +85,25 @@ class PostApprovalAdapter(
             val hasImage = !post.imageUrl.isNullOrEmpty()
             val hasVideo = !post.videoUrl.isNullOrEmpty()
             val hasAudio = !post.audioUrl.isNullOrEmpty()
+            val hasMedia = hasImage || hasVideo || hasAudio
+            val hasTextBackground = !hasMedia &&
+                !post.caption.isNullOrBlank() &&
+                TextPostBackgrounds.normalize(post.textBackgroundColor).isNotBlank()
 
+            mediaContainer.visibility = if (hasMedia || hasTextBackground) View.VISIBLE else View.GONE
             postImage.visibility = if (hasImage) View.VISIBLE else View.GONE
             audioIcon.visibility = if (hasAudio) View.VISIBLE else View.GONE
             playerView?.visibility = if (hasVideo) View.VISIBLE else View.GONE
             btnPlayPause?.visibility = if (hasVideo) View.VISIBLE else View.GONE
+            textBackgroundPost.visibility = if (hasTextBackground) View.VISIBLE else View.GONE
+
+            postText.text = post.caption.orEmpty()
+            postText.visibility = if (post.caption.isNullOrBlank() || hasTextBackground) View.GONE else View.VISIBLE
+
+            if (hasTextBackground) {
+                textBackgroundPost.text = post.caption.orEmpty()
+                TextPostBackgrounds.apply(textBackgroundPost, post.textBackgroundColor.orEmpty())
+            }
 
             if (hasImage) {
                 Glide.with(context)

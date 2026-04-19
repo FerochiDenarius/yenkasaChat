@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.adapter
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Handler
 import android.util.Log
@@ -12,6 +13,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.media3.common.Player
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -21,6 +23,7 @@ import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -79,6 +82,8 @@ class PostAdapter(
         val timestamp: TextView = itemRoot.findViewById(R.id.textTimestampPost)
         val communityName: TextView = itemRoot.findViewById(R.id.textCommunityName)
         val postText: TextView = itemRoot.findViewById(R.id.textPostContent)
+        val mediaContainer: FrameLayout = itemRoot.findViewById(R.id.mediaContainer)
+        val textBackgroundPost: TextView = itemRoot.findViewById(R.id.textPostBackgroundContent)
 
         // Engagement
         val btnLike: ImageButton = itemRoot.findViewById(R.id.btnLike)
@@ -125,12 +130,14 @@ class PostAdapter(
 
         // Reset all media UI to hidden (called before bind)
         fun resetMediaUi() {
+            mediaContainer.visibility = View.GONE
             postImage.visibility = View.GONE
             playerView?.visibility = View.GONE
             imageVideoThumbnail.visibility = View.GONE
             btnVideoPlay.visibility = View.GONE
             btnPlayPause?.visibility = View.GONE
             audioIcon.visibility = View.GONE
+            textBackgroundPost.visibility = View.GONE
         }
 
         // Release audio player when view is recycled
@@ -281,7 +288,6 @@ class PostAdapter(
 
         holder.communityName.text = post.communityId?.displayName ?: "General"
         holder.timestamp.text = formatTimestamp(post.createdAt.toLongOrNull())
-        holder.postText.text = post.caption ?: ""
         holder.likeCount.text = "${post.likeCount} likes"
         holder.commentCount.text = "${post.commentCount} comments"
         holder.viewCount.text = "👁 ${post.viewCount}"
@@ -297,6 +303,10 @@ class PostAdapter(
         holder.btnShare.setOnClickListener { onShareClick(post) }
 
         val currentUserId = TokenManager.getUserId(context)
+        holder.fabFollow.setImageResource(R.drawable.ic_person_add)
+        holder.fabFollow.backgroundTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.primary))
+        holder.fabFollow.isEnabled = true
         holder.fabFollow.visibility = if (post.userId.id == currentUserId) View.GONE else View.VISIBLE
         holder.fabFollow.setOnClickListener {
             followPostAuthor(post, holder.fabFollow)
@@ -306,8 +316,29 @@ class PostAdapter(
         val hasImage = !post.imageUrl.isNullOrEmpty()
         val hasVideo = !post.videoUrl.isNullOrEmpty()
         val hasAudio = !post.audioUrl.isNullOrEmpty()
+        val hasMedia = hasImage || hasVideo || hasAudio
+        val hasTextBackground = !hasMedia &&
+            !post.caption.isNullOrBlank() &&
+            TextPostBackgrounds.normalize(post.textBackgroundColor).isNotBlank()
+
+        holder.postText.text = post.caption.orEmpty()
+        holder.postText.visibility = if (post.caption.isNullOrBlank() || hasTextBackground) {
+            View.GONE
+        } else {
+            View.VISIBLE
+        }
+
+        holder.mediaContainer.visibility = if (hasMedia || hasTextBackground) View.VISIBLE else View.GONE
+
+        if (hasTextBackground) {
+            holder.textBackgroundPost.text = post.caption.orEmpty()
+            holder.textBackgroundPost.visibility = View.VISIBLE
+            TextPostBackgrounds.apply(holder.textBackgroundPost, post.textBackgroundColor.orEmpty())
+            recordVisibleView(post._id, 3)
+        }
 
         if (hasImage) {
+            holder.mediaContainer.visibility = View.VISIBLE
             holder.postImage.visibility = View.VISIBLE
             Glide.with(holder.itemRoot.context)
                 .load(post.imageUrl)
@@ -317,6 +348,7 @@ class PostAdapter(
         }
 
         if (hasVideo) {
+            holder.mediaContainer.visibility = View.VISIBLE
             holder.prepareVideoUi(post.videoUrl, position)
 
             // If this position is currently playing, attach player view immediately
@@ -331,6 +363,7 @@ class PostAdapter(
         }
 
         if (hasAudio) {
+            holder.mediaContainer.visibility = View.VISIBLE
             holder.audioIcon.visibility = View.VISIBLE
             holder.setupAudio(post.audioUrl!!)
             recordVisibleView(post._id, 5)
@@ -614,6 +647,10 @@ class PostAdapter(
                     followButton.isEnabled = true
                     val body = response.body()
                     if (response.isSuccessful && body != null) {
+                        followButton.setImageResource(R.drawable.ic_check)
+                        followButton.backgroundTintList =
+                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.green))
+                        followButton.isEnabled = false
                         Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "Could not follow ${post.userId.username}", Toast.LENGTH_SHORT).show()

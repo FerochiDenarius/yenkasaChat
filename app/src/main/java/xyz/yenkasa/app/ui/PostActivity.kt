@@ -2,9 +2,15 @@ package xyz.yenkasa.app.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +21,7 @@ import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -37,7 +44,11 @@ class PostActivity : AppCompatActivity() {
     private lateinit var btnPost: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var spinnerCommunity: Spinner
+    private lateinit var textBackgroundLabel: TextView
+    private lateinit var textBackgroundPicker: LinearLayout
     private var selectedCommunityId: String? = null
+    private var selectedTextBackgroundColor: String = ""
+    private var defaultContentBackground: Drawable? = null
 
     // 🎯 Each media type handled separately
     private var imageUri: Uri? = null
@@ -66,6 +77,18 @@ class PostActivity : AppCompatActivity() {
         btnPost = findViewById(R.id.btnPost)
         progressBar = findViewById(R.id.progressBar)
         spinnerCommunity = findViewById(R.id.spinnerCommunity)
+        textBackgroundLabel = findViewById(R.id.textBackgroundLabel)
+        textBackgroundPicker = findViewById(R.id.textBackgroundPicker)
+        defaultContentBackground = editTextContent.background
+
+        setupTextBackgroundPicker()
+        editTextContent.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                applyTextBackgroundPreview()
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
 
         fetchCommunities()
 
@@ -130,6 +153,7 @@ class PostActivity : AppCompatActivity() {
             }
 
             updatePreview()
+            applyTextBackgroundPreview()
         }
     }
 
@@ -153,6 +177,58 @@ class PostActivity : AppCompatActivity() {
                 audioPreview.visibility = View.VISIBLE
                 audioPreview.text = "🎵 Audio selected: ${audioUri?.lastPathSegment}"
             }
+        }
+    }
+
+    private fun setupTextBackgroundPicker() {
+        val density = resources.displayMetrics.density
+        textBackgroundPicker.removeAllViews()
+
+        TextPostBackgrounds.options.forEach { color ->
+            val swatch = TextView(this).apply {
+                text = if (color.isBlank()) "Aa" else ""
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(Color.BLACK)
+                background = TextPostBackgrounds.swatchDrawable(
+                    color,
+                    color == selectedTextBackgroundColor,
+                    density
+                )
+                contentDescription = if (color.isBlank()) "No text background" else "Text background $color"
+                setOnClickListener {
+                    selectedTextBackgroundColor = color
+                    setupTextBackgroundPicker()
+                    applyTextBackgroundPreview()
+                }
+            }
+
+            val size = (42f * density).toInt()
+            val margin = (8f * density).toInt()
+            swatch.layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                marginEnd = margin
+            }
+            textBackgroundPicker.addView(swatch)
+        }
+    }
+
+    private fun applyTextBackgroundPreview() {
+        val hasMedia = imageUri != null || videoUri != null || audioUri != null
+        val hasText = editTextContent.text?.toString()?.trim()?.isNotEmpty() == true
+        val shouldShowBackground = !hasMedia && hasText && selectedTextBackgroundColor.isNotBlank()
+
+        textBackgroundLabel.alpha = if (hasMedia) 0.45f else 1f
+        textBackgroundPicker.alpha = if (hasMedia) 0.45f else 1f
+        textBackgroundPicker.isEnabled = !hasMedia
+
+        if (shouldShowBackground) {
+            TextPostBackgrounds.apply(editTextContent, selectedTextBackgroundColor, centered = false)
+        } else {
+            editTextContent.background = defaultContentBackground
+            editTextContent.setTextColor(Color.BLACK)
+            editTextContent.setTypeface(Typeface.DEFAULT, Typeface.NORMAL)
+            editTextContent.gravity = Gravity.TOP
         }
     }
 
@@ -202,11 +278,21 @@ class PostActivity : AppCompatActivity() {
                 return
             }
         }
+        val textBackgroundColor = if (uriToUpload == null && content.isNotBlank()) {
+            TextPostBackgrounds.normalize(selectedTextBackgroundColor)
+        } else {
+            ""
+        }
+        val textBackgroundColorBody = RequestBody.create(
+            "text/plain".toMediaTypeOrNull(),
+            textBackgroundColor
+        )
 
         ApiClient.apiService.createPost(
             textBody,
             communityIdBody,
             communityNameBody,
+            textBackgroundColorBody,
             mediaPart
         ).enqueue(object : Callback<CreatePostResponse> {
             override fun onResponse(

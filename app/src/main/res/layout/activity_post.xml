@@ -34,6 +34,30 @@
                 android:inputType="textMultiLine"
                 android:lines="4" />
 
+            <TextView
+                android:id="@+id/textBackgroundLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Text background"
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <HorizontalScrollView
+                android:id="@+id/textBackgroundScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/textBackgroundPicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
             <!-- ✅ COMMUNITY SELECTION FIELD -->
             <TextView
                 android:id="@+id/tvCommunityLabel"

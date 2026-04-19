@@ -38,6 +38,12 @@ const postSchema = new Schema({
     default: ''
   },
 
+  textBackgroundColor: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+
   // Media fields
   imageUrl: { type: String, default: '' },
   videoUrl: { type: String, default: '' },

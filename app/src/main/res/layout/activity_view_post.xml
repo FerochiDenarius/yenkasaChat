@@ -125,6 +125,19 @@
                         android:textSize="14sp"
                         android:layout_marginTop="6dp" />
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textBackgroundPost"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:padding="24dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="Text-only post with a color background"
+                    tools:visibility="visible" />
             </FrameLayout>
 
             <!-- Divider -->

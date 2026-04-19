@@ -92,7 +92,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:background="@android:color/black">
+        android:background="@android:color/transparent"
+        android:visibility="gone">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -161,6 +162,23 @@
                     android:textColor="@color/black"
                     android:layout_marginTop="8dp" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/textPostBackgroundContent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintDimensionRatio="1:1"
+                android:gravity="center"
+                android:padding="24dp"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="Text-only post with a color background" />
 
             <!-- PLAY BUTTON -->
             <ImageButton

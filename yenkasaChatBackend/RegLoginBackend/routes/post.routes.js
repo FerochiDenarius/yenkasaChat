@@ -37,6 +37,11 @@ function countryQuery(value) {
   return { country: new RegExp(`^${country}$`, "i") };
 }
 
+function normalizeTextBackgroundColor(value) {
+  const color = (value || "").toString().trim();
+  return /^#[0-9A-Fa-f]{6}$/.test(color) ? color.toUpperCase() : "";
+}
+
 /* ---------------------------------------------------
  * ONE-WAY BLOCK CHECK (Instagram style)
  * userA = viewer or actor
@@ -114,7 +119,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       visibility,
       mentions,
       communityName,
-      postType
+      postType,
+      textBackgroundColor
     } = req.body;
 
     const userId = req.user.userId || req.user.id;
@@ -230,11 +236,15 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     }
 
     const postStatus = isAutoPublished ? "approved" : "pending";
+    const textOnlyBackgroundColor = !file && text?.trim()
+      ? normalizeTextBackgroundColor(textBackgroundColor)
+      : "";
 
     const post = await Post.create({
       userId,
       communityId: selectedCommunity._id,
       text: text?.trim() || "",
+      textBackgroundColor: textOnlyBackgroundColor,
       imageUrl,
       videoUrl,
       audioUrl,
@@ -256,6 +266,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
         post: post._id,
         user: userId,
         caption: post.text,
+        textBackgroundColor: post.textBackgroundColor,
         imageUrl: post.imageUrl,
         videoUrl: post.videoUrl,
         audioUrl: post.audioUrl,

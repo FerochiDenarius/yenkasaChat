@@ -16,6 +16,7 @@ const PostApprovalSchema = new mongoose.Schema({
   },
 
   caption: { type: String },
+  textBackgroundColor: { type: String, default: "" },
   imageUrl: { type: String },
   videoUrl: { type: String },
   audioUrl: { type: String },

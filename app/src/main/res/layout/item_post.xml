@@ -75,6 +75,18 @@
             android:textColor="@color/gray"
             android:textSize="11sp" />
 
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabFollow"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:contentDescription="Follow user"
+            app:backgroundTint="@color/primary"
+            app:fabCustomSize="36dp"
+            app:maxImageSize="18dp"
+            app:srcCompat="@drawable/ic_person_add"
+            app:tint="@android:color/white" />
+
         <ImageButton
             android:id="@+id/btnMoreOptions"
             android:layout_width="wrap_content"
@@ -101,7 +113,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:background="@android:color/black">
+        android:background="@android:color/transparent"
+        android:visibility="gone">
 
         <!-- 16:9 Aspect Ratio Wrapper -->
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -252,6 +265,24 @@
 
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/textPostBackgroundContent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:gravity="center"
+                android:padding="24dp"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:text="Text-only post with a color background"
+                tools:visibility="visible" />
+
             <!-- Center Play Button -->
             <ImageButton
                 android:id="@+id/btnPlayPause"
@@ -266,19 +297,6 @@
                 android:src="@drawable/ic_play_circle"
                 app:tint="@android:color/white"
                 android:visibility="gone" />
-
-            <!-- Follow FAB (bottom-right corner) -->
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabFollow"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                android:layout_margin="12dp"
-                app:backgroundTint="@color/primary"
-                app:srcCompat="@drawable/ic_person_add"
-                app:tint="@android:color/white"
-                android:contentDescription="Follow user" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

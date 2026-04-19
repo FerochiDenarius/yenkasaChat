@@ -16,6 +16,7 @@ data class Post(
     val imageUrl: String? = null,
     val videoUrl: String? = null,
     val audioUrl: String? = null,
+    val textBackgroundColor: String? = null,
     val mentions: List<String>? = null,
 
     // Engagement
@@ -60,6 +61,7 @@ data class Post(
                 imageUrl = json.optString("imageUrl", null),
                 videoUrl = json.optString("videoUrl", null),
                 audioUrl = json.optString("audioUrl", null),
+                textBackgroundColor = json.optString("textBackgroundColor", null),
                 mentions = json.optJSONArray("mentions")?.let { arr ->
                     List(arr.length()) { i -> arr.optString(i) }
                 },

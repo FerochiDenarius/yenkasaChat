@@ -178,4 +178,69 @@ appVerificationSchema.methods.updateAccountAge = async function (createdAt) {
   await this.save();
 };
 
+appVerificationSchema.methods.advancePhase = async function () {
+  const now = new Date();
+  const currentPhase = this.currentPhase;
+
+  this.phaseHistory.push({
+    phase: currentPhase,
+    startedAt: this.phaseStartDate || null,
+    endedAt: now,
+    completed: true
+  });
+
+  this.currentPhase = Math.min(currentPhase + 1, 6);
+  this.phaseStartDate = now;
+  this.phaseEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  this.hasVerifiedBanner = this.currentPhase >= 6;
+
+  await this.save();
+  return this;
+};
+
+appVerificationSchema.methods.checkPhaseAdvancement = async function () {
+  const progress = this.checkRequirementsMet();
+  const now = new Date();
+
+  if (!progress.allMet) {
+    return {
+      advanced: false,
+      reason: "requirements_not_met",
+      currentPhase: this.currentPhase,
+      progress
+    };
+  }
+
+  if (now < this.phaseEndDate) {
+    return {
+      advanced: false,
+      reason: "phase_time_remaining",
+      currentPhase: this.currentPhase,
+      daysRemaining: Math.ceil((this.phaseEndDate - now) / (1000 * 60 * 60 * 24)),
+      progress
+    };
+  }
+
+  if (this.currentPhase >= 6) {
+    this.hasVerifiedBanner = true;
+    await this.save();
+    return {
+      advanced: false,
+      reason: "max_phase_reached",
+      currentPhase: this.currentPhase,
+      hasVerifiedBanner: this.hasVerifiedBanner,
+      progress
+    };
+  }
+
+  await this.advancePhase();
+
+  return {
+    advanced: true,
+    currentPhase: this.currentPhase,
+    hasVerifiedBanner: this.hasVerifiedBanner,
+    nextRequirements: this.getCurrentRequirements()
+  };
+};
+
 module.exports = mongoose.model("AppVerification", appVerificationSchema);

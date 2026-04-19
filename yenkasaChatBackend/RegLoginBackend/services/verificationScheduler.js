@@ -60,13 +60,15 @@ cron.schedule(
         appVer.metrics.postsCreated = lifetime.postsCreated; // correct
         appVer.metrics.totalPostCount = lifetime.postsCreated;
 
-        appVer.metrics.totalFollowers = lifetime.followers;
+        appVer.metrics.totalFollowers = lifetime.totalFollowers || lifetime.followers;
+        appVer.metrics.totalFollowing = lifetime.totalFollowing || 0;
 
         appVer.metrics.totalLikesReceived = lifetime.likesReceived;
         appVer.metrics.maxLikesOnPost = lifetime.maxLikesOnPost;
+        appVer.metrics.totalLikesCount = lifetime.totalLikesCount || 0;
 
         appVer.metrics.totalViewsReceived = lifetime.viewsReceived;
-        appVer.metrics.totalViewsCount = lifetime.viewsReceived;
+        appVer.metrics.totalViewsCount = lifetime.totalViewsCount || 0;
 
         appVer.metrics.totalCommentsReceived = lifetime.commentsReceived;
         appVer.metrics.totalRepliesReceived = lifetime.repliesReceived;
@@ -74,6 +76,7 @@ cron.schedule(
 
         appVer.metrics.totalComments = lifetime.commentsMade; // user-made comments
         appVer.metrics.totalCommentsMade = lifetime.commentsMade;
+        appVer.metrics.totalShares = lifetime.totalShares || 0;
 
         await appVer.save();
 

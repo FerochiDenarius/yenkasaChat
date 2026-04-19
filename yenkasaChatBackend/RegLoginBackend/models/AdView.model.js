@@ -8,6 +8,7 @@ const AdViewSchema = new Schema({
   durationMs: Number,
   fullyWatched: { type: Boolean, default: false },
   rewarded: { type: Boolean, default: false }, // ensures idempotent reward
+  verificationCounted: { type: Boolean, default: false },
   deviceInfo: Schema.Types.Mixed
 });
 

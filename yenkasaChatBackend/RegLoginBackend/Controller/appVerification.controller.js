@@ -2,11 +2,12 @@
 const AppVerification = require("../models/appverification.model");
 const User = require("../models/user.model");
 const auth = require('../middleware/auth');
+const { getUserPerformanceMetrics } = require("../services/userPerformanceMetrics");
 
 
 // ensure all metrics are integers
 function sanitizeMetrics(metrics) {
-  const out = { ...metrics };
+  const out = metrics?.toObject ? metrics.toObject() : { ...(metrics || {}) };
   for (const k of Object.keys(out)) {
     if (typeof out[k] === "number") {
       out[k] = Math.floor(out[k]);
@@ -27,6 +28,39 @@ function formatPhaseHistory(history) {
   }));
 }
 
+async function syncVerificationMetrics(appVerification, user) {
+  if (!appVerification || !user) return appVerification;
+
+  await appVerification.updateAccountAge(user.createdAt);
+
+  const lifetime = await getUserPerformanceMetrics(user._id);
+  const metrics = appVerification.metrics;
+
+  metrics.postsCreated = lifetime.postsCreated || 0;
+  metrics.totalPostCount = lifetime.totalPostCount || lifetime.postsCreated || 0;
+
+  metrics.totalFollowers = lifetime.totalFollowers || lifetime.followers || 0;
+  metrics.totalFollowing = lifetime.totalFollowing || 0;
+
+  metrics.totalLikesReceived = lifetime.totalLikesReceived || lifetime.likesReceived || 0;
+  metrics.maxLikesOnPost = lifetime.maxLikesOnPost || 0;
+  metrics.totalLikesCount = lifetime.totalLikesCount || 0;
+
+  metrics.totalViewsReceived = lifetime.totalViewsReceived || lifetime.viewsReceived || 0;
+  metrics.totalViewsCount = lifetime.totalViewsCount || 0;
+
+  metrics.totalComments = lifetime.totalComments || lifetime.commentsMade || 0;
+  metrics.totalCommentsMade = lifetime.totalCommentsMade || lifetime.commentsMade || 0;
+  metrics.totalCommentsReceived = lifetime.totalCommentsReceived || lifetime.commentsReceived || 0;
+  metrics.totalRepliesReceived = lifetime.totalRepliesReceived || lifetime.repliesReceived || 0;
+  metrics.commentLikesReceived = lifetime.commentLikesReceived || 0;
+  metrics.totalShares = lifetime.totalShares || 0;
+
+  appVerification.metrics = sanitizeMetrics(metrics);
+  await appVerification.save();
+  return appVerification;
+}
+
 // ===============================
 // GET DASHBOARD
 // ===============================
@@ -45,7 +79,7 @@ exports.getDashboard = async (req, res) => {
       await appVerification.save();
     }
 
-    await appVerification.updateAccountAge(user.createdAt);
+    await syncVerificationMetrics(appVerification, user);
 
     const requirements = appVerification.getCurrentRequirements();
     const progress = appVerification.checkRequirementsMet();
@@ -230,7 +264,7 @@ exports.getProgress = async (req, res) => {
       return res.json({ progress: 0, phase: 1 });
     }
 
-    await appVerification.updateAccountAge(user.createdAt);
+    await syncVerificationMetrics(appVerification, user);
 
     const reqs = appVerification.getCurrentRequirements();
     const metrics = sanitizeMetrics(appVerification.metrics);
@@ -282,6 +316,9 @@ exports.checkPhaseAdvancement = async (req, res) => {
       appVerification = new AppVerification({ userId });
       await appVerification.save();
     }
+
+    const user = await User.findById(userId).select("createdAt");
+    await syncVerificationMetrics(appVerification, user);
 
     const result = await appVerification.checkPhaseAdvancement();
 

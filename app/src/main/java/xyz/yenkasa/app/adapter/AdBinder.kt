@@ -28,9 +28,9 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
         // 1️⃣ Track impression ONCE
         holder.itemView.post {
-            if (!trackedImpressions.contains(ad._id)) {
+            if (ad.videoUrl.isNullOrEmpty() && !trackedImpressions.contains(ad._id)) {
                 trackedImpressions.add(ad._id)
-                sendImpression()  // increments adsViewed in backend
+                sendVerificationAdView("in_app_ad")  // increments adsViewed in backend
             }
         }
 
@@ -100,13 +100,16 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
     // ---------------- IMPRESSION ----------------
 
-    private fun sendImpression() {
+    private fun sendVerificationAdView(source: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
-                ApiClient.apiService.trackAdView("Bearer $token")
+                val response = ApiClient.apiService.trackAdView("Bearer $token").execute()
+                if (!response.isSuccessful) {
+                    Log.e("AdBinder", "Failed to track $source ad view: ${response.code()}")
+                }
             } catch (e: Exception) {
-                Log.e("AdBinder", "Failed to track ad view: ${e.message}")
+                Log.e("AdBinder", "Failed to track $source ad view: ${e.message}")
             }
         }
     }
@@ -181,6 +184,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
     // ---------------- ADMOB NATIVE ----------------
 
     private fun loadAdmobNativeAd(holder: AdsViewHolder) {
+        var impressionTracked = false
 
         val adLoader = AdLoader.Builder(context, "ca-app-pub-5051666473627498/1225516323")
             .forNativeAd { nativeAd ->
@@ -203,6 +207,13 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                 holder.nativeAdView.setNativeAd(nativeAd)
             }
             .withAdListener(object : AdListener() {
+                override fun onAdImpression() {
+                    if (!impressionTracked) {
+                        impressionTracked = true
+                        sendVerificationAdView("admob_native")
+                    }
+                }
+
                 override fun onAdFailedToLoad(err: LoadAdError) {
                     Log.e("Ads", "Native ad failed: ${err.message}")
                 }

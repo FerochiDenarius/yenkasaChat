@@ -4,6 +4,7 @@ const Post = require('../models/post.model');        // posts collection
 const Comment = require('../models/comment.model');  // comments collection
 const View = require('../models/view.model');        // optional: views collection (if exists)
 const User = require('../models/user.model');        // users collection
+const Follow = require('../models/follow.model');
 
 // Helper: convert string id to ObjectId
 const toId = id => {
@@ -76,6 +77,15 @@ async function computeUserPerformanceMetrics(userIdInput) {
   // 3) Count comments made by the user
   const commentsMade = await Comment.countDocuments({ userId });
 
+  // Views user has made
+  let totalViewsCount = 0;
+  try {
+    totalViewsCount = await View.countDocuments({ userId });
+  } catch (_) {}
+
+  // Likes user has made on posts
+  const totalLikesCount = await Post.countDocuments({ likes: userId });
+
   // 4) Views: prefer aggregated 'views' collection if you track individual views
   let totalViewsReceived = postSums.totalViewsFromPostField;
   if (postIds.length > 0 && await View.collection.countDocuments() > 0) {
@@ -89,17 +99,31 @@ async function computeUserPerformanceMetrics(userIdInput) {
   // 5) Followers: use user.followersCount if present, else count followers array
   const userDoc = await User.findById(userId).select('followersCount followers').lean();
   const totalFollowers = userDoc ? (userDoc.followersCount || (userDoc.followers && userDoc.followers.length) || 0) : 0;
+  const totalFollowersFromFollow = await Follow.getFollowersCount(userId);
+  const totalFollowing = await Follow.getFollowingCount(userId);
+  const followers = Math.max(totalFollowers, totalFollowersFromFollow || 0);
 
   return {
-    followers: totalFollowers,
+    followers,
+    totalFollowers: followers,
+    totalFollowing,
     postsCreated: postSums.postsCreated || 0,
+    totalPostCount: postSums.postsCreated || 0,
     likesReceived: postSums.totalLikesReceived || 0,
+    totalLikesReceived: postSums.totalLikesReceived || 0,
     maxLikesOnPost: postSums.maxLikesOnPost || 0,
     viewsReceived: totalViewsReceived || 0,
+    totalViewsReceived: totalViewsReceived || 0,
+    totalViewsCount,
     commentsReceived: postSums.totalCommentsReceived || 0,
+    totalCommentsReceived: postSums.totalCommentsReceived || 0,
     repliesReceived: totalRepliesReceived || 0,
+    totalRepliesReceived: totalRepliesReceived || 0,
     commentLikesReceived: commentLikesReceived || 0,
     commentsMade: commentsMade || 0,
+    totalComments: commentsMade || 0,
+    totalCommentsMade: commentsMade || 0,
+    totalLikesCount,
     totalShares: postSums.totalShares || 0,
     coinsEarned: postSums.coinsEarned || 0
   };

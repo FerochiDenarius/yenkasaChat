@@ -1,7 +1,6 @@
 package xyz.yenkasa.app.ui
 
 import android.app.AlertDialog
-import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
@@ -50,11 +49,6 @@ class FeedFragment : Fragment() {
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
-
-    companion object {
-        private const val COMMUNITY_SELECTION_PREFS = "feed_community_selection"
-        private const val COMMUNITY_SELECTION_KEY_PREFIX = "selected_community_ids_"
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -302,8 +296,18 @@ class FeedFragment : Fragment() {
                     val savedSelectionIds = getSavedSelectedCommunityIds()
                     applySelectedCommunityIds(savedSelectionIds ?: defaultSelectionIds)
 
-                    if (selectedCommunities.isEmpty() && savedSelectionIds == null && allCommunities.isNotEmpty()) {
-                        selectedCommunities.add(allCommunities.first())
+                    if (selectedCommunities.isEmpty()) {
+                        when {
+                            savedSelectionIds == null && allCommunities.isNotEmpty() -> {
+                                selectedCommunities.add(allCommunities.first())
+                            }
+                            savedSelectionIds?.isNotEmpty() == true -> {
+                                applySelectedCommunityIds(defaultSelectionIds)
+                                if (selectedCommunities.isEmpty() && allCommunities.isNotEmpty()) {
+                                    selectedCommunities.add(allCommunities.first())
+                                }
+                            }
+                        }
                     }
 
                     updateSelectedCommunitiesUI()
@@ -392,25 +396,12 @@ class FeedFragment : Fragment() {
     }
 
     private fun saveSelectedCommunities() {
-        val key = communitySelectionPrefsKey() ?: return
         val selectedIds = selectedCommunities.mapNotNull { it.id }.toSet()
-        requireContext()
-            .getSharedPreferences(COMMUNITY_SELECTION_PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putStringSet(key, selectedIds)
-            .apply()
+        TokenManager.saveSelectedCommunityIds(requireContext(), userId, selectedIds)
     }
 
     private fun getSavedSelectedCommunityIds(): Set<String>? {
-        val key = communitySelectionPrefsKey() ?: return null
-        val prefs = requireContext().getSharedPreferences(COMMUNITY_SELECTION_PREFS, Context.MODE_PRIVATE)
-        if (!prefs.contains(key)) return null
-        return prefs.getStringSet(key, emptySet())?.toSet() ?: emptySet()
-    }
-
-    private fun communitySelectionPrefsKey(): String? {
-        val id = userId?.takeIf { it.isNotBlank() } ?: return null
-        return "$COMMUNITY_SELECTION_KEY_PREFIX$id"
+        return TokenManager.getSelectedCommunityIds(requireContext(), userId)
     }
 
     private fun updateSelectedCommunitiesUI() {

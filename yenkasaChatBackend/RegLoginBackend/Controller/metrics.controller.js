@@ -1,10 +1,8 @@
 // Controller/metrics.controller.js
-const mongoose = require('mongoose');
 const Post = require('../models/post.model');        // posts collection
 const Comment = require('../models/comment.model');  // comments collection
 const View = require('../models/view.model');        // optional: views collection (if exists)
-const User = require('../models/user.model');        // users collection
-const Follow = require('../models/follow.model');
+const performanceMetricsService = require('../services/userPerformanceMetrics');
 
 
 // Helper: convert string id to ObjectId
@@ -15,92 +13,7 @@ const toId = (id) => new ObjectId(id);
 // GET /api/metrics/:userId/performance-metrics
 exports.getUserPerformanceMetrics = async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const objectId = toId(userId);
-
-    // ==============================
-    // 1) RECEIVED METRICS (from user's posts)
-    // ==============================
-    const posts = await Post.find({ userId: objectId })
-      .select("_id likeCount commentCount shareCount viewCount")
-      .lean();
-
-    const postIds = posts.map(p => p._id);
-    const totalPostCount = posts.length;
-
-    // Summed from Post model
-    const totalLikesReceived = posts.reduce((s, p) => s + (p.likeCount || 0), 0);
-    const totalCommentsReceived = posts.reduce((s, p) => s + (p.commentCount || 0), 0);
-    const totalShares = posts.reduce((s, p) => s + (p.shareCount || 0), 0);
-    const totalViewsReceived = posts.reduce((s, p) => s + (p.viewCount || 0), 0);
-
-    // Comments + replies + comment likes
-    let totalRepliesReceived = 0;
-    let commentLikesReceived = 0;
-    if (postIds.length > 0) {
-      const commentAgg = await Comment.aggregate([
-        { $match: { postId: { $in: postIds } } },
-        {
-          $group: {
-            _id: null,
-            totalReplies: { $sum: "$replyCount" },
-            commentLikes: { $sum: "$likeCount" }
-          }
-        }
-      ]);
-
-      if (commentAgg.length > 0) {
-        totalRepliesReceived = commentAgg[0].totalReplies || 0;
-        commentLikesReceived = commentAgg[0].commentLikes || 0;
-      }
-    }
-
-    // ==============================
-    // 2) ACTIVITY METRICS (what user did)
-    // ==============================
-
-    // Views user has made
-let totalViewsCount = 0;
-try {
-  totalViewsCount = await View.countDocuments({ userId: objectId });
-} catch (_) {}
-
-    // Comments user made
-    const totalCommentsMade = await Comment.countDocuments({ userId: objectId });
-
-    // Likes user has made (posts where userId exists in likes[])
-    const totalLikesCount = await Post.countDocuments({ likes: objectId });
-
-    // Posts user has created
-    const postsCreated = totalPostCount;
-
-    // ==============================
-    // 3) SOCIAL METRICS
-    // ==============================
-    const totalFollowers = await Follow.getFollowersCount(objectId);
-    const totalFollowing = await Follow.getFollowingCount(objectId);
-
-    // ==============================
-    // 4) Build response (matches Android model)
-    // ==============================
-    const response = {
-      // ACTIVITY
-      postsCreated,
-      totalPostCount,
-      totalViewsCount,
-      totalLikesCount,
-      totalCommentsMade,
-      totalFollowers,
-      totalFollowing,
-
-      // RECEIVED
-      totalViewsReceived,
-      totalLikesReceived,
-      totalCommentsReceived,
-      totalRepliesReceived,
-      commentLikesReceived,
-      totalShares
-    };
+    const response = await performanceMetricsService.getUserPerformanceMetrics(req.params.userId);
 
     return res.json({
       success: true,

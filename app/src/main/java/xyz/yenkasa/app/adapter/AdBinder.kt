@@ -25,10 +25,12 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
     private val trackedImpressions = mutableSetOf<String>()  // avoid duplicate views
 
     override fun bind(holder: AdsViewHolder, ad: AdModel) {
+        val isAdMobSlot = ad.sponsorName.equals("AdMob", ignoreCase = true) ||
+            ad._id.startsWith("local-ad")
 
         // 1️⃣ Track impression ONCE
         holder.itemView.post {
-            if (ad.videoUrl.isNullOrEmpty() && !trackedImpressions.contains(ad._id)) {
+            if (!isAdMobSlot && ad.videoUrl.isNullOrEmpty() && !trackedImpressions.contains(ad._id)) {
                 trackedImpressions.add(ad._id)
                 sendVerificationAdView("in_app_ad")  // increments adsViewed in backend
             }
@@ -51,7 +53,9 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         holder.adPlayerView.visibility = View.GONE
         holder.adPlayButton.visibility = View.GONE
         holder.adCTAButton.visibility = View.GONE
-        holder.adWatchRewardButton.visibility = View.VISIBLE
+        holder.adWatchRewardButton.visibility = View.GONE
+        holder.admobNativeContainer.visibility = View.GONE
+        holder.nativeAdView.visibility = View.GONE
 
         // 3️⃣ Image ad
         if (!ad.imageUrl.isNullOrEmpty()) {
@@ -65,6 +69,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         if (!ad.videoUrl.isNullOrEmpty()) {
             holder.adVideoThumbnail.visibility = View.VISIBLE
             holder.adPlayButton.visibility = View.VISIBLE
+            holder.adWatchRewardButton.visibility = View.VISIBLE
 
             Glide.with(context)
                 .load(ad.thumbnailUrl ?: R.drawable.placeholder_image)
@@ -94,8 +99,10 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             }
         }
 
-        // 7️⃣ Load AdMob native ad
-        loadAdmobNativeAd(holder)
+        // 7️⃣ Load AdMob native ad only for Google ad slots.
+        if (isAdMobSlot) {
+            loadAdmobNativeAd(holder)
+        }
     }
 
     // ---------------- IMPRESSION ----------------

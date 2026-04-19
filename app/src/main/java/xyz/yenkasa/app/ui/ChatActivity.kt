@@ -112,7 +112,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val label: String,
         val colors: IntArray?,
         val orientation: GradientDrawable.Orientation = GradientDrawable.Orientation.TL_BR,
-        val solidColor: Int? = null
+        val solidColor: Int? = null,
+        val drawableRes: Int? = null
     )
 
     private val chatThemePresets = listOf(
@@ -120,6 +121,42 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             "default",
             "Yenkasa default",
             null
+        ),
+        ChatThemePreset(
+            "africa_skyline_dark",
+            "Africa skyline dark",
+            null,
+            drawableRes = R.drawable.chat_theme_africa_skyline_dark
+        ),
+        ChatThemePreset(
+            "softotech_light",
+            "Soft-O-Tech light",
+            null,
+            drawableRes = R.drawable.chat_theme_softotech_light
+        ),
+        ChatThemePreset(
+            "yenkasa_cream",
+            "Yenkasa cream",
+            null,
+            drawableRes = R.drawable.chat_theme_yenkasa_cream
+        ),
+        ChatThemePreset(
+            "africa_network_blue",
+            "Africa network blue",
+            null,
+            drawableRes = R.drawable.chat_theme_africa_network_blue
+        ),
+        ChatThemePreset(
+            "ykc_gold_dark",
+            "YKC gold dark",
+            null,
+            drawableRes = R.drawable.chat_theme_ykc_gold_dark
+        ),
+        ChatThemePreset(
+            "savanna_green",
+            "Savanna green",
+            null,
+            drawableRes = R.drawable.chat_theme_savanna_green
         ),
         ChatThemePreset(
             "whatsapp_light",
@@ -523,11 +560,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
-        val drawable = if (preset.colors != null) {
-            GradientDrawable(preset.orientation, preset.colors)
-        } else {
-            GradientDrawable().apply {
-                setColor(preset.solidColor ?: Color.WHITE)
+        val drawable = when {
+            preset.drawableRes != null -> {
+                ContextCompat.getDrawable(this, preset.drawableRes)
+            }
+            preset.colors != null -> {
+                GradientDrawable(preset.orientation, preset.colors)
+            }
+            else -> {
+                GradientDrawable().apply {
+                    setColor(preset.solidColor ?: Color.WHITE)
+                }
             }
         }
 

@@ -30,17 +30,17 @@
 
 
     <color name="gray_dark">#555555</color>
-    <color name="primary">#3B82F6</color>
+    <color name="primary">#1A1A1A</color>
 
     <color name="gray">#9E9E9E</color>
     <color name="gray_light">#E0E0E0</color>
 
 
     <!-- 🛠️ Add these -->
-    <color name="colorPrimary">#6200EE</color>
-    <color name="colorPrimaryVariant">#3700B3</color>
-    <color name="colorSecondary">#03DAC6</color>
-    <color name="colorSecondaryVariant">#018786</color>
+    <color name="colorPrimary">#1A1A1A</color>
+    <color name="colorPrimaryVariant">#1A1A1A</color>
+    <color name="colorSecondary">#FFD54F</color>
+    <color name="colorSecondaryVariant">#E5B326</color>
     <color name="blue">#2196F3</color>
     <color name="light_gray">#F5F5F5</color>
     <color name="primary_color">#FFEB3B</color>
@@ -52,6 +52,8 @@
         <color name="inputLabel">#777777</color>
         <color name="divider">#EDEDED</color>
         <color name="rowBg">#FFFFFF</color>
+        <color name="yenkasa_dialog_action">#1A1A1A</color>
+        <color name="yenkasa_dialog_on_surface">#1A1A1A</color>
 
 
 
@@ -75,6 +77,5 @@
 
 
 </resources>
-
 
 

@@ -40,8 +40,8 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="Approve"
-            android:backgroundTint="@color/green"
-            android:textColor="@android:color/white" />
+            android:backgroundTint="@color/yenkasa_black"
+            android:textColor="@color/yenkasa_amber" />
 
         <Button
             android:id="@+id/btnReject"

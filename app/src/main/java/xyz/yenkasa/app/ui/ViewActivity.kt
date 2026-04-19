@@ -191,7 +191,9 @@ class ViewActivity : AppCompatActivity() {
                     if (response.isSuccessful && body != null) {
                         fabFollow.setImageResource(R.drawable.ic_check)
                         fabFollow.backgroundTintList =
-                            ColorStateList.valueOf(ContextCompat.getColor(this@ViewActivity, R.color.green))
+                            ColorStateList.valueOf(ContextCompat.getColor(this@ViewActivity, R.color.yenkasa_black))
+                        fabFollow.imageTintList =
+                            ColorStateList.valueOf(ContextCompat.getColor(this@ViewActivity, R.color.yenkasa_amber))
                         fabFollow.isEnabled = false
                         Toast.makeText(this@ViewActivity, body.message, Toast.LENGTH_SHORT).show()
                     } else {

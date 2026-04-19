@@ -649,7 +649,9 @@ class PostAdapter(
                     if (response.isSuccessful && body != null) {
                         followButton.setImageResource(R.drawable.ic_check)
                         followButton.backgroundTintList =
-                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.green))
+                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.yenkasa_black))
+                        followButton.imageTintList =
+                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.yenkasa_amber))
                         followButton.isEnabled = false
                         Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
                     } else {

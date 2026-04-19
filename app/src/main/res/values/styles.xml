@@ -3,25 +3,28 @@
 
     <!-- Base application theme -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Primary branding color -->
-        <item name="colorOnPrimary">@color/white</item>
+        <!-- Yenkasa brand colors. These also drive AlertDialog action text. -->
+        <item name="colorPrimary">@color/yenkasa_black</item>
+        <item name="colorOnPrimary">@color/yenkasa_amber</item>
+        <item name="colorPrimaryVariant">@color/yenkasa_black</item>
+        <item name="colorSecondary">@color/yenkasa_amber</item>
+        <item name="colorOnSecondary">@color/yenkasa_black</item>
+        <item name="colorAccent">@color/yenkasa_black</item>
+        <item name="android:colorAccent">@color/yenkasa_black</item>
+        <item name="colorSurface">@color/background_light</item>
+        <item name="colorOnSurface">@color/yenkasa_black</item>
         <item name="android:textCursorDrawable">@drawable/cursor_color</item>
 
 
         <!-- Backgrounds -->
         <item name="android:windowBackground">?attr/colorSurface</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:statusBarColor">@color/yenkasa_black</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
 
-        <!-- ❗ Prevent Material3/Theme from auto-tinting your button drawables -->
-        <!-- Setting colorPrimary/Secondary/Accent to transparent avoids default M3 tint fallback -->
-        <item name="colorPrimary">@android:color/transparent</item>
-        <item name="colorSecondary">@android:color/transparent</item>
-        <item name="colorAccent">@android:color/transparent</item>
-        <item name="android:colorAccent">@android:color/transparent</item>
-
-        <!-- Use the NoTintButton style for materialButtonStyle to stop automatic tinting -->
-        <item name="materialButtonStyle">@style/NoTintButton</item>
+        <item name="materialButtonStyle">@style/YenkasaButton</item>
+        <item name="android:buttonStyle">@style/YenkasaFrameworkButton</item>
+        <item name="alertDialogTheme">@style/YenkasaAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/YenkasaAlertDialog</item>
     </style>
 
     <!-- Transparent activity theme (unchanged) -->
@@ -106,6 +109,20 @@
         <item name="backgroundTint">@null</item>
         <item name="android:backgroundTint">@null</item>
         <!-- keep default paddings/shape from Material if you want; we only remove the tint -->
+    </style>
+
+    <style name="YenkasaAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorPrimary">@color/yenkasa_dialog_action</item>
+        <item name="colorOnSurface">@color/yenkasa_dialog_on_surface</item>
+        <item name="buttonBarPositiveButtonStyle">@style/YenkasaDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/YenkasaDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/YenkasaDialogButton</item>
+    </style>
+
+    <style name="YenkasaDialogButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/yenkasa_dialog_action</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:backgroundTint">@android:color/transparent</item>
     </style>
 
 

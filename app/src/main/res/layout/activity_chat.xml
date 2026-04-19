@@ -29,7 +29,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@drawable/ic_arrow_back"
-                app:tint="@android:color/white"
+                app:tint="@color/yenkasa_black"
                 android:contentDescription="Back"
                 android:padding="12dp"
                 app:layout_constraintStart_toStartOf="parent"
@@ -56,7 +56,7 @@
                 android:layout_marginStart="12dp"
                 android:layout_marginEnd="8dp"
                 tools:text="Receiver Name"
-                android:textColor="@android:color/white"
+                android:textColor="@color/yenkasa_black"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
@@ -81,7 +81,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 tools:text="Offline"
-                android:textColor="@android:color/white"
+                android:textColor="@color/yenkasa_black"
                 android:textSize="12sp"
                 app:layout_constraintStart_toEndOf="@id/imageViewStatusIndicator"
                 app:layout_constraintEnd_toEndOf="@id/textViewReceiverName"
@@ -94,7 +94,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@drawable/ic_more_vert"
-                app:tint="@android:color/white"
+                app:tint="@color/yenkasa_black"
                 android:contentDescription="More options"
                 android:padding="12dp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -107,7 +107,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@drawable/ic_videocam"
-                app:tint="@android:color/white"
+                app:tint="@color/yenkasa_black"
                 android:contentDescription="Video call"
                 android:padding="12dp"
                 app:layout_constraintEnd_toStartOf="@id/imageViewCall"
@@ -120,7 +120,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@drawable/ic_call"
-                app:tint="@android:color/white"
+                app:tint="@color/yenkasa_black"
                 android:contentDescription="Call"
                 android:padding="12dp"
                 app:layout_constraintEnd_toStartOf="@id/imageViewMoreOptions"
@@ -203,7 +203,7 @@
                 android:contentDescription="Attach"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
-                app:tint="#128C7E" />
+                app:tint="@color/yenkasa_black" />
 
             <!-- Message EditText -->
             <!-- Message EditText -->
@@ -236,7 +236,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
                 android:layout_marginStart="4dp"
-                app:tint="#128C7E" />
+                app:tint="@color/yenkasa_black" />
 
             <!-- Send Button -->
             <ImageButton
@@ -250,7 +250,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
                 android:layout_marginStart="4dp"
-                app:tint="#128C7E" />
+                app:tint="@color/yenkasa_black" />
 
         </LinearLayout>
     </LinearLayout>
@@ -277,7 +277,7 @@
             android:src="@drawable/ic_image"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Image"
-            app:tint="#128C7E" />
+            app:tint="@color/yenkasa_black" />
 
         <ImageButton
             android:id="@+id/buttonAttachVideo"
@@ -286,7 +286,7 @@
             android:src="@drawable/ic_video"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Video"
-            app:tint="#128C7E" />
+            app:tint="@color/yenkasa_black" />
 
         <ImageButton
             android:id="@+id/buttonAttachCamera"
@@ -295,7 +295,7 @@
             android:src="@drawable/ic_camera"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Camera"
-            app:tint="#128C7E" />
+            app:tint="@color/yenkasa_black" />
 
         <ImageButton
             android:id="@+id/buttonAttachFile"
@@ -304,7 +304,7 @@
             android:src="@drawable/ic_attach_file"
             android:background="@android:color/transparent"
             android:contentDescription="Attach File"
-            app:tint="#128C7E" />
+            app:tint="@color/yenkasa_black" />
 
         <ImageButton
             android:id="@+id/buttonAttachLocation"
@@ -313,7 +313,7 @@
             android:src="@drawable/ic_location"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Location"
-            app:tint="#128C7E" />
+            app:tint="@color/yenkasa_black" />
 
         <ImageButton
             android:id="@+id/buttonAttachContact"
@@ -322,7 +322,7 @@
             android:src="@drawable/ic_contact"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Contact"
-            app:tint="#128C7E" />
+            app:tint="@color/yenkasa_black" />
 
     </LinearLayout>
 

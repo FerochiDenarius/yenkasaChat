@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="yenkasa_dialog_action">#FFD54F</color>
+    <color name="yenkasa_dialog_on_surface">#EDEDED</color>
+</resources>

@@ -187,8 +187,8 @@
                 android:layout_marginTop="16dp"
                 android:src="@drawable/ic_person_add"
                 android:contentDescription="Follow"
-                app:backgroundTint="@color/primary"
-                app:tint="@android:color/white" />
+                app:backgroundTint="@color/yenkasa_black"
+                app:tint="@color/yenkasa_amber" />
 
         </LinearLayout>
     </ScrollView>

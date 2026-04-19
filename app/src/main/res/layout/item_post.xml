@@ -81,11 +81,11 @@
             android:layout_height="36dp"
             android:layout_marginStart="6dp"
             android:contentDescription="Follow user"
-            app:backgroundTint="@color/primary"
+            app:backgroundTint="@color/yenkasa_black"
             app:fabCustomSize="36dp"
             app:maxImageSize="18dp"
             app:srcCompat="@drawable/ic_person_add"
-            app:tint="@android:color/white" />
+            app:tint="@color/yenkasa_amber" />
 
         <ImageButton
             android:id="@+id/btnMoreOptions"

@@ -94,7 +94,7 @@ object CallNotificationHandler {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setOngoing(true)
-                .setColor(Color.parseColor("#25D366"))
+                .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
                 .setAutoCancel(true)
                 .addAction(R.drawable.ic_call, "Accept", acceptPendingIntent)
                 .addAction(R.drawable.ic_call_end, "Reject", rejectPendingIntent)
@@ -205,7 +205,7 @@ object CallNotificationHandler {
             ).apply {
                 description = "Notifications for incoming video/audio calls"
                 enableVibration(true)
-                lightColor = Color.GREEN
+                lightColor = Color.parseColor("#FFD54F")
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
                 if (ringtoneUri != null) {
                     setSound(ringtoneUri, audioAttributes)

@@ -90,7 +90,7 @@ object NotificationHelper {
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
             .setFullScreenIntent(acceptPendingIntent, true)
-            .setColor(Color.parseColor("#25D366"))
+            .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
             .addAction(R.drawable.ic_call, "Accept", acceptPendingIntent)
             .addAction(R.drawable.ic_call_end, "Reject", rejectPendingIntent)
 
@@ -124,7 +124,7 @@ object NotificationHelper {
             ).apply {
                 description = "Notifications for incoming calls"
                 enableVibration(true)
-                lightColor = Color.GREEN
+                lightColor = Color.parseColor("#FFD54F")
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 if (ringtoneUri != null) setSound(ringtoneUri, attributes)
             }
@@ -191,7 +191,7 @@ object NotificationHelper {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setColor(Color.parseColor("#128C7E"))
+            .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
             .setContentIntent(pendingIntent)
 
         if (soundUri != null) builder.setSound(soundUri)
@@ -224,7 +224,7 @@ object NotificationHelper {
             ).apply {
                 description = "Notifications for chat messages"
                 enableLights(true)
-                lightColor = Color.BLUE
+                lightColor = Color.parseColor("#FFD54F")
                 enableVibration(true)
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 if (soundUri != null) setSound(soundUri, attributes)

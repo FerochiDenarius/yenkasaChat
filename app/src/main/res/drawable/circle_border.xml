@@ -8,7 +8,7 @@
     <!-- Soft primary-colored border -->
     <stroke
         android:width="3dp"
-        android:color="@color/purple_500" /> <!-- You can replace with your app’s theme color -->
+        android:color="@color/yenkasa_amber" />
 
     <!-- Adds a bit of spacing so it looks neat -->
     <padding

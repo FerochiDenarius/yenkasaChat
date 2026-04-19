@@ -30,8 +30,16 @@
          ========================= -->
     <style name="YenkasaButton" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/yenkasa_black</item>
+        <item name="android:backgroundTint">@color/yenkasa_black</item>
         <item name="android:textColor">@color/yenkasa_amber</item>
+        <item name="iconTint">@color/yenkasa_amber</item>
         <item name="cornerRadius">10dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="YenkasaFrameworkButton" parent="@android:style/Widget.Material.Button">
+        <item name="android:backgroundTint">@color/yenkasa_black</item>
+        <item name="android:textColor">@color/yenkasa_amber</item>
         <item name="android:textAllCaps">false</item>
     </style>
 

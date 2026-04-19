@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -16,6 +18,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -199,6 +202,25 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     // --- Activity Result Launchers ---
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "image") }
+    }
+
+    private val chatBackgroundImageLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri ?: return@registerForActivityResult
+
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (ex: Exception) {
+            Log.w("ChatActivity", "Could not persist chat background image permission", ex)
+        }
+
+        ChatBackgroundManager.saveBackgroundUri(this, uri)
+        if (applyCustomChatBackground(uri)) {
+            Toast.makeText(this, "Chat background updated.", Toast.LENGTH_SHORT).show()
+        } else {
+            ChatBackgroundManager.clearBackground(this)
+            applyChatBackground("default")
+            Toast.makeText(this, "Could not use that image.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -526,15 +548,27 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun showChatBackgroundPicker() {
-        val labels = chatThemePresets.map { it.label }.toTypedArray()
+        val customImageLabel = "Choose picture from device"
+        val labels = listOf(customImageLabel) + chatThemePresets.map { it.label }
         val currentPreset = ChatBackgroundManager.getPreset(this) ?: "default"
-        val checkedIndex = chatThemePresets.indexOfFirst { it.key == currentPreset }
-            .takeIf { it >= 0 } ?: 0
+        val checkedIndex = if (ChatBackgroundManager.getBackgroundUri(this) != null) {
+            0
+        } else {
+            val presetIndex = chatThemePresets.indexOfFirst { it.key == currentPreset }
+                .takeIf { it >= 0 } ?: 0
+            presetIndex + 1
+        }
 
         AlertDialog.Builder(this)
             .setTitle("Change chat background")
-            .setSingleChoiceItems(labels, checkedIndex) { dialog, which ->
-                val selectedPreset = chatThemePresets[which]
+            .setSingleChoiceItems(labels.toTypedArray(), checkedIndex) { dialog, which ->
+                if (which == 0) {
+                    dialog.dismiss()
+                    chatBackgroundImageLauncher.launch(arrayOf("image/*"))
+                    return@setSingleChoiceItems
+                }
+
+                val selectedPreset = chatThemePresets[which - 1]
                 if (selectedPreset.key == "default") {
                     ChatBackgroundManager.clearBackground(this)
                 } else {
@@ -548,7 +582,31 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun applySavedChatBackground() {
+        ChatBackgroundManager.getBackgroundUri(this)?.let { uri ->
+            if (applyCustomChatBackground(uri)) {
+                return
+            }
+            Log.w("ChatActivity", "Saved custom chat background could not be loaded: $uri")
+            ChatBackgroundManager.clearBackground(this)
+        }
+
         applyChatBackground(ChatBackgroundManager.getPreset(this) ?: "default")
+    }
+
+    private fun applyCustomChatBackground(uri: Uri): Boolean {
+        return try {
+            val bitmap = contentResolver.openInputStream(uri)?.use { input ->
+                BitmapFactory.decodeStream(input)
+            } ?: return false
+
+            chatRootLayout.background = BitmapDrawable(resources, bitmap).apply {
+                gravity = Gravity.FILL
+            }
+            true
+        } catch (ex: Exception) {
+            Log.e("ChatActivity", "Failed to apply custom chat background", ex)
+            false
+        }
     }
 
     private fun applyChatBackground(presetKey: String) {

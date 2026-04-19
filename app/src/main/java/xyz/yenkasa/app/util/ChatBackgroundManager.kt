@@ -10,14 +10,18 @@ object ChatBackgroundManager {
 
     fun saveBackgroundUri(context: Context, uri: Uri) {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        prefs.edit().putString(KEY_CHAT_BG_URI, uri.toString()).apply()
-        prefs.edit().remove(KEY_CHAT_BG_PRESET).apply()
+        prefs.edit()
+            .putString(KEY_CHAT_BG_URI, uri.toString())
+            .remove(KEY_CHAT_BG_PRESET)
+            .apply()
     }
 
     fun savePreset(context: Context, presetName: String) {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        prefs.edit().putString(KEY_CHAT_BG_PRESET, presetName).apply()
-        prefs.edit().remove(KEY_CHAT_BG_URI).apply()
+        prefs.edit()
+            .putString(KEY_CHAT_BG_PRESET, presetName)
+            .remove(KEY_CHAT_BG_URI)
+            .apply()
     }
 
     fun getBackgroundUri(context: Context): Uri? {

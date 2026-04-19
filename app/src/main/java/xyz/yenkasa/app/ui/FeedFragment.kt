@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui
 
 import android.app.AlertDialog
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
@@ -49,6 +50,11 @@ class FeedFragment : Fragment() {
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
+
+    companion object {
+        private const val COMMUNITY_SELECTION_PREFS = "feed_community_selection"
+        private const val COMMUNITY_SELECTION_KEY_PREFIX = "selected_community_ids_"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -289,10 +295,14 @@ class FeedFragment : Fragment() {
                     val joined = response.body()!!.communities
                     selectedCommunities.clear()
 
-                    primary?.let { selectedCommunities.add(it) }
-                    selectedCommunities.addAll(joined)
+                    val defaultSelectionIds = mutableSetOf<String>()
+                    primary?.id?.let { defaultSelectionIds.add(it) }
+                    defaultSelectionIds.addAll(joined.mapNotNull { it.id })
 
-                    if (selectedCommunities.isEmpty() && allCommunities.isNotEmpty()) {
+                    val savedSelectionIds = getSavedSelectedCommunityIds()
+                    applySelectedCommunityIds(savedSelectionIds ?: defaultSelectionIds)
+
+                    if (selectedCommunities.isEmpty() && savedSelectionIds == null && allCommunities.isNotEmpty()) {
                         selectedCommunities.add(allCommunities.first())
                     }
 
@@ -332,19 +342,22 @@ class FeedFragment : Fragment() {
                 val community = allCommunities[which]
                 val communityId = community.id
 
-                if (isChecked) {
-                    if (communityId == null || selectedCommunities.none { it.id == communityId }) {
-                        selectedCommunities.add(community)
+                if (!communityId.isNullOrBlank()) {
+                    if (isChecked) {
+                        selectedIds.add(communityId)
+                    } else {
+                        selectedIds.remove(communityId)
                     }
-                } else {
-                    selectedCommunities.removeAll { it.id == communityId }
                 }
             }
             .setPositiveButton("OK") { dialog, _ ->
+                applySelectedCommunityIds(selectedIds)
+                saveSelectedCommunities()
                 updateSelectedCommunitiesUI()
                 loadFeed()
                 dialog.dismiss()
             }
+            .setNeutralButton("Select all", null)
             .setNegativeButton("Cancel", null)
             .create()
 
@@ -354,10 +367,50 @@ class FeedFragment : Fragment() {
 
             dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.setTextColor(actionColor)
             dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.setTextColor(cancelColor)
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL)?.setTextColor(actionColor)
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL)?.setOnClickListener {
+                selectedIds.clear()
+                allCommunities.forEachIndexed { index, community ->
+                    community.id?.let { selectedIds.add(it) }
+                    dialog.listView?.setItemChecked(index, true)
+                }
+            }
             dialog.listView?.isVerticalScrollBarEnabled = true
         }
 
         dialog.show()
+    }
+
+    private fun applySelectedCommunityIds(selectedIds: Set<String>) {
+        selectedCommunities.clear()
+        selectedCommunities.addAll(
+            allCommunities.filter { community ->
+                val communityId = community.id
+                communityId != null && selectedIds.contains(communityId)
+            }
+        )
+    }
+
+    private fun saveSelectedCommunities() {
+        val key = communitySelectionPrefsKey() ?: return
+        val selectedIds = selectedCommunities.mapNotNull { it.id }.toSet()
+        requireContext()
+            .getSharedPreferences(COMMUNITY_SELECTION_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putStringSet(key, selectedIds)
+            .apply()
+    }
+
+    private fun getSavedSelectedCommunityIds(): Set<String>? {
+        val key = communitySelectionPrefsKey() ?: return null
+        val prefs = requireContext().getSharedPreferences(COMMUNITY_SELECTION_PREFS, Context.MODE_PRIVATE)
+        if (!prefs.contains(key)) return null
+        return prefs.getStringSet(key, emptySet())?.toSet() ?: emptySet()
+    }
+
+    private fun communitySelectionPrefsKey(): String? {
+        val id = userId?.takeIf { it.isNotBlank() } ?: return null
+        return "$COMMUNITY_SELECTION_KEY_PREFIX$id"
     }
 
     private fun updateSelectedCommunitiesUI() {
@@ -383,6 +436,7 @@ class FeedFragment : Fragment() {
             feedAdapter.updateItems(mixedList)
 
             emptyView.visibility = View.VISIBLE
+            isLoading = false
             showLoading(false)
             return
         }

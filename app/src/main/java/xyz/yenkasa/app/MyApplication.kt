@@ -29,6 +29,7 @@ import xyz.yenkasa.app.ui.CommentsActivity
 import xyz.yenkasa.app.ui.IncomingCallActivity
 import xyz.yenkasa.app.ui.MainActivity
 import xyz.yenkasa.app.ui.UserProfileActivity
+import xyz.yenkasa.app.util.CallPayloadUtils
 
 
 class MyApplication : Application(), OSSubscriptionObserver {
@@ -234,6 +235,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
     private fun isCallNotification(data: JSONObject?): Boolean {
         if (data == null) return false
+        if (CallPayloadUtils.isDataCall(data)) return false
         val targetType = data.optString("targetType", "")
         val type = data.optString("type", "")
         return targetType.equals("call", ignoreCase = true) ||
@@ -265,11 +267,13 @@ class MyApplication : Application(), OSSubscriptionObserver {
         }
         val roomUrl = data?.optString("roomUrl", "").orEmpty()
         val token = data?.optString("token", data.optString("roomToken", "")).orEmpty()
+        val callType = data?.optString("callType", if (isVideo) "video" else "audio") ?: if (isVideo) "video" else "audio"
 
         return Intent(this, IncomingCallActivity::class.java).apply {
             putExtra("CALLER_ID", callerId)
             putExtra("CALLER_NAME", callerName)
             putExtra("IS_VIDEO_CALL", isVideo)
+            putExtra("CALL_TYPE", callType)
             putExtra("ROOM_URL", roomUrl)
             putExtra("ROOM_TOKEN", token)
         }
@@ -281,7 +285,11 @@ class MyApplication : Application(), OSSubscriptionObserver {
         val activityId = data?.optString("activityId").orEmpty()
 
         val intent = when (targetType) {
-            "call" -> buildIncomingCallIntent(data)
+            "call" -> if (CallPayloadUtils.isDataCall(data)) {
+                Intent(this, MainActivity::class.java)
+            } else {
+                buildIncomingCallIntent(data)
+            }
             "chat" -> Intent(this, ChatActivity::class.java).apply {
                 putExtra("roomId", targetId.ifBlank {
                     data?.optString("roomId").orEmpty().ifBlank { data?.optString("chatId").orEmpty() }

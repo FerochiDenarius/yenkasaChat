@@ -34,6 +34,7 @@ object TokenManager {
     private const val IS_MODERATOR_KEY = "is_moderator"
     private const val IS_DEVELOPER_KEY = "is_developer"
     private const val COMMUNITY_ID_KEY = "community_id"
+    private const val SELECTED_COMMUNITY_IDS_KEY_PREFIX = "selected_community_ids_"
     // Logging Tag
     private const val TAG = "TokenManager"
     private const val GENDER_KEY = "user_gender"
@@ -292,6 +293,38 @@ object TokenManager {
             userId
         } catch (e: Exception) {
             Log.e(TAG, "Error getting User ID from EncryptedSharedPreferences", e)
+            null
+        }
+    }
+
+    fun saveSelectedCommunityIds(context: Context, userId: String?, communityIds: Set<String>) {
+        if (userId.isNullOrBlank()) {
+            Log.w(TAG, "Tried to save selected communities without a user ID. Skipping save.")
+            return
+        }
+
+        try {
+            getEncryptedPrefs(context)
+                .edit()
+                .putStringSet("$SELECTED_COMMUNITY_IDS_KEY_PREFIX$userId", communityIds.toSet())
+                .apply()
+            Log.i(TAG, "Selected communities saved for user: $userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving selected communities to EncryptedSharedPreferences", e)
+        }
+    }
+
+    fun getSelectedCommunityIds(context: Context, userId: String?): Set<String>? {
+        if (userId.isNullOrBlank()) return null
+
+        return try {
+            val key = "$SELECTED_COMMUNITY_IDS_KEY_PREFIX$userId"
+            val prefs = getEncryptedPrefs(context)
+            if (!prefs.contains(key)) return null
+
+            prefs.getStringSet(key, emptySet())?.toSet() ?: emptySet()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting selected communities from EncryptedSharedPreferences", e)
             null
         }
     }

@@ -10,6 +10,7 @@ import okhttp3.*
 import okio.ByteString
 import org.json.JSONObject
 import xyz.yenkasa.app.ui.CallNotificationHandler
+import xyz.yenkasa.app.util.CallPayloadUtils
 
 class WebSocketManager {
 
@@ -125,6 +126,11 @@ class WebSocketManager {
                     when (type) {
                         "offer", "answer", "candidate", "error",
                         "call_request", "call_accept", "call_reject", "user_busy" -> {
+                            if (CallPayloadUtils.isDataCall(json)) {
+                                Log.d(TAG, "Ignoring data-call payload in video/audio signaling flow.")
+                                _messages.tryEmit(text)
+                                return
+                            }
                             val msg = parseSignalingMessage(json)
                             if (msg.type == SignalingMessageType.CALL_REQUEST) {
                                 showIncomingCallFromSignaling(msg)
@@ -322,6 +328,8 @@ class WebSocketManager {
             val json = JSONObject().apply {
                 put("type", "call_accept_with_room")
                 put("toUserId", receiverId)
+                put("targetUserId", receiverId)
+                put("_id", receiverId)
                 put("roomUrl", roomUrl)
                 put("token", token)
             }

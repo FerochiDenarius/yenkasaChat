@@ -5,6 +5,7 @@ import android.util.Log
 import xyz.yenkasa.app.ui.IncomingCallActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import xyz.yenkasa.app.util.CallPayloadUtils
 
 class IncomingCallService : FirebaseMessagingService() {
 
@@ -16,17 +17,24 @@ class IncomingCallService : FirebaseMessagingService() {
             val type = data["type"]
 
             if (type == "call_invite") {
+                if (CallPayloadUtils.isDataCall(data)) {
+                    Log.d("IncomingCallService", "Data-call push received; not launching video/audio call UI.")
+                    return
+                }
+
                 val callerId = data["callerId"]
                 val callerName = data["callerName"]
                 val isVideo = data["isVideo"]?.toBoolean() ?: true
                 val roomUrl = data["roomUrl"]
                 val roomToken = data["roomToken"]
+                val callType = data["callType"] ?: if (isVideo) "video" else "audio"
 
                 // Launch your custom incoming call UI
                 val intent = Intent(this, IncomingCallActivity::class.java).apply {
                     putExtra("CALLER_ID", callerId)
                     putExtra("CALLER_NAME", callerName)
                     putExtra("IS_VIDEO_CALL", isVideo)
+                    putExtra("CALL_TYPE", callType)
                     putExtra("ROOM_URL", roomUrl)
                     putExtra("ROOM_TOKEN", roomToken)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)

@@ -10,6 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.CallPayloadUtils
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.webrtc.WebSocketManager
@@ -22,6 +23,7 @@ class IncomingCallActivity : AppCompatActivity() {
     private var callerId: String? = null
     private var callerName: String? = null
     private var isVideo: Boolean = true
+    private var callType: String = "video"
     private var roomUrl: String? = null
     private var roomToken: String? = null
 
@@ -46,8 +48,15 @@ class IncomingCallActivity : AppCompatActivity() {
         callerId = intent.getStringExtra("CALLER_ID")
         callerName = intent.getStringExtra("CALLER_NAME")
         isVideo = intent.getBooleanExtra("IS_VIDEO_CALL", true)
+        callType = intent.getStringExtra("CALL_TYPE") ?: if (isVideo) "video" else "audio"
         roomUrl = intent.getStringExtra("ROOM_URL")
         roomToken = intent.getStringExtra("ROOM_TOKEN")
+
+        if (CallPayloadUtils.isDataCall(type = null, targetType = null, callType = callType)) {
+            Log.d(TAG, "Data-call intent received; closing incoming video/audio call screen.")
+            finish()
+            return
+        }
 
         findViewById<TextView>(R.id.textCallerName).text = callerName ?: "Unknown"
         findViewById<TextView>(R.id.textCallType).text =
@@ -82,6 +91,12 @@ class IncomingCallActivity : AppCompatActivity() {
      * Accept the incoming call and immediately join the shared room.
      */
     private fun acceptCall() {
+        if (CallPayloadUtils.isDataCall(type = null, targetType = null, callType = callType)) {
+            Log.d(TAG, "Ignoring accept for data-call payload.")
+            finish()
+            return
+        }
+
         stopRingtone()
 
         val caller = callerId ?: return
@@ -104,6 +119,7 @@ class IncomingCallActivity : AppCompatActivity() {
             putExtra("RECEIVER_NAME", callerName)
             putExtra("IS_CALLER", false)
             putExtra("IS_VIDEO_CALL", isVideo)
+            putExtra("CALL_TYPE", callType)
             putExtra("ROOM_URL", url)
             putExtra("ROOM_TOKEN", token)
         }

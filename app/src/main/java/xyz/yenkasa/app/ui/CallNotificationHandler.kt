@@ -17,6 +17,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import xyz.yenkasa.app.R
 import org.json.JSONObject
+import xyz.yenkasa.app.util.CallPayloadUtils
 
 object CallNotificationHandler {
 
@@ -33,6 +34,11 @@ object CallNotificationHandler {
      */
     fun showIncomingCall(context: Context, data: JSONObject) {
         try {
+            if (CallPayloadUtils.isDataCall(data)) {
+                Log.d(TAG, "Ignoring data-call payload; not showing video/audio call UI.")
+                return
+            }
+
             val callerName = data.optString("callerName", "Unknown")
             val callerId = data.optString("callerId", data.optString("fromUserId", ""))
             val isVideo = when {
@@ -42,6 +48,7 @@ object CallNotificationHandler {
             }
             val roomUrl = data.optString("roomUrl", "")
             val token = data.optString("token", data.optString("roomToken", ""))
+            val callType = data.optString("callType", if (isVideo) "video" else "audio")
 
             Log.d(TAG, "📞 Incoming ${if (isVideo) "Video" else "Audio"} Call from $callerName ($callerId)")
 
@@ -61,7 +68,7 @@ object CallNotificationHandler {
             }
 
             // ✅ Intent to open IncomingCallActivity when ACCEPTED
-            val acceptIntent = buildIncomingCallIntent(context, callerId, callerName, isVideo, roomUrl, token)
+            val acceptIntent = buildIncomingCallIntent(context, callerId, callerName, isVideo, roomUrl, token, callType)
 
             val requestCode = "${callerId}:${roomUrl}".hashCode()
             val acceptPendingIntent = PendingIntent.getActivity(
@@ -119,12 +126,14 @@ object CallNotificationHandler {
         callerName: String,
         isVideo: Boolean,
         roomUrl: String,
-        token: String
+        token: String,
+        callType: String
     ): Intent {
         return Intent(context, IncomingCallActivity::class.java).apply {
                 putExtra("CALLER_ID", callerId)
                 putExtra("CALLER_NAME", callerName)
                 putExtra("IS_VIDEO_CALL", isVideo)
+                putExtra("CALL_TYPE", callType)
                 putExtra("ROOM_URL", roomUrl)
                 putExtra("ROOM_TOKEN", token)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -136,6 +145,11 @@ object CallNotificationHandler {
      */
     fun handleNotificationOpened(context: Context, data: JSONObject) {
         try {
+            if (CallPayloadUtils.isDataCall(data)) {
+                Log.d(TAG, "Ignoring opened data-call notification; not launching call UI.")
+                return
+            }
+
             val callerId = data.optString("callerId", "")
             val callerName = data.optString("callerName", "Unknown")
             val isVideo = when {
@@ -145,8 +159,9 @@ object CallNotificationHandler {
             }
             val roomUrl = data.optString("roomUrl", "")
             val token = data.optString("token", data.optString("roomToken", ""))
+            val callType = data.optString("callType", if (isVideo) "video" else "audio")
 
-            val intent = buildIncomingCallIntent(context, callerId, callerName, isVideo, roomUrl, token)
+            val intent = buildIncomingCallIntent(context, callerId, callerName, isVideo, roomUrl, token, callType)
             context.startActivity(intent)
 
         } catch (e: Exception) {

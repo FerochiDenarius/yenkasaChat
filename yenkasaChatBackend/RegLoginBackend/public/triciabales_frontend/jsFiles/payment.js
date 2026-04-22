@@ -5,6 +5,8 @@ const bankDetails = document.getElementById("bank-details");
 const paymentForm = document.getElementById("payment-form");
 const API_BASE = "/triciabales-api";
 
+renderPaymentSummary();
+
 paymentOptions.forEach(option => {
   option.addEventListener("click", () => {
     const radio = option.querySelector('input[name="paymentMethod"]');
@@ -42,6 +44,7 @@ paymentForm.addEventListener("submit", async e => {
   const cart = JSON.parse(localStorage.getItem("cart") || "[]");
   const addressData = JSON.parse(localStorage.getItem("checkoutAddress") || "{}");
   const deliveryMethod = localStorage.getItem("deliveryMethod");
+  const deliveryEstimate = JSON.parse(localStorage.getItem("deliveryEstimate") || "null");
   const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
   const authToken = localStorage.getItem("authToken") || "";
   const submitButton = paymentForm.querySelector('button[type="submit"]');
@@ -106,6 +109,9 @@ paymentForm.addEventListener("submit", async e => {
     landmark: addressData.landmark,
     notes: addressData.notes,
     deliveryMethod,
+    deliveryAddress: deliveryEstimate?.buyerAddress || null,
+    deliveryDistanceKm: deliveryMethod === "pickup" ? null : deliveryEstimate?.distanceKm || null,
+    deliveryFee: deliveryMethod === "pickup" ? 0 : deliveryEstimate?.deliveryFee || 0,
     paymentMethod: selectedPaymentMethod,
     paymentStatus:
       selectedPaymentMethod === "cash"
@@ -185,6 +191,7 @@ paymentForm.addEventListener("submit", async e => {
     localStorage.removeItem("cart");
     localStorage.removeItem("checkoutAddress");
     localStorage.removeItem("deliveryMethod");
+    localStorage.removeItem("deliveryEstimate");
 
     localStorage.setItem("lastOrder", JSON.stringify(data));
 
@@ -199,3 +206,22 @@ paymentForm.addEventListener("submit", async e => {
     }
   }
 });
+
+function renderPaymentSummary() {
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const deliveryMethod = localStorage.getItem("deliveryMethod");
+  const deliveryEstimate = JSON.parse(localStorage.getItem("deliveryEstimate") || "null");
+  const productTotal = cart.reduce((sum, item) => {
+    return sum + (Number(item.price || 0) * Number(item.quantity || 1));
+  }, 0);
+  const deliveryFee = deliveryMethod === "pickup" ? 0 : Number(deliveryEstimate?.deliveryFee || 0);
+  const total = productTotal + deliveryFee;
+
+  document.getElementById("summary-products").textContent = money(productTotal);
+  document.getElementById("summary-delivery").textContent = money(deliveryFee);
+  document.getElementById("summary-total").textContent = money(total);
+}
+
+function money(amount) {
+  return `GHS ${Number(amount || 0).toFixed(2)}`;
+}

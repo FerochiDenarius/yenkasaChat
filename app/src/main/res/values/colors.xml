@@ -54,6 +54,46 @@
         <color name="rowBg">#FFFFFF</color>
         <color name="yenkasa_dialog_action">#1A1A1A</color>
         <color name="yenkasa_dialog_on_surface">#1A1A1A</color>
+        <color name="menu_background">#FFFFFF</color>
+        <color name="menu_surface">#FFFFFF</color>
+        <color name="menu_surface_stroke">#EDF0EE</color>
+        <color name="menu_primary_text">#1F2937</color>
+        <color name="menu_secondary_text">#737987</color>
+        <color name="menu_accent">#128A3A</color>
+        <color name="menu_icon_background">#F0FAF2</color>
+        <color name="menu_wallet_background">#F3FAED</color>
+        <color name="menu_wallet_text">#128A3A</color>
+        <color name="menu_chevron">#9AA3AF</color>
+        <color name="menu_logout">#EF4444</color>
+        <color name="feed_background">#F7F8F7</color>
+        <color name="feed_surface">#FFFFFF</color>
+        <color name="feed_soft_surface">#F1F7F3</color>
+        <color name="feed_primary_text">#1A1A1A</color>
+        <color name="feed_secondary_text">#666666</color>
+        <color name="feed_accent">#123322</color>
+        <color name="feed_action_background">#1A1A1A</color>
+        <color name="feed_action_icon">#FFD54F</color>
+        <color name="feed_icon_button_pressed">#EEF5F1</color>
+        <color name="feed_divider">#EDF0EE</color>
+        <color name="post_create_background">#FFFDFB</color>
+        <color name="post_create_surface">#FFFFFF</color>
+        <color name="post_create_primary_text">#1F2937</color>
+        <color name="post_create_secondary_text">#7A8090</color>
+        <color name="post_create_hint">#9A9FB1</color>
+        <color name="post_create_accent">#D1A62D</color>
+        <color name="post_create_soft_accent">#FFF7D8</color>
+        <color name="post_create_border">#EDF0F4</color>
+        <color name="wallet_background">#F7FAF7</color>
+        <color name="wallet_surface">#FFFFFF</color>
+        <color name="wallet_soft_surface">#EFF8F1</color>
+        <color name="wallet_primary_text">#102018</color>
+        <color name="wallet_secondary_text">#6B766F</color>
+        <color name="wallet_accent_green">#16994A</color>
+        <color name="wallet_accent_gold">#D1A62D</color>
+        <color name="wallet_border">#E8EFEA</color>
+        <color name="wallet_hero_start">#002515</color>
+        <color name="wallet_hero_end">#00120A</color>
+        <color name="wallet_negative">#D64A4A</color>
 
 
 
@@ -77,5 +117,3 @@
 
 
 </resources>
-
-

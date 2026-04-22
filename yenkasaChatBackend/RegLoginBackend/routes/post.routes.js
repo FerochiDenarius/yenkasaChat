@@ -200,43 +200,54 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     }
 
     let imageUrl = '';
+    let imageUrls = [];
     let videoUrl = '';
     let audioUrl = '';
     let detectedPostType = postType || 'text';
 
-    let file;
-    if (req.files?.media) file = req.files.media[0];
-    else if (req.files?.videoUrl) file = req.files.videoUrl[0];
-    else if (req.files?.audioUrl) file = req.files.audioUrl[0];
-    else if (req.files?.imageUrl) file = req.files.imageUrl[0];
+    const folder = "yenkasachat/posts";
+    const imageFiles = req.files?.imageUrl || [];
+    const legacyMediaFile = req.files?.media?.[0];
+    const videoFile = req.files?.videoUrl?.[0] ||
+      (legacyMediaFile?.mimetype?.startsWith("video") ? legacyMediaFile : null);
+    const audioFile = req.files?.audioUrl?.[0] ||
+      (legacyMediaFile?.mimetype?.startsWith("audio") ? legacyMediaFile : null);
+    const legacyImageFile = !videoFile && !audioFile && legacyMediaFile?.mimetype?.startsWith("image")
+      ? legacyMediaFile
+      : null;
+    const uploadImageFiles = imageFiles.length > 0 ? imageFiles : (legacyImageFile ? [legacyImageFile] : []);
 
-    if (file) {
-      const folder = "yenkasachat/posts";
-      const mime = file.mimetype || "";
+    if (uploadImageFiles.length > 0) {
+      const uploadResults = await Promise.all(uploadImageFiles.map((file) =>
+        cloudinary.uploader.upload(file.path, {
+          folder,
+          resource_type: "image"
+        })
+      ));
 
-      const isVideo = mime.startsWith("video");
-      const isAudio = mime.startsWith("audio");
-      const resourceType = isVideo || isAudio ? "video" : "image";
-
+      imageUrls = uploadResults.map((result) => result.secure_url).filter(Boolean);
+      imageUrl = imageUrls[0] || "";
+      detectedPostType = "image";
+    } else if (videoFile || audioFile) {
+      const file = videoFile || audioFile;
+      const isVideo = !!videoFile;
       const uploadRes = await cloudinary.uploader.upload(file.path, {
         folder,
-        resource_type: resourceType
+        resource_type: isVideo ? "video" : "video"
       });
 
       if (isVideo) {
         videoUrl = uploadRes.secure_url;
         detectedPostType = "video";
-      } else if (isAudio) {
+      } else {
         audioUrl = uploadRes.secure_url;
         detectedPostType = "audio";
-      } else {
-        imageUrl = uploadRes.secure_url;
-        detectedPostType = "image";
       }
     }
 
     const postStatus = isAutoPublished ? "approved" : "pending";
-    const textOnlyBackgroundColor = !file && text?.trim()
+    const hasUploadedMedia = imageUrls.length > 0 || videoUrl || audioUrl;
+    const textOnlyBackgroundColor = !hasUploadedMedia && text?.trim()
       ? normalizeTextBackgroundColor(textBackgroundColor)
       : "";
 
@@ -246,6 +257,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       text: text?.trim() || "",
       textBackgroundColor: textOnlyBackgroundColor,
       imageUrl,
+      imageUrls,
       videoUrl,
       audioUrl,
       postType: detectedPostType,
@@ -268,6 +280,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
         caption: post.text,
         textBackgroundColor: post.textBackgroundColor,
         imageUrl: post.imageUrl,
+        imageUrls: post.imageUrls || [],
         videoUrl: post.videoUrl,
         audioUrl: post.audioUrl,
         submittedAt: new Date(),
@@ -705,6 +718,7 @@ router.get("/:postId/download", authMiddleware, async (req, res) => {
       success: true,
       media: {
         imageUrl: post.imageUrl || null,
+        imageUrls: post.imageUrls || [],
         videoUrl: post.videoUrl || null,
         audioUrl: post.audioUrl || null
       }

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -32,6 +33,8 @@ class MainActivity : AppCompatActivity() {
 
     // NEW: toolbar create-ad button
     private lateinit var btnCreateAd: LinearLayout
+    private lateinit var btnMenu: ImageView
+    private lateinit var btnNotifications: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,13 +46,14 @@ class MainActivity : AppCompatActivity() {
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.title = "Yenkasa"
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationIcon(R.drawable.ic_menu) // ✅ menu icon from drawable folder
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        toolbar.navigationIcon = null
 
-        // Handle toolbar menu button click
-        toolbar.setNavigationOnClickListener {
-            val intent = Intent(this, MenuActivity::class.java)
-            startActivity(intent)
+        btnMenu = findViewById(R.id.btnMenu)
+        btnNotifications = findViewById(R.id.btnNotifications)
+        btnMenu.setOnClickListener { startActivity(Intent(this, MenuActivity::class.java)) }
+        btnNotifications.setOnClickListener {
+            startActivity(Intent(this, UserNotificationsActivity::class.java))
         }
 
         // FIND/Create-Ad toolbar button (declared in your toolbar XML)
@@ -99,7 +103,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applySystemBarSpacing() {
-        window.statusBarColor = ContextCompat.getColor(this, R.color.yellowAccent)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.feed_surface)
 
         val root = findViewById<View>(R.id.mainRoot)
         val appBar = findViewById<View>(R.id.mainAppBar)

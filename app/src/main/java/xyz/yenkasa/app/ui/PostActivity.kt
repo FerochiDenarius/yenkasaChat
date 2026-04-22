@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -15,6 +16,8 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.CreatePostResponse
 import xyz.yenkasa.app.model.Community
@@ -38,20 +41,28 @@ class PostActivity : AppCompatActivity() {
 
     private lateinit var editTextContent: EditText
     private lateinit var imagePreview: ImageView
+    private lateinit var imagePreviewCount: TextView
     private lateinit var videoPreview: VideoView
     private lateinit var audioPreview: TextView
-    private lateinit var btnChooseMedia: Button
+    private lateinit var btnChooseMedia: View
     private lateinit var btnPost: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var spinnerCommunity: Spinner
     private lateinit var textBackgroundLabel: TextView
     private lateinit var textBackgroundPicker: LinearLayout
+    private var textPostCharacterCount: TextView? = null
+    private var selectedCommunityMeta: TextView? = null
+    private var selectedCommunityNameText: TextView? = null
+    private var selectedCommunityCardMeta: TextView? = null
+    private var selectedCommunityIcon: ImageView? = null
+    private var privacyChip: TextView? = null
     private var selectedCommunityId: String? = null
     private var selectedTextBackgroundColor: String = ""
     private var defaultContentBackground: Drawable? = null
 
     // 🎯 Each media type handled separately
     private var imageUri: Uri? = null
+    private val imageUris = mutableListOf<Uri>()
     private var videoUri: Uri? = null
     private var audioUri: Uri? = null
 
@@ -66,11 +77,13 @@ class PostActivity : AppCompatActivity() {
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Create Post"
+        supportActionBar?.title = ""
+        toolbar.navigationIcon = ContextCompat.getDrawable(this, R.drawable.ic_close)
         toolbar.setNavigationOnClickListener { finish() }
 
         editTextContent = findViewById(R.id.editTextContent)
         imagePreview = findViewById(R.id.imagePreview)
+        imagePreviewCount = findViewById(R.id.imagePreviewCount)
         videoPreview = findViewById(R.id.videoPreview)
         audioPreview = findViewById(R.id.audioPreview)
         btnChooseMedia = findViewById(R.id.btnChooseMedia)
@@ -79,12 +92,32 @@ class PostActivity : AppCompatActivity() {
         spinnerCommunity = findViewById(R.id.spinnerCommunity)
         textBackgroundLabel = findViewById(R.id.textBackgroundLabel)
         textBackgroundPicker = findViewById(R.id.textBackgroundPicker)
+        textPostCharacterCount = findViewById(R.id.textPostCharacterCount)
+        selectedCommunityMeta = findViewById(R.id.textSelectedCommunityMeta)
+        selectedCommunityNameText = findViewById(R.id.textSelectedCommunityName)
+        selectedCommunityCardMeta = findViewById(R.id.textSelectedCommunityCardMeta)
+        selectedCommunityIcon = findViewById(R.id.imageSelectedCommunity)
+        privacyChip = findViewById(R.id.privacyChip)
+        findViewById<View>(R.id.selectCommunityCard).setOnClickListener {
+            spinnerCommunity.performClick()
+        }
+        findViewById<TextView>(R.id.textSeeMoreStyles).setOnClickListener {
+            Toast.makeText(this, "More post styles are coming soon.", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<TextView>(R.id.textPostAuthorName).text =
+            TokenManager.getUsername(this)?.takeIf { it.isNotBlank() } ?: "Yenkasa user"
+        Glide.with(this)
+            .load(TokenManager.getProfilePicUrl(this))
+            .placeholder(R.drawable.ic_profile_placeholder)
+            .circleCrop()
+            .into(findViewById<ImageView>(R.id.imagePostAuthor))
         defaultContentBackground = editTextContent.background
 
         setupTextBackgroundPicker()
         editTextContent.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                textPostCharacterCount?.text = "${s?.length ?: 0}/500"
                 applyTextBackgroundPreview()
             }
             override fun afterTextChanged(s: Editable?) = Unit
@@ -103,16 +136,34 @@ class PostActivity : AppCompatActivity() {
 
         // 🔹 Choose Media
         btnChooseMedia.setOnClickListener {
-            val intent = Intent(Intent.ACTION_GET_CONTENT)
-            intent.type = "*/*"
-            intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*", "audio/*"))
-            startActivityForResult(Intent.createChooser(intent, "Select Media"), PICK_MEDIA_REQUEST)
+            openMediaPicker()
+        }
+        findViewById<View>(R.id.btnAddVideoPlaceholder).setOnClickListener {
+            openMediaPicker()
+        }
+        findViewById<View>(R.id.btnAddAudioPlaceholder).setOnClickListener {
+            openMediaPicker()
+        }
+        findViewById<View>(R.id.btnAddPollPlaceholder).setOnClickListener {
+            Toast.makeText(this, "Polls are coming soon.", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.btnAddEventPlaceholder).setOnClickListener {
+            Toast.makeText(this, "Events are coming soon.", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<TextView>(R.id.btnDrafts).setOnClickListener {
+            Toast.makeText(this, "Drafts are coming soon.", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btnSchedulePlaceholder).setOnClickListener {
+            Toast.makeText(this, "Scheduling is coming soon.", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.communityReminderCard).setOnClickListener {
+            Toast.makeText(this, "Community rules are coming soon.", Toast.LENGTH_SHORT).show()
         }
 
         // 🔹 Post Button
         btnPost.setOnClickListener {
             val content = editTextContent.text.toString().trim()
-            if (content.isEmpty() && imageUri == null && videoUri == null && audioUri == null) {
+            if (content.isEmpty() && imageUris.isEmpty() && videoUri == null && audioUri == null) {
                 Toast.makeText(this, "Add text or media before posting.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -120,31 +171,60 @@ class PostActivity : AppCompatActivity() {
         }
     }
 
+    private fun openMediaPicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "*/*"
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*", "audio/*"))
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        startActivityForResult(Intent.createChooser(intent, "Select Media"), PICK_MEDIA_REQUEST)
+    }
+
     // 🔹 Handle selected media
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_MEDIA_REQUEST && resultCode == Activity.RESULT_OK && data?.data != null) {
-            val uri = data.data ?: return
+        if (requestCode == PICK_MEDIA_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
+            val selectedUris = mutableListOf<Uri>()
+            data.clipData?.let { clip ->
+                for (index in 0 until clip.itemCount) {
+                    selectedUris.add(clip.getItemAt(index).uri)
+                }
+            }
+            data.data?.let { selectedUris.add(it) }
 
-            val mimeType = contentResolver.getType(uri) ?: ""
+            if (selectedUris.isEmpty()) return
+
+            val firstMimeType = contentResolver.getType(selectedUris.first()) ?: ""
             when {
-                mimeType.startsWith("image") -> {
-                    imageUri = uri
+                firstMimeType.startsWith("image") -> {
+                    val images = selectedUris.filter {
+                        contentResolver.getType(it)?.startsWith("image") == true
+                    }.take(10)
+
+                    if (images.isEmpty()) {
+                        Toast.makeText(this, "Select image files only.", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+
+                    imageUris.clear()
+                    imageUris.addAll(images)
+                    imageUri = imageUris.first()
                     videoUri = null
                     audioUri = null
-                    Log.d("PostActivity", "🖼️ Image selected: $uri")
+                    Log.d("PostActivity", "🖼️ Images selected: ${imageUris.size}")
                 }
-                mimeType.startsWith("video") -> {
-                    videoUri = uri
+                firstMimeType.startsWith("video") -> {
+                    videoUri = selectedUris.first()
+                    imageUris.clear()
                     imageUri = null
                     audioUri = null
-                    Log.d("PostActivity", "🎬 Video selected: $uri")
+                    Log.d("PostActivity", "🎬 Video selected: $videoUri")
                 }
-                mimeType.startsWith("audio") -> {
-                    audioUri = uri
+                firstMimeType.startsWith("audio") -> {
+                    audioUri = selectedUris.first()
+                    imageUris.clear()
                     imageUri = null
                     videoUri = null
-                    Log.d("PostActivity", "🎧 Audio selected: $uri")
+                    Log.d("PostActivity", "🎧 Audio selected: $audioUri")
                 }
                 else -> {
                     Toast.makeText(this, "Unsupported file type.", Toast.LENGTH_SHORT).show()
@@ -160,13 +240,18 @@ class PostActivity : AppCompatActivity() {
     // 🔹 Update preview UI
     private fun updatePreview() {
         imagePreview.visibility = View.GONE
+        imagePreviewCount.visibility = View.GONE
         videoPreview.visibility = View.GONE
         audioPreview.visibility = View.GONE
 
         when {
-            imageUri != null -> {
+            imageUris.isNotEmpty() -> {
                 imagePreview.visibility = View.VISIBLE
-                imagePreview.setImageURI(imageUri)
+                imagePreview.setImageURI(imageUris.first())
+                if (imageUris.size > 1) {
+                    imagePreviewCount.visibility = View.VISIBLE
+                    imagePreviewCount.text = "${imageUris.size} images selected"
+                }
             }
             videoUri != null -> {
                 videoPreview.visibility = View.VISIBLE
@@ -185,48 +270,108 @@ class PostActivity : AppCompatActivity() {
         textBackgroundPicker.removeAllViews()
 
         TextPostBackgrounds.options.forEach { color ->
-            val swatch = TextView(this).apply {
-                text = if (color.isBlank()) "Aa" else ""
-                textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                setTextColor(Color.BLACK)
-                background = TextPostBackgrounds.swatchDrawable(
-                    color,
-                    color == selectedTextBackgroundColor,
-                    density
-                )
+            val isSelected = color == selectedTextBackgroundColor
+            val tile = FrameLayout(this).apply {
+                background = styleTileBackground(color, isSelected, density)
                 contentDescription = if (color.isBlank()) "No text background" else "Text background $color"
-                setOnClickListener {
-                    selectedTextBackgroundColor = color
-                    setupTextBackgroundPicker()
-                    applyTextBackgroundPreview()
-                }
+                isClickable = true
+                isFocusable = true
             }
 
-            val size = (42f * density).toInt()
+            val label = TextView(this).apply {
+                text = "Aa"
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(styleTileTextColor(color))
+            }
+            tile.addView(label, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ))
+
+            if (isSelected) {
+                val check = TextView(this).apply {
+                    text = "✓"
+                    textSize = 11f
+                    typeface = Typeface.DEFAULT_BOLD
+                    gravity = Gravity.CENTER
+                    setTextColor(ContextCompat.getColor(this@PostActivity, R.color.yenkasa_black))
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(ContextCompat.getColor(this@PostActivity, R.color.yenkasa_amber))
+                    }
+                }
+                val badgeSize = (18f * density).toInt()
+                val badgeParams = FrameLayout.LayoutParams(badgeSize, badgeSize, Gravity.BOTTOM or Gravity.END)
+                tile.addView(check, badgeParams)
+            }
+
+            tile.setOnClickListener {
+                selectedTextBackgroundColor = color
+                setupTextBackgroundPicker()
+                applyTextBackgroundPreview()
+            }
+
+            val width = (50f * density).toInt()
+            val height = (42f * density).toInt()
             val margin = (8f * density).toInt()
-            swatch.layoutParams = LinearLayout.LayoutParams(size, size).apply {
+            tile.layoutParams = LinearLayout.LayoutParams(width, height).apply {
                 marginEnd = margin
             }
-            textBackgroundPicker.addView(swatch)
+            textBackgroundPicker.addView(tile)
         }
     }
 
+    private fun styleTileBackground(color: String, selected: Boolean, density: Float): GradientDrawable {
+        val normalized = TextPostBackgrounds.normalize(color)
+        val fill = if (normalized.isBlank()) {
+            ContextCompat.getColor(this, R.color.post_create_surface)
+        } else {
+            Color.parseColor(normalized)
+        }
+        val strokeColor = if (selected) {
+            ContextCompat.getColor(this, R.color.post_create_accent)
+        } else {
+            ContextCompat.getColor(this, R.color.post_create_border)
+        }
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 8f * density
+            setColor(fill)
+            setStroke(if (selected) (2f * density).toInt() else (1f * density).toInt(), strokeColor)
+        }
+    }
+
+    private fun styleTileTextColor(color: String): Int {
+        val normalized = TextPostBackgrounds.normalize(color)
+        if (normalized.isBlank()) {
+            return ContextCompat.getColor(this, R.color.post_create_primary_text)
+        }
+        val parsed = Color.parseColor(normalized)
+        val luminance = (0.299 * Color.red(parsed) + 0.587 * Color.green(parsed) + 0.114 * Color.blue(parsed))
+        return if (luminance > 150) Color.BLACK else Color.WHITE
+    }
+
     private fun applyTextBackgroundPreview() {
-        val hasMedia = imageUri != null || videoUri != null || audioUri != null
+        val hasMedia = imageUris.isNotEmpty() || videoUri != null || audioUri != null
         val hasText = editTextContent.text?.toString()?.trim()?.isNotEmpty() == true
         val shouldShowBackground = !hasMedia && hasText && selectedTextBackgroundColor.isNotBlank()
 
         textBackgroundLabel.alpha = if (hasMedia) 0.45f else 1f
         textBackgroundPicker.alpha = if (hasMedia) 0.45f else 1f
         textBackgroundPicker.isEnabled = !hasMedia
+        for (index in 0 until textBackgroundPicker.childCount) {
+            textBackgroundPicker.getChildAt(index).isEnabled = !hasMedia
+        }
 
         if (shouldShowBackground) {
             TextPostBackgrounds.apply(editTextContent, selectedTextBackgroundColor, centered = false)
         } else {
             editTextContent.background = defaultContentBackground
-            editTextContent.setTextColor(Color.BLACK)
+            editTextContent.setTextColor(
+                ContextCompat.getColor(this, R.color.post_create_primary_text)
+            )
             editTextContent.setTypeface(Typeface.DEFAULT, Typeface.NORMAL)
             editTextContent.gravity = Gravity.TOP
         }
@@ -251,25 +396,21 @@ class PostActivity : AppCompatActivity() {
         )
 
         // Prepare correct media part
-        var mediaPart: MultipartBody.Part? = null
-        var fieldName = ""
+        val mediaParts = mutableListOf<MultipartBody.Part>()
+        val mediaUris = when {
+            imageUris.isNotEmpty() -> imageUris.map { "imageUrl" to it }
+            videoUri != null -> listOf("videoUrl" to videoUri!!)
+            audioUri != null -> listOf("audioUrl" to audioUri!!)
+            else -> emptyList()
+        }
 
-        val uriToUpload = imageUri ?: videoUri ?: audioUri
-        if (uriToUpload != null) {
-            fieldName = when {
-                imageUri != null -> "imageUrl"
-                videoUri != null -> "videoUrl"
-                audioUri != null -> "audioUrl"
-                else -> "file"
-            }
-
+        for ((fieldName, uriToUpload) in mediaUris) {
             try {
                 val file = getFileFromUri(uriToUpload)
-                if (file == null) throw IOException("File could not be read")
-
+                    ?: throw IOException("File could not be read")
                 val mime = contentResolver.getType(uriToUpload) ?: "application/octet-stream"
                 val requestFile = file.asRequestBody(mime.toMediaTypeOrNull())
-                mediaPart = MultipartBody.Part.createFormData(fieldName, file.name, requestFile)
+                mediaParts.add(MultipartBody.Part.createFormData(fieldName, file.name, requestFile))
             } catch (e: Exception) {
                 Log.e("PostActivity", "Error preparing media", e)
                 Toast.makeText(this, "Error preparing file for upload.", Toast.LENGTH_SHORT).show()
@@ -278,7 +419,7 @@ class PostActivity : AppCompatActivity() {
                 return
             }
         }
-        val textBackgroundColor = if (uriToUpload == null && content.isNotBlank()) {
+        val textBackgroundColor = if (mediaParts.isEmpty() && content.isNotBlank()) {
             TextPostBackgrounds.normalize(selectedTextBackgroundColor)
         } else {
             ""
@@ -293,7 +434,7 @@ class PostActivity : AppCompatActivity() {
             communityIdBody,
             communityNameBody,
             textBackgroundColorBody,
-            mediaPart
+            mediaParts
         ).enqueue(object : Callback<CreatePostResponse> {
             override fun onResponse(
                 call: Call<CreatePostResponse>,
@@ -459,16 +600,20 @@ class PostActivity : AppCompatActivity() {
                     // Setup spinner
                     val adapter = ArrayAdapter(
                         this@PostActivity,
-                        android.R.layout.simple_spinner_item,
-                        finalList.map { it.displayName }
+                        R.layout.item_create_post_spinner,
+                        R.id.textCreatePostSpinner,
+                        finalList.map { it.displayName ?: it.name ?: "Unnamed community" }
                     )
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    adapter.setDropDownViewResource(R.layout.item_create_post_spinner_dropdown)
                     spinnerCommunity.adapter = adapter
 
                     spinnerCommunity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                         override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
-                            selectedCommunityId = finalList[pos].id
-                            Log.d("COMM_FETCH", "Selected community: ${finalList[pos].displayName} (${selectedCommunityId})")
+                            val selected = finalList[pos]
+                            selectedCommunityId = selected.id
+                            selectedCommunityMeta?.text = buildCommunityMeta(selected)
+                            updateSelectedCommunityCard(selected)
+                            Log.d("COMM_FETCH", "Selected community: ${selected.displayName} (${selectedCommunityId})")
                         }
 
                         override fun onNothingSelected(parent: AdapterView<*>) {
@@ -483,5 +628,33 @@ class PostActivity : AppCompatActivity() {
                     Toast.makeText(this@PostActivity, "Error fetching communities", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    private fun buildCommunityMeta(community: Community): String {
+        val privacy = if (community.isPrivate) "Private" else "Public"
+        val memberText = when (community.memberCount) {
+            0 -> "New community"
+            1 -> "1 member"
+            else -> "${community.memberCount} members"
+        }
+        return "$memberText - $privacy"
+    }
+
+    private fun updateSelectedCommunityCard(community: Community) {
+        val name = community.displayName ?: community.name ?: "Unnamed community"
+        selectedCommunityNameText?.text = name
+        selectedCommunityCardMeta?.text = buildCommunityMeta(community)
+        privacyChip?.text = if (community.isPrivate) "Private" else "Public"
+
+        val imageUrl = community.icon?.takeIf { it.isNotBlank() }
+            ?: community.coverImage?.takeIf { it.isNotBlank() }
+        selectedCommunityIcon?.let { icon ->
+            Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_community_placeholder)
+                .error(R.drawable.ic_community_placeholder)
+                .circleCrop()
+                .into(icon)
+        }
     }
 }

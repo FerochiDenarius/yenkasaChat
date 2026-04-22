@@ -200,10 +200,10 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'This is already your primary community' });
     }
 
-    if (user.joinedCommunities.length >= 2) {
+    if (user.joinedCommunities.length >= 5) {
       return res.status(403).json({
-        error: 'You can only join up to 2 communities',
-        message: 'You have reached your limit'
+        error: 'You can only join up to 5 communities',
+        message: 'You can select 2 communities at signup and join 3 more in the app.'
       });
     }
 

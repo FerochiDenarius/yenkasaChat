@@ -14,6 +14,7 @@ data class Post(
     @SerializedName("text")
     val caption: String? = null,
     val imageUrl: String? = null,
+    val imageUrls: List<String>? = emptyList(),
     val videoUrl: String? = null,
     val audioUrl: String? = null,
     val textBackgroundColor: String? = null,
@@ -52,13 +53,23 @@ data class Post(
     // Client-side UI state
     var likedByCurrentUser: Boolean = false
 ) {
+    fun effectiveImageUrls(): List<String> {
+        return imageUrls.orEmpty()
+            .filter { it.isNotBlank() }
+            .ifEmpty { imageUrl?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }
+    }
 
     companion object {
         fun fromJson(json: JSONObject): Post {
+            val imageUrls = json.optJSONArray("imageUrls")?.let { arr ->
+                List(arr.length()) { i -> arr.optString(i) }.filter { it.isNotBlank() }
+            }.orEmpty()
+
             return Post(
                 _id = json.optString("_id"),
                 caption = json.optString("text", json.optString("caption", null)),
                 imageUrl = json.optString("imageUrl", null),
+                imageUrls = imageUrls,
                 videoUrl = json.optString("videoUrl", null),
                 audioUrl = json.optString("audioUrl", null),
                 textBackgroundColor = json.optString("textBackgroundColor", null),

@@ -23,6 +23,12 @@
       <div class="card-content">
 
         <form id="payment-form" style="display:flex;flex-direction:column;gap:18px;">
+          <div id="payment-summary" style="background:#f9fafb;border:1px solid #d1d5db;border-radius:8px;padding:16px;">
+            <p style="margin:4px 0;"><strong>Products:</strong> <span id="summary-products">GHS 0.00</span></p>
+            <p style="margin:4px 0;"><strong>Delivery:</strong> <span id="summary-delivery">GHS 0.00</span></p>
+            <p style="margin:4px 0;"><strong>Total:</strong> <span id="summary-total">GHS 0.00</span></p>
+          </div>
+
           <div class="payment-section">
             <h2>Select Payment Method</h2>
 
@@ -121,6 +127,6 @@
     </div>
   </section>
   <script src="/store/assets/jsFiles/store-settings.js"></script>
-  <script src="/store/assets/jsFiles/payment.js"></script>
+  <script src="/store/assets/jsFiles/payment.js?v=20260421-delivery-estimate"></script>
 </body>
 </html>

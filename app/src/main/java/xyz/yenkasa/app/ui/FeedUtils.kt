@@ -135,7 +135,7 @@ object FeedUtils {
                     }
 
                     val media = response.body()!!.media
-                    val url = media.imageUrl ?: media.videoUrl ?: media.audioUrl ?: return
+                    val url = media.firstImageUrl() ?: media.videoUrl ?: media.audioUrl ?: return
 
                     val intent = Intent(Intent.ACTION_VIEW)
                     intent.setDataAndType(android.net.Uri.parse(url), "*/*")

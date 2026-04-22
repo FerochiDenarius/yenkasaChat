@@ -227,7 +227,7 @@ interface ApiService {
         @Part("communityId") communityId: RequestBody,
         @Part("communityName") communityName: RequestBody,
         @Part("textBackgroundColor") textBackgroundColor: RequestBody,
-        @Part media: MultipartBody.Part? // optional: imageUrl, videoUrl, or audioUrl
+        @Part media: List<MultipartBody.Part> // optional: repeated imageUrl, videoUrl, or audioUrl
     ): Call<CreatePostResponse>
 
 

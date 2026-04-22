@@ -22,6 +22,7 @@ class TransactionAdapter(
         val tvType: TextView = itemView.findViewById(R.id.tvType)
         val tvDate: TextView = itemView.findViewById(R.id.tvDate)
         val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
+        val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
         val imgType: ImageView = itemView.findViewById(R.id.imgType)
     }
 
@@ -38,30 +39,33 @@ class TransactionAdapter(
         val isOutgoing = currentWalletId != null && tx.from == currentWalletId
         val otherParty = if (isOutgoing) tx.recipientUsername ?: tx.to else tx.senderUsername ?: tx.from
 
-        // Description and type
         holder.tvDescription.text = tx.description.ifEmpty { "Transfer with $otherParty" }
-        holder.tvType.text = tx.type
+        holder.tvType.text = tx.type.ifEmpty { "WALLET_TRANSACTION" }.uppercase(Locale.getDefault())
 
-        // Format date
         holder.tvDate.text = formatDate(tx.createdAt)
+        holder.tvStatus.text = "Confirmed"
 
-        // Amount with sign
-        val displayAmount = if (isOutgoing) "-${tx.amount}" else "+${tx.amount}"
+        val displayAmount = if (isOutgoing) "-${tx.amount} YKC" else "+${tx.amount} YKC"
         holder.tvAmount.text = displayAmount
 
-        // Color: green incoming, red outgoing
-        val colorRes = if (isOutgoing) R.color.red else R.color.green
+        val colorRes = if (isOutgoing) R.color.wallet_negative else R.color.wallet_accent_green
         holder.tvAmount.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))
+        holder.tvStatus.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.wallet_accent_green))
+        holder.imgType.setImageResource(R.drawable.ic_coin)
     }
 
     override fun getItemCount(): Int = transactions.size
 
     private fun formatDate(isoDate: String): String {
         return try {
+            isoDate.toLongOrNull()?.let { millis ->
+                return SimpleDateFormat("MMM d, yyyy - hh:mm a", Locale.getDefault()).format(Date(millis))
+            }
+
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
             parser.timeZone = TimeZone.getTimeZone("UTC")
             val date = parser.parse(isoDate)
-            SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date!!)
+            SimpleDateFormat("MMM d, yyyy - hh:mm a", Locale.getDefault()).format(date!!)
         } catch (e: Exception) {
             isoDate
         }

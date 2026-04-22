@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/storyRoot"
+    android:layout_width="76dp"
+    android:layout_height="match_parent"
+    android:layout_marginEnd="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingHorizontal="4dp">
+
+    <FrameLayout
+        android:id="@+id/storyImageFrame"
+        android:layout_width="58dp"
+        android:layout_height="58dp"
+        android:background="@drawable/bg_feed_avatar_ring"
+        android:padding="3dp">
+
+        <ImageView
+            android:id="@+id/imageCommunityStory"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Community"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_community_placeholder" />
+
+        <ImageView
+            android:id="@+id/imageAllCommunitiesIcon"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:contentDescription="All Communities"
+            android:src="@drawable/ic_communities"
+            android:visibility="gone"
+            app:tint="@color/feed_accent"
+            tools:visibility="visible" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/textCommunityStoryName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/feed_primary_text"
+        android:textSize="10sp"
+        tools:text="Music Lovers Ghana" />
+</LinearLayout>

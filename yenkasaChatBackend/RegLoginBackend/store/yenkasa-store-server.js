@@ -1119,6 +1119,33 @@ module.exports = function (app) {
     }
   });
 
+  // DELIVERY ESTIMATE
+  app.post('/triciabales-api/api/delivery/estimate', async (req, res) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/delivery/estimate`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'DELIVERY ESTIMATE ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // ALL ORDERS
   app.get('/triciabales-api/api/orders', async (req, res) => {
     try {
@@ -1188,6 +1215,54 @@ module.exports = function (app) {
     } catch (err) {
       console.error(
         'PAYSTACK VERIFY ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // PAYSTACK BANKS
+  app.get('/triciabales-api/api/paystack/banks', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/paystack/banks`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PAYSTACK BANKS ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
+  // PAYSTACK STATUS
+  app.get('/triciabales-api/api/paystack/status', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/paystack/status`,
+        {
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'PAYSTACK STATUS ERROR:',
         err.response?.status,
         err.response?.data || err.message
       );

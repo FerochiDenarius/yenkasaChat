@@ -216,6 +216,22 @@ function formatStatus(status) {
 }
 
 function estimateSellerPayout(order) {
+  const sellerItems = Array.isArray(order.items)
+    ? order.items.filter(item => Number(item.sellerId) === Number(currentUser.id))
+    : [];
+
+  if (sellerItems.length) {
+    return sellerItems.reduce((sum, item) => {
+      if (item.sellerPayoutAmount != null) {
+        return sum + Number(item.sellerPayoutAmount || 0);
+      }
+      const lineTotal = item.lineTotal != null
+        ? Number(item.lineTotal || 0)
+        : Number(item.price || 0) * Number(item.quantity || 1);
+      return sum + (lineTotal - (lineTotal * 0.10));
+    }, 0);
+  }
+
   if (order.sellerPayoutAmount != null) {
     return Number(order.sellerPayoutAmount || 0);
   }
@@ -263,11 +279,54 @@ function updatePayoutPreview() {
   previewAccount.textContent = "";
 }
 
+async function loadPaystackBanks() {
+  const bankSelect = document.getElementById("bankCode");
+  const bankNameInput = document.getElementById("bankName");
+  if (!bankSelect) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/paystack/banks`, {
+      headers: getAuthHeaders()
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not load Paystack banks");
+    }
+
+    const banks = Array.isArray(payload.banks) ? payload.banks : [];
+    bankSelect.innerHTML = '<option value="">Select bank</option>';
+
+    banks
+      .slice()
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+      .forEach(bank => {
+        const option = document.createElement("option");
+        option.value = bank.code || "";
+        option.textContent = bank.code ? `${bank.name} (${bank.code})` : bank.name;
+        option.dataset.name = bank.name || "";
+        bankSelect.appendChild(option);
+      });
+
+    if (currentUser?.bankCode) {
+      bankSelect.value = currentUser.bankCode;
+    }
+    if (bankSelect.value && !bankNameInput.value.trim()) {
+      bankNameInput.value = bankSelect.selectedOptions[0]?.dataset.name || "";
+    }
+    updatePayoutPreview();
+  } catch (err) {
+    console.error(err);
+    bankSelect.innerHTML = '<option value="">Unable to load banks</option>';
+  }
+}
+
 function hydratePayoutForm() {
   payoutMethod.value = currentUser?.payoutMethod || "momo";
   document.getElementById("momoNetwork").value = currentUser?.momoNetwork || "";
   document.getElementById("momoNumber").value = currentUser?.momoNumber || "";
   document.getElementById("bankName").value = currentUser?.bankName || "";
+  document.getElementById("bankCode").value = currentUser?.bankCode || "";
   document.getElementById("bankAccountNumber").value = currentUser?.bankAccountNumber || "";
   document.getElementById("bankAccountName").value = currentUser?.bankAccountName || "";
   togglePayoutFields(payoutMethod.value);
@@ -1066,9 +1125,17 @@ payoutCards.forEach(card => {
   });
 });
 
-["momoNetwork", "momoNumber", "bankName", "bankAccountNumber", "bankAccountName"].forEach(id => {
+["momoNetwork", "momoNumber", "bankName", "bankCode", "bankAccountNumber", "bankAccountName"].forEach(id => {
   document.getElementById(id).addEventListener("input", updatePayoutPreview);
   document.getElementById(id).addEventListener("change", updatePayoutPreview);
+});
+
+document.getElementById("bankCode").addEventListener("change", event => {
+  const selected = event.target.selectedOptions[0];
+  if (selected?.dataset.name) {
+    document.getElementById("bankName").value = selected.dataset.name;
+  }
+  updatePayoutPreview();
 });
 
 payoutForm.addEventListener("submit", async event => {
@@ -1086,6 +1153,7 @@ payoutForm.addEventListener("submit", async event => {
     momoNetwork: document.getElementById("momoNetwork").value.trim() || null,
     momoNumber: document.getElementById("momoNumber").value.trim() || null,
     bankName: document.getElementById("bankName").value.trim() || null,
+    bankCode: document.getElementById("bankCode").value.trim() || null,
     bankAccountNumber: document.getElementById("bankAccountNumber").value.trim() || null,
     bankAccountName: document.getElementById("bankAccountName").value.trim() || null
   };
@@ -1095,7 +1163,7 @@ payoutForm.addEventListener("submit", async event => {
     return;
   }
 
-  if (method === "bank" && (!payload.bankName || !payload.bankAccountNumber || !payload.bankAccountName)) {
+  if (method === "bank" && (!payload.bankName || !payload.bankCode || !payload.bankAccountNumber || !payload.bankAccountName)) {
     alert("Please complete all bank payout fields.");
     return;
   }
@@ -1133,5 +1201,6 @@ payoutForm.addEventListener("submit", async event => {
 });
 
 hydratePayoutForm();
+loadPaystackBanks();
 setUploadMode("bale");
 showSection("upload");

@@ -40,7 +40,8 @@ const corsOptions = {
 
 app.use(express.json({
   verify: (req, res, buf) => {
-    if (req.originalUrl === '/triciabales-api/api/paystack/webhook') {
+    const requestPath = String(req.originalUrl || '').split('?')[0];
+    if (requestPath === '/triciabales-api/api/paystack/webhook') {
       req.rawBody = buf.toString('utf8');
     }
   }

@@ -1,62 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0E1A12"
-    android:padding="6dp">
+    android:background="@color/feed_background"
+    android:orientation="vertical">
 
-    <!-- Smaller header text -->
-    <TextView
-        android:id="@+id/textCommunityHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="All Communities"
-        android:textColor="#333333"
-        android:textStyle="bold"
-        android:textSize="14sp"
-        android:layout_marginBottom="6dp"/>
-
-    <!-- Community selector (compact) -->
-    <LinearLayout
-        android:id="@+id/btnSelectCommunities"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewFeedCommunities"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:gravity="center_vertical"
-        android:background="@drawable/yenkasa_gradient">
-
-        <TextView
-            android:id="@+id/textCommunityNameHeader"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="Communities"
-            android:textColor="@color/yenkasaBlack"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_dropdown"
-            app:tint="#333" />
-    </LinearLayout>
+        android:layout_height="98dp"
+        android:background="@color/feed_surface"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:scrollbars="none"
+        tools:itemCount="5"
+        tools:listitem="@layout/item_feed_community_story" />
 
     <TextView
         android:id="@+id/textSelectedCommunities"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="All"
-        android:textColor="#555"
-        android:textSize="12sp"
-        android:paddingStart="8dp"
-        android:paddingBottom="6dp" />
+        android:background="@color/feed_surface"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/feed_secondary_text"
+        android:textSize="11sp"
+        tools:text="Music Lovers Ghana, Health Ghana" />
 
-    <!-- Feed RecyclerView (no SwipeRefreshLayout wrapper) -->
+    <TextView
+        android:id="@+id/textCommunityNameHeader"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/feedFilterBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_feed_filter_bar"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp">
+
+        <TextView
+            android:id="@+id/tabForYou"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_feed_tab_selected"
+            android:gravity="center"
+            android:text="For You"
+            android:textColor="@color/feed_accent"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabFollowing"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_feed_tab_unselected"
+            android:gravity="center"
+            android:text="Following"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tabTrending"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_feed_tab_unselected"
+            android:gravity="center"
+            android:text="Trending"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tabTop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_feed_tab_unselected"
+            android:drawableEnd="@drawable/ic_dropdown"
+            android:drawablePadding="4dp"
+            android:gravity="center"
+            android:text="Top"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="13sp" />
+    </LinearLayout>
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -67,7 +109,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingBottom="86dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="92dp"
             android:scrollbars="vertical" />
 
         <ProgressBar
@@ -82,9 +125,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:background="@drawable/bg_feed_filter_bar"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="12dp"
             android:text="No posts yet."
+            android:textColor="@color/feed_secondary_text"
             android:textSize="13sp"
-            android:textColor="#777"
             android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

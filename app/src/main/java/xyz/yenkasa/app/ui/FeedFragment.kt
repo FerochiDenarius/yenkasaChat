@@ -3,6 +3,7 @@ package xyz.yenkasa.app.ui
 import android.app.AlertDialog
 import android.content.DialogInterface
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -14,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.FeedAdapter
+import xyz.yenkasa.app.adapter.FeedCommunityStoryAdapter
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
@@ -25,6 +27,9 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.adapter.AdBinder
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 
 class FeedFragment : Fragment() {
@@ -34,11 +39,13 @@ class FeedFragment : Fragment() {
     private lateinit var emptyView: TextView
     private lateinit var communityNameView: TextView
     private lateinit var fabCreatePost: FloatingActionButton
-    private lateinit var btnSelectCommunities: LinearLayout
     private lateinit var selectedCommunitiesText: TextView
+    private lateinit var communityStoryRecyclerView: RecyclerView
+    private lateinit var feedTabs: List<TextView>
 
     private val posts = mutableListOf<Post>()
     private lateinit var feedAdapter: FeedAdapter
+    private lateinit var communityStoryAdapter: FeedCommunityStoryAdapter
 
     private lateinit var layoutManager: LinearLayoutManager
 
@@ -46,9 +53,20 @@ class FeedFragment : Fragment() {
     private var userId: String? = null
     private var currentPage = 1
     private var isLoading = false
+    private var selectedFeedTabId = R.id.tabForYou
+    private var selectedFeedMode = FeedMode.FOR_YOU
+    private var followingUserIds: Set<String>? = null
+    private var communityPreviewMediaUrls: Map<String, String> = emptyMap()
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
+
+    private enum class FeedMode {
+        FOR_YOU,
+        FOLLOWING,
+        TRENDING,
+        TOP
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -61,6 +79,8 @@ class FeedFragment : Fragment() {
         initAuth()
         initViews(view)
         setupRecyclerView()
+        setupCommunityStoryRecyclerView()
+        setupFeedTabs()
 
         recyclerView.post { fetchCommunitiesAndFeed() }
         trackDailyLogin()
@@ -72,8 +92,6 @@ class FeedFragment : Fragment() {
             intent.putExtra("userId", userId)
             startActivity(intent)
         }
-
-        btnSelectCommunities.setOnClickListener { showCommunitySelectorDialog() }
 
         SocketManager.ensureConnected(userId)
         setupSocketListeners()
@@ -96,8 +114,14 @@ class FeedFragment : Fragment() {
         emptyView = view.findViewById(R.id.textEmptyFeed)
         communityNameView = view.findViewById(R.id.textCommunityNameHeader)
         fabCreatePost = requireActivity().findViewById(R.id.fabCreatePost)
-        btnSelectCommunities = view.findViewById(R.id.btnSelectCommunities)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
+        communityStoryRecyclerView = view.findViewById(R.id.recyclerViewFeedCommunities)
+        feedTabs = listOf(
+            view.findViewById(R.id.tabForYou),
+            view.findViewById(R.id.tabFollowing),
+            view.findViewById(R.id.tabTrending),
+            view.findViewById(R.id.tabTop)
+        )
     }
 
 
@@ -127,7 +151,6 @@ class FeedFragment : Fragment() {
             onUserClick = { id -> openUserProfile(id) },
             onPostClick = { post ->
                 when {
-                    !post.imageUrl.isNullOrEmpty() -> openImage(post)
                     !post.videoUrl.isNullOrEmpty() -> openVideo(post)
                     !post.audioUrl.isNullOrEmpty() -> openAudio(post)
                 }
@@ -159,9 +182,54 @@ class FeedFragment : Fragment() {
         recyclerView.adapter = feedAdapter
     }
 
+    private fun setupCommunityStoryRecyclerView() {
+        communityStoryAdapter = FeedCommunityStoryAdapter(
+            onAllCommunitiesClick = { selectAllCommunitiesFromStory() },
+            onCommunityClick = { community -> selectCommunityFromStory(community) }
+        )
+
+        communityStoryRecyclerView.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        communityStoryRecyclerView.adapter = communityStoryAdapter
+    }
+
+    private fun setupFeedTabs() {
+        feedTabs.forEach { tab ->
+            tab.setOnClickListener {
+                selectedFeedTabId = tab.id
+                selectedFeedMode = when (tab.id) {
+                    R.id.tabFollowing -> FeedMode.FOLLOWING
+                    R.id.tabTrending -> FeedMode.TRENDING
+                    R.id.tabTop -> FeedMode.TOP
+                    else -> FeedMode.FOR_YOU
+                }
+                updateFeedTabVisualState()
+                currentPage = 1
+                loadFeed()
+            }
+        }
+        updateFeedTabVisualState()
+    }
+
+    private fun updateFeedTabVisualState() {
+        feedTabs.forEach { tab ->
+            val selected = tab.id == selectedFeedTabId
+            tab.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.feed_accent else R.color.feed_secondary_text
+                )
+            )
+            tab.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
+            tab.setBackgroundResource(
+                if (selected) R.drawable.bg_feed_tab_selected else R.drawable.bg_feed_tab_unselected
+            )
+        }
+    }
+
     private fun openImage(post: Post) {
         val intent = Intent(requireContext(), PostMediaActivity::class.java)
-        intent.putExtra("MEDIA_URL", post.imageUrl)
+        intent.putExtra("MEDIA_URL", post.effectiveImageUrls().firstOrNull())
         intent.putExtra("MEDIA_TYPE", "image")
         intent.putExtra("POST_ID", post._id)
         intent.putExtra("USERNAME", post.userId.username)
@@ -326,6 +394,32 @@ class FeedFragment : Fragment() {
         updateSelectedCommunitiesUI()
         loadFeed()
     }
+
+    private fun selectAllCommunitiesFromStory() {
+        if (allCommunities.isEmpty()) {
+            showCommunitySelectorDialog()
+            return
+        }
+
+        selectedCommunities.clear()
+        selectedCommunities.addAll(allCommunities.filter { !it.id.isNullOrBlank() })
+        saveSelectedCommunities()
+        updateSelectedCommunitiesUI()
+        loadFeed()
+    }
+
+    private fun selectCommunityFromStory(community: Community) {
+        if (community.id.isNullOrBlank()) {
+            return
+        }
+
+        selectedCommunities.clear()
+        selectedCommunities.add(community)
+        saveSelectedCommunities()
+        updateSelectedCommunitiesUI()
+        loadFeed()
+    }
+
     private fun showCommunitySelectorDialog() {
         if (allCommunities.isEmpty()) {
             Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
@@ -413,10 +507,27 @@ class FeedFragment : Fragment() {
             1 -> selectedCommunities.first().displayName ?: selectedCommunities.first().name ?: "Unnamed"
             else -> "Multiple Communities"
         }
+
+        updateCommunityStoryRow()
+    }
+
+    private fun updateCommunityStoryRow() {
+        if (!::communityStoryAdapter.isInitialized) return
+        communityStoryAdapter.submitCommunities(
+            allCommunities,
+            selectedCommunities.mapNotNull { it.id }.toSet(),
+            communityPreviewMediaUrls
+        )
     }
 
     private fun loadFeed(page: Int = 1) {
         if (isLoading) return
+
+        if (selectedFeedMode == FeedMode.FOLLOWING && followingUserIds == null) {
+            fetchFollowingUserIds { loadFeed(page) }
+            return
+        }
+
         isLoading = true
         showLoading(true)
 
@@ -446,8 +557,11 @@ class FeedFragment : Fragment() {
                 showLoading(false)
 
                 if (response.isSuccessful && response.body() != null) {
+                    val sourcePosts = response.body()!!.posts
+                    updateCommunityStoryPreviews(sourcePosts)
+
                     posts.clear()
-                    posts.addAll(response.body()!!.posts)
+                    posts.addAll(applyFeedMode(sourcePosts))
                     val mixedList = buildMixedFeed(posts)
                     feedAdapter.updateItems(mixedList)
                     emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
@@ -462,6 +576,96 @@ class FeedFragment : Fragment() {
                 Log.e("FeedFragment", "Network failure: ${t.message}")
             }
         })
+    }
+
+    private fun fetchFollowingUserIds(onComplete: () -> Unit) {
+        val currentUserId = userId
+        val authToken = token
+
+        if (currentUserId.isNullOrBlank() || authToken.isNullOrBlank()) {
+            followingUserIds = emptySet()
+            onComplete()
+            return
+        }
+
+        ApiClient.apiService.getFollowing(currentUserId, "Bearer $authToken")
+            .enqueue(object : Callback<FollowListResponse> {
+                override fun onResponse(
+                    call: Call<FollowListResponse>,
+                    response: Response<FollowListResponse>
+                ) {
+                    followingUserIds = response.body()
+                        ?.following
+                        ?.map { it._id }
+                        ?.toSet()
+                        .orEmpty()
+                    onComplete()
+                }
+
+                override fun onFailure(call: Call<FollowListResponse>, t: Throwable) {
+                    followingUserIds = emptySet()
+                    onComplete()
+                }
+            })
+    }
+
+    private fun applyFeedMode(sourcePosts: List<Post>): List<Post> {
+        return when (selectedFeedMode) {
+            FeedMode.FOR_YOU -> sourcePosts
+            FeedMode.FOLLOWING -> {
+                val ids = followingUserIds.orEmpty()
+                sourcePosts
+                    .filter { ids.contains(it.userId.id) }
+                    .sortedByDescending { parsePostTimestampMillis(it.createdAt) ?: 0L }
+            }
+            FeedMode.TRENDING -> sourcePosts.sortedWith(
+                compareByDescending<Post> {
+                    it.likeCount + it.commentCount + it.shareCount + it.viewCount
+                }.thenByDescending {
+                    parsePostTimestampMillis(it.createdAt) ?: 0L
+                }
+            )
+            FeedMode.TOP -> sourcePosts.sortedByDescending {
+                parsePostTimestampMillis(it.createdAt) ?: 0L
+            }
+        }
+    }
+
+    private fun updateCommunityStoryPreviews(sourcePosts: List<Post>) {
+        communityPreviewMediaUrls = sourcePosts
+            .mapNotNull { post ->
+                val communityId = post.communityId?.id ?: return@mapNotNull null
+                val mediaUrl = post.effectiveImageUrls().firstOrNull()
+                    ?: post.videoUrl
+                    ?: return@mapNotNull null
+                communityId to mediaUrl
+            }
+            .distinctBy { it.first }
+            .toMap()
+        updateCommunityStoryRow()
+    }
+
+    private fun parsePostTimestampMillis(rawTimestamp: String?): Long? {
+        if (rawTimestamp.isNullOrBlank()) return null
+
+        rawTimestamp.toLongOrNull()?.let { value ->
+            return if (value < 10_000_000_000L) value * 1000 else value
+        }
+
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX"
+        )
+
+        return formats.firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(rawTimestamp)?.time
+            }.getOrNull()
+        }
     }
 
     private fun openComments(post: Post) {
@@ -576,7 +780,7 @@ class FeedFragment : Fragment() {
 
                 val media = response.body()!!.media
 
-                val url = media.imageUrl
+                val url = media.firstImageUrl()
                     ?: media.videoUrl
                     ?: media.audioUrl
 

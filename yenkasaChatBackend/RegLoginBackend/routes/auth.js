@@ -27,10 +27,10 @@ router.post('/register', async (req, res) => {
   console.log("🔥 /api/auth/register HIT");
   console.log("📩 Incoming body:", req.body);
 
-  let { email, phoneNumber, username, location, password, communityId, country } = req.body;
+  let { email, phoneNumber, username, location, password, communityId, communityIds, country } = req.body;
 
   try {
-    console.log("🔎 Before sanitize:", { email, phoneNumber, username, location, password, communityId, country });
+    console.log("🔎 Before sanitize:", { email, phoneNumber, username, location, password, communityId, communityIds, country });
 
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
-    console.log("✨ After sanitize:", { email, phoneNumber, username, location, password, communityId, country });
+    console.log("✨ After sanitize:", { email, phoneNumber, username, location, password, communityId, communityIds, country });
 
     // 🌍 COUNTRY VALIDATION
     const allowedCountries = ["Ghana", "Nigeria"];
@@ -62,24 +62,48 @@ router.post('/register', async (req, res) => {
 
     // Validate required
     console.log("🔍 Checking required fields…");
-    if (!username || !location || !password || (!email && !phoneNumber) || !communityId) {
-      console.log("❌ Missing fields:", { username, location, password, email, phoneNumber, communityId });
+    const requestedCommunityIds = Array.isArray(communityIds)
+      ? communityIds
+      : (communityId ? [communityId] : []);
+    const selectedCommunityIds = [...new Set(
+      requestedCommunityIds
+        .map(id => id?.toString().trim())
+        .filter(Boolean)
+    )];
+
+    if (!username || !location || !password || (!email && !phoneNumber) || selectedCommunityIds.length === 0) {
+      console.log("❌ Missing fields:", { username, location, password, email, phoneNumber, communityId, communityIds });
       return res.status(400).json({ message: 'Missing required fields (including communityId)' });
     }
 
-    console.log("🔍 Checking community:", communityId);
-    const community = await Community.findById(communityId);
-    if (!community || !community.isApproved) {
-      console.log("❌ Community invalid:", communityId);
+    if (selectedCommunityIds.length > 2) {
+      return res.status(400).json({
+        success: false,
+        message: "You can select up to 2 communities at signup."
+      });
+    }
+
+    console.log("🔍 Checking communities:", selectedCommunityIds);
+    const communities = await Community.find({
+      _id: { $in: selectedCommunityIds },
+      isApproved: true
+    });
+
+    if (communities.length !== selectedCommunityIds.length) {
+      console.log("❌ Community invalid:", selectedCommunityIds);
       return res.status(403).json({ message: 'Community not valid or not approved' });
     }
 
-    const communityCountry = (community.country || "Ghana").trim().toLowerCase();
-    if (communityCountry !== selectedCountry.toLowerCase()) {
+    const invalidCountryCommunity = communities.find((community) => {
+      const communityCountry = (community.country || "Ghana").trim().toLowerCase();
+      return communityCountry !== selectedCountry.toLowerCase();
+    });
+
+    if (invalidCountryCommunity) {
       console.log("❌ Community country mismatch:", {
         selectedCountry,
-        communityCountry: community.country,
-        communityId
+        communityCountry: invalidCountryCommunity.country,
+        communityId: invalidCountryCommunity._id
       });
       return res.status(400).json({
         success: false,
@@ -110,13 +134,23 @@ router.post('/register', async (req, res) => {
       location,
       country: selectedCountry,
       password: hashedPassword,
-      community: communityId,
-      joinedCommunities: [communityId],
+      community: selectedCommunityIds[0],
+      joinedCommunities: selectedCommunityIds,
       ...(email && { email }),
       ...(phoneNumber && { phoneNumber }),
     });
 
     await newUser.save();
+    await Community.updateMany(
+      { _id: { $in: selectedCommunityIds }, members: { $ne: newUser._id } },
+      { $addToSet: { members: newUser._id } }
+    );
+    await Promise.all(
+      selectedCommunityIds.map(async (id) => {
+        const count = await User.countDocuments({ joinedCommunities: id });
+        await Community.findByIdAndUpdate(id, { memberCount: count });
+      })
+    );
     console.log("🎉 User created successfully:", newUser._id);
 
     // 🔥 THIS WAS MISSING — MUST RETURN A RESPONSE

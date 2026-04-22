@@ -1,13 +1,20 @@
 package xyz.yenkasa.app.ui
 
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.MyApplication
@@ -21,7 +28,8 @@ import xyz.yenkasa.app.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import android.content.Intent
+import java.text.NumberFormat
+import java.util.Locale
 
 
 class CoinWalletActivity : AppCompatActivity() {
@@ -29,11 +37,32 @@ class CoinWalletActivity : AppCompatActivity() {
     private lateinit var tvTitle: TextView
     private lateinit var tvBalanceLabel: TextView
     private lateinit var tvBalance: TextView
+    private lateinit var textWalletUsdValue: TextView
+    private lateinit var textWalletTotalEarned: TextView
+    private lateinit var textWalletTotalSpent: TextView
+    private lateinit var textWalletTransactionsCount: TextView
+    private lateinit var textWalletAddress: TextView
+    private lateinit var textWalletExplorer: TextView
+    private lateinit var btnWalletBack: ImageView
+    private lateinit var btnWalletNotifications: ImageView
+    private lateinit var imgWalletBalanceVisibility: ImageView
+    private lateinit var btnWalletCopyAddress: ImageView
     private lateinit var btnTransaction: Button
+    private lateinit var btnWalletReceive: TextView
+    private lateinit var btnWalletConvert: TextView
+    private lateinit var btnWalletScan: TextView
+    private lateinit var tabRecentTransactions: TextView
+    private lateinit var tabAllTransactions: TextView
+    private lateinit var btnWalletFilter: TextView
     private lateinit var recyclerViewTransactions: RecyclerView
     private lateinit var transactionAdapter: TransactionAdapter
 
     private val transactionList = mutableListOf<TransactionUiModel>()
+    private val allTransactions = mutableListOf<TransactionUiModel>()
+    private var currentBalance: Int = 0
+    private var currentWalletId: String? = null
+    private var isBalanceHidden: Boolean = false
+    private var selectedTransactionTab: TransactionTab = TransactionTab.RECENT
 
     // Track old transaction list to detect NEW rewards
     private var previousList: List<TransactionUiModel> = emptyList()
@@ -54,11 +83,28 @@ class CoinWalletActivity : AppCompatActivity() {
         tvTitle = findViewById(R.id.tvTitle)
         tvBalanceLabel = findViewById(R.id.tvBalanceLabel)
         tvBalance = findViewById(R.id.tvBalance)
+        textWalletUsdValue = findViewById(R.id.textWalletUsdValue)
+        textWalletTotalEarned = findViewById(R.id.textWalletTotalEarned)
+        textWalletTotalSpent = findViewById(R.id.textWalletTotalSpent)
+        textWalletTransactionsCount = findViewById(R.id.textWalletTransactionsCount)
+        textWalletAddress = findViewById(R.id.textWalletAddress)
+        textWalletExplorer = findViewById(R.id.textWalletExplorer)
+        btnWalletBack = findViewById(R.id.btnWalletBack)
+        btnWalletNotifications = findViewById(R.id.btnWalletNotifications)
+        imgWalletBalanceVisibility = findViewById(R.id.imgWalletBalanceVisibility)
+        btnWalletCopyAddress = findViewById(R.id.btnWalletCopyAddress)
         btnTransaction = findViewById(R.id.btnTransaction)
+        btnWalletReceive = findViewById(R.id.btnWalletReceive)
+        btnWalletConvert = findViewById(R.id.btnWalletConvert)
+        btnWalletScan = findViewById(R.id.btnWalletScan)
+        tabRecentTransactions = findViewById(R.id.tabRecentTransactions)
+        tabAllTransactions = findViewById(R.id.tabAllTransactions)
+        btnWalletFilter = findViewById(R.id.btnWalletFilter)
         recyclerViewTransactions = findViewById(R.id.recyclerViewTransactions)
 
-        tvTitle.text = "Coin Wallet"
+        tvTitle.text = "Yenkasa Coin Wallet"
         tvBalanceLabel.text = "Current Balance"
+        refreshWalletHero()
 
         // RecyclerView
         transactionAdapter = TransactionAdapter(transactionList)
@@ -69,6 +115,55 @@ class CoinWalletActivity : AppCompatActivity() {
 
         btnTransaction.setOnClickListener {
             startActivity(Intent(this, CreateTransactionActivity::class.java))
+        }
+
+        btnWalletReceive.setOnClickListener {
+            startActivity(Intent(this, CreateTransactionActivity::class.java).putExtra("action", "receive"))
+        }
+
+        btnWalletConvert.setOnClickListener {
+            Toast.makeText(this, "Convert will be available when YKC exchange is ready", Toast.LENGTH_SHORT).show()
+        }
+
+        btnWalletScan.setOnClickListener {
+            Toast.makeText(this, "Scan will be available when wallet QR payments are ready", Toast.LENGTH_SHORT).show()
+        }
+
+        btnWalletCopyAddress.setOnClickListener {
+            copyWalletAddress()
+        }
+
+        textWalletAddress.setOnClickListener {
+            copyWalletAddress()
+        }
+
+        textWalletExplorer.setOnClickListener {
+            Toast.makeText(this, "Explorer will be available after blockchain integration", Toast.LENGTH_SHORT).show()
+        }
+
+        tabRecentTransactions.setOnClickListener {
+            selectedTransactionTab = TransactionTab.RECENT
+            applyTransactionTab()
+        }
+
+        tabAllTransactions.setOnClickListener {
+            selectedTransactionTab = TransactionTab.ALL
+            applyTransactionTab()
+        }
+
+        btnWalletFilter.setOnClickListener {
+            Toast.makeText(this, "Transaction filters will be available after wallet categories are finalized", Toast.LENGTH_SHORT).show()
+        }
+
+        btnWalletBack.setOnClickListener { finish() }
+
+        btnWalletNotifications.setOnClickListener {
+            startActivity(Intent(this, UserNotificationsActivity::class.java))
+        }
+
+        imgWalletBalanceVisibility.setOnClickListener {
+            isBalanceHidden = !isBalanceHidden
+            refreshWalletHero()
         }
 
         loadWalletData()
@@ -82,14 +177,21 @@ class CoinWalletActivity : AppCompatActivity() {
             .enqueue(object : Callback<CoinBalanceResponse> {
                 override fun onResponse(call: Call<CoinBalanceResponse>, response: Response<CoinBalanceResponse>) {
                     if (response.isSuccessful && response.body() != null) {
-                        tvBalance.text = "YenkasaCoins: ${response.body()!!.balance}"
+                        val body = response.body()!!
+                        currentBalance = body.balance
+                        currentWalletId = body.walletId
+                        textWalletAddress.text = body.walletId?.let { shortenWalletId(it) } ?: "Wallet pending"
                     } else {
-                        tvBalance.text = "YenkasaCoins: 0"
+                        currentBalance = 0
+                        textWalletAddress.text = "Wallet pending"
                     }
+                    refreshWalletHero()
                 }
 
                 override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
-                    tvBalance.text = "YenkasaCoins: 0"
+                    currentBalance = 0
+                    textWalletAddress.text = "Wallet unavailable"
+                    refreshWalletHero()
                 }
             })
 
@@ -98,10 +200,11 @@ class CoinWalletActivity : AppCompatActivity() {
             .filter { !it.activityId.isNullOrEmpty() }
 
         if (cached.isNotEmpty()) {
-            transactionList.clear()
-            transactionList.addAll(cached)
-            transactionAdapter.notifyDataSetChanged()
+            allTransactions.clear()
+            allTransactions.addAll(cached)
+            applyTransactionTab()
             previousList = cached // STORE previous list baseline
+            refreshWalletHero()
         }
 
         // Fetch latest from server
@@ -147,9 +250,10 @@ class CoinWalletActivity : AppCompatActivity() {
                     }
 
                     // Update UI
-                    transactionList.clear()
-                    transactionList.addAll(latest)
-                    transactionAdapter.notifyDataSetChanged()
+                    allTransactions.clear()
+                    allTransactions.addAll(latest)
+                    applyTransactionTab()
+                    refreshWalletHero()
 
                     // Save to local cache
                     TokenManager.saveTransactionHistory(this@CoinWalletActivity, latest)
@@ -160,8 +264,88 @@ class CoinWalletActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<CoinTransactionResponse>, t: Throwable) {
                     Toast.makeText(this@CoinWalletActivity, "Failed to load transactions", Toast.LENGTH_SHORT).show()
+                    refreshWalletHero()
                 }
             })
+    }
+
+    private fun refreshWalletHero() {
+        tvBalance.text = if (isBalanceHidden) "••••" else formatCoinAmount(currentBalance)
+        textWalletUsdValue.text = "~ $0.00 USD"
+
+        val walletId = currentWalletId
+        val totalEarned = allTransactions
+            .filter { tx -> walletId == null || tx.to == walletId || tx.from != walletId }
+            .sumOf { it.amount }
+        val totalSpent = allTransactions
+            .filter { tx -> walletId != null && tx.from == walletId }
+            .sumOf { it.amount }
+
+        textWalletTotalEarned.text = "Total Earned\n${formatWholeCoins(totalEarned)} YKC ↑"
+        textWalletTotalSpent.text = "Total Spent\n${formatWholeCoins(totalSpent)} YKC ↓"
+        textWalletTransactionsCount.text = "Transactions\n${formatWholeCoins(allTransactions.size)}"
+    }
+
+    private fun applyTransactionTab() {
+        transactionList.clear()
+        transactionList.addAll(
+            when (selectedTransactionTab) {
+                TransactionTab.RECENT -> allTransactions.take(10)
+                TransactionTab.ALL -> allTransactions
+            }
+        )
+        transactionAdapter.notifyDataSetChanged()
+        refreshTransactionTabStyle()
+    }
+
+    private fun refreshTransactionTabStyle() {
+        val accent = ContextCompat.getColor(this, R.color.wallet_accent_green)
+        val muted = ContextCompat.getColor(this, R.color.wallet_secondary_text)
+        val recentSelected = selectedTransactionTab == TransactionTab.RECENT
+
+        tabRecentTransactions.setTextColor(if (recentSelected) accent else muted)
+        tabRecentTransactions.setTypeface(null, if (recentSelected) Typeface.BOLD else Typeface.NORMAL)
+        tabRecentTransactions.setBackgroundResource(if (recentSelected) R.drawable.bg_wallet_tab_selected else 0)
+
+        tabAllTransactions.setTextColor(if (!recentSelected) accent else muted)
+        tabAllTransactions.setTypeface(null, if (!recentSelected) Typeface.BOLD else Typeface.NORMAL)
+        tabAllTransactions.setBackgroundResource(if (!recentSelected) R.drawable.bg_wallet_tab_selected else 0)
+    }
+
+    private fun formatCoinAmount(amount: Int): String {
+        return NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }.format(amount)
+    }
+
+    private fun formatWholeCoins(amount: Int): String {
+        return NumberFormat.getIntegerInstance(Locale.getDefault()).format(amount)
+    }
+
+    private fun shortenWalletId(walletId: String): String {
+        return if (walletId.length <= 14) {
+            walletId
+        } else {
+            "${walletId.take(7)}...${walletId.takeLast(4)}"
+        }
+    }
+
+    private fun copyWalletAddress() {
+        val walletId = currentWalletId
+        if (walletId.isNullOrBlank()) {
+            Toast.makeText(this, "Wallet address is not available yet", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Yenkasa wallet address", walletId))
+        Toast.makeText(this, "Wallet address copied", Toast.LENGTH_SHORT).show()
+    }
+
+    private enum class TransactionTab {
+        RECENT,
+        ALL
     }
 
 

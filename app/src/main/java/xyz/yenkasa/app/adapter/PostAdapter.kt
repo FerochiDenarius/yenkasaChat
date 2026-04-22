@@ -15,6 +15,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.common.Player
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -97,6 +98,9 @@ class PostAdapter(
 
         // IMAGE
         val postImage: ImageView = itemRoot.findViewById(R.id.imagePostContent)
+        val imageCarousel: ViewPager2 = itemRoot.findViewById(R.id.imageCarouselPostContent)
+        val imageCarouselCounter: TextView = itemRoot.findViewById(R.id.textImageCarouselCounter)
+        private var imagePageCallback: ViewPager2.OnPageChangeCallback? = null
 
         // VIDEO
         val playerView: PlayerView? = itemRoot.findViewById(R.id.playerView)
@@ -132,6 +136,11 @@ class PostAdapter(
         fun resetMediaUi() {
             mediaContainer.visibility = View.GONE
             postImage.visibility = View.GONE
+            imagePageCallback?.let { imageCarousel.unregisterOnPageChangeCallback(it) }
+            imagePageCallback = null
+            imageCarousel.adapter = null
+            imageCarousel.visibility = View.GONE
+            imageCarouselCounter.visibility = View.GONE
             playerView?.visibility = View.GONE
             imageVideoThumbnail.visibility = View.GONE
             btnVideoPlay.visibility = View.GONE
@@ -152,6 +161,26 @@ class PostAdapter(
             audioCurrent.text = "0:00"
             audioTotal.text = "0:00"
             btnAudioPlayPause.setImageResource(R.drawable.ic_play_circle)
+        }
+
+        fun bindImageCarousel(imageUrls: List<String>) {
+            imagePageCallback?.let { imageCarousel.unregisterOnPageChangeCallback(it) }
+            imageCarousel.adapter = FeedImageCarouselAdapter(imageUrls)
+            imageCarousel.setCurrentItem(0, false)
+            imageCarousel.visibility = View.VISIBLE
+
+            if (imageUrls.size > 1) {
+                imageCarouselCounter.visibility = View.VISIBLE
+                imageCarouselCounter.text = "1/${imageUrls.size}"
+                imagePageCallback = object : ViewPager2.OnPageChangeCallback() {
+                    override fun onPageSelected(position: Int) {
+                        imageCarouselCounter.text = "${position + 1}/${imageUrls.size}"
+                    }
+                }
+                imageCarousel.registerOnPageChangeCallback(imagePageCallback!!)
+            } else {
+                imageCarouselCounter.visibility = View.GONE
+            }
         }
 
         // Release video player reference from this ViewHolder.
@@ -232,21 +261,28 @@ class PostAdapter(
             btnVideoPlay.setOnClickListener {
                 // prevent double clicks while preparing
                 if (isPreparing) return@setOnClickListener
+                throttleTap(btnVideoPlay, 700L)
 
                 // Hide thumbnail UI, show player
                 imageVideoThumbnail.visibility = View.GONE
                 btnVideoPlay.visibility = View.GONE
                 playerView?.visibility = View.VISIBLE
                 btnPlayPause?.visibility = View.VISIBLE
+                btnPlayPause?.setImageResource(R.drawable.ic_pause_circle)
 
-                // Delay until PlayerView has a surface
-                playerView?.post {
-                    playVideoRequested(position)
-                }
+                playVideoRequested(position)
             }
 
             btnPlayPause?.setOnClickListener {
+                throttleTap(it, 250L)
                 toggleRequested(position)
+                btnPlayPause?.setImageResource(
+                    if (exoPlayer?.isPlaying == true) {
+                        R.drawable.ic_pause_circle
+                    } else {
+                        R.drawable.ic_play_circle
+                    }
+                )
             }
         }
 
@@ -287,7 +323,7 @@ class PostAdapter(
         holder.username.setOnClickListener { onUserClick(post.userId.id) }
 
         holder.communityName.text = post.communityId?.displayName ?: "General"
-        holder.timestamp.text = formatTimestamp(post.createdAt.toLongOrNull())
+        holder.timestamp.text = formatTimestamp(post.createdAt)
         holder.likeCount.text = "${post.likeCount} likes"
         holder.commentCount.text = "${post.commentCount} comments"
         holder.viewCount.text = "👁 ${post.viewCount}"
@@ -298,14 +334,28 @@ class PostAdapter(
         } else View.GONE
 
         holder.updateLikeButton(post.likedByCurrentUser, holder.btnLike)
-        holder.btnLike.setOnClickListener { onLikeClick(post, position) }
-        holder.btnComment.setOnClickListener { onCommentClick(post, position) }
-        holder.btnShare.setOnClickListener { onShareClick(post) }
+        holder.btnLike.setOnClickListener { view ->
+            throttleTap(view)
+            onLikeClick(post, position)
+        }
+        holder.likeCount.setOnClickListener { holder.btnLike.performClick() }
+        holder.btnComment.setOnClickListener { view ->
+            throttleTap(view)
+            onCommentClick(post, position)
+        }
+        holder.commentCount.setOnClickListener { holder.btnComment.performClick() }
+        holder.btnShare.setOnClickListener { view ->
+            throttleTap(view)
+            onShareClick(post)
+        }
+        holder.viewCount.setOnClickListener { holder.btnShare.performClick() }
 
         val currentUserId = TokenManager.getUserId(context)
         holder.fabFollow.setImageResource(R.drawable.ic_person_add)
         holder.fabFollow.backgroundTintList =
-            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.primary))
+            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.feed_action_background))
+        holder.fabFollow.imageTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.feed_action_icon))
         holder.fabFollow.isEnabled = true
         holder.fabFollow.visibility = if (post.userId.id == currentUserId) View.GONE else View.VISIBLE
         holder.fabFollow.setOnClickListener {
@@ -313,7 +363,8 @@ class PostAdapter(
         }
 
         // Media
-        val hasImage = !post.imageUrl.isNullOrEmpty()
+        val imageUrls = post.effectiveImageUrls()
+        val hasImage = imageUrls.isNotEmpty()
         val hasVideo = !post.videoUrl.isNullOrEmpty()
         val hasAudio = !post.audioUrl.isNullOrEmpty()
         val hasMedia = hasImage || hasVideo || hasAudio
@@ -339,11 +390,7 @@ class PostAdapter(
 
         if (hasImage) {
             holder.mediaContainer.visibility = View.VISIBLE
-            holder.postImage.visibility = View.VISIBLE
-            Glide.with(holder.itemRoot.context)
-                .load(post.imageUrl)
-                .placeholder(R.drawable.placeholder_image)
-                .into(holder.postImage)
+            holder.bindImageCarousel(imageUrls)
             recordVisibleView(post._id, 3)
         }
 
@@ -358,6 +405,13 @@ class PostAdapter(
                     attachPlayerToView(holder.playerView)
                     holder.playerView?.visibility = View.VISIBLE
                     holder.btnPlayPause?.visibility = View.VISIBLE
+                    holder.btnPlayPause?.setImageResource(
+                        if (exoPlayer?.isPlaying == true) {
+                            R.drawable.ic_pause_circle
+                        } else {
+                            R.drawable.ic_play_circle
+                        }
+                    )
                 }
             }
         }
@@ -375,7 +429,10 @@ class PostAdapter(
         }
 
         val btnMoreOptions = holder.itemRoot.findViewById<ImageButton>(R.id.btnMoreOptions)
-        btnMoreOptions.setOnClickListener { holder.showPostOptionsBottomSheet(post) }
+        btnMoreOptions.setOnClickListener {
+            throttleTap(it)
+            holder.showPostOptionsBottomSheet(post)
+        }
     }
 
     override fun getItemCount(): Int = posts.size
@@ -467,6 +524,11 @@ class PostAdapter(
             player.play()
             posts.getOrNull(position)?.let { startVideoTimer(it) }
         }
+    }
+
+    private fun throttleTap(view: View, delayMillis: Long = 350L) {
+        view.isEnabled = false
+        view.postDelayed({ view.isEnabled = true }, delayMillis)
     }
 
     private fun stopPlaybackInternal() {
@@ -572,7 +634,7 @@ class PostAdapter(
                         when {
                             post?.videoUrl?.isNotEmpty() == true -> "video"
                             post?.audioUrl?.isNotEmpty() == true -> "audio"
-                            post?.imageUrl?.isNotEmpty() == true -> "image"
+                            post?.effectiveImageUrls()?.isNotEmpty() == true -> "image"
                             else -> "text"
                         })
                 )
@@ -600,7 +662,7 @@ class PostAdapter(
                         when {
                             post?.videoUrl?.isNotEmpty() == true -> "video"
                             post?.audioUrl?.isNotEmpty() == true -> "audio"
-                            post?.imageUrl?.isNotEmpty() == true -> "image"
+                            post?.effectiveImageUrls()?.isNotEmpty() == true -> "image"
                             else -> "text"
                         })
                 )
@@ -649,9 +711,9 @@ class PostAdapter(
                     if (response.isSuccessful && body != null) {
                         followButton.setImageResource(R.drawable.ic_check)
                         followButton.backgroundTintList =
-                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.yenkasa_black))
+                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.feed_action_background))
                         followButton.imageTintList =
-                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.yenkasa_amber))
+                            ColorStateList.valueOf(ContextCompat.getColor(context, R.color.feed_action_icon))
                         followButton.isEnabled = false
                         Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
                     } else {
@@ -676,9 +738,41 @@ class PostAdapter(
         return String.format("%d:%02d", totalSec / 60, totalSec % 60)
     }
 
-    private fun formatTimestamp(ts: Long?): String {
-        if (ts == null) return ""
-        return SimpleDateFormat("dd MMM • hh:mm a", Locale.getDefault()).format(Date(ts))
+    private fun formatTimestamp(rawTimestamp: String?): String {
+        val timestamp = parseTimestampMillis(rawTimestamp) ?: return ""
+        val diffMillis = System.currentTimeMillis() - timestamp
+        val diffSeconds = diffMillis / 1000
+
+        return when {
+            diffSeconds < 60 -> "now"
+            diffSeconds < 3600 -> "${diffSeconds / 60}m"
+            diffSeconds < 86400 -> "${diffSeconds / 3600}h"
+            diffSeconds < 604800 -> "${diffSeconds / 86400}d"
+            else -> SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(timestamp))
+        }
+    }
+
+    private fun parseTimestampMillis(rawTimestamp: String?): Long? {
+        if (rawTimestamp.isNullOrBlank()) return null
+
+        rawTimestamp.toLongOrNull()?.let { value ->
+            return if (value < 10_000_000_000L) value * 1000 else value
+        }
+
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX"
+        )
+
+        return formats.firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(rawTimestamp)?.time
+            }.getOrNull()
+        }
     }
 
     private fun PostViewHolder.showPostOptionsBottomSheet(post: Post) {

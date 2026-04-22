@@ -24,6 +24,15 @@
 
         <form id="delivery-form" style="display:flex;flex-direction:column;gap:18px;">
 
+          <div id="delivery-estimate-box" style="background:#f9fafb;border:1px solid #d1d5db;border-radius:8px;padding:16px;">
+            <strong>Delivery estimate</strong>
+            <p id="delivery-estimate-status" style="margin:8px 0 0;">Checking delivery cost...</p>
+            <div id="delivery-estimate-details" style="display:none;margin-top:10px;">
+              <p style="margin:4px 0;"><strong>Distance:</strong> <span id="delivery-distance">-</span></p>
+              <p style="margin:4px 0;"><strong>Delivery Fee:</strong> <span id="delivery-fee">-</span></p>
+            </div>
+          </div>
+
           <label style="display:flex;align-items:center;gap:12px;">
             <input type="radio" name="deliveryMethod" value="pickup" required>
             Pick Up at Oyarifa
@@ -56,6 +65,6 @@
     </div>
   </section>
   <script src="/store/assets/jsFiles/store-settings.js"></script>
-  <script src="/store/assets/jsFiles/delivery.js"></script>
+  <script src="/store/assets/jsFiles/delivery.js?v=20260421-delivery-estimate"></script>
 </body>
 </html>

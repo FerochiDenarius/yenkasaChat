@@ -1,11 +1,15 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.util.TokenManager
 
@@ -16,6 +20,13 @@ class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_menu)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.menu_background)
+        window.navigationBarColor = ContextCompat.getColor(this, R.color.menu_background)
+        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+        if (!isNightMode) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        }
 
         Log.d(TAG, "MenuActivity started")
 
@@ -32,6 +43,14 @@ class MenuActivity : AppCompatActivity() {
         val btnLogout = findViewById<LinearLayout>(R.id.btnLogout)
         val btnCommunities = findViewById<LinearLayout>(R.id.btnCommunities)
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
+        val walletBalanceChip = findViewById<LinearLayout>(R.id.walletBalanceChip)
+        val textMenuWalletBalance = findViewById<TextView>(R.id.textMenuWalletBalance)
+
+        textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
+        walletBalanceChip.visibility = if (isNightMode) View.GONE else View.VISIBLE
+        walletBalanceChip.setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
 
         // ✔ Contacts
         btnContacts.setOnClickListener {

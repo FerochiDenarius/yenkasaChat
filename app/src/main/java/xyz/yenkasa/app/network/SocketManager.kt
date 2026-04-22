@@ -216,8 +216,12 @@ object SocketManager {
                 communityId = parseCommunity(json.optJSONObject("communityId")),
                 caption = json.optString("text", json.optString("caption", null)),
                 imageUrl = json.optString("imageUrl", null),
+                imageUrls = json.optJSONArray("imageUrls")?.let { arr ->
+                    List(arr.length()) { i -> arr.optString(i) }.filter { it.isNotBlank() }
+                }.orEmpty(),
                 videoUrl = json.optString("videoUrl", null),
                 audioUrl = json.optString("audioUrl", null),
+                textBackgroundColor = json.optString("textBackgroundColor", null),
                 mentions = json.optJSONArray("mentions")?.let { arr ->
                     List(arr.length()) { i -> arr.optString(i) }
                 },

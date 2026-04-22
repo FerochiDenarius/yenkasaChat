@@ -420,6 +420,7 @@ class RegisterActivity : AppCompatActivity() {
             location = location,
             password = password,
             communityId = selectedCommunityId!!,
+            communityIds = listOf(selectedCommunityId!!),
             country = selectedCountry
         )
 

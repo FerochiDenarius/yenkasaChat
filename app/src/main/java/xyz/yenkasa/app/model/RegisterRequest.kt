@@ -10,5 +10,6 @@ data class RegisterRequest(
     val location: String,
     val password: String,
     val communityId: String,
+    val communityIds: List<String>? = null,
     val country: String = "Ghana"
 )

@@ -585,7 +585,11 @@ class CommunitiesActivity : AppCompatActivity() {
 
                         response.code() == 403 -> {
                             Log.e("JOIN_COMMUNITY", "❌ ERROR: Join limit reached")
-                            Toast.makeText(this@CommunitiesActivity, "You can only join up to 2 communities.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this@CommunitiesActivity,
+                                "You can join up to 5 communities: 2 at signup and 3 more in the app.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
 
                         else -> {

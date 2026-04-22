@@ -46,6 +46,7 @@ const postSchema = new Schema({
 
   // Media fields
   imageUrl: { type: String, default: '' },
+  imageUrls: [{ type: String }],
   videoUrl: { type: String, default: '' },
   audioUrl: { type: String, default: '' },
 

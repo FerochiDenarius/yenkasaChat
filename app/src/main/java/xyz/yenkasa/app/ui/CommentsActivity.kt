@@ -19,14 +19,12 @@ import xyz.yenkasa.app.model.Comment
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.PostNotificationSender
 import kotlinx.coroutines.*
-import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.net.HttpURLConnection
-import java.net.URL
 import android.view.animation.BounceInterpolator
 import android.view.animation.ScaleAnimation
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -51,6 +49,7 @@ class CommentsActivity : AppCompatActivity() {
     private var isRefreshing = false
     private var autoRefreshJob: Job? = null
     private var latestCommentCount: Int? = null
+    private var currentPost: Post? = null
     private val pendingCommentLikeIds = mutableSetOf<String>()
     // Post header root
     private lateinit var postHeaderView: View
@@ -153,6 +152,12 @@ class CommentsActivity : AppCompatActivity() {
 
                                         editComment.text.clear()
                                         Toast.makeText(this@CommentsActivity, "Reply posted", Toast.LENGTH_SHORT).show()
+                                        PostNotificationSender.sendPostComment(
+                                            this@CommentsActivity,
+                                            currentPost,
+                                            postId,
+                                            text
+                                        )
                                         loadComments()
                                         resetSendButton()
 
@@ -459,6 +464,12 @@ class CommentsActivity : AppCompatActivity() {
 
                                 // Optionally update RecyclerView
                                 // commentsAdapter.addComment(comment)
+                                PostNotificationSender.sendPostComment(
+                                    this@CommentsActivity,
+                                    currentPost,
+                                    postId,
+                                    comment.text
+                                )
                                 loadComments()
                                 resetSendButton()
                                 editComment.text.clear()
@@ -494,33 +505,6 @@ class CommentsActivity : AppCompatActivity() {
                     }
                 }
             })
-    }
-
-    // ✅ Toggle Like on Comment
-
-    private fun sendCommentNotification(comment: Comment) {
-        val jsonBody = JSONObject().apply {
-            put("app_id", "165df9e6-a0ea-4a37-a40a-110af7e28ad2")
-            put("included_segments", JSONArray().put("Subscribed Users"))
-            put("headings", JSONObject().put("en", "New Comment on Your Post"))
-            put("contents", JSONObject().put("en", "${comment.user?.username ?: "Someone"}: ${comment.text}"))
-            put("data", JSONObject().put("post_id", postId))
-        }
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val url = URL("https://onesignal.com/api/v1/notifications")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "POST"
-                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                conn.setRequestProperty("Authorization", "Basic YOUR_REST_API_KEY")
-                conn.doOutput = true
-                conn.outputStream.use { it.write(jsonBody.toString().toByteArray()) }
-                Log.d("CommentsActivity", "OneSignal response: ${conn.responseCode}")
-            } catch (e: Exception) {
-                Log.e("CommentsActivity", "Failed to send comment notification: ${e.message}")
-            }
-        }
     }
 
     // Optional: comment success animation
@@ -669,6 +653,7 @@ class CommentsActivity : AppCompatActivity() {
                 if (!response.isSuccessful || response.body() == null) return
 
                 val post = response.body()!!
+                currentPost = post
 
                 val displayPost = latestCommentCount?.let { count ->
                     post.copy(commentCount = count)

@@ -672,6 +672,12 @@ interface ApiService {
         @Header("Authorization") auth: String
     ): Call<ApiResponse>
 
+    @POST("notifications")
+    fun createNotification(
+        @Header("Authorization") auth: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any?>
+    ): Call<ApiResponse>
+
 
 
 

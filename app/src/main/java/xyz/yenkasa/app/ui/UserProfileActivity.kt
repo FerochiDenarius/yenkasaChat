@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.adapter.PostAdapter
+import xyz.yenkasa.app.adapter.ProfilePostAdapter
 import xyz.yenkasa.app.model.UnblockUserRequest
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ProfileResponse
@@ -43,7 +43,7 @@ class UserProfileActivity : AppCompatActivity() {
     private lateinit var btnMessage: Button
     private lateinit var btnBlock: Button
 
-    private lateinit var postAdapter: PostAdapter
+    private lateinit var postAdapter: ProfilePostAdapter
     private val userPostsList = mutableListOf<Post>()
 
     private var userId: String? = null
@@ -83,49 +83,7 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        postAdapter = PostAdapter(
-            context = this,  // ✅ Add this line — passing the Activity context
-            posts = userPostsList,
-            onLikeClick = { post, position ->
-                // TODO: Handle like logic
-            },
-            onCommentClick = { post, _ ->
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", post._id)
-                startActivity(intent)
-            },
-            onUserClick = { userId ->
-                val intent = Intent(this, UserProfileActivity::class.java)
-                intent.putExtra("USER_ID", userId)
-                startActivity(intent)
-            },
-            onPostClick = { post ->
-                val intent = Intent(this, PostMediaActivity::class.java)
-                intent.putExtra("POST_ID", post._id)
-                intent.putExtra("MEDIA_URL", post.imageUrl?.takeIf { it.isNotBlank() }
-                    ?: post.videoUrl?.takeIf { it.isNotBlank() }
-                    ?: post.audioUrl?.takeIf { it.isNotBlank() })
-                intent.putExtra(
-                    "MEDIA_TYPE",
-                    when {
-                        !post.videoUrl.isNullOrEmpty() -> "video"
-                        !post.audioUrl.isNullOrEmpty() -> "audio"
-                        !post.imageUrl.isNullOrEmpty() -> "image"
-                        else -> "text"
-                    }
-                )
-                intent.putExtra("USERNAME", post.userId.username)
-                intent.putExtra("CAPTION", post.caption ?: "")
-                startActivity(intent)
-            },
-            onShareClick = { post ->
-                val shareIntent = Intent(Intent.ACTION_SEND)
-                shareIntent.type = "text/plain"
-                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
-                shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
-                startActivity(Intent.createChooser(shareIntent, "Share via"))
-            }
-        )
+        postAdapter = ProfilePostAdapter(userPostsList) { post -> openPostFromGrid(post) }
 
         recyclerUserPosts.layoutManager = GridLayoutManager(this, 3)
         recyclerUserPosts.adapter = postAdapter
@@ -191,25 +149,20 @@ class UserProfileActivity : AppCompatActivity() {
                         val profile = response.body()!!
                         updateUI(profile)
 
-                        // ✅ Filter only posts that actually have media
-                        val mediaPosts = profile.posts?.filter { post ->
-                            !post.imageUrl.isNullOrBlank() ||
-                                    !post.videoUrl.isNullOrBlank() ||
-                                    !post.audioUrl.isNullOrBlank()
-                        } ?: emptyList()
+                        val profilePosts = profile.posts ?: emptyList()
 
                         Log.d(
                             TAG,
-                            "✅ Loaded ${mediaPosts.size} media posts for user ${profile.username} (Total posts: ${(profile.posts ?: emptyList()).size})"
+                            "✅ Loaded ${profilePosts.size} posts for user ${profile.username}"
                         )
 
                         // ✅ Update RecyclerView
                         userPostsList.clear()
-                        userPostsList.addAll(mediaPosts)
-                        postAdapter.notifyDataSetChanged()
+                        userPostsList.addAll(profilePosts)
+                        postAdapter.submitPosts(profilePosts)
 
                         // ✅ Update UI count
-                        postsCountView.text = "${mediaPosts.size}\nPosts"
+                        postsCountView.text = "${profilePosts.size}\nPosts"
                     } else {
                         Log.e(
                             TAG,
@@ -341,5 +294,31 @@ class UserProfileActivity : AppCompatActivity() {
         intent.putExtra("LIST_TYPE", type) // "followers" or "following"
         intent.putExtra("USER_ID", userId ?: TokenManager.getUserId(this))
         startActivity(intent)
+    }
+
+    private fun openPostFromGrid(post: Post) {
+        val mediaUrl = post.effectiveImageUrls().firstOrNull()?.takeIf { it.isNotBlank() }
+            ?: post.videoUrl?.takeIf { it.isNotBlank() }
+            ?: post.audioUrl?.takeIf { it.isNotBlank() }
+
+        if (mediaUrl.isNullOrBlank()) {
+            startActivity(Intent(this, CommentsActivity::class.java).putExtra("POST_ID", post._id))
+            return
+        }
+
+        startActivity(Intent(this, PostMediaActivity::class.java).apply {
+            putExtra("POST_ID", post._id)
+            putExtra("MEDIA_URL", mediaUrl)
+            putExtra(
+                "MEDIA_TYPE",
+                when {
+                    !post.videoUrl.isNullOrEmpty() -> "video"
+                    !post.audioUrl.isNullOrEmpty() -> "audio"
+                    else -> "image"
+                }
+            )
+            putExtra("USERNAME", post.userId.username)
+            putExtra("CAPTION", post.caption ?: "")
+        })
     }
 }

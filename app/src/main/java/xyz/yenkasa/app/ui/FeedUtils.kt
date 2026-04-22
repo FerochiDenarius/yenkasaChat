@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.PostNotificationSender
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -32,6 +33,9 @@ object FeedUtils {
                         )
 
                         onLikeUpdated(body.likedByUser, body.likeCount)
+                        if (body.likedByUser) {
+                            PostNotificationSender.sendPostLike(context, post)
+                        }
                     } else {
                         Log.w(
                             "FeedUtils",

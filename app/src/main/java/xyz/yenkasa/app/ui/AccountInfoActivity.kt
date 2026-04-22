@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.adapter.PostAdapter
+import xyz.yenkasa.app.adapter.ProfilePostAdapter
 import xyz.yenkasa.app.databinding.ActivityAccountInfoBinding
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.User
@@ -52,7 +52,7 @@ class AccountInfoActivity : AppCompatActivity() {
 
 
 
-    private lateinit var postAdapter: PostAdapter
+    private lateinit var postAdapter: ProfilePostAdapter
     private val userPostsList = mutableListOf<Post>()
     private val TAG = "AccountInfoActivity"
 
@@ -93,41 +93,7 @@ class AccountInfoActivity : AppCompatActivity() {
 // ... (imports and other class members)
 
     private fun setupRecyclerView() {
-        // ✅ Pass 'this' (Activity context) as the first argument
-        postAdapter = PostAdapter(
-            this, // <-- FIX HERE
-            userPostsList,
-            onLikeClick = { _, _ -> /* Not needed in this grid view */ },
-            onCommentClick = { _, _ -> /* Not needed in this grid view */ },
-            onUserClick = { /* Not needed, we are already on a user's profile */ },
-            onPostClick = { post ->
-                // When a user clicks a post in the grid, open the detail view
-                val intent = Intent(this, PostMediaActivity::class.java)
-                intent.putExtra("POST_ID", post._id)
-                intent.putExtra("MEDIA_URL", post.imageUrl?.takeIf { it.isNotBlank() }
-                    ?: post.videoUrl?.takeIf { it.isNotBlank() }
-                    ?: post.audioUrl?.takeIf { it.isNotBlank() })
-                intent.putExtra(
-                    "MEDIA_TYPE",
-                    when {
-                        !post.videoUrl.isNullOrEmpty() -> "video"
-                        !post.audioUrl.isNullOrEmpty() -> "audio"
-                        !post.imageUrl.isNullOrEmpty() -> "image"
-                        else -> "text"
-                    }
-                )
-                intent.putExtra("USERNAME", post.userId.username)
-                intent.putExtra("CAPTION", post.caption ?: "")
-                startActivity(intent)
-            },
-            onShareClick = { post ->
-                val shareIntent = Intent(Intent.ACTION_SEND)
-                shareIntent.type = "text/plain"
-                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
-                shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
-                startActivity(Intent.createChooser(shareIntent, "Share via"))
-            }
-        )
+        postAdapter = ProfilePostAdapter(userPostsList) { post -> openPostFromGrid(post) }
 
         recyclerUserPosts.apply {
             layoutManager = GridLayoutManager(this@AccountInfoActivity, 3)
@@ -376,18 +342,11 @@ class AccountInfoActivity : AppCompatActivity() {
                         val allPosts = response.body()!!
                         Log.d(TAG, "✅ User posts loaded: $allPosts")
 
-                        // ✅ Filter posts that actually have media (image, video, or audio)
-                        val mediaPosts = allPosts.filter {
-                            !it.imageUrl.isNullOrBlank() ||
-                                    !it.videoUrl.isNullOrBlank() ||
-                                    !it.audioUrl.isNullOrBlank()
-                        }
-
                         userPostsList.clear()
-                        userPostsList.addAll(mediaPosts)
-                        postAdapter.notifyDataSetChanged()
+                        userPostsList.addAll(allPosts)
+                        postAdapter.submitPosts(allPosts)
 
-                        postsCountView.text = "${mediaPosts.size}\nPosts"
+                        postsCountView.text = "${allPosts.size}\nPosts"
                     } else {
                         Log.w(TAG, "⚠️ Failed to load posts: ${response.code()} - ${response.message()}")
                     }
@@ -415,5 +374,31 @@ class AccountInfoActivity : AppCompatActivity() {
         intent.putExtra("LIST_TYPE", type) // "followers" or "following"
         intent.putExtra("USER_ID", TokenManager.getUserId(this))
         startActivity(intent)
+    }
+
+    private fun openPostFromGrid(post: Post) {
+        val mediaUrl = post.effectiveImageUrls().firstOrNull()?.takeIf { it.isNotBlank() }
+            ?: post.videoUrl?.takeIf { it.isNotBlank() }
+            ?: post.audioUrl?.takeIf { it.isNotBlank() }
+
+        if (mediaUrl.isNullOrBlank()) {
+            startActivity(Intent(this, CommentsActivity::class.java).putExtra("POST_ID", post._id))
+            return
+        }
+
+        startActivity(Intent(this, PostMediaActivity::class.java).apply {
+            putExtra("POST_ID", post._id)
+            putExtra("MEDIA_URL", mediaUrl)
+            putExtra(
+                "MEDIA_TYPE",
+                when {
+                    !post.videoUrl.isNullOrEmpty() -> "video"
+                    !post.audioUrl.isNullOrEmpty() -> "audio"
+                    else -> "image"
+                }
+            )
+            putExtra("USERNAME", post.userId.username)
+            putExtra("CAPTION", post.caption ?: "")
+        })
     }
 }

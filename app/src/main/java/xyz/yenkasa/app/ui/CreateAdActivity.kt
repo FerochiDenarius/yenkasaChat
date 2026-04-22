@@ -2,6 +2,8 @@ package xyz.yenkasa.app.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,12 +13,15 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
+import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONObject
 import java.io.File
 
 class CreateAdActivity : AppCompatActivity() {
@@ -25,11 +30,15 @@ class CreateAdActivity : AppCompatActivity() {
     private lateinit var previewAdImage: ImageView
     private lateinit var previewAdVideo: VideoView
     private lateinit var previewAdThumb: ImageView
+    private lateinit var imageAdVideoPlaceholder: ImageView
 
     private lateinit var btnUploadImage: Button
     private lateinit var btnUploadVideo: Button
     private lateinit var btnUploadThumb: Button
     private lateinit var btnSubmitAd: Button
+    private lateinit var btnBackCreateAd: ImageButton
+    private lateinit var textAdWalletBalance: TextView
+    private lateinit var textAdTitleCount: TextView
 
     private lateinit var inputCtaText: EditText
     private lateinit var inputCtaUrl: EditText
@@ -45,6 +54,7 @@ class CreateAdActivity : AppCompatActivity() {
         if (uri != null) {
             imageUri = uri
             previewAdImage.visibility = ImageView.VISIBLE
+            previewAdImage.clearColorFilter()
             Glide.with(this).load(uri).into(previewAdImage)
         }
     }
@@ -55,6 +65,7 @@ class CreateAdActivity : AppCompatActivity() {
         if (uri != null) {
             videoUri = uri
             previewAdVideo.visibility = VideoView.VISIBLE
+            imageAdVideoPlaceholder.visibility = ImageView.GONE
             previewAdVideo.setVideoURI(uri)
             previewAdVideo.start()
         }
@@ -66,6 +77,7 @@ class CreateAdActivity : AppCompatActivity() {
         if (uri != null) {
             thumbUri = uri
             previewAdThumb.visibility = ImageView.VISIBLE
+            previewAdThumb.clearColorFilter()
             Glide.with(this).load(uri).into(previewAdThumb)
         }
     }
@@ -74,8 +86,20 @@ class CreateAdActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_ad)
 
+        if (!canCurrentUserCreateAd()) {
+            Toast.makeText(
+                this,
+                "Only moderators and developers can create sponsored ads.",
+                Toast.LENGTH_LONG
+            ).show()
+            finish()
+            return
+        }
+
         initViews()
         setupClicks()
+        setupTextCounter()
+        updateWalletBalance()
     }
 
     private fun initViews() {
@@ -83,11 +107,15 @@ class CreateAdActivity : AppCompatActivity() {
         previewAdImage = findViewById(R.id.previewAdImage)
         previewAdVideo = findViewById(R.id.previewAdVideo)
         previewAdThumb = findViewById(R.id.previewAdThumb)
+        imageAdVideoPlaceholder = findViewById(R.id.imageAdVideoPlaceholder)
 
         btnUploadImage = findViewById(R.id.btnUploadImage)
         btnUploadVideo = findViewById(R.id.btnUploadVideo)
         btnUploadThumb = findViewById(R.id.btnUploadThumb)
         btnSubmitAd = findViewById(R.id.btnSubmitAd)
+        btnBackCreateAd = findViewById(R.id.btnBackCreateAd)
+        textAdWalletBalance = findViewById(R.id.textAdWalletBalance)
+        textAdTitleCount = findViewById(R.id.textAdTitleCount)
 
         inputCtaText = findViewById(R.id.inputCtaText)
         inputCtaUrl = findViewById(R.id.inputCtaUrl)
@@ -99,6 +127,51 @@ class CreateAdActivity : AppCompatActivity() {
         btnUploadVideo.setOnClickListener { pickVideoLauncher.launch("video/*") }
         btnUploadThumb.setOnClickListener { pickThumbLauncher.launch("image/*") }
         btnSubmitAd.setOnClickListener { submitAd() }
+        btnBackCreateAd.setOnClickListener { finish() }
+    }
+
+    private fun setupTextCounter() {
+        textAdTitleCount.text = "${inputAdTitle.text?.length ?: 0}/70"
+        inputAdTitle.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                textAdTitleCount.text = "${s?.length ?: 0}/70"
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+    }
+
+    private fun updateWalletBalance() {
+        textAdWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
+        WalletBalanceManager.refreshBalance(this) { balance ->
+            runOnUiThread {
+                textAdWalletBalance.text = "$balance YKC"
+            }
+        }
+    }
+
+    private fun canCurrentUserCreateAd(): Boolean {
+        return UserPermissions.canCreateAd(resolveCurrentRole())
+    }
+
+    private fun resolveCurrentRole(): String {
+        val userJson = TokenManager.getUser(this)
+        if (!userJson.isNullOrBlank()) {
+            runCatching {
+                val json = JSONObject(userJson)
+                val roleName = json.optString("roleName").takeIf { it.isNotBlank() }
+                if (roleName != null) return roleName
+
+                val roleValue = json.opt("role")
+                when (roleValue) {
+                    is JSONObject -> roleValue.optString("name").takeIf { it.isNotBlank() }?.let { return it }
+                    is String -> roleValue.takeIf { it.isNotBlank() }?.let { return it }
+                }
+            }.onFailure {
+                Log.w("CreateAd", "Unable to parse saved role JSON: ${it.message}")
+            }
+        }
+        return TokenManager.getUserRole(this)
     }
 
     private fun submitAd() {
@@ -123,11 +196,19 @@ class CreateAdActivity : AppCompatActivity() {
             return
         }
 
+        if (imageUri == null && videoUri == null) {
+            showToast("Select an image or video for the ad")
+            return
+        }
+
+        btnSubmitAd.isEnabled = false
+        btnSubmitAd.text = "Submitting..."
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val token = TokenManager.getToken(this@CreateAdActivity)
                 if (token == null) {
                     showToast("Login required")
+                    resetSubmitButton()
                     return@launch
                 }
 
@@ -141,6 +222,8 @@ class CreateAdActivity : AppCompatActivity() {
                     .addFormDataPart("ctaText", ctaText)
                     .addFormDataPart("ctaUrl", ctaUrl)
                     .addFormDataPart("rewardAmount", reward.toString())
+                    .addFormDataPart("scope", "global")
+                    .addFormDataPart("communityScope", "all")
                     .apply {
                         if (imagePart != null) addPart(imagePart)
                         if (videoPart != null) addPart(videoPart)
@@ -159,6 +242,7 @@ class CreateAdActivity : AppCompatActivity() {
                         finish()
                     } else {
                         showToast("Failed: ${response.errorBody()?.string()}")
+                        resetSubmitButton()
                     }
                 }
 
@@ -166,6 +250,7 @@ class CreateAdActivity : AppCompatActivity() {
                 Log.e("CreateAd", "Error submitting ad: ${e.message}")
                 withContext(Dispatchers.Main) {
                     showToast("Error: ${e.message}")
+                    resetSubmitButton()
                 }
             }
         }
@@ -185,6 +270,13 @@ class CreateAdActivity : AppCompatActivity() {
     private fun showToast(msg: String) {
         runOnUiThread {
             Toast.makeText(this@CreateAdActivity, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun resetSubmitButton() {
+        runOnUiThread {
+            btnSubmitAd.isEnabled = true
+            btnSubmitAd.text = "Submit Ad"
         }
     }
 }

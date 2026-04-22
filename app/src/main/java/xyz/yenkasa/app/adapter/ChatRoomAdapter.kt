@@ -61,7 +61,7 @@ class ChatRoomAdapter(
         holder.contactName.text = displayName
 
         // --- Profile image (first participant only for group) ---
-        val profileUrl = contactUser?.profileImage
+        val profileUrl = contactUser?.displayImage
         Glide.with(context)
             .load(profileUrl)
             .apply(RequestOptions.circleCropTransform())
@@ -69,8 +69,18 @@ class ChatRoomAdapter(
             .error(R.drawable.ic_profile_placeholder)
             .into(holder.profileImage)
 
+        // --- Online/offline indicator ---
+        if (contactUser != null && uniqueParticipants.size == 1) {
+            holder.onlineIndicator.visibility = View.VISIBLE
+            holder.onlineIndicator.setBackgroundResource(
+                if (contactUser.resolvedOnline) R.drawable.bg_chat_online_dot else R.drawable.bg_chat_offline_dot
+            )
+        } else {
+            holder.onlineIndicator.visibility = View.GONE
+        }
+
         // --- Timestamp ---
-        holder.timestamp.text = chatRoom.lastMessageTimeFormatted ?: ""
+        holder.timestamp.text = chatRoom.lastMessageTimeFormatted.takeIf { it != "N/A" } ?: ""
 
         // --- Unread badge ---
         if (chatRoom.unreadCount > 0) {
@@ -88,6 +98,7 @@ class ChatRoomAdapter(
         val contactName: TextView = itemView.findViewById(R.id.textContactName)
         val lastMessage: TextView = itemView.findViewById(R.id.textLastMessage)
         val profileImage: ImageView = itemView.findViewById(R.id.imageProfile)
+        val onlineIndicator: View = itemView.findViewById(R.id.viewOnlineIndicator)
         val timestamp: TextView = itemView.findViewById(R.id.textTimestamp)
         val unreadBadge: TextView = itemView.findViewById(R.id.textUnreadBadge)
     }

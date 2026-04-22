@@ -37,6 +37,12 @@ object UserPermissions {
         return r in listOf("senior_developer", "junior_developer", "developer", "moderator", "admin")
     }
 
+    // 🟢 Can Create Sponsored Ads
+    fun canCreateAd(role: String?): Boolean {
+        val r = normalize(role)
+        return r in listOf("senior_developer", "junior_developer", "developer", "moderator")
+    }
+
     // 🟢 Can Assign Roles
     fun canAssignRoles(role: String?): Boolean {
         val r = normalize(role)

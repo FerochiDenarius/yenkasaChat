@@ -237,11 +237,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Enable/disable and wire up the CREATE-AD toolbar button.
-     * Only accessible to owner/admin/sponsor roles (adjust as needed).
-     */
-    /**
-     * Enable/disable and wire up the CREATE-AD toolbar button.
-     * For now: ENABLE FOR ALL USERS (testing mode).
+     * Only moderators and developer roles can create sponsored ads.
      */
     private fun setupCreateAdButton() {
         val user = currentUser
@@ -254,15 +250,22 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 🔥 TEST MODE: allow ALL users to create ads
-        val allowed = true   // <--- always allow during testing
+        val roleName = user.role?.name ?: user.roleName ?: TokenManager.getUserRole(this)
+        val allowed = UserPermissions.canCreateAd(roleName)
 
         btnCreateAd.isEnabled = true
-        btnCreateAd.alpha = 1f
+        btnCreateAd.alpha = if (allowed) 1f else 0.55f
 
         btnCreateAd.setOnClickListener {
-            val intent = Intent(this, CreateAdActivity::class.java)
-            startActivity(intent)
+            if (allowed) {
+                startActivity(Intent(this, CreateAdActivity::class.java))
+            } else {
+                Toast.makeText(
+                    this,
+                    "Only moderators and developers can create sponsored ads.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

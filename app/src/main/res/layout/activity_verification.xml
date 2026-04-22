@@ -1,236 +1,283 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/post_create_background"
     android:clipToPadding="false"
     android:fillViewport="true"
-    android:padding="24dp"
-    android:paddingBottom="96dp"
-    android:background="@color/yenkasa_black">
+    android:paddingHorizontal="16dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center">
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
 
-        <!-- ================= VERIFIED STATUS (HIDDEN INITIALLY) ================= -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnVerificationBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_feed_icon_button"
+                android:contentDescription="Back"
+                android:padding="10dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/post_create_primary_text" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="78dp"
+            android:layout_height="78dp"
+            android:layout_marginTop="8dp"
+            android:contentDescription="Yenkasa"
+            android:src="@drawable/ic_yenkasa_logo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:text="Verification"
+            android:textColor="@color/wallet_primary_text"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Secure your account in a few simple steps"
+            android:textColor="@color/post_create_secondary_text"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="22dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="78dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_verify_step_active"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_email"
+                    app:tint="@color/white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:gravity="center"
+                    android:text="Email\nVerify"
+                    android:textColor="@color/yenkasa_emerald"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="2dp"
+                android:layout_weight="1"
+                android:background="@color/yenkasa_emerald" />
+
+            <LinearLayout
+                android:layout_width="78dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_verify_step_idle"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_phone"
+                    app:tint="@color/post_create_primary_text" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:gravity="center"
+                    android:text="Phone\nVerify"
+                    android:textColor="@color/post_create_secondary_text"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="2dp"
+                android:layout_weight="1"
+                android:background="@color/post_create_border" />
+
+            <LinearLayout
+                android:layout_width="78dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_verify_step_idle"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_shield"
+                    app:tint="@color/post_create_primary_text" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:gravity="center"
+                    android:text="Confirm\nCode"
+                    android:textColor="@color/post_create_secondary_text"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/layoutVerifiedStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_verification_status_card"
+            android:orientation="horizontal"
+            android:padding="12dp"
             android:visibility="gone"
-            android:layout_marginBottom="24dp">
+            tools:visibility="visible">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/emailStatus"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Verification Status"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:layout_marginBottom="16dp"/>
+                android:layout_weight="1"
+                android:text="Email: Not verified"
+                android:textColor="@color/post_create_secondary_text"
+                android:textSize="12sp" />
 
-            <!-- EMAIL STATUS -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/phoneStatus"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/yenkasa_black"
-                app:strokeColor="@color/yenkasa_emerald"
-                app:strokeWidth="1dp"
-                android:layout_marginBottom="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_email"
-                        app:tint="@color/yenkasa_emerald"/>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Email"
-                            android:textColor="@android:color/white"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
-
-                        <TextView
-                            android:id="@+id/emailStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Verified"
-                            android:textColor="@color/yenkasa_emerald"
-                            android:textSize="14sp"/>
-
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_verified_check_small"/>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- PHONE STATUS -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/yenkasa_black"
-                app:strokeColor="@color/yenkasa_emerald"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_phone"
-                        app:tint="@color/yenkasa_emerald"/>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Phone"
-                            android:textColor="@android:color/white"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
-
-                        <TextView
-                            android:id="@+id/phoneStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Verified"
-                            android:textColor="@color/yenkasa_emerald"
-                            android:textSize="14sp"/>
-
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_verified_check_small"/>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="Phone: Not verified"
+                android:textColor="@color/post_create_secondary_text"
+                android:textSize="12sp" />
         </LinearLayout>
-
-
-        <!-- TITLE -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Verification"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/white"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- CARD -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="8dp"
-            app:cardBackgroundColor="#0F0F0F"
-            app:contentPadding="20dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_ad_surface_card"
+            android:orientation="vertical"
+            android:padding="14dp">
 
-            <!-- EMAIL -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="#1A1A1A">
+                android:layout_height="42dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_ad_soft_green"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_email"
+                    app:tint="@color/yenkasa_emerald" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="16dp">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_email"
-                        app:tint="@color/yenkasa_emerald"/>
-
-                    <EditText
-                        android:id="@+id/editEmail"
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:hint="Enter your email"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="#8A8A8A"
-                        android:background="@null"
-                        android:inputType="textEmailAddress"/>
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Verify your email"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="We’ll send a 6-digit code to your email address"
+                        android:textColor="@color/post_create_secondary_text"
+                        android:textSize="11sp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/editEmail"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_verify_input"
+                android:drawableStart="@drawable/ic_email"
+                android:drawablePadding="10dp"
+                android:hint="Enter your email"
+                android:inputType="textEmailAddress"
+                android:paddingHorizontal="14dp"
+                android:textColor="@color/post_create_primary_text"
+                android:textColorHint="@color/post_create_hint"
+                android:textSize="14sp" />
 
             <Button
                 android:id="@+id/btnRequestEmailCode"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_verify_primary_button"
+                android:fontFamily="sans-serif-medium"
+                android:stateListAnimator="@null"
                 android:text="Send Email Code"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@color/yenkasa_emerald"/>
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="13sp" />
 
-            <!-- EMAIL RESEND TIMER -->
-            <!-- EMAIL RESEND TIMER (ICON STYLE) -->
             <LinearLayout
                 android:id="@+id/layoutEmailTimer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
+                android:orientation="horizontal"
                 android:visibility="gone">
 
                 <ImageView
                     android:layout_width="14dp"
                     android:layout_height="14dp"
                     android:src="@drawable/ic_info"
-                    app:tint="#8A8A8A"/>
+                    app:tint="@color/post_create_secondary_text" />
 
                 <TextView
                     android:id="@+id/textEmailTimer"
@@ -238,112 +285,218 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
                     android:text="Resend in 03:00"
-                    android:textColor="#8A8A8A"
-                    android:textSize="13sp"/>
+                    android:textColor="@color/post_create_secondary_text"
+                    android:textSize="12sp" />
             </LinearLayout>
+        </LinearLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_ad_surface_card"
+            android:orientation="vertical"
+            android:padding="14dp">
 
-
-            <!-- PHONE -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="20dp"
-                app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="#1A1A1A">
+                android:layout_height="42dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_ad_soft_green"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_phone"
+                    app:tint="@color/yenkasa_emerald" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="16dp">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_phone"
-                        app:tint="@color/yenkasa_emerald"/>
-
-                    <EditText
-                        android:id="@+id/editPhone"
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:hint="Enter phone (+233...)"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="#8A8A8A"
-                        android:background="@null"
-                        android:inputType="phone"/>
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Verify your phone"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="SMS verification will be enabled when the API is ready"
+                        android:textColor="@color/post_create_secondary_text"
+                        android:textSize="11sp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_verify_input"
+                    android:gravity="center"
+                    android:text="+233"
+                    android:textColor="@color/post_create_primary_text"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/editPhone"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_verify_input"
+                    android:hint="Enter your phone number"
+                    android:inputType="phone"
+                    android:paddingHorizontal="14dp"
+                    android:textColor="@color/post_create_primary_text"
+                    android:textColorHint="@color/post_create_hint"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btnRequestPhoneCode"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_verify_muted_button"
+                android:fontFamily="sans-serif-medium"
+                android:stateListAnimator="@null"
                 android:text="Send SMS Code"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@color/yenkasa_emerald"/>
+                android:textAllCaps="false"
+                android:textColor="@color/yenkasa_emerald"
+                android:textSize="13sp" />
+        </LinearLayout>
 
-            <!-- CODE -->
-            <com.google.android.material.card.MaterialCardView
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_ad_surface_card"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="20dp"
-                app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="#1A1A1A">
+                android:layout_height="42dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_ad_soft_green"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_lock"
+                    app:tint="@color/yenkasa_emerald" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="16dp">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_lock"
-                        app:tint="@color/yenkasa_emerald"/>
-
-                    <EditText
-                        android:id="@+id/editCode"
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:hint="Enter verification code"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="#8A8A8A"
-                        android:background="@null"
-                        android:inputType="number"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Enter verification code"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="14sp" />
 
-            <!-- CONFIRM -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Enter the 6-digit code you received"
+                        android:textColor="@color/post_create_secondary_text"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/editCode"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_verify_code_input"
+                android:gravity="center"
+                android:inputType="number"
+                android:letterSpacing="0.2"
+                android:maxLength="6"
+                android:textColor="@color/post_create_primary_text"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
             <Button
                 android:id="@+id/btnConfirmCode"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="16dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_verify_muted_button"
+                android:fontFamily="sans-serif-medium"
+                android:stateListAnimator="@null"
                 android:text="Confirm Code"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@color/yenkasa_emerald"/>
-
-            <!-- STATUS -->
-            <TextView
-                android:id="@+id/textStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textAlignment="center"
-                android:textColor="@color/yenkasa_emerald"/>
-
+                android:textAllCaps="false"
+                android:textColor="@color/yenkasa_emerald"
+                android:textSize="13sp" />
         </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_verification_status_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="@drawable/bg_ad_soft_green"
+                android:padding="8dp"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/yenkasa_emerald" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Your information is encrypted and secure"
+                    android:textColor="@color/yenkasa_emerald"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/textStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="We take your security seriously"
+                    android:textColor="@color/post_create_secondary_text"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
-
 </androidx.core.widget.NestedScrollView>

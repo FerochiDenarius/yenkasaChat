@@ -2,6 +2,7 @@ package xyz.yenkasa.app.adapter
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Handler
 import android.util.Log
@@ -10,15 +11,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.media3.common.MediaItem
+import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.media3.common.Player
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.transition.Transition
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.Post
@@ -38,6 +43,7 @@ import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.scheduleAtFixedRate
+import kotlin.math.roundToInt
 
 class PostAdapter(
     private val context: Context,
@@ -55,6 +61,7 @@ class PostAdapter(
     private var exoPlayer: ExoPlayer? = null
     private var currentPlayingPosition: Int = -1
     private var currentPlayerView: PlayerView? = null
+    private var videoSizeListener: Player.Listener? = null
 
     private val lastViewTime = mutableMapOf<String, Long>()
     private var videoTimer: Timer? = null
@@ -108,6 +115,7 @@ class PostAdapter(
         val imageVideoThumbnail: ImageView = itemRoot.findViewById(R.id.imageVideoThumbnail)
         val btnVideoPlay: ImageButton = itemRoot.findViewById(R.id.btnVideoPlay)
         val btnPlayPause: ImageButton? = itemRoot.findViewById(R.id.btnPlayPause)
+        private var mediaAspectKey: String? = null
 
         // AUDIO
         val audioIcon: LinearLayout = itemRoot.findViewById(R.id.audioIcon)
@@ -165,10 +173,14 @@ class PostAdapter(
         }
 
         fun bindImageCarousel(imageUrls: List<String>) {
+            val aspectKey = imageUrls.firstOrNull().orEmpty()
+            mediaAspectKey = aspectKey
+            applyMediaAspect(4f / 5f, imageCarousel)
             imagePageCallback?.let { imageCarousel.unregisterOnPageChangeCallback(it) }
             imageCarousel.adapter = FeedImageCarouselAdapter(imageUrls)
             imageCarousel.setCurrentItem(0, false)
             imageCarousel.visibility = View.VISIBLE
+            loadAspectFromImage(aspectKey, imageCarousel)
 
             if (imageUrls.size > 1) {
                 imageCarouselCounter.visibility = View.VISIBLE
@@ -244,6 +256,8 @@ class PostAdapter(
 
         // Setup video thumbnail and play button; actual video playback handled by adapter when needed
         fun prepareVideoUi(videoUrl: String?, position: Int) {
+            mediaAspectKey = videoUrl
+            applyMediaAspect(9f / 16f, imageVideoThumbnail, playerView)
             imageVideoThumbnail.visibility = View.VISIBLE
             btnVideoPlay.visibility = View.VISIBLE
             playerView?.visibility = View.GONE
@@ -256,7 +270,21 @@ class PostAdapter(
                     .load(videoUrl)
                     .apply(RequestOptions().frame(4_000_000).diskCacheStrategy(DiskCacheStrategy.ALL))
                     .placeholder(R.drawable.video_placeholder)
-                    .into(imageVideoThumbnail)
+                    .into(object : CustomTarget<Bitmap>() {
+                        override fun onResourceReady(
+                            resource: Bitmap,
+                            transition: Transition<in Bitmap>?
+                        ) {
+                            if (mediaAspectKey == videoUrl) {
+                                applyMediaAspect(aspectFrom(resource), imageVideoThumbnail, playerView)
+                                imageVideoThumbnail.setImageBitmap(resource)
+                            }
+                        }
+
+                        override fun onLoadCleared(placeholder: android.graphics.drawable.Drawable?) {
+                            imageVideoThumbnail.setImageDrawable(placeholder)
+                        }
+                    })
             } catch (_: Exception) {}
 
             btnVideoPlay.setOnClickListener {
@@ -268,8 +296,7 @@ class PostAdapter(
                 imageVideoThumbnail.visibility = View.GONE
                 btnVideoPlay.visibility = View.GONE
                 playerView?.visibility = View.VISIBLE
-                btnPlayPause?.visibility = View.VISIBLE
-                btnPlayPause?.setImageResource(R.drawable.ic_pause_circle)
+                btnPlayPause?.visibility = View.GONE
 
                 playVideoRequested(position)
             }
@@ -284,6 +311,54 @@ class PostAdapter(
                         R.drawable.ic_play_circle
                     }
                 )
+            }
+        }
+
+        fun applyVideoSize(videoSize: VideoSize) {
+            if (videoSize.width <= 0 || videoSize.height <= 0) return
+            val rawAspect = if (videoSize.unappliedRotationDegrees == 90 || videoSize.unappliedRotationDegrees == 270) {
+                videoSize.height.toFloat() / videoSize.width.toFloat()
+            } else {
+                videoSize.width.toFloat() / videoSize.height.toFloat()
+            }
+            applyMediaAspect(rawAspect, imageVideoThumbnail, playerView)
+        }
+
+        private fun loadAspectFromImage(url: String, targetView: View) {
+            if (url.isBlank()) return
+            Glide.with(itemRoot.context)
+                .asBitmap()
+                .load(url)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(object : CustomTarget<Bitmap>() {
+                    override fun onResourceReady(
+                        resource: Bitmap,
+                        transition: Transition<in Bitmap>?
+                    ) {
+                        if (mediaAspectKey == url) {
+                            applyMediaAspect(aspectFrom(resource), targetView)
+                        }
+                    }
+
+                    override fun onLoadCleared(placeholder: android.graphics.drawable.Drawable?) = Unit
+                })
+        }
+
+        private fun aspectFrom(bitmap: Bitmap): Float {
+            if (bitmap.width <= 0 || bitmap.height <= 0) return 4f / 5f
+            return bitmap.width.toFloat() / bitmap.height.toFloat()
+        }
+
+        private fun applyMediaAspect(rawAspect: Float, vararg views: View?) {
+            val aspect = rawAspect.coerceIn(9f / 16f, 16f / 9f)
+            val width = (aspect * 1000).roundToInt().coerceAtLeast(1)
+            val ratio = "$width:1000"
+            views.filterNotNull().forEach { view ->
+                val params = view.layoutParams as? ConstraintLayout.LayoutParams ?: return@forEach
+                if (params.dimensionRatio != ratio) {
+                    params.dimensionRatio = ratio
+                    view.layoutParams = params
+                }
             }
         }
 
@@ -405,14 +480,7 @@ class PostAdapter(
                 holder.playerView?.post {
                     attachPlayerToView(holder.playerView)
                     holder.playerView?.visibility = View.VISIBLE
-                    holder.btnPlayPause?.visibility = View.VISIBLE
-                    holder.btnPlayPause?.setImageResource(
-                        if (exoPlayer?.isPlaying == true) {
-                            R.drawable.ic_pause_circle
-                        } else {
-                            R.drawable.ic_play_circle
-                        }
-                    )
+                    holder.btnPlayPause?.visibility = View.GONE
                 }
             }
         }
@@ -494,6 +562,13 @@ class PostAdapter(
                 attachPlayerToView(holder.playerView)
 
                 exoPlayer?.let { player ->
+                    videoSizeListener?.let { player.removeListener(it) }
+                    videoSizeListener = object : Player.Listener {
+                        override fun onVideoSizeChanged(videoSize: VideoSize) {
+                            holder.applyVideoSize(videoSize)
+                        }
+                    }
+                    player.addListener(videoSizeListener!!)
                     player.stop() // ensure no leftover
                     player.clearMediaItems()
                     player.setMediaItem(MediaItem.fromUri(Uri.parse(url)))

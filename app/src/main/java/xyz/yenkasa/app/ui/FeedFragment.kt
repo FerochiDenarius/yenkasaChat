@@ -58,6 +58,7 @@ class FeedFragment : Fragment() {
     private var selectedFeedMode = FeedMode.FOR_YOU
     private var followingUserIds: Set<String>? = null
     private var communityStoryPreviews: Map<String, CommunityStoryPreview> = emptyMap()
+    private var sponsoredAds: List<AdModel> = emptyList()
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
@@ -83,6 +84,7 @@ class FeedFragment : Fragment() {
         setupCommunityStoryRecyclerView()
         setupFeedTabs()
 
+        loadSponsoredAds()
         recyclerView.post { fetchCommunitiesAndFeed() }
         trackDailyLogin()
 
@@ -304,8 +306,10 @@ class FeedFragment : Fragment() {
             counter++
 
             if (counter % 5 == 0) {
+                val adIndex = (counter / 5) - 1
+                val ad = sponsoredAds.getOrNull(adIndex % sponsoredAds.size.coerceAtLeast(1))
                 mixed.add(
-                    AdModel(
+                    ad ?: AdModel(
                         _id = "local-ad-${counter}",
                         sponsorName = "AdMob",
                         title = "Sponsored Ad",
@@ -321,6 +325,28 @@ class FeedFragment : Fragment() {
         }
 
         return mixed
+    }
+
+    private fun loadSponsoredAds() {
+        val authToken = token ?: return
+        ApiClient.apiService.getSponsoredAds("Bearer $authToken")
+            .enqueue(object : Callback<AdsFeedResponse> {
+                override fun onResponse(
+                    call: Call<AdsFeedResponse>,
+                    response: Response<AdsFeedResponse>
+                ) {
+                    val ads = response.body()?.ads.orEmpty()
+                    sponsoredAds = if (response.isSuccessful) ads else emptyList()
+                    if (::feedAdapter.isInitialized && posts.isNotEmpty()) {
+                        feedAdapter.updateItems(buildMixedFeed(posts))
+                    }
+                }
+
+                override fun onFailure(call: Call<AdsFeedResponse>, t: Throwable) {
+                    Log.w("FeedFragment", "Sponsored ads unavailable, using AdMob fallback: ${t.message}")
+                    sponsoredAds = emptyList()
+                }
+            })
     }
 
 

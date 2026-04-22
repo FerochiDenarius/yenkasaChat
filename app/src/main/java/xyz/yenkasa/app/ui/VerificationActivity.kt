@@ -1,8 +1,10 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -82,6 +84,7 @@ class VerificationActivity : AppCompatActivity() {
         emailTimerLayout = findViewById(R.id.layoutEmailTimer)
         emailTimerText = findViewById(R.id.textEmailTimer)
         emailTimerLayout.visibility = LinearLayout.GONE
+        findViewById<ImageButton>(R.id.btnVerificationBack).setOnClickListener { finish() }
 
 
         setupFirebaseCallbacks()
@@ -107,13 +110,8 @@ class VerificationActivity : AppCompatActivity() {
 
         // ================= PHONE =================
         btnPhoneCode.setOnClickListener {
-            val phone = formatPhone(phoneInput.text.toString())
-            if (phone == null) {
-                toast("Use format +233XXXXXXXXX")
-            } else {
-                currentMode = VerificationMode.PHONE
-                sendOtp(phone)
-            }
+            statusText.text = "SMS verification is coming soon."
+            toast("SMS verification is not ready yet")
         }
 
         // ================= CONFIRM =================
@@ -246,6 +244,8 @@ class VerificationActivity : AppCompatActivity() {
                         emailVerified = true,
                         phoneVerified = TokenManager.isPhoneVerified(this@VerificationActivity)
                     )
+                    startActivity(Intent(this@VerificationActivity, VerificationSuccessActivity::class.java))
+                    finish()
 
                 } else {
                     statusText.text = "❌ Invalid or expired code"

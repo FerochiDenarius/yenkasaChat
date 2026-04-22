@@ -18,7 +18,7 @@ data class ChatRoom(
     val lastMessage: ChatMessage?,
 
     @SerializedName("lastMessageTime")
-    private val lastMessageTime: String? = null,
+    val lastMessageTime: String? = null,
 
     @SerializedName("name") // <- Name of the chat room
     val name: String? = null,
@@ -27,7 +27,7 @@ data class ChatRoom(
     val unreadCount: Int = 0,
 
     @SerializedName("createdAt")
-    private val createdAt: String? = null
+    val createdAt: String? = null
 ) {
 
     // Formatted getter for lastMessageTime
@@ -38,20 +38,32 @@ data class ChatRoom(
     val createdAtFormatted: String
         get() = formatDate(createdAt)
 
+    val lastActivityTimeMillis: Long
+        get() = parseDate(lastMessageTime ?: lastMessage?.timestamp ?: createdAt)?.time ?: 0L
+
     // Robust date formatting
     private fun formatDate(dateString: String?): String {
-        if (dateString.isNullOrEmpty()) return "N/A"
+        val date = parseDate(dateString) ?: return if (dateString.isNullOrEmpty()) "N/A" else dateString
+        val formatter = SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault())
+        formatter.timeZone = TimeZone.getDefault()
+        return formatter.format(date)
+    }
+
+    private fun parseDate(dateString: String?): Date? {
+        if (dateString.isNullOrEmpty()) return null
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
             parser.timeZone = TimeZone.getTimeZone("UTC")
-            val date: Date = parser.parse(dateString) ?: return "Invalid Date"
-
-            val formatter = SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault())
-            formatter.timeZone = TimeZone.getDefault()
-            formatter.format(date)
+            parser.parse(dateString)
         } catch (e: Exception) {
-            Log.e("ChatRoomModel", "Error parsing date: $dateString", e)
-            dateString
+            try {
+                val fallbackParser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                fallbackParser.timeZone = TimeZone.getTimeZone("UTC")
+                fallbackParser.parse(dateString)
+            } catch (fallback: Exception) {
+                Log.e("ChatRoomModel", "Error parsing date: $dateString", fallback)
+                null
+            }
         }
     }
 }

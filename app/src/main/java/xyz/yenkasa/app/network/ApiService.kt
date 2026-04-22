@@ -703,6 +703,11 @@ interface ApiService {
 
 //Ads and reward
 
+    @GET("ads/feed")
+    fun getSponsoredAds(
+        @Header("Authorization") auth: String
+    ): Call<AdsFeedResponse>
+
 
     @POST("ads/view/{adId}")
     fun recordAdView(
@@ -718,7 +723,6 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
-    @Multipart
     @POST("ads/create")
     fun createSponsoredAd(
         @Header("Authorization") token: String,

@@ -2,10 +2,12 @@ package xyz.yenkasa.app.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -36,6 +38,7 @@ import retrofit2.Response
 import java.io.File
 import java.io.IOException
 import org.json.JSONObject
+import kotlin.math.roundToInt
 
 class PostActivity : AppCompatActivity() {
 
@@ -85,6 +88,16 @@ class PostActivity : AppCompatActivity() {
         imagePreview = findViewById(R.id.imagePreview)
         imagePreviewCount = findViewById(R.id.imagePreviewCount)
         videoPreview = findViewById(R.id.videoPreview)
+        videoPreview.setOnPreparedListener { mediaPlayer ->
+            val aspect = if (mediaPlayer.videoWidth > 0 && mediaPlayer.videoHeight > 0) {
+                mediaPlayer.videoWidth.toFloat() / mediaPlayer.videoHeight.toFloat()
+            } else {
+                readVideoAspect(videoUri) ?: (9f / 16f)
+            }
+            resizePreview(videoPreview, aspect)
+            mediaPlayer.isLooping = true
+            videoPreview.start()
+        }
         audioPreview = findViewById(R.id.audioPreview)
         btnChooseMedia = findViewById(R.id.btnChooseMedia)
         btnPost = findViewById(R.id.btnPost)
@@ -241,6 +254,7 @@ class PostActivity : AppCompatActivity() {
     private fun updatePreview() {
         imagePreview.visibility = View.GONE
         imagePreviewCount.visibility = View.GONE
+        videoPreview.stopPlayback()
         videoPreview.visibility = View.GONE
         audioPreview.visibility = View.GONE
 
@@ -248,6 +262,7 @@ class PostActivity : AppCompatActivity() {
             imageUris.isNotEmpty() -> {
                 imagePreview.visibility = View.VISIBLE
                 imagePreview.setImageURI(imageUris.first())
+                resizePreview(imagePreview, readImageAspect(imageUris.first()) ?: (4f / 5f))
                 if (imageUris.size > 1) {
                     imagePreviewCount.visibility = View.VISIBLE
                     imagePreviewCount.text = "${imageUris.size} images selected"
@@ -255,8 +270,8 @@ class PostActivity : AppCompatActivity() {
             }
             videoUri != null -> {
                 videoPreview.visibility = View.VISIBLE
+                resizePreview(videoPreview, readVideoAspect(videoUri) ?: (9f / 16f))
                 videoPreview.setVideoURI(videoUri)
-                videoPreview.start()
             }
             audioUri != null -> {
                 audioPreview.visibility = View.VISIBLE
@@ -264,6 +279,60 @@ class PostActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun readImageAspect(uri: Uri): Float? {
+        return try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(input, null, options)
+                if (options.outWidth > 0 && options.outHeight > 0) {
+                    options.outWidth.toFloat() / options.outHeight.toFloat()
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("PostActivity", "Unable to read image dimensions: ${e.message}")
+            null
+        }
+    }
+
+    private fun readVideoAspect(uri: Uri?): Float? {
+        if (uri == null) return null
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(this, uri)
+            val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloatOrNull()
+            val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloatOrNull()
+            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+            retriever.release()
+            if (width != null && height != null && width > 0f && height > 0f) {
+                if (rotation == 90 || rotation == 270) height / width else width / height
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("PostActivity", "Unable to read video dimensions: ${e.message}")
+            null
+        }
+    }
+
+    private fun resizePreview(view: View, rawAspect: Float) {
+        view.post {
+            val aspect = rawAspect.coerceIn(9f / 16f, 16f / 9f)
+            val availableWidth = view.width.takeIf { it > 0 }
+                ?: (resources.displayMetrics.widthPixels - dp(56))
+            val targetHeight = (availableWidth / aspect).roundToInt()
+                .coerceIn(dp(180), dp(540))
+            val params = view.layoutParams
+            if (params.height != targetHeight) {
+                params.height = targetHeight
+                view.layoutParams = params
+            }
+        }
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
     private fun setupTextBackgroundPicker() {
         val density = resources.displayMetrics.density

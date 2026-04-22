@@ -5,4 +5,4 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_feed_media"
     android:contentDescription="Post image"
-    android:scaleType="centerCrop" />
+    android:scaleType="fitCenter" />

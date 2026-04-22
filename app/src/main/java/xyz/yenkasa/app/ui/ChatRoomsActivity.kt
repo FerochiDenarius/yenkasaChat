@@ -245,7 +245,10 @@ class ChatRoomsActivity : AppCompatActivity() {
                             room.participants
                                 ?.firstOrNull { it._id != currentUserId }
                                 ?._id ?: room._id
-                        }
+                        }.sortedWith(
+                            compareByDescending<ChatRoom> { it.lastActivityTimeMillis }
+                                .thenByDescending { it.unreadCount }
+                        )
 
 
                         Log.d("ChatRoomsActivity", "Filtered unique chat rooms: ${uniqueRooms.size}")

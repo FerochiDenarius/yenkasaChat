@@ -161,6 +161,7 @@
         <activity
             android:name=".ui.VerificationActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity android:name=".ui.VerificationSuccessActivity" />
         <activity
             android:name=".ui.PhoneVerificationActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />

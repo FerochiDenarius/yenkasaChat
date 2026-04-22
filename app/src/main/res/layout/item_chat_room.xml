@@ -42,7 +42,7 @@
                 android:layout_gravity="bottom|end"
                 android:layout_marginEnd="2dp"
                 android:layout_marginBottom="2dp"
-                android:background="@drawable/bg_chat_online_dot" />
+                android:background="@drawable/bg_chat_offline_dot" />
         </FrameLayout>
 
         <LinearLayout

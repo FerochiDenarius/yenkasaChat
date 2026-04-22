@@ -1,161 +1,610 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/post_create_background"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingStart="16dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="18dp">
 
-        <TextView
-            android:id="@+id/titleCreateAd"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Create Sponsored Ad"
-            android:textStyle="bold"
-            android:textSize="20sp"
-            android:textColor="@color/black"
-            android:layout_marginBottom="10dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- AD TITLE -->
-        <EditText
-            android:id="@+id/inputAdTitle"
+            <ImageButton
+                android:id="@+id/btnBackCreateAd"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_feed_icon_button"
+                android:contentDescription="Back"
+                android:padding="10dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/post_create_primary_text" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/titleCreateAd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:text="Create Sponsored Ad"
+                    android:textColor="@color/post_create_primary_text"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:includeFontPadding="false"
+                    android:text="Promote your brand. Reach more. Get results."
+                    android:textColor="@color/post_create_secondary_text"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_wallet_pill"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="12dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="YKC balance"
+                    android:src="@drawable/ic_coin" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="Balance"
+                        android:textColor="@color/wallet_secondary_text"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/textAdWalletBalance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/wallet_accent_green"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        tools:text="12,450 YKC" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="86dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_ad_surface_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <ImageView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_ad_soft_green"
+                android:contentDescription="Ad title"
+                android:padding="10dp"
+                android:src="@drawable/ic_post"
+                app:tint="@color/yenkasa_emerald" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Ad Title"
+                    android:textColor="@color/post_create_primary_text"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/inputAdTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@android:color/transparent"
+                    android:hint="e.g. 50% Off Sale!"
+                    android:inputType="textCapSentences"
+                    android:maxLength="70"
+                    android:maxLines="1"
+                    android:textColor="@color/post_create_primary_text"
+                    android:textColorHint="@color/post_create_hint"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textAdTitleCount"
+                android:layout_width="42dp"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:text="0/70"
+                android:textColor="@color/post_create_secondary_text"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Ad Title (e.g. 50% Off Sale!)"
-            android:padding="12dp"
-            android:background="@drawable/bg_input"
-            android:layout_marginTop="8dp"/>
-
-        <!-- IMAGE UPLOAD -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Upload Image"
-            android:textStyle="bold"
             android:layout_marginTop="12dp"
-            android:textColor="@color/black" />
+            android:background="@drawable/bg_ad_surface_card"
+            android:orientation="vertical"
+            android:padding="14dp">
 
-        <ImageView
-            android:id="@+id/previewAdImage"
-            android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:scaleType="centerCrop"
-            android:background="@color/gray_light"
-            android:visibility="gone"
-            android:layout_marginTop="6dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnUploadImage"
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_ad_soft_green"
+                    android:contentDescription="Add media"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_image"
+                    app:tint="@color/yenkasa_emerald" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Add Media"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Choose an image or video that represents your ad."
+                        android:textColor="@color/post_create_secondary_text"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="136dp"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_create_post_secondary_button"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:id="@+id/previewAdImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_ad_soft_green"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/ic_image" />
+
+                    <Button
+                        android:id="@+id/btnUploadImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_ad_upload_slot"
+                        android:drawableTop="@drawable/ic_upload"
+                        android:drawableTint="@color/yenkasa_emerald"
+                        android:fontFamily="sans-serif-medium"
+                        android:stateListAnimator="@null"
+                        android:text="Select Image"
+                        android:textAllCaps="false"
+                        android:textColor="@color/yenkasa_emerald"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_create_post_secondary_button"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_ad_soft_gold">
+
+                        <VideoView
+                            android:id="@+id/previewAdVideo"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:visibility="gone" />
+
+                        <ImageView
+                            android:id="@+id/imageAdVideoPlaceholder"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="Upload video"
+                            android:src="@drawable/ic_video"
+                            app:tint="@color/post_create_accent" />
+                    </FrameLayout>
+
+                    <Button
+                        android:id="@+id/btnUploadVideo"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_ad_upload_slot"
+                        android:drawableTop="@drawable/ic_upload"
+                        android:drawableTint="@color/post_create_accent"
+                        android:fontFamily="sans-serif-medium"
+                        android:stateListAnimator="@null"
+                        android:text="Select Video"
+                        android:textAllCaps="false"
+                        android:textColor="@color/post_create_accent"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Select Image"
-            android:backgroundTint="@color/primary"
-            android:textColor="@color/white"
-            android:layout_marginTop="8dp"/>
-
-        <!-- VIDEO UPLOAD -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Upload Video (optional)"
-            android:textStyle="bold"
             android:layout_marginTop="12dp"
-            android:textColor="@color/black" />
+            android:background="@drawable/bg_ad_surface_card"
+            android:orientation="vertical"
+            android:padding="14dp">
 
-        <VideoView
-            android:id="@+id/previewAdVideo"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_ad_soft_gold"
+                    android:contentDescription="Call to action"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_ads_plus"
+                    app:tint="@color/post_create_accent" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Call To Action"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Tell people what to do next."
+                        android:textColor="@color/post_create_secondary_text"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="70dp"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Button Text"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/inputCtaText"
+                        android:layout_width="match_parent"
+                        android:layout_height="46dp"
+                        android:layout_marginTop="5dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:hint="e.g. Learn More"
+                        android:inputType="textCapWords"
+                        android:maxLines="1"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textColorHint="@color/post_create_hint"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Button URL"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/inputCtaUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="46dp"
+                        android:layout_marginTop="5dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:hint="https://yourwebsite.com"
+                        android:inputType="textUri"
+                        android:maxLines="1"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textColorHint="@color/post_create_hint"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:visibility="gone"
-            android:layout_marginTop="6dp"
-            android:background="@color/black"/>
+            android:layout_height="72dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_ad_surface_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
 
-        <Button
-            android:id="@+id/btnUploadVideo"
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_ad_soft_gold"
+                android:contentDescription="Reward"
+                android:padding="10dp"
+                android:src="@drawable/ic_coin"
+                app:tint="@color/post_create_accent" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Reward (YKC) for watching"
+                    android:textColor="@color/post_create_primary_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Incentivize users to watch your ad."
+                    android:textColor="@color/post_create_secondary_text"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/inputReward"
+                android:layout_width="96dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_input_rounded"
+                android:gravity="center"
+                android:hint="50"
+                android:inputType="number"
+                android:maxLength="5"
+                android:maxLines="1"
+                android:textColor="@color/post_create_primary_text"
+                android:textColorHint="@color/post_create_hint"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Select Video"
-            android:backgroundTint="@color/primary"
-            android:textColor="@color/white"
-            android:layout_marginTop="8dp"/>
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_ad_surface_card"
+            android:orientation="vertical"
+            android:padding="14dp">
 
-        <!-- CTA TEXT -->
-        <EditText
-            android:id="@+id/inputCtaText"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_ad_soft_green"
+                    android:contentDescription="Custom thumbnail"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_image"
+                    app:tint="@color/yenkasa_emerald" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Custom Thumbnail"
+                        android:textColor="@color/post_create_primary_text"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Choose a custom thumbnail to represent your ad."
+                        android:textColor="@color/post_create_secondary_text"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/previewAdThumb"
+                android:layout_width="match_parent"
+                android:layout_height="112dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_ad_upload_slot"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_image" />
+
+            <Button
+                android:id="@+id/btnUploadThumb"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_ad_upload_slot"
+                android:drawableTop="@drawable/ic_upload"
+                android:drawableTint="@color/yenkasa_emerald"
+                android:fontFamily="sans-serif-medium"
+                android:stateListAnimator="@null"
+                android:text="Select Thumbnail"
+                android:textAllCaps="false"
+                android:textColor="@color/yenkasa_emerald"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="CTA Button Text (e.g. Learn More)"
-            android:padding="12dp"
-            android:background="@drawable/bg_input"
-            android:layout_marginTop="14dp"/>
+            android:layout_height="76dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_ad_soft_green"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
 
-        <!-- CTA URL -->
-        <EditText
-            android:id="@+id/inputCtaUrl"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="CTA URL (https://...)"
-            android:padding="12dp"
-            android:background="@drawable/bg_input"
-            android:layout_marginTop="6dp"
-            android:inputType="textUri"/>
+            <ImageView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_ad_soft_green"
+                android:contentDescription="Make it count"
+                android:padding="8dp"
+                android:src="@drawable/ic_check_circle"
+                app:tint="@color/yenkasa_emerald" />
 
-        <!-- REWARD AMOUNT -->
-        <EditText
-            android:id="@+id/inputReward"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Reward (YKC) for watching"
-            android:padding="12dp"
-            android:background="@drawable/bg_input"
-            android:layout_marginTop="14dp"
-            android:inputType="number"/>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-        <!-- THUMBNAIL UPLOAD (optional) -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Custom Thumbnail (optional)"
-            android:layout_marginTop="14dp"
-            android:textStyle="bold"
-            android:textColor="@color/black"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Make It Count!"
+                    android:textColor="@color/yenkasa_emerald"
+                    android:textSize="14sp" />
 
-        <ImageView
-            android:id="@+id/previewAdThumb"
-            android:layout_width="match_parent"
-            android:layout_height="160dp"
-            android:visibility="gone"
-            android:layout_marginTop="6dp"
-            android:scaleType="centerCrop"
-            android:background="@color/gray_light"/>
-
-        <Button
-            android:id="@+id/btnUploadThumb"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Select Thumbnail"
-            android:backgroundTint="@color/yenkasa_emerald"
-            android:textColor="@color/white"
-            android:layout_marginTop="8dp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Use high quality visuals and a clear call to action."
+                    android:textColor="@color/post_create_primary_text"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
 
         <Button
             android:id="@+id/btnSubmitAd"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="54dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_ad_submit_button"
+            android:drawableStart="@drawable/ic_ads_plus"
+            android:drawablePadding="8dp"
+            android:drawableTint="@color/white"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:stateListAnimator="@null"
             android:text="Submit Ad"
-            android:textStyle="bold"
-            android:backgroundTint="@color/yenkasa_black"
-            android:textColor="@color/amber_300"
-            android:layout_marginTop="20dp"
-            android:padding="14dp"/>
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="15sp" />
 
-        <View
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="30dp"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="Your ad will be reviewed before it goes live."
+            android:textColor="@color/post_create_secondary_text"
+            android:textSize="11sp" />
     </LinearLayout>
-
 </ScrollView>

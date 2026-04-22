@@ -2,6 +2,7 @@ const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const authToken = localStorage.getItem("authToken") || "";
 const menuToggle = document.getElementById("menuToggle");
 const dashboardMenu = document.getElementById("dashboardMenu");
+const dashboardMenuCloseBtn = document.getElementById("dashboardMenuCloseBtn");
 const menuButtons = document.querySelectorAll(".dashboard-menu .tab-btn");
 const panels = document.querySelectorAll(".super-admin-panel");
 const pendingPayoutsList = document.getElementById("pendingPayoutsList");
@@ -949,6 +950,8 @@ async function loadUsers() {
 menuToggle.addEventListener("click", () => {
   dashboardMenu.classList.toggle("open");
 });
+
+dashboardMenuCloseBtn?.addEventListener("click", closeMenu);
 
 menuButtons.forEach(button => {
   button.addEventListener("click", () => {

@@ -15,6 +15,12 @@ const buyerOrdersLink = document.getElementById("buyerOrdersLink");
 const sellerDashboardLink = document.getElementById("sellerDashboardLink");
 const superAdminLink = document.getElementById("superAdminLink");
 
+document.querySelectorAll("[data-menu-close]").forEach(button => {
+  button.addEventListener("click", () => {
+    button.closest(".dashboard-menu")?.classList.add("menu-closed");
+  });
+});
+
 let loadedNotifications = [];
 let activeNotificationFilter = "all";
 const hiddenNotificationIds = new Set(

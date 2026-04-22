@@ -65,7 +65,10 @@ class CreateAdActivity : AppCompatActivity() {
         if (uri != null) {
             videoUri = uri
             previewAdVideo.visibility = VideoView.VISIBLE
-            imageAdVideoPlaceholder.visibility = ImageView.GONE
+            imageAdVideoPlaceholder.visibility = ImageView.VISIBLE
+            imageAdVideoPlaceholder.clearColorFilter()
+            Glide.with(this).load(uri).into(imageAdVideoPlaceholder)
+            previewAdVideo.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             previewAdVideo.setVideoURI(uri)
             previewAdVideo.start()
         }
@@ -120,6 +123,18 @@ class CreateAdActivity : AppCompatActivity() {
         inputCtaText = findViewById(R.id.inputCtaText)
         inputCtaUrl = findViewById(R.id.inputCtaUrl)
         inputReward = findViewById(R.id.inputReward)
+
+        previewAdVideo.setOnPreparedListener {
+            imageAdVideoPlaceholder.visibility = ImageView.GONE
+            previewAdVideo.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            it.isLooping = true
+            previewAdVideo.start()
+        }
+        previewAdVideo.setOnErrorListener { _, _, _ ->
+            imageAdVideoPlaceholder.visibility = ImageView.VISIBLE
+            showToast("Unable to preview this video, but it can still be submitted.")
+            true
+        }
     }
 
     private fun setupClicks() {
@@ -222,6 +237,8 @@ class CreateAdActivity : AppCompatActivity() {
                     .addFormDataPart("ctaText", ctaText)
                     .addFormDataPart("ctaUrl", ctaUrl)
                     .addFormDataPart("rewardAmount", reward.toString())
+                    .addFormDataPart("rewardYKC", reward.toString())
+                    .addFormDataPart("adType", "sponsor")
                     .addFormDataPart("scope", "global")
                     .addFormDataPart("communityScope", "all")
                     .apply {
@@ -231,17 +248,24 @@ class CreateAdActivity : AppCompatActivity() {
                     }
                     .build()
 
-                val response = ApiClient.apiService.createSponsoredAd(
+                var response = ApiClient.apiService.createSponsoredAd(
                     "Bearer $token",
                     request
                 ).execute()
+
+                if (response.code() == 404 || response.code() == 405) {
+                    response = ApiClient.apiService.createSponsoredAdFallback(
+                        "Bearer $token",
+                        request
+                    ).execute()
+                }
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful && response.body()?.success == true) {
                         showToast("Ad submitted successfully!")
                         finish()
                     } else {
-                        showToast("Failed: ${response.errorBody()?.string()}")
+                        showToast("Ad failed (${response.code()}): ${readBackendError(response.errorBody()?.string())}")
                         resetSubmitButton()
                     }
                 }
@@ -278,5 +302,15 @@ class CreateAdActivity : AppCompatActivity() {
             btnSubmitAd.isEnabled = true
             btnSubmitAd.text = "Submit Ad"
         }
+    }
+
+    private fun readBackendError(errorText: String?): String {
+        if (errorText.isNullOrBlank()) return "Unknown server error"
+        return runCatching {
+            val json = JSONObject(errorText)
+            json.optString("message").ifBlank {
+                json.optString("error").ifBlank { errorText }
+            }
+        }.getOrDefault(errorText)
     }
 }

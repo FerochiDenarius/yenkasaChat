@@ -29,9 +29,16 @@ object PostNotificationSender {
 
     fun sendPostComment(context: Context, post: Post?, postId: String?, commentText: String?) {
         val actorId = TokenManager.getUserId(context).orEmpty()
-        val receiverId = post?.userId?.id.orEmpty()
         val resolvedPostId = post?._id ?: postId.orEmpty()
-        if (actorId.isBlank() || receiverId.isBlank() || resolvedPostId.isBlank() || actorId == receiverId) return
+        if (actorId.isBlank() || resolvedPostId.isBlank()) return
+
+        if (post == null) {
+            fetchPostAndSendComment(context.applicationContext, resolvedPostId, commentText)
+            return
+        }
+
+        val receiverId = post.userId.id
+        if (receiverId.isBlank() || actorId == receiverId) return
 
         val actorName = TokenManager.getUsername(context)?.takeIf { it.isNotBlank() } ?: "Someone"
         val preview = commentText.orEmpty().trim().take(80)
@@ -46,6 +53,27 @@ object PostNotificationSender {
             },
             postId = resolvedPostId
         )
+    }
+
+    private fun fetchPostAndSendComment(context: Context, postId: String, commentText: String?) {
+        val token = TokenManager.getToken(context).orEmpty()
+        if (token.isBlank()) return
+
+        ApiClient.apiService.getPostById("Bearer $token", postId)
+            .enqueue(object : Callback<Post> {
+                override fun onResponse(call: Call<Post>, response: Response<Post>) {
+                    val post = response.body()
+                    if (response.isSuccessful && post != null) {
+                        sendPostComment(context, post, postId, commentText)
+                    } else {
+                        Log.w(TAG, "Post lookup before comment notification failed: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<Post>, t: Throwable) {
+                    Log.w(TAG, "Post lookup before comment notification error: ${t.message}")
+                }
+            })
     }
 
     private fun sendPostNotification(
@@ -70,11 +98,28 @@ object PostNotificationSender {
             "targetId" to postId
         )
 
-        ApiClient.apiService.createNotification("Bearer $token", body)
+        enqueueCreateNotification("Bearer $token", body, useFallback = false)
+    }
+
+    private fun enqueueCreateNotification(
+        auth: String,
+        body: Map<String, @JvmSuppressWildcards Any?>,
+        useFallback: Boolean
+    ) {
+        val call = if (useFallback) {
+            ApiClient.apiService.createNotificationFallback(auth, body)
+        } else {
+            ApiClient.apiService.createNotification(auth, body)
+        }
+
+        call
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     if (!response.isSuccessful) {
                         Log.w(TAG, "Notification create failed: ${response.code()}")
+                        if (!useFallback && (response.code() == 404 || response.code() == 405)) {
+                            enqueueCreateNotification(auth, body, useFallback = true)
+                        }
                     }
                 }
 

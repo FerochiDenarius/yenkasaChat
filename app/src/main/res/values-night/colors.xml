@@ -53,4 +53,6 @@
     <color name="account_accent_green">#61A92F</color>
     <color name="account_accent_gold">#D1B45A</color>
     <color name="account_danger">#FF594D</color>
+    <color name="community_create_button_bg">#101417</color>
+    <color name="community_create_button_text">#EAF4EA</color>
 </resources>

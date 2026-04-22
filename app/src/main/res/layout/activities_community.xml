@@ -68,12 +68,12 @@
                         android:id="@+id/btnCreateCommunity"
                         android:layout_width="46dp"
                         android:layout_height="46dp"
-                        android:background="@drawable/bg_account_circle_button"
+                        android:background="@drawable/bg_community_create_button"
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center"
                         android:text="+"
-                        android:textColor="@color/account_primary_text"
+                        android:textColor="@color/community_create_button_text"
                         android:textSize="26sp"
                         android:textStyle="bold" />
                 </LinearLayout>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Dashboard | Yenkasa Store</title>
-  <link rel="stylesheet" href="/store/assets/cssFile/style.css?v=20260416-support-refunds">
+  <link rel="stylesheet" href="/store/assets/cssFile/style.css?v=20260422-dress-sizes">
 </head>
 <body>
 
@@ -22,6 +22,7 @@
     <button id="menuToggle" class="menu-toggle">☰</button>
 
     <div class="dashboard-menu" id="dashboardMenu">
+      <button type="button" class="menu-close-btn" id="dashboardMenuCloseBtn">Close</button>
       <button class="tab-btn active" id="baleTab">Upload Product</button>
       <button class="tab-btn" id="singleTab">Quick Dress Upload</button>
       <button class="tab-btn" id="manageTab">Manage Products</button>
@@ -78,19 +79,6 @@
             <input type="text" id="weight" placeholder="55kg">
           </div>
 
-          <div class="field modern-field" id="sizeField" style="display:none;">
-            <label for="size">Size</label>
-            <select id="size">
-              <option value="">Select Size</option>
-              <option value="XS">XS</option>
-              <option value="S">S</option>
-              <option value="M">M</option>
-              <option value="L">L</option>
-              <option value="XL">XL</option>
-              <option value="XXL">XXL</option>
-            </select>
-          </div>
-
           <div class="field modern-field">
             <label for="category">Subcategory</label>
             <input type="text" id="category" placeholder="Flannel Blouse">
@@ -103,6 +91,34 @@
               <option value="preorder">Preorder</option>
               <option value="sold">Sold</option>
             </select>
+          </div>
+
+          <div id="dressFields" class="settings-panel catalogue-field-panel hidden-panel">
+            <div class="field modern-field full">
+              <label>Available Dress Sizes</label>
+              <div class="size-check-grid" id="dressSizeOptions">
+                <label><input type="checkbox" name="dressSizes" value="XS"> XS</label>
+                <label><input type="checkbox" name="dressSizes" value="S"> S</label>
+                <label><input type="checkbox" name="dressSizes" value="M"> M</label>
+                <label><input type="checkbox" name="dressSizes" value="L"> L</label>
+                <label><input type="checkbox" name="dressSizes" value="XL"> XL</label>
+                <label><input type="checkbox" name="dressSizes" value="XXL"> XXL</label>
+              </div>
+            </div>
+
+            <div class="field modern-field">
+              <label for="dressColor">Color</label>
+              <input type="text" id="dressColor" placeholder="Black, Red, Floral">
+            </div>
+
+            <div class="field modern-field">
+              <label for="dressCondition">Condition</label>
+              <select id="dressCondition">
+                <option value="">Select condition</option>
+                <option value="new">New</option>
+                <option value="used">Used</option>
+              </select>
+            </div>
           </div>
 
           <div id="shoeFields" class="settings-panel catalogue-field-panel hidden-panel">
@@ -678,7 +694,7 @@
   </div>
   <script src="/store/assets/jsFiles/store-settings.js"></script>
   <script src="/store/assets/jsFiles/password-toggle.js"></script>
-  <script src="/store/assets/jsFiles/seller-dashboard.js?v=20260421-paystack-bank-dropdown"></script>
+  <script src="/store/assets/jsFiles/seller-dashboard.js?v=20260422-dress-sizes"></script>
   <script src="/store/assets/jsFiles/account-profile.js"></script>
 </body>
 </html>

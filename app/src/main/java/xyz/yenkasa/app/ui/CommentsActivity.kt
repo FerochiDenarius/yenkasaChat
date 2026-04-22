@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.graphics.Rect
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +10,8 @@ import android.view.WindowManager
 import android.widget.*
 import com.google.gson.Gson
 import xyz.yenkasa.app.model.CommentsResponse
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -314,12 +317,53 @@ class CommentsActivity : AppCompatActivity() {
     }
 
     private fun setupKeyboardAwareCommentInput() {
+        val commentsRoot = findViewById<View>(R.id.commentsRoot)
+        val commentInputLayout = findViewById<View>(R.id.layoutCommentInput)
+        val replyPreviewLayout = findViewById<View>(R.id.layoutReplyPreview)
+        val originalRecyclerBottomPadding = recyclerComments.paddingBottom
+        var wasKeyboardVisible = false
+
+        ViewCompat.setOnApplyWindowInsetsListener(commentsRoot) { _, insets ->
+            val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            val keyboardOffset = if (isKeyboardVisible) getKeyboardOverlapHeight() else 0
+            val translationY = -keyboardOffset.toFloat()
+
+            commentInputLayout.translationY = translationY
+            replyPreviewLayout.translationY = translationY
+            recyclerComments.setPadding(
+                recyclerComments.paddingLeft,
+                recyclerComments.paddingTop,
+                recyclerComments.paddingRight,
+                originalRecyclerBottomPadding + keyboardOffset
+            )
+
+            if (isKeyboardVisible && !wasKeyboardVisible) {
+                scrollCommentsAboveKeyboard()
+            }
+            wasKeyboardVisible = isKeyboardVisible
+
+            insets
+        }
+        ViewCompat.requestApplyInsets(commentsRoot)
+
         editComment.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) scrollCommentsAboveKeyboard()
         }
         editComment.setOnClickListener {
             scrollCommentsAboveKeyboard()
         }
+    }
+
+    private fun getKeyboardOverlapHeight(): Int {
+        val commentsRoot = findViewById<View>(R.id.commentsRoot)
+        val visibleFrame = Rect()
+        commentsRoot.getWindowVisibleDisplayFrame(visibleFrame)
+
+        val rootLocation = IntArray(2)
+        commentsRoot.getLocationOnScreen(rootLocation)
+        val rootBottom = rootLocation[1] + commentsRoot.height
+
+        return (rootBottom - visibleFrame.bottom).coerceAtLeast(0)
     }
 
     private fun scrollCommentsAboveKeyboard() {

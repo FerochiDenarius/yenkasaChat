@@ -418,6 +418,12 @@ interface ApiService {
         @Body request: CreateCommunityRequest
     ): Call<CreateCommunityResponse>
 
+    @POST("communities/create")
+    fun createCommunityFallback(
+        @Header("Authorization") token: String,
+        @Body request: CreateCommunityRequest
+    ): Call<CreateCommunityResponse>
+
     // ✅ Get the communities created by the logged-in user
     @GET("communities/user/my-communities")
     fun getMyCommunities(
@@ -678,6 +684,12 @@ interface ApiService {
         @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Call<ApiResponse>
 
+    @POST("notifications/create")
+    fun createNotificationFallback(
+        @Header("Authorization") auth: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any?>
+    ): Call<ApiResponse>
+
 
 
 
@@ -731,6 +743,12 @@ interface ApiService {
 
     @POST("ads/create")
     fun createSponsoredAd(
+        @Header("Authorization") token: String,
+        @Body request: MultipartBody
+    ): Call<AdCreateResponse>
+
+    @POST("ads")
+    fun createSponsoredAdFallback(
         @Header("Authorization") token: String,
         @Body request: MultipartBody
     ): Call<AdCreateResponse>

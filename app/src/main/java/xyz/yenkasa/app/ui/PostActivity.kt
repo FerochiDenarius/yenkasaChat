@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
@@ -45,7 +46,10 @@ class PostActivity : AppCompatActivity() {
     private lateinit var editTextContent: EditText
     private lateinit var imagePreview: ImageView
     private lateinit var imagePreviewCount: TextView
+    private lateinit var videoPreviewContainer: View
     private lateinit var videoPreview: VideoView
+    private lateinit var videoPreviewThumbnail: ImageView
+    private lateinit var videoPreviewPlayHint: TextView
     private lateinit var audioPreview: TextView
     private lateinit var btnChooseMedia: View
     private lateinit var btnPost: Button
@@ -87,6 +91,7 @@ class PostActivity : AppCompatActivity() {
         editTextContent = findViewById(R.id.editTextContent)
         imagePreview = findViewById(R.id.imagePreview)
         imagePreviewCount = findViewById(R.id.imagePreviewCount)
+        videoPreviewContainer = findViewById(R.id.videoPreviewContainer)
         videoPreview = findViewById(R.id.videoPreview)
         videoPreview.setOnPreparedListener { mediaPlayer ->
             val aspect = if (mediaPlayer.videoWidth > 0 && mediaPlayer.videoHeight > 0) {
@@ -95,9 +100,20 @@ class PostActivity : AppCompatActivity() {
                 readVideoAspect(videoUri) ?: (9f / 16f)
             }
             resizePreview(videoPreview, aspect)
+            videoPreview.setBackgroundColor(Color.TRANSPARENT)
+            videoPreviewThumbnail.visibility = View.GONE
+            videoPreviewPlayHint.visibility = View.GONE
             mediaPlayer.isLooping = true
             videoPreview.start()
         }
+        videoPreview.setOnErrorListener { _, _, _ ->
+            videoPreviewThumbnail.visibility = View.VISIBLE
+            videoPreviewPlayHint.visibility = View.VISIBLE
+            Toast.makeText(this, "Unable to preview this video, but it can still be uploaded.", Toast.LENGTH_SHORT).show()
+            true
+        }
+        videoPreviewThumbnail = findViewById(R.id.videoPreviewThumbnail)
+        videoPreviewPlayHint = findViewById(R.id.videoPreviewPlayHint)
         audioPreview = findViewById(R.id.audioPreview)
         btnChooseMedia = findViewById(R.id.btnChooseMedia)
         btnPost = findViewById(R.id.btnPost)
@@ -255,7 +271,10 @@ class PostActivity : AppCompatActivity() {
         imagePreview.visibility = View.GONE
         imagePreviewCount.visibility = View.GONE
         videoPreview.stopPlayback()
-        videoPreview.visibility = View.GONE
+        videoPreviewContainer.visibility = View.GONE
+        videoPreviewThumbnail.setImageDrawable(null)
+        videoPreviewThumbnail.visibility = View.GONE
+        videoPreviewPlayHint.visibility = View.GONE
         audioPreview.visibility = View.GONE
 
         when {
@@ -269,8 +288,13 @@ class PostActivity : AppCompatActivity() {
                 }
             }
             videoUri != null -> {
+                videoPreviewContainer.visibility = View.VISIBLE
                 videoPreview.visibility = View.VISIBLE
-                resizePreview(videoPreview, readVideoAspect(videoUri) ?: (9f / 16f))
+                videoPreviewThumbnail.visibility = View.VISIBLE
+                videoPreviewPlayHint.visibility = View.VISIBLE
+                createVideoThumbnail(videoUri)?.let { videoPreviewThumbnail.setImageBitmap(it) }
+                val aspect = readVideoAspect(videoUri) ?: (9f / 16f)
+                resizePreview(videoPreviewContainer, aspect)
                 videoPreview.setVideoURI(videoUri)
             }
             audioUri != null -> {
@@ -313,6 +337,20 @@ class PostActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             Log.w("PostActivity", "Unable to read video dimensions: ${e.message}")
+            null
+        }
+    }
+
+    private fun createVideoThumbnail(uri: Uri?): Bitmap? {
+        if (uri == null) return null
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(this, uri)
+            val bitmap = retriever.getFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            retriever.release()
+            bitmap
+        } catch (e: Exception) {
+            Log.w("PostActivity", "Unable to create video thumbnail: ${e.message}")
             null
         }
     }

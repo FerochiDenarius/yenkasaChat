@@ -6,8 +6,8 @@ function saveCart(cart) {
   localStorage.setItem("cart", JSON.stringify(cart));
 }
 
-function removeFromCart(id) {
-  const cart = getCart().filter(item => item.id !== id);
+function removeFromCart(cartKey) {
+  const cart = getCart().filter(item => (item.cartKey || String(item.id)) !== cartKey);
   saveCart(cart);
   renderCart();
 }
@@ -51,12 +51,13 @@ function renderCart() {
 
             <div style="flex:1;">
               <h3>${item.name}</h3>
+              ${item.selectedSize ? `<p>Size: ${item.selectedSize}</p>` : ""}
               <p>Quantity: ${item.quantity}</p>
               <p>Price: GHS ${item.price}</p>
               <p><strong>Subtotal: GHS ${subtotal}</strong></p>
             </div>
 
-            <button class="remove-cart-btn" data-id="${item.id}">
+            <button class="remove-cart-btn" data-key="${item.cartKey || item.id}">
               Remove
             </button>
           </div>
@@ -76,7 +77,7 @@ document.addEventListener("click", event => {
     return;
   }
 
-  removeFromCart(Number(removeBtn.dataset.id));
+  removeFromCart(String(removeBtn.dataset.key));
 });
 
 renderCart();

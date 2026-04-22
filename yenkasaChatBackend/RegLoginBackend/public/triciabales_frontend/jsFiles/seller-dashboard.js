@@ -16,7 +16,6 @@ const profileTab = document.getElementById("profileTab");
 const productType = document.getElementById("productType");
 const productCategoryType = document.getElementById("productCategoryType");
 const weightField = document.getElementById("weightField");
-const sizeField = document.getElementById("sizeField");
 const catalogueFieldPanels = document.querySelectorAll(".catalogue-field-panel");
 const uploadCard = document.getElementById("uploadCard");
 const manageSection = document.getElementById("manageSection");
@@ -30,6 +29,7 @@ const pendingCount = document.getElementById("pending-count");
 const completedCount = document.getElementById("completed-count");
 const menuToggle = document.getElementById("menuToggle");
 const dashboardMenu = document.getElementById("dashboardMenu");
+const dashboardMenuCloseBtn = document.getElementById("dashboardMenuCloseBtn");
 const payoutForm = document.getElementById("payout-form");
 const payoutMethod = document.getElementById("payoutMethod");
 const momoFields = document.getElementById("momoFields");
@@ -63,6 +63,7 @@ const productCatalogueLabels = {
 };
 
 const productCataloguePanels = {
+  dress: document.getElementById("dressFields"),
   shoe: document.getElementById("shoeFields"),
   bag: document.getElementById("bagFields"),
   wig: document.getElementById("wigFields"),
@@ -139,6 +140,23 @@ function setFieldValue(id, value = "") {
   }
 }
 
+function getCheckedValues(name) {
+  return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`))
+    .map(input => input.value);
+}
+
+function resetCatalogueFields() {
+  catalogueFieldPanels.forEach(panel => {
+    panel.querySelectorAll("input, select, textarea").forEach(field => {
+      if (field.type === "checkbox" || field.type === "radio") {
+        field.checked = false;
+      } else {
+        field.value = "";
+      }
+    });
+  });
+}
+
 function updateCatalogueFieldVisibility(mode) {
   catalogueFieldPanels.forEach(panel => {
     panel.classList.add("hidden-panel");
@@ -195,7 +213,7 @@ function setUploadMode(mode) {
   const uploadLabel = getUploadActionLabel(nextMode);
 
   weightField.style.display = isBale ? "flex" : "none";
-  sizeField.style.display = isDress ? "flex" : "none";
+  resetCatalogueFields();
   updateCatalogueFieldVisibility(nextMode);
 
   panelTitle.textContent = `Upload ${uploadLabel}`;
@@ -336,10 +354,10 @@ function resetUploadForm() {
   document.getElementById("name").value = "";
   document.getElementById("price").value = "";
   document.getElementById("weight").value = "";
-  document.getElementById("size").value = "";
   document.getElementById("category").value = "";
   document.getElementById("description").value = "";
   document.getElementById("status").value = "available";
+  resetCatalogueFields();
   imageInput.value = "";
   videoInput.value = "";
   imagePreview.innerHTML = "";
@@ -391,7 +409,10 @@ function collectCatalogueDetails(mode) {
       weight: getValue("weight")
     },
     dress: {
-      size: getValue("size")
+      sizes: getCheckedValues("dressSizes"),
+      size: getCheckedValues("dressSizes").join(", "),
+      color: getValue("dressColor"),
+      condition: getValue("dressCondition")
     },
     shoe: {
       brand: getValue("shoeBrand"),
@@ -450,8 +471,8 @@ function validateCatalogueDetails(mode, details) {
     return "Please enter the bale weight.";
   }
 
-  if (mode === "dress" && !details.size) {
-    return "Please select the dress size.";
+  if (mode === "dress" && (!Array.isArray(details.sizes) || !details.sizes.length)) {
+    return "Please select at least one dress size.";
   }
 
   if (mode === "shoe" && !details.size) {
@@ -533,7 +554,7 @@ function renderManageProducts(products) {
             <small>
               ${productCatalogueLabels[item.categoryType] || productCatalogueLabels[item.type] || item.type || "Product"} • ${item.status || "available"}<br>
               GH₵${Number(item.price || 0).toFixed(2)} • ${item.category || "-"}<br>
-              ${item.weight ? `Main detail: ${item.weight}` : ""}
+              ${item.weight ? `${item.categoryType === "dress" ? "Sizes" : "Main detail"}: ${item.weight}` : ""}
               ${item.color ? `<br>Color: ${item.color}` : ""}
               ${item.brand ? `<br>Brand: ${item.brand}` : ""}
             </small>
@@ -708,6 +729,12 @@ async function loadSellerOrders() {
       const sellerReceives = estimateSellerPayout(order);
       const deliveryStatus = order.deliveryStatus || "pending";
       const paymentStatus = order.paymentStatus || "pending";
+      const sellerItems = Array.isArray(order.items)
+        ? order.items.filter(item => Number(item.sellerId) === Number(currentUser.id))
+        : [];
+      const itemSummary = sellerItems.length
+        ? sellerItems.map(item => `${item.baleName || "Product"}${item.selectedSize ? ` (${item.selectedSize})` : ""} x ${item.quantity || 1}`).join(", ")
+        : "";
       const acceptedBtn = deliveryStatus !== "accepted" && deliveryStatus !== "delivered"
         ? `
           <button class="manage-btn status seller-order-btn" data-id="${order.id}" data-action="accept">
@@ -732,6 +759,7 @@ async function loadSellerOrders() {
             <p><strong>Address:</strong> ${order.address || "-"}</p>
             <p><strong>Payment:</strong> ${order.paymentMethod || "-"} (${paymentStatus})</p>
             <p><strong>Delivery:</strong> ${deliveryStatus}</p>
+            ${itemSummary ? `<p><strong>Items:</strong> ${itemSummary}</p>` : ""}
             <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
             <p><strong>Estimated Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
           </div>
@@ -797,6 +825,8 @@ async function deleteProduct(id) {
 menuToggle.addEventListener("click", () => {
   dashboardMenu.classList.toggle("open");
 });
+
+dashboardMenuCloseBtn?.addEventListener("click", closeMenu);
 
 baleTab.addEventListener("click", () => {
   activateTab(baleTab);

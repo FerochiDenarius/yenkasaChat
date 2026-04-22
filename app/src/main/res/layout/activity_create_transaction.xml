@@ -1,104 +1,604 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/createTransactionRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/surface_card_dark">
+    android:background="@color/wallet_background"
+    tools:context=".ui.CreateTransactionActivity">
 
-    <!-- Scrollable content -->
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="24dp">
+        android:orientation="vertical">
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <!-- Receive Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Receive Coins"
-                android:textColor="@color/amber_300"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:paddingBottom="12dp" />
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:paddingHorizontal="18dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="18dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/bg_coin_transfer_field"
-                android:padding="10dp"
-                android:layout_marginBottom="24dp">
+                android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/tvWalletId"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="USER_WALLET_ID"
-                    android:textSize="16sp"
-                    android:textColor="@color/yenkasa_black"
-                    android:textIsSelectable="true" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/buttonBackTransaction"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:clickable="true"
+                        android:contentDescription="Back"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="11dp"
+                        android:src="@drawable/ic_arrow_back"
+                        app:tint="@color/wallet_primary_text" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:text="Transaction"
+                            android:textColor="@color/wallet_primary_text"
+                            android:textSize="23sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:includeFontPadding="false"
+                            android:text="Send or receive Yenkasa Coins"
+                            android:textColor="@color/wallet_secondary_text"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/buttonTransactionHistory"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:clickable="true"
+                        android:contentDescription="History"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_receive"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <ImageView
+                        android:id="@+id/buttonTransactionScan"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:clickable="true"
+                        android:contentDescription="Scan"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_scan"
+                        app:tint="@color/wallet_accent_green" />
+                </LinearLayout>
+
+                <FrameLayout
+                    android:id="@+id/receiveCoinsCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="176dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_wallet_hero">
+
+                    <ImageView
+                        android:layout_width="118dp"
+                        android:layout_height="118dp"
+                        android:layout_gravity="center_vertical|start"
+                        android:layout_marginStart="10dp"
+                        android:alpha="0.38"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_logo_emblem"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <ImageView
+                        android:layout_width="150dp"
+                        android:layout_height="150dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="-24dp"
+                        android:layout_marginEnd="-24dp"
+                        android:alpha="0.08"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_logo_emblem"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <View
+                            android:layout_width="82dp"
+                            android:layout_height="1dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Receive Coins"
+                                android:textColor="@color/wallet_accent_green"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:text="Your Wallet ID"
+                                android:textColor="@color/wallet_secondary_text"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvWalletId"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:ellipsize="middle"
+                                android:maxLines="1"
+                                android:text="YKC-XL2INN"
+                                android:textColor="@color/wallet_primary_text"
+                                android:textIsSelectable="true"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="26dp"
+                                android:layout_marginTop="10dp"
+                                android:background="@drawable/bg_wallet_pill"
+                                android:drawableStart="@drawable/ic_shield"
+                                android:drawablePadding="6dp"
+                                android:drawableTint="@color/wallet_accent_green"
+                                android:gravity="center"
+                                android:paddingHorizontal="10dp"
+                                android:text="Secure • On Chain"
+                                android:textColor="@color/wallet_accent_green"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <FrameLayout
+                            android:layout_width="96dp"
+                            android:layout_height="96dp"
+                            android:layout_marginStart="12dp"
+                            android:background="@drawable/bg_transaction_qr">
+
+                            <ImageView
+                                android:layout_width="68dp"
+                                android:layout_height="68dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="Wallet QR"
+                                android:src="@drawable/ic_scan"
+                                app:tint="@color/yenkasa_black" />
+
+                            <ImageView
+                                android:layout_width="30dp"
+                                android:layout_height="30dp"
+                                android:layout_gravity="center"
+                                android:background="@drawable/bg_wallet_pill"
+                                android:padding="3dp"
+                                android:src="@drawable/ic_logo_emblem" />
+                        </FrameLayout>
+                    </LinearLayout>
+                </FrameLayout>
 
                 <Button
                     android:id="@+id/btnCopyWalletId"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="-52dp"
+                    android:background="@drawable/bg_transaction_copy_button"
+                    android:backgroundTint="@null"
+                    android:drawableStart="@drawable/ic_copy_wallet"
+                    android:drawablePadding="8dp"
+                    android:drawableTint="@color/wallet_accent_green"
+                    android:stateListAnimator="@null"
+                    android:text="Copy Wallet ID"
+                    android:textAllCaps="false"
+                    android:textColor="@color/wallet_accent_green"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"
+                        android:background="@color/wallet_border" />
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginHorizontal="10dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:gravity="center"
+                        android:text="⇅"
+                        android:textColor="@color/wallet_accent_green"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"
+                        android:background="@color/wallet_border" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutSendCoins"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Copy"
-                    android:backgroundTint="@color/yellowAccent"
-                    android:textColor="@color/yenkasaBlack" />
+                    android:background="@drawable/bg_transaction_send_card"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_send"
+                        android:drawablePadding="10dp"
+                        android:drawableTint="@color/wallet_accent_gold"
+                        android:text="Send Coins"
+                        android:textColor="@color/wallet_accent_gold"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_transaction_input"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="14dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Recipient Wallet ID"
+                                android:textColor="@color/wallet_secondary_text"
+                                android:textSize="11sp" />
+
+                            <EditText
+                                android:id="@+id/etRecipientId"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@android:color/transparent"
+                                android:hint="Enter wallet ID or scan QR"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:padding="0dp"
+                                android:singleLine="true"
+                                android:textColor="@color/wallet_primary_text"
+                                android:textColorHint="@color/wallet_secondary_text"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:background="@drawable/bg_wallet_pill"
+                            android:padding="8dp"
+                            android:src="@drawable/ic_scan"
+                            app:tint="@color/wallet_accent_gold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="62dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_transaction_input"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="14dp">
+
+                        <ImageView
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:src="@drawable/ic_logo_emblem"
+                            app:tint="@color/wallet_accent_green" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Amount"
+                                android:textColor="@color/wallet_secondary_text"
+                                android:textSize="11sp" />
+
+                            <EditText
+                                android:id="@+id/etAmount"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@android:color/transparent"
+                                android:hint="0.00"
+                                android:inputType="numberDecimal"
+                                android:maxLines="1"
+                                android:padding="0dp"
+                                android:singleLine="true"
+                                android:textColor="@color/wallet_primary_text"
+                                android:textColorHint="@color/wallet_secondary_text"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="YKC"
+                            android:textColor="@color/wallet_secondary_text"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textTransactionMax"
+                            android:layout_width="48dp"
+                            android:layout_height="28dp"
+                            android:layout_marginStart="10dp"
+                            android:background="@drawable/bg_wallet_pill"
+                            android:gravity="center"
+                            android:text="Max"
+                            android:textColor="@color/wallet_accent_gold"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/textTransactionUsdEstimate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="≈ $0.00 USD"
+                        android:textColor="@color/wallet_secondary_text"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:drawableStart="@drawable/ic_wallet"
+                            android:drawablePadding="8dp"
+                            android:drawableTint="@color/wallet_secondary_text"
+                            android:text="Network Fee"
+                            android:textColor="@color/wallet_secondary_text"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.10 YKC"
+                            android:textColor="@color/wallet_accent_gold"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnSend"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_transaction_primary_button"
+                        android:backgroundTint="@null"
+                        android:drawableStart="@drawable/ic_send"
+                        android:drawablePadding="10dp"
+                        android:drawableTint="@color/yenkasa_black"
+                        android:stateListAnimator="@null"
+                        android:text="Review Transaction"
+                        android:textAllCaps="false"
+                        android:textColor="@color/yenkasa_black"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="80dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_transaction_secure_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp">
+
+                    <ImageView
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_shield"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Secure &amp; Verified"
+                            android:textColor="@color/wallet_primary_text"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="All transactions are protected by blockchain technology."
+                            android:textColor="@color/wallet_secondary_text"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="96dp"
+                        android:layout_height="62dp"
+                        android:alpha="0.6"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_logo_emblem"
+                        app:tint="@color/wallet_accent_green" />
+                </LinearLayout>
             </LinearLayout>
+        </ScrollView>
+
+        <LinearLayout
+            android:id="@+id/transactionBottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="74dp"
+            android:background="@drawable/bg_wallet_bottom_nav"
+            android:elevation="8dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
 
             <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Send Coins"
-                android:textColor="@color/amber_300"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:paddingBottom="12dp" />
+                android:id="@+id/navTransactionHome"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:drawableTop="@drawable/ic_wallet_nav_home"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="Home"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
 
-            <EditText
-                android:id="@+id/etRecipientId"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Recipient Wallet ID"
-                android:padding="12dp"
-                android:background="@drawable/bg_coin_transfer_field"
-                android:textColor="@color/yenkasa_black"
-                android:textColorHint="@color/dark_gray"
-                android:inputType="text"
-                android:singleLine="true"
-                android:layout_marginBottom="16dp" />
+            <TextView
+                android:id="@+id/navTransactionWallet"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:drawableTop="@drawable/ic_wallet"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="Wallet"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
 
-            <EditText
-                android:id="@+id/etAmount"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Amount"
-                android:inputType="numberDecimal"
-                android:padding="12dp"
-                android:background="@drawable/bg_coin_transfer_field"
-                android:textColor="@color/yenkasa_black"
-                android:textColorHint="@color/dark_gray"
-                android:singleLine="true"
-                android:layout_marginBottom="24dp" />
+            <TextView
+                android:id="@+id/navTransactionActive"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_wallet_nav_active"
+                android:clickable="true"
+                android:drawableTop="@drawable/ic_receive"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_accent_green"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="Transact"
+                android:textColor="@color/wallet_accent_green"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/btnSend"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Send Coins"
-                android:background="@drawable/btn_login_gold"
-                android:textColor="@color/yenkasa_black" />
+            <TextView
+                android:id="@+id/navTransactionReceive"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:drawableTop="@drawable/ic_receive"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="Receive"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
 
+            <TextView
+                android:id="@+id/navTransactionProfile"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:drawableTop="@drawable/ic_wallet_nav_profile"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="Profile"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
         </LinearLayout>
-    </ScrollView>
+    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/progressBar"

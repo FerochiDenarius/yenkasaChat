@@ -118,6 +118,7 @@
         <activity
             android:name=".ui.CreateTransactionActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity android:name=".ui.TransactionReceiptActivity" />
         <activity
             android:name=".ui.CommunitiesActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />

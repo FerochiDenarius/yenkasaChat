@@ -167,7 +167,7 @@ class CommunitiesActivity : AppCompatActivity() {
                             recyclerJoinedCommunities.visibility = View.VISIBLE
                             dividerAfterJoined.visibility = View.VISIBLE
 
-                            textJoinedCommunitiesTitle.text = "Your Communities (${userCommunities.size})"
+                            textJoinedCommunitiesTitle.text = "My Communities (${userCommunities.size})"
                             Log.d("JOINED_DEBUG", "✅ Showing joined communities section with ${userCommunities.size} communities")
                         } else {
                             textJoinedCommunitiesTitle.visibility = View.GONE
@@ -245,7 +245,7 @@ class CommunitiesActivity : AppCompatActivity() {
                     textJoinedCommunitiesTitle.visibility = View.VISIBLE
                     recyclerJoinedCommunities.visibility = View.VISIBLE
                     dividerAfterJoined.visibility = View.VISIBLE
-                    textJoinedCommunitiesTitle.text = "Your Communities (${joinedCommunities.size})"
+                    textJoinedCommunitiesTitle.text = "My Communities (${joinedCommunities.size})"
 
                     Log.d(
                         "PRIMARY_COMMUNITY",

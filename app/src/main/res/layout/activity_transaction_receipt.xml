@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/wallet_background"
+    tools:context=".ui.TransactionReceiptActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingHorizontal="18dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="18dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/buttonReceiptBack"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:clickable="true"
+                        android:contentDescription="Back"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="11dp"
+                        android:src="@drawable/ic_arrow_back"
+                        app:tint="@color/wallet_primary_text" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:text="Transaction Receipt"
+                            android:textColor="@color/wallet_primary_text"
+                            android:textSize="21sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textReceiptStatusSubtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:includeFontPadding="false"
+                            android:text="Transaction Successful"
+                            android:textColor="@color/wallet_accent_green"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/buttonReceiptShare"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:clickable="true"
+                        android:contentDescription="Share"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_share"
+                        app:tint="@color/wallet_accent_green" />
+                </LinearLayout>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="162dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_wallet_hero">
+
+                    <ImageView
+                        android:layout_width="112dp"
+                        android:layout_height="112dp"
+                        android:layout_gravity="center_vertical|start"
+                        android:layout_marginStart="12dp"
+                        android:alpha="0.42"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_logo_emblem"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <ImageView
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="-26dp"
+                        android:layout_marginEnd="-26dp"
+                        android:alpha="0.08"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_logo_emblem"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <View
+                            android:layout_width="92dp"
+                            android:layout_height="1dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/textReceiptTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Transaction Successful"
+                                android:textColor="@color/wallet_accent_green"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/textReceiptDescription"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="5dp"
+                                android:text="Your coins have been sent successfully."
+                                android:textColor="@color/wallet_secondary_text"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/textReceiptAmount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:text="- 10.00 YKC"
+                                android:textColor="@color/wallet_primary_text"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/textReceiptUsd"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="≈ $0.00 USD"
+                                android:textColor="@color/wallet_secondary_text"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_marginTop="-20dp"
+                    android:background="@drawable/bg_transaction_copy_button"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="14dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_shield"
+                        android:drawablePadding="8dp"
+                        android:drawableTint="@color/wallet_accent_green"
+                        android:text="Confirmed on-chain"
+                        android:textColor="@color/wallet_accent_green"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="12 Confirmations"
+                        android:textColor="@color/wallet_primary_text"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="72dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="14dp"
+                        android:background="@drawable/bg_wallet_transaction_status"
+                        android:gravity="center"
+                        android:text="Completed"
+                        android:textColor="@color/wallet_accent_green"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Transaction Details"
+                    android:textColor="@color/wallet_primary_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_wallet_card"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:id="@+id/textReceiptTransactionId"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Transaction ID                                      0xf83a...c2d9" />
+
+                    <TextView
+                        android:id="@+id/textReceiptDate"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Date &amp; Time                                      May 24, 2025 • 3:42 PM" />
+
+                    <TextView
+                        android:id="@+id/textReceiptStatus"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Status                                           • Success" />
+
+                    <TextView
+                        android:id="@+id/textReceiptNetwork"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Network                                      Yenkasa Chain" />
+
+                    <TextView
+                        android:id="@+id/textReceiptBlock"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Block Number                                      #187,456" />
+
+                    <TextView
+                        android:id="@+id/textReceiptConfirmations"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Confirmations                                             12" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Transfer Summary"
+                    android:textColor="@color/wallet_primary_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_wallet_card"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:id="@+id/textReceiptFrom"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="From                                                   You" />
+
+                    <TextView
+                        android:id="@+id/textReceiptTo"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="To                                           0x713a...d4e7" />
+
+                    <TextView
+                        android:id="@+id/textReceiptSummaryAmount"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Amount                                              10 YKC" />
+
+                    <TextView
+                        android:id="@+id/textReceiptFee"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Network Fee                                      0.10 YKC" />
+
+                    <TextView
+                        android:id="@+id/textReceiptTotal"
+                        style="@style/TransactionReceiptRow"
+                        tools:text="Total                                             10.10 YKC" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_transaction_secure_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_wallet_pill"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_shield"
+                        app:tint="@color/wallet_accent_green" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Secure &amp; Verified"
+                            android:textColor="@color/wallet_primary_text"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="This transaction is recorded securely on the Yenkasa Chain."
+                            android:textColor="@color/wallet_secondary_text"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="74dp"
+            android:background="@drawable/bg_wallet_bottom_nav"
+            android:elevation="8dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:id="@+id/navReceiptHome"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/ic_wallet_nav_home"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:gravity="center"
+                android:text="Home"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/navReceiptWallet"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/ic_wallet"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:gravity="center"
+                android:text="Wallet"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/navReceiptTransaction"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_wallet_nav_active"
+                android:drawableTop="@drawable/ic_receive"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_accent_green"
+                android:gravity="center"
+                android:text="Transact"
+                android:textColor="@color/wallet_accent_green"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/navReceiptReceive"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/ic_receive"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:gravity="center"
+                android:text="Receive"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/navReceiptProfile"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/ic_wallet_nav_profile"
+                android:drawablePadding="4dp"
+                android:drawableTint="@color/wallet_secondary_text"
+                android:gravity="center"
+                android:text="Profile"
+                android:textColor="@color/wallet_secondary_text"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

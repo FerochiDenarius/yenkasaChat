@@ -131,7 +131,15 @@ class CoinWalletActivity : AppCompatActivity() {
         refreshWalletHero()
 
         // RecyclerView
-        transactionAdapter = TransactionAdapter(transactionList)
+        transactionAdapter = TransactionAdapter(transactionList) { transaction ->
+            startActivity(
+                TransactionReceiptActivity.createIntent(
+                    context = this,
+                    transaction = transaction,
+                    currentWalletId = currentWalletId
+                )
+            )
+        }
         recyclerViewTransactions.apply {
             layoutManager = LinearLayoutManager(this@CoinWalletActivity)
             adapter = transactionAdapter
@@ -336,6 +344,9 @@ class CoinWalletActivity : AppCompatActivity() {
     private fun updateBalance(newBalance: Int, walletId: String?, animate: Boolean) {
         val oldBalance = currentBalance
         currentWalletId = walletId ?: currentWalletId
+        if (::transactionAdapter.isInitialized) {
+            transactionAdapter.currentWalletId = currentWalletId
+        }
         TokenManager.saveCoins(this, newBalance)
 
         if (!animate || oldBalance == newBalance || isBalanceHidden) {

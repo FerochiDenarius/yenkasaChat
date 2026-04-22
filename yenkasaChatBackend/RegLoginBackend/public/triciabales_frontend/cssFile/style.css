@@ -764,6 +764,17 @@ body {
   display: none;
 }
 
+.menu-close-btn {
+  display: none;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .super-admin-shell {
   display: grid;
   gap: 20px;
@@ -1179,6 +1190,44 @@ body {
   display: none;
 }
 
+.size-check-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.size-check-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.size-check-grid input {
+  width: auto;
+  box-shadow: none;
+}
+
+.product-size-picker {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  font-weight: 700;
+  color: #111827;
+}
+
+.product-size-picker select {
+  width: 100%;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
 .settings-submit {
   border: none;
   cursor: pointer;
@@ -1306,6 +1355,11 @@ footer {
     z-index: 1000;
     transition: left .3s ease;
     box-shadow: 0 0 30px rgba(0,0,0,.15);
+  }
+
+  .dashboard-menu .menu-close-btn {
+    display: block;
+    margin-bottom: 6px;
   }
 
   .dashboard-menu.open {
@@ -3483,6 +3537,13 @@ body {
   display: flex;
 }
 
+.market-hero .nav-links .menu-close-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 5px;
+  background: #ffffff;
+}
+
 .market-hero .nav-links a {
   color: var(--yk-brown);
   background: transparent;
@@ -4499,6 +4560,16 @@ footer a {
 
 .compact-dashboard-menu {
   margin-bottom: 20px;
+}
+
+.compact-dashboard-menu.menu-closed {
+  display: none;
+}
+
+.compact-dashboard-menu .compact-menu-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .notification-toolbar {

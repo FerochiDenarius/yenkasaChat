@@ -3,6 +3,12 @@ const authToken = localStorage.getItem("authToken") || "";
 const feedback = document.getElementById("orders-feedback");
 const ordersContainer = document.getElementById("orders-container");
 
+document.querySelectorAll("[data-menu-close]").forEach(button => {
+  button.addEventListener("click", () => {
+    button.closest(".dashboard-menu")?.classList.add("menu-closed");
+  });
+});
+
 function getAuthHeaders() {
   return {
     Authorization: `Bearer ${authToken}`
@@ -90,7 +96,7 @@ function renderOrders(orders) {
         <div class="order-item-list">
           ${(order.items || []).map(item => `
             <div class="order-item-row">
-              <span>${item.baleName}</span>
+              <span>${item.baleName}${item.selectedSize ? ` (${item.selectedSize})` : ""}</span>
               <span>${item.quantity} x GHS ${item.price}</span>
             </div>
           `).join("")}

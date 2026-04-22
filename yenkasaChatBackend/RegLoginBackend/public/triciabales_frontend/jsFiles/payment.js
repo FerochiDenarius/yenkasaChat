@@ -128,6 +128,7 @@ paymentForm.addEventListener("submit", async e => {
       baleId: item.id,
       baleName: item.name,
       price: item.price,
+      selectedSize: item.selectedSize || null,
       quantity: item.quantity
     }))
   };

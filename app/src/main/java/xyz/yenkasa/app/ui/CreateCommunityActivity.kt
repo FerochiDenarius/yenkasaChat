@@ -21,6 +21,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import org.json.JSONObject
 
 class CreateCommunityActivity : AppCompatActivity() {
 
@@ -128,22 +129,13 @@ class CreateCommunityActivity : AppCompatActivity() {
                     call: Call<CreateCommunityResponse>,
                     response: Response<CreateCommunityResponse>
                 ) {
-                    btnCreateCommunity.isEnabled = true
-                    btnCreateCommunity.text = "Create"
-
                     if (response.isSuccessful && response.body() != null) {
-                        Toast.makeText(
-                            this@CreateCommunityActivity,
-                            "Community created successfully!",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        finish()
+                        handleCreateCommunitySuccess()
+                    } else if (response.code() == 404 || response.code() == 405) {
+                        retryCreateCommunityFallback(token, request)
                     } else {
-                        Toast.makeText(
-                            this@CreateCommunityActivity,
-                            "Error: ${response.errorBody()?.string() ?: "Unknown"}",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        resetCreateButton()
+                        showCreateCommunityError(response)
                     }
                 }
 
@@ -159,9 +151,68 @@ class CreateCommunityActivity : AppCompatActivity() {
             })
     }
 
+    private fun retryCreateCommunityFallback(token: String, request: CreateCommunityRequest) {
+        ApiClient.apiService.createCommunityFallback("Bearer $token", request)
+            .enqueue(object : Callback<CreateCommunityResponse> {
+                override fun onResponse(
+                    call: Call<CreateCommunityResponse>,
+                    response: Response<CreateCommunityResponse>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        handleCreateCommunitySuccess()
+                    } else {
+                        resetCreateButton()
+                        showCreateCommunityError(response)
+                    }
+                }
+
+                override fun onFailure(call: Call<CreateCommunityResponse>, t: Throwable) {
+                    resetCreateButton()
+                    Toast.makeText(
+                        this@CreateCommunityActivity,
+                        "Network Error: ${t.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            })
+    }
+
+    private fun handleCreateCommunitySuccess() {
+        resetCreateButton()
+        Toast.makeText(
+            this@CreateCommunityActivity,
+            "Community created successfully!",
+            Toast.LENGTH_LONG
+        ).show()
+        finish()
+    }
+
+    private fun resetCreateButton() {
+        btnCreateCommunity.isEnabled = true
+        btnCreateCommunity.text = "Create"
+    }
+
+    private fun showCreateCommunityError(response: Response<CreateCommunityResponse>) {
+        val message = readBackendError(response.errorBody()?.string())
+        Toast.makeText(
+            this@CreateCommunityActivity,
+            "Community failed (${response.code()}): $message",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun readBackendError(errorText: String?): String {
+        if (errorText.isNullOrBlank()) return "Unknown server error"
+        return runCatching {
+            val json = JSONObject(errorText)
+            json.optString("message").ifBlank {
+                json.optString("error").ifBlank { errorText }
+            }
+        }.getOrDefault(errorText)
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         onBackPressedDispatcher.onBackPressed()
         return true
     }
 }
-

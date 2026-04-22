@@ -15,6 +15,7 @@ const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const mainNav = document.getElementById("mainNav");
 const categoryMenuBtn = document.getElementById("categoryMenuBtn");
 const categoryMenuPanel = document.getElementById("categoryMenuPanel");
+const mainNavCloseBtn = document.getElementById("mainNavCloseBtn");
 const browseSection = document.getElementById("browse-products");
 const categoryResults = document.getElementById("category-results");
 const browseKicker = document.getElementById("browseKicker");
@@ -153,6 +154,10 @@ mobileMenuBtn?.addEventListener("click", () => {
   mainNav?.classList.toggle("open");
 });
 
+mainNavCloseBtn?.addEventListener("click", () => {
+  mainNav?.classList.remove("open");
+});
+
 mainNav?.querySelectorAll("a").forEach(link => {
   link.addEventListener("click", () => {
     mainNav.classList.remove("open");
@@ -185,19 +190,22 @@ function rotatePromoSlides() {
 rotatePromoSlides();
 setInterval(rotatePromoSlides, 4000);
 
-function addToCart(item) {
+function addToCart(item, selectedSize = "") {
   const cart = getCart();
+  const cartKey = selectedSize ? `${item.id}:${selectedSize}` : String(item.id);
 
-  const existing = cart.find(cartItem => cartItem.id === item.id);
+  const existing = cart.find(cartItem => (cartItem.cartKey || String(cartItem.id)) === cartKey);
 
   if (existing) {
     existing.quantity += 1;
   } else {
     cart.push({
+      cartKey,
       id: item.id,
       name: item.name,
       price: item.price,
       imageUrl: item.imageUrl,
+      selectedSize,
       quantity: 1
     });
   }
@@ -262,6 +270,32 @@ function getProductCategory(item) {
   }
 
   return "bale";
+}
+
+function parseProductMetadata(item) {
+  if (!item?.metadataJson) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(item.metadataJson);
+  } catch (err) {
+    return {};
+  }
+}
+
+function getDressSizes(item) {
+  const metadata = parseProductMetadata(item);
+  if (Array.isArray(metadata.sizes)) {
+    return metadata.sizes.filter(Boolean);
+  }
+  if (metadata.size) {
+    return String(metadata.size).split(",").map(size => size.trim()).filter(Boolean);
+  }
+  if (item.weight && getProductCategory(item) === "dress") {
+    return String(item.weight).split(",").map(size => size.trim()).filter(Boolean);
+  }
+  return [];
 }
 
 function productMatchesCategory(item, categoryKey) {
@@ -332,6 +366,7 @@ function createProductCard(item) {
   const productImages = getProductImages(item);
   const firstImage = productImages[0];
   const visibleGridImages = productImages.slice(1, 4);
+  const dressSizes = productCategory === "dress" ? getDressSizes(item) : [];
 
   card.innerHTML = `
     ${firstImage ? `
@@ -403,6 +438,16 @@ function createProductCard(item) {
         ? `<video controls src="${item.videoUrl}"></video>`
         : ""}
 
+      ${dressSizes.length ? `
+        <label class="product-size-picker">
+          <span>Choose size</span>
+          <select data-dress-size>
+            <option value="">Select size</option>
+            ${dressSizes.map(size => `<option value="${size}">${size}</option>`).join("")}
+          </select>
+        </label>
+      ` : ""}
+
       ${status !== "sold"
         ? `
           <div class="card-actions">
@@ -417,6 +462,7 @@ function createProductCard(item) {
 
   const productImage = card.querySelector("[data-gallery-main]");
   const addCartBtn = card.querySelector(".add-cart-btn");
+  const dressSizeSelect = card.querySelector("[data-dress-size]");
   const galleryButtons = card.querySelectorAll("[data-product-image]");
 
   if (productImage) {
@@ -449,7 +495,13 @@ function createProductCard(item) {
 
   if (addCartBtn) {
     addCartBtn.addEventListener("click", () => {
-      addToCart(item);
+      const selectedSize = dressSizeSelect?.value || "";
+      if (dressSizeSelect && !selectedSize) {
+        alert("Please select a dress size before adding to cart.");
+        dressSizeSelect.focus();
+        return;
+      }
+      addToCart(item, selectedSize);
     });
   }
 

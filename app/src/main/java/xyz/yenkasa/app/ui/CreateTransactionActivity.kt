@@ -3,6 +3,7 @@ package xyz.yenkasa.app.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -23,6 +24,7 @@ class CreateTransactionActivity : AppCompatActivity() {
     private lateinit var etAmount: EditText
     private lateinit var btnSend: Button
     private lateinit var progressBar: ProgressBar
+    private var currentWalletId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,9 +40,39 @@ class CreateTransactionActivity : AppCompatActivity() {
         val action = intent.getStringExtra("action")
 
         if (action == "receive") {
-            etRecipientId.visibility = View.GONE
-            etAmount.visibility = View.GONE
-            btnSend.visibility = View.GONE
+            findViewById<View>(R.id.layoutSendCoins).visibility = View.GONE
+        }
+
+        findViewById<View>(R.id.buttonBackTransaction).setOnClickListener { finish() }
+        findViewById<View>(R.id.buttonTransactionHistory).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
+        findViewById<View>(R.id.buttonTransactionScan).setOnClickListener {
+            Toast.makeText(this, "Scan will be available when wallet QR payments are ready", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.textTransactionMax).setOnClickListener {
+            Toast.makeText(this, "Max amount will be enabled after spendable balance is finalized", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.navTransactionHome).setOnClickListener {
+            startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+            )
+            finish()
+        }
+        findViewById<View>(R.id.navTransactionWallet).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+            finish()
+        }
+        findViewById<View>(R.id.navTransactionActive).setOnClickListener {
+            Toast.makeText(this, "You are already on transactions", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<View>(R.id.navTransactionReceive).setOnClickListener {
+            findViewById<View>(R.id.layoutSendCoins).visibility = View.GONE
+        }
+        findViewById<View>(R.id.navTransactionProfile).setOnClickListener {
+            startActivity(Intent(this, AccountInfoActivity::class.java))
         }
 
         fetchWalletId()
@@ -84,6 +116,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     val body = response.body()
                     if (response.isSuccessful && body != null && body.success) {
+                        currentWalletId = body.walletId
                         tvWalletId.text = body.walletId ?: "N/A"
                     } else {
                         tvWalletId.text = "N/A"
@@ -184,6 +217,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                         existing.add(0, newTransaction)
                         TokenManager.saveTransactionHistory(this@CreateTransactionActivity, existing)
 
+                        openReceipt(newTransaction)
                         finish()
                     } else {
                         val errorMsg = body?.error ?: response.message()
@@ -204,5 +238,15 @@ class CreateTransactionActivity : AppCompatActivity() {
                     ).show()
                 }
             })
+    }
+
+    private fun openReceipt(transaction: TransactionUiModel) {
+        startActivity(
+            TransactionReceiptActivity.createIntent(
+                context = this,
+                transaction = transaction,
+                currentWalletId = currentWalletId
+            )
+        )
     }
 }

@@ -14,7 +14,8 @@ import java.util.*
 
 class TransactionAdapter(
     private val transactions: List<TransactionUiModel>,
-    private val currentWalletId: String? = null // optional
+    var currentWalletId: String? = null,
+    private val onTransactionClick: ((TransactionUiModel) -> Unit)? = null
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -52,6 +53,7 @@ class TransactionAdapter(
         holder.tvAmount.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))
         holder.tvStatus.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.wallet_accent_green))
         holder.imgType.setImageResource(R.drawable.ic_coin)
+        holder.itemView.setOnClickListener { onTransactionClick?.invoke(tx) }
     }
 
     override fun getItemCount(): Int = transactions.size

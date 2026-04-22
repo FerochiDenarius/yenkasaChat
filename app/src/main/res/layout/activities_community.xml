@@ -3,131 +3,259 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/account_background">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshCommunities"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="8dp">
+            android:clipToPadding="false"
+            android:fillViewport="true">
 
-                <TextView
-                    android:id="@+id/textJoinedCommunitiesTitle"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="34dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="92dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Communities"
+                            android:textColor="@color/account_primary_text"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Connect. Share. Grow together."
+                            android:textColor="@color/account_secondary_text"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SearchView
+                        android:id="@+id/searchViewCommunities"
+                        android:layout_width="46dp"
+                        android:layout_height="46dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/bg_account_circle_button"
+                        android:iconifiedByDefault="true"
+                        android:queryHint="Search communities..." />
+
+                    <TextView
+                        android:id="@+id/btnCreateCommunity"
+                        android:layout_width="46dp"
+                        android:layout_height="46dp"
+                        android:background="@drawable/bg_account_circle_button"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="+"
+                        android:textColor="@color/account_primary_text"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_account_surface"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="2dp">
+
+                    <TextView
+                        android:id="@+id/textJoinedCommunitiesTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_community_tab_selected"
+                        android:gravity="center"
+                        android:text="My Communities"
+                        android:textColor="@color/yenkasa_black"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/textAllCommunitiesTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="All Communities"
+                        android:textColor="@color/account_secondary_text"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Your Communities"
-                    android:textStyle="bold"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp"
-                    android:visibility="gone"/>
+                    android:layout_marginTop="22dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="My Communities"
+                        android:textColor="@color/account_primary_text"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="See All  ›"
+                        android:textColor="@color/account_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recyclerJoinedCommunities"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:nestedScrollingEnabled="false"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
 
                 <View
                     android:id="@+id/dividerAfterJoined"
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginVertical="12dp"
-                    android:background="?android:attr/listDivider"
-                    android:visibility="gone"/>
-
-                <!-- SEARCH SECTION -->
-                <androidx.appcompat.widget.SearchView
-                    android:id="@+id/searchViewCommunities"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:queryHint="Search communities..."
-                    android:iconifiedByDefault="false"/>
+                    android:layout_marginTop="10dp"
+                    android:background="@color/account_border"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginTop="18dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                    <Button
-                        android:id="@+id/btnCreateCommunity"
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Discover Communities"
+                        android:textColor="@color/account_primary_text"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Create"
-                        android:drawableStart="@drawable/ic_add"
-                        android:padding="8dp"/>
-
-                    <Button
-                        android:id="@+id/btnEditCommunity"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Edit"
-                        android:drawableStart="@drawable/ic_edit"
-                        android:layout_marginStart="8dp"
-                        android:padding="8dp"/>
+                        android:text="See All  ›"
+                        android:textColor="@color/account_secondary_text"
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <ProgressBar
                     android:id="@+id/progressBarCommunities"
                     style="?android:attr/progressBarStyleLarge"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="20dp"
-                    android:visibility="gone"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="24dp"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/textEmptyCommunities"
-                    android:text="No communities found"
-                    android:textSize="16sp"
-                    android:textAlignment="center"
-                    android:layout_marginTop="20dp"
-                    android:visibility="gone"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"/>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="12dp"
-                    android:background="?android:attr/listDivider"/>
-
-                <TextView
-                    android:id="@+id/textAllCommunitiesTitle"
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="All Communities"
-                    android:textStyle="bold"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="4dp"/>
+                    android:layout_marginTop="24dp"
+                    android:gravity="center"
+                    android:text="No communities found"
+                    android:textColor="@color/account_secondary_text"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recyclerViewCommunities"
                     android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:clipToPadding="false"
-                    android:paddingBottom="16dp"
-                    android:nestedScrollingEnabled="true"/>
+                    android:nestedScrollingEnabled="false"
+                    android:paddingBottom="18dp" />
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Popular Categories"
+                    android:textColor="@color/account_secondary_text"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/CommunityCategoryChip"
+                        android:text="★  All" />
+
+                    <TextView
+                        style="@style/CommunityCategoryChip"
+                        android:layout_marginStart="8dp"
+                        android:text="♫  Music" />
+
+                    <TextView
+                        style="@style/CommunityCategoryChip"
+                        android:layout_marginStart="8dp"
+                        android:text="⌘  Tech" />
+
+                    <TextView
+                        style="@style/CommunityCategoryChip"
+                        android:layout_marginStart="8dp"
+                        android:text="More  ▾" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btnEditCommunity"
+                    android:layout_width="1dp"
+                    android:layout_height="1dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabCreateCommunity"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:srcCompat="@drawable/ic_add"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:alpha="0"
         android:contentDescription="Create community"
+        app:layout_anchor="@id/swipeRefreshCommunities"
         app:layout_anchorGravity="bottom|end"
-        app:layout_anchor="@id/swipeRefreshCommunities"/>
+        app:srcCompat="@drawable/ic_add" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -74,6 +74,10 @@ class EditProfileActivity : AppCompatActivity() {
         setupDobPicker()// loads full profile (bio, email, gender etc.)
         setupGenderPicker()
 
+        findViewById<View>(R.id.btnEditProfileBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnSaveProfile).setOnClickListener {
+            saveProfileSnapshot()
+        }
 
         rowPassword.setOnClickListener {
             showChangePasswordDialog()
@@ -120,6 +124,8 @@ class EditProfileActivity : AppCompatActivity() {
         locationView.setText(TokenManager.getLocation(this))
         genderView.setText(TokenManager.getGender(this))
         dobView.setText(TokenManager.getDob(this))
+        textName.text = TokenManager.getUsername(this) ?: "Username"
+        textPhone.text = TokenManager.getPhone(this) ?: "No phone number"
 
         Glide.with(this)
             .load(TokenManager.getProfilePicUrl(this))
@@ -248,9 +254,15 @@ class EditProfileActivity : AppCompatActivity() {
 
                     // Local save
                     when (field) {
-                        "username" -> TokenManager.saveUsername(this@EditProfileActivity, value)
+                        "username" -> {
+                            TokenManager.saveUsername(this@EditProfileActivity, value)
+                            textName.text = value
+                        }
                         "email" -> TokenManager.saveEmail(this@EditProfileActivity, value)
-                        "phoneNumber" -> TokenManager.savePhone(this@EditProfileActivity, value)
+                        "phoneNumber" -> {
+                            TokenManager.savePhone(this@EditProfileActivity, value)
+                            textPhone.text = value
+                        }
                         "location" -> TokenManager.saveLocation(this@EditProfileActivity, value)
                         "gender" -> TokenManager.saveGender(this@EditProfileActivity, value)
                         "dateOfBirth" -> TokenManager.saveDob(this@EditProfileActivity, value)
@@ -299,6 +311,8 @@ class EditProfileActivity : AppCompatActivity() {
 
                         val phoneValue = user.phone ?: user.phone
                         phoneView.setText(phoneValue)
+                        textName.text = user.username
+                        textPhone.text = phoneValue ?: "No phone number"
 
                         locationView.setText(user.location)
                         genderView.setText(user.gender)
@@ -338,6 +352,55 @@ class EditProfileActivity : AppCompatActivity() {
                 }
             })
     }
+
+    private fun saveProfileSnapshot() {
+        val currentToken = token ?: return
+
+        val username = usernameView.text?.toString()?.trim().orEmpty()
+        val email = emailView.text?.toString()?.trim().orEmpty()
+        val phone = phoneView.text?.toString()?.trim().orEmpty()
+        val location = locationView.text?.toString()?.trim().orEmpty()
+        val gender = genderView.text?.toString()?.trim().orEmpty()
+        val dob = dobView.text?.toString()?.trim().orEmpty()
+
+        lifecycleScope.launch {
+            try {
+                val res = ApiClient.apiService.updateProfile(
+                    "Bearer $currentToken",
+                    UpdateProfileRequest(
+                        username = username.ifBlank { null },
+                        email = email.ifBlank { null },
+                        phoneNumber = phone.ifBlank { null },
+                        location = location.ifBlank { null },
+                        gender = gender.ifBlank { null },
+                        dateOfBirth = dob.ifBlank { null }
+                    )
+                )
+
+                if (res.isSuccessful) {
+                    if (username.isNotBlank()) {
+                        TokenManager.saveUsername(this@EditProfileActivity, username)
+                        textName.text = username
+                    }
+                    if (email.isNotBlank()) TokenManager.saveEmail(this@EditProfileActivity, email)
+                    if (phone.isNotBlank()) {
+                        TokenManager.savePhone(this@EditProfileActivity, phone)
+                        textPhone.text = phone
+                    }
+                    if (location.isNotBlank()) TokenManager.saveLocation(this@EditProfileActivity, location)
+                    if (gender.isNotBlank()) TokenManager.saveGender(this@EditProfileActivity, gender)
+                    if (dob.isNotBlank()) TokenManager.saveDob(this@EditProfileActivity, dob)
+
+                    Toast.makeText(this@EditProfileActivity, "Profile updated", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@EditProfileActivity, "Failed to update profile", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@EditProfileActivity, "Network error", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun showChangePasswordDialog() {
         val view = layoutInflater.inflate(R.layout.dialog_change_password, null)
 

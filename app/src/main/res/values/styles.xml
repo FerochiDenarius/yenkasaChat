@@ -125,6 +125,18 @@
         <item name="android:backgroundTint">@android:color/transparent</item>
     </style>
 
+    <style name="CommunityCategoryChip" parent="Widget.AppCompat.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">28dp</item>
+        <item name="android:background">@drawable/bg_community_category_chip</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textColor">@color/account_primary_text</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
 
 
 </resources>

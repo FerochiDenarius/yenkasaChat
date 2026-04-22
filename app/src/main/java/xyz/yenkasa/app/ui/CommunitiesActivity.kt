@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
@@ -24,7 +25,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import android.widget.Button
 
 class CommunitiesActivity : AppCompatActivity() {
 
@@ -102,7 +102,7 @@ class CommunitiesActivity : AppCompatActivity() {
         dividerAfterJoined = findViewById(R.id.dividerAfterJoined)
         recyclerJoinedCommunities = findViewById(R.id.recyclerJoinedCommunities)
 
-        recyclerView.isNestedScrollingEnabled = true
+        recyclerView.isNestedScrollingEnabled = false
         recyclerJoinedCommunities.isNestedScrollingEnabled = true
 
     }
@@ -311,7 +311,7 @@ class CommunitiesActivity : AppCompatActivity() {
             leaveCommunity(community)  // This will call your leave function
         }
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.layoutManager = GridLayoutManager(this, 2)
         recyclerView.adapter = adapter
     }
 
@@ -629,7 +629,7 @@ class CommunitiesActivity : AppCompatActivity() {
         // All roles allowed to bypass verification
         val elevatedRoles = setOf("admin", "moderator", "developer", "senior_developer", "junior_developer")
 
-        val btnCreateCommunity = findViewById<Button>(R.id.btnCreateCommunity)
+        val btnCreateCommunity = findViewById<View>(R.id.btnCreateCommunity)
 
         val launchCreateCommunity = {
             val hasRolePrivilege = elevatedRoles.contains(userRole)

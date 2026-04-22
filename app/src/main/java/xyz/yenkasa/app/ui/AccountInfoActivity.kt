@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -28,6 +27,7 @@ import xyz.yenkasa.app.util.UserPermissions
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -46,7 +46,7 @@ class AccountInfoActivity : AppCompatActivity() {
     private lateinit var followingCountView: TextView
     private lateinit var postsCountView: TextView
     private lateinit var recyclerUserPosts: RecyclerView
-    private lateinit var btnEditProfile: Button
+    private lateinit var btnEditProfile: View
     private lateinit var binding: ActivityAccountInfoBinding
     private lateinit var textRole: TextView
 
@@ -107,6 +107,37 @@ class AccountInfoActivity : AppCompatActivity() {
         btnEditProfile.setOnClickListener {
             startActivity(Intent(this, EditProfileActivity::class.java))
         }
+        findViewById<View>(R.id.btnAccountBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnAccountSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        findViewById<View>(R.id.btnAccountWallet).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
+        findViewById<View>(R.id.btnAccountSecurity).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        findViewById<View>(R.id.btnAccountLogout).setOnClickListener {
+            TokenManager.clearAll(this)
+            Toast.makeText(this, "Logged out successfully.", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
+        findViewById<View>(R.id.navAccountHome).setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            })
+            finish()
+        }
+        findViewById<View>(R.id.navAccountWallet).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
+        findViewById<View>(R.id.navAccountSend).setOnClickListener {
+            startActivity(Intent(this, CreateTransactionActivity::class.java))
+        }
+        findViewById<View>(R.id.navAccountReceive).setOnClickListener {
+            startActivity(Intent(this, CreateTransactionActivity::class.java).putExtra("action", "receive"))
+        }
         followersCountView.setOnClickListener { openFollowList("followers") }
         followingCountView.setOnClickListener { openFollowList("following") }
     }
@@ -116,7 +147,7 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = TokenManager.getEmail(this) ?: "Not provided"
         phoneView.text = TokenManager.getPhone(this) ?: "Not provided"
         locationView.text = TokenManager.getLocation(this) ?: "No location"
-        coinsBalanceView.text = "YenkasaCoins: 0"
+        coinsBalanceView.text = formatCoins(TokenManager.getCoins(this))
         communityView.text = "Community: None"
         dateJoinedView.text = "Joined: Unknown"
 
@@ -218,8 +249,8 @@ class AccountInfoActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
                     if (response.isSuccessful && response.body() != null) {
                         val stats = response.body()!!
-                        followersCountView.text = "${stats.followersCount} Followers"
-                        followingCountView.text = "${stats.followingCount} Following"
+                        followersCountView.text = "${stats.followersCount}\nFollowers"
+                        followingCountView.text = "${stats.followingCount}\nFollowing"
                     }
                 }
 
@@ -235,7 +266,8 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = user.email ?: "Not provided"
         phoneView.text = user.phone ?: "Not provided"
         locationView.text = user.location ?: "No location"
-        coinsBalanceView.text = "YenkasaCoins: ${user.coinsBalance}"
+        TokenManager.saveCoins(this, user.coinsBalance)
+        coinsBalanceView.text = formatCoins(user.coinsBalance)
 
         // ✅ Correct property — your Community model uses displayName, not name
         communityView.text = "Communities: Loading..."
@@ -367,6 +399,10 @@ class AccountInfoActivity : AppCompatActivity() {
         } catch (e: Exception) {
             "Unknown"
         }
+    }
+
+    private fun formatCoins(coins: Int): String {
+        return NumberFormat.getIntegerInstance(Locale.getDefault()).format(coins)
     }
 
     private fun openFollowList(type: String) {

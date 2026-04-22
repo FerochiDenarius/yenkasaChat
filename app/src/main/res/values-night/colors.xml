@@ -42,4 +42,15 @@
     <color name="wallet_hero_start">#001F12</color>
     <color name="wallet_hero_end">#000D07</color>
     <color name="wallet_negative">#D56A5D</color>
+    <color name="account_background">#070B0C</color>
+    <color name="account_surface">#101417</color>
+    <color name="account_soft_surface">#0E2418</color>
+    <color name="account_primary_text">#EAF4EA</color>
+    <color name="account_secondary_text">#9CB0A4</color>
+    <color name="account_border">#1A2A24</color>
+    <color name="account_hero_start">#002515</color>
+    <color name="account_hero_end">#071316</color>
+    <color name="account_accent_green">#61A92F</color>
+    <color name="account_accent_gold">#D1B45A</color>
+    <color name="account_danger">#FF594D</color>
 </resources>

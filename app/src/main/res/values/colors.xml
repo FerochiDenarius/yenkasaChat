@@ -95,6 +95,18 @@
         <color name="wallet_hero_end">#00120A</color>
         <color name="wallet_negative">#D64A4A</color>
 
+        <color name="account_background">#F7FAF7</color>
+        <color name="account_surface">#FFFFFF</color>
+        <color name="account_soft_surface">#EFF8F1</color>
+        <color name="account_primary_text">#102018</color>
+        <color name="account_secondary_text">#6B766F</color>
+        <color name="account_border">#E8EFEA</color>
+        <color name="account_hero_start">#EAF7EF</color>
+        <color name="account_hero_end">#D8EFE1</color>
+        <color name="account_accent_green">#128A3A</color>
+        <color name="account_accent_gold">#D1A62D</color>
+        <color name="account_danger">#EF4444</color>
+
 
 
     <!-- Add this -->

@@ -13,6 +13,12 @@ import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Community
 
+data class CommunityStoryPreview(
+    val mediaUrl: String?,
+    val text: String?,
+    val createdAtMillis: Long
+)
+
 class FeedCommunityStoryAdapter(
     private val onAllCommunitiesClick: () -> Unit,
     private val onCommunityClick: (Community) -> Unit
@@ -20,16 +26,16 @@ class FeedCommunityStoryAdapter(
 
     private var communities: List<Community> = emptyList()
     private var selectedIds: Set<String> = emptySet()
-    private var latestMediaByCommunityId: Map<String, String> = emptyMap()
+    private var latestPreviewByCommunityId: Map<String, CommunityStoryPreview> = emptyMap()
 
     fun submitCommunities(
         nextCommunities: List<Community>,
         nextSelectedIds: Set<String>,
-        nextLatestMediaByCommunityId: Map<String, String> = emptyMap()
+        nextLatestPreviewByCommunityId: Map<String, CommunityStoryPreview> = emptyMap()
     ) {
         communities = nextCommunities
         selectedIds = nextSelectedIds
-        latestMediaByCommunityId = nextLatestMediaByCommunityId
+        latestPreviewByCommunityId = nextLatestPreviewByCommunityId
         notifyDataSetChanged()
     }
 
@@ -59,6 +65,7 @@ class FeedCommunityStoryAdapter(
         private val imageFrame: FrameLayout = itemView.findViewById(R.id.storyImageFrame)
         private val communityImage: ImageView = itemView.findViewById(R.id.imageCommunityStory)
         private val allIcon: ImageView = itemView.findViewById(R.id.imageAllCommunitiesIcon)
+        private val previewText: TextView = itemView.findViewById(R.id.textCommunityStoryPreview)
         private val name: TextView = itemView.findViewById(R.id.textCommunityStoryName)
 
         fun bindAll(selected: Boolean) {
@@ -68,6 +75,7 @@ class FeedCommunityStoryAdapter(
             imageFrame.setBackgroundResource(R.drawable.bg_feed_story_tile_plain)
             communityImage.visibility = View.GONE
             allIcon.visibility = View.VISIBLE
+            previewText.visibility = View.GONE
             name.text = "All Communities"
             name.setTextColor(ContextCompat.getColor(itemView.context, R.color.feed_primary_text))
             itemView.setOnClickListener { onAllCommunitiesClick() }
@@ -81,21 +89,31 @@ class FeedCommunityStoryAdapter(
             imageFrame.setBackgroundResource(R.drawable.bg_feed_avatar_ring)
             communityImage.visibility = View.VISIBLE
             allIcon.visibility = View.GONE
+            previewText.visibility = View.GONE
             name.text = community.displayName ?: community.name ?: "Community"
             name.setTextColor(ContextCompat.getColor(itemView.context, R.color.feed_primary_text))
 
+            val preview = community.id?.let { latestPreviewByCommunityId[it] }
             val imageUrl = when {
-                community.id != null && !latestMediaByCommunityId[community.id].isNullOrBlank() ->
-                    latestMediaByCommunityId[community.id]
+                !preview?.mediaUrl.isNullOrBlank() -> preview?.mediaUrl
                 !community.icon.isNullOrBlank() -> community.icon
                 !community.coverImage.isNullOrBlank() -> community.coverImage
                 else -> null
             }
 
-            if (imageUrl.isNullOrBlank()) {
+            if (imageUrl.isNullOrBlank() && !preview?.text.isNullOrBlank()) {
                 Glide.with(itemView.context).clear(communityImage)
+                communityImage.visibility = View.GONE
+                previewText.text = preview?.text
+                previewText.visibility = View.VISIBLE
+            } else if (imageUrl.isNullOrBlank()) {
+                Glide.with(itemView.context).clear(communityImage)
+                communityImage.visibility = View.VISIBLE
+                previewText.visibility = View.GONE
                 communityImage.setImageResource(R.drawable.ic_community_placeholder)
             } else {
+                communityImage.visibility = View.VISIBLE
+                previewText.visibility = View.GONE
                 Glide.with(itemView.context)
                     .load(imageUrl)
                     .apply(

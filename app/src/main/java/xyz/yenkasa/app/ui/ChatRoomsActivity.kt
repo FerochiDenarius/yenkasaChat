@@ -1,12 +1,21 @@
 package xyz.yenkasa.app.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
@@ -30,16 +39,31 @@ class ChatRoomsActivity : AppCompatActivity() {
     private lateinit var currentUserId: String
     private lateinit var btnCreateRoom: Button
     private lateinit var inputUsername: EditText
+    private lateinit var foundCardTitle: TextView
+    private lateinit var foundCardSubtitle: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat_rooms)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.feed_surface)
+        window.navigationBarColor = ContextCompat.getColor(this, R.color.yenkasa_emerald)
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 
         recyclerView = findViewById(R.id.recyclerViewChatRooms)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         btnCreateRoom = findViewById(R.id.btnCreateRoom)
         inputUsername = findViewById(R.id.inputUsername)
+        foundCardTitle = findViewById(R.id.textChatRoomsFoundTitle)
+        foundCardSubtitle = findViewById(R.id.textChatRoomsFoundSubtitle)
+        val foundCard = findViewById<View>(R.id.chatRoomsFoundCard)
+        val btnCamera = findViewById<ImageView>(R.id.btnChatRoomsCamera)
+        val btnMore = findViewById<ImageView>(R.id.btnChatRoomsMore)
+        val btnAddShortcut = findViewById<ImageView>(R.id.btnChatRoomsAddShortcut)
+        val navChats = findViewById<TextView>(R.id.navChatRoomsChats)
+        val navStatus = findViewById<TextView>(R.id.navChatRoomsStatus)
+        val navCalls = findViewById<TextView>(R.id.navChatRoomsCalls)
+        val navSettings = findViewById<TextView>(R.id.navChatRoomsSettings)
 
         val retrievedToken = TokenManager.getToken(this)
         currentUserId = TokenManager.getUserId(this) ?: ""
@@ -64,12 +88,84 @@ class ChatRoomsActivity : AppCompatActivity() {
         loadChatRooms()
 
         btnCreateRoom.setOnClickListener {
-            val recipientUsername = inputUsername.text.toString().trim()
-            if (recipientUsername.isEmpty()) {
-                Toast.makeText(this, "Please enter a username to create a chat with", Toast.LENGTH_SHORT).show()
+            submitCreateRoomFromInput()
+        }
+
+        inputUsername.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                submitCreateRoomFromInput()
+                true
             } else {
-                createChatRoom(recipientUsername)
+                false
             }
+        }
+        inputUsername.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateFoundCard(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        updateFoundCard(inputUsername.text?.toString().orEmpty())
+
+        btnAddShortcut.setOnClickListener {
+            focusUsernameInput()
+        }
+
+        foundCard.setOnClickListener {
+            focusUsernameInput()
+        }
+
+        btnCamera.setOnClickListener {
+            Toast.makeText(this, "Camera shortcut will be connected in the chat media step", Toast.LENGTH_SHORT).show()
+        }
+
+        btnMore.setOnClickListener {
+            Toast.makeText(this, "Chat room options will be added after the UI pass", Toast.LENGTH_SHORT).show()
+        }
+
+        navChats.setOnClickListener {
+            recyclerView.smoothScrollToPosition(0)
+            loadChatRooms()
+        }
+
+        navStatus.setOnClickListener {
+            Toast.makeText(this, "Status will be connected after the chat UI pass", Toast.LENGTH_SHORT).show()
+        }
+
+        navCalls.setOnClickListener {
+            Toast.makeText(this, "Calls list will be connected after the chat UI pass", Toast.LENGTH_SHORT).show()
+        }
+
+        navSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+    }
+
+    private fun focusUsernameInput() {
+        inputUsername.requestFocus()
+        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.showSoftInput(inputUsername, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun updateFoundCard(rawUsername: String) {
+        val username = rawUsername.trim()
+        if (username.isBlank()) {
+            foundCardTitle.text = "Start a chat"
+            foundCardSubtitle.text = "Type a username above, then add the user to your chat list."
+        } else {
+            foundCardTitle.text = "Ready to add user"
+            foundCardSubtitle.text = "Tap Add User to start a chat with $username."
+        }
+    }
+
+    private fun submitCreateRoomFromInput() {
+        val recipientUsername = inputUsername.text.toString().trim()
+        if (recipientUsername.isEmpty()) {
+            Toast.makeText(this, "Please enter a username to create a chat with", Toast.LENGTH_SHORT).show()
+        } else {
+            createChatRoom(recipientUsername)
         }
     }
 

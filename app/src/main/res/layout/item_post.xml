@@ -38,20 +38,23 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/textUsernamePost"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
                     android:includeFontPadding="false"
-                android:textColor="@color/feed_primary_text"
+                    android:maxLines="1"
+                    android:textColor="@color/feed_primary_text"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    tools:text="kofi" />
+                    tools:text="kwamewithaverylongusername" />
 
                 <ImageView
                     android:id="@+id/imageVerifiedBadge"
@@ -64,7 +67,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:gravity="center_vertical"
@@ -72,8 +75,9 @@
 
                 <TextView
                     android:id="@+id/textCommunityName"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="@color/feed_secondary_text"
@@ -92,9 +96,11 @@
                     android:id="@+id/textTimestampPost"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textColor="@color/feed_secondary_text"
                     android:textSize="12sp"
-                    tools:text="2h ago" />
+                    tools:text="20 Apr 2026" />
             </LinearLayout>
         </LinearLayout>
 

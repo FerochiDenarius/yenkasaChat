@@ -65,10 +65,14 @@
           <textarea
             id="address"
             rows="3"
-            placeholder="Street Address"
+            placeholder="Start typing your delivery location"
             required
             style="padding:16px;border-radius:12px;border:1px solid #d1d5db;"
           ></textarea>
+          <div
+            id="address-suggestions"
+            style="display:none;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;"
+          ></div>
 
           <textarea
             id="notes"
@@ -86,6 +90,6 @@
     </div>
   </section>
   <script src="/store/assets/jsFiles/store-settings.js"></script>
-  <script src="/store/assets/jsFiles/address.js"></script>
+  <script src="/store/assets/jsFiles/address.js?v=20260422-place-suggestions"></script>
 </body>
 </html>

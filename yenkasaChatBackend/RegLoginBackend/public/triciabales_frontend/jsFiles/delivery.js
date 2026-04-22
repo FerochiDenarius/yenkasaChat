@@ -68,6 +68,7 @@ async function loadDeliveryEstimate() {
         region: addressData.region,
         area: addressData.area,
         landmark: addressData.landmark,
+        placeId: addressData.placeId,
         items: cart.map(item => ({
           baleId: item.id,
           quantity: item.quantity
@@ -82,10 +83,16 @@ async function loadDeliveryEstimate() {
 
     deliveryEstimate = data;
     localStorage.setItem("deliveryEstimate", JSON.stringify(data));
-    estimateStatus.textContent = data.sellerCount > 1
-      ? `Estimated from ${data.sellerCount} seller pickup points.`
-      : "Estimated from seller shop to your address.";
-    distanceText.textContent = `${Number(data.distanceKm || 0).toFixed(1)} km`;
+    const outsideAccra = Array.isArray(data.sellerEstimates)
+      && data.sellerEstimates.some(item => item.outsideAccra);
+    estimateStatus.textContent = outsideAccra
+      ? "Parcel delivery estimate applied for seller outside Accra."
+      : data.sellerCount > 1
+        ? `Estimated from ${data.sellerCount} seller pickup points.`
+        : "Estimated from seller shop to your address.";
+    distanceText.textContent = outsideAccra
+      ? "Parcel service"
+      : `${Number(data.distanceKm || 0).toFixed(1)} km`;
     feeText.textContent = `GHS ${Number(data.deliveryFee || 0).toFixed(2)}`;
     estimateDetails.style.display = "block";
   } catch (err) {

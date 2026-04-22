@@ -1146,6 +1146,33 @@ module.exports = function (app) {
     }
   });
 
+  // DELIVERY PLACE SUGGESTIONS
+  app.get('/triciabales-api/api/delivery/places', async (req, res) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/delivery/places`,
+        {
+          params: {
+            input: req.query.input
+          },
+          headers: forwardHeaders(req)
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'DELIVERY PLACES ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   // ALL ORDERS
   app.get('/triciabales-api/api/orders', async (req, res) => {
     try {

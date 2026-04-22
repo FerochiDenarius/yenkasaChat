@@ -38,6 +38,22 @@
             android:visibility="gone"
             app:tint="@color/feed_accent"
             tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/textCommunityStoryPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_feed_story_text_preview"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="3"
+            android:padding="7dp"
+            android:textColor="@android:color/white"
+            android:textSize="8sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="Start your day with positive vibes"
+            tools:visibility="gone" />
     </FrameLayout>
 
     <TextView

@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.FeedAdapter
 import xyz.yenkasa.app.adapter.FeedCommunityStoryAdapter
+import xyz.yenkasa.app.adapter.CommunityStoryPreview
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
@@ -56,7 +57,7 @@ class FeedFragment : Fragment() {
     private var selectedFeedTabId = R.id.tabForYou
     private var selectedFeedMode = FeedMode.FOR_YOU
     private var followingUserIds: Set<String>? = null
-    private var communityPreviewMediaUrls: Map<String, String> = emptyMap()
+    private var communityStoryPreviews: Map<String, CommunityStoryPreview> = emptyMap()
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
@@ -283,6 +284,7 @@ class FeedFragment : Fragment() {
                     }
 
                     allCommunities = response.body()!!
+                    loadCommunityStoryPreviews()
                     fetchUserMembership()
                 }
 
@@ -516,8 +518,38 @@ class FeedFragment : Fragment() {
         communityStoryAdapter.submitCommunities(
             allCommunities,
             selectedCommunities.mapNotNull { it.id }.toSet(),
-            communityPreviewMediaUrls
+            communityStoryPreviews
         )
+    }
+
+    private fun loadCommunityStoryPreviews() {
+        val authToken = token ?: return
+        val names = allCommunities
+            .mapNotNull { it.displayName ?: it.name }
+            .filter { it.isNotBlank() }
+
+        if (names.isEmpty()) {
+            communityStoryPreviews = emptyMap()
+            updateCommunityStoryRow()
+            return
+        }
+
+        ApiClient.apiService.getPostsByCommunities(
+            "Bearer $authToken",
+            names.joinToString(","),
+            1,
+            100
+        ).enqueue(object : Callback<FeedResponse> {
+            override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
+                if (response.isSuccessful && response.body() != null) {
+                    mergeCommunityStoryPreviews(response.body()!!.posts)
+                }
+            }
+
+            override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
+                Log.w("FeedFragment", "Failed to load community previews: ${t.message}")
+            }
+        })
     }
 
     private fun loadFeed(page: Int = 1) {
@@ -558,7 +590,7 @@ class FeedFragment : Fragment() {
 
                 if (response.isSuccessful && response.body() != null) {
                     val sourcePosts = response.body()!!.posts
-                    updateCommunityStoryPreviews(sourcePosts)
+                    mergeCommunityStoryPreviews(sourcePosts)
 
                     posts.clear()
                     posts.addAll(applyFeedMode(sourcePosts))
@@ -631,18 +663,42 @@ class FeedFragment : Fragment() {
         }
     }
 
-    private fun updateCommunityStoryPreviews(sourcePosts: List<Post>) {
-        communityPreviewMediaUrls = sourcePosts
+    private fun mergeCommunityStoryPreviews(sourcePosts: List<Post>) {
+        val nextPreviews = communityStoryPreviews.toMutableMap()
+        buildCommunityStoryPreviewMap(sourcePosts).forEach { (communityId, preview) ->
+            val current = nextPreviews[communityId]
+            if (current == null || preview.createdAtMillis >= current.createdAtMillis) {
+                nextPreviews[communityId] = preview
+            }
+        }
+        communityStoryPreviews = nextPreviews
+        updateCommunityStoryRow()
+    }
+
+    private fun buildCommunityStoryPreviewMap(sourcePosts: List<Post>): Map<String, CommunityStoryPreview> {
+        return sourcePosts
+            .sortedByDescending { parsePostTimestampMillis(it.createdAt) ?: 0L }
             .mapNotNull { post ->
                 val communityId = post.communityId?.id ?: return@mapNotNull null
                 val mediaUrl = post.effectiveImageUrls().firstOrNull()
-                    ?: post.videoUrl
-                    ?: return@mapNotNull null
-                communityId to mediaUrl
+                    ?: post.videoUrl?.takeIf { it.isNotBlank() }
+                val text = post.caption
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { if (it.length > 44) "${it.take(41)}..." else it }
+
+                if (mediaUrl.isNullOrBlank() && text.isNullOrBlank()) {
+                    return@mapNotNull null
+                }
+
+                communityId to CommunityStoryPreview(
+                    mediaUrl = mediaUrl,
+                    text = text,
+                    createdAtMillis = parsePostTimestampMillis(post.createdAt) ?: 0L
+                )
             }
             .distinctBy { it.first }
             .toMap()
-        updateCommunityStoryRow()
     }
 
     private fun parsePostTimestampMillis(rawTimestamp: String?): Long? {

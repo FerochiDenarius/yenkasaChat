@@ -54,6 +54,11 @@ class CoinWalletActivity : AppCompatActivity() {
     private lateinit var tabRecentTransactions: TextView
     private lateinit var tabAllTransactions: TextView
     private lateinit var btnWalletFilter: TextView
+    private lateinit var navWalletHome: TextView
+    private lateinit var navWalletExplore: TextView
+    private lateinit var navWalletWallet: TextView
+    private lateinit var navWalletRewards: TextView
+    private lateinit var navWalletProfile: TextView
     private lateinit var recyclerViewTransactions: RecyclerView
     private lateinit var transactionAdapter: TransactionAdapter
 
@@ -100,6 +105,11 @@ class CoinWalletActivity : AppCompatActivity() {
         tabRecentTransactions = findViewById(R.id.tabRecentTransactions)
         tabAllTransactions = findViewById(R.id.tabAllTransactions)
         btnWalletFilter = findViewById(R.id.btnWalletFilter)
+        navWalletHome = findViewById(R.id.navWalletHome)
+        navWalletExplore = findViewById(R.id.navWalletExplore)
+        navWalletWallet = findViewById(R.id.navWalletWallet)
+        navWalletRewards = findViewById(R.id.navWalletRewards)
+        navWalletProfile = findViewById(R.id.navWalletProfile)
         recyclerViewTransactions = findViewById(R.id.recyclerViewTransactions)
 
         tvTitle.text = "Yenkasa Coin Wallet"
@@ -153,6 +163,30 @@ class CoinWalletActivity : AppCompatActivity() {
 
         btnWalletFilter.setOnClickListener {
             Toast.makeText(this, "Transaction filters will be available after wallet categories are finalized", Toast.LENGTH_SHORT).show()
+        }
+
+        navWalletHome.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(intent)
+            finish()
+        }
+
+        navWalletExplore.setOnClickListener {
+            Toast.makeText(this, "Explore tab will be connected after the shared bottom navigation is ready", Toast.LENGTH_SHORT).show()
+        }
+
+        navWalletWallet.setOnClickListener {
+            recyclerViewTransactions.smoothScrollToPosition(0)
+        }
+
+        navWalletRewards.setOnClickListener {
+            Toast.makeText(this, "Rewards tab will be connected after the rewards page is ready", Toast.LENGTH_SHORT).show()
+        }
+
+        navWalletProfile.setOnClickListener {
+            startActivity(Intent(this, AccountInfoActivity::class.java))
         }
 
         btnWalletBack.setOnClickListener { finish() }

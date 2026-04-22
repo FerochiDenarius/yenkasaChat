@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.ChatRoom
 
@@ -63,6 +64,7 @@ class ChatRoomAdapter(
         val profileUrl = contactUser?.profileImage
         Glide.with(context)
             .load(profileUrl)
+            .apply(RequestOptions.circleCropTransform())
             .placeholder(R.drawable.ic_profile_placeholder)
             .error(R.drawable.ic_profile_placeholder)
             .into(holder.profileImage)

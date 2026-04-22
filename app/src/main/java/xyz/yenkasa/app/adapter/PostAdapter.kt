@@ -748,7 +748,7 @@ class PostAdapter(
             diffSeconds < 3600 -> "${diffSeconds / 60}m"
             diffSeconds < 86400 -> "${diffSeconds / 3600}h"
             diffSeconds < 604800 -> "${diffSeconds / 86400}d"
-            else -> SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(timestamp))
+            else -> SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(timestamp))
         }
     }
 

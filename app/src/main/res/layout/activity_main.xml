@@ -55,8 +55,8 @@
                 android:orientation="horizontal">
 
                 <ImageView
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:contentDescription="Yenkasa"
                     android:src="@drawable/ic_logo_emblem" />
 
@@ -64,12 +64,15 @@
                     android:id="@+id/toolbarTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
                     android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:singleLine="true"
                     android:text="Yenkasa"
                     android:textColor="@color/feed_primary_text"
-                    android:textSize="21sp"
-                    android:textStyle="bold" />
+                    android:textSize="18sp" />
             </LinearLayout>
 
             <LinearLayout

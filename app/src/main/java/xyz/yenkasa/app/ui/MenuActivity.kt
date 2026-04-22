@@ -11,11 +11,17 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.CoinBalanceResponse
+import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MenuActivity : AppCompatActivity() {
 
     private val TAG = "MenuActivity"
+    private lateinit var textMenuWalletBalance: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,9 +50,10 @@ class MenuActivity : AppCompatActivity() {
         val btnCommunities = findViewById<LinearLayout>(R.id.btnCommunities)
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
         val walletBalanceChip = findViewById<LinearLayout>(R.id.walletBalanceChip)
-        val textMenuWalletBalance = findViewById<TextView>(R.id.textMenuWalletBalance)
+        textMenuWalletBalance = findViewById(R.id.textMenuWalletBalance)
 
         textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
+        loadWalletBalance()
         walletBalanceChip.visibility = if (isNightMode) View.GONE else View.VISIBLE
         walletBalanceChip.setOnClickListener {
             startActivity(Intent(this, CoinWalletActivity::class.java))
@@ -127,5 +134,37 @@ class MenuActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::textMenuWalletBalance.isInitialized) {
+            loadWalletBalance()
+        }
+    }
+
+    private fun loadWalletBalance() {
+        val authToken = TokenManager.getToken(this) ?: return
+
+        ApiClient.apiService.getCoinBalance("Bearer $authToken")
+            .enqueue(object : Callback<CoinBalanceResponse> {
+                override fun onResponse(
+                    call: Call<CoinBalanceResponse>,
+                    response: Response<CoinBalanceResponse>
+                ) {
+                    val balance = response.body()?.balance
+                    if (response.isSuccessful && balance != null) {
+                        TokenManager.saveCoins(this@MenuActivity, balance)
+                        textMenuWalletBalance.text = "$balance YKC"
+                    } else {
+                        textMenuWalletBalance.text = "${TokenManager.getCoins(this@MenuActivity)} YKC"
+                    }
+                }
+
+                override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
+                    Log.w(TAG, "Failed to load wallet balance: ${t.message}")
+                    textMenuWalletBalance.text = "${TokenManager.getCoins(this@MenuActivity)} YKC"
+                }
+            })
     }
 }

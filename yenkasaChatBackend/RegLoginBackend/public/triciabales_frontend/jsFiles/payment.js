@@ -110,6 +110,7 @@ paymentForm.addEventListener("submit", async e => {
     notes: addressData.notes,
     deliveryMethod,
     deliveryAddress: deliveryEstimate?.buyerAddress || null,
+    deliveryPlaceId: addressData.placeId || null,
     deliveryDistanceKm: deliveryMethod === "pickup" ? null : deliveryEstimate?.distanceKm || null,
     deliveryFee: deliveryMethod === "pickup" ? 0 : deliveryEstimate?.deliveryFee || 0,
     paymentMethod: selectedPaymentMethod,

@@ -24,6 +24,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -189,6 +190,7 @@ class ViewActivity : AppCompatActivity() {
                     fabFollow.isEnabled = true
                     val body = response.body()
                     if (response.isSuccessful && body != null) {
+                        WalletBalanceManager.refreshAfterReward(this@ViewActivity, body.coinsRewarded)
                         fabFollow.setImageResource(R.drawable.ic_check)
                         fabFollow.backgroundTintList =
                             ColorStateList.valueOf(ContextCompat.getColor(this@ViewActivity, R.color.yenkasa_black))
@@ -269,6 +271,10 @@ class ViewActivity : AppCompatActivity() {
                         textViews.text = "👁️ ${body.viewsCount}"
                         // Push update also to feed list when user returns
                         post?.viewCount = body.viewsCount
+                        WalletBalanceManager.refreshAfterReward(
+                            this@ViewActivity,
+                            body.rewardAmount ?: body.rewardTransaction?.amount
+                        )
 
                         Log.d(
                             "ViewActivity",

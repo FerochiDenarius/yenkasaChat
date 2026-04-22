@@ -1,10 +1,13 @@
 package xyz.yenkasa.app.ui
 
+import android.animation.ValueAnimator
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
@@ -25,6 +28,7 @@ import xyz.yenkasa.app.model.CoinTransactionResponse
 import xyz.yenkasa.app.model.CoinBalanceResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -68,6 +72,7 @@ class CoinWalletActivity : AppCompatActivity() {
     private var currentWalletId: String? = null
     private var isBalanceHidden: Boolean = false
     private var selectedTransactionTab: TransactionTab = TransactionTab.RECENT
+    private var balanceReceiverRegistered = false
 
     // Track old transaction list to detect NEW rewards
     private var previousList: List<TransactionUiModel> = emptyList()
@@ -78,6 +83,15 @@ class CoinWalletActivity : AppCompatActivity() {
         const val PREFS_NAME = "settings"
         const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+    }
+
+    private val balanceUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
+            val newBalance = intent.getIntExtra(WalletBalanceManager.EXTRA_BALANCE, currentBalance)
+            val walletId = intent.getStringExtra(WalletBalanceManager.EXTRA_WALLET_ID)
+            updateBalance(newBalance, walletId, animate = true)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -212,14 +226,13 @@ class CoinWalletActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<CoinBalanceResponse>, response: Response<CoinBalanceResponse>) {
                     if (response.isSuccessful && response.body() != null) {
                         val body = response.body()!!
-                        currentBalance = body.balance
-                        currentWalletId = body.walletId
+                        updateBalance(body.balance, body.walletId, animate = body.balance != currentBalance)
                         textWalletAddress.text = body.walletId?.let { shortenWalletId(it) } ?: "Wallet pending"
                     } else {
                         currentBalance = 0
                         textWalletAddress.text = "Wallet pending"
+                        refreshWalletHero()
                     }
-                    refreshWalletHero()
                 }
 
                 override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
@@ -318,6 +331,40 @@ class CoinWalletActivity : AppCompatActivity() {
         textWalletTotalEarned.text = "Total Earned\n${formatWholeCoins(totalEarned)} YKC ↑"
         textWalletTotalSpent.text = "Total Spent\n${formatWholeCoins(totalSpent)} YKC ↓"
         textWalletTransactionsCount.text = "Transactions\n${formatWholeCoins(allTransactions.size)}"
+    }
+
+    private fun updateBalance(newBalance: Int, walletId: String?, animate: Boolean) {
+        val oldBalance = currentBalance
+        currentWalletId = walletId ?: currentWalletId
+        TokenManager.saveCoins(this, newBalance)
+
+        if (!animate || oldBalance == newBalance || isBalanceHidden) {
+            currentBalance = newBalance
+            refreshWalletHero()
+            return
+        }
+
+        ValueAnimator.ofInt(oldBalance, newBalance).apply {
+            duration = 650L
+            addUpdateListener { animator ->
+                currentBalance = animator.animatedValue as Int
+                refreshWalletHero()
+            }
+            start()
+        }
+
+        tvBalance.animate()
+            .scaleX(1.08f)
+            .scaleY(1.08f)
+            .setDuration(180L)
+            .withEndAction {
+                tvBalance.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(180L)
+                    .start()
+            }
+            .start()
     }
 
     private fun applyTransactionTab() {
@@ -419,5 +466,26 @@ class CoinWalletActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadWalletData()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!balanceReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                this,
+                balanceUpdateReceiver,
+                IntentFilter(WalletBalanceManager.ACTION_BALANCE_UPDATED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            balanceReceiverRegistered = true
+        }
+    }
+
+    override fun onStop() {
+        if (balanceReceiverRegistered) {
+            unregisterReceiver(balanceUpdateReceiver)
+            balanceReceiverRegistered = false
+        }
+        super.onStop()
     }
 }

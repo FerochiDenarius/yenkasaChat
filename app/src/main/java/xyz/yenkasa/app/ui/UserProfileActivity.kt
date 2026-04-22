@@ -20,6 +20,7 @@ import xyz.yenkasa.app.model.ProfileResponse
 import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -264,6 +265,7 @@ class UserProfileActivity : AppCompatActivity() {
             override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
                 val result = response.body()
                 if (response.isSuccessful && result != null) {
+                    WalletBalanceManager.refreshAfterReward(this@UserProfileActivity, result.coinsRewarded)
                     isFollowing = result.isFollowing ?: !isFollowing
                     btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
 

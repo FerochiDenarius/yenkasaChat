@@ -17,6 +17,7 @@ import android.util.Log
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.nativead.*
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.WalletBalanceManager
 
 
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
@@ -127,7 +128,10 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = TokenManager.getToken(context) ?: return@launch
-                ApiClient.apiService.rewardAdClick("Bearer $token", ad._id)
+                val response = ApiClient.apiService.rewardAdClick(ad._id, "Bearer $token")
+                if (response.success) {
+                    WalletBalanceManager.applyKnownBalance(context, response.newBalance)
+                }
             } catch (e: Exception) {
                 Log.e("AdBinder", "Click reward failed: ${e.message}")
             }
@@ -170,12 +174,33 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             if (!viewRes.isSuccessful) return
             val adViewId = viewRes.body()?.get("adViewId") as? String ?: return
 
-            ApiClient.apiService.rewardAd(
+            val rewardRes = ApiClient.apiService.rewardAd(
                 ad._id, auth, mapOf("adViewId" to adViewId)
             ).execute()
+            if (rewardRes.isSuccessful) {
+                val newBalance = rewardRes.body()?.get("newBalance").toIntOrNull()
+                    ?: rewardRes.body()?.get("balance").toIntOrNull()
+                if (newBalance != null) {
+                    WalletBalanceManager.applyKnownBalance(context, newBalance)
+                } else {
+                    WalletBalanceManager.refreshBalance(context)
+                }
+            }
 
         } catch (e: Exception) {
             Log.e("AdBinder", "Video reward failed: ${e.message}")
+        }
+    }
+
+    private fun Any?.toIntOrNull(): Int? {
+        return when (this) {
+            is Int -> this
+            is Long -> this.toInt()
+            is Double -> this.toInt()
+            is Float -> this.toInt()
+            is Number -> this.toInt()
+            is String -> this.toIntOrNull()
+            else -> null
         }
     }
 

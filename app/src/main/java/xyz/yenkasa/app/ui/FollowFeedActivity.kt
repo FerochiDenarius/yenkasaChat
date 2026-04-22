@@ -14,6 +14,7 @@ import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -101,6 +102,7 @@ class FollowFeedActivity : AppCompatActivity() {
             override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
                 if (response.isSuccessful && response.body() != null) {
                     val result = response.body()!!
+                    WalletBalanceManager.refreshAfterReward(this@FollowFeedActivity, result.coinsRewarded)
                     Toast.makeText(this@FollowFeedActivity, result.message, Toast.LENGTH_SHORT).show()
                     loadFollowList()
 

@@ -204,6 +204,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "image") }
     }
 
+    private val videoPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "video") }
+    }
+
     private val chatBackgroundImageLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri ?: return@registerForActivityResult
 
@@ -402,6 +406,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         findViewById<ImageButton>(R.id.buttonAttachImage).setOnClickListener {
             attachMenu.visibility = View.GONE
             imagePickerLauncher.launch("image/*")
+        }
+        findViewById<ImageButton>(R.id.buttonAttachVideo).setOnClickListener {
+            attachMenu.visibility = View.GONE
+            videoPickerLauncher.launch("video/*")
         }
         findViewById<ImageButton>(R.id.buttonAttachCamera).setOnClickListener {
             attachMenu.visibility = View.GONE

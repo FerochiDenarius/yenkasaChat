@@ -1,6 +1,9 @@
 package xyz.yenkasa.app.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
@@ -14,6 +17,7 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.CoinBalanceResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -22,6 +26,15 @@ class MenuActivity : AppCompatActivity() {
 
     private val TAG = "MenuActivity"
     private lateinit var textMenuWalletBalance: TextView
+    private var balanceReceiverRegistered = false
+
+    private val balanceUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
+            val balance = intent.getIntExtra(WalletBalanceManager.EXTRA_BALANCE, TokenManager.getCoins(this@MenuActivity))
+            textMenuWalletBalance.text = "$balance YKC"
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,6 +154,27 @@ class MenuActivity : AppCompatActivity() {
         if (::textMenuWalletBalance.isInitialized) {
             loadWalletBalance()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!balanceReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                this,
+                balanceUpdateReceiver,
+                IntentFilter(WalletBalanceManager.ACTION_BALANCE_UPDATED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            balanceReceiverRegistered = true
+        }
+    }
+
+    override fun onStop() {
+        if (balanceReceiverRegistered) {
+            unregisterReceiver(balanceUpdateReceiver)
+            balanceReceiverRegistered = false
+        }
+        super.onStop()
     }
 
     private fun loadWalletBalance() {

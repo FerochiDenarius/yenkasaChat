@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.model.ViewRequest
 import kotlinx.coroutines.CoroutineScope
@@ -272,7 +273,12 @@ class PostMediaActivity : AppCompatActivity() {
                 )
 
                 if (response.isSuccessful) {
-                    // reward recorded successfully (no UI update needed)
+                    response.body()?.let { body ->
+                        WalletBalanceManager.refreshAfterReward(
+                            this@PostMediaActivity,
+                            body.rewardAmount ?: body.rewardTransaction?.amount
+                        )
+                    }
                 } else {
                     hasRecordedView = false
                 }

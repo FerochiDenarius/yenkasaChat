@@ -26,6 +26,7 @@ import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
@@ -590,6 +591,10 @@ class PostAdapter(
                     response.body()?.let { body ->
                         if (body.success) {
                             applyViewCount(post._id, maxOf(body.viewsCount, body.viewCount))
+                            WalletBalanceManager.refreshAfterReward(
+                                context,
+                                body.rewardAmount ?: body.rewardTransaction?.amount
+                            )
                         }
                     }
                 }
@@ -709,6 +714,7 @@ class PostAdapter(
                     followButton.isEnabled = true
                     val body = response.body()
                     if (response.isSuccessful && body != null) {
+                        WalletBalanceManager.refreshAfterReward(context, body.coinsRewarded)
                         followButton.setImageResource(R.drawable.ic_check)
                         followButton.backgroundTintList =
                             ColorStateList.valueOf(ContextCompat.getColor(context, R.color.feed_action_background))

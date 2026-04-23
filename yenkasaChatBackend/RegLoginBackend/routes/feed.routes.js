@@ -34,7 +34,7 @@ router.get("/", auth, async (req, res) => {
     // 1️⃣ FETCH POSTS (same as before)
     // ===============================
     const posts = await Post.find({ isActive: true, status: "approved" })
-      .populate("userId", "username profileImage verified")
+      .populate("userId", "username profileImage verified roleName")
       .populate("communityId", "name displayName")
       .sort({ createdAt: -1 })
       .skip(skip)

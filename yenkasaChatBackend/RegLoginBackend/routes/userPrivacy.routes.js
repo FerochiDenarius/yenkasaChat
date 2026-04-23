@@ -161,7 +161,7 @@ router.get("/blocked-users", auth, async (req, res) => {
         const blockedUsers = await User.find({
             _id: { $in: doc.blockedUsers }
         })
-        .select("_id username profileImage bio verified")  // tidy, safe fields
+        .select("_id username profileImage bio verified roleName")  // tidy, safe fields
         .lean();
 
         res.json(blockedUsers);

@@ -1,145 +1,681 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:background="@color/dark_almost"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/dark_almost"
+    tools:context=".ui.AppVerificationActivity">
 
-    <!-- ⭐ FIXED: MATERIAL PROGRESS INDICATOR (NO ERRORS) -->
-    <com.google.android.material.progressindicator.CircularProgressIndicator
-        android:id="@+id/progressCircle"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_gravity="center"
-        android:padding="6dp"
-        android:visibility="gone"
-
-        app:indicatorSize="40dp"
-        app:trackThickness="6dp"
-        app:indicatorColor="@color/amber_300"
-        app:trackColor="@color/emerald"
-        />
-
-    <Button
-        android:id="@+id/btnAdvance"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:backgroundTint="@color/emerald"
-        android:text="Advance Phase"
-        android:textColor="@color/amber_300"
-        android:textStyle="bold"
-        android:padding="12dp"
-        android:visibility="gone"/>
-
-    <!-- HEADER -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="20dp"
-        android:gravity="center_vertical">
-
-        <ImageView
-            android:id="@+id/imgLogo"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:src="@drawable/ic_yenkasa_logo"
-            android:contentDescription="logo"/>
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="18dp"
+        android:paddingBottom="22dp">
 
         <LinearLayout
-            android:orientation="vertical"
-            android:layout_marginStart="12dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnVerificationBack"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_verification_icon_pill"
+                    android:contentDescription="Back"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/on_surface" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="Verification &amp; Ranking"
+                    android:textColor="@color/on_surface"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/btnVerificationInfo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_verification_icon_pill"
+                    android:contentDescription="Verification info"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="@color/amber_300" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="134dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_verification_dashboard_hero"
+                android:elevation="2dp"
+                android:padding="14dp">
+
+                <ImageView
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="-24dp"
+                    android:layout_marginBottom="-28dp"
+                    android:alpha="0.14"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_coin" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/imageVerificationAvatar"
+                        android:layout_width="76dp"
+                        android:layout_height="76dp"
+                        android:background="@drawable/bg_verified_logo_badge"
+                        android:padding="5dp"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/ic_yenkasa_logo" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/textVerificationStoreName"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text="Yenkasa"
+                                android:textColor="@color/on_surface"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:layout_marginStart="6dp"
+                                android:src="@drawable/ic_verified_check_small" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/textVerificationRankChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="26dp"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/bg_verification_badge_chip"
+                            android:gravity="center"
+                            android:paddingHorizontal="12dp"
+                            android:text="Verified Member"
+                            android:textColor="@color/on_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textVerificationMemberSince"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="7dp"
+                            android:text="Member since your first login"
+                            android:textColor="#A9B6AF"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/imageVerificationShield"
+                        android:layout_width="86dp"
+                        android:layout_height="86dp"
+                        android:layout_marginStart="8dp"
+                        android:src="@drawable/badge_verified" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/tabContainer"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_verification_segment_container"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="5dp">
+
+                <TextView
+                    android:id="@+id/tabVerified"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:drawableTop="@drawable/ic_verified"
+                    android:drawablePadding="3dp"
+                    android:drawableTint="@color/on_surface"
+                    android:gravity="center"
+                    android:text="Verified"
+                    android:textColor="@color/on_surface"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tabAdmin"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:drawableTop="@drawable/ic_admin_panel"
+                    android:drawablePadding="3dp"
+                    android:drawableTint="#8F9B96"
+                    android:gravity="center"
+                    android:text="Admin"
+                    android:textColor="#8F9B96"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tabModerator"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:drawableTop="@drawable/ic_shield"
+                    android:drawablePadding="3dp"
+                    android:drawableTint="#8F9B96"
+                    android:gravity="center"
+                    android:text="Moderator"
+                    android:textColor="#8F9B96"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_verification_dashboard_card"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Your Current Rank"
+                            android:textColor="#A9B6AF"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/textCurrentRank"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Verified Member"
+                            android:textColor="#1DD36F"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Keep going. You're making great progress."
+                            android:textColor="#A9B6AF"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:layout_width="86dp"
+                        android:layout_height="86dp"
+                        android:layout_marginHorizontal="10dp">
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/progressCircle"
+                            android:layout_width="86dp"
+                            android:layout_height="86dp"
+                            android:layout_gravity="center"
+                            app:indicatorColor="@color/amber_300"
+                            app:indicatorDirectionCircular="clockwise"
+                            app:indicatorInset="2dp"
+                            app:indicatorSize="78dp"
+                            app:trackColor="#274331"
+                            app:trackThickness="7dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/textProgressPercent"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0%"
+                                android:textColor="@color/on_surface"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Progress"
+                                android:textColor="#A9B6AF"
+                                android:textSize="10sp" />
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Next Rank"
+                            android:textColor="#A9B6AF"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/textNextRank"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Admin"
+                            android:textColor="@color/amber_300"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textNextRankHint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Reach the next milestone to unlock more."
+                            android:textColor="#A9B6AF"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/progressRankBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="5dp"
+                    android:layout_marginTop="14dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressDrawable="@drawable/progress_verification_rank" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textCurrentPoints"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="0 / 0 points"
+                        android:textColor="#C7D0CB"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/textRemainingPoints"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:text="0 points to next rank"
+                        android:textColor="#C7D0CB"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/textTitle"
-                android:text="VERIFICATION"
-                android:textSize="26sp"
-                android:textStyle="bold"
-                android:textColor="@color/amber_300"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Your Metrics"
+                android:textColor="@color/on_surface"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/textTitle2"
-                android:text="DASHBOARD"
-                android:textSize="26sp"
-                android:textStyle="bold"
-                android:textColor="@color/amber_300"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+            <GridLayout
+                android:id="@+id/layoutMetricGrid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:columnCount="2"
+                android:useDefaultMargins="true">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="118dp"
+                    android:layout_columnWeight="1"
+                    android:background="@drawable/bg_verification_metric_card"
+                    android:elevation="1dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:background="@drawable/bg_verification_icon_pill"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_eye"
+                        app:tint="#1DD36F" />
+
+                    <TextView
+                        android:id="@+id/textMetricViews"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="0"
+                        android:textColor="@color/on_surface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMetricViewsGoal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Views"
+                        android:textColor="#A9B6AF"
+                        android:textSize="11sp" />
+
+                    <ProgressBar
+                        android:id="@+id/progressMetricViews"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progressDrawable="@drawable/progress_verification_rank" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="118dp"
+                    android:layout_columnWeight="1"
+                    android:background="@drawable/bg_verification_metric_card"
+                    android:elevation="1dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:background="@drawable/bg_verification_icon_pill"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_comment"
+                        app:tint="#1DD36F" />
+
+                    <TextView
+                        android:id="@+id/textMetricComments"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="0"
+                        android:textColor="@color/on_surface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMetricCommentsGoal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Goal: 0"
+                        android:textColor="#A9B6AF"
+                        android:textSize="11sp" />
+
+                    <ProgressBar
+                        android:id="@+id/progressMetricComments"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progressDrawable="@drawable/progress_verification_rank" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="118dp"
+                    android:layout_columnWeight="1"
+                    android:background="@drawable/bg_verification_metric_card"
+                    android:elevation="1dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:background="@drawable/bg_verification_icon_pill"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_people"
+                        app:tint="#1DD36F" />
+
+                    <TextView
+                        android:id="@+id/textMetricFollowers"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="0"
+                        android:textColor="@color/on_surface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMetricFollowersGoal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Goal: 0"
+                        android:textColor="#A9B6AF"
+                        android:textSize="11sp" />
+
+                    <ProgressBar
+                        android:id="@+id/progressMetricFollowers"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progressDrawable="@drawable/progress_verification_rank" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="118dp"
+                    android:layout_columnWeight="1"
+                    android:background="@drawable/bg_verification_metric_card"
+                    android:elevation="1dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:background="@drawable/bg_verification_icon_pill"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_share"
+                        app:tint="#1DD36F" />
+
+                    <TextView
+                        android:id="@+id/textMetricShares"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="0"
+                        android:textColor="@color/on_surface"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMetricSharesGoal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Shares"
+                        android:textColor="#A9B6AF"
+                        android:textSize="11sp" />
+
+                    <ProgressBar
+                        android:id="@+id/progressMetricShares"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progressDrawable="@drawable/progress_verification_rank" />
+                </LinearLayout>
+            </GridLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/textRequirementTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="To reach Admin"
+                    android:textColor="@color/on_surface"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnAdvance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_verification_gold_chip"
+                    android:gravity="center"
+                    android:paddingHorizontal="14dp"
+                    android:text="Advance"
+                    android:textColor="@color/amber_300"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutRequirementRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_verification_dashboard_card"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="10dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_verification_footer"
+                android:elevation="1dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="14dp">
+
+                <ImageView
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:background="@drawable/bg_verification_gold_chip"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_shield"
+                    app:tint="@color/amber_300" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="You're doing great!"
+                        android:textColor="@color/on_surface"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Keep engaging to unlock rank benefits."
+                        android:textColor="#A9B6AF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btnLearnMoreRanks"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:background="@drawable/bg_transaction_primary_button"
+                    android:gravity="center"
+                    android:paddingHorizontal="14dp"
+                    android:text="Learn More"
+                    android:textColor="@color/wallet_primary_text"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </ScrollView>
 
-    <!-- OLD PROGRESSBAR (KEEP IT OR REMOVE) -->
     <ProgressBar
         android:id="@+id/progressBarDashboard"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:visibility="gone"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
         android:layout_gravity="center"
-        android:layout_marginTop="8dp"/>
-
-    <!-- ⭐ CUSTOM PILL SHAPED TAB BAR -->
-    <LinearLayout
-        android:id="@+id/tabContainer"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:background="@drawable/bg_tab_bar"
-        android:padding="6dp"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:id="@+id/tabVerified"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Verified"
-            android:textColor="@color/amber_300"
-            android:textStyle="bold"
-            android:background="@drawable/bg_tab_active"
-            android:padding="8dp"/>
-
-        <TextView
-            android:id="@+id/tabAdmin"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Admin"
-            android:textColor="@color/emerald"
-            android:padding="8dp"/>
-
-        <TextView
-            android:id="@+id/tabModerator"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Moderator"
-            android:textColor="@color/emerald"
-            android:padding="8dp"/>
-
-        <TextView
-            android:id="@+id/tabTotalMetrics"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Total Metrics"
-            android:textColor="@color/emerald"
-            android:padding="8dp"/>
-    </LinearLayout>
-
-    <!-- ⭐ VIEWPAGER (4 FRAGMENTS) -->
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPager"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
-
-</LinearLayout>
+        android:visibility="gone" />
+</FrameLayout>

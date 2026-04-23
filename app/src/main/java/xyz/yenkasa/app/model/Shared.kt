@@ -13,16 +13,18 @@ data class UserBasic(
     val id: String,
     val username: String,
     val profileImage: String? = null,
-    val verified: Boolean = false
+    val verified: Boolean = false,
+    val roleName: String? = null
 ) {
     companion object {
         fun fromJson(json: JSONObject?): UserBasic {
-            if (json == null) return UserBasic("", "Unknown", null, false)
+            if (json == null) return UserBasic("", "Unknown", null, false, null)
             return UserBasic(
                 id = json.optString("_id"),
                 username = json.optString("username", "Unknown"),
                 profileImage = json.optString("profileImage", null),
-                verified = json.optBoolean("verified", false)
+                verified = json.optBoolean("verified", false),
+                roleName = json.optString("roleName", null)
             )
         }
     }

@@ -568,6 +568,7 @@ class PostActivity : AppCompatActivity() {
 
                     val postId = responseBody?.post?.get("_id")?.asString ?: "unknown"
                     Log.i("PostActivity", "Post created: $postId")
+                    TokenManager.saveRecentPostedCommunity(this@PostActivity, selectedCommunityId)
                     setResult(Activity.RESULT_OK)
                     finish()
                 } else {

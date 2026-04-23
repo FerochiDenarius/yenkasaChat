@@ -15,6 +15,8 @@ import xyz.yenkasa.app.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.util.Locale
+import java.util.UUID
 
 class CreateTransactionActivity : AppCompatActivity() {
 
@@ -143,6 +145,7 @@ class CreateTransactionActivity : AppCompatActivity() {
     private fun fetchRecipientUsernameAndSend(walletId: String, amount: Int) {
         val token = TokenManager.getToken(this) ?: return
         progressBar.visibility = View.VISIBLE
+        btnSend.isEnabled = false
 
         ApiClient.apiService.getUsernameByWalletId("Bearer $token", walletId)
             .enqueue(object : Callback<User> {
@@ -152,6 +155,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                         val username = response.body()!!.username
                         sendCoins(walletId, username, amount)
                     } else {
+                        btnSend.isEnabled = true
                         Toast.makeText(
                             this@CreateTransactionActivity,
                             "Recipient not found",
@@ -162,6 +166,7 @@ class CreateTransactionActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<User>, t: Throwable) {
                     progressBar.visibility = View.GONE
+                    btnSend.isEnabled = true
                     Toast.makeText(
                         this@CreateTransactionActivity,
                         "Network error: ${t.message}",
@@ -174,12 +179,17 @@ class CreateTransactionActivity : AppCompatActivity() {
     private fun sendCoins(recipientWalletId: String, recipientUsername: String?, amount: Int) {
         val token = TokenManager.getToken(this) ?: return
         progressBar.visibility = View.VISIBLE
+        btnSend.isEnabled = false
+        val activityId = createTransferActivityId(recipientWalletId, amount)
 
         val request = TransferCoinsRequest(
             toWalletId = recipientWalletId,
             recipientUsername = recipientUsername,
             amount = amount,
-            message = "Transfer from mobile app"
+            message = "Transfer from mobile app",
+            activityId = activityId,
+            clientTransactionId = activityId,
+            idempotencyKey = activityId
         )
 
         ApiClient.apiService.transferCoins("Bearer $token", request)
@@ -201,7 +211,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                         // ✅ Build and save the transaction locally using TransactionInfo from response
                         val tx = body.transaction
                         val newTransaction = TransactionUiModel(
-                            transactionId = tx?.transactionId ?: "temp_${System.currentTimeMillis()}",
+                            transactionId = tx?.transactionId ?: activityId,
                             amount = tx?.amount ?: amount,
                             from = tx?.fromWalletId ?: TokenManager.getUserId(this@CreateTransactionActivity) ?: "",
                             to = tx?.toWalletId ?: recipientWalletId,
@@ -210,7 +220,8 @@ class CreateTransactionActivity : AppCompatActivity() {
                             recipientUsername = tx?.toUsername ?: recipientUsername ?: "",
                             description = "Sent $amount coins to $recipientUsername",
                             type = "transfer",
-                            createdAt = System.currentTimeMillis().toString()
+                            createdAt = tx?.createdAt ?: System.currentTimeMillis().toString(),
+                            activityId = tx?.activityId ?: activityId
                         )
 
                         val existing = TokenManager.getTransactionHistory(this@CreateTransactionActivity).toMutableList()
@@ -220,6 +231,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                         openReceipt(newTransaction)
                         finish()
                     } else {
+                        btnSend.isEnabled = true
                         val errorMsg = body?.error ?: response.message()
                         Toast.makeText(
                             this@CreateTransactionActivity,
@@ -231,6 +243,7 @@ class CreateTransactionActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<TransferCoinsResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
+                    btnSend.isEnabled = true
                     Toast.makeText(
                         this@CreateTransactionActivity,
                         "Network error: ${t.message}",
@@ -238,6 +251,15 @@ class CreateTransactionActivity : AppCompatActivity() {
                     ).show()
                 }
             })
+    }
+
+    private fun createTransferActivityId(recipientWalletId: String, amount: Int): String {
+        val senderId = TokenManager.getUserId(this).orEmpty().ifBlank { "unknown" }
+        val normalizedRecipient = recipientWalletId.lowercase(Locale.US)
+            .replace(Regex("[^a-z0-9_-]"), "")
+            .take(24)
+            .ifBlank { "recipient" }
+        return "ykc_transfer_${senderId.take(12)}_${normalizedRecipient}_${amount}_${UUID.randomUUID()}"
     }
 
     private fun openReceipt(transaction: TransactionUiModel) {

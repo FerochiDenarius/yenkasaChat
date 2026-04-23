@@ -60,7 +60,10 @@ data class CommentUser(
     val profileImage: String? = null,
 
     @SerializedName("verified")
-    val verified: Boolean = false
+    val verified: Boolean = false,
+
+    @SerializedName("roleName")
+    val roleName: String? = null
 )
 
 data class RepliesResponse(

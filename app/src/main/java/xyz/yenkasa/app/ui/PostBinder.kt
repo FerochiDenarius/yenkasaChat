@@ -11,6 +11,7 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.util.TextPostBackgrounds
+import xyz.yenkasa.app.util.UserBadgeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 import android.widget.ImageButton
@@ -59,8 +60,11 @@ object PostBinder {
 
         // 👤 User
         username.text = post.userId.username
-        verifiedBadge.visibility =
-            if (post.userId.verified) View.VISIBLE else View.GONE
+        UserBadgeUtils.applyBadge(
+            verifiedBadge,
+            post.userId.verified,
+            post.userId.roleName
+        )
 
         Glide.with(context)
             .load(post.userId.profileImage)

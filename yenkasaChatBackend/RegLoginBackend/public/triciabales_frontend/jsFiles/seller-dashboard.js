@@ -160,11 +160,15 @@ function resetCatalogueFields() {
 function updateCatalogueFieldVisibility(mode) {
   catalogueFieldPanels.forEach(panel => {
     panel.classList.add("hidden-panel");
+    panel.hidden = true;
+    panel.setAttribute("aria-hidden", "true");
   });
 
   const activePanel = productCataloguePanels[mode];
   if (activePanel) {
     activePanel.classList.remove("hidden-panel");
+    activePanel.hidden = false;
+    activePanel.setAttribute("aria-hidden", "false");
   }
 }
 

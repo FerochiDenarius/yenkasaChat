@@ -84,15 +84,15 @@
 
             <ImageView
                 android:id="@+id/imageWalletWatermark"
-                android:layout_width="112dp"
-                android:layout_height="112dp"
+                android:layout_width="132dp"
+                android:layout_height="132dp"
                 android:layout_gravity="top|end"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="12dp"
-                android:alpha="0.14"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="6dp"
+                android:alpha="0.20"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_logo_emblem"
-                app:tint="@color/wallet_accent_green" />
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_coin" />
 
             <LinearLayout
                 android:layout_width="match_parent"

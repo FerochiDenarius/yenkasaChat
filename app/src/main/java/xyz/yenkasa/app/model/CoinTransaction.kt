@@ -26,7 +26,7 @@ data class CoinTransactionResponse(
 // === Individual coin transaction ===
 // === Individual coin transaction ===
 data class CoinTransaction(
-    @SerializedName("_id")
+    @SerializedName(value = "_id", alternate = ["transactionId"])
     val transactionId: String,
 
     val fromUserId: String? = null,
@@ -82,7 +82,10 @@ data class TransferCoinsRequest(
     val toWalletId: String,
     val recipientUsername: String?,
     val amount: Int,
-    val message: String?
+    val message: String?,
+    val activityId: String? = null,
+    val clientTransactionId: String? = null,
+    val idempotencyKey: String? = null
 )
 
 data class TransferCoinsResponse(
@@ -96,15 +99,17 @@ data class TransferCoinsResponse(
 
 // === Transaction info snapshot ===
 data class TransactionInfo(
-    @SerializedName("_id") val _id: String,
-    @SerializedName("transactionId") val transactionId: String,
+    @SerializedName(value = "transactionId", alternate = ["_id"]) val transactionId: String,
     @SerializedName("amount") val amount: Int,
     @SerializedName("fromWalletId") val fromWalletId: String,
     @SerializedName("toWalletId") val toWalletId: String,
     @SerializedName("fromUsername") val fromUsername: String?,
     @SerializedName("toUsername") val toUsername: String?,
     @SerializedName("fromUserBalanceAfter") val fromUserBalanceAfter: Int?,
-    @SerializedName("toUserBalanceAfter") val toUserBalanceAfter: Int?
+    @SerializedName("toUserBalanceAfter") val toUserBalanceAfter: Int?,
+    @SerializedName("activityId") val activityId: String? = null,
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("status") val status: String? = null
 )
 
 // === UI model for RecyclerView ===

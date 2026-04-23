@@ -12,6 +12,7 @@ import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Comment
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserBadgeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,6 +36,7 @@ class CommentAdapter(
         val textUsername: TextView = itemView.findViewById(R.id.textUsername)
         val textComment: TextView = itemView.findViewById(R.id.textComment)
         val textTimestamp: TextView = itemView.findViewById(R.id.textTimestamp)
+        val imageVerifiedBadge: ImageView = itemView.findViewById(R.id.imageVerifiedBadge)
         val buttonReply: TextView = itemView.findViewById(R.id.buttonReply)
         val buttonEdit: TextView = itemView.findViewById(R.id.buttonEdit)
         val buttonDelete: TextView = itemView.findViewById(R.id.buttonDelete)
@@ -57,6 +59,11 @@ class CommentAdapter(
 
         // Basic info
         holder.textUsername.text = comment.user?.username ?: "Unknown User"
+        UserBadgeUtils.applyBadge(
+            holder.imageVerifiedBadge,
+            comment.user.verified,
+            comment.user.roleName
+        )
         holder.textComment.text = comment.text ?: ""
         holder.textTimestamp.text = comment.createdAt?.let { formatDate(it) } ?: ""
 

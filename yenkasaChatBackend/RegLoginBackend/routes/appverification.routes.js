@@ -12,6 +12,9 @@ router.post('/track-login', auth, appVerificationController.trackLogin);
 // ✅ POST /app-verification/track-ad-view
 router.post('/track-ad-view', auth, appVerificationController.trackAdView);
 
+// ✅ POST /app-verification/update-metrics
+router.post('/update-metrics', auth, appVerificationController.updateMetrics);
+
 // ✅ POST /app-verification/check-phase-advancement
 router.post('/check-phase-advancement', auth, appVerificationController.checkPhaseAdvancement);
 

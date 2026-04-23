@@ -37,7 +37,7 @@ router.get("/pending", authMiddleware, async (req, res) => {
     .populate({
       path: "post",
       populate: [
-        { path: "userId", select: "username profileImage verified" },
+        { path: "userId", select: "username profileImage verified roleName" },
         { path: "communityId", select: "displayName name" }
       ]
     })

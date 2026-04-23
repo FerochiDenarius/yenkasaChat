@@ -254,7 +254,7 @@ router.get('/:userId/following', authMiddleware, async (req, res) => {
       follower: userId,
       status: "active"
     })
-      .populate("following", "username profileImage bio verified followersCount followingCount")
+      .populate("following", "username profileImage bio verified roleName followersCount followingCount")
       .sort({ followedAt: -1 })
       .skip(skip)
       .limit(Number(limit));

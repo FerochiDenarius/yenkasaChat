@@ -30,6 +30,7 @@ import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TextPostBackgrounds
+import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -387,7 +388,11 @@ class PostAdapter(
 
         // Header + engagement bind
         holder.username.text = post.userId.username
-        holder.verifiedBadge.visibility = if (post.userId.verified) View.VISIBLE else View.GONE
+        UserBadgeUtils.applyBadge(
+            holder.verifiedBadge,
+            post.userId.verified,
+            post.userId.roleName
+        )
 
         Glide.with(holder.itemRoot.context)
             .load(post.userId.profileImage)

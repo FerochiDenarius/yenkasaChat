@@ -16,6 +16,7 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.PostApprovalItem
 import xyz.yenkasa.app.util.TextPostBackgrounds
+import xyz.yenkasa.app.util.UserBadgeUtils
 
 
 class PostApprovalAdapter(
@@ -58,7 +59,11 @@ class PostApprovalAdapter(
 
             // --- Same Feed UI ----
             username.text = post.userId.username
-            verifiedBadge.visibility = if (post.userId.verified) View.VISIBLE else View.GONE
+            UserBadgeUtils.applyBadge(
+                verifiedBadge,
+                post.userId.verified,
+                post.userId.roleName
+            )
 
             Glide.with(itemView.context)
                 .load(post.userId.profileImage)

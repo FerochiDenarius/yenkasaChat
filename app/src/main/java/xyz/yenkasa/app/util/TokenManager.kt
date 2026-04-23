@@ -35,6 +35,7 @@ object TokenManager {
     private const val IS_DEVELOPER_KEY = "is_developer"
     private const val COMMUNITY_ID_KEY = "community_id"
     private const val SELECTED_COMMUNITY_IDS_KEY_PREFIX = "selected_community_ids_"
+    private const val RECENT_POSTED_COMMUNITY_IDS_KEY = "recent_posted_community_ids"
     // Logging Tag
     private const val TAG = "TokenManager"
     private const val GENDER_KEY = "user_gender"
@@ -44,13 +45,27 @@ object TokenManager {
     private const val POLICIES_ACCEPTED_KEY = "policies_accepted"
     private const val EMAIL_VERIFIED_KEY = "email_verified"
     private const val PHONE_VERIFIED_KEY = "phone_verified"
+    private const val MAX_RECENT_POSTED_COMMUNITIES = 12
 
 
 
 
 
     // === EncryptedSharedPreferences Access ===
+    @Volatile
+    private var cachedEncryptedPrefs: SharedPreferences? = null
+    private val prefsLock = Any()
+
     private fun getEncryptedPrefs(context: Context): SharedPreferences {
+        cachedEncryptedPrefs?.let { return it }
+        return synchronized(prefsLock) {
+            cachedEncryptedPrefs ?: createEncryptedPrefs(context.applicationContext).also {
+                cachedEncryptedPrefs = it
+            }
+        }
+    }
+
+    private fun createEncryptedPrefs(context: Context): SharedPreferences {
         return try {
             val masterKey = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -64,6 +79,7 @@ object TokenManager {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
+            cachedEncryptedPrefs = null
             Log.e(
                 TAG,
                 "EncryptedSharedPreferences corrupted. Clearing and falling back safely.",
@@ -72,12 +88,12 @@ object TokenManager {
 
             // 🔥 CRITICAL FIX: remove corrupted encrypted storage
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                context.deleteSharedPreferences("settings")
+                context.deleteSharedPreferences(PREF_NAME)
             } else {
-                context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
                     .edit()
                     .clear()
-                    .apply()
+                    .commit()
             }
 
 
@@ -326,6 +342,41 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting selected communities from EncryptedSharedPreferences", e)
             null
+        }
+    }
+
+    fun saveRecentPostedCommunity(context: Context, communityId: String?) {
+        val cleanCommunityId = communityId?.trim().orEmpty()
+        if (cleanCommunityId.isBlank()) return
+
+        try {
+            val nextIds = buildList {
+                add(cleanCommunityId)
+                addAll(getRecentPostedCommunityIds(context).filterNot { it == cleanCommunityId })
+            }.take(MAX_RECENT_POSTED_COMMUNITIES)
+
+            getEncryptedPrefs(context)
+                .edit()
+                .putString(RECENT_POSTED_COMMUNITY_IDS_KEY, nextIds.joinToString(","))
+                .apply()
+            Log.i(TAG, "Recent posted community saved: $cleanCommunityId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving recent posted community", e)
+        }
+    }
+
+    fun getRecentPostedCommunityIds(context: Context): List<String> {
+        return try {
+            getEncryptedPrefs(context)
+                .getString(RECENT_POSTED_COMMUNITY_IDS_KEY, null)
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() }
+                ?.distinct()
+                ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting recent posted communities", e)
+            emptyList()
         }
     }
 
@@ -869,6 +920,7 @@ object TokenManager {
                     put("description", t.description)
                     put("type", t.type)
                     put("createdAt", t.createdAt)
+                    put("activityId", t.activityId)
                 }
                 jsonArray.put(obj)
             }
@@ -906,7 +958,8 @@ object TokenManager {
                         recipientUsername = obj.optString("recipientUsername"),
                         description = obj.optString("description"),
                         type = obj.optString("type"),
-                        createdAt = obj.optString("createdAt")
+                        createdAt = obj.optString("createdAt"),
+                        activityId = obj.optString("activityId").takeIf { it.isNotBlank() }
                     )
                 )
             }

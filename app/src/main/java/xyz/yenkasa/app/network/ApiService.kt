@@ -540,6 +540,12 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<TrackAdViewResponse>
 
+    @POST("app-verification/update-metrics")
+    fun updateVerificationMetric(
+        @Header("Authorization") token: String,
+        @Body request: VerificationMetricUpdateRequest
+    ): Call<VerificationMetricUpdateResponse>
+
 
 
     @GET("app-verification/progress")

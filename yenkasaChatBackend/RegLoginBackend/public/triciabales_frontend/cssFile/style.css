@@ -1187,7 +1187,13 @@ body {
 }
 
 .hidden-panel {
-  display: none;
+  display: none !important;
+}
+
+.settings-panel.hidden-panel,
+.catalogue-field-panel.hidden-panel,
+.catalogue-field-panel[hidden] {
+  display: none !important;
 }
 
 .size-check-grid {

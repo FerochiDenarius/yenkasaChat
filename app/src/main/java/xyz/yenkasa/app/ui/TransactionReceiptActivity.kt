@@ -38,26 +38,24 @@ class TransactionReceiptActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.textReceiptAmount).text = amountText
         findViewById<TextView>(R.id.textReceiptUsd).text = "≈ ${formatUsd(transaction.amount)} USD"
 
-        findViewById<TextView>(R.id.textReceiptTransactionId).text =
-            row("Transaction ID", shorten(transaction.transactionId))
-        findViewById<TextView>(R.id.textReceiptDate).text =
-            row("Date & Time", formatDate(transaction.createdAt))
-        findViewById<TextView>(R.id.textReceiptStatus).text = row("Status", "• Success")
-        findViewById<TextView>(R.id.textReceiptNetwork).text = row("Network", "Yenkasa Chain")
+        findViewById<TextView>(R.id.textReceiptTransactionId).text = shorten(transaction.transactionId)
+        findViewById<TextView>(R.id.textReceiptDate).text = formatDate(transaction.createdAt)
+        findViewById<TextView>(R.id.textReceiptStatus).text = "• Success"
+        findViewById<TextView>(R.id.textReceiptNetwork).text = "Yenkasa Chain"
         findViewById<TextView>(R.id.textReceiptBlock).text =
-            row("Block Number", "#${buildBlockNumber(transaction.transactionId)}")
-        findViewById<TextView>(R.id.textReceiptConfirmations).text = row("Confirmations", "12")
+            "#${buildBlockNumber(transaction.transactionId)}"
+        findViewById<TextView>(R.id.textReceiptConfirmations).text = "12"
 
         findViewById<TextView>(R.id.textReceiptFrom).text =
-            row("From", if (isOutgoing) "You\n${shorten(transaction.from)}" else displayParty(transaction.senderUsername, transaction.from))
+            if (isOutgoing) "You\n${shorten(transaction.from)}" else displayParty(transaction.senderUsername, transaction.from)
         findViewById<TextView>(R.id.textReceiptTo).text =
-            row("To", if (isOutgoing) displayParty(transaction.recipientUsername, transaction.to) else "You\n${shorten(transaction.to)}")
+            if (isOutgoing) displayParty(transaction.recipientUsername, transaction.to) else "You\n${shorten(transaction.to)}"
         findViewById<TextView>(R.id.textReceiptSummaryAmount).text =
-            row("Amount", "${formatCoins(transaction.amount)} YKC\n≈ ${formatUsd(transaction.amount)} USD")
+            "${formatCoins(transaction.amount)} YKC\n≈ ${formatUsd(transaction.amount)} USD"
         findViewById<TextView>(R.id.textReceiptFee).text =
-            row("Network Fee", "${formatCoins(NETWORK_FEE)} YKC\n≈ ${formatUsd(NETWORK_FEE)} USD")
+            "${formatCoins(NETWORK_FEE)} YKC\n≈ ${formatUsd(NETWORK_FEE)} USD"
         findViewById<TextView>(R.id.textReceiptTotal).text =
-            row("Total", "${formatCoins(total)} YKC\n≈ ${formatUsd(total)} USD")
+            "${formatCoins(total)} YKC\n≈ ${formatUsd(total)} USD"
 
         findViewById<android.view.View>(R.id.buttonReceiptBack).setOnClickListener { finish() }
         findViewById<android.view.View>(R.id.buttonReceiptShare).setOnClickListener {
@@ -100,10 +98,6 @@ class TransactionReceiptActivity : AppCompatActivity() {
             createdAt = intent.getStringExtra(EXTRA_CREATED_AT).orEmpty(),
             activityId = intent.getStringExtra(EXTRA_ACTIVITY_ID)
         )
-    }
-
-    private fun row(label: String, value: String): String {
-        return "$label     $value"
     }
 
     private fun displayParty(username: String?, walletId: String): String {

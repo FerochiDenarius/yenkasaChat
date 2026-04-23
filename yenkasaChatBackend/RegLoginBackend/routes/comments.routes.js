@@ -136,7 +136,7 @@ await sendNotification({
  * POPULATE + SOCKET EMIT (this remains outside the reply block)
  * --------------------------------------------------- */
 const populatedComment = await Comment.findById(comment._id)
-  .populate('userId', 'username profileImage verified')
+  .populate('userId', 'username profileImage verified roleName')
   .lean();
 
 if (global.io) {
@@ -182,7 +182,7 @@ router.get('/post/:postId', authMiddleware, async (req, res) => {
 
     // Fetch comments only AFTER block validation
     const comments = await Comment.find({ postId, isActive: true })
-      .populate('userId', 'username profileImage verified')
+      .populate('userId', 'username profileImage verified roleName')
       .sort({ createdAt: 1 })
       .skip((page - 1) * limit)
       .limit(Number(limit))
@@ -347,7 +347,7 @@ router.put('/:commentId', authMiddleware, async (req, res) => {
     await comment.save();
 
     const populatedComment = await Comment.findById(comment._id)
-      .populate('userId', 'username profileImage verified')
+      .populate('userId', 'username profileImage verified roleName')
       .lean();
 
     res.json({

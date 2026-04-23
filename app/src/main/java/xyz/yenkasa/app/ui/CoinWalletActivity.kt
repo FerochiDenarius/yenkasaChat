@@ -33,7 +33,9 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 
 class CoinWalletActivity : AppCompatActivity() {
@@ -251,8 +253,7 @@ class CoinWalletActivity : AppCompatActivity() {
             })
 
         // Load cached transactions
-        val cached = TokenManager.getTransactionHistory(this)
-            .filter { !it.activityId.isNullOrEmpty() }
+        val cached = sortTransactions(TokenManager.getTransactionHistory(this))
 
         if (cached.isNotEmpty()) {
             allTransactions.clear()
@@ -275,7 +276,6 @@ class CoinWalletActivity : AppCompatActivity() {
                     }
 
                     val latest = response.body()!!.transactions
-                        .filter { !it.activityId.isNullOrEmpty() }
                         .map {
                             TransactionUiModel(
                                 transactionId = it.transactionId,
@@ -304,17 +304,22 @@ class CoinWalletActivity : AppCompatActivity() {
                         }
                     }
 
+                    val mergedHistory = mergeTransactions(
+                        serverTransactions = latest,
+                        cachedTransactions = TokenManager.getTransactionHistory(this@CoinWalletActivity)
+                    )
+
                     // Update UI
                     allTransactions.clear()
-                    allTransactions.addAll(latest)
+                    allTransactions.addAll(mergedHistory)
                     applyTransactionTab()
                     refreshWalletHero()
 
                     // Save to local cache
-                    TokenManager.saveTransactionHistory(this@CoinWalletActivity, latest)
+                    TokenManager.saveTransactionHistory(this@CoinWalletActivity, mergedHistory)
 
                     // Update previous list
-                    previousList = latest
+                    previousList = mergedHistory
                 }
 
                 override fun onFailure(call: Call<CoinTransactionResponse>, t: Throwable) {
@@ -322,6 +327,55 @@ class CoinWalletActivity : AppCompatActivity() {
                     refreshWalletHero()
                 }
             })
+    }
+
+    private fun mergeTransactions(
+        serverTransactions: List<TransactionUiModel>,
+        cachedTransactions: List<TransactionUiModel>
+    ): List<TransactionUiModel> {
+        val merged = LinkedHashMap<String, TransactionUiModel>()
+
+        // Server records are authoritative after reinstall. Cached records preserve local
+        // transfer receipts that may not have appeared in the server response yet.
+        (serverTransactions + cachedTransactions).forEach { tx ->
+            val key = transactionStableKey(tx)
+            if (!merged.containsKey(key)) {
+                merged[key] = tx
+            }
+        }
+
+        return sortTransactions(merged.values.toList())
+    }
+
+    private fun sortTransactions(transactions: List<TransactionUiModel>): List<TransactionUiModel> {
+        return transactions.sortedWith(
+            compareByDescending<TransactionUiModel> { parseTransactionTime(it.createdAt) }
+                .thenByDescending { it.transactionId }
+        )
+    }
+
+    private fun transactionStableKey(tx: TransactionUiModel): String {
+        return tx.transactionId.takeIf { it.isNotBlank() }
+            ?: listOf(tx.type, tx.from, tx.to, tx.amount.toString(), tx.createdAt, tx.description)
+                .joinToString("|")
+    }
+
+    private fun parseTransactionTime(value: String): Long {
+        value.toLongOrNull()?.let { return it }
+
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            parser.timeZone = TimeZone.getTimeZone("UTC")
+            parser.parse(value)?.time ?: 0L
+        } catch (_: Exception) {
+            try {
+                val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+                parser.timeZone = TimeZone.getTimeZone("UTC")
+                parser.parse(value)?.time ?: 0L
+            } catch (_: Exception) {
+                0L
+            }
+        }
     }
 
     private fun refreshWalletHero() {

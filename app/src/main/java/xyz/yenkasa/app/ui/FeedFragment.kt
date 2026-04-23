@@ -542,9 +542,23 @@ class FeedFragment : Fragment() {
     private fun updateCommunityStoryRow() {
         if (!::communityStoryAdapter.isInitialized) return
         communityStoryAdapter.submitCommunities(
-            allCommunities,
+            sortCommunitiesForStoryRow(allCommunities),
             selectedCommunities.mapNotNull { it.id }.toSet(),
             communityStoryPreviews
+        )
+    }
+
+    private fun sortCommunitiesForStoryRow(communities: List<Community>): List<Community> {
+        val recentIds = TokenManager.getRecentPostedCommunityIds(requireContext())
+        if (recentIds.isEmpty()) return communities
+
+        val recentOrder = recentIds.withIndex().associate { it.value to it.index }
+        return communities.sortedWith(
+            compareBy<Community> { community ->
+                recentOrder[community.id] ?: Int.MAX_VALUE
+            }.thenBy { community ->
+                community.displayName ?: community.name ?: ""
+            }
         )
     }
 

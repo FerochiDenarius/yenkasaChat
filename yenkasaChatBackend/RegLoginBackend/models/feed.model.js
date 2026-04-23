@@ -47,7 +47,7 @@ async function getCommunityFeed(userId, page = 1, limit = 20) {
 
   // Query posts
   const posts = await Post.find(filter)
-    .populate("userId", "username profileImage verified")
+    .populate("userId", "username profileImage verified roleName")
     .populate("communityId", "name displayName")
     .sort({ isPinned: -1, createdAt: -1 })
     .skip(skip)

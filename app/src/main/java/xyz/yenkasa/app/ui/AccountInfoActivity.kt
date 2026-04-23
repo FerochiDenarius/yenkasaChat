@@ -24,6 +24,7 @@ import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
+import xyz.yenkasa.app.util.UserBadgeUtils
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -273,8 +274,8 @@ class AccountInfoActivity : AppCompatActivity() {
         communityView.text = "Communities: Loading..."
         dateJoinedView.text = "Joined: ${formatDate(user.createdAt)}"
 
-        iconVerified.visibility = if (user.verified) View.VISIBLE else View.GONE
         val roleName = user.roleName ?: user.role?.name ?: "user"
+        UserBadgeUtils.applyBadge(iconVerified, user.verified, roleName, user.role)
 
         val displayRole = roleName.replace("_", " ")
             .replaceFirstChar { it.uppercase() }

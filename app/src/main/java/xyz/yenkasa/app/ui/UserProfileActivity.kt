@@ -178,23 +178,28 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     private fun updateUI(profile: ProfileResponse) {
+        if (isFinishing || isDestroyed) return
+
         usernameView.text = profile.username
         followersCountView.text = "${profile.followersCount ?: profile.followers.size}\nFollowers"
         followingCountView.text = "${profile.followingCount ?: profile.following.size}\nFollowing"
         postsCountView.text = "${profile.posts?.size ?: 0}\nPosts"
 
-        val imageUrl = if (profile.profileImage?.startsWith("http") == true)
-            profile.profileImage
-        else
-            "https://yenkasa.xyz/${profile.profileImage}"
+        val rawImageUrl = profile.profileImage?.trim().orEmpty()
+        val imageUrl = when {
+            rawImageUrl.isBlank() || rawImageUrl == "null" -> null
+            rawImageUrl.startsWith("http") -> rawImageUrl
+            else -> "https://yenkasa.xyz/${rawImageUrl.trimStart('/')}"
+        }
 
-        Glide.with(this)
+        Glide.with(imageProfile)
             .load(imageUrl)
             .placeholder(R.drawable.ic_user_placeholder)
+            .error(R.drawable.ic_user_placeholder)
             .apply(RequestOptions.circleCropTransform())
             .into(imageProfile)
 
-        imageProfile.tag = profile.profileImage
+        imageProfile.tag = imageUrl.orEmpty()
 
         isFollowing = profile.isFollowing
         isBlocked = profile.isBlocked

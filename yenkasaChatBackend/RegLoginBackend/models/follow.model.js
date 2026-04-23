@@ -47,7 +47,7 @@ FollowSchema.statics = {
 
   async getFollowers(userId, limit = 50, skip = 0) {
     return this.find({ following: userId, status: 'active' })
-      .populate('follower', 'username profileImage bio verified')
+      .populate('follower', 'username profileImage bio verified roleName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -55,7 +55,7 @@ FollowSchema.statics = {
 
   async getFollowing(userId, limit = 50, skip = 0) {
     return this.find({ follower: userId, status: 'active' })
-      .populate('following', 'username profileImage bio verified')
+      .populate('following', 'username profileImage bio verified roleName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

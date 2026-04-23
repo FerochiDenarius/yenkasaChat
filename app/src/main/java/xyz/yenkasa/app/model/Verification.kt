@@ -160,6 +160,17 @@ data class TrackAdViewResponse(
     val adsViewed: Int
 )
 
+data class VerificationMetricUpdateRequest(
+    val type: String,
+    val value: Int? = null
+)
+
+data class VerificationMetricUpdateResponse(
+    val success: Boolean,
+    val metrics: VerificationMetrics? = null,
+    val error: String? = null
+)
+
 
 // ===============================
 // VERIFICATION PROGRESS RESPONSE
@@ -215,6 +226,7 @@ data class PerformanceTotals(
     val totalPostCount: Int = 0,
     val totalViewsCount: Int = 0,
     val totalLikesCount: Int = 0,
+    val maxLikesOnPost: Int = 0,
     val totalCommentsMade: Int = 0,
 
     // ----- SOCIAL -----

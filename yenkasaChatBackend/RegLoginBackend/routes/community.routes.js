@@ -152,7 +152,7 @@ router.get('/:communityId', async (req, res, next) => {
 
     const community = await Community.findById(req.params.communityId)
       .populate('moderators', 'username profileImage')
-      .populate('createdBy', 'username profileImage verified')
+      .populate('createdBy', 'username profileImage verified roleName')
       .lean();
     
     if (!community) {

@@ -403,7 +403,7 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('userId', 'username profileImage verified')
+      .populate('userId', 'username profileImage verified roleName')
       .populate('communityId', 'name displayName')
       .lean();
 
@@ -486,7 +486,7 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
-    .populate("userId", "username profileImage verified")
+    .populate("userId", "username profileImage verified roleName")
     .populate("communityId", "name displayName")  // ✅ FIXED: populate communityId object
     .lean();
 
@@ -540,7 +540,7 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('userId', 'username profileImage verified')
+      .populate('userId', 'username profileImage verified roleName')
       .populate('communityId', 'name displayName')
       .lean();
 
@@ -589,7 +589,7 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
       status: 'approved'
     })
       .sort({ createdAt: -1 })
-      .populate('userId', 'username profileImage verified')
+      .populate('userId', 'username profileImage verified roleName')
       .populate('communityId', 'name displayName')
       .lean();
 
@@ -615,7 +615,7 @@ router.get("/:postId", authMiddleware, async (req, res) => {
       isActive: true,
       status: "approved"
     })
-      .populate("userId", "username profileImage verified")
+      .populate("userId", "username profileImage verified roleName")
       .populate("communityId", "name displayName")
       .lean();
 

@@ -183,19 +183,21 @@ exports.createAd = async (req, res) => {
       });
     }
 
-    const adData = {
-      title,
-      rewardYKC: Number(rewardAmount || rewardYKC) || 5,
-      sponsorId: userId,
-      adType: adType || 'sponsor',
-      isActive: true,
-      meta: {
-        ctaText,
-        ctaUrl,
-        scope: scope || "global",
-        communityScope: communityScope || "all"
-      }
-    };
+   const finalAdType = (adType || "sponsor").toLowerCase();
+
+const adData = {
+  title,
+  rewardYKC: Number(rewardAmount || rewardYKC) || 5,
+  sponsorId: finalAdType === "google" ? null : userId,
+  adType: finalAdType,
+  isActive: true,
+  meta: {
+    ctaText,
+    ctaUrl,
+    scope: scope || "global",
+    communityScope: communityScope || "all"
+  }
+};
 
     // files come from multer
     const imageFile = req.files?.image?.[0] || req.files?.imageUrl?.[0];
@@ -214,12 +216,14 @@ exports.createAd = async (req, res) => {
       adData.meta.thumbnail = `/uploads/${thumbnailFile.filename}`;
     }
 
-    if (!adData.imageUrl && !adData.videoUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Select an image or video for the ad"
-      });
-    }
+// Google AdMob ads are handled by the Android SDK.
+// They do not need uploaded image/video files.
+if (finalAdType !== "google" && !adData.imageUrl && !adData.videoUrl) {
+  return res.status(400).json({
+    success: false,
+    message: "Select an image or video for the ad"
+  });
+}
 
     const ad = await Ad.create(adData);
 

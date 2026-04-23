@@ -24,8 +24,21 @@ function parseAdUpload(req, res, next) {
 router.get('/feed', auth, adsController.getAdsFeed);
 router.post('/view/:adId', auth, adsController.recordAdView);
 router.post('/reward/:adId', auth, adsController.rewardAd);
-router.post('/create', auth, parseAdUpload, adsController.createAd);
-router.post('/', auth, parseAdUpload, adsController.createAd);
+
+function maybeParseAdUpload(req, res, next) {
+  const contentType = req.headers["content-type"] || "";
+
+  // Only use multer for file uploads
+  if (!contentType.includes("multipart/form-data")) {
+    return next();
+  }
+
+  return parseAdUpload(req, res, next);
+}
+
+router.post('/create', auth, maybeParseAdUpload, adsController.createAd);
+router.post('/', auth, maybeParseAdUpload, adsController.createAd);
+
 router.post('/reward-click/:adId', auth, adsController.rewardAdClick);
 
 module.exports = router;

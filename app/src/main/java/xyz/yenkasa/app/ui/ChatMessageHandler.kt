@@ -87,7 +87,11 @@ class ChatMessageHandler(
 
 // Replace your old uploadFileToCloudinary function with this one
 
-    fun uploadFileToCloudinary(uri: Uri, type: String) {
+    fun uploadFileToCloudinary(
+        uri: Uri,
+        type: String,
+        extraMessageData: Map<String, Any?> = emptyMap()
+    ) {
         Log.d("ChatMessageHandler", "Preparing to upload $type file. Original URI: $uri")
 
         // 1. ✅ THIS IS THE FIX: Copy the file to a safe local directory first.
@@ -126,7 +130,7 @@ class ChatMessageHandler(
                             "file" -> "fileUrl"
                             else -> "fileUrl"
                         }
-                        sendMessage(mapOf(mediaKey to secureUrl))
+                        sendMessage(extraMessageData + mapOf(mediaKey to secureUrl))
                     } else {
                         Log.e("ChatMessageHandler", "Cloudinary upload succeeded but secure_url is null or blank.")
                         callback.onError("Upload succeeded but no URL was returned.")

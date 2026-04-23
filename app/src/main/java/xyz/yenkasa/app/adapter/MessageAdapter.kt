@@ -380,7 +380,11 @@ class MessageAdapter(
         private val statusText: TextView = itemView.findViewById(R.id.textStatus)
         override fun bind(message: ChatMessage, currentUserId: String) {
             super.bind(message, currentUserId)
-            statusText.text = message.status
+            statusText.text = when (message.status?.lowercase(Locale.getDefault())) {
+                "read", "seen" -> "✓✓"
+                "delivered" -> "✓✓"
+                else -> "✓"
+            }
         }
     }
 

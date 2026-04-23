@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -14,12 +15,15 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.ChatRoomAdapter
+import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.ChatRoom
 // Assuming CreateChatRoomRequest is now used by your ApiService
 import xyz.yenkasa.app.model.CreateChatRoomRequest
@@ -32,15 +36,24 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
 
-class ChatRoomsActivity : AppCompatActivity() {
+class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCallback {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var chatRoomAdapter: ChatRoomAdapter
     private lateinit var currentUserId: String
+    private var token: String = ""
     private lateinit var btnCreateRoom: Button
     private lateinit var inputUsername: EditText
     private lateinit var foundCardTitle: TextView
     private lateinit var foundCardSubtitle: TextView
+    private var recentChatRooms: List<ChatRoom> = emptyList()
+    private var activeMediaSender: ChatMessageHandler? = null
+    private var pendingMediaRecipientName: String? = null
+
+    private val chatRoomImagePickerLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let { showChatRecipientPicker(it) }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +79,7 @@ class ChatRoomsActivity : AppCompatActivity() {
         val navSettings = findViewById<TextView>(R.id.navChatRoomsSettings)
 
         val retrievedToken = TokenManager.getToken(this)
+        token = retrievedToken.orEmpty()
         currentUserId = TokenManager.getUserId(this) ?: ""
 
         if (retrievedToken.isNullOrEmpty() || currentUserId.isEmpty()) {
@@ -118,7 +132,7 @@ class ChatRoomsActivity : AppCompatActivity() {
         }
 
         btnCamera.setOnClickListener {
-            Toast.makeText(this, "Camera shortcut will be connected in the chat media step", Toast.LENGTH_SHORT).show()
+            openImagePickerForChatRoom()
         }
 
         btnMore.setOnClickListener {
@@ -147,6 +161,49 @@ class ChatRoomsActivity : AppCompatActivity() {
         inputUsername.requestFocus()
         val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         inputMethodManager.showSoftInput(inputUsername, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun openImagePickerForChatRoom() {
+        if (recentChatRooms.isEmpty()) {
+            Toast.makeText(this, "Start a chat first, then send images from here.", Toast.LENGTH_SHORT).show()
+            focusUsernameInput()
+            return
+        }
+
+        chatRoomImagePickerLauncher.launch("image/*")
+    }
+
+    private fun showChatRecipientPicker(imageUri: Uri) {
+        val rooms = recentChatRooms
+        if (rooms.isEmpty()) {
+            Toast.makeText(this, "No chat users available.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val labels = rooms.map { room ->
+            determineChatDisplayNameForActivity(room, currentUserId)
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Send image to")
+            .setItems(labels) { dialog, which ->
+                dialog.dismiss()
+                sendImageToChatRoom(imageUri, rooms[which], labels[which])
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun sendImageToChatRoom(imageUri: Uri, chatRoom: ChatRoom, recipientName: String) {
+        pendingMediaRecipientName = recipientName
+        activeMediaSender = ChatMessageHandler(
+            context = this,
+            callback = this,
+            token = token,
+            senderId = currentUserId,
+            roomId = chatRoom._id
+        )
+        activeMediaSender?.uploadFileToCloudinary(imageUri, "image")
     }
 
     private fun updateFoundCard(rawUsername: String) {
@@ -253,6 +310,7 @@ class ChatRoomsActivity : AppCompatActivity() {
 
                         Log.d("ChatRoomsActivity", "Filtered unique chat rooms: ${uniqueRooms.size}")
 
+                        recentChatRooms = uniqueRooms
                         chatRoomAdapter.submitList(uniqueRooms)
                     } else {
                         val errorMsg = parseError(response)
@@ -280,5 +338,23 @@ class ChatRoomsActivity : AppCompatActivity() {
         } catch (e: IOException) {
             "Error reading error response: ${e.message}"
         }
+    }
+
+    override fun onUploadStarted(type: String) {
+        Toast.makeText(this, "Sending image...", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onMessageSent(message: ChatMessage) {
+        val recipientName = pendingMediaRecipientName ?: "chat"
+        Toast.makeText(this, "Image sent to $recipientName", Toast.LENGTH_SHORT).show()
+        pendingMediaRecipientName = null
+        activeMediaSender = null
+        loadChatRooms()
+    }
+
+    override fun onError(error: String) {
+        Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+        pendingMediaRecipientName = null
+        activeMediaSender = null
     }
 }

@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -20,6 +21,7 @@ import android.text.TextWatcher
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -40,10 +42,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.adapter.MessageAdapter
@@ -80,6 +84,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private lateinit var attachMenu: LinearLayout
     private lateinit var chatRootLayout: FrameLayout
     private lateinit var moreOptionsButton: ImageView
+    private lateinit var mediaPreviewLayout: View
+    private lateinit var imageMediaPreview: ImageView
+    private lateinit var textMediaPreviewPlay: TextView
+    private lateinit var textMediaPreviewTitle: TextView
+    private lateinit var textMediaPreviewSubtitle: TextView
+    private lateinit var cancelMediaPreviewButton: ImageButton
 
     private lateinit var textViewReceiverName: TextView
     private lateinit var imageViewReceiverPicture: CircleImageView
@@ -101,6 +111,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var senderId: String = ""
     private var roomId: String? = null
     private var tempCameraUri: Uri? = null
+    private var pendingMediaUri: Uri? = null
+    private var pendingMediaType: String? = null
+    private var isUploadingPendingMedia: Boolean = false
     private var pendingPermissionAction: (() -> Unit)? = null
     private var replyingToMessage: ChatMessage? = null
     private lateinit var callButton: ImageView
@@ -201,11 +214,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     // --- Activity Result Launchers ---
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "image") }
+        uri?.let { showPendingMediaPreview(it, "image") }
     }
 
     private val videoPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "video") }
+        uri?.let { showPendingMediaPreview(it, "video") }
     }
 
     private val chatBackgroundImageLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -227,13 +240,27 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
     }
 
+    private val stickerPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri ?: return@registerForActivityResult
+
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (ex: Exception) {
+            Log.w("ChatActivity", "Could not persist sticker permission", ex)
+        }
+
+        saveStickerUri(uri)
+        Toast.makeText(this, "Sticker saved. Tap it to send.", Toast.LENGTH_SHORT).show()
+        showStickerTray()
+    }
+
     private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
             val imageUri = tempCameraUri
             if (imageUri == null) {
                 Toast.makeText(this, "Camera image was not saved. Try again.", Toast.LENGTH_LONG).show()
             } else {
-                chatMessageHandler.uploadFileToCloudinary(imageUri, "image")
+                showPendingMediaPreview(imageUri, "image")
             }
         } else {
             Toast.makeText(this, "Photo cancelled.", Toast.LENGTH_SHORT).show()
@@ -381,6 +408,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         callButton = findViewById(R.id.imageViewCall)
         videoCallButton = findViewById(R.id.imageViewVideoCall)
         moreOptionsButton = findViewById(R.id.imageViewMoreOptions)
+        mediaPreviewLayout = findViewById(R.id.mediaPreviewLayout)
+        imageMediaPreview = findViewById(R.id.imageMediaPreview)
+        textMediaPreviewPlay = findViewById(R.id.textMediaPreviewPlay)
+        textMediaPreviewTitle = findViewById(R.id.textMediaPreviewTitle)
+        textMediaPreviewSubtitle = findViewById(R.id.textMediaPreviewSubtitle)
+        cancelMediaPreviewButton = findViewById(R.id.buttonCancelMediaPreview)
 
         textViewReceiverName = findViewById(R.id.textViewReceiverName)
         imageViewReceiverPicture = findViewById(R.id.imageViewReceiverPicture)
@@ -392,9 +425,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         textViewRepliedToName = findViewById(R.id.textViewRepliedToName)
         textViewRepliedToMessage = findViewById(R.id.textViewRepliedToMessage)
         buttonCancelReply = findViewById(R.id.buttonCancelReply)
+        cancelMediaPreviewButton.setOnClickListener { clearPendingMediaPreview() }
 
-        sendButton.visibility = if (messageInput.text.isNullOrBlank()) View.GONE else View.VISIBLE
-        micButton.visibility = if (messageInput.text.isNullOrBlank()) View.VISIBLE else View.GONE
+        updateComposerActionButtons()
     }
 
     private fun setupListeners() {
@@ -444,11 +477,20 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             contactPickerLauncher.launch(intent)
         }
 
+        findViewById<ImageButton>(R.id.buttonEmojiShortcut).setOnClickListener {
+            attachMenu.visibility = View.GONE
+            showEmojiPicker()
+        }
+
+        findViewById<ImageButton>(R.id.buttonStickerShortcut).setOnClickListener {
+            attachMenu.visibility = View.GONE
+            showStickerTray()
+        }
+
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
+                updateComposerActionButtons()
                 val hasText = !s.isNullOrBlank()
-                sendButton.visibility = if (hasText) View.VISIBLE else View.GONE
-                micButton.visibility = if (!hasText) View.VISIBLE else View.GONE
                 messageInput.maxLines = if (hasText) 5 else 1
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -457,6 +499,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         sendButton.setOnClickListener {
             val text = messageInput.text.toString().trim()
+            if (pendingMediaUri != null && pendingMediaType != null) {
+                uploadPendingMedia(text)
+                return@setOnClickListener
+            }
+
             if (text.isNotEmpty()) {
                 val messageData = mutableMapOf<String, Any>("text" to text)
 
@@ -503,6 +550,323 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             // Use your existing handler to upload it as an "image"
             chatMessageHandler.uploadFileToCloudinary(contentUri, "image")
         }
+    }
+
+    private fun showEmojiPicker() {
+        val emojis = arrayOf("😀", "😂", "😊", "😍", "😎", "😢", "🙏", "👍", "🔥", "❤️", "💚", "🎉")
+        AlertDialog.Builder(this)
+            .setTitle("Choose emoji")
+            .setItems(emojis) { dialog, which ->
+                insertEmoji(emojis[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun insertEmoji(emoji: String) {
+        val editable = messageInput.text ?: return
+        val start = messageInput.selectionStart.coerceAtLeast(0)
+        val end = messageInput.selectionEnd.coerceAtLeast(0)
+        val min = minOf(start, end)
+        val max = maxOf(start, end)
+        editable.replace(min, max, emoji)
+        messageInput.requestFocus()
+    }
+
+    private fun showPendingMediaPreview(uri: Uri, type: String) {
+        pendingMediaUri = uri
+        pendingMediaType = type
+        isUploadingPendingMedia = false
+
+        mediaPreviewLayout.visibility = View.VISIBLE
+        textMediaPreviewTitle.text = if (type == "video") "Video ready" else "Photo ready"
+        textMediaPreviewSubtitle.text = "Tap send when ready"
+        textMediaPreviewPlay.visibility = if (type == "video") View.VISIBLE else View.GONE
+
+        if (type == "video") {
+            imageMediaPreview.setImageBitmap(readVideoFrame(uri))
+            if (imageMediaPreview.drawable == null) {
+                imageMediaPreview.setImageResource(R.drawable.placeholder_image)
+            }
+        } else {
+            imageMediaPreview.setImageURI(uri)
+        }
+
+        attachMenu.visibility = View.GONE
+        updateComposerActionButtons()
+    }
+
+    private fun uploadPendingMedia(caption: String) {
+        val uri = pendingMediaUri ?: return
+        val type = pendingMediaType ?: return
+        if (isUploadingPendingMedia) return
+
+        isUploadingPendingMedia = true
+        textMediaPreviewSubtitle.text = "Uploading..."
+        updateComposerActionButtons()
+
+        val extraData = mutableMapOf<String, Any?>()
+        if (caption.isNotBlank()) {
+            extraData["text"] = caption
+        }
+        replyingToMessage?.id?.let { repliedToId ->
+            extraData["repliedTo"] = repliedToId
+        }
+
+        chatMessageHandler.uploadFileToCloudinary(uri, type, extraData)
+    }
+
+    private fun clearPendingMediaPreview() {
+        pendingMediaUri = null
+        pendingMediaType = null
+        isUploadingPendingMedia = false
+        imageMediaPreview.setImageDrawable(null)
+        mediaPreviewLayout.visibility = View.GONE
+        updateComposerActionButtons()
+    }
+
+    private fun updateComposerActionButtons() {
+        val hasText = !messageInput.text.isNullOrBlank()
+        val hasPendingMedia = pendingMediaUri != null
+        sendButton.visibility = if (hasText || hasPendingMedia) View.VISIBLE else View.GONE
+        sendButton.isEnabled = !isUploadingPendingMedia
+        sendButton.alpha = if (isUploadingPendingMedia) 0.55f else 1f
+        micButton.visibility = if (!hasText && !hasPendingMedia) View.VISIBLE else View.GONE
+    }
+
+    private fun readVideoFrame(uri: Uri): android.graphics.Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(this, uri)
+            retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+        } catch (ex: Exception) {
+            Log.w("ChatActivity", "Could not read video preview frame", ex)
+            null
+        } finally {
+            runCatching { retriever.release() }
+        }
+    }
+
+    private fun showStickerTray() {
+        val stickers = loadSavedStickerUris()
+        val bottomSheet = BottomSheetDialog(this)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(20))
+            setBackgroundColor(ContextCompat.getColor(this@ChatActivity, R.color.feed_surface))
+        }
+
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val title = TextView(this).apply {
+            text = "Stickers"
+            textSize = 18f
+            setTextColor(ContextCompat.getColor(this@ChatActivity, R.color.feed_primary_text))
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+
+        val subtitle = TextView(this).apply {
+            text = "Tap to send. Long press to delete."
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(this@ChatActivity, R.color.feed_secondary_text))
+        }
+
+        val titleStack = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(title)
+            addView(subtitle)
+        }
+
+        val closeButton = ImageButton(this).apply {
+            setImageResource(R.drawable.ic_close)
+            background = ContextCompat.getDrawable(this@ChatActivity, R.drawable.bg_chat_header_icon_button)
+            setColorFilter(ContextCompat.getColor(this@ChatActivity, R.color.yenkasa_emerald))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setOnClickListener { bottomSheet.dismiss() }
+        }
+
+        header.addView(
+            titleStack,
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        )
+        header.addView(closeButton, LinearLayout.LayoutParams(dp(38), dp(38)))
+
+        val recycler = RecyclerView(this).apply {
+            layoutManager = GridLayoutManager(this@ChatActivity, 4)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            adapter = StickerTrayAdapter(
+                stickers = stickers,
+                onAddSticker = {
+                    bottomSheet.dismiss()
+                    stickerPickerLauncher.launch(arrayOf("image/*"))
+                },
+                onSendSticker = { uri ->
+                    bottomSheet.dismiss()
+                    sendSticker(uri)
+                },
+                onDeleteSticker = { uri ->
+                    confirmDeleteSticker(uri) {
+                        bottomSheet.dismiss()
+                        showStickerTray()
+                    }
+                }
+            )
+        }
+
+        root.addView(header)
+        root.addView(
+            recycler,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(14)
+            }
+        )
+
+        bottomSheet.setContentView(root)
+        bottomSheet.show()
+    }
+
+    private fun sendSticker(uri: Uri) {
+        chatMessageHandler.uploadFileToCloudinary(uri, "image")
+    }
+
+    private fun saveStickerUri(uri: Uri) {
+        val stickers = loadSavedStickerUris()
+            .map { it.toString() }
+            .toMutableList()
+
+        val stickerUri = uri.toString()
+        if (!stickers.contains(stickerUri)) {
+            stickers.add(0, stickerUri)
+        }
+
+        while (stickers.size > MAX_SAVED_STICKERS) {
+            stickers.removeAt(stickers.lastIndex)
+        }
+
+        val json = JSONArray()
+        stickers.forEach { json.put(it) }
+        getSharedPreferences(STICKER_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_SAVED_STICKERS, json.toString())
+            .apply()
+    }
+
+    private fun removeStickerUri(uri: Uri) {
+        val stickerUri = uri.toString()
+        val stickers = loadSavedStickerUris()
+            .map { it.toString() }
+            .filterNot { it == stickerUri }
+
+        val json = JSONArray()
+        stickers.forEach { json.put(it) }
+        getSharedPreferences(STICKER_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_SAVED_STICKERS, json.toString())
+            .apply()
+    }
+
+    private fun confirmDeleteSticker(uri: Uri, onDeleted: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setTitle("Delete sticker?")
+            .setMessage("Remove this sticker from your saved stickers on this device.")
+            .setPositiveButton("Delete") { dialog, _ ->
+                removeStickerUri(uri)
+                dialog.dismiss()
+                onDeleted()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun loadSavedStickerUris(): List<Uri> {
+        val raw = getSharedPreferences(STICKER_PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_SAVED_STICKERS, null)
+            ?: return emptyList()
+
+        return runCatching {
+            val json = JSONArray(raw)
+            buildList {
+                for (index in 0 until json.length()) {
+                    json.optString(index)
+                        .takeIf { it.isNotBlank() }
+                        ?.let { add(Uri.parse(it)) }
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
+    }
+
+    private inner class StickerTrayAdapter(
+        private val stickers: List<Uri>,
+        private val onAddSticker: () -> Unit,
+        private val onSendSticker: (Uri) -> Unit,
+        private val onDeleteSticker: (Uri) -> Unit
+    ) : RecyclerView.Adapter<StickerTrayAdapter.StickerViewHolder>() {
+
+        override fun getItemCount(): Int = stickers.size + 1
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StickerViewHolder {
+            val frame = FrameLayout(parent.context).apply {
+                layoutParams = RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(82)
+                ).apply {
+                    setMargins(dp(4), dp(4), dp(4), dp(4))
+                }
+            }
+
+            val image = ImageView(parent.context).apply {
+                id = View.generateViewId()
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                background = ContextCompat.getDrawable(parent.context, R.drawable.bg_chat_header_icon_button)
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+            }
+
+            frame.addView(
+                image,
+                FrameLayout.LayoutParams(dp(72), dp(72), Gravity.CENTER)
+            )
+            return StickerViewHolder(frame, image)
+        }
+
+        override fun onBindViewHolder(holder: StickerViewHolder, position: Int) {
+            if (position == 0) {
+                holder.image.setImageResource(R.drawable.ic_add)
+                holder.image.setColorFilter(ContextCompat.getColor(this@ChatActivity, R.color.yenkasa_emerald))
+                holder.itemView.setOnClickListener { onAddSticker() }
+                holder.itemView.setOnLongClickListener(null)
+                return
+            }
+
+            val stickerUri = stickers[position - 1]
+            holder.image.clearColorFilter()
+            Glide.with(holder.image)
+                .load(stickerUri)
+                .placeholder(R.drawable.placeholder_image)
+                .error(R.drawable.error_image)
+                .into(holder.image)
+
+            holder.itemView.setOnClickListener { onSendSticker(stickerUri) }
+            holder.itemView.setOnLongClickListener {
+                onDeleteSticker(stickerUri)
+                true
+            }
+        }
+
+        inner class StickerViewHolder(
+            itemView: View,
+            val image: ImageView
+        ) : RecyclerView.ViewHolder(itemView)
     }
 
     private fun launchCameraCapture() {
@@ -622,7 +986,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             ?: chatThemePresets.first()
 
         if (preset.key == "default") {
-            chatRootLayout.background = ContextCompat.getDrawable(this, R.drawable.yenkasa_gradient)
+            chatRootLayout.background = ContextCompat.getDrawable(this, R.drawable.bg_chat_conversation_surface)
             return
         }
 
@@ -696,6 +1060,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun setupKeyboardAwareChatInput() {
         val messageInputLayout = findViewById<View>(R.id.messageInputLayout)
+        val emojiShortcut = findViewById<View>(R.id.buttonEmojiShortcut)
+        val stickerShortcut = findViewById<View>(R.id.buttonStickerShortcut)
         val originalRecyclerBottomPadding = recyclerView.paddingBottom
         var wasKeyboardVisible = false
 
@@ -711,6 +1077,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             messageInputLayout.translationY = translationY
             replyPreviewLayout.translationY = translationY
             attachMenu.translationY = translationY
+            emojiShortcut.translationY = translationY
+            stickerShortcut.translationY = translationY
             recyclerView.setPadding(
                 recyclerView.paddingLeft,
                 recyclerView.paddingTop,
@@ -1277,5 +1645,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         private const val MENU_VIEW_CONTACT = 2
         private const val MENU_MUTE_NOTIFICATIONS = 3
         private const val MENU_CLEAR_CHAT = 4
+        private const val STICKER_PREFS = "chat_stickers"
+        private const val KEY_SAVED_STICKERS = "saved_sticker_uris"
+        private const val MAX_SAVED_STICKERS = 36
     }
 }

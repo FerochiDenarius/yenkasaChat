@@ -5,149 +5,164 @@
     android:id="@+id/chatRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/yenkasa_gradient">
+    android:background="@drawable/bg_chat_conversation_surface">
 
-    <!-- Main layout with messages and input -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingTop="6dp">
 
-        <!-- Receiver Info Header -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/receiverHeaderLayout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/yenkasa_amber"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="6dp"
-            android:elevation="4dp">
+            android:layout_height="64dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/bg_chat_header_card"
+            android:elevation="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
-            <!-- Back Button -->
             <ImageView
                 android:id="@+id/imageViewBackButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_arrow_back"
-                app:tint="@color/yenkasa_black"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_chat_header_icon_button"
                 android:contentDescription="Back"
-                android:padding="12dp"
+                android:padding="10dp"
+                android:src="@drawable/ic_arrow_back"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:tint="@color/yenkasa_emerald" />
 
-            <!-- Receiver Profile Picture -->
             <de.hdodenhof.circleimageview.CircleImageView
                 android:id="@+id/imageViewReceiverPicture"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:layout_marginStart="8dp"
-                android:src="@drawable/ic_default_profile"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="10dp"
                 android:contentDescription="Receiver profile picture"
+                android:src="@drawable/ic_default_profile"
+                app:civ_border_color="@color/yenkasa_emerald"
+                app:civ_border_width="1dp"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toEndOf="@id/imageViewBackButton"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Receiver Name -->
             <TextView
                 android:id="@+id/textViewReceiverName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:layout_marginEnd="8dp"
-                tools:text="Receiver Name"
-                android:textColor="@color/yenkasa_black"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/feed_primary_text"
+                android:textSize="17sp"
+                app:layout_constraintBottom_toTopOf="@id/textViewOnlineStatus"
                 app:layout_constraintEnd_toStartOf="@+id/imageViewVideoCall"
-                app:layout_constraintTop_toTopOf="@id/imageViewReceiverPicture" />
+                app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
+                app:layout_constraintTop_toTopOf="@id/imageViewReceiverPicture"
+                app:layout_constraintVertical_chainStyle="packed"
+                tools:text="Qish" />
 
-            <!-- Status Indicator Dot -->
             <ImageView
                 android:id="@+id/imageViewStatusIndicator"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_marginTop="2dp"
-                android:src="@drawable/status_indicator_offline"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginStart="10dp"
                 android:contentDescription="Online status indicator"
-                app:layout_constraintStart_toStartOf="@id/textViewReceiverName"
-                app:layout_constraintTop_toBottomOf="@id/textViewReceiverName" />
+                android:src="@drawable/status_indicator_offline"
+                app:layout_constraintBottom_toBottomOf="@id/textViewOnlineStatus"
+                app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
+                app:layout_constraintTop_toTopOf="@id/textViewOnlineStatus" />
 
-            <!-- Online/Offline Text -->
             <TextView
                 android:id="@+id/textViewOnlineStatus"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                tools:text="Offline"
-                android:textColor="@color/yenkasa_black"
+                android:layout_marginStart="5dp"
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/yenkasa_emerald"
                 android:textSize="12sp"
-                app:layout_constraintStart_toEndOf="@id/imageViewStatusIndicator"
+                app:layout_constraintBottom_toBottomOf="@id/imageViewReceiverPicture"
                 app:layout_constraintEnd_toEndOf="@id/textViewReceiverName"
-                app:layout_constraintTop_toTopOf="@id/imageViewStatusIndicator"
-                app:layout_constraintBottom_toBottomOf="@id/imageViewStatusIndicator" />
+                app:layout_constraintStart_toEndOf="@id/imageViewStatusIndicator"
+                app:layout_constraintTop_toBottomOf="@id/textViewReceiverName"
+                tools:text="Online" />
 
-            <!-- More Options Button -->
-            <ImageView
-                android:id="@+id/imageViewMoreOptions"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_more_vert"
-                app:tint="@color/yenkasa_black"
-                android:contentDescription="More options"
-                android:padding="12dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
-
-            <!-- Video Call Button -->
             <ImageView
                 android:id="@+id/imageViewVideoCall"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_videocam"
-                app:tint="@color/yenkasa_black"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_chat_header_icon_button"
                 android:contentDescription="Video call"
-                android:padding="12dp"
+                android:padding="10dp"
+                android:src="@drawable/ic_videocam"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/imageViewCall"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:tint="@color/yenkasa_emerald" />
 
-            <!-- Call Button -->
             <ImageView
                 android:id="@+id/imageViewCall"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_call"
-                app:tint="@color/yenkasa_black"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_chat_header_icon_button"
                 android:contentDescription="Call"
-                android:padding="12dp"
+                android:padding="10dp"
+                android:src="@drawable/ic_call"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/imageViewMoreOptions"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:tint="@color/yenkasa_emerald" />
+
+            <ImageView
+                android:id="@+id/imageViewMoreOptions"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_chat_header_icon_button"
+                android:contentDescription="More options"
+                android:padding="10dp"
+                android:src="@drawable/ic_more_vert"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/yenkasa_emerald" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Messages RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerViewMessages"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:padding="4dp" />
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:paddingStart="12dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="56dp" />
 
-        <!-- Reply Preview Layout -->
         <RelativeLayout
             android:id="@+id/replyPreviewLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="6dp"
             android:background="@drawable/reply_view_background"
             android:padding="8dp"
             android:visibility="gone"
-            tools:visibility="visible"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp">
+            tools:visibility="visible">
 
             <ImageButton
                 android:id="@+id/buttonCancelReply"
@@ -156,9 +171,9 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Cancel reply"
                 android:src="@drawable/ic_close"
-                app:tint="#000000"
-                android:contentDescription="Cancel reply" />
+                app:tint="@color/feed_primary_text" />
 
             <TextView
                 android:id="@+id/textViewRepliedToName"
@@ -166,8 +181,8 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/buttonCancelReply"
+                android:textColor="@color/yenkasa_emerald"
                 android:textStyle="bold"
-                android:textColor="@color/yellowAccent"
                 tools:text="Replying to John Doe" />
 
             <TextView
@@ -177,152 +192,267 @@
                 android:layout_below="@id/textViewRepliedToName"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@id/buttonCancelReply"
-                android:maxLines="1"
                 android:ellipsize="end"
-                android:textColor="#000000"
+                android:maxLines="1"
+                android:textColor="@color/feed_primary_text"
                 tools:text="This is the message being replied to..." />
         </RelativeLayout>
 
-        <!-- Message Input Area -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/mediaPreviewLayout"
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/bg_chat_header_card"
+            android:elevation="6dp"
+            android:padding="10dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <FrameLayout
+                android:id="@+id/mediaPreviewFrame"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:background="@drawable/bg_feed_media"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <ImageView
+                    android:id="@+id/imageMediaPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="Selected media preview"
+                    android:scaleType="centerCrop"
+                    tools:src="@drawable/placeholder_image" />
+
+                <TextView
+                    android:id="@+id/textMediaPreviewPlay"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_chat_floating_sticker"
+                    android:gravity="center"
+                    android:text="▶"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/textMediaPreviewTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/feed_primary_text"
+                android:textSize="15sp"
+                app:layout_constraintBottom_toTopOf="@id/textMediaPreviewSubtitle"
+                app:layout_constraintEnd_toStartOf="@id/buttonCancelMediaPreview"
+                app:layout_constraintStart_toEndOf="@id/mediaPreviewFrame"
+                app:layout_constraintTop_toTopOf="@id/mediaPreviewFrame"
+                app:layout_constraintVertical_chainStyle="packed"
+                tools:text="Photo ready" />
+
+            <TextView
+                android:id="@+id/textMediaPreviewSubtitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="8dp"
+                android:text="Tap send when ready"
+                android:textColor="@color/feed_secondary_text"
+                android:textSize="12sp"
+                app:layout_constraintBottom_toBottomOf="@id/mediaPreviewFrame"
+                app:layout_constraintEnd_toStartOf="@id/buttonCancelMediaPreview"
+                app:layout_constraintStart_toEndOf="@id/mediaPreviewFrame"
+                app:layout_constraintTop_toBottomOf="@id/textMediaPreviewTitle" />
+
+            <ImageButton
+                android:id="@+id/buttonCancelMediaPreview"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_chat_header_icon_button"
+                android:contentDescription="Remove selected media"
+                android:padding="10dp"
+                android:src="@drawable/ic_close"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/yenkasa_emerald" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
         <LinearLayout
             android:id="@+id/messageInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_chat_composer_bar"
+            android:elevation="8dp"
+            android:gravity="center_vertical"
+            android:minHeight="58dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="12dp"
-            android:background="@color/white"
-            android:gravity="center_vertical">
+            android:paddingStart="8dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="6dp">
 
-            <!-- Toggle Attachment Menu Button -->
             <ImageButton
                 android:id="@+id/buttonToggleAttachMenu"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_attach"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_chat_attach_button"
                 android:contentDescription="Attach"
-                android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
-                app:tint="@color/yenkasa_black" />
+                android:src="@drawable/ic_add"
+                app:tint="@color/yenkasa_emerald" />
 
-            <!-- Message EditText -->
-            <!-- Message EditText -->
             <xyz.yenkasa.app.ui.RichContentEditText
                 android:id="@+id/editTextMessage"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Type a message"
-                android:inputType="textMultiLine|textCapSentences"
-                android:maxLines="5"
-                android:minHeight="48dp"
-                android:background="@drawable/message_input_bg"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
-                android:textColor="#000000"
-                android:textSize="16sp"
-                android:gravity="top|start"
-                android:scrollbars="vertical" />
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:gravity="center_vertical|start"
+                android:hint="Type a message..."
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="5"
+                android:minHeight="42dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:scrollbars="vertical"
+                android:textColor="@color/feed_primary_text"
+                android:textColorHint="@color/feed_secondary_text"
+                android:textSize="15sp" />
 
-            <!-- Microphone Button -->
             <ImageButton
                 android:id="@+id/btnMic"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_mic"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_chat_floating_sticker"
                 android:contentDescription="Record Audio"
-                android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
-                android:layout_marginStart="4dp"
-                app:tint="@color/yenkasa_black" />
+                android:src="@drawable/ic_mic"
+                app:tint="@color/white" />
 
-            <!-- Send Button -->
             <ImageButton
                 android:id="@+id/btnSend"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_send"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_chat_floating_sticker"
                 android:contentDescription="Send Message"
-                android:visibility="gone"
-                tools:visibility="visible"
-                android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
-                android:layout_marginStart="4dp"
-                app:tint="@color/yenkasa_black" />
-
+                android:src="@drawable/ic_send"
+                android:visibility="gone"
+                app:tint="@color/white"
+                tools:visibility="visible" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Vertical Popup Attachment Menu -->
+    <ImageButton
+        android:id="@+id/buttonEmojiShortcut"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="18dp"
+        android:layout_marginBottom="82dp"
+        android:background="@drawable/bg_chat_floating_emoji"
+        android:contentDescription="Emoji"
+        android:elevation="6dp"
+        android:padding="10dp"
+        android:src="@drawable/ic_emoji"
+        app:tint="@color/yenkasa_emerald" />
+
+    <ImageButton
+        android:id="@+id/buttonStickerShortcut"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="82dp"
+        android:background="@drawable/bg_chat_floating_sticker"
+        android:contentDescription="Stickers"
+        android:elevation="6dp"
+        android:padding="10dp"
+        android:src="@drawable/ic_image"
+        app:tint="@color/white" />
+
     <LinearLayout
         android:id="@+id/attachmentMenu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:visibility="visible"
-        android:background="@drawable/rounded_popup_bg"
-        android:padding="6dp"
         android:layout_gravity="bottom|start"
-        android:layout_marginBottom="64dp"
-        android:layout_marginStart="8dp"
-        android:elevation="6dp">
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="70dp"
+        android:background="@drawable/rounded_popup_bg"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="6dp"
+        android:visibility="gone"
+        tools:visibility="visible">
 
         <ImageButton
             android:id="@+id/buttonAttachImage"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_image"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Image"
-            app:tint="@color/yenkasa_black" />
+            android:src="@drawable/ic_image"
+            app:tint="@color/yenkasa_emerald" />
 
         <ImageButton
             android:id="@+id/buttonAttachVideo"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_video"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Video"
-            app:tint="@color/yenkasa_black" />
+            android:src="@drawable/ic_video"
+            app:tint="@color/yenkasa_emerald" />
 
         <ImageButton
             android:id="@+id/buttonAttachCamera"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_camera"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Camera"
-            app:tint="@color/yenkasa_black" />
+            android:src="@drawable/ic_camera"
+            app:tint="@color/yenkasa_emerald" />
 
         <ImageButton
             android:id="@+id/buttonAttachFile"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_attach_file"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:background="@android:color/transparent"
             android:contentDescription="Attach File"
-            app:tint="@color/yenkasa_black" />
+            android:src="@drawable/ic_attach_file"
+            app:tint="@color/yenkasa_emerald" />
 
         <ImageButton
             android:id="@+id/buttonAttachLocation"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_location"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Location"
-            app:tint="@color/yenkasa_black" />
+            android:src="@drawable/ic_location"
+            app:tint="@color/yenkasa_emerald" />
 
         <ImageButton
             android:id="@+id/buttonAttachContact"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_contact"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:background="@android:color/transparent"
             android:contentDescription="Attach Contact"
-            app:tint="@color/yenkasa_black" />
+            android:src="@drawable/ic_contact"
+            app:tint="@color/yenkasa_emerald" />
 
     </LinearLayout>
 

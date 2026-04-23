@@ -9,6 +9,7 @@ const verifyToken = require("../middleware/auth");
 const rewardService = require('../services/reward.service');
 const UserPrivacy = require("../models/userPrivacy.model");
 const { sendNotification } = require("../services/notification.service");
+const AppVerification = require("../models/appverification.model");
 
 
 async function isBlocked(userA, userB) {
@@ -44,6 +45,23 @@ function emitFeedUpdate(req, type, payload = {}) {
     if (io) io.emit("feedUpdate", { type, ...payload });
   } catch (err) {
     console.error("⚠️ Socket emit error:", err.message);
+  }
+}
+
+async function updatePostOwnerLikeMetrics(ownerId, likeCount) {
+  try {
+    let appVerification = await AppVerification.findOne({ userId: ownerId });
+    if (!appVerification) {
+      appVerification = new AppVerification({ userId: ownerId });
+    }
+
+    appVerification.metrics.maxLikesOnPost = Math.max(
+      Number(appVerification.metrics.maxLikesOnPost || 0),
+      Number(likeCount || 0)
+    );
+    await appVerification.save();
+  } catch (err) {
+    console.error("⚠️ Failed to update owner like verification metrics:", err.message);
   }
 }
 
@@ -144,6 +162,8 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
      * 🎁 REWARD for LIKE ONLY (not unlike)
      * ------------------------------------ */
     if (!alreadyLiked && likedByUser) {
+      await updatePostOwnerLikeMetrics(postOwnerId, updatedPost.likeCount);
+
       await rewardService.reward(userId, REWARD_LIKE, {
         fromUserId: postOwnerId,
         type: "REWARD_POST_LIKE",

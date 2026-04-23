@@ -7,6 +7,7 @@ import android.widget.Toast
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.PostNotificationSender
+import xyz.yenkasa.app.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -57,6 +58,24 @@ object FeedUtils {
     // 🔹 Share post
     fun sharePost(context: Context, post: Post) {
         try {
+            TokenManager.getToken(context)?.takeIf { it.isNotBlank() }?.let { token ->
+                ApiClient.apiService.recordPostShare(post._id, "Bearer $token")
+                    .enqueue(object : Callback<GenericResponse> {
+                        override fun onResponse(
+                            call: Call<GenericResponse>,
+                            response: Response<GenericResponse>
+                        ) {
+                            if (!response.isSuccessful) {
+                                Log.w("FeedUtils", "Failed to record share for ${post._id}: ${response.code()}")
+                            }
+                        }
+
+                        override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                            Log.w("FeedUtils", "Failed to record share for ${post._id}: ${t.message}")
+                        }
+                    })
+            }
+
             val shareIntent = Intent(Intent.ACTION_SEND)
             shareIntent.type = "text/plain"
             shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post on Yenkasa")

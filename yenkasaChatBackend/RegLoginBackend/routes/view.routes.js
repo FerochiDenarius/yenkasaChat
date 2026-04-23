@@ -146,7 +146,7 @@ switch (mediaType) {
 const ownerActivityId = `owner_${activityId}`;
 
       await rewardService.reward(ownerId, 1, {
-        type: "REWARD_POST_VIEW",
+        type: "REWARD_POST_VIEW_RECEIVED",
         description: "Earned 1 YKC for receiving a view",
         relatedPostId: postId,
         activityId: ownerActivityId

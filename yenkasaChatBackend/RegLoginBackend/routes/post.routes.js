@@ -701,6 +701,61 @@ router.post("/:postId/hide", authMiddleware, async (req, res) => {
   }
 });
 
+// -----------------------------------------------
+// SHARE POST (record a real share before opening OS share sheet)
+// -----------------------------------------------
+router.post("/:postId/share", authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user.id;
+
+    const post = await Post.findById(postId).select("userId shareCount");
+    if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+
+    const ownerId = post.userId.toString();
+    if (await isBlocked(userId, ownerId)) {
+      return res.status(403).json({ success: false, message: "Action blocked by privacy settings" });
+    }
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $inc: { shareCount: 1 } },
+      { new: true, select: "_id shareCount userId" }
+    ).lean();
+
+    try {
+      const AppVerification = require("../models/appverification.model");
+      let appVerification = await AppVerification.findOne({ userId: ownerId });
+      if (!appVerification) {
+        appVerification = new AppVerification({ userId: ownerId });
+      }
+      appVerification.metrics.totalShares = Number(appVerification.metrics.totalShares || 0) + 1;
+      await appVerification.save();
+    } catch (metricErr) {
+      console.error("⚠️ Failed to update share verification metric:", metricErr.message);
+    }
+
+    if (global.io) {
+      global.io.emit("feedUpdate", {
+        type: "post_shared",
+        postId,
+        shareCount: updatedPost?.shareCount || 0,
+        userId,
+        timestamp: new Date()
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Share recorded",
+      shareCount: updatedPost?.shareCount || 0
+    });
+  } catch (err) {
+    console.error("❌ Share tracking failed:", err);
+    res.status(500).json({ success: false, error: "Failed to record share" });
+  }
+});
+
 
 // -----------------------------------------------
 // DOWNLOAD MEDIA (just returns the media URL)

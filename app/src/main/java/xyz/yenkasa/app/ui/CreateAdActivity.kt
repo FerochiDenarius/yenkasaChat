@@ -20,7 +20,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.File
 
@@ -231,32 +233,35 @@ class CreateAdActivity : AppCompatActivity() {
                 val videoPart = videoUri?.let { prepareFilePart("video", it) }
                 val thumbPart = thumbUri?.let { prepareFilePart("thumbnail", it) }
 
-                val request = MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("title", title)
-                    .addFormDataPart("ctaText", ctaText)
-                    .addFormDataPart("ctaUrl", ctaUrl)
-                    .addFormDataPart("rewardAmount", reward.toString())
-                    .addFormDataPart("rewardYKC", reward.toString())
-                    .addFormDataPart("adType", "sponsor")
-                    .addFormDataPart("scope", "global")
-                    .addFormDataPart("communityScope", "all")
-                    .apply {
-                        if (imagePart != null) addPart(imagePart)
-                        if (videoPart != null) addPart(videoPart)
-                        if (thumbPart != null) addPart(thumbPart)
-                    }
-                    .build()
-
                 var response = ApiClient.apiService.createSponsoredAd(
                     "Bearer $token",
-                    request
+                    textPart(title),
+                    textPart(ctaText),
+                    textPart(ctaUrl),
+                    textPart(reward.toString()),
+                    textPart(reward.toString()),
+                    textPart("sponsor"),
+                    textPart("global"),
+                    textPart("all"),
+                    imagePart,
+                    videoPart,
+                    thumbPart
                 ).execute()
 
                 if (response.code() == 404 || response.code() == 405) {
                     response = ApiClient.apiService.createSponsoredAdFallback(
                         "Bearer $token",
-                        request
+                        textPart(title),
+                        textPart(ctaText),
+                        textPart(ctaUrl),
+                        textPart(reward.toString()),
+                        textPart(reward.toString()),
+                        textPart("sponsor"),
+                        textPart("global"),
+                        textPart("all"),
+                        imagePart,
+                        videoPart,
+                        thumbPart
                     ).execute()
                 }
 
@@ -289,6 +294,10 @@ class CreateAdActivity : AppCompatActivity() {
         val request = file.asRequestBody(mime.toMediaTypeOrNull())
 
         return MultipartBody.Part.createFormData(fieldName, file.name, request)
+    }
+
+    private fun textPart(value: String): RequestBody {
+        return value.toRequestBody("text/plain".toMediaTypeOrNull())
     }
 
     private fun showToast(msg: String) {

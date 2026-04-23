@@ -127,12 +127,53 @@ const fs = require('fs');
 exports.createAd = async (req, res) => {
   try {
     const userId = req.user.id;
+    const user = await User.findById(userId).select("role roleName").lean();
+    const normalizedRole = String(
+      user?.roleName ||
+      req.user?.roleName ||
+      user?.role?.name ||
+      req.user?.role?.name ||
+      user?.role ||
+      req.user?.role ||
+      ""
+    ).trim().toLowerCase().replace(/\s+/g, "_");
+
+    const allowedRoles = new Set([
+      "moderator",
+      "developer",
+      "junior_developer",
+      "senior_developer"
+    ]);
+
+    if (!allowedRoles.has(normalizedRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only moderators and developers can create sponsored ads."
+      });
+    }
+
+    if (!req.body) {
+      console.warn("⚠️ createAd missing parsed body", {
+        contentType: req.headers["content-type"],
+        hasFiles: Boolean(req.files),
+        fileFields: req.files ? Object.keys(req.files) : []
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Request body is missing. Send multipart/form-data with title and media fields."
+      });
+    }
 
     const {
       title,
       ctaText,
       ctaUrl,
-      rewardAmount
+      rewardAmount,
+      rewardYKC,
+      adType,
+      scope,
+      communityScope
     } = req.body;
 
     if (!title) {
@@ -144,26 +185,40 @@ exports.createAd = async (req, res) => {
 
     const adData = {
       title,
-      rewardYKC: Number(rewardAmount) || 5,
+      rewardYKC: Number(rewardAmount || rewardYKC) || 5,
       sponsorId: userId,
-      adType: 'sponsor',
+      adType: adType || 'sponsor',
+      isActive: true,
       meta: {
         ctaText,
-        ctaUrl
+        ctaUrl,
+        scope: scope || "global",
+        communityScope: communityScope || "all"
       }
     };
 
     // files come from multer
-    if (req.files?.image) {
-      adData.imageUrl = `/uploads/${req.files.image[0].filename}`;
+    const imageFile = req.files?.image?.[0] || req.files?.imageUrl?.[0];
+    const videoFile = req.files?.video?.[0] || req.files?.videoUrl?.[0] || req.files?.media?.[0];
+    const thumbnailFile = req.files?.thumbnail?.[0] || req.files?.customThumbnail?.[0];
+
+    if (imageFile) {
+      adData.imageUrl = `/uploads/${imageFile.filename}`;
     }
 
-    if (req.files?.video) {
-      adData.videoUrl = `/uploads/${req.files.video[0].filename}`;
+    if (videoFile) {
+      adData.videoUrl = `/uploads/${videoFile.filename}`;
     }
 
-    if (req.files?.thumbnail) {
-      adData.meta.thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
+    if (thumbnailFile) {
+      adData.meta.thumbnail = `/uploads/${thumbnailFile.filename}`;
+    }
+
+    if (!adData.imageUrl && !adData.videoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Select an image or video for the ad"
+      });
     }
 
     const ad = await Ad.create(adData);

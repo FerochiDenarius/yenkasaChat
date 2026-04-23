@@ -5,7 +5,11 @@ const path = require("path");
 // STORAGE (local disk)
 // ==========================
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => {
+    const fs = require("fs");
+    fs.mkdirSync("uploads/", { recursive: true });
+    cb(null, "uploads/");
+  },
   filename: (req, file, cb) =>
     cb(
       null,
@@ -43,9 +47,25 @@ const profileImageUpload = multer({
 }).single("profileImage");
 
 // ==========================
+// EXPORT 3: uploadAdFiles() -> sponsored ads
+// ==========================
+function uploadAdFiles() {
+  return multer({ storage, fileFilter }).fields([
+    { name: "image", maxCount: 1 },
+    { name: "imageUrl", maxCount: 1 },
+    { name: "video", maxCount: 1 },
+    { name: "videoUrl", maxCount: 1 },
+    { name: "media", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+    { name: "customThumbnail", maxCount: 1 }
+  ]);
+}
+
+// ==========================
 // EXPORT BOTH
 // ==========================
 module.exports = {
   uploadFiles,
-  profileImageUpload
+  profileImageUpload,
+  uploadAdFiles
 };

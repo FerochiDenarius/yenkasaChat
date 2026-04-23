@@ -99,7 +99,15 @@ class AppVerificationActivity : AppCompatActivity() {
         btnAdvance = findViewById(R.id.btnAdvance)
         btnAdvance.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-            checkPhaseAdvancement()
+            if (dashboardData?.appVerification?.progress?.allMet == true) {
+                checkPhaseAdvancement()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Ranks unlock as you complete the milestones below.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
 
         findViewById<ImageButton>(R.id.btnVerificationBack).setOnClickListener { finish() }
@@ -250,7 +258,8 @@ class AppVerificationActivity : AppCompatActivity() {
 
     private fun updateAdvancePhaseButton() {
         val met = dashboardData?.appVerification?.progress?.allMet == true
-        btnAdvance.visibility = if (met) View.VISIBLE else View.GONE
+        btnAdvance.visibility = View.VISIBLE
+        btnAdvance.text = if (met) "Advance" else "View all ranks"
     }
 
     private fun checkPhaseAdvancement() {

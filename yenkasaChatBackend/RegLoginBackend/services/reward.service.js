@@ -166,11 +166,8 @@ const tx = await CoinTransaction.create({
   // POST LIKES RECEIVED
   // ============================
   case "REWARD_POST_LIKE":
-    ver.metrics.totalLikesReceived += 1;
-    ver.metrics.maxLikesOnPost = Math.max(
-      ver.metrics.maxLikesOnPost,
-      1
-    );
+    // This reward is paid to the user who liked a post. The post owner's
+    // received-like metrics are updated from the post aggregate source.
     break;
 
       // ============================
@@ -191,11 +188,6 @@ const tx = await CoinTransaction.create({
         // ============================
   // REWARD POST VIEW RECEIVED
   // ============================
-
-  case "REWARD_POST_VIEW_RECEIVED":
-  ver.metrics.totalViewsReceived += 1;
-  break;
-
 
   case "REWARD_POST_REJECTED":
   if (!ver.metrics.postsModerated) ver.metrics.postsModerated = 0;
@@ -235,6 +227,11 @@ const tx = await CoinTransaction.create({
   // FOLLOWER GROWTH
   // ============================
   case "REWARD_FOLLOW":
+    // This reward is paid to the follower. Followers received belongs to
+    // the target user and is handled by REWARD_FOLLOW_RECEIVED.
+    break;
+
+  case "REWARD_FOLLOW_RECEIVED":
     ver.metrics.totalFollowers += 1;
     break;
 

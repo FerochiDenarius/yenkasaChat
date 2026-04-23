@@ -16,6 +16,7 @@ import androidx.lifecycle.Observer
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.LoginRequest
 import xyz.yenkasa.app.model.LoginResponse
+import xyz.yenkasa.app.model.TrackLoginResponse
 import com.google.android.material.textfield.TextInputEditText
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.OneSignalHelper
@@ -225,6 +226,7 @@ class LoginActivity : AppCompatActivity() {
 
                     TokenManager.saveToken(this@LoginActivity, token)
                     if (refreshToken != null) TokenManager.saveRefreshToken(this@LoginActivity, refreshToken)
+                    trackDailyLogin(token)
 
                     userViewModel.saveLoggedInMongoDbUserIdToTokenManager(user._id)
 
@@ -277,5 +279,23 @@ class LoginActivity : AppCompatActivity() {
 
     private fun shakeCard() {
         loginCard.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake))
+    }
+
+    private fun trackDailyLogin(token: String) {
+        ApiClient.apiService.trackLogin("Bearer $token")
+            .enqueue(object : Callback<TrackLoginResponse> {
+                override fun onResponse(
+                    call: Call<TrackLoginResponse>,
+                    response: Response<TrackLoginResponse>
+                ) {
+                    if (!response.isSuccessful) {
+                        Log.w("LoginActivity", "Daily login tracking failed: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<TrackLoginResponse>, t: Throwable) {
+                    Log.w("LoginActivity", "Daily login tracking failed: ${t.message}")
+                }
+            })
     }
 }

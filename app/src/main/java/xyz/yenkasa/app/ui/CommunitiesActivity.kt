@@ -9,7 +9,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
@@ -21,6 +20,7 @@ import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
@@ -31,8 +31,10 @@ class CommunitiesActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private val joinedCommunityIds = mutableSetOf<String>()
 
-    private fun Community.isUserMember(): Boolean {
-        return this.id?.let { joinedCommunityIds.contains(it) } ?: false
+    private fun Community.isCurrentUserMember(): Boolean {
+        return this.id?.let { joinedCommunityIds.contains(it) } == true ||
+            this.id == primaryCommunityId ||
+            this.isUserMember()
     }
     private lateinit var searchView: SearchView
     private lateinit var fabCreateCommunity: FloatingActionButton
@@ -47,10 +49,16 @@ class CommunitiesActivity : AppCompatActivity() {
     private var primaryCommunityId: String? = null
 
     // ✅ ONLY views that exist in your XML
+    private lateinit var tabMyCommunities: TextView
+    private lateinit var tabAllCommunities: TextView
+    private lateinit var layoutMyCommunitiesHeader: View
+    private lateinit var layoutDiscoverHeader: View
     private lateinit var textJoinedCommunitiesTitle: TextView
-    private lateinit var textAllCommunitiesTitle: TextView
+    private lateinit var textPopularCategoriesTitle: TextView
+    private lateinit var layoutPopularCategories: View
     private lateinit var dividerAfterJoined: View
     private lateinit var recyclerJoinedCommunities: RecyclerView
+    private var showingMyCommunities = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,6 +81,8 @@ class CommunitiesActivity : AppCompatActivity() {
         setupRecyclerView()
         setupJoinedCommunitiesRecyclerView() // Setup joined communities
         setupSearch()
+        setupCommunityTabs()
+        setupBottomNavigation()
         loadCommunities()
         loadJoinedCommunities() // Load user's joined communities
         loadUserPrimaryCommunity()
@@ -81,10 +91,7 @@ class CommunitiesActivity : AppCompatActivity() {
         // Connect adapter's "View" button click
         adapter.onCommunitySelected = { community ->
             Log.d("CommunitiesActivity", "Community selected: ${community.displayName}")
-            val intent = Intent(this, MainActivity::class.java)
-            intent.putExtra("communityId", community.id)
-            intent.putExtra("communityName", community.displayName)
-            startActivity(intent)
+            showCommunityDialog(community)
         }
 
     }
@@ -97,23 +104,64 @@ class CommunitiesActivity : AppCompatActivity() {
         emptyView = findViewById(R.id.textEmptyCommunities)
 
         // ✅ ONLY initialize views that exist in XML
+        tabMyCommunities = findViewById(R.id.tabMyCommunities)
+        tabAllCommunities = findViewById(R.id.tabAllCommunities)
+        layoutMyCommunitiesHeader = findViewById(R.id.layoutMyCommunitiesHeader)
+        layoutDiscoverHeader = findViewById(R.id.layoutDiscoverHeader)
         textJoinedCommunitiesTitle = findViewById(R.id.textJoinedCommunitiesTitle)
-        textAllCommunitiesTitle = findViewById(R.id.textAllCommunitiesTitle)
+        textPopularCategoriesTitle = findViewById(R.id.textPopularCategoriesTitle)
+        layoutPopularCategories = findViewById(R.id.layoutPopularCategories)
         dividerAfterJoined = findViewById(R.id.dividerAfterJoined)
         recyclerJoinedCommunities = findViewById(R.id.recyclerJoinedCommunities)
 
         recyclerView.isNestedScrollingEnabled = false
-        recyclerJoinedCommunities.isNestedScrollingEnabled = true
+        recyclerView.clipToPadding = false
+        recyclerJoinedCommunities.isNestedScrollingEnabled = false
 
+    }
+
+    private fun setupCommunityTabs() {
+        tabMyCommunities.setOnClickListener { setCommunityMode(showMy = true) }
+        tabAllCommunities.setOnClickListener { setCommunityMode(showMy = false) }
+        setCommunityMode(showMy = true)
+    }
+
+    private fun setCommunityMode(showMy: Boolean) {
+        showingMyCommunities = showMy
+
+        tabMyCommunities.setBackgroundResource(
+            if (showMy) R.drawable.bg_community_tab_selected else android.R.color.transparent
+        )
+        tabMyCommunities.setTextColor(
+            getColor(if (showMy) R.color.yenkasa_black else R.color.account_secondary_text)
+        )
+
+        tabAllCommunities.setBackgroundResource(
+            if (showMy) android.R.color.transparent else R.drawable.bg_community_tab_selected
+        )
+        tabAllCommunities.setTextColor(
+            getColor(if (showMy) R.color.account_secondary_text else R.color.yenkasa_black)
+        )
+
+        updateJoinedSectionVisibility()
+        layoutDiscoverHeader.visibility = View.VISIBLE
+        recyclerView.visibility = if (communities.isEmpty()) View.GONE else View.VISIBLE
+        textPopularCategoriesTitle.visibility = View.VISIBLE
+        layoutPopularCategories.visibility = View.VISIBLE
+    }
+
+    private fun updateJoinedSectionVisibility() {
+        val showJoined = showingMyCommunities && joinedCommunities.isNotEmpty()
+        layoutMyCommunitiesHeader.visibility = if (showJoined) View.VISIBLE else View.GONE
+        recyclerJoinedCommunities.visibility = if (showJoined) View.VISIBLE else View.GONE
+        dividerAfterJoined.visibility = if (showJoined) View.VISIBLE else View.GONE
+        textJoinedCommunitiesTitle.text = "My Communities (${joinedCommunities.size})"
+        tabMyCommunities.text = "My Communities (${joinedCommunities.size})"
     }
 
     private fun setupJoinedCommunitiesRecyclerView() {
         joinedAdapter = JoinedCommunityAdapter(joinedCommunities) { community ->
-            // Handle click on joined community - navigate to feed
-            val intent = Intent(this, MainActivity::class.java)
-            intent.putExtra("communityId", community.id)
-            intent.putExtra("communityName", community.displayName)
-            startActivity(intent)
+            showCommunityDialog(community)
         }
 
         recyclerJoinedCommunities.layoutManager = LinearLayoutManager(this)
@@ -161,37 +209,20 @@ class CommunitiesActivity : AppCompatActivity() {
                         // Refresh main adapter to update button states
                         adapter.notifyDataSetChanged()
 
-                        // Show/hide the joined communities section
-                        if (userCommunities.isNotEmpty()) {
-                            textJoinedCommunitiesTitle.visibility = View.VISIBLE
-                            recyclerJoinedCommunities.visibility = View.VISIBLE
-                            dividerAfterJoined.visibility = View.VISIBLE
-
-                            textJoinedCommunitiesTitle.text = "My Communities (${userCommunities.size})"
-                            Log.d("JOINED_DEBUG", "✅ Showing joined communities section with ${userCommunities.size} communities")
-                        } else {
-                            textJoinedCommunitiesTitle.visibility = View.GONE
-                            recyclerJoinedCommunities.visibility = View.GONE
-                            dividerAfterJoined.visibility = View.GONE
-                            Log.d("JOINED_DEBUG", "❌ Hiding joined communities section - no communities")
-                        }
+                        updateJoinedSectionVisibility()
+                        Log.d("JOINED_DEBUG", "✅ Joined communities section updated with ${userCommunities.size} communities")
                     } else {
                         Log.e("JOINED_DEBUG", "❌ API call failed: ${response.code()} - ${response.message()}")
                         if (response.errorBody() != null) {
                             Log.e("JOINED_DEBUG", "Error body: ${response.errorBody()!!.string()}")
                         }
-                        // Hide section on failure
-                        textJoinedCommunitiesTitle.visibility = View.GONE
-                        recyclerJoinedCommunities.visibility = View.GONE
-                        dividerAfterJoined.visibility = View.GONE
+                        updateJoinedSectionVisibility()
                     }
                 }
 
                 override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) { // FIXED
                     Log.e("JOINED_DEBUG", "❌ Network error: ${t.message}", t)
-                    textJoinedCommunitiesTitle.visibility = View.GONE
-                    recyclerJoinedCommunities.visibility = View.GONE
-                    dividerAfterJoined.visibility = View.GONE
+                    updateJoinedSectionVisibility()
                 }
             })
     }
@@ -241,11 +272,7 @@ class CommunitiesActivity : AppCompatActivity() {
                         Log.d("PRIMARY_COMMUNITY", "✅ Primary added to joinedCommunities at position 0")
                     }
 
-                    // Ensure joined section is visible
-                    textJoinedCommunitiesTitle.visibility = View.VISIBLE
-                    recyclerJoinedCommunities.visibility = View.VISIBLE
-                    dividerAfterJoined.visibility = View.VISIBLE
-                    textJoinedCommunitiesTitle.text = "My Communities (${joinedCommunities.size})"
+                    updateJoinedSectionVisibility()
 
                     Log.d(
                         "PRIMARY_COMMUNITY",
@@ -269,9 +296,7 @@ class CommunitiesActivity : AppCompatActivity() {
         }
 
         adapter.isCommunityJoined = { community ->
-            community.id?.let { joinedCommunityIds.contains(it) } == true ||
-                community.id == primaryCommunityId ||
-                community.isUserMember()
+            community.isCurrentUserMember()
         }
 
         adapter.onJoinCommunity = { community ->
@@ -311,7 +336,7 @@ class CommunitiesActivity : AppCompatActivity() {
             leaveCommunity(community)  // This will call your leave function
         }
 
-        recyclerView.layoutManager = GridLayoutManager(this, 2)
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         recyclerView.adapter = adapter
     }
 
@@ -414,8 +439,7 @@ class CommunitiesActivity : AppCompatActivity() {
                         communities.clear()
                         communities.addAll(allCommunities)
                         adapter.notifyDataSetChanged()
-                        textAllCommunitiesTitle.visibility = View.VISIBLE
-                        recyclerView.visibility = View.VISIBLE
+                        recyclerView.visibility = if (allCommunities.isEmpty()) View.GONE else View.VISIBLE
 
                         // Handle empty state
                         emptyView.visibility = if (allCommunities.isEmpty()) View.VISIBLE else View.GONE
@@ -488,31 +512,71 @@ class CommunitiesActivity : AppCompatActivity() {
     }
 
     private fun showCommunityDialog(community: Community) {
-        val isMember = community.isUserMember()
+        val isMember = community.isCurrentUserMember()
 
         val dialogBuilder = android.app.AlertDialog.Builder(this)
-            .setTitle(community.displayName)
+            .setTitle(community.displayName ?: community.name ?: "Community")
             .setMessage(
-                "${community.description}\n\n" +
-                        "📍 ${community.location ?: "Interest-based"}\n" +
-                        "👥 ${community.memberCount} members\n" +
-                        "📝 ${community.postCount} posts"
+                "${community.description.orEmpty().ifBlank { "No description yet." }}\n\n" +
+                        "Location: ${community.location ?: "Interest-based"}\n" +
+                        "Members: ${community.memberCount}\n" +
+                        "Posts: ${community.postCount}\n" +
+                        "Status: ${if (community.isApproved) "Approved" else "Pending approval"}"
             )
 
-        // Show appropriate button based on membership
-        if (isMember) {
-            dialogBuilder.setPositiveButton("Leave") { _, _ ->
-                leaveCommunity(community)
-            }
-        } else {
-            dialogBuilder.setPositiveButton("Join") { _, _ ->
-                joinCommunity(community)
+        dialogBuilder.setPositiveButton("View Feed") { _, _ ->
+            openCommunityFeed(community)
+        }
+
+        dialogBuilder.setNegativeButton(if (isMember) "Leave" else "Join") { _, _ ->
+            if (isMember) leaveCommunity(community) else joinCommunity(community)
+        }
+
+        if (canEditCommunity(community)) {
+            dialogBuilder.setNeutralButton("Edit") { _, _ ->
+                openEditCommunity(community)
             }
         }
 
-        dialogBuilder.setNegativeButton("Cancel", null)
         val dialog = dialogBuilder.create()
         dialog.show()
+    }
+
+    private fun openCommunityFeed(community: Community) {
+        val communityId = community.id
+        if (communityId.isNullOrBlank()) {
+            Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(this, MainActivity::class.java)
+        intent.putExtra("communityId", communityId)
+        intent.putExtra("communityName", community.displayName ?: community.name)
+        startActivity(intent)
+    }
+
+    private fun canEditCommunity(community: Community): Boolean {
+        val role = TokenManager.getUserRole(this)
+        val userId = TokenManager.getUserId(this)
+        val isCreator = !userId.isNullOrBlank() && community.createdById == userId
+        val isModerator = !userId.isNullOrBlank() && community.moderators.contains(userId)
+        return UserPermissions.canCreateCommunity(role) || isCreator || isModerator
+    }
+
+    private fun openEditCommunity(community: Community) {
+        val communityId = community.id
+        if (communityId.isNullOrBlank()) {
+            Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        startActivity(Intent(this, CreateCommunityActivity::class.java).apply {
+            putExtra("communityId", communityId)
+            putExtra("communityDisplayName", community.displayName ?: community.name.orEmpty())
+            putExtra("communityDescription", community.description.orEmpty())
+            putExtra("communityLocation", community.location.orEmpty())
+            putStringArrayListExtra("communityCategories", ArrayList(community.categories))
+            putExtra("communityIsPrivate", community.isPrivate)
+        })
     }
 
 
@@ -626,20 +690,17 @@ class CommunitiesActivity : AppCompatActivity() {
             .replace("\\s+".toRegex(), "_")
         val isVerified = TokenManager.isVerified(this)
 
-        // All roles allowed to bypass verification
-        val elevatedRoles = setOf("admin", "moderator", "developer", "senior_developer", "junior_developer")
-
         val btnCreateCommunity = findViewById<View>(R.id.btnCreateCommunity)
 
         val launchCreateCommunity = {
-            val hasRolePrivilege = elevatedRoles.contains(userRole)
+            val hasRolePrivilege = UserPermissions.canCreateCommunity(userRole)
 
             if (hasRolePrivilege || isVerified) {
                 startActivity(Intent(this, CreateCommunityActivity::class.java))
             } else {
                 Toast.makeText(
                     this,
-                    "You must be verified or have a privileged role to create a community.",
+                    "You need a privileged role or verified creator access to create a community.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -647,6 +708,27 @@ class CommunitiesActivity : AppCompatActivity() {
 
         btnCreateCommunity.setOnClickListener { launchCreateCommunity() }
         fabCreateCommunity.setOnClickListener { launchCreateCommunity() }
+    }
+
+    private fun setupBottomNavigation() {
+        findViewById<View>(R.id.navCommunityHome).setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            })
+            finish()
+        }
+        findViewById<View>(R.id.navCommunityWallet).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
+        findViewById<View>(R.id.navCommunitySend).setOnClickListener {
+            startActivity(Intent(this, CreateTransactionActivity::class.java))
+        }
+        findViewById<View>(R.id.navCommunityReceive).setOnClickListener {
+            startActivity(Intent(this, CreateTransactionActivity::class.java).putExtra("action", "receive"))
+        }
+        findViewById<View>(R.id.navCommunityProfile).setOnClickListener {
+            startActivity(Intent(this, AccountInfoActivity::class.java))
+        }
     }
 
     private fun showLoading(show: Boolean) {

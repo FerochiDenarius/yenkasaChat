@@ -1,48 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="132dp"
-    android:layout_margin="4dp"
+    android:layout_width="104dp"
+    android:layout_height="128dp"
+    android:layout_marginEnd="8dp"
     app:cardBackgroundColor="@color/account_surface"
     app:cardCornerRadius="8dp"
-    app:cardElevation="0dp">
+    app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="6dp">
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="42dp">
+            android:layout_height="40dp"
+            android:background="@drawable/bg_community_icon_tile">
 
             <ImageView
                 android:id="@+id/imageCommunityIcon"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_gravity="start|center_vertical"
-                android:background="@drawable/bg_community_icon_tile"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
                 android:contentDescription="Community icon"
-                android:padding="8dp"
+                android:padding="6dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_community_placeholder" />
 
             <TextView
                 android:id="@+id/editCategories"
                 android:layout_width="wrap_content"
-                android:layout_height="20dp"
+                android:layout_height="18dp"
                 android:layout_gravity="end|top"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="2dp"
                 android:background="@drawable/bg_community_category_chip"
                 android:ellipsize="end"
                 android:gravity="center"
                 android:maxLines="1"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
                 android:text="New"
                 android:textColor="@color/account_primary_text"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:textStyle="bold" />
         </FrameLayout>
 
@@ -50,12 +52,12 @@
             android:id="@+id/textCommunityName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Community Name"
             android:textColor="@color/account_primary_text"
-            android:textSize="13sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
@@ -74,12 +76,12 @@
             android:id="@+id/textMemberCount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="0 members"
             android:textColor="@color/account_secondary_text"
-            android:textSize="11sp" />
+            android:textSize="9sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -91,7 +93,7 @@
             <Button
                 android:id="@+id/btnJoinCommunity"
                 android:layout_width="0dp"
-                android:layout_height="30dp"
+                android:layout_height="26dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_community_join_button"
                 android:backgroundTint="@null"
@@ -102,13 +104,13 @@
                 android:text="Join"
                 android:textAllCaps="false"
                 android:textColor="@color/account_accent_green"
-                android:textSize="11sp"
+                android:textSize="9sp"
                 android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnLeaveCommunity"
                 android:layout_width="0dp"
-                android:layout_height="30dp"
+                android:layout_height="26dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_community_leave_button"
                 android:backgroundTint="@null"
@@ -119,14 +121,14 @@
                 android:text="Leave"
                 android:textAllCaps="false"
                 android:textColor="@color/account_danger"
-                android:textSize="11sp"
+                android:textSize="9sp"
                 android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnViewCommunity"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_marginStart="6dp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="4dp"
                 android:background="@drawable/bg_account_circle_button"
                 android:backgroundTint="@null"
                 android:includeFontPadding="false"

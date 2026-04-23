@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_almost"
+    android:background="#0B1110"
     tools:context=".ui.AppVerificationActivity">
 
     <ScrollView
@@ -61,19 +61,19 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="134dp"
+                android:layout_height="126dp"
                 android:layout_marginTop="8dp"
                 android:background="@drawable/bg_verification_dashboard_hero"
                 android:elevation="2dp"
-                android:padding="14dp">
+                android:padding="13dp">
 
                 <ImageView
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
+                    android:layout_width="132dp"
+                    android:layout_height="132dp"
                     android:layout_gravity="bottom|end"
-                    android:layout_marginEnd="-24dp"
-                    android:layout_marginBottom="-28dp"
-                    android:alpha="0.14"
+                    android:layout_marginEnd="-30dp"
+                    android:layout_marginBottom="-34dp"
+                    android:alpha="0.18"
                     android:contentDescription="@null"
                     android:scaleType="centerCrop"
                     android:src="@drawable/ic_coin" />
@@ -86,8 +86,8 @@
 
                     <ImageView
                         android:id="@+id/imageVerificationAvatar"
-                        android:layout_width="76dp"
-                        android:layout_height="76dp"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
                         android:background="@drawable/bg_verified_logo_badge"
                         android:padding="5dp"
                         android:scaleType="centerCrop"
@@ -114,7 +114,7 @@
                                 android:maxLines="1"
                                 android:text="Yenkasa"
                                 android:textColor="@color/on_surface"
-                                android:textSize="22sp"
+                                android:textSize="20sp"
                                 android:textStyle="bold" />
 
                             <ImageView
@@ -149,8 +149,8 @@
 
                     <ImageView
                         android:id="@+id/imageVerificationShield"
-                        android:layout_width="86dp"
-                        android:layout_height="86dp"
+                        android:layout_width="92dp"
+                        android:layout_height="92dp"
                         android:layout_marginStart="8dp"
                         android:src="@drawable/badge_verified" />
                 </LinearLayout>
@@ -377,18 +377,18 @@
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
-            <GridLayout
+            <LinearLayout
                 android:id="@+id/layoutMetricGrid"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:columnCount="2"
-                android:useDefaultMargins="true">
+                android:orientation="horizontal">
 
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="118dp"
-                    android:layout_columnWeight="1"
+                    android:layout_height="106dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
                     android:background="@drawable/bg_verification_metric_card"
                     android:elevation="1dp"
                     android:gravity="center"
@@ -396,10 +396,10 @@
                     android:padding="10dp">
 
                     <ImageView
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/bg_verification_icon_pill"
-                        android:padding="8dp"
+                        android:padding="7dp"
                         android:src="@drawable/ic_eye"
                         app:tint="#1DD36F" />
 
@@ -410,7 +410,7 @@
                         android:layout_marginTop="7dp"
                         android:text="0"
                         android:textColor="@color/on_surface"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -420,7 +420,9 @@
                         android:layout_marginTop="3dp"
                         android:text="Views"
                         android:textColor="#A9B6AF"
-                        android:textSize="11sp" />
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="10sp" />
 
                     <ProgressBar
                         android:id="@+id/progressMetricViews"
@@ -434,8 +436,9 @@
 
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="118dp"
-                    android:layout_columnWeight="1"
+                    android:layout_height="106dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_weight="1"
                     android:background="@drawable/bg_verification_metric_card"
                     android:elevation="1dp"
                     android:gravity="center"
@@ -443,10 +446,10 @@
                     android:padding="10dp">
 
                     <ImageView
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/bg_verification_icon_pill"
-                        android:padding="8dp"
+                        android:padding="7dp"
                         android:src="@drawable/ic_comment"
                         app:tint="#1DD36F" />
 
@@ -457,7 +460,7 @@
                         android:layout_marginTop="7dp"
                         android:text="0"
                         android:textColor="@color/on_surface"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -467,7 +470,9 @@
                         android:layout_marginTop="3dp"
                         android:text="Goal: 0"
                         android:textColor="#A9B6AF"
-                        android:textSize="11sp" />
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="10sp" />
 
                     <ProgressBar
                         android:id="@+id/progressMetricComments"
@@ -481,8 +486,9 @@
 
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="118dp"
-                    android:layout_columnWeight="1"
+                    android:layout_height="106dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_weight="1"
                     android:background="@drawable/bg_verification_metric_card"
                     android:elevation="1dp"
                     android:gravity="center"
@@ -490,10 +496,10 @@
                     android:padding="10dp">
 
                     <ImageView
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/bg_verification_icon_pill"
-                        android:padding="8dp"
+                        android:padding="7dp"
                         android:src="@drawable/ic_people"
                         app:tint="#1DD36F" />
 
@@ -504,7 +510,7 @@
                         android:layout_marginTop="7dp"
                         android:text="0"
                         android:textColor="@color/on_surface"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -514,7 +520,9 @@
                         android:layout_marginTop="3dp"
                         android:text="Goal: 0"
                         android:textColor="#A9B6AF"
-                        android:textSize="11sp" />
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="10sp" />
 
                     <ProgressBar
                         android:id="@+id/progressMetricFollowers"
@@ -528,8 +536,9 @@
 
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="118dp"
-                    android:layout_columnWeight="1"
+                    android:layout_height="106dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
                     android:background="@drawable/bg_verification_metric_card"
                     android:elevation="1dp"
                     android:gravity="center"
@@ -537,10 +546,10 @@
                     android:padding="10dp">
 
                     <ImageView
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/bg_verification_icon_pill"
-                        android:padding="8dp"
+                        android:padding="7dp"
                         android:src="@drawable/ic_share"
                         app:tint="#1DD36F" />
 
@@ -551,7 +560,7 @@
                         android:layout_marginTop="7dp"
                         android:text="0"
                         android:textColor="@color/on_surface"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -561,7 +570,9 @@
                         android:layout_marginTop="3dp"
                         android:text="Shares"
                         android:textColor="#A9B6AF"
-                        android:textSize="11sp" />
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:textSize="10sp" />
 
                     <ProgressBar
                         android:id="@+id/progressMetricShares"
@@ -572,7 +583,7 @@
                         android:max="100"
                         android:progressDrawable="@drawable/progress_verification_rank" />
                 </LinearLayout>
-            </GridLayout>
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -598,11 +609,10 @@
                     android:background="@drawable/bg_verification_gold_chip"
                     android:gravity="center"
                     android:paddingHorizontal="14dp"
-                    android:text="Advance"
+                    android:text="View all ranks"
                     android:textColor="@color/amber_300"
                     android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <LinearLayout

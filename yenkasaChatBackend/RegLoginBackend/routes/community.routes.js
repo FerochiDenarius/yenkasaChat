@@ -311,10 +311,30 @@ router.post('/:id/leave', authMiddleware, async (req, res) => {
 
 
 
+function normalizeRole(value) {
+  return (value || '').toString().trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function canManageCommunity(user, community) {
+  const roleName = normalizeRole(user.roleName || user.role?.role || user.role);
+  const privilegedRoles = new Set([
+    'admin',
+    'moderator',
+    'developer',
+    'junior_developer',
+    'senior_developer',
+  ]);
+
+  if (privilegedRoles.has(roleName)) return true;
+  if (community.createdBy?.toString() === user.id?.toString()) return true;
+  return Array.isArray(community.moderators) &&
+    community.moderators.some((id) => id.toString() === user.id?.toString());
+}
+
 // -----------------------------
 // CREATE COMMUNITY (FINAL FIXED VERSION)
 // -----------------------------
-router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
+async function createCommunityHandler(req, res) {
   try {
     const {
       name,
@@ -398,6 +418,91 @@ router.post("/", authMiddleware, allowCommunityCreation, async (req, res) => {
   } catch (err) {
     console.error("❌ Failed to create community:", err);
     return res.status(500).json({ error: "Failed to create community" });
+  }
+}
+
+router.post("/", authMiddleware, allowCommunityCreation, createCommunityHandler);
+router.post("/create", authMiddleware, allowCommunityCreation, createCommunityHandler);
+
+router.put("/:communityId", authMiddleware, async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    const community = await Community.findById(communityId);
+
+    if (!community) {
+      return res.status(404).json({ error: "Community not found" });
+    }
+
+    if (!canManageCommunity(req.user, community)) {
+      return res.status(403).json({
+        error: "Permission denied",
+        message: "Only admins, moderators, developers, the creator, or assigned moderators can edit this community"
+      });
+    }
+
+    const {
+      name,
+      displayName,
+      description,
+      location,
+      categories,
+      state,
+      city,
+      town,
+      communityLevel,
+      isPrivate,
+      isActive,
+    } = req.body;
+
+    if (displayName !== undefined && displayName.toString().trim() === "") {
+      return res.status(400).json({ error: "Display name cannot be empty" });
+    }
+
+    if (name !== undefined) {
+      const normalizedName = name.toString().toLowerCase().trim();
+      const existingCommunity = await Community.findOne({
+        _id: { $ne: communityId },
+        name: normalizedName
+      });
+      if (existingCommunity) {
+        return res.status(400).json({ error: "Community with this name already exists" });
+      }
+      community.name = normalizedName;
+    }
+
+    if (displayName !== undefined) community.displayName = displayName.toString().trim();
+    if (description !== undefined) community.description = description || "";
+    if (location !== undefined) community.location = location || "";
+    if (Array.isArray(categories)) community.categories = categories;
+    if (state !== undefined) community.state = state || "";
+    if (city !== undefined) community.city = city || "";
+    if (town !== undefined) community.town = town || "";
+    if (communityLevel !== undefined) community.communityLevel = communityLevel || null;
+    if (typeof isPrivate === "boolean") community.isPrivate = isPrivate;
+    if (typeof isActive === "boolean" && canManageCommunity(req.user, community)) {
+      community.isActive = isActive;
+    }
+
+    await community.save();
+
+    return res.json({
+      success: true,
+      message: "Community updated successfully",
+      community: {
+        id: community._id,
+        name: community.name,
+        displayName: community.displayName,
+        description: community.description,
+        location: community.location,
+        categories: community.categories,
+        isPrivate: community.isPrivate,
+        isActive: community.isActive,
+        isApproved: community.isApproved,
+      }
+    });
+  } catch (err) {
+    console.error("❌ Failed to update community:", err);
+    return res.status(500).json({ error: "Failed to update community" });
   }
 });
 

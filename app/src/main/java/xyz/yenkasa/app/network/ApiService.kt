@@ -424,6 +424,13 @@ interface ApiService {
         @Body request: CreateCommunityRequest
     ): Call<CreateCommunityResponse>
 
+    @PUT("communities/{communityId}")
+    fun updateCommunity(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String,
+        @Body request: CreateCommunityRequest
+    ): Call<CreateCommunityResponse>
+
     // ✅ Get the communities created by the logged-in user
     @GET("communities/user/my-communities")
     fun getMyCommunities(
@@ -711,6 +718,12 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<GenericResponse>
 
+    @POST("posts/{postId}/share")
+    fun recordPostShare(
+        @Path("postId") postId: String,
+        @Header("Authorization") token: String
+    ): Call<GenericResponse>
+
 
     @POST("posts/{postId}/flag")
     fun flagPost(
@@ -747,19 +760,41 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Call<Map<String, Any>>
 
+    @Multipart
     @POST("ads/create")
     fun createSponsoredAd(
         @Header("Authorization") token: String,
-        @Body request: MultipartBody
+        @Part("title") title: RequestBody,
+        @Part("ctaText") ctaText: RequestBody,
+        @Part("ctaUrl") ctaUrl: RequestBody,
+        @Part("rewardAmount") rewardAmount: RequestBody,
+        @Part("rewardYKC") rewardYKC: RequestBody,
+        @Part("adType") adType: RequestBody,
+        @Part("scope") scope: RequestBody,
+        @Part("communityScope") communityScope: RequestBody,
+        @Part image: MultipartBody.Part?,
+        @Part video: MultipartBody.Part?,
+        @Part thumbnail: MultipartBody.Part?
     ): Call<AdCreateResponse>
 
+    @Multipart
     @POST("ads")
     fun createSponsoredAdFallback(
         @Header("Authorization") token: String,
-        @Body request: MultipartBody
+        @Part("title") title: RequestBody,
+        @Part("ctaText") ctaText: RequestBody,
+        @Part("ctaUrl") ctaUrl: RequestBody,
+        @Part("rewardAmount") rewardAmount: RequestBody,
+        @Part("rewardYKC") rewardYKC: RequestBody,
+        @Part("adType") adType: RequestBody,
+        @Part("scope") scope: RequestBody,
+        @Part("communityScope") communityScope: RequestBody,
+        @Part image: MultipartBody.Part?,
+        @Part video: MultipartBody.Part?,
+        @Part thumbnail: MultipartBody.Part?
     ): Call<AdCreateResponse>
 
-    @POST("ads/click/{adId}")
+    @POST("ads/reward-click/{adId}")
     suspend fun rewardAdClick(
         @Path("adId") adId: String,
         @Header("Authorization") token: String

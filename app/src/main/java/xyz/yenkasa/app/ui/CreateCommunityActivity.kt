@@ -31,11 +31,11 @@ class CreateCommunityActivity : AppCompatActivity() {
     private lateinit var editCommunityLocation: TextInputEditText
     private lateinit var editCategories: TextInputEditText
     private lateinit var switchPrivate: MaterialSwitch
-    private lateinit var switchActive: MaterialSwitch
-    private lateinit var switchApproved: MaterialSwitch
     private lateinit var btnCreateCommunity: Button
 
     private var selectedImageUri: Uri? = null
+    private var editMode = false
+    private var editingCommunityId: String? = null
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -58,6 +58,7 @@ class CreateCommunityActivity : AppCompatActivity() {
         supportActionBar?.title = "Create Community"
 
         initViews()
+        hydrateEditState()
         setupListeners()
     }
 
@@ -68,16 +69,32 @@ class CreateCommunityActivity : AppCompatActivity() {
         editCommunityLocation = findViewById(R.id.editCommunityLocation)
         editCategories = findViewById(R.id.editCategories)
         switchPrivate = findViewById(R.id.switchPrivate)
-        switchActive = findViewById(R.id.switchActive)
-        switchApproved = findViewById(R.id.switchApproved)
         btnCreateCommunity = findViewById(R.id.btnCreateCommunity)
-        switchActive = findViewById(R.id.switchActive)
 
     }
 
     private fun setupListeners() {
         imageCommunityIcon.setOnClickListener { openGallery() }
-        btnCreateCommunity.setOnClickListener { createCommunity() }
+        btnCreateCommunity.setOnClickListener { submitCommunity() }
+    }
+
+    private fun hydrateEditState() {
+        editingCommunityId = intent.getStringExtra("communityId")
+        editMode = !editingCommunityId.isNullOrBlank()
+
+        if (!editMode) {
+            supportActionBar?.title = "Create Community"
+            btnCreateCommunity.text = "Create Community"
+            return
+        }
+
+        supportActionBar?.title = "Edit Community"
+        btnCreateCommunity.text = "Save Changes"
+        editCommunityDisplayName.setText(intent.getStringExtra("communityDisplayName").orEmpty())
+        editCommunityDescription.setText(intent.getStringExtra("communityDescription").orEmpty())
+        editCommunityLocation.setText(intent.getStringExtra("communityLocation").orEmpty())
+        editCategories.setText(intent.getStringArrayListExtra("communityCategories")?.joinToString(", ").orEmpty())
+        switchPrivate.isChecked = intent.getBooleanExtra("communityIsPrivate", false)
     }
 
     private fun openGallery() {
@@ -85,7 +102,7 @@ class CreateCommunityActivity : AppCompatActivity() {
         pickImageLauncher.launch(intent)
     }
 
-    private fun createCommunity() {
+    private fun submitCommunity() {
         val token = TokenManager.getToken(this)
         if (token.isNullOrEmpty()) {
             Toast.makeText(this, "You are not logged in.", Toast.LENGTH_SHORT).show()
@@ -98,8 +115,6 @@ class CreateCommunityActivity : AppCompatActivity() {
         val categories = editCategories.text.toString()
             .split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val isPrivate = switchPrivate.isChecked
-        val isActive = switchActive.isChecked
-        val isApproved = switchApproved.isChecked
 
         if (displayName.isEmpty() || description.isEmpty()) {
             Toast.makeText(this, "Display Name and Description cannot be empty.", Toast.LENGTH_SHORT).show()
@@ -116,13 +131,21 @@ class CreateCommunityActivity : AppCompatActivity() {
             location = location.ifEmpty { null },
             categories = categories,
             isPrivate = isPrivate,
-            isActive = isActive,
-            isApproved = isApproved
+            isActive = true,
+            isApproved = false
         )
 
         btnCreateCommunity.isEnabled = false
-        btnCreateCommunity.text = "Creating..."
+        btnCreateCommunity.text = if (editMode) "Saving..." else "Creating..."
 
+        if (editMode) {
+            updateCommunity(token, request)
+        } else {
+            createCommunity(token, request)
+        }
+    }
+
+    private fun createCommunity(token: String, request: CreateCommunityRequest) {
         ApiClient.apiService.createCommunity("Bearer $token", request)
             .enqueue(object : Callback<CreateCommunityResponse> {
                 override fun onResponse(
@@ -130,7 +153,7 @@ class CreateCommunityActivity : AppCompatActivity() {
                     response: Response<CreateCommunityResponse>
                 ) {
                     if (response.isSuccessful && response.body() != null) {
-                        handleCreateCommunitySuccess()
+                        handleCommunitySubmitSuccess("Community created successfully!")
                     } else if (response.code() == 404 || response.code() == 405) {
                         retryCreateCommunityFallback(token, request)
                     } else {
@@ -159,7 +182,7 @@ class CreateCommunityActivity : AppCompatActivity() {
                     response: Response<CreateCommunityResponse>
                 ) {
                     if (response.isSuccessful && response.body() != null) {
-                        handleCreateCommunitySuccess()
+                        handleCommunitySubmitSuccess("Community created successfully!")
                     } else {
                         resetCreateButton()
                         showCreateCommunityError(response)
@@ -177,19 +200,53 @@ class CreateCommunityActivity : AppCompatActivity() {
             })
     }
 
-    private fun handleCreateCommunitySuccess() {
+    private fun updateCommunity(token: String, request: CreateCommunityRequest) {
+        val communityId = editingCommunityId
+        if (communityId.isNullOrBlank()) {
+            resetCreateButton()
+            Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        ApiClient.apiService.updateCommunity("Bearer $token", communityId, request)
+            .enqueue(object : Callback<CreateCommunityResponse> {
+                override fun onResponse(
+                    call: Call<CreateCommunityResponse>,
+                    response: Response<CreateCommunityResponse>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        handleCommunitySubmitSuccess("Community updated successfully!")
+                    } else {
+                        resetCreateButton()
+                        showCreateCommunityError(response)
+                    }
+                }
+
+                override fun onFailure(call: Call<CreateCommunityResponse>, t: Throwable) {
+                    resetCreateButton()
+                    Toast.makeText(
+                        this@CreateCommunityActivity,
+                        "Network Error: ${t.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            })
+    }
+
+    private fun handleCommunitySubmitSuccess(message: String) {
         resetCreateButton()
         Toast.makeText(
             this@CreateCommunityActivity,
-            "Community created successfully!",
+            message,
             Toast.LENGTH_LONG
         ).show()
+        setResult(Activity.RESULT_OK)
         finish()
     }
 
     private fun resetCreateButton() {
         btnCreateCommunity.isEnabled = true
-        btnCreateCommunity.text = "Create"
+        btnCreateCommunity.text = if (editMode) "Save Changes" else "Create Community"
     }
 
     private fun showCreateCommunityError(response: Response<CreateCommunityResponse>) {

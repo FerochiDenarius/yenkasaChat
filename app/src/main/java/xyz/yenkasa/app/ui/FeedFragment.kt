@@ -263,6 +263,24 @@ class FeedFragment : Fragment() {
 
 
     private fun sharePost(post: Post) {
+        token?.takeIf { it.isNotBlank() }?.let { authToken ->
+            ApiClient.apiService.recordPostShare(post._id, "Bearer $authToken")
+                .enqueue(object : Callback<GenericResponse> {
+                    override fun onResponse(
+                        call: Call<GenericResponse>,
+                        response: Response<GenericResponse>
+                    ) {
+                        if (!response.isSuccessful) {
+                            Log.w("FeedFragment", "Failed to record share for ${post._id}: ${response.code()}")
+                        }
+                    }
+
+                    override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                        Log.w("FeedFragment", "Failed to record share for ${post._id}: ${t.message}")
+                    }
+                })
+        }
+
         val shareIntent = Intent(Intent.ACTION_SEND)
         shareIntent.type = "text/plain"
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")

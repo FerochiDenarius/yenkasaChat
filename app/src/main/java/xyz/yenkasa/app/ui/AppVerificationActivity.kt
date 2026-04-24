@@ -414,12 +414,12 @@ class AppVerificationActivity : AppCompatActivity() {
 
         val rows = listOf(
             RequirementRow("Account Age", "Keep your account active", metrics.accountAge, requirements.accountAge, "days"),
-            RequirementRow("Comments", "Engage with your audience", metrics.totalComments, requirements.comments, "left"),
-            RequirementRow("Following", "Support other users", metrics.totalFollowing, requirements.followers, "left"),            RequirementRow("Max Likes", "Earn likes on a post", metrics.maxLikesOnPost, requirements.maxLikes, "left"),
+            RequirementRow("Comments Made", "Engage on posts", metrics.totalCommentsMade, requirements.comments, "left"),
+            RequirementRow("Following", "Support other users", metrics.totalFollowing, requirements.followers, "left"),
+            RequirementRow("Posts Liked", "Support posts you enjoy", metrics.postsLiked, requirements.maxLikes, "left"),
             RequirementRow("Daily Logins", "Return daily and stay active", metrics.dailyLogins, requirements.dailyLogins, "left"),
             RequirementRow("Ads Viewed", "Watch rewarded ads", metrics.adsViewed, requirements.adsViewed, "left")
         )
-
         rows.forEachIndexed { index, row ->
             requirementRows.addView(createRequirementRow(row))
             if (index != rows.lastIndex) {
@@ -587,7 +587,7 @@ class AppVerificationActivity : AppCompatActivity() {
             percent(metrics.accountAge, requirements.accountAge),
             percent(metrics.totalComments, requirements.comments),
             percent(metrics.totalFollowing, requirements.followers),
-            percent(metrics.maxLikesOnPost, requirements.maxLikes),
+            percent(metrics.postsLiked, requirements.maxLikes),
             percent(metrics.dailyLogins, requirements.dailyLogins),
             percent(metrics.adsViewed, requirements.adsViewed)
         )
@@ -599,7 +599,7 @@ class AppVerificationActivity : AppCompatActivity() {
             metrics.accountAge to requirements.accountAge,
             metrics.totalComments to requirements.comments,
             metrics.totalFollowing to requirements.followers,
-            metrics.maxLikesOnPost to requirements.maxLikes,
+            metrics.postsLiked to requirements.maxLikes,
             metrics.dailyLogins to requirements.dailyLogins,
             metrics.adsViewed to requirements.adsViewed
         ).sumOf { (current, target) -> current.coerceAtMost(target) }

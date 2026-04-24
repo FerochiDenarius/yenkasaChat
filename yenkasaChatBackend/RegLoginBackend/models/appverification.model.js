@@ -92,6 +92,8 @@ communitiesEngaged: { type: Number, default: 0 },
 reportsMade: { type: Number, default: 0 },
 validReports: { type: Number, default: 0 }
 
+    },
+
     // ------------------------------
     // PHASE HISTORY (MATCH ANDROID)
     // ------------------------------
@@ -161,8 +163,8 @@ appVerificationSchema.methods.checkRequirementsMet = function () {
     allMet:
       m.accountAge >= req.accountAge &&
       m.totalComments >= req.comments &&
-      m.totalFollowers >= req.followers &&
-      m.maxLikesOnPost >= req.maxLikes &&
+      m.totalFollowing >= req.followers &&
+      m.postsLiked >= req.maxLikes &&
       m.dailyLogins >= req.dailyLogins &&
       m.adsViewed >= req.adsViewed
   };

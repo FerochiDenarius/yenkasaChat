@@ -468,7 +468,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Goal: 0"
+                        android:text="Comments Made"
                         android:textColor="#A9B6AF"
                         android:gravity="center"
                         android:maxLines="1"

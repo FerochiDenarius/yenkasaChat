@@ -45,16 +45,26 @@ async function syncVerificationMetrics(appVerification, user) {
   metrics.totalLikesReceived = lifetime.totalLikesReceived || lifetime.likesReceived || 0;
   metrics.maxLikesOnPost = lifetime.maxLikesOnPost || 0;
   metrics.totalLikesCount = lifetime.totalLikesCount || 0;
+  metrics.postsLiked = lifetime.postsLiked || 0;
 
   metrics.totalViewsReceived = lifetime.totalViewsReceived || lifetime.viewsReceived || 0;
   metrics.totalViewsCount = lifetime.totalViewsCount || 0;
+  metrics.totalViewsMade = lifetime.totalViewsMade || 0;
 
   metrics.totalComments = lifetime.totalComments || lifetime.commentsMade || 0;
   metrics.totalCommentsMade = lifetime.totalCommentsMade || lifetime.commentsMade || 0;
+  metrics.repliesMade = lifetime.repliesMade || 0;
   metrics.totalCommentsReceived = lifetime.totalCommentsReceived || lifetime.commentsReceived || 0;
   metrics.totalRepliesReceived = lifetime.totalRepliesReceived || lifetime.repliesReceived || 0;
   metrics.commentLikesReceived = lifetime.commentLikesReceived || 0;
   metrics.totalShares = lifetime.totalShares || 0;
+
+  metrics.sharesMade = lifetime.sharesMade || 0;
+metrics.profilesVisited = lifetime.profilesVisited || 0;
+metrics.communitiesJoined = lifetime.communitiesJoined || 0;
+metrics.communitiesEngaged = lifetime.communitiesEngaged || 0;
+metrics.reportsMade = lifetime.reportsMade || 0;
+metrics.validReports = lifetime.validReports || 0;
 
   appVerification.metrics = sanitizeMetrics(metrics);
   await appVerification.save();
@@ -186,54 +196,103 @@ exports.updateMetrics = async (req, res) => {
 
     const m = appVerification.metrics;
 
-    switch (type) {
+switch (type) {
 
-      case "comment":
-        m.totalComments += 1;
-        m.totalCommentsMade += 1;
-        break;
+  case "comment":
+  case "commentMade":
+    m.totalComments += value || 1;
+    m.totalCommentsMade += value || 1;
+    break;
 
-      case "follower":
-        m.totalFollowers += value || 1;
-        break;
+  case "commentReceived":
+    m.totalCommentsReceived += value || 1;
+    break;
 
-      case "maxLikes":
-        if (value > m.maxLikesOnPost) {
-          m.maxLikesOnPost = value;
-        }
-        m.totalLikesCount += value || 0;
-        break;
+  case "replyMade":
+    m.repliesMade += value || 1;
+    break;
 
-      case "postCreated":
-        m.postsCreated += 1;
-        m.totalPostCount += 1;
-        break;
+  case "replyReceived":
+    m.totalRepliesReceived += value || 1;
+    break;
 
-      case "viewReceived":
-        m.totalViewsReceived += 1;
-        m.totalViewsCount += 1;
-        break;
+  case "followMade":
+  case "following":
+    m.totalFollowing += value || 1;
+    break;
 
-      case "replyReceived":
-        m.totalRepliesReceived += 1;
-        break;
+  case "follower":
+  case "followerReceived":
+    m.totalFollowers += value || 1;
+    break;
 
-      case "commentReceived":
-        m.totalCommentsReceived += 1;
-        break;
+  case "postCreated":
+    m.postsCreated += value || 1;
+    m.totalPostCount += value || 1;
+    break;
 
-      case "likeOnComment":
-        m.commentLikesReceived += 1;
-        m.totalLikesCount += 1;
-        break;
+  case "postLiked":
+    m.postsLiked += value || 1;
+    m.totalLikesCount += value || 1;
+    break;
 
-      case "share":
-        m.totalShares += 1;
-        break;
+  case "likeReceived":
+    m.totalLikesReceived += value || 1;
+    break;
 
-      default:
-        return res.status(400).json({ error: "Invalid metric type" });
+  case "likeOnComment":
+    m.commentLikesReceived += value || 1;
+    break;
+
+  case "viewMade":
+    m.totalViewsMade += value || 1;
+    break;
+
+  case "viewReceived":
+    m.totalViewsReceived += value || 1;
+    m.totalViewsCount += value || 1;
+    break;
+
+  case "share":
+  case "shareMade":
+    m.sharesMade += value || 1;
+    break;
+
+  case "shareReceived":
+    m.totalShares += value || 1;
+    break;
+
+  case "maxLikes":
+    if (value > m.maxLikesOnPost) {
+      m.maxLikesOnPost = value;
     }
+    break;
+
+  case "profileVisited":
+    m.profilesVisited += value || 1;
+    break;
+
+  case "communityJoined":
+    m.communitiesJoined += value || 1;
+    break;
+
+  case "communityEngaged":
+    m.communitiesEngaged += value || 1;
+    break;
+
+  case "reportMade":
+    m.reportsMade += value || 1;
+    break;
+
+  case "validReport":
+    m.validReports += value || 1;
+    break;
+
+  default:
+    return res.status(400).json({ error: "Invalid metric type" });
+}
+  
+
 
     // sanitize + save
     appVerification.metrics = sanitizeMetrics(m);
@@ -276,8 +335,8 @@ exports.getProgress = async (req, res) => {
     const detailed = {
       accountAge: pct(metrics.accountAge, reqs.accountAge),
       comments: pct(metrics.totalComments, reqs.comments),
-      followers: pct(metrics.totalFollowers, reqs.followers),
-      maxLikes: pct(metrics.maxLikesOnPost, reqs.maxLikes),
+      followers: pct(metrics.totalFollowing, reqs.followers),
+      maxLikes: pct(metrics.postsLiked, reqs.maxLikes),
       dailyLogins: pct(metrics.dailyLogins, reqs.dailyLogins),
       adsViewed: pct(metrics.adsViewed, reqs.adsViewed),
     };

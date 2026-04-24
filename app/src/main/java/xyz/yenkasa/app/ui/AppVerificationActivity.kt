@@ -64,9 +64,9 @@ class AppVerificationActivity : AppCompatActivity() {
     private lateinit var textMetricComments: TextView
     private lateinit var textMetricCommentsGoal: TextView
     private lateinit var progressMetricComments: ProgressBar
-    private lateinit var textMetricFollowers: TextView
-    private lateinit var textMetricFollowersGoal: TextView
-    private lateinit var progressMetricFollowers: ProgressBar
+    private lateinit var textMetricFollowing: TextView
+    private lateinit var textMetricFollowingGoal: TextView
+    private lateinit var progressMetricFollowing: ProgressBar
     private lateinit var textMetricShares: TextView
     private lateinit var textMetricSharesGoal: TextView
     private lateinit var progressMetricShares: ProgressBar
@@ -137,9 +137,9 @@ class AppVerificationActivity : AppCompatActivity() {
         textMetricComments = findViewById(R.id.textMetricComments)
         textMetricCommentsGoal = findViewById(R.id.textMetricCommentsGoal)
         progressMetricComments = findViewById(R.id.progressMetricComments)
-        textMetricFollowers = findViewById(R.id.textMetricFollowers)
-        textMetricFollowersGoal = findViewById(R.id.textMetricFollowersGoal)
-        progressMetricFollowers = findViewById(R.id.progressMetricFollowers)
+        textMetricFollowing = findViewById(R.id.textMetricFollowing)
+        textMetricFollowingGoal = findViewById(R.id.textMetricFollowingGoal)
+        progressMetricFollowing = findViewById(R.id.progressMetricFollowing)
         textMetricShares = findViewById(R.id.textMetricShares)
         textMetricSharesGoal = findViewById(R.id.textMetricSharesGoal)
         progressMetricShares = findViewById(R.id.progressMetricShares)
@@ -170,10 +170,13 @@ class AppVerificationActivity : AppCompatActivity() {
                     if (selected) R.color.on_surface else R.color.wallet_secondary_text
                 )
             )
-            tab.compoundDrawableTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(
-                    this,
-                    if (selected) R.color.on_surface else R.color.wallet_secondary_text
+            androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+                tab,
+                ColorStateList.valueOf(
+                    ContextCompat.getColor(
+                        this,
+                        if (selected) R.color.on_surface else R.color.wallet_secondary_text
+                    )
                 )
             )
             tab.alpha = if (selected) 1f else 0.82f
@@ -370,14 +373,16 @@ class AppVerificationActivity : AppCompatActivity() {
             goal = requirements.comments,
             label = "Goal: ${formatNumber(requirements.comments)}"
         )
+
         bindMetricCard(
-            valueView = textMetricFollowers,
-            goalView = textMetricFollowersGoal,
-            progressView = progressMetricFollowers,
-            value = metrics.totalFollowers,
+            valueView = textMetricFollowing,
+            goalView = textMetricFollowingGoal,
+            progressView = progressMetricFollowing,
+            value = metrics.totalFollowing,
             goal = requirements.followers,
             label = "Goal: ${formatNumber(requirements.followers)}"
         )
+
         bindMetricCard(
             valueView = textMetricShares,
             goalView = textMetricSharesGoal,
@@ -410,8 +415,7 @@ class AppVerificationActivity : AppCompatActivity() {
         val rows = listOf(
             RequirementRow("Account Age", "Keep your account active", metrics.accountAge, requirements.accountAge, "days"),
             RequirementRow("Comments", "Engage with your audience", metrics.totalComments, requirements.comments, "left"),
-            RequirementRow("Followers", "Grow your followers", metrics.totalFollowers, requirements.followers, "left"),
-            RequirementRow("Max Likes", "Earn likes on a post", metrics.maxLikesOnPost, requirements.maxLikes, "left"),
+            RequirementRow("Following", "Support other users", metrics.totalFollowing, requirements.followers, "left"),            RequirementRow("Max Likes", "Earn likes on a post", metrics.maxLikesOnPost, requirements.maxLikes, "left"),
             RequirementRow("Daily Logins", "Return daily and stay active", metrics.dailyLogins, requirements.dailyLogins, "left"),
             RequirementRow("Ads Viewed", "Watch rewarded ads", metrics.adsViewed, requirements.adsViewed, "left")
         )
@@ -541,6 +545,15 @@ class AppVerificationActivity : AppCompatActivity() {
         target.totalCommentsReceived = source.totalCommentsReceived
         target.totalShares = source.totalShares
         target.totalLikesReceived = source.totalLikesReceived
+        target.postsLiked = source.postsLiked
+        target.totalViewsMade = source.totalViewsMade
+        target.repliesMade = source.repliesMade
+        target.sharesMade = source.sharesMade
+        target.profilesVisited = source.profilesVisited
+        target.communitiesJoined = source.communitiesJoined
+        target.communitiesEngaged = source.communitiesEngaged
+        target.reportsMade = source.reportsMade
+        target.validReports = source.validReports
     }
 
     private fun applyPerformanceTotals(totals: PerformanceTotals, metrics: VerificationMetrics) {
@@ -558,13 +571,22 @@ class AppVerificationActivity : AppCompatActivity() {
         metrics.totalCommentsMade = totals.totalCommentsMade
         metrics.totalFollowers = totals.totalFollowers
         metrics.totalFollowing = totals.totalFollowing
+        metrics.postsLiked = totals.postsLiked
+        metrics.totalViewsMade = totals.totalViewsMade
+        metrics.repliesMade = totals.repliesMade
+        metrics.sharesMade = totals.sharesMade
+        metrics.profilesVisited = totals.profilesVisited
+        metrics.communitiesJoined = totals.communitiesJoined
+        metrics.communitiesEngaged = totals.communitiesEngaged
+        metrics.reportsMade = totals.reportsMade
+        metrics.validReports = totals.validReports
     }
 
     private fun calculateOverallProgress(metrics: VerificationMetrics, requirements: VerificationRequirements): Int {
         val values = listOf(
             percent(metrics.accountAge, requirements.accountAge),
             percent(metrics.totalComments, requirements.comments),
-            percent(metrics.totalFollowers, requirements.followers),
+            percent(metrics.totalFollowing, requirements.followers),
             percent(metrics.maxLikesOnPost, requirements.maxLikes),
             percent(metrics.dailyLogins, requirements.dailyLogins),
             percent(metrics.adsViewed, requirements.adsViewed)
@@ -576,7 +598,7 @@ class AppVerificationActivity : AppCompatActivity() {
         return listOf(
             metrics.accountAge to requirements.accountAge,
             metrics.totalComments to requirements.comments,
-            metrics.totalFollowers to requirements.followers,
+            metrics.totalFollowing to requirements.followers,
             metrics.maxLikesOnPost to requirements.maxLikes,
             metrics.dailyLogins to requirements.dailyLogins,
             metrics.adsViewed to requirements.adsViewed
@@ -586,8 +608,8 @@ class AppVerificationActivity : AppCompatActivity() {
     private fun targetRequirementPoints(requirements: VerificationRequirements): Int {
         return requirements.accountAge +
             requirements.comments +
-            requirements.followers +
-            requirements.maxLikes +
+                requirements.followers +
+                requirements.maxLikes +
             requirements.dailyLogins +
             requirements.adsViewed
     }

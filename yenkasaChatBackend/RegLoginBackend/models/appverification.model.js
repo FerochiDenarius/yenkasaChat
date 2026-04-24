@@ -50,6 +50,8 @@ const appVerificationSchema = new Schema(
     // ------------------------------
     // METRICS - MATCH ANDROID EXACTLY
     // ------------------------------
+
+    
     metrics: {
       // CORE
       accountAge: { type: Number, default: 0 },
@@ -71,12 +73,24 @@ const appVerificationSchema = new Schema(
       // SOCIAL
       totalFollowing: { type: Number, default: 0 },
 
-      // ACTIVITY METRICS
-      totalPostCount: { type: Number, default: 0 },
-      totalViewsCount: { type: Number, default: 0 },
-      totalLikesCount: { type: Number, default: 0 },
-      totalCommentsMade: { type: Number, default: 0 }
-    },
+// ACTIVITY METRICS - GIVEN BY USER
+totalPostCount: { type: Number, default: 0 },
+totalViewsCount: { type: Number, default: 0 },
+totalLikesCount: { type: Number, default: 0 },
+totalCommentsMade: { type: Number, default: 0 },
+postsLiked: { type: Number, default: 0 },
+repliesMade: { type: Number, default: 0 },
+totalViewsMade: { type: Number, default: 0 },
+sharesMade: { type: Number, default: 0 },
+
+// COMMUNITY SUPPORT METRICS
+profilesVisited: { type: Number, default: 0 },
+communitiesJoined: { type: Number, default: 0 },
+communitiesEngaged: { type: Number, default: 0 },
+
+// TRUST / REVIEW METRICS
+reportsMade: { type: Number, default: 0 },
+validReports: { type: Number, default: 0 }
 
     // ------------------------------
     // PHASE HISTORY (MATCH ANDROID)

@@ -86,15 +86,28 @@ data class VerificationMetrics(
 
     var postsCreated: Int = 0,
     var totalPostCount: Int = 0,
+    var postsLiked: Int = 0,
 
     var totalViewsReceived: Int = 0,
     var totalViewsCount: Int = 0,
+    var totalViewsMade: Int = 0,
 
     var totalRepliesReceived: Int = 0,
+    var repliesMade: Int = 0,
+
     var totalCommentsReceived: Int = 0,
 
     var totalShares: Int = 0,
-    var totalLikesReceived : Int =0
+    var sharesMade: Int = 0,
+
+    var totalLikesReceived: Int = 0,
+
+    var profilesVisited: Int = 0,
+    var communitiesJoined: Int = 0,
+    var communitiesEngaged: Int = 0,
+
+    var reportsMade: Int = 0,
+    var validReports: Int = 0
 )
 
 
@@ -224,12 +237,27 @@ data class PerformanceTotals(
     // ----- ACTIVITY METRICS -----
     val postsCreated: Int = 0,
     val totalPostCount: Int = 0,
+    val postsLiked: Int = 0,
     val totalViewsCount: Int = 0,
+    val totalViewsMade: Int = 0,
     val totalLikesCount: Int = 0,
     val maxLikesOnPost: Int = 0,
     val totalCommentsMade: Int = 0,
+    val repliesMade: Int = 0,
+    val sharesMade: Int = 0,
+
+    // ----- COMMUNITY SUPPORT -----
+    val profilesVisited: Int = 0,
+    val communitiesJoined: Int = 0,
+    val communitiesEngaged: Int = 0,
+
+    // ----- TRUST / REVIEW -----
+    val reportsMade: Int = 0,
+    val validReports: Int = 0,
 
     // ----- SOCIAL -----
     val totalFollowers: Int = 0,
     val totalFollowing: Int = 0
 )
+
+

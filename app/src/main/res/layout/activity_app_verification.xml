@@ -504,7 +504,7 @@
                         app:tint="#1DD36F" />
 
                     <TextView
-                        android:id="@+id/textMetricFollowers"
+                        android:id="@+id/textMetricFollowing"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
@@ -514,18 +514,18 @@
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/textMetricFollowersGoal"
+                        android:id="@+id/textMetricFollowingGoal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Goal: 0"
+                        android:text="Following"
                         android:textColor="#A9B6AF"
                         android:gravity="center"
                         android:maxLines="1"
                         android:textSize="10sp" />
 
                     <ProgressBar
-                        android:id="@+id/progressMetricFollowers"
+                        android:id="@+id/progressMetricFollowing"
                         style="?android:attr/progressBarStyleHorizontal"
                         android:layout_width="match_parent"
                         android:layout_height="4dp"

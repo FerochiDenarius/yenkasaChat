@@ -204,17 +204,19 @@ const adData = {
     const videoFile = req.files?.video?.[0] || req.files?.videoUrl?.[0] || req.files?.media?.[0];
     const thumbnailFile = req.files?.thumbnail?.[0] || req.files?.customThumbnail?.[0];
 
-    if (imageFile) {
-      adData.imageUrl = `/uploads/${imageFile.filename}`;
-    }
+  const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
 
-    if (videoFile) {
-      adData.videoUrl = `/uploads/${videoFile.filename}`;
-    }
+if (imageFile) {
+  adData.imageUrl = `${baseUrl}/uploads/${imageFile.filename}`;
+}
 
-    if (thumbnailFile) {
-      adData.meta.thumbnail = `/uploads/${thumbnailFile.filename}`;
-    }
+if (videoFile) {
+  adData.videoUrl = `${baseUrl}/uploads/${videoFile.filename}`;
+}
+
+if (thumbnailFile) {
+  adData.meta.thumbnail = `${baseUrl}/uploads/${thumbnailFile.filename}`;
+}
 
 // Google AdMob ads are handled by the Android SDK.
 // They do not need uploaded image/video files.

@@ -3,41 +3,46 @@ package xyz.yenkasa.app.adapter
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import com.bumptech.glide.Glide
+import com.google.android.gms.ads.*
+import com.google.android.gms.ads.nativead.*
+import kotlinx.coroutines.*
+import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.AdModel
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
-import kotlinx.coroutines.*
-import android.util.Log
-import com.google.android.gms.ads.*
-import com.google.android.gms.ads.nativead.*
-import xyz.yenkasa.app.R
 import xyz.yenkasa.app.util.WalletBalanceManager
-
 
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
     private var exoPlayer: ExoPlayer? = null
-    private val trackedImpressions = mutableSetOf<String>()  // avoid duplicate views
+    private val trackedImpressions = mutableSetOf<String>()
 
     override fun bind(holder: AdsViewHolder, ad: AdModel) {
-        val isAdMobSlot = ad.sponsorName.equals("AdMob", ignoreCase = true) ||
-            ad._id.startsWith("local-ad")
+        val isAdMobSlot =
+            ad.adType.equals("google", ignoreCase = true) ||
+                    ad.sponsorName.equals("AdMob", ignoreCase = true) ||
+                    ad._id.startsWith("local-ad")
 
-        // 1️⃣ Track impression ONCE
-        holder.itemView.post {
-            if (!isAdMobSlot && ad.videoUrl.isNullOrEmpty() && !trackedImpressions.contains(ad._id)) {
-                trackedImpressions.add(ad._id)
-                sendVerificationAdView("in_app_ad")  // increments adsViewed in backend
-            }
-        }
+        holder.itemView.visibility = View.VISIBLE
+        holder.itemView.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
 
-        // 2️⃣ Sponsor label
+        holder.adImageThumbnail.visibility = View.GONE
+        holder.adVideoThumbnail.visibility = View.GONE
+        holder.adPlayerView.visibility = View.GONE
+        holder.adPlayButton.visibility = View.GONE
+        holder.adCTAButton.visibility = View.GONE
+        holder.adWatchRewardButton.visibility = View.GONE
+        holder.admobNativeContainer.visibility = View.GONE
+        holder.nativeAdView.visibility = View.GONE
+
         holder.adSponsorLabel.text =
             ad.sponsorName ?: "Sponsored • Earn ${ad.rewardYKC} YKC"
 
@@ -48,25 +53,32 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             holder.adTitle.visibility = View.GONE
         }
 
-        // Reset UI
-        holder.adImageThumbnail.visibility = View.GONE
-        holder.adVideoThumbnail.visibility = View.GONE
-        holder.adPlayerView.visibility = View.GONE
-        holder.adPlayButton.visibility = View.GONE
-        holder.adCTAButton.visibility = View.GONE
-        holder.adWatchRewardButton.visibility = View.GONE
-        holder.admobNativeContainer.visibility = View.GONE
-        holder.nativeAdView.visibility = View.GONE
+        if (isAdMobSlot) {
+            loadAdmobNativeAd(holder)
+            return
+        }
 
-        // 3️⃣ Image ad
+        if (ad.imageUrl.isNullOrEmpty() && ad.videoUrl.isNullOrEmpty()) {
+            holder.itemView.visibility = View.GONE
+            holder.itemView.layoutParams.height = 0
+            return
+        }
+
+        holder.itemView.post {
+            if (ad.videoUrl.isNullOrEmpty() && !trackedImpressions.contains(ad._id)) {
+                trackedImpressions.add(ad._id)
+                sendVerificationAdView("in_app_ad")
+            }
+        }
+
         if (!ad.imageUrl.isNullOrEmpty()) {
             holder.adImageThumbnail.visibility = View.VISIBLE
-            Glide.with(context).load(ad.imageUrl)
+            Glide.with(context)
+                .load(ad.imageUrl)
                 .placeholder(R.drawable.placeholder_image)
                 .into(holder.adImageThumbnail)
         }
 
-        // 4️⃣ Video ad
         if (!ad.videoUrl.isNullOrEmpty()) {
             holder.adVideoThumbnail.visibility = View.VISIBLE
             holder.adPlayButton.visibility = View.VISIBLE
@@ -81,7 +93,6 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             }
         }
 
-        // 5️⃣ CTA CLICK REWARD (5 YKC)
         if (!ad.ctaUrl.isNullOrEmpty()) {
             holder.adCTAButton.visibility = View.VISIBLE
             holder.adCTAButton.text = ad.ctaText ?: "Learn More"
@@ -92,21 +103,13 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             }
         }
 
-        // 6️⃣ WATCH VIDEO TO EARN REWARD
         holder.adWatchRewardButton.setOnClickListener {
             holder.adWatchRewardButton.text = "Watching…"
             showRewardedAd(ad) {
                 holder.adWatchRewardButton.text = "Reward Earned!"
             }
         }
-
-        // 7️⃣ Load AdMob native ad only for Google ad slots.
-        if (isAdMobSlot) {
-            loadAdmobNativeAd(holder)
-        }
     }
-
-    // ---------------- IMPRESSION ----------------
 
     private fun sendVerificationAdView(source: String) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -122,8 +125,6 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    // ---------------- CLICK REWARD ----------------
-
     private fun rewardClick(ad: AdModel) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -138,23 +139,20 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    // ---------------- VIDEO PLAY ----------------
-
     private fun playVideo(holder: AdsViewHolder, ad: AdModel) {
-        if (exoPlayer == null)
+        if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(context).build()
+        }
 
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayButton.visibility = View.GONE
         holder.adPlayerView.visibility = View.VISIBLE
-
         holder.adPlayerView.player = exoPlayer
 
-        exoPlayer!!.setMediaItem(MediaItem.fromUri(ad.videoUrl!!))
-        exoPlayer!!.prepare()
-        exoPlayer!!.play()
+        exoPlayer?.setMediaItem(MediaItem.fromUri(ad.videoUrl!!))
+        exoPlayer?.prepare()
+        exoPlayer?.play()
 
-        // Track reward after 10 seconds
         CoroutineScope(Dispatchers.IO).launch {
             delay(10000)
             recordVideoReward(ad, 10000)
@@ -167,26 +165,31 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
         try {
             val viewRes = ApiClient.apiService.recordAdView(
-                ad._id, auth,
+                ad._id,
+                auth,
                 mapOf("durationMs" to watchMs, "fullyWatched" to true)
             ).execute()
 
             if (!viewRes.isSuccessful) return
+
             val adViewId = viewRes.body()?.get("adViewId") as? String ?: return
 
             val rewardRes = ApiClient.apiService.rewardAd(
-                ad._id, auth, mapOf("adViewId" to adViewId)
+                ad._id,
+                auth,
+                mapOf("adViewId" to adViewId)
             ).execute()
+
             if (rewardRes.isSuccessful) {
                 val newBalance = rewardRes.body()?.get("newBalance").toIntOrNull()
                     ?: rewardRes.body()?.get("balance").toIntOrNull()
+
                 if (newBalance != null) {
                     WalletBalanceManager.applyKnownBalance(context, newBalance)
                 } else {
                     WalletBalanceManager.refreshBalance(context)
                 }
             }
-
         } catch (e: Exception) {
             Log.e("AdBinder", "Video reward failed: ${e.message}")
         }
@@ -204,8 +207,6 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    // ---------------- GOOGLE REWARDED AD ----------------
-
     private fun showRewardedAd(ad: AdModel, onReward: () -> Unit) {
         onReward()
         CoroutineScope(Dispatchers.IO).launch {
@@ -213,14 +214,14 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    // ---------------- ADMOB NATIVE ----------------
-
     private fun loadAdmobNativeAd(holder: AdsViewHolder) {
         var impressionTracked = false
 
-        val adLoader = AdLoader.Builder(context, "ca-app-pub-5051666473627498/1225516323")
+        val adLoader = AdLoader.Builder(
+            context,
+            "ca-app-pub-5051666473627498/1225516323"
+        )
             .forNativeAd { nativeAd ->
-
                 holder.admobNativeContainer.visibility = View.VISIBLE
                 holder.nativeAdView.visibility = View.VISIBLE
 

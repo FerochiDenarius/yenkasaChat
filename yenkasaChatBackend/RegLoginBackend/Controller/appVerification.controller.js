@@ -45,7 +45,10 @@ async function syncVerificationMetrics(appVerification, user) {
   metrics.totalLikesReceived = lifetime.totalLikesReceived || lifetime.likesReceived || 0;
   metrics.maxLikesOnPost = lifetime.maxLikesOnPost || 0;
   metrics.totalLikesCount = lifetime.totalLikesCount || 0;
-  metrics.postsLiked = lifetime.postsLiked || 0;
+metrics.postsLiked = Math.max(
+  Number(metrics.postsLiked || 0),
+  Number(lifetime.postsLiked || 0)
+);
 
   metrics.totalViewsReceived = lifetime.totalViewsReceived || lifetime.viewsReceived || 0;
   metrics.totalViewsCount = lifetime.totalViewsCount || 0;

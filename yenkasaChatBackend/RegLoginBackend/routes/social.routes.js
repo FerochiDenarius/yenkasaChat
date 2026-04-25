@@ -164,7 +164,9 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     if (!alreadyLiked && likedByUser) {
       await updatePostOwnerLikeMetrics(postOwnerId, updatedPost.likeCount);
 
-      await AppVerification.findOneAndUpdate(
+console.log("🧪 ABOUT TO UPDATE postsLiked for:", userId);
+
+const updatedVerification = await AppVerification.findOneAndUpdate(
   { userId },
   {
     $inc: {
@@ -173,6 +175,11 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     }
   },
   { upsert: true, new: true }
+);
+
+console.log(
+  "✅ postsLiked metric updated:",
+  updatedVerification?.metrics?.postsLiked
 );
 
       await rewardService.reward(userId, REWARD_LIKE, {

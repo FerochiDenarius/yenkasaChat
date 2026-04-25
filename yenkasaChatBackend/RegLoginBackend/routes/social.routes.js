@@ -164,6 +164,17 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     if (!alreadyLiked && likedByUser) {
       await updatePostOwnerLikeMetrics(postOwnerId, updatedPost.likeCount);
 
+      await AppVerification.findOneAndUpdate(
+  { userId },
+  {
+    $inc: {
+      "metrics.postsLiked": 1,
+      "metrics.totalLikesCount": 1
+    }
+  },
+  { upsert: true, new: true }
+);
+
       await rewardService.reward(userId, REWARD_LIKE, {
         fromUserId: postOwnerId,
         type: "REWARD_POST_LIKE",
@@ -171,6 +182,8 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
         relatedPostId: postId,
         activityId: `post_like_${postId}_${userId}` 
       });
+
+      
 
       // 🔔 Notification to owner
       if (!(await isBlocked(userId, postOwnerId))) {

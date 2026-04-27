@@ -18,6 +18,7 @@ import com.google.android.gms.ads.*
 import com.google.android.gms.ads.nativead.*
 import kotlinx.coroutines.*
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.BuildConfig
 import xyz.yenkasa.app.model.AdModel
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
@@ -270,12 +271,14 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
     private fun loadAdmobNativeAd(holder: AdMobAdViewHolder) {
         var impressionTracked = false
-        val isDebuggable =
-            (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        val adUnitId = if (isDebuggable) {
+        val adUnitId = if (BuildConfig.DEBUG) {
             "ca-app-pub-3940256099942544/2247696110"
         } else {
             "ca-app-pub-5051666473627498/1225516323"
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d("AdMob", "Using ad unit: $adUnitId")
         }
 
         val adLoader = AdLoader.Builder(

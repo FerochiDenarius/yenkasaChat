@@ -26,6 +26,7 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -94,6 +95,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
 
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
+    implementation("com.github.yalantis:ucrop:2.2.8")
+    implementation("com.burhanrashid52:photoeditor:3.0.2")
     implementation("com.onesignal:OneSignal:4.8.6")
     implementation("de.hdodenhof:circleimageview:3.1.0")
 

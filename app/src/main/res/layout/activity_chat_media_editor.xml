@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/chat_picker_background"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/buttonEditorClose"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_close"
+            android:padding="11dp"
+            android:src="@drawable/ic_close"
+            android:tint="@color/chat_picker_icon" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/buttonEditorSave"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_chat_media_send_button"
+            android:contentDescription="@string/chat_media_save"
+            android:padding="10dp"
+            android:src="@drawable/ic_check"
+            android:tint="@color/white" />
+    </LinearLayout>
+
+    <ja.burhanrashid52.photoeditor.PhotoEditorView
+        android:id="@+id/photoEditorView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:background="@drawable/bg_chat_media_panel" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/buttonEditorUndo"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_undo"
+            android:padding="11dp"
+            android:src="@drawable/ic_close"
+            android:rotation="45"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonEditorRedo"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_redo"
+            android:padding="11dp"
+            android:src="@drawable/ic_close"
+            android:rotation="225"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonEditorDraw"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_draw"
+            android:padding="11dp"
+            android:src="@drawable/ic_edit_modern"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonEditorText"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_add_text_title"
+            android:padding="11dp"
+            android:src="@drawable/ic_attach_file"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonEditorEmoji"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_add_emoji_title"
+            android:padding="11dp"
+            android:src="@drawable/ic_emoji"
+            android:tint="@color/chat_picker_icon" />
+    </LinearLayout>
+</LinearLayout>

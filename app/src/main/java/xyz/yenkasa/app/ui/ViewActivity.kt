@@ -40,11 +40,18 @@ import androidx.core.content.ContextCompat
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import xyz.yenkasa.app.BuildConfig
 
 
 
 
 class ViewActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TEST_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+        // Replace with your real rewarded ad unit when available.
+        private const val RELEASE_REWARDED_AD_UNIT_ID = ""
+    }
 
     private lateinit var textUsername: TextView
     private lateinit var textCaption: TextView
@@ -297,10 +304,25 @@ class ViewActivity : AppCompatActivity() {
 
     private fun loadRewardedAd() {
         val adRequest = AdRequest.Builder().build()
+        val adUnitId = if (BuildConfig.DEBUG) {
+            TEST_REWARDED_AD_UNIT_ID
+        } else {
+            RELEASE_REWARDED_AD_UNIT_ID
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d("AdMob", "Using rewarded ad unit: $adUnitId")
+        }
+
+        if (adUnitId.isBlank()) {
+            Log.w("Ads", "No production rewarded ad unit configured; skipping rewarded ad load.")
+            rewardedAd = null
+            return
+        }
 
         RewardedAd.load(
             this,
-            "ca-app-pub-3940256099942544/5224354917", // TEST Rewarded Ad ID
+            adUnitId,
             adRequest,
             object : RewardedAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {

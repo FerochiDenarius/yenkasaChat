@@ -1,12 +1,14 @@
 package xyz.yenkasa.app.ui
 
 import android.Manifest
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
+import android.os.Build
+import android.os.CancellationSignal
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
@@ -132,7 +134,7 @@ class ChatMediaPickerActivity : AppCompatActivity() {
 
     private fun ensureMediaPermissionsAndLoad() {
         val permissions = requiredMediaPermissions()
-        if (permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) {
+        if (permissions.isEmpty() || permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) {
             loadMedia()
         } else {
             pendingPermissionAction = { loadMedia() }
@@ -141,11 +143,7 @@ class ChatMediaPickerActivity : AppCompatActivity() {
     }
 
     private fun requiredMediaPermissions(): List<String> {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            listOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
-        } else {
-            listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
+        return emptyList()
     }
 
     private fun loadMedia() {
@@ -197,37 +195,65 @@ class ChatMediaPickerActivity : AppCompatActivity() {
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
         )
-        val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC LIMIT 120"
-
         val items = mutableListOf<ChatMediaItem>()
-        contentResolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-            val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-            val typeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
-            val mimeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
-            val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-            val durationIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
-
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idIndex)
-                val mediaType = cursor.getInt(typeIndex)
-                val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-                val contentUri = if (isVideo) {
-                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
-                } else {
-                    ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+        try {
+            val cursor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val queryArgs = Bundle().apply {
+                    putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(MediaStore.Files.FileColumns.DATE_ADDED))
+                    putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+                    putInt(ContentResolver.QUERY_ARG_LIMIT, 120)
+                    putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                    putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
                 }
-
-                items.add(
-                    ChatMediaItem(
-                        id = id,
-                        uriString = contentUri.toString(),
-                        mimeType = cursor.getString(mimeIndex).orEmpty(),
-                        displayName = cursor.getString(nameIndex).orEmpty(),
-                        isVideo = isVideo,
-                        durationMillis = if (isVideo) cursor.getLong(durationIndex) else 0L
-                    )
+                contentResolver.query(collection, projection, queryArgs, CancellationSignal())
+            } else {
+                contentResolver.query(
+                    collection,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
                 )
             }
+
+            cursor?.use {
+                val idIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val typeIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+                val mimeIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
+                val nameIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val durationIndex = it.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
+
+                while (it.moveToNext() && items.size < 120) {
+                    val id = it.getLong(idIndex)
+                    val mediaType = it.getInt(typeIndex)
+                    val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                    val contentUri = if (isVideo) {
+                        ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+                    } else {
+                        ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                    }
+
+                    items.add(
+                        ChatMediaItem(
+                            id = id,
+                            uriString = contentUri.toString(),
+                            mimeType = it.getString(mimeIndex).orEmpty(),
+                            displayName = it.getString(nameIndex).orEmpty(),
+                            isVideo = isVideo,
+                            durationMillis = if (isVideo) it.getLong(durationIndex) else 0L
+                        )
+                    )
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.w("ChatMediaPicker", "Media query blocked without gallery permission", e)
+            return emptyList()
+        } catch (e: IllegalArgumentException) {
+            Log.w("ChatMediaPicker", "Media query rejected by provider", e)
+            return emptyList()
+        } catch (e: Exception) {
+            Log.e("ChatMediaPicker", "Failed to load recent media", e)
+            return emptyList()
         }
         return items
     }

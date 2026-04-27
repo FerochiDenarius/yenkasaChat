@@ -1,5 +1,6 @@
 package xyz.yenkasa.app.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -9,11 +10,14 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.yalantis.ucrop.UCrop
+import java.io.File
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.SelectedMediaAdapter
 import xyz.yenkasa.app.model.ChatMediaItem
@@ -31,10 +35,54 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
     private lateinit var filterCool: TextView
     private lateinit var filterWarm: TextView
     private lateinit var filterBw: TextView
+    private lateinit var cropButton: ImageButton
+    private lateinit var drawButton: ImageButton
+    private lateinit var textButton: ImageButton
+    private lateinit var stickerButton: ImageButton
 
     private val selectedAdapter = SelectedMediaAdapter(::selectIndex, ::removeItem)
     private val mediaItems = mutableListOf<ChatMediaItem>()
     private var selectedIndex: Int = 0
+
+    private val cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) {
+            if (result.resultCode != Activity.RESULT_CANCELED) {
+                Log.w("ChatMediaPreview", "Crop cancelled or failed: result=${result.resultCode}")
+                Toast.makeText(this, R.string.chat_media_crop_failed, Toast.LENGTH_SHORT).show()
+            }
+            return@registerForActivityResult
+        }
+
+        val outputUri = UCrop.getOutput(result.data ?: return@registerForActivityResult)
+        if (outputUri == null) {
+            Log.w("ChatMediaPreview", "Crop finished without output URI")
+            Toast.makeText(this, R.string.chat_media_crop_failed, Toast.LENGTH_SHORT).show()
+            return@registerForActivityResult
+        }
+
+        Log.d("ChatMediaPreview", "Crop success: $outputUri")
+        replaceSelectedMediaUri(outputUri, "image/jpeg")
+    }
+
+    private val editorLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != RESULT_OK) {
+            if (result.resultCode != RESULT_CANCELED) {
+                Log.w("ChatMediaPreview", "Editor cancelled or failed: result=${result.resultCode}")
+                Toast.makeText(this, R.string.chat_media_edit_failed, Toast.LENGTH_SHORT).show()
+            }
+            return@registerForActivityResult
+        }
+
+        val outputUri = result.data?.getParcelableExtra<Uri>(ChatMediaEditorActivity.EXTRA_OUTPUT_URI)
+        if (outputUri == null) {
+            Log.w("ChatMediaPreview", "Editor finished without output URI")
+            Toast.makeText(this, R.string.chat_media_edit_failed, Toast.LENGTH_SHORT).show()
+            return@registerForActivityResult
+        }
+
+        Log.d("ChatMediaPreview", "Editor success: $outputUri")
+        replaceSelectedMediaUri(outputUri, "image/jpeg")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +99,10 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
         filterCool = findViewById(R.id.filterCool)
         filterWarm = findViewById(R.id.filterWarm)
         filterBw = findViewById(R.id.filterBw)
+        cropButton = findViewById(R.id.buttonPreviewCrop)
+        drawButton = findViewById(R.id.buttonPreviewDraw)
+        textButton = findViewById(R.id.buttonPreviewText)
+        stickerButton = findViewById(R.id.buttonPreviewSticker)
 
         @Suppress("DEPRECATION")
         mediaItems.addAll(
@@ -68,17 +120,17 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.buttonPreviewDelete).setOnClickListener {
             mediaItems.getOrNull(selectedIndex)?.let(::removeItem)
         }
-        findViewById<ImageButton>(R.id.buttonPreviewCrop).setOnClickListener {
-            Toast.makeText(this, R.string.chat_media_crop_todo, Toast.LENGTH_SHORT).show()
+        cropButton.setOnClickListener {
+            launchCropForSelectedImage()
         }
-        findViewById<ImageButton>(R.id.buttonPreviewDraw).setOnClickListener {
-            Toast.makeText(this, R.string.chat_media_draw_todo, Toast.LENGTH_SHORT).show()
+        drawButton.setOnClickListener {
+            launchEditorForSelectedImage()
         }
-        findViewById<ImageButton>(R.id.buttonPreviewText).setOnClickListener {
+        textButton.setOnClickListener {
             captionInput.requestFocus()
         }
-        findViewById<ImageButton>(R.id.buttonPreviewSticker).setOnClickListener {
-            Toast.makeText(this, R.string.chat_media_sticker_todo, Toast.LENGTH_SHORT).show()
+        stickerButton.setOnClickListener {
+            launchEditorForSelectedImage()
         }
         findViewById<ImageButton>(R.id.buttonPreviewSend).setOnClickListener { finishWithResult() }
 
@@ -103,6 +155,7 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
         val item = mediaItems[selectedIndex]
         val uri = Uri.parse(item.uriString)
         playOverlay.isVisible = item.isVideo
+        setEditingControlsEnabled(!item.isVideo)
         loadingText.isVisible = true
         loadingText.text = getString(if (item.isVideo) R.string.chat_media_loading_video else R.string.chat_media_loading_image)
 
@@ -127,6 +180,17 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
                 )
             )
             .into(previewImage)
+    }
+
+    private fun setEditingControlsEnabled(isImage: Boolean) {
+        cropButton.isVisible = isImage
+        drawButton.isVisible = isImage
+        stickerButton.isVisible = isImage
+        filterNone.isVisible = isImage
+        filterVivid.isVisible = isImage
+        filterCool.isVisible = isImage
+        filterWarm.isVisible = isImage
+        filterBw.isVisible = isImage
     }
 
     private fun removeItem(item: ChatMediaItem) {
@@ -162,6 +226,66 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
         }
         setResult(RESULT_OK, result)
         finish()
+    }
+
+    private fun launchCropForSelectedImage() {
+        val item = mediaItems.getOrNull(selectedIndex) ?: return
+        if (item.isVideo) {
+            Toast.makeText(this, R.string.chat_media_edit_images_only, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val sourceUri = Uri.parse(item.uriString)
+        val destinationUri = createCacheOutputUri("crop")
+        Log.d("ChatMediaPreview", "Launching crop: source=$sourceUri output=$destinationUri")
+
+        val options = UCrop.Options().apply {
+            setCompressionQuality(92)
+            setHideBottomControls(false)
+            setFreeStyleCropEnabled(true)
+            setToolbarTitle(getString(R.string.chat_media_crop))
+        }
+
+        val intent = UCrop.of(sourceUri, destinationUri)
+            .withOptions(options)
+            .getIntent(this)
+        cropLauncher.launch(intent)
+    }
+
+    private fun launchEditorForSelectedImage() {
+        val item = mediaItems.getOrNull(selectedIndex) ?: return
+        if (item.isVideo) {
+            Toast.makeText(this, R.string.chat_media_edit_images_only, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val sourceUri = Uri.parse(item.uriString)
+        Log.d("ChatMediaPreview", "Launching editor for $sourceUri")
+        val intent = Intent(this, ChatMediaEditorActivity::class.java).apply {
+            putExtra(ChatMediaEditorActivity.EXTRA_SOURCE_URI, sourceUri.toString())
+        }
+        editorLauncher.launch(intent)
+    }
+
+    private fun replaceSelectedMediaUri(newUri: Uri, mimeType: String) {
+        val existing = mediaItems.getOrNull(selectedIndex) ?: return
+        val replacement = existing.copy(
+            uriString = newUri.toString(),
+            mimeType = mimeType,
+            displayName = buildEditedDisplayName(existing.displayName)
+        )
+        mediaItems[selectedIndex] = replacement
+        updatePreview()
+    }
+
+    private fun buildEditedDisplayName(original: String): String {
+        val base = original.substringBeforeLast('.', original)
+        return "${base}_edited.jpg"
+    }
+
+    private fun createCacheOutputUri(prefix: String): Uri {
+        val outputFile = File(cacheDir, "chat_${prefix}_${System.currentTimeMillis()}.jpg")
+        return Uri.fromFile(outputFile)
     }
 
     companion object {

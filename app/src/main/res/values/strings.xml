@@ -50,6 +50,9 @@
     <string name="chat_media_loading_image">Preparing image preview…</string>
     <string name="chat_media_loading_video">Preparing video preview…</string>
     <string name="chat_media_preview_failed">Preview unavailable. You can still send this media.</string>
+    <string name="chat_image_unavailable">Image unavailable</string>
+    <string name="chat_image_failed_retry">Image failed to load. Tap to retry.</string>
+    <string name="chat_video_failed_retry">Video preview failed. Tap to retry.</string>
     <string name="chat_media_crop_todo">Crop editor will be added next.</string>
     <string name="chat_media_draw_todo">Drawing editor will be added next.</string>
     <string name="chat_media_sticker_todo">Sticker tools will be added next.</string>
@@ -59,6 +62,17 @@
     <string name="chat_media_picker_open_failed">Could not open the media picker.</string>
     <string name="chat_media_send_empty">No media selected to send.</string>
     <string name="chat_media_limit">You can select up to %1$d items.</string>
+    <string name="chat_media_crop_failed">Could not crop this image.</string>
+    <string name="chat_media_edit_failed">Could not save your edits.</string>
+    <string name="chat_media_edit_images_only">Editing is available for images only.</string>
+    <string name="chat_media_draw_enabled">Drawing enabled</string>
+    <string name="chat_media_add_text_title">Add text</string>
+    <string name="chat_media_add_text_hint">Type text to place on image</string>
+    <string name="chat_media_add_emoji_title">Choose emoji</string>
+    <string name="chat_media_apply">Apply</string>
+    <string name="chat_media_save">Save edits</string>
+    <string name="chat_media_undo">Undo</string>
+    <string name="chat_media_redo">Redo</string>
     <string name="chat_emoji_title">Emoji</string>
     <string name="chat_emoji_recent_hint">Tap an emoji to insert it.</string>
     <plurals name="chat_media_selected_count">

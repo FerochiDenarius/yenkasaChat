@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Rect
@@ -14,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
+import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -33,6 +35,7 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -223,12 +226,19 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     )
 
     // --- Activity Result Launchers ---
-    private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { showPendingMediaPreview(it, "image") }
-    }
+    private val chatMediaPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ChatMediaPickerActivity.MAX_SELECTION_COUNT)
+    ) { uris: List<Uri> ->
+        if (uris.isEmpty()) return@registerForActivityResult
 
-    private val videoPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { showPendingMediaPreview(it, "video") }
+        lifecycleScope.launch {
+            val items = buildPickedMediaItems(uris)
+            if (items.isEmpty()) {
+                Toast.makeText(this@ChatActivity, R.string.chat_media_send_empty, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            launchChatMediaPreview(items)
+        }
     }
 
     private val chatBackgroundImageLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -270,7 +280,18 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             if (imageUri == null) {
                 Toast.makeText(this, "Camera image was not saved. Try again.", Toast.LENGTH_LONG).show()
             } else {
-                showPendingMediaPreview(imageUri, "image")
+                Log.d("ChatActivity", "Camera capture ready: $imageUri")
+                launchChatMediaPreview(
+                    listOf(
+                        ChatMediaItem(
+                            id = System.currentTimeMillis(),
+                            uriString = imageUri.toString(),
+                            mimeType = "image/jpeg",
+                            displayName = "camera_${System.currentTimeMillis()}.jpg",
+                            isVideo = false
+                        )
+                    )
+                )
             }
         } else {
             Toast.makeText(this, "Photo cancelled.", Toast.LENGTH_SHORT).show()
@@ -471,7 +492,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
         findViewById<ImageButton>(R.id.buttonAttachCamera).setOnClickListener {
             attachMenu.visibility = View.GONE
-            launchChatMediaPicker()
+            if (!hasPermission(Manifest.permission.CAMERA)) {
+                pendingPermissionAction = { launchCameraCapture() }
+                permissionsLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+                return@setOnClickListener
+            }
+            launchCameraCapture()
         }
         findViewById<ImageButton>(R.id.buttonAttachLocation).setOnClickListener {
             attachMenu.visibility = View.GONE
@@ -693,17 +719,71 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun launchChatMediaPicker() {
         try {
-            val intent = Intent(this, ChatMediaPickerActivity::class.java)
-            chatMediaFlowLauncher.launch(intent)
+            chatMediaPickerLauncher.launch(
+                PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                )
+            )
         } catch (e: Exception) {
             Log.e("ChatActivity", "Unable to launch media picker", e)
             Toast.makeText(this, R.string.chat_media_picker_open_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
+    private fun launchChatMediaPreview(items: List<ChatMediaItem>) {
+        clearPendingMediaPreview()
+        val intent = Intent(this@ChatActivity, ChatMediaPreviewActivity::class.java).apply {
+            putExtra(ChatMediaPreviewActivity.EXTRA_MEDIA_ITEMS, ArrayList(items))
+            putExtra(ChatMediaPreviewActivity.EXTRA_INITIAL_INDEX, 0)
+        }
+        chatMediaFlowLauncher.launch(intent)
+    }
+
+    private suspend fun buildPickedMediaItems(uris: List<Uri>): List<ChatMediaItem> {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            uris.mapIndexedNotNull { index, uri ->
+                try {
+                    val mimeType = contentResolver.getType(uri).orEmpty()
+                    ChatMediaItem(
+                        id = System.currentTimeMillis() + index,
+                        uriString = uri.toString(),
+                        mimeType = mimeType,
+                        displayName = queryDisplayName(uri) ?: "media_${index + 1}",
+                        isVideo = mimeType.startsWith("video/")
+                    )
+                } catch (e: Exception) {
+                    Log.w("ChatActivity", "Skipping picked media URI: $uri", e)
+                    null
+                }
+            }
+        }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        var cursor: Cursor? = null
+        return try {
+            cursor = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0) cursor.getString(nameIndex) else null
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("ChatActivity", "Unable to resolve media name for $uri", e)
+            null
+        } finally {
+            cursor?.close()
+        }
+    }
+
     private fun queueSelectedMediaForUpload(selectedItems: List<ChatMediaItem>, caption: String) {
         outgoingMediaQueue.clear()
         selectedItems.forEachIndexed { index, item ->
+            Log.d(
+                "ChatActivity",
+                "Queueing media item: uri=${item.uriString}, mime=${item.mimeType}, isVideo=${item.isVideo}, name=${item.displayName}"
+            )
             outgoingMediaQueue.add(
                 QueuedMediaUpload(
                     uri = Uri.parse(item.uriString),
@@ -736,6 +816,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val extraData = mutableMapOf<String, Any?>()
         next.caption?.let { extraData["text"] = it }
         replyingToMessage?.id?.let { extraData["repliedTo"] = it }
+        Log.d("ChatActivity", "Uploading queued media: uri=${next.uri}, type=${next.type}, caption=${next.caption}")
         chatMessageHandler.uploadFileToCloudinary(next.uri, next.type, extraData)
     }
 
@@ -1661,6 +1742,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     override fun onMessageSent(message: ChatMessage) {
+        Log.d(
+            "ChatActivity",
+            "Message sent callback: id=${message.id}, image=${message.imageUrl}, video=${message.videoUrl}, file=${message.fileUrl}, text=${message.text}"
+        )
+        if (isUploadingPendingMedia) {
+            clearPendingMediaPreview()
+        }
         chatActivityHelper.onMessageSentByHandler(message)
         if (isUploadingMediaQueue) {
             uploadNextQueuedMedia()
@@ -1669,6 +1757,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onError(error: String) {
         chatActivityHelper.onErrorFromHandler(error)
+        if (isUploadingPendingMedia) {
+            isUploadingPendingMedia = false
+            updateComposerActionButtons()
+            textMediaPreviewSubtitle.text = getString(R.string.chat_media_preview_failed)
+        }
         if (isUploadingMediaQueue) {
             isUploadingMediaQueue = false
             outgoingMediaQueue.clear()

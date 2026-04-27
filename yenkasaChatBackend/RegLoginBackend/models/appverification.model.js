@@ -1,6 +1,11 @@
 // models/appverification.model.js - VERIFIED & MATCHED TO ANDROID MODEL
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const {
+  PRELAUNCH_LABEL,
+  RANKING_LAUNCH_DATE,
+  RANK_REQUIREMENTS
+} = require('../config/ranking.config');
 
 // ------------------------------
 // PHASE HISTORY ITEM (MATCH FRONTEND)
@@ -128,25 +133,24 @@ appVerificationSchema.methods.getPhaseMultiplier = function () {
 };
 
 appVerificationSchema.methods.getCurrentRequirements = function () {
-  const base = {
-    accountAge: 21,
-    comments: 30,
-    followers: 100,
-    maxLikes: 30,
-    dailyLogins: 30,
-    adsViewed: 100
-  };
+  const rankKey = this.getRankKeyForPhase();
+  return RANK_REQUIREMENTS[rankKey] || RANK_REQUIREMENTS.verified;
+};
 
-  const m = this.getPhaseMultiplier();
+appVerificationSchema.methods.getRankKeyForPhase = function () {
+  if (this.currentPhase >= 3) return 'moderator';
+  if (this.currentPhase === 2) return 'admin';
+  return 'verified';
+};
 
-  return {
-    accountAge: base.accountAge,
-    comments: Math.floor(base.comments * m),
-    followers: Math.floor(base.followers * m),
-    maxLikes: Math.floor(base.maxLikes * m),
-    dailyLogins: Math.floor(base.dailyLogins * m),
-    adsViewed: Math.floor(base.adsViewed * m)
-  };
+appVerificationSchema.methods.getNextRankKeyForPhase = function () {
+  if (this.currentPhase >= 3) return 'moderator';
+  if (this.currentPhase === 2) return 'moderator';
+  return 'admin';
+};
+
+appVerificationSchema.methods.getRankingPeriodLabel = function () {
+  return new Date() < RANKING_LAUNCH_DATE ? PRELAUNCH_LABEL : 'Official ranking period';
 };
 
 appVerificationSchema.methods.checkRequirementsMet = function () {
@@ -155,14 +159,14 @@ appVerificationSchema.methods.checkRequirementsMet = function () {
 
   return {
     accountAge: m.accountAge >= req.accountAge,
-    comments: m.totalComments >= req.comments,
-    followers: m.totalFollowers >= req.followers,
-    maxLikes: m.maxLikesOnPost >= req.maxLikes,
+    comments: m.totalCommentsMade >= req.comments,
+    followers: m.totalFollowing >= req.followers,
+    maxLikes: m.postsLiked >= req.maxLikes,
     dailyLogins: m.dailyLogins >= req.dailyLogins,
     adsViewed: m.adsViewed >= req.adsViewed,
     allMet:
       m.accountAge >= req.accountAge &&
-      m.totalComments >= req.comments &&
+      m.totalCommentsMade >= req.comments &&
       m.totalFollowing >= req.followers &&
       m.postsLiked >= req.maxLikes &&
       m.dailyLogins >= req.dailyLogins &&

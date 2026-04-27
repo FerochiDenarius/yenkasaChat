@@ -55,4 +55,21 @@
     <color name="account_danger">#FF594D</color>
     <color name="community_create_button_bg">#101417</color>
     <color name="community_create_button_text">#EAF4EA</color>
+    <color name="chat_picker_background">#0A0E0D</color>
+    <color name="chat_picker_panel">#151B1A</color>
+    <color name="chat_picker_tile">#1F2624</color>
+    <color name="chat_picker_button">#202826</color>
+    <color name="chat_picker_stroke">#2E3A36</color>
+    <color name="chat_picker_text">#EDF2EF</color>
+    <color name="chat_picker_secondary_text">#93A19A</color>
+    <color name="chat_picker_icon">#E4EEE8</color>
+    <color name="chat_picker_filter_selected">#1B3027</color>
+    <color name="chat_composer_surface">#171D1B</color>
+    <color name="chat_composer_text">#F2F5F4</color>
+    <color name="chat_composer_hint">#94A29B</color>
+    <color name="chat_surface_top">#0B1210</color>
+    <color name="chat_surface_bottom">#101716</color>
+    <color name="chat_bubble_sent">#143A2D</color>
+    <color name="chat_bubble_received">#1A2120</color>
+    <color name="chat_reply_surface">#12201B</color>
 </resources>

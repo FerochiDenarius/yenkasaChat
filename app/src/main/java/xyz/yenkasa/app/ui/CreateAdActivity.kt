@@ -94,7 +94,7 @@ class CreateAdActivity : AppCompatActivity() {
         if (!canCurrentUserCreateAd()) {
             Toast.makeText(
                 this,
-                "Only moderators and developers can create sponsored ads.",
+                "Only verified users and approved reviewer roles can create sponsored ads.",
                 Toast.LENGTH_LONG
             ).show()
             finish()
@@ -168,7 +168,7 @@ class CreateAdActivity : AppCompatActivity() {
     }
 
     private fun canCurrentUserCreateAd(): Boolean {
-        return UserPermissions.canCreateAd(resolveCurrentRole())
+        return isCurrentUserVerified() || UserPermissions.canCreateAd(resolveCurrentRole())
     }
 
     private fun resolveCurrentRole(): String {
@@ -189,6 +189,17 @@ class CreateAdActivity : AppCompatActivity() {
             }
         }
         return TokenManager.getUserRole(this)
+    }
+
+    private fun isCurrentUserVerified(): Boolean {
+        val userJson = TokenManager.getUser(this)
+        if (!userJson.isNullOrBlank()) {
+            runCatching {
+                val json = JSONObject(userJson)
+                if (json.optBoolean("verified", false)) return true
+            }
+        }
+        return TokenManager.isVerified(this)
     }
 
     private fun submitAd() {
@@ -267,7 +278,7 @@ class CreateAdActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful && response.body()?.success == true) {
-                        showToast("Ad submitted successfully!")
+                        showToast(response.body()?.message ?: "Ad submitted for approval")
                         finish()
                     } else {
                         showToast("Ad failed (${response.code()}): ${readBackendError(response.errorBody()?.string())}")

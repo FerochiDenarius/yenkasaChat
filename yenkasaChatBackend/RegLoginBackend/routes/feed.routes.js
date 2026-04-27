@@ -63,7 +63,11 @@ router.get("/", auth, async (req, res) => {
     // ===============================
     // 2️⃣ FETCH ADS
     // ===============================
-    const ads = await Ad.find({ isActive: true })
+    const ads = await Ad.find({
+      isActive: true,
+      approvalStatus: "approved",
+      adType: { $in: ["sponsor", "internal"] }
+    })
       .sort({ createdAt: -1 })
       .limit(Math.ceil(posts.length / 6)) // 1 ad per 6 posts
       .lean();

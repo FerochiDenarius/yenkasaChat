@@ -330,8 +330,8 @@
                 android:paddingStart="6dp"
                 android:paddingEnd="6dp"
                 android:scrollbars="vertical"
-                android:textColor="@color/feed_primary_text"
-                android:textColorHint="@color/feed_secondary_text"
+                android:textColor="@color/chat_composer_text"
+                android:textColorHint="@color/chat_composer_hint"
                 android:textSize="15sp" />
 
             <ImageButton

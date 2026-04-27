@@ -125,6 +125,23 @@
         <color name="on_surface">#EDEDED</color>
 
     <color name="ic_yenkasa_background">#F8D24A</color>
+    <color name="chat_picker_background">#0C1110</color>
+    <color name="chat_picker_panel">#161D1B</color>
+    <color name="chat_picker_tile">#222A27</color>
+    <color name="chat_picker_button">#212926</color>
+    <color name="chat_picker_stroke">#2E3935</color>
+    <color name="chat_picker_text">#F2F5F4</color>
+    <color name="chat_picker_secondary_text">#97A29D</color>
+    <color name="chat_picker_icon">#DCE8E1</color>
+    <color name="chat_picker_filter_selected">#21362D</color>
+    <color name="chat_composer_surface">#FFFFFF</color>
+    <color name="chat_composer_text">#14211C</color>
+    <color name="chat_composer_hint">#6E7B74</color>
+    <color name="chat_surface_top">#FAF7EF</color>
+    <color name="chat_surface_bottom">#F3EEDC</color>
+    <color name="chat_bubble_sent">#E5F4D6</color>
+    <color name="chat_bubble_received">#FFFFFF</color>
+    <color name="chat_reply_surface">#EEF6E9</color>
 
 
 

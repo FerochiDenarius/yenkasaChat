@@ -22,6 +22,8 @@ function parseAdUpload(req, res, next) {
 }
 
 router.get('/feed', auth, adsController.getAdsFeed);
+router.get('/pending', auth, adsController.getPendingAds);
+router.get('/mine', auth, adsController.getMyAds);
 router.post('/view/:adId', auth, adsController.recordAdView);
 router.post('/reward/:adId', auth, adsController.rewardAd);
 
@@ -38,6 +40,8 @@ function maybeParseAdUpload(req, res, next) {
 
 router.post('/create', auth, maybeParseAdUpload, adsController.createAd);
 router.post('/', auth, maybeParseAdUpload, adsController.createAd);
+router.put('/:adId/approve', auth, adsController.approveAd);
+router.put('/:adId/reject', auth, adsController.rejectAd);
 
 router.post('/reward-click/:adId', auth, adsController.rewardAdClick);
 

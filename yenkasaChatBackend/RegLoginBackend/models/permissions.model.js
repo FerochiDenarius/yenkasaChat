@@ -8,12 +8,13 @@ const { Schema } = mongoose;
 // --------------------------------------------
 const rankOrder = [
   'user',
+  'unverified',
   'verified',
-  'moderator',
   'admin',
-  'developer',
+  'moderator',
   'junior_developer',
   'senior_developer',
+  'developer',
 ];
 
 // --------------------------------------------
@@ -72,7 +73,8 @@ permissionSchema.statics.normalize = normalize;
 // Basic permission checks
 permissionSchema.statics.canPost = function (role, verified = false) {
   const r = normalize(role);
-  return ['user', 'verified', 'admin', 'moderator', 'developer', 'junior_developer', 'senior_developer'].includes(r);
+  if (verified) return true;
+  return ['verified', 'admin', 'moderator', 'developer', 'junior_developer', 'senior_developer'].includes(r);
 };
 
 permissionSchema.statics.canApprove = function (role) {
@@ -116,7 +118,8 @@ permissionSchema.statics.seedDefaults = async function () {
   const Permission = this;
 
   const defaults = {
-    user: { canPost: true },
+    user: { canPost: false },
+    unverified: { canPost: false },
     verified: { canPost: true },
     admin: { canPost: true, canApprove: true, canCreateCommunity: true },
     moderator: {

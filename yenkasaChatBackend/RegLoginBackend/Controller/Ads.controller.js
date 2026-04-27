@@ -4,6 +4,47 @@ const User = require('../models/user.model');
 const RewardTx = require('../models/Rewards.Transaction.model');
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
+const Permission = require('../models/permissions.model');
+
+const AD_REVIEWER_ROLES = new Set(["admin", "moderator", "junior_developer", "senior_developer"]);
+const ELEVATED_AD_CREATOR_ROLES = new Set(["admin", "moderator", "junior_developer", "senior_developer"]);
+
+function normalizeRole(role) {
+  return Permission.normalize(role);
+}
+
+function canReviewAds(roleName) {
+  return AD_REVIEWER_ROLES.has(normalizeRole(roleName));
+}
+
+function canCreateAds(user) {
+  const roleName = normalizeRole(
+    user?.roleName || user?.role?.name || user?.role || ""
+  );
+  return user?.verified === true || ELEVATED_AD_CREATOR_ROLES.has(roleName);
+}
+
+function normalizeAdForClient(ad) {
+  if (!ad) return ad;
+
+  const meta = ad.meta || {};
+
+  return {
+    ...ad,
+    thumbnailUrl: ad.thumbnailUrl || meta.thumbnail || null,
+    ctaText: ad.ctaText || meta.ctaText || null,
+    ctaUrl: ad.ctaUrl || meta.ctaUrl || null,
+    sponsorName: ad.sponsorName || meta.sponsorName || null
+  };
+}
+
+function publicAdFilter() {
+  return {
+    isActive: true,
+    approvalStatus: "approved",
+    adType: { $in: ["sponsor", "internal"] }
+  };
+}
 
 
 // GET /ads/feed?page=&limit=
@@ -13,8 +54,12 @@ exports.getAdsFeed = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page-1)*limit;
 
-    const ads = await Ad.find({ isActive: true }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
-    res.json({ success:true, ads });
+    const ads = await Ad.find(publicAdFilter())
+      .sort({ impressions: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    res.json({ success:true, ads: ads.map(normalizeAdForClient) });
   } catch(err){ res.status(500).json({ success:false, err: err.message }); }
 };
 
@@ -25,7 +70,7 @@ exports.recordAdView = async (req, res) => {
     const { adId } = req.params;
     const { durationMs = 0, fullyWatched = false, deviceInfo = {} } = req.body;
 
-    const ad = await Ad.findById(adId);
+    const ad = await Ad.findOne({ _id: adId, ...publicAdFilter() });
     if(!ad) return res.status(404).json({ success:false, message:'Ad not found' });
 
     const adView = new AdView({ adId, userId, durationMs, fullyWatched, deviceInfo });
@@ -43,6 +88,14 @@ exports.rewardAdClick = async (req, res) => {
   try {
     const userId = req.user.id;
     const { adId } = req.params;
+    const ad = await Ad.findOne({ _id: adId, ...publicAdFilter() }).select("_id");
+
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: "Ad not found"
+      });
+    }
 
     // Prevent double rewards: 1 click per ad per user
     const existing = await RewardTx.findOne({
@@ -127,7 +180,7 @@ const fs = require('fs');
 exports.createAd = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId).select("role roleName").lean();
+    const user = await User.findById(userId).select("role roleName verified username").lean();
     const normalizedRole = String(
       user?.roleName ||
       req.user?.roleName ||
@@ -138,17 +191,10 @@ exports.createAd = async (req, res) => {
       ""
     ).trim().toLowerCase().replace(/\s+/g, "_");
 
-    const allowedRoles = new Set([
-      "moderator",
-      "developer",
-      "junior_developer",
-      "senior_developer"
-    ]);
-
-    if (!allowedRoles.has(normalizedRole)) {
+    if (!canCreateAds(user)) {
       return res.status(403).json({
         success: false,
-        message: "Only moderators and developers can create sponsored ads."
+        message: "Only verified users and approved reviewer roles can create sponsored ads."
       });
     }
 
@@ -188,14 +234,21 @@ exports.createAd = async (req, res) => {
 const adData = {
   title,
   rewardYKC: Number(rewardAmount || rewardYKC) || 5,
-  sponsorId: finalAdType === "google" ? null : userId,
+  sponsorId: userId,
   adType: finalAdType,
-  isActive: true,
+  isActive: false,
+  approvalStatus: "pending",
+  submittedBy: userId,
+  submittedByRole: normalizedRole,
+  ctaText: ctaText || "",
+  ctaUrl: ctaUrl || "",
+  sponsorName: user?.username || "Yenkasa Sponsor",
   meta: {
     ctaText,
     ctaUrl,
     scope: scope || "global",
-    communityScope: communityScope || "all"
+    communityScope: communityScope || "all",
+    sponsorName: user?.username || "Yenkasa Sponsor"
   }
 };
 
@@ -215,12 +268,19 @@ if (videoFile) {
 }
 
 if (thumbnailFile) {
+  adData.thumbnailUrl = `${baseUrl}/uploads/${thumbnailFile.filename}`;
   adData.meta.thumbnail = `${baseUrl}/uploads/${thumbnailFile.filename}`;
 }
 
-// Google AdMob ads are handled by the Android SDK.
-// They do not need uploaded image/video files.
-if (finalAdType !== "google" && !adData.imageUrl && !adData.videoUrl) {
+// Google AdMob ads are handled only by the Android SDK.
+if (finalAdType === "google") {
+  return res.status(400).json({
+    success: false,
+    message: "Google AdMob ads are managed by the Android SDK and should not be created through this upload API."
+  });
+}
+
+if (!adData.imageUrl && !adData.videoUrl) {
   return res.status(400).json({
     success: false,
     message: "Select an image or video for the ad"
@@ -231,7 +291,8 @@ if (finalAdType !== "google" && !adData.imageUrl && !adData.videoUrl) {
 
     return res.json({
       success: true,
-      ad
+      message: "Ad submitted for approval.",
+      ad: normalizeAdForClient(ad.toObject())
     });
 
   } catch (err) {
@@ -252,7 +313,7 @@ exports.rewardAd = async (req, res) => {
     const { adViewId } = req.body; // recommended (returned from recordAdView)
 
     // 1) verify ad & adView
-    const ad = await Ad.findById(adId);
+    const ad = await Ad.findOne({ _id: adId, ...publicAdFilter() });
     if(!ad) return res.status(404).json({ success:false, message:'Ad not found' });
 
     const adView = await AdView.findById(adViewId);
@@ -316,4 +377,100 @@ exports.rewardAd = async (req, res) => {
     return res.json({ success:true, rewarded: true, amount: tx.amount });
   } catch(err){ console.error(err); res.status(500).json({ success:false }); }
   
+};
+
+exports.getPendingAds = async (req, res) => {
+  try {
+    const reviewer = await User.findById(req.user.id).select("role roleName");
+    if (!canReviewAds(reviewer?.roleName || reviewer?.role)) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    const ads = await Ad.find({ approvalStatus: "pending" })
+      .populate("submittedBy", "username profileImage verified roleName")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ success: true, ads: ads.map(normalizeAdForClient) });
+  } catch (err) {
+    console.error("❌ Failed to fetch pending ads:", err);
+    return res.status(500).json({ success: false, message: "Failed to fetch pending ads" });
+  }
+};
+
+exports.approveAd = async (req, res) => {
+  try {
+    const reviewer = await User.findById(req.user.id).select("role roleName");
+    if (!canReviewAds(reviewer?.roleName || reviewer?.role)) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    const ad = await Ad.findById(req.params.adId);
+    if (!ad) {
+      return res.status(404).json({ success: false, message: "Ad not found" });
+    }
+
+    if (String(ad.submittedBy) === String(req.user.id)) {
+      return res.status(403).json({ success: false, message: "You cannot approve your own ad." });
+    }
+
+    ad.approvalStatus = "approved";
+    ad.isActive = true;
+    ad.approvedBy = req.user.id;
+    ad.approvedAt = new Date();
+    ad.rejectedBy = null;
+    ad.rejectedAt = null;
+    ad.rejectionReason = "";
+    await ad.save();
+
+    return res.json({ success: true, ad: normalizeAdForClient(ad.toObject()) });
+  } catch (err) {
+    console.error("❌ Failed to approve ad:", err);
+    return res.status(500).json({ success: false, message: "Failed to approve ad" });
+  }
+};
+
+exports.rejectAd = async (req, res) => {
+  try {
+    const reviewer = await User.findById(req.user.id).select("role roleName");
+    if (!canReviewAds(reviewer?.roleName || reviewer?.role)) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    const ad = await Ad.findById(req.params.adId);
+    if (!ad) {
+      return res.status(404).json({ success: false, message: "Ad not found" });
+    }
+
+    if (String(ad.submittedBy) === String(req.user.id)) {
+      return res.status(403).json({ success: false, message: "You cannot reject your own ad." });
+    }
+
+    ad.approvalStatus = "rejected";
+    ad.isActive = false;
+    ad.rejectedBy = req.user.id;
+    ad.rejectedAt = new Date();
+    ad.rejectionReason = String(req.body?.reason || "").trim();
+    ad.approvedBy = null;
+    ad.approvedAt = null;
+    await ad.save();
+
+    return res.json({ success: true, ad: normalizeAdForClient(ad.toObject()) });
+  } catch (err) {
+    console.error("❌ Failed to reject ad:", err);
+    return res.status(500).json({ success: false, message: "Failed to reject ad" });
+  }
+};
+
+exports.getMyAds = async (req, res) => {
+  try {
+    const ads = await Ad.find({ submittedBy: req.user.id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ success: true, ads: ads.map(normalizeAdForClient) });
+  } catch (err) {
+    console.error("❌ Failed to fetch my ads:", err);
+    return res.status(500).json({ success: false, message: "Failed to fetch my ads" });
+  }
 };

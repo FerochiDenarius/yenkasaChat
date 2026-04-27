@@ -36,6 +36,10 @@ data class DetailsVerification(
 // ===============================
 data class AppVerification(
     val currentPhase: Int,
+    val currentRankKey: String? = null,
+    val nextRankKey: String? = null,
+    val rankingPeriodLabel: String? = null,
+    val rankingLaunchDate: String? = null,
     val hasVerifiedBanner: Boolean,
     val phaseStartDate: String? = null,
     val phaseEndDate: String? = null,
@@ -44,7 +48,9 @@ data class AppVerification(
     val requirements: VerificationRequirements,
     val currentMetrics: VerificationMetrics,
     val progress: VerificationProgress,
-    val phaseHistory: List<PhaseHistory>
+    val phaseHistory: List<PhaseHistory>,
+    val activeRankingMetrics: ActiveRankingMetrics? = null,
+    val analyticsOnlyMetrics: AnalyticsOnlyMetrics? = null
 )
 
 
@@ -260,4 +266,22 @@ data class PerformanceTotals(
     val totalFollowing: Int = 0
 )
 
+data class ActiveRankingMetrics(
+    val accountAge: Int = 0,
+    val totalCommentsMade: Int = 0,
+    val totalFollowing: Int = 0,
+    val postsLiked: Int = 0,
+    val totalLikesGiven: Int = 0,
+    val dailyLogins: Int = 0,
+    val adsViewed: Int = 0
+)
+
+data class AnalyticsOnlyMetrics(
+    val totalFollowers: Int = 0,
+    val totalLikesReceived: Int = 0,
+    val totalViewsReceived: Int = 0,
+    val totalCommentsReceived: Int = 0,
+    val totalRepliesReceived: Int = 0,
+    val maxLikesOnPost: Int = 0
+)
 

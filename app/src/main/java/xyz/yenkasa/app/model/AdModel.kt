@@ -33,7 +33,10 @@ data class AdModel(
 
     // SPONSOR DATA
     val sponsorName: String? = null,
-    val campaignId: String? = null
+    val campaignId: String? = null,
+    val approvalStatus: String? = null,
+    val isActive: Boolean = false,
+    val rejectionReason: String? = null
 )
 
 
@@ -46,7 +49,8 @@ data class AdCreateRequest(
 data class AdCreateResponse(
     val success: Boolean,
     val message: String? = null,
-    val adId: String? = null
+    val adId: String? = null,
+    val ad: AdModel? = null
 )
 
 data class AdsFeedResponse(

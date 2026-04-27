@@ -745,6 +745,16 @@ interface ApiService {
         @Header("Authorization") auth: String
     ): Call<AdsFeedResponse>
 
+    @GET("ads/pending")
+    fun getPendingAds(
+        @Header("Authorization") auth: String
+    ): Call<AdsFeedResponse>
+
+    @GET("ads/mine")
+    fun getMyAds(
+        @Header("Authorization") auth: String
+    ): Call<AdsFeedResponse>
+
 
     @POST("ads/view/{adId}")
     fun recordAdView(
@@ -792,6 +802,19 @@ interface ApiService {
         @Part image: MultipartBody.Part?,
         @Part video: MultipartBody.Part?,
         @Part thumbnail: MultipartBody.Part?
+    ): Call<AdCreateResponse>
+
+    @PUT("ads/{adId}/approve")
+    fun approveAd(
+        @Path("adId") adId: String,
+        @Header("Authorization") auth: String
+    ): Call<AdCreateResponse>
+
+    @PUT("ads/{adId}/reject")
+    fun rejectAd(
+        @Path("adId") adId: String,
+        @Header("Authorization") auth: String,
+        @Body body: Map<String, String>
     ): Call<AdCreateResponse>
 
     @POST("ads/reward-click/{adId}")

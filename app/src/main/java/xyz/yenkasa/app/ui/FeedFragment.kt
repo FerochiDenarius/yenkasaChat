@@ -330,6 +330,7 @@ class FeedFragment : Fragment() {
                     ad ?: AdModel(
                         _id = "local-ad-${counter}",
                         sponsorName = "AdMob",
+                        adType = "google",
                         title = "Sponsored Ad",
                         imageUrl = null,
                         videoUrl = null,

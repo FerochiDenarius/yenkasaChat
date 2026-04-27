@@ -5,12 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.google.android.gms.ads.*
 import com.google.android.gms.ads.nativead.*
 import kotlinx.coroutines.*
@@ -25,26 +28,22 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
     private var exoPlayer: ExoPlayer? = null
     private val trackedImpressions = mutableSetOf<String>()
 
-    override fun bind(holder: AdsViewHolder, ad: AdModel) {
-        val isAdMobSlot =
-            ad.adType.equals("google", ignoreCase = true) ||
-                    ad.sponsorName.equals("AdMob", ignoreCase = true) ||
-                    ad._id.startsWith("local-ad")
-
-        holder.itemView.visibility = View.VISIBLE
-        holder.itemView.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-
+    override fun bindYenkasa(holder: YenkasaAdViewHolder, ad: AdModel) {
+        Log.d("YenkasaAds", "Binding Yenkasa ad id=${ad._id} image=${ad.imageUrl} video=${ad.videoUrl} thumb=${ad.thumbnailUrl}")
         holder.adImageThumbnail.visibility = View.GONE
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayerView.visibility = View.GONE
         holder.adPlayButton.visibility = View.GONE
         holder.adCTAButton.visibility = View.GONE
         holder.adWatchRewardButton.visibility = View.GONE
-        holder.admobNativeContainer.visibility = View.GONE
-        holder.nativeAdView.visibility = View.GONE
+        holder.adMediaFallback.visibility = View.GONE
+        holder.adPlayerView.player = null
+        holder.adPlayButton.setOnClickListener(null)
+        holder.adCTAButton.setOnClickListener(null)
+        holder.adWatchRewardButton.setOnClickListener(null)
 
         holder.adSponsorLabel.text =
-            ad.sponsorName ?: "Sponsored • Earn ${ad.rewardYKC} YKC"
+            ad.sponsorName?.takeIf { it.isNotBlank() } ?: "Sponsored • Earn ${ad.rewardYKC} YKC"
 
         if (!ad.title.isNullOrEmpty()) {
             holder.adTitle.visibility = View.VISIBLE
@@ -53,14 +52,8 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             holder.adTitle.visibility = View.GONE
         }
 
-        if (isAdMobSlot) {
-            loadAdmobNativeAd(holder)
-            return
-        }
-
         if (ad.imageUrl.isNullOrEmpty() && ad.videoUrl.isNullOrEmpty()) {
-            holder.itemView.visibility = View.GONE
-            holder.itemView.layoutParams.height = 0
+            holder.adMediaFallback.visibility = View.VISIBLE
             return
         }
 
@@ -76,6 +69,32 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             Glide.with(context)
                 .load(ad.imageUrl)
                 .placeholder(R.drawable.placeholder_image)
+                .error(R.drawable.placeholder_image)
+                .listener(object : RequestListener<android.graphics.drawable.Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<android.graphics.drawable.Drawable>,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        Log.e("YenkasaAds", "Image ad failed id=${ad._id}: ${e?.message}")
+                        holder.adImageThumbnail.visibility = View.GONE
+                        holder.adMediaFallback.visibility = View.VISIBLE
+                        return false
+                    }
+
+                    override fun onResourceReady(
+                        resource: android.graphics.drawable.Drawable,
+                        model: Any,
+                        target: Target<android.graphics.drawable.Drawable>?,
+                        dataSource: DataSource,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        Log.d("YenkasaAds", "Image ad loaded id=${ad._id}")
+                        holder.adMediaFallback.visibility = View.GONE
+                        return false
+                    }
+                })
                 .into(holder.adImageThumbnail)
         }
 
@@ -85,7 +104,32 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             holder.adWatchRewardButton.visibility = View.VISIBLE
 
             Glide.with(context)
-                .load(ad.thumbnailUrl ?: R.drawable.placeholder_image)
+                .load(ad.thumbnailUrl ?: ad.imageUrl ?: R.drawable.placeholder_image)
+                .error(R.drawable.placeholder_image)
+                .listener(object : RequestListener<android.graphics.drawable.Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<android.graphics.drawable.Drawable>,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        Log.e("YenkasaAds", "Video thumbnail failed id=${ad._id}: ${e?.message}")
+                        holder.adMediaFallback.visibility = View.VISIBLE
+                        return false
+                    }
+
+                    override fun onResourceReady(
+                        resource: android.graphics.drawable.Drawable,
+                        model: Any,
+                        target: Target<android.graphics.drawable.Drawable>?,
+                        dataSource: DataSource,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        Log.d("YenkasaAds", "Video thumbnail loaded id=${ad._id}")
+                        holder.adMediaFallback.visibility = View.GONE
+                        return false
+                    }
+                })
                 .into(holder.adVideoThumbnail)
 
             holder.adPlayButton.setOnClickListener {
@@ -103,12 +147,21 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             }
         }
 
-        holder.adWatchRewardButton.setOnClickListener {
-            holder.adWatchRewardButton.text = "Watching…"
-            showRewardedAd(ad) {
-                holder.adWatchRewardButton.text = "Reward Earned!"
+        if (!ad.videoUrl.isNullOrEmpty()) {
+            holder.adWatchRewardButton.visibility = View.VISIBLE
+            holder.adWatchRewardButton.text = "Watch & Earn ${ad.rewardYKC} YKC"
+            holder.adWatchRewardButton.setOnClickListener {
+                holder.adWatchRewardButton.text = "Watching…"
+                showRewardedAd(ad) {
+                    holder.adWatchRewardButton.text = "Reward Earned!"
+                }
             }
         }
+    }
+
+    override fun bindAdMob(holder: AdMobAdViewHolder, ad: AdModel) {
+        Log.d("AdMobAds", "Binding AdMob slot id=${ad._id} type=${ad.adType}")
+        loadAdmobNativeAd(holder)
     }
 
     private fun sendVerificationAdView(source: String) {
@@ -139,7 +192,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    private fun playVideo(holder: AdsViewHolder, ad: AdModel) {
+    private fun playVideo(holder: YenkasaAdViewHolder, ad: AdModel) {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(context).build()
         }
@@ -147,6 +200,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayButton.visibility = View.GONE
         holder.adPlayerView.visibility = View.VISIBLE
+        holder.adMediaFallback.visibility = View.GONE
         holder.adPlayerView.player = exoPlayer
 
         exoPlayer?.setMediaItem(MediaItem.fromUri(ad.videoUrl!!))
@@ -214,12 +268,19 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    private fun loadAdmobNativeAd(holder: AdsViewHolder) {
+    private fun loadAdmobNativeAd(holder: AdMobAdViewHolder) {
         var impressionTracked = false
+        val isDebuggable =
+            (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val adUnitId = if (isDebuggable) {
+            "ca-app-pub-3940256099942544/2247696110"
+        } else {
+            "ca-app-pub-5051666473627498/1225516323"
+        }
 
         val adLoader = AdLoader.Builder(
             context,
-            "ca-app-pub-5051666473627498/1225516323"
+            adUnitId
         )
             .forNativeAd { nativeAd ->
                 holder.admobNativeContainer.visibility = View.VISIBLE
@@ -238,6 +299,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                 holder.nativeAdView.callToActionView = btn
 
                 holder.nativeAdView.setNativeAd(nativeAd)
+                Log.d("AdMobAds", "Native ad loaded unit=$adUnitId")
             }
             .withAdListener(object : AdListener() {
                 override fun onAdImpression() {
@@ -248,7 +310,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                 }
 
                 override fun onAdFailedToLoad(err: LoadAdError) {
-                    Log.e("Ads", "Native ad failed: ${err.message}")
+                    Log.e("AdMobAds", "Native ad failed unit=$adUnitId: ${err.message}")
                 }
             })
             .build()

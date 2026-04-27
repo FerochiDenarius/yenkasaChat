@@ -3,6 +3,7 @@ const AppVerification = require("../models/appverification.model");
 const User = require("../models/user.model");
 const auth = require('../middleware/auth');
 const { getUserPerformanceMetrics } = require("../services/userPerformanceMetrics");
+const { RANKING_LAUNCH_DATE } = require("../config/ranking.config");
 
 
 // ensure all metrics are integers
@@ -116,6 +117,10 @@ exports.getDashboard = async (req, res) => {
 
       appVerification: {
         currentPhase: appVerification.currentPhase,
+        currentRankKey: appVerification.getRankKeyForPhase(),
+        nextRankKey: appVerification.getNextRankKeyForPhase(),
+        rankingPeriodLabel: appVerification.getRankingPeriodLabel(),
+        rankingLaunchDate: RANKING_LAUNCH_DATE.toISOString(),
         hasVerifiedBanner: appVerification.hasVerifiedBanner,
         phaseStartDate: appVerification.phaseStartDate?.toISOString(),
         phaseEndDate: appVerification.phaseEndDate?.toISOString(),
@@ -123,7 +128,24 @@ exports.getDashboard = async (req, res) => {
         requirements,
         currentMetrics: sanitizeMetrics(appVerification.metrics),
         progress,
-        phaseHistory: formatPhaseHistory(appVerification.phaseHistory)
+        phaseHistory: formatPhaseHistory(appVerification.phaseHistory),
+        activeRankingMetrics: {
+          accountAge: appVerification.metrics.accountAge || 0,
+          totalCommentsMade: appVerification.metrics.totalCommentsMade || 0,
+          totalFollowing: appVerification.metrics.totalFollowing || 0,
+          postsLiked: appVerification.metrics.postsLiked || 0,
+          totalLikesGiven: appVerification.metrics.totalLikesCount || 0,
+          dailyLogins: appVerification.metrics.dailyLogins || 0,
+          adsViewed: appVerification.metrics.adsViewed || 0
+        },
+        analyticsOnlyMetrics: {
+          totalFollowers: appVerification.metrics.totalFollowers || 0,
+          totalLikesReceived: appVerification.metrics.totalLikesReceived || 0,
+          totalViewsReceived: appVerification.metrics.totalViewsReceived || 0,
+          totalCommentsReceived: appVerification.metrics.totalCommentsReceived || 0,
+          totalRepliesReceived: appVerification.metrics.totalRepliesReceived || 0,
+          maxLikesOnPost: appVerification.metrics.maxLikesOnPost || 0
+        }
       }
     });
 
@@ -340,7 +362,7 @@ exports.getProgress = async (req, res) => {
 
     const detailed = {
       accountAge: pct(metrics.accountAge, reqs.accountAge),
-      comments: pct(metrics.totalComments, reqs.comments),
+      comments: pct(metrics.totalCommentsMade, reqs.comments),
       followers: pct(metrics.totalFollowing, reqs.followers),
       maxLikes: pct(metrics.postsLiked, reqs.maxLikes),
       dailyLogins: pct(metrics.dailyLogins, reqs.dailyLogins),

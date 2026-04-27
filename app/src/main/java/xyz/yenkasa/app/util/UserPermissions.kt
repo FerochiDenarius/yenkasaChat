@@ -4,12 +4,13 @@ object UserPermissions {
 
     private val rankOrder = listOf(
         "user",
+        "unverified",
         "verified",
-        "moderator",
         "admin",
-        "developer",
+        "moderator",
         "junior_developer",
-        "senior_developer"
+        "senior_developer",
+        "developer"
     )
 
     private fun normalize(role: String?): String =
@@ -40,7 +41,7 @@ object UserPermissions {
     // 🟢 Can Create Sponsored Ads
     fun canCreateAd(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "developer", "moderator")
+        return r in listOf("verified", "admin", "moderator", "junior_developer", "senior_developer")
     }
 
     // 🟢 Can Assign Roles

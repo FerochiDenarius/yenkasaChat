@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/chat_picker_background"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/buttonPreviewClose"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_close"
+            android:padding="11dp"
+            android:src="@drawable/ic_close"
+            android:tint="@color/chat_picker_icon" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/buttonPreviewDelete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_remove"
+            android:padding="10dp"
+            android:src="@drawable/ic_delete"
+            android:tint="@color/chat_picker_secondary_text" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:background="@drawable/bg_chat_media_panel"
+        android:padding="12dp">
+
+        <ImageView
+            android:id="@+id/imagePreviewLarge"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_chat_media_preview_surface"
+            android:contentDescription="@string/chat_media_preview"
+            android:scaleType="centerCrop" />
+
+        <ImageView
+            android:id="@+id/imagePreviewPlay"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_play_circle"
+            android:tint="@color/white"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/textPreviewLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_chat_media_loading_chip"
+            android:paddingStart="14dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp"
+            android:text="@string/chat_media_loading"
+            android:textColor="@color/chat_picker_text"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/buttonPreviewCrop"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_crop"
+            android:padding="11dp"
+            android:src="@drawable/ic_edit"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonPreviewDraw"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_draw"
+            android:padding="11dp"
+            android:src="@drawable/ic_edit_modern"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonPreviewText"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_caption"
+            android:padding="11dp"
+            android:src="@drawable/ic_attach_file"
+            android:tint="@color/chat_picker_icon" />
+
+        <ImageButton
+            android:id="@+id/buttonPreviewSticker"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:contentDescription="@string/chat_media_sticker"
+            android:padding="11dp"
+            android:src="@drawable/ic_emoji"
+            android:tint="@color/chat_picker_icon" />
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/filterNone"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center"
+                android:minWidth="70dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="None"
+                android:textColor="@color/chat_picker_text" />
+
+            <TextView
+                android:id="@+id/filterVivid"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center"
+                android:minWidth="70dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Vivid"
+                android:textColor="@color/chat_picker_text" />
+
+            <TextView
+                android:id="@+id/filterCool"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center"
+                android:minWidth="70dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Cool"
+                android:textColor="@color/chat_picker_text" />
+
+            <TextView
+                android:id="@+id/filterWarm"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center"
+                android:minWidth="70dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Warm"
+                android:textColor="@color/chat_picker_text" />
+
+            <TextView
+                android:id="@+id/filterBw"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:minWidth="70dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="B&amp;W"
+                android:textColor="@color/chat_picker_text" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <EditText
+        android:id="@+id/editTextPreviewCaption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_chat_preview_caption"
+        android:hint="@string/chat_media_add_caption"
+        android:paddingStart="16dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="14dp"
+        android:textColor="@color/chat_picker_text"
+        android:textColorHint="@color/chat_picker_secondary_text" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_chat_media_panel"
+        android:gravity="center_vertical"
+        android:minHeight="88dp"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerPreviewThumbs"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:overScrollMode="never" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/textPreviewSelectedCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:textColor="@color/chat_picker_text"
+                android:textSize="14sp" />
+
+            <ImageButton
+                android:id="@+id/buttonPreviewSend"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_chat_media_send_button"
+                android:contentDescription="@string/chat_media_send"
+                android:padding="12dp"
+                android:src="@drawable/ic_send"
+                android:tint="@color/white" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

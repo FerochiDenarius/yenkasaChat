@@ -6,7 +6,6 @@ import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.ads.nativead.NativeAdView
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.model.AdModel
 import android.widget.FrameLayout
 import com.google.android.gms.ads.nativead.MediaView
 
@@ -20,25 +19,24 @@ import com.google.android.gms.ads.nativead.MediaView
  */
 
 interface AdAdapterCallbacks {
-    fun bind(holder: AdsViewHolder, ad: AdModel)
+    fun bindYenkasa(holder: YenkasaAdViewHolder, ad: xyz.yenkasa.app.model.AdModel)
+    fun bindAdMob(holder: AdMobAdViewHolder, ad: xyz.yenkasa.app.model.AdModel)
 }
 
-class AdsViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+class YenkasaAdViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val adSponsorLabel: TextView = itemView.findViewById(R.id.adSponsorLabel)
     val adTitle: TextView = itemView.findViewById(R.id.adTitle)
-
+    val adMediaFallback: TextView = itemView.findViewById(R.id.adMediaFallback)
     val adImageThumbnail: ImageView = itemView.findViewById(R.id.adImageThumbnail)
     val adVideoThumbnail: ImageView = itemView.findViewById(R.id.adVideoThumbnail)
-
     val adPlayerView: PlayerView = itemView.findViewById(R.id.adPlayerView)
     val adPlayButton: ImageButton = itemView.findViewById(R.id.adPlayButton)
-
     val adCTAButton: Button = itemView.findViewById(R.id.adCTAButton)
     val adWatchRewardButton: Button = itemView.findViewById(R.id.adWatchRewardButton)
+}
 
-    // AdMob-native views (optional)
+class AdMobAdViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val admobNativeContainer: FrameLayout = itemView.findViewById(R.id.admobNativeContainer)
     val nativeAdView: NativeAdView = itemView.findViewById(R.id.nativeAdView)
-    // If you used a MediaView inside nativeAdView xml with different id, update accordingly
     val nativeMediaView: MediaView? = itemView.findViewById(R.id.ad_media)
 }

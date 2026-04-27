@@ -21,7 +21,8 @@ class FeedAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val TYPE_POST = 0
-    private val TYPE_AD = 1
+    private val TYPE_YENKASA_AD = 1
+    private val TYPE_ADMOB_AD = 2
 
     private var items: List<Any> = emptyList()
 
@@ -57,7 +58,18 @@ class FeedAdapter(
     override fun getItemViewType(position: Int): Int {
         return when (items[position]) {
             is Post -> TYPE_POST
-            is AdModel -> TYPE_AD
+            is AdModel -> {
+                val ad = items[position] as AdModel
+                if (
+                    ad.adType.equals("google", ignoreCase = true) ||
+                    ad.sponsorName.equals("AdMob", ignoreCase = true) ||
+                    ad._id.startsWith("local-ad")
+                ) {
+                    TYPE_ADMOB_AD
+                } else {
+                    TYPE_YENKASA_AD
+                }
+            }
             else -> error("Unsupported item at position $position")
         }
     }
@@ -70,10 +82,16 @@ class FeedAdapter(
                 internalPostAdapter.PostViewHolder(view)
             }
 
-            TYPE_AD -> {
+            TYPE_YENKASA_AD -> {
                 val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_ad_post, parent, false)
-                AdsViewHolder(view)
+                    .inflate(R.layout.item_yenkasa_ad, parent, false)
+                YenkasaAdViewHolder(view)
+            }
+
+            TYPE_ADMOB_AD -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_admob_native, parent, false)
+                AdMobAdViewHolder(view)
             }
 
             else -> error("Unknown view type: $viewType")
@@ -100,7 +118,11 @@ class FeedAdapter(
             }
 
             is AdModel -> {
-                adAdapterCallbacks.bind(holder as AdsViewHolder, obj)
+                when (holder) {
+                    is YenkasaAdViewHolder -> adAdapterCallbacks.bindYenkasa(holder, obj)
+                    is AdMobAdViewHolder -> adAdapterCallbacks.bindAdMob(holder, obj)
+                    else -> error("Unsupported ad holder ${holder::class.java.simpleName}")
+                }
             }
         }
     }

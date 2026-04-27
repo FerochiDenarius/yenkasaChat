@@ -237,7 +237,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Enable/disable and wire up the CREATE-AD toolbar button.
-     * Only moderators and developer roles can create sponsored ads.
+     * Verified users and reviewer roles can create sponsored ads.
      */
     private fun setupCreateAdButton() {
         val user = currentUser
@@ -251,7 +251,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val roleName = user.role?.name ?: user.roleName ?: TokenManager.getUserRole(this)
-        val allowed = UserPermissions.canCreateAd(roleName)
+        val allowed = user.verified || UserPermissions.canCreateAd(roleName)
 
         btnCreateAd.isEnabled = true
         btnCreateAd.alpha = if (allowed) 1f else 0.55f
@@ -262,7 +262,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Only moderators and developers can create sponsored ads.",
+                    "Only verified users and approved reviewer roles can create sponsored ads.",
                     Toast.LENGTH_LONG
                 ).show()
             }

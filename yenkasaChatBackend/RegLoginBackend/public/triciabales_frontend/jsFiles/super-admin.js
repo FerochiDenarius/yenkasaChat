@@ -11,6 +11,7 @@ const allOrdersList = document.getElementById("allOrdersList");
 const refundRequestsList = document.getElementById("refundRequestsList");
 const releasedPayoutsList = document.getElementById("releasedPayoutsList");
 const sellersList = document.getElementById("sellersList");
+const sellerProductsList = document.getElementById("sellerProductsList");
 const usersList = document.getElementById("usersList");
 const superAdminNotificationCountText = document.getElementById("superAdminNotificationCountText");
 const superAdminNotificationsFeedback = document.getElementById("superAdminNotificationsFeedback");
@@ -825,14 +826,125 @@ function renderUsers(users) {
   }).join("");
 }
 
+function getProductPrimaryImage(product) {
+  if (Array.isArray(product.imageUrls) && product.imageUrls.length) {
+    return product.imageUrls[0];
+  }
+
+  return product.imageUrl || "";
+}
+
+function renderSellerProducts(sellers, products) {
+  if (!sellerProductsList) {
+    return;
+  }
+
+  const sellerMap = new Map();
+
+  (Array.isArray(sellers) ? sellers : []).forEach(seller => {
+    sellerMap.set(Number(seller.id), {
+      sellerId: Number(seller.id),
+      sellerName: seller.name || "Seller",
+      email: seller.email || "-",
+      phone: seller.phone || "-",
+      accountStatus: seller.accountStatus || "ACTIVE",
+      products: []
+    });
+  });
+
+  (Array.isArray(products) ? products : []).forEach(product => {
+    const sellerId = Number(product.sellerId || 0);
+    if (!sellerId) {
+      return;
+    }
+
+    const existing = sellerMap.get(sellerId) || {
+      sellerId,
+      sellerName: product.sellerName || "Seller",
+      email: "-",
+      phone: "-",
+      accountStatus: "ACTIVE",
+      products: []
+    };
+
+    existing.sellerName = product.sellerName || existing.sellerName;
+    existing.products.push(product);
+    sellerMap.set(sellerId, existing);
+  });
+
+  const sellerEntries = Array.from(sellerMap.values()).sort((a, b) => {
+    if (b.products.length !== a.products.length) {
+      return b.products.length - a.products.length;
+    }
+
+    return String(a.sellerName).localeCompare(String(b.sellerName));
+  });
+
+  if (!sellerEntries.length) {
+    renderEmpty(sellerProductsList, "No sellers or listed products found.");
+    return;
+  }
+
+  sellerProductsList.innerHTML = sellerEntries.map(seller => {
+    const sortedProducts = seller.products.slice().sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    const productMarkup = sortedProducts.length
+      ? sortedProducts.map(product => {
+          const imageUrl = getProductPrimaryImage(product);
+          const status = formatStatus(String(product.status || "available").toUpperCase());
+          return `
+            <div class="super-admin-item" style="margin-top:14px;">
+              <div class="super-admin-item-header">
+                <div>
+                  <strong>${product.name || "Untitled Product"}</strong>
+                  <p>${product.categoryType || product.category || "General"} • ${status}</p>
+                </div>
+                <strong>GH₵${Number(product.price || 0).toFixed(2)}</strong>
+              </div>
+              ${imageUrl ? `<p><img src="${imageUrl}" alt="${product.name || "Product"}" style="width:88px;height:88px;object-fit:cover;border-radius:14px;border:1px solid rgba(15,23,42,0.08);"></p>` : ""}
+              <p><strong>Product ID:</strong> ${product.id || "-"}</p>
+              <p><strong>Description:</strong> ${product.description || "No description available."}</p>
+              <p><strong>Category:</strong> ${product.category || "-"}</p>
+              <p><strong>Status:</strong> ${status}</p>
+            </div>
+          `;
+        }).join("")
+      : `<p>No products listed yet.</p>`;
+
+    return `
+      <div class="super-admin-item">
+        <div class="super-admin-item-header">
+          <div>
+            <strong>${seller.sellerName}</strong>
+            <p>Seller ID: ${seller.sellerId}</p>
+          </div>
+          <strong>${seller.products.length} product${seller.products.length === 1 ? "" : "s"}</strong>
+        </div>
+        <p><strong>Email:</strong> ${seller.email}</p>
+        <p><strong>Phone:</strong> ${seller.phone}</p>
+        <p><strong>Status:</strong> ${formatStatus(String(seller.accountStatus || "ACTIVE").toUpperCase())}</p>
+        ${productMarkup}
+      </div>
+    `;
+  }).join("");
+}
+
 async function loadDashboard() {
   try {
-    const ordersResponse = await fetch(
-      `${API_BASE}/api/orders`,
-      {
-        headers: getAuthHeaders()
-      }
-    );
+    const [ordersResponse, usersResponse, productsResponse] = await Promise.all([
+      fetch(
+        `${API_BASE}/api/orders`,
+        {
+          headers: getAuthHeaders()
+        }
+      ),
+      fetch(
+        `${API_BASE}/api/users`,
+        {
+          headers: getAuthHeaders()
+        }
+      ),
+      fetch(`${API_BASE}/api/triciabales`)
+    ]);
     const orders = await readResponseData(ordersResponse);
 
     if (isAuthFailure(ordersResponse.status)) {
@@ -844,12 +956,6 @@ async function loadDashboard() {
       throw new Error("Could not load platform orders");
     }
 
-    const usersResponse = await fetch(
-      `${API_BASE}/api/users`,
-      {
-        headers: getAuthHeaders()
-      }
-    );
     const usersPayload = await readResponseData(usersResponse);
 
     if (isAuthFailure(usersResponse.status)) {
@@ -859,6 +965,12 @@ async function loadDashboard() {
 
     if (!usersResponse.ok || !Array.isArray(usersPayload)) {
       throw new Error("Could not load seller accounts");
+    }
+
+    const productsPayload = await readResponseData(productsResponse);
+
+    if (!productsResponse.ok || !Array.isArray(productsPayload)) {
+      throw new Error("Could not load seller products");
     }
 
     const sellers = usersPayload.filter(user => (user.role || "").toUpperCase() === "SELLER");
@@ -882,6 +994,7 @@ async function loadDashboard() {
     renderAllOrders(orders);
     renderReleasedPayouts(releasedPayouts);
     renderSellers(sellers, orders);
+    renderSellerProducts(sellers, productsPayload);
     loadRefundRequests();
   } catch (err) {
     console.error(err);
@@ -890,6 +1003,7 @@ async function loadDashboard() {
     renderEmpty(allOrdersList, "Unable to load orders.");
     renderEmpty(releasedPayoutsList, "Unable to load released payouts.");
     renderEmpty(sellersList, "Unable to load sellers.");
+    renderEmpty(sellerProductsList, "Unable to load seller products.");
     renderEmpty(refundRequestsList, "Unable to load refunds.");
   }
 }

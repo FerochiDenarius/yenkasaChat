@@ -9,7 +9,6 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -49,9 +48,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.adapter.EmojiPickerAdapter
 import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.adapter.MessageAdapter
 import xyz.yenkasa.app.model.ChatMessage
+import xyz.yenkasa.app.model.ChatMediaItem
 import xyz.yenkasa.app.model.Contact
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
@@ -73,6 +74,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
+import java.util.ArrayDeque
 
 class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler.ChatMessageCallback, MessageAdapter.OnMessageLongClickListener {
 
@@ -116,12 +118,20 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var isUploadingPendingMedia: Boolean = false
     private var pendingPermissionAction: (() -> Unit)? = null
     private var replyingToMessage: ChatMessage? = null
+    private val outgoingMediaQueue = ArrayDeque<QueuedMediaUpload>()
+    private var isUploadingMediaQueue: Boolean = false
     private lateinit var callButton: ImageView
     private lateinit var videoCallButton: ImageView
     private val webSocketManager = WebSocketProvider.instance
     private var receiverParticipant: Participant? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
+
+    private data class QueuedMediaUpload(
+        val uri: Uri,
+        val type: String,
+        val caption: String? = null
+    )
 
     private data class ChatThemePreset(
         val key: String,
@@ -269,6 +279,21 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "file") }
+    }
+
+    private val chatMediaFlowLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != RESULT_OK) return@registerForActivityResult
+        val data = result.data ?: return@registerForActivityResult
+        @Suppress("DEPRECATION")
+        val selectedItems = data.getSerializableExtra(ChatMediaPreviewActivity.EXTRA_MEDIA_ITEMS) as? ArrayList<ChatMediaItem>
+        val caption = data.getStringExtra(ChatMediaPreviewActivity.EXTRA_CAPTION).orEmpty()
+        if (selectedItems.isNullOrEmpty()) {
+            Toast.makeText(this, R.string.chat_media_send_empty, Toast.LENGTH_SHORT).show()
+            return@registerForActivityResult
+        }
+        queueSelectedMediaForUpload(selectedItems, caption)
     }
 
     private val contactPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -438,20 +463,15 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         findViewById<ImageButton>(R.id.buttonAttachImage).setOnClickListener {
             attachMenu.visibility = View.GONE
-            imagePickerLauncher.launch("image/*")
+            launchChatMediaPicker()
         }
         findViewById<ImageButton>(R.id.buttonAttachVideo).setOnClickListener {
             attachMenu.visibility = View.GONE
-            videoPickerLauncher.launch("video/*")
+            launchChatMediaPicker()
         }
         findViewById<ImageButton>(R.id.buttonAttachCamera).setOnClickListener {
             attachMenu.visibility = View.GONE
-            if (!hasPermission(Manifest.permission.CAMERA)) {
-                pendingPermissionAction = { launchCameraCapture() }
-                permissionsLauncher.launch(arrayOf(Manifest.permission.CAMERA))
-                return@setOnClickListener
-            }
-            launchCameraCapture()
+            launchChatMediaPicker()
         }
         findViewById<ImageButton>(R.id.buttonAttachLocation).setOnClickListener {
             attachMenu.visibility = View.GONE
@@ -553,15 +573,42 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun showEmojiPicker() {
-        val emojis = arrayOf("😀", "😂", "😊", "😍", "😎", "😢", "🙏", "👍", "🔥", "❤️", "💚", "🎉")
-        AlertDialog.Builder(this)
-            .setTitle("Choose emoji")
-            .setItems(emojis) { dialog, which ->
-                insertEmoji(emojis[which])
-                dialog.dismiss()
+        hideKeyboard()
+        attachMenu.visibility = View.GONE
+
+        val bottomSheet = BottomSheetDialog(this)
+        val root = layoutInflater.inflate(R.layout.activity_chat_media_picker, null)
+        bottomSheet.setContentView(root)
+
+        root.findViewById<ImageButton>(R.id.buttonPickerClose).setOnClickListener { bottomSheet.dismiss() }
+        root.findViewById<TextView>(R.id.textSelectedCount).text = getString(R.string.chat_emoji_recent_hint)
+        root.findViewById<ImageButton>(R.id.buttonPickerNext).visibility = View.GONE
+        root.findViewById<TextView>(R.id.tabAll).apply {
+            text = getString(R.string.chat_emoji_title)
+            setBackgroundResource(R.drawable.bg_chat_media_tab_selected)
+        }
+        root.findViewById<TextView>(R.id.tabPhotos).visibility = View.GONE
+        root.findViewById<TextView>(R.id.tabVideos).visibility = View.GONE
+        root.findViewById<TextView>(R.id.viewPickerLoading).visibility = View.GONE
+        root.findViewById<TextView>(R.id.textPickerEmptyState).visibility = View.GONE
+        root.findViewById<RecyclerView>(R.id.recyclerSelectedMedia).visibility = View.GONE
+
+        val emojis = listOf(
+            "😀", "😁", "😂", "🤣", "😊", "😍", "😘", "😎",
+            "🥳", "😭", "😡", "🙏", "👍", "👏", "🔥", "💚",
+            "❤️", "💯", "🎉", "✨", "👀", "🤝", "🙌", "🤍",
+            "😅", "😴", "🤔", "😇", "😋", "🥹", "😢", "😬"
+        )
+
+        root.findViewById<RecyclerView>(R.id.recyclerMediaPicker).apply {
+            layoutManager = GridLayoutManager(this@ChatActivity, 6)
+            adapter = EmojiPickerAdapter(emojis) { emoji ->
+                insertEmoji(emoji)
+                bottomSheet.dismiss()
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+
+        bottomSheet.show()
     }
 
     private fun insertEmoji(emoji: String) {
@@ -583,15 +630,23 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         textMediaPreviewTitle.text = if (type == "video") "Video ready" else "Photo ready"
         textMediaPreviewSubtitle.text = "Tap send when ready"
         textMediaPreviewPlay.visibility = if (type == "video") View.VISIBLE else View.GONE
-
-        if (type == "video") {
-            imageMediaPreview.setImageBitmap(readVideoFrame(uri))
-            if (imageMediaPreview.drawable == null) {
-                imageMediaPreview.setImageResource(R.drawable.placeholder_image)
-            }
-        } else {
-            imageMediaPreview.setImageURI(uri)
-        }
+        Glide.with(imageMediaPreview)
+            .load(uri)
+            .centerCrop()
+            .placeholder(R.drawable.placeholder_image)
+            .error(R.drawable.error_image)
+            .listener(
+                ChatPreviewGlideListener(
+                    onSuccess = {
+                        Log.d("ChatActivity", "Composer preview loaded: $uri")
+                    },
+                    onFailure = {
+                        Log.w("ChatActivity", "Composer preview failed: $uri")
+                        textMediaPreviewSubtitle.text = getString(R.string.chat_media_preview_failed)
+                    }
+                )
+            )
+            .into(imageMediaPreview)
 
         attachMenu.visibility = View.GONE
         updateComposerActionButtons()
@@ -630,22 +685,58 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val hasText = !messageInput.text.isNullOrBlank()
         val hasPendingMedia = pendingMediaUri != null
         sendButton.visibility = if (hasText || hasPendingMedia) View.VISIBLE else View.GONE
-        sendButton.isEnabled = !isUploadingPendingMedia
-        sendButton.alpha = if (isUploadingPendingMedia) 0.55f else 1f
+        val disableSend = isUploadingPendingMedia || isUploadingMediaQueue
+        sendButton.isEnabled = !disableSend
+        sendButton.alpha = if (disableSend) 0.55f else 1f
         micButton.visibility = if (!hasText && !hasPendingMedia) View.VISIBLE else View.GONE
     }
 
-    private fun readVideoFrame(uri: Uri): android.graphics.Bitmap? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(this, uri)
-            retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-        } catch (ex: Exception) {
-            Log.w("ChatActivity", "Could not read video preview frame", ex)
-            null
-        } finally {
-            runCatching { retriever.release() }
+    private fun launchChatMediaPicker() {
+        try {
+            val intent = Intent(this, ChatMediaPickerActivity::class.java)
+            chatMediaFlowLauncher.launch(intent)
+        } catch (e: Exception) {
+            Log.e("ChatActivity", "Unable to launch media picker", e)
+            Toast.makeText(this, R.string.chat_media_picker_open_failed, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun queueSelectedMediaForUpload(selectedItems: List<ChatMediaItem>, caption: String) {
+        outgoingMediaQueue.clear()
+        selectedItems.forEachIndexed { index, item ->
+            outgoingMediaQueue.add(
+                QueuedMediaUpload(
+                    uri = Uri.parse(item.uriString),
+                    type = if (item.isVideo) "video" else "image",
+                    caption = if (index == 0) caption.takeIf { it.isNotBlank() } else null
+                )
+            )
+        }
+
+        if (outgoingMediaQueue.isEmpty()) {
+            Toast.makeText(this, R.string.chat_media_send_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isUploadingMediaQueue = true
+        updateComposerActionButtons()
+        Toast.makeText(this, R.string.chat_media_batch_uploading, Toast.LENGTH_SHORT).show()
+        uploadNextQueuedMedia()
+    }
+
+    private fun uploadNextQueuedMedia() {
+        val next = if (outgoingMediaQueue.isEmpty()) null else outgoingMediaQueue.removeFirst()
+        if (next == null) {
+            isUploadingMediaQueue = false
+            updateComposerActionButtons()
+            Toast.makeText(this, R.string.chat_media_batch_complete, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val extraData = mutableMapOf<String, Any?>()
+        next.caption?.let { extraData["text"] = it }
+        replyingToMessage?.id?.let { extraData["repliedTo"] = it }
+        chatMessageHandler.uploadFileToCloudinary(next.uri, next.type, extraData)
     }
 
     private fun showStickerTray() {
@@ -1571,10 +1662,19 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onMessageSent(message: ChatMessage) {
         chatActivityHelper.onMessageSentByHandler(message)
+        if (isUploadingMediaQueue) {
+            uploadNextQueuedMedia()
+        }
     }
 
     override fun onError(error: String) {
         chatActivityHelper.onErrorFromHandler(error)
+        if (isUploadingMediaQueue) {
+            isUploadingMediaQueue = false
+            outgoingMediaQueue.clear()
+            updateComposerActionButtons()
+            Toast.makeText(this, R.string.chat_media_batch_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onUploadStarted(type: String) {

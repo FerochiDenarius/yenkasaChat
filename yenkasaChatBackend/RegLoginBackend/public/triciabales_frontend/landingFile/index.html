@@ -4,198 +4,205 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yenkasa Store | Ghana Marketplace for Fashion, Fabrics and More</title>
-
   <link rel="stylesheet" href="/store/assets/cssFile/style.css?v=20260422-menu-close">
+  <link rel="stylesheet" href="/store/assets/cssFile/store-home.css?v=20260427-seller-previews">
 </head>
-<body>
+<body class="store-home-page">
+  <div class="store-page-shell">
+    <header class="store-home-hero">
+      <nav class="navbar store-topbar">
+        <a href="/store" class="store-brand" aria-label="Yenkasa Store home">
+          <img src="/store/assets/images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
+          <div class="store-brand-copy">
+            <strong>Yenkasa Store</strong>
+            <span>One store, many products, trusted sellers.</span>
+          </div>
+        </a>
 
-  <header class="market-hero">
-    <nav class="topbar navbar">
-      <div class="logo">
-        <img src="/store/assets/images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
-        <span>Yenkasa Store</span>
-      </div>
+        <div class="store-topbar-actions">
+          <button type="button" class="topbar-icon-btn" id="supportEmailBtn">Support</button>
+          <button type="button" class="topbar-icon-btn menu-trigger-btn" id="mobileMenuBtn" aria-label="Open menu">Menu</button>
+        </div>
 
-      <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">Menu</button>
+        <div class="nav-links store-nav-panel" id="mainNav">
+          <button type="button" class="menu-close-btn" id="mainNavCloseBtn" aria-label="Close menu">Close</button>
+          <a href="#shop-categories">Categories</a>
+          <a href="#seller-showcase-anchor">Seller Picks</a>
+          <a href="/store/cart">Cart</a>
+          <a href="/store/orders">My Orders</a>
+          <a href="/store/notifications">Notifications</a>
+          <a href="/store/register" id="registerLink">Register</a>
+          <a href="/store/buyer-login" id="buyerLoginLink">Buyer Login</a>
+          <a href="/store/seller-login" class="seller-btn">Seller Dashboard</a>
+          <a href="/store/admin-login" class="admin-btn">Super Admin</a>
+          <a href="#" class="logout-btn hidden-nav-link" id="logoutLink">Logout</a>
 
-      <div class="nav-links" id="mainNav">
-        <button type="button" class="menu-close-btn" id="mainNavCloseBtn" aria-label="Close menu">Close</button>
-        <a href="#featured">Featured</a>
-        <div class="category-menu">
-          <button type="button" class="category-menu-btn" id="categoryMenuBtn">Categories</button>
-          <div class="category-menu-panel" id="categoryMenuPanel">
-            <button type="button" data-category-filter="all">All Products</button>
-            <button type="button" data-category-filter="dress">Dresses</button>
-            <button type="button" data-category-filter="ladies_wear">Ladies Wear</button>
+          <div class="nav-category-shortcuts" id="categoryMenuPanel">
+            <button type="button" data-category-filter="all">View All Products</button>
             <button type="button" data-category-filter="bale">Bales</button>
+            <button type="button" data-category-filter="dress">Dresses</button>
             <button type="button" data-category-filter="fabric">Fabrics</button>
             <button type="button" data-category-filter="accessory">Accessories</button>
+            <button type="button" data-category-filter="ladies_wear">Fashion</button>
             <button type="button" data-category-filter="shoe">Shoes</button>
             <button type="button" data-category-filter="bag">Bags</button>
             <button type="button" data-category-filter="beauty">Beauty</button>
-            <button type="button" data-category-filter="car_importation">Cars Importation</button>
           </div>
         </div>
-        <a href="#market-services">Services</a>
-        <a href="/store/cart">Cart</a>
-        <a href="/store/orders">My Orders</a>
-        <a href="/store/notifications">Notifications</a>
-        <a href="/store/register" id="registerLink">Register</a>
-        <a href="/store/buyer-login" id="buyerLoginLink">Buyer Login</a>
-        <a href="/store/seller-login" class="seller-btn">Seller Dashboard</a>
-        <a href="/store/admin-login" class="admin-btn">Super Admin</a>
-        <a href="#" class="logout-btn hidden-nav-link" id="logoutLink">Logout</a>
+      </nav>
+
+      <section class="hero-card-shell">
+        <div class="hero-copy-panel">
+          <span class="hero-eyebrow">Welcome to Yenkasa</span>
+          <h1>One store, many products, trusted sellers.</h1>
+          <p>
+            Shop bales, dresses, fabrics, accessories and more from active sellers across Yenkasa Store.
+            The homepage now shows category previews and seller product slices so shoppers see inventory immediately.
+          </p>
+
+          <div class="hero-cta-row">
+            <a href="#shop-categories" class="primary-btn">Shop Now</a>
+            <button type="button" class="secondary-btn category-jump-btn">Explore Categories</button>
+          </div>
+
+          <div class="hero-inline-stats">
+            <div>
+              <strong id="heroProductCount">0</strong>
+              <span>Active products</span>
+            </div>
+            <div>
+              <strong id="heroSellerCount">0</strong>
+              <span>Active sellers</span>
+            </div>
+            <div>
+              <strong id="heroCategoryCount">0</strong>
+              <span>Categories live</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual-panel">
+          <div class="hero-image-frame">
+            <img
+              src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1200&q=80"
+              alt="Fashion products hanging in a shop"
+            >
+          </div>
+          <div class="hero-floating-note">
+            <span>Live marketplace</span>
+            <strong>Fresh products from multiple sellers</strong>
+          </div>
+        </div>
+      </section>
+    </header>
+
+    <section class="store-search-panel">
+      <div class="store-search-box">
+        <input type="search" id="siteSearch" placeholder="Search bales, dresses, fabrics, accessories and more...">
+        <button type="button" id="searchBtn">Search</button>
       </div>
-    </nav>
+    </section>
 
-    <div class="hero-shell">
-      <div class="hero-copy">
-        <span class="hero-tag">Marketplace for fashion, fabrics, accessories and more</span>
-        <h1>One store, many products, trusted sellers.</h1>
-        <p>
-          Shop bales, dresses, fabrics, fashion accessories and more on Yenkasa Store.
-          The foundation is now ready for more categories, sellers, promotions and future imports.
-        </p>
-
-        <div class="hero-search" id="searchArea">
-          <input type="search" id="siteSearch" placeholder="Search bales, dresses, fabrics, accessories...">
-          <button type="button" id="searchBtn">Search</button>
+    <section class="store-category-section" id="shop-categories">
+      <div class="section-header split-header">
+        <div>
+          <span>Shop by Category</span>
+          <h2>Browse the storefront faster</h2>
+          <p>Each category opens a filtered product view, and `View all` shows every active listing.</p>
         </div>
-
-        <div class="hero-quick-links">
-          <a href="#featured" class="primary-btn">Shop Now</a>
-          <a href="https://wa.me/233537044801" target="_blank" rel="noopener noreferrer" class="secondary-btn">WhatsApp Us</a>
-        </div>
+        <button type="button" class="view-all-link-btn" id="viewAllProductsBtn">View all</button>
       </div>
 
-      <div class="hero-promo-stack">
-        <div class="promo-slider-card">
-          <div class="promo-slide active">
-            <span>Hot Category</span>
-            <h3>Fresh Bale Arrivals</h3>
-            <p>Updated listings with ready-to-order options from sellers.</p>
-          </div>
+      <div id="categorySpotlight" class="category-spotlight-grid"></div>
+    </section>
 
-          <div class="promo-slide">
-            <span>New Expansion</span>
-            <h3>Fabrics and Accessories</h3>
-            <p>The marketplace shell is ready for textiles, bags, beauty and fashion extras.</p>
-          </div>
+    <section class="market-trust-row">
+      <article class="trust-card">
+        <strong>Trusted Sellers</strong>
+        <span>Verified and visible listings from live seller accounts.</span>
+      </article>
+      <article class="trust-card">
+        <strong>Category Routing</strong>
+        <span>Tap a category and jump straight into matching products.</span>
+      </article>
+      <article class="trust-card">
+        <strong>Seller Previews</strong>
+        <span>See a portion of each seller's products before opening all results.</span>
+      </article>
+      <article class="trust-card">
+        <strong>Quick Support</strong>
+        <span>Use WhatsApp or the support form when you need help with an order.</span>
+      </article>
+    </section>
 
-          <div class="promo-slide">
-            <span>Coming Soon</span>
-            <h3>Imported Cars</h3>
-            <p>A premium category area is reserved for future import listings.</p>
-          </div>
-        </div>
-
-        <div class="promo-image-marquee" aria-label="Marketplace highlights">
-          <div class="promo-image-track">
-            <div class="promo-image-card fashion-one"><span>Bales</span></div>
-            <div class="promo-image-card fashion-two"><span>Dresses</span></div>
-            <div class="promo-image-card fashion-three"><span>Fabrics</span></div>
-            <div class="promo-image-card fashion-four"><span>Accessories</span></div>
-            <div class="promo-image-card fashion-one"><span>Bales</span></div>
-            <div class="promo-image-card fashion-two"><span>Dresses</span></div>
-          </div>
-        </div>
-
-        <div class="mini-market-stats">
-          <div>
-            <strong>Multi-Seller</strong>
-            <span>Built for many sellers and product types</span>
-          </div>
-          <div>
-            <strong>Fast Search</strong>
-            <span>Find products quickly by name or category</span>
-          </div>
-          <div>
-            <strong>Ad Ready</strong>
-            <span>Space reserved for future promotions</span>
-          </div>
-        </div>
+    <section class="seller-showcase-section" id="seller-showcase-anchor">
+      <div class="section-header left">
+        <span>Products by Seller</span>
+        <h2>Preview live items across the marketplace</h2>
+        <p>Each seller block shows a limited product slice so the page looks active without dumping every item at once.</p>
       </div>
-    </div>
-  </header>
 
-  <section id="storeAnnouncement" class="store-announcement hidden" data-store-announcement></section>
+      <div id="sellerShowcase" class="seller-showcase-list"></div>
+    </section>
 
-  <section class="market-banner-row" id="market-services">
-    <div class="market-banner primary-banner">
-      <span>Marketplace Upgrade</span>
-      <h3>More sellers. More products. Better discovery.</h3>
-      <p>This space can later hold paid promotions, Google ads, and featured sellers.</p>
-    </div>
+    <section class="collection-section browse-results hidden" id="browse-products">
+      <div class="section-header left">
+        <span id="browseKicker">Browse</span>
+        <h2 id="browseTitle">Shop Products</h2>
+        <p id="browseDescription">Choose a category or search for what you need.</p>
+      </div>
 
-    <div class="market-banner ad-banner">
-      <span>Ad Space</span>
-      <h3>Sponsored promotion block</h3>
-      <p>Reserved for Google ads, brand campaigns or store announcements.</p>
-    </div>
-  </section>
+      <div class="browse-results-toolbar">
+        <span id="browseCount">0 products</span>
+        <button type="button" id="clearBrowseBtn">Show homepage</button>
+      </div>
 
-  <section class="collection-section" id="featured">
-    <div class="section-header">
-      <span>Featured Products</span>
-      <h2>Top Picks on Yenkasa Store</h2>
-      <p>A selected preview from active products. Use the category menu to browse more.</p>
-    </div>
+      <div id="category-results" class="bale-grid"></div>
+    </section>
 
-    <div id="featured-container" class="bale-grid"></div>
-  </section>
+    <section class="store-promo-banner">
+      <div class="promo-banner-copy">
+        <span>Coming Soon</span>
+        <h3>More categories, more collections, more discovery.</h3>
+        <p>This banner area can still hold campaigns, promotions, or Google ads later without replacing the product-first layout.</p>
+      </div>
+      <button type="button" class="secondary-btn promo-banner-btn" data-category-filter="all">Stay Shopping</button>
+    </section>
 
-  <section class="collection-section browse-results hidden" id="browse-products">
-    <div class="section-header left">
-      <span id="browseKicker">Browse</span>
-      <h2 id="browseTitle">Shop Products</h2>
-      <p id="browseDescription">Choose a category from the menu or search for what you need.</p>
-    </div>
+    <section class="contact-banner" id="contact">
+      <div>
+        <h2>Need help choosing a product?</h2>
+        <p>Message Yenkasa Store directly for quick support and seller guidance.</p>
+      </div>
 
-    <div class="browse-results-toolbar">
-      <span id="browseCount">0 products</span>
-      <button type="button" id="clearBrowseBtn">Show Featured</button>
-    </div>
+      <a href="https://wa.me/233537044801" target="_blank" rel="noopener noreferrer" class="primary-btn white-btn">
+        Contact on WhatsApp
+      </a>
+    </section>
 
-    <div id="category-results" class="bale-grid"></div>
-  </section>
-
-  <section class="contact-banner" id="contact">
-    <div>
-      <h2>Need help choosing a product?</h2>
-      <p>Message Yenkasa Store directly for quick support and seller guidance.</p>
-    </div>
-
-    <a href="https://wa.me/233537044801" target="_blank" rel="noopener noreferrer" class="primary-btn white-btn">
-      Contact on WhatsApp
-    </a>
-  </section>
-
-  <footer>
-    <p>
-      © 2026 Yenkasa Store. Powered by Yenkasa-Soft-O-Tech.
-      <a href="/store/privacy">Privacy & Terms</a>
-    </p>
-  </footer>
+    <footer class="store-home-footer">
+      <p>
+        © 2026 Yenkasa Store. Powered by Yenkasa-Soft-O-Tech.
+        <a href="/store/privacy">Privacy & Terms</a>
+      </p>
+    </footer>
+  </div>
 
   <div id="imageModal" class="image-modal">
     <button type="button" class="modal-close-btn" id="modalCloseBtn" aria-label="Close image">×</button>
     <button type="button" class="modal-gallery-arrow modal-gallery-prev" id="modalPrevBtn" aria-label="Previous image">‹</button>
-    <img id="modalImage" class="modal-image">
+    <img id="modalImage" class="modal-image" alt="Selected product image">
     <button type="button" class="modal-gallery-arrow modal-gallery-next" id="modalNextBtn" aria-label="Next image">›</button>
     <div class="modal-image-counter" id="modalImageCounter"></div>
   </div>
+
   <div class="support-launcher" data-live-chat-root>
-    <button
-      type="button"
-      class="support-launcher-btn"
-      id="supportEmailBtn"
-    >
-      Support
-    </button>
+    <button type="button" class="support-launcher-btn" id="floatingSupportBtn">Support</button>
     <button type="button" class="support-live-chat-btn" id="liveChatLauncher" data-live-chat-launcher>
       Live chat soon
     </button>
   </div>
+
   <div class="support-modal" id="supportModal" aria-hidden="true">
     <div class="support-modal-card" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle">
       <div class="support-modal-head">
@@ -243,7 +250,8 @@
       </form>
     </div>
   </div>
+
   <script src="/store/assets/jsFiles/store-settings.js"></script>
-  <script src="/store/assets/jsFiles/script.js?v=20260422-menu-close"></script>
+  <script src="/store/assets/jsFiles/script.js?v=20260427-seller-previews"></script>
 </body>
 </html>

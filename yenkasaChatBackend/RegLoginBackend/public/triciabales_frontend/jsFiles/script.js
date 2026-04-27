@@ -8,14 +8,13 @@ const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 const logoutLink = document.getElementById("logoutLink");
 const registerLink = document.getElementById("registerLink");
 const buyerLoginLink = document.getElementById("buyerLoginLink");
-const featuredContainer = document.getElementById("featured-container");
 const siteSearch = document.getElementById("siteSearch");
 const searchBtn = document.getElementById("searchBtn");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const mainNav = document.getElementById("mainNav");
-const categoryMenuBtn = document.getElementById("categoryMenuBtn");
-const categoryMenuPanel = document.getElementById("categoryMenuPanel");
 const mainNavCloseBtn = document.getElementById("mainNavCloseBtn");
+const categorySpotlight = document.getElementById("categorySpotlight");
+const sellerShowcase = document.getElementById("sellerShowcase");
 const browseSection = document.getElementById("browse-products");
 const categoryResults = document.getElementById("category-results");
 const browseKicker = document.getElementById("browseKicker");
@@ -23,7 +22,12 @@ const browseTitle = document.getElementById("browseTitle");
 const browseDescription = document.getElementById("browseDescription");
 const browseCount = document.getElementById("browseCount");
 const clearBrowseBtn = document.getElementById("clearBrowseBtn");
+const heroProductCount = document.getElementById("heroProductCount");
+const heroSellerCount = document.getElementById("heroSellerCount");
+const heroCategoryCount = document.getElementById("heroCategoryCount");
+const viewAllProductsBtn = document.getElementById("viewAllProductsBtn");
 const supportEmailBtn = document.getElementById("supportEmailBtn");
+const floatingSupportBtn = document.getElementById("floatingSupportBtn");
 const liveChatLauncher = document.getElementById("liveChatLauncher");
 const supportModal = document.getElementById("supportModal");
 const supportForm = document.getElementById("supportForm");
@@ -31,47 +35,44 @@ const supportCloseBtn = document.getElementById("supportCloseBtn");
 const supportCancelBtn = document.getElementById("supportCancelBtn");
 const supportFeedback = document.getElementById("supportFeedback");
 const supportSubmitBtn = document.getElementById("supportSubmitBtn");
-const promoSlides = document.querySelectorAll(".promo-slide");
-let allProducts = [];
-let currentPromoIndex = 0;
-let modalImages = [];
-let modalImageIndex = 0;
-let activeCategoryFilter = "";
+
 const productDisplayLabels = {
-  bale: "Bale",
-  dress: "Dress",
-  ladies_wear: "Ladies Wear",
-  fabric: "Fabric",
-  accessory: "Accessory",
+  all: "All Products",
+  bale: "Bales",
+  dress: "Dresses",
+  ladies_wear: "Fashion",
+  fabric: "Fabrics",
+  accessory: "Accessories",
   shoe: "Shoes",
   bag: "Bags",
   beauty: "Beauty",
-  car_importation: "Cars Importation"
+  car_importation: "Cars"
 };
+
 const categoryConfig = {
   all: {
     title: "All Products",
-    description: "Browse active products across all store categories."
-  },
-  dress: {
-    title: "Dresses",
-    description: "Dresses and single fashion pieces from active sellers."
-  },
-  ladies_wear: {
-    title: "Ladies Wear",
-    description: "Women and ladies fashion, including dresses, tops, gowns and related pieces."
+    description: "Browse every active product from live Yenkasa sellers."
   },
   bale: {
     title: "Bales",
-    description: "Bulk fashion bundles and bale arrivals."
+    description: "Bulk fashion bundles and bale arrivals from active sellers."
+  },
+  dress: {
+    title: "Dresses",
+    description: "Dresses and single-piece fashion items now available."
   },
   fabric: {
     title: "Fabrics",
-    description: "Fabric, textile and material listings."
+    description: "Fabric, textile and material listings across the store."
   },
   accessory: {
     title: "Accessories",
-    description: "Fashion add-ons and accessories."
+    description: "Fashion accessories and finishing pieces from active sellers."
+  },
+  ladies_wear: {
+    title: "Fashion",
+    description: "Women and ladies fashion including tops, gowns, skirts and more."
   },
   shoe: {
     title: "Shoes",
@@ -79,19 +80,35 @@ const categoryConfig = {
   },
   bag: {
     title: "Bags",
-    description: "Bags, purses and handbags."
+    description: "Bags, purses and handbags from the marketplace."
   },
   beauty: {
     title: "Beauty",
-    description: "Cosmetics, beauty and personal care items."
+    description: "Beauty and personal care listings when sellers upload them."
   },
   car_importation: {
     title: "Cars Importation",
-    description: "Vehicle and import listings when available."
+    description: "Vehicle and import listings when this category goes live."
   }
 };
-const supportEmail = "support@store.yenkas.xyz";
+
+const orderedCategoryKeys = [
+  "bale",
+  "dress",
+  "fabric",
+  "accessory",
+  "ladies_wear",
+  "shoe",
+  "bag",
+  "beauty",
+  "car_importation"
+];
+
 const supportContactEndpoint = "/triciabales-api/api/support/contact";
+let allProducts = [];
+let activeCategoryFilter = "";
+let modalImages = [];
+let modalImageIndex = 0;
 
 function getCart() {
   return JSON.parse(localStorage.getItem("cart") || "[]");
@@ -99,6 +116,10 @@ function getCart() {
 
 function saveCart(cart) {
   localStorage.setItem("cart", JSON.stringify(cart));
+}
+
+function getActiveProducts(products = allProducts) {
+  return products.filter(item => String(item.status || "").toLowerCase() !== "sold");
 }
 
 function updateHomepageNav() {
@@ -130,8 +151,8 @@ async function logout() {
         }
       });
     }
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
   } finally {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("authToken");
@@ -143,57 +164,35 @@ async function logout() {
   }
 }
 
+function openMenu() {
+  mainNav?.classList.add("open");
+}
+
+function closeMenu() {
+  mainNav?.classList.remove("open");
+}
+
 logoutLink?.addEventListener("click", event => {
   event.preventDefault();
   logout();
 });
 
-updateHomepageNav();
-
-mobileMenuBtn?.addEventListener("click", () => {
-  mainNav?.classList.toggle("open");
-});
-
-mainNavCloseBtn?.addEventListener("click", () => {
-  mainNav?.classList.remove("open");
-});
+mobileMenuBtn?.addEventListener("click", openMenu);
+mainNavCloseBtn?.addEventListener("click", closeMenu);
 
 mainNav?.querySelectorAll("a").forEach(link => {
-  link.addEventListener("click", () => {
-    mainNav.classList.remove("open");
-  });
-});
-
-categoryMenuBtn?.addEventListener("click", event => {
-  event.stopPropagation();
-  categoryMenuPanel?.classList.toggle("open");
+  link.addEventListener("click", closeMenu);
 });
 
 document.addEventListener("click", event => {
-  if (!event.target.closest(".category-menu")) {
-    categoryMenuPanel?.classList.remove("open");
+  if (!event.target.closest(".store-nav-panel") && !event.target.closest("#mobileMenuBtn")) {
+    closeMenu();
   }
 });
-
-function rotatePromoSlides() {
-  if (!promoSlides.length) {
-    return;
-  }
-
-  promoSlides.forEach((slide, index) => {
-    slide.classList.toggle("active", index === currentPromoIndex);
-  });
-
-  currentPromoIndex = (currentPromoIndex + 1) % promoSlides.length;
-}
-
-rotatePromoSlides();
-setInterval(rotatePromoSlides, 4000);
 
 function addToCart(item, selectedSize = "") {
   const cart = getCart();
   const cartKey = selectedSize ? `${item.id}:${selectedSize}` : String(item.id);
-
   const existing = cart.find(cartItem => (cartItem.cartKey || String(cartItem.id)) === cartKey);
 
   if (existing) {
@@ -211,8 +210,36 @@ function addToCart(item, selectedSize = "") {
   }
 
   saveCart(cart);
-
   alert(`${item.name} added to cart`);
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function getSearchHaystack(item) {
+  return normalizeSearchText([
+    item.name,
+    item.description,
+    item.category,
+    item.categoryType,
+    item.status,
+    item.weight,
+    item.size,
+    item.type,
+    item.brand,
+    item.color,
+    item.material,
+    item.condition,
+    item.length,
+    item.model,
+    item.year,
+    item.metadataJson,
+    item.sellerName
+  ].join(" "));
 }
 
 function getProductCategory(item) {
@@ -261,12 +288,25 @@ function getProductCategory(item) {
 
   if (
     combined.includes("accessory") ||
-    combined.includes("bag") ||
-    combined.includes("shoe") ||
     combined.includes("jewelry") ||
-    combined.includes("cosmetic")
+    combined.includes("jewellery") ||
+    combined.includes("watch") ||
+    combined.includes("belt") ||
+    combined.includes("cap") ||
+    combined.includes("hat")
   ) {
     return "accessory";
+  }
+
+  if (
+    combined.includes("ladies") ||
+    combined.includes("women") ||
+    combined.includes("female") ||
+    combined.includes("skirt") ||
+    combined.includes("blouse") ||
+    combined.includes("jumpsuit")
+  ) {
+    return "ladies_wear";
   }
 
   return "bale";
@@ -279,22 +319,26 @@ function parseProductMetadata(item) {
 
   try {
     return JSON.parse(item.metadataJson);
-  } catch (err) {
+  } catch (error) {
     return {};
   }
 }
 
 function getDressSizes(item) {
   const metadata = parseProductMetadata(item);
+
   if (Array.isArray(metadata.sizes)) {
     return metadata.sizes.filter(Boolean);
   }
+
   if (metadata.size) {
     return String(metadata.size).split(",").map(size => size.trim()).filter(Boolean);
   }
+
   if (item.weight && getProductCategory(item) === "dress") {
     return String(item.weight).split(",").map(size => size.trim()).filter(Boolean);
   }
+
   return [];
 }
 
@@ -336,13 +380,15 @@ function productMatchesCategory(item, categoryKey) {
   return false;
 }
 
-function getEmptyCategoryCard(title, message) {
-  return `
-    <div class="coming-category-card compact">
-      <h3>${title}</h3>
-      <p>${message}</p>
-    </div>
-  `;
+function productMatchesQuery(item, query) {
+  const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+
+  if (!terms.length) {
+    return true;
+  }
+
+  const haystack = getSearchHaystack(item);
+  return terms.every(term => haystack.includes(term));
 }
 
 function getProductImages(item) {
@@ -357,6 +403,15 @@ function getProductImages(item) {
   return images;
 }
 
+function getEmptyCategoryCard(title, message) {
+  return `
+    <div class="coming-category-card compact">
+      <h3>${title}</h3>
+      <p>${message}</p>
+    </div>
+  `;
+}
+
 function createProductCard(item) {
   const card = document.createElement("div");
   card.className = "card marketplace-product-card";
@@ -367,6 +422,7 @@ function createProductCard(item) {
   const firstImage = productImages[0];
   const visibleGridImages = productImages.slice(1, 4);
   const dressSizes = productCategory === "dress" ? getDressSizes(item) : [];
+  const sellerName = item.sellerName || "Yenkasa Seller";
 
   card.innerHTML = `
     ${firstImage ? `
@@ -400,15 +456,15 @@ function createProductCard(item) {
             </div>
           </div>
         ` : `
-        <div class="product-image-wrap single-product-image">
-          ${productImages.length > 1 ? `<span class="product-image-count">${productImages.length} photos</span>` : ""}
-          <img
-            src="${firstImage}"
-            alt="${item.name || "Yenkasa Store product"}"
-            class="product-image"
-            data-gallery-main
-          >
-        </div>
+          <div class="product-image-wrap single-product-image">
+            ${productImages.length > 1 ? `<span class="product-image-count">${productImages.length} photos</span>` : ""}
+            <img
+              src="${firstImage}"
+              alt="${item.name || "Yenkasa Store product"}"
+              class="product-image"
+              data-gallery-main
+            >
+          </div>
         `}
       </div>
     ` : `
@@ -419,7 +475,10 @@ function createProductCard(item) {
 
     <div class="card-content">
       <div class="card-top">
-        <h3>${item.name || "Untitled Product"}</h3>
+        <div>
+          <h3>${item.name || "Untitled Product"}</h3>
+          <span class="product-seller-name">${sellerName}</span>
+        </div>
         <span class="status ${status}">${status}</span>
       </div>
 
@@ -429,14 +488,11 @@ function createProductCard(item) {
         <span class="product-chip">${categoryLabel}</span>
         <span class="product-chip">${item.weight || item.size || "Details pending"}</span>
         <span class="product-chip">${item.category || "General"}</span>
-        <span class="product-chip fixed-price-chip">Fixed Price</span>
       </div>
 
       <div class="price">GHS ${item.price || 0}</div>
 
-      ${item.videoUrl
-        ? `<video controls src="${item.videoUrl}"></video>`
-        : ""}
+      ${item.videoUrl ? `<video controls src="${item.videoUrl}"></video>` : ""}
 
       ${dressSizes.length ? `
         <label class="product-size-picker">
@@ -480,7 +536,6 @@ function createProductCard(item) {
   galleryButtons.forEach(button => {
     button.addEventListener("click", () => {
       const nextImage = button.dataset.productImage;
-
       if (!nextImage) {
         return;
       }
@@ -501,6 +556,7 @@ function createProductCard(item) {
         dressSizeSelect.focus();
         return;
       }
+
       addToCart(item, selectedSize);
     });
   }
@@ -531,16 +587,164 @@ function renderIntoContainer(container, products, emptyTitle, emptyMessage) {
   });
 }
 
-function renderMarketplaceProducts(products, options = {}) {
-  const availableProducts = products.filter(item => String(item.status || "").toLowerCase() !== "sold");
-  const featuredProducts = options.featuredProducts || availableProducts.slice(0, 6);
+function getCategoryPreviewImage(products, categoryKey) {
+  const matching = products.find(item => productMatchesCategory(item, categoryKey));
+  return getProductImages(matching || {})[0] || "";
+}
 
-  renderIntoContainer(
-    featuredContainer,
-    featuredProducts,
-    options.featuredEmptyTitle || "No featured products yet",
-    options.featuredEmptyMessage || "Active products will appear here as sellers upload more items."
-  );
+function renderHeroStats(products) {
+  const activeProducts = getActiveProducts(products);
+  const sellerIds = new Set();
+  const liveCategories = new Set();
+
+  activeProducts.forEach(item => {
+    if (item.sellerId != null) {
+      sellerIds.add(String(item.sellerId));
+    } else if (item.sellerName) {
+      sellerIds.add(String(item.sellerName));
+    }
+
+    liveCategories.add(getProductCategory(item));
+  });
+
+  if (heroProductCount) {
+    heroProductCount.textContent = String(activeProducts.length);
+  }
+
+  if (heroSellerCount) {
+    heroSellerCount.textContent = String(sellerIds.size);
+  }
+
+  if (heroCategoryCount) {
+    heroCategoryCount.textContent = String(liveCategories.size);
+  }
+}
+
+function renderCategorySpotlight(products) {
+  if (!categorySpotlight) {
+    return;
+  }
+
+  const activeProducts = getActiveProducts(products);
+  clearContainer(categorySpotlight);
+
+  const cards = [
+    ...orderedCategoryKeys.map(categoryKey => {
+      const count = activeProducts.filter(item => productMatchesCategory(item, categoryKey)).length;
+      const imageUrl = getCategoryPreviewImage(activeProducts, categoryKey);
+      const config = categoryConfig[categoryKey];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "category-spotlight-card";
+      button.dataset.categoryFilter = categoryKey;
+      button.innerHTML = `
+        <div class="category-card-thumb ${imageUrl ? "has-image" : ""}">
+          ${imageUrl ? `<img src="${imageUrl}" alt="${config.title}">` : `<span>${productDisplayLabels[categoryKey]}</span>`}
+        </div>
+        <div class="category-card-copy">
+          <strong>${productDisplayLabels[categoryKey]}</strong>
+          <span>${count} item${count === 1 ? "" : "s"}</span>
+        </div>
+      `;
+      return button;
+    }),
+    (() => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "category-spotlight-card category-view-all-card";
+      button.dataset.categoryFilter = "all";
+      button.innerHTML = `
+        <div class="category-card-thumb category-view-all-thumb">
+          <span>All</span>
+        </div>
+        <div class="category-card-copy">
+          <strong>View All</strong>
+          <span>${activeProducts.length} live products</span>
+        </div>
+      `;
+      return button;
+    })()
+  ];
+
+  cards.forEach(card => categorySpotlight.appendChild(card));
+}
+
+function getSellerGroups(products) {
+  const map = new Map();
+
+  getActiveProducts(products).forEach(item => {
+    const key = item.sellerId != null ? String(item.sellerId) : String(item.sellerName || "unknown");
+    const sellerName = item.sellerName || "Yenkasa Seller";
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        sellerName,
+        items: []
+      });
+    }
+
+    map.get(key).items.push(item);
+  });
+
+  return Array.from(map.values())
+    .map(group => ({
+      ...group,
+      items: group.items.slice().sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+    }))
+    .sort((a, b) => b.items.length - a.items.length || a.sellerName.localeCompare(b.sellerName));
+}
+
+function renderSellerShowcase(products) {
+  if (!sellerShowcase) {
+    return;
+  }
+
+  clearContainer(sellerShowcase);
+
+  const groups = getSellerGroups(products);
+  if (!groups.length) {
+    sellerShowcase.innerHTML = getEmptyCategoryCard(
+      "No live seller products yet",
+      "Seller product previews will appear here as soon as listings are available."
+    );
+    return;
+  }
+
+  groups.forEach(group => {
+    const previewItems = group.items.slice(0, 4);
+    const section = document.createElement("article");
+    section.className = "seller-showcase-card";
+
+    const header = document.createElement("div");
+    header.className = "seller-showcase-head";
+    header.innerHTML = `
+      <div>
+        <span>Seller Preview</span>
+        <h3>${group.sellerName}</h3>
+        <p>${group.items.length} product${group.items.length === 1 ? "" : "s"} live now.</p>
+      </div>
+      <button type="button" class="seller-showcase-link" data-category-filter="all">View all products</button>
+    `;
+
+    const grid = document.createElement("div");
+    grid.className = "seller-product-grid";
+    previewItems.forEach(item => {
+      grid.appendChild(createProductCard(item));
+    });
+
+    section.appendChild(header);
+    section.appendChild(grid);
+
+    if (group.items.length > previewItems.length) {
+      const footer = document.createElement("div");
+      footer.className = "seller-showcase-foot";
+      footer.textContent = `Showing ${previewItems.length} of ${group.items.length} items from ${group.sellerName}.`;
+      section.appendChild(footer);
+    }
+
+    sellerShowcase.appendChild(section);
+  });
 }
 
 function showBrowseResults(products, options = {}) {
@@ -569,56 +773,16 @@ function hideBrowseResults() {
   clearContainer(categoryResults);
 }
 
-function normalizeSearchText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function getSearchHaystack(item) {
-  return normalizeSearchText([
-    item.name,
-    item.description,
-    item.category,
-    item.categoryType,
-    item.status,
-    item.weight,
-    item.size,
-    item.type,
-    item.brand,
-    item.color,
-    item.material,
-    item.condition,
-    item.length,
-    item.model,
-    item.year,
-    item.metadataJson
-  ].join(" "));
-}
-
-function productMatchesQuery(item, query) {
-  const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
-
-  if (!terms.length) {
-    return true;
-  }
-
-  const haystack = getSearchHaystack(item);
-  return terms.every(term => haystack.includes(term));
-}
-
 function applySearch(options = {}) {
   const rawQuery = String(siteSearch?.value || "").trim();
+  const activeProducts = getActiveProducts(allProducts);
 
   if (!rawQuery && !activeCategoryFilter) {
-    renderMarketplaceProducts(allProducts);
     hideBrowseResults();
     return;
   }
 
-  const browseableProducts = allProducts.filter(item => String(item.status || "").toLowerCase() !== "sold");
-  const filtered = browseableProducts.filter(item => (
+  const filtered = activeProducts.filter(item => (
     productMatchesQuery(item, rawQuery) && productMatchesCategory(item, activeCategoryFilter)
   ));
   const categoryInfo = categoryConfig[activeCategoryFilter] || {};
@@ -626,7 +790,6 @@ function applySearch(options = {}) {
     ? `Results for "${rawQuery}"`
     : categoryInfo.title || "Browse Products";
 
-  renderMarketplaceProducts(allProducts);
   showBrowseResults(filtered, {
     categoryKey: activeCategoryFilter,
     kicker: rawQuery ? "Search Results" : "Category",
@@ -646,48 +809,83 @@ function applySearch(options = {}) {
   }
 }
 
-function applyCategoryFilter(categoryKey) {
+function applyCategoryFilter(categoryKey, options = {}) {
   activeCategoryFilter = categoryKey || "all";
-  categoryMenuPanel?.classList.remove("open");
-  mainNav?.classList.remove("open");
-  applySearch({ scrollToResults: true });
+  closeMenu();
+
+  if (options.clearSearch && siteSearch) {
+    siteSearch.value = "";
+  }
+
+  applySearch({ scrollToResults: options.scrollToResults !== false });
+}
+
+function renderStorefront(products) {
+  renderHeroStats(products);
+  renderCategorySpotlight(products);
+  renderSellerShowcase(products);
 }
 
 searchBtn?.addEventListener("click", () => applySearch({ scrollToResults: true }));
-siteSearch?.addEventListener("input", applySearch);
+siteSearch?.addEventListener("input", () => applySearch());
 siteSearch?.addEventListener("keydown", event => {
   if (event.key === "Enter") {
     event.preventDefault();
     applySearch({ scrollToResults: true });
   }
 });
-categoryMenuPanel?.addEventListener("click", event => {
-  const button = event.target.closest("[data-category-filter]");
-  if (!button) return;
 
-  applyCategoryFilter(button.dataset.categoryFilter || "all");
+viewAllProductsBtn?.addEventListener("click", () => {
+  applyCategoryFilter("all", {
+    clearSearch: true,
+    scrollToResults: true
+  });
 });
+
 clearBrowseBtn?.addEventListener("click", () => {
   if (siteSearch) {
     siteSearch.value = "";
   }
 
   activeCategoryFilter = "";
-  applySearch({ scrollToResults: true });
-  document.getElementById("featured")?.scrollIntoView({
+  hideBrowseResults();
+  document.getElementById("shop-categories")?.scrollIntoView({
     behavior: "smooth",
     block: "start"
   });
 });
 
+document.addEventListener("click", event => {
+  const jumpButton = event.target.closest(".category-jump-btn");
+  if (jumpButton) {
+    document.getElementById("shop-categories")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+    return;
+  }
+
+  const categoryButton = event.target.closest("[data-category-filter]");
+  if (categoryButton) {
+    const categoryKey = categoryButton.dataset.categoryFilter || "all";
+    applyCategoryFilter(categoryKey, {
+      clearSearch: categoryKey === "all",
+      scrollToResults: true
+    });
+    return;
+  }
+});
+
 fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
-  .then(res => res.json())
+  .then(response => response.json())
   .then(data => {
     allProducts = Array.isArray(data) ? data : [];
+    updateHomepageNav();
+    renderStorefront(allProducts);
     applySearch();
   })
-  .catch(err => {
-    console.error(err);
+  .catch(error => {
+    console.error(error);
 
     const errorHtml = `
       <div style="grid-column:1/-1;text-align:center;padding:40px;background:white;border-radius:20px;">
@@ -696,62 +894,19 @@ fetch("https://www.yenkasa.xyz/triciabales-api/api/triciabales")
       </div>
     `;
 
-    if (featuredContainer) {
-      featuredContainer.innerHTML = errorHtml;
+    if (categorySpotlight) {
+      categorySpotlight.innerHTML = errorHtml;
     }
+
+    if (sellerShowcase) {
+      sellerShowcase.innerHTML = errorHtml;
+    }
+
     if (categoryResults) {
       browseSection?.classList.remove("hidden");
       categoryResults.innerHTML = errorHtml;
     }
   });
-
-imageModal.addEventListener("click", event => {
-  if (event.target === imageModal) {
-    closeImage();
-  }
-});
-
-modalCloseBtn?.addEventListener("click", closeImage);
-modalPrevBtn?.addEventListener("click", () => moveModalImage(-1));
-modalNextBtn?.addEventListener("click", () => moveModalImage(1));
-supportEmailBtn?.addEventListener("click", openSupportForm);
-liveChatLauncher?.addEventListener("click", () => {
-  if (window.yenkasaLiveChat && typeof window.yenkasaLiveChat.open === "function") {
-    window.yenkasaLiveChat.open();
-    return;
-  }
-
-  openSupportForm();
-});
-supportCloseBtn?.addEventListener("click", closeSupportForm);
-supportCancelBtn?.addEventListener("click", closeSupportForm);
-supportModal?.addEventListener("click", event => {
-  if (event.target === supportModal) {
-    closeSupportForm();
-  }
-});
-supportForm?.addEventListener("submit", submitSupportMessage);
-
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && supportModal?.classList.contains("show")) {
-    closeSupportForm();
-    return;
-  }
-
-  if (imageModal.style.display !== "flex") {
-    return;
-  }
-
-  if (event.key === "Escape") {
-    closeImage();
-  }
-  if (event.key === "ArrowLeft") {
-    moveModalImage(-1);
-  }
-  if (event.key === "ArrowRight") {
-    moveModalImage(1);
-  }
-});
 
 function openImage(src, images = []) {
   modalImages = Array.isArray(images) && images.length ? images : [src];
@@ -788,7 +943,9 @@ function closeImage() {
 }
 
 function openSupportForm() {
-  if (!supportModal) return;
+  if (!supportModal) {
+    return;
+  }
 
   supportModal.classList.add("show");
   supportModal.setAttribute("aria-hidden", "false");
@@ -796,9 +953,11 @@ function openSupportForm() {
 
   const nameField = document.getElementById("supportName");
   const emailField = document.getElementById("supportEmail");
+
   if (currentUser?.name && nameField && !nameField.value) {
     nameField.value = currentUser.name;
   }
+
   if (currentUser?.email && emailField && !emailField.value) {
     emailField.value = currentUser.email;
   }
@@ -807,14 +966,18 @@ function openSupportForm() {
 }
 
 function closeSupportForm() {
-  if (!supportModal) return;
+  if (!supportModal) {
+    return;
+  }
 
   supportModal.classList.remove("show");
   supportModal.setAttribute("aria-hidden", "true");
 }
 
 function setSupportFeedback(message, type) {
-  if (!supportFeedback) return;
+  if (!supportFeedback) {
+    return;
+  }
 
   supportFeedback.textContent = message;
   supportFeedback.className = `support-feedback ${type || "hidden"}`;
@@ -822,7 +985,9 @@ function setSupportFeedback(message, type) {
 
 async function submitSupportMessage(event) {
   event.preventDefault();
-  if (!supportForm || !supportSubmitBtn) return;
+  if (!supportForm || !supportSubmitBtn) {
+    return;
+  }
 
   const formData = new FormData(supportForm);
   const payload = {
@@ -858,15 +1023,69 @@ async function submitSupportMessage(event) {
       throw new Error(data.error || data.message || "Unable to send your message.");
     }
 
-    setSupportFeedback(`Message sent. We will reply from ${supportEmail}.`, "success");
     supportForm.reset();
+    setSupportFeedback("Your message has been sent. We will get back to you shortly.", "success");
 
-    setTimeout(closeSupportForm, 1600);
-  } catch (err) {
-    console.error(err);
-    setSupportFeedback(err.message || "Unable to send your message right now.", "error");
+    setTimeout(() => {
+      closeSupportForm();
+      setSupportFeedback("", "");
+    }, 1200);
+  } catch (error) {
+    console.error(error);
+    setSupportFeedback(error.message || "Unable to send your message right now.", "error");
   } finally {
     supportSubmitBtn.disabled = false;
     supportSubmitBtn.textContent = "Send Message";
   }
 }
+
+imageModal?.addEventListener("click", event => {
+  if (event.target === imageModal) {
+    closeImage();
+  }
+});
+
+modalCloseBtn?.addEventListener("click", closeImage);
+modalPrevBtn?.addEventListener("click", () => moveModalImage(-1));
+modalNextBtn?.addEventListener("click", () => moveModalImage(1));
+supportEmailBtn?.addEventListener("click", openSupportForm);
+floatingSupportBtn?.addEventListener("click", openSupportForm);
+liveChatLauncher?.addEventListener("click", () => {
+  if (window.yenkasaLiveChat && typeof window.yenkasaLiveChat.open === "function") {
+    window.yenkasaLiveChat.open();
+    return;
+  }
+
+  openSupportForm();
+});
+supportCloseBtn?.addEventListener("click", closeSupportForm);
+supportCancelBtn?.addEventListener("click", closeSupportForm);
+supportModal?.addEventListener("click", event => {
+  if (event.target === supportModal) {
+    closeSupportForm();
+  }
+});
+supportForm?.addEventListener("submit", submitSupportMessage);
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && supportModal?.classList.contains("show")) {
+    closeSupportForm();
+    return;
+  }
+
+  if (imageModal?.style.display !== "flex") {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    closeImage();
+  }
+  if (event.key === "ArrowLeft") {
+    moveModalImage(-1);
+  }
+  if (event.key === "ArrowRight") {
+    moveModalImage(1);
+  }
+});
+
+updateHomepageNav();

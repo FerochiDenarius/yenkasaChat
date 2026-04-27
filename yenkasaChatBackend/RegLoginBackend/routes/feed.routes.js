@@ -21,6 +21,17 @@ async function getBlockedUserIds(viewerId) {
   return [...new Set([...iBlocked, ...blockedMe])];
 }
 
+function attachLikedByUser(posts, viewerId) {
+  if (!viewerId) return posts;
+
+  return posts.map((post) => ({
+    ...post,
+    likedByUser: Array.isArray(post.likes)
+      ? post.likes.some((id) => id?.toString() === viewerId.toString())
+      : false
+  }));
+}
+
 // -----------------------------------------------------
 // ✅ FEED WITH ADS MIXED IN
 // -----------------------------------------------------
@@ -42,6 +53,7 @@ router.get("/", auth, async (req, res) => {
       .lean();
 
     await attachAccurateViewCounts(posts);
+    const postsWithLikedState = attachLikedByUser(posts, req.user.id);
 
     const totalPosts = await Post.countDocuments({
       isActive: true,
@@ -63,7 +75,7 @@ router.get("/", auth, async (req, res) => {
     let adIndex = 0;
 
     for (let i = 0; i < posts.length; i++) {
-      combined.push(posts[i]);
+      combined.push(postsWithLikedState[i]);
 
       // Insert an ad every 6 posts
       if ((i + 1) % 6 === 0 && ads[adIndex]) {

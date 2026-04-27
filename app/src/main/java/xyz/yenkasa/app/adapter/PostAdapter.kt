@@ -414,7 +414,7 @@ class PostAdapter(
             View.VISIBLE
         } else View.GONE
 
-        holder.updateLikeButton(post.likedByCurrentUser, holder.btnLike)
+        holder.updateLikeButton(post.likedByUser, holder.btnLike)
         holder.btnLike.setOnClickListener { view ->
             throttleTap(view)
             onLikeClick(post, position)

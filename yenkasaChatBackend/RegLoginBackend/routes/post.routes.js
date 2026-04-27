@@ -42,6 +42,19 @@ function normalizeTextBackgroundColor(value) {
   return /^#[0-9A-Fa-f]{6}$/.test(color) ? color.toUpperCase() : "";
 }
 
+function attachLikedByUser(posts, viewerId) {
+  if (!viewerId) return posts;
+
+  const decorate = (post) => ({
+    ...post,
+    likedByUser: Array.isArray(post.likes)
+      ? post.likes.some((id) => id?.toString() === viewerId.toString())
+      : false
+  });
+
+  return Array.isArray(posts) ? posts.map(decorate) : decorate(posts);
+}
+
 /* ---------------------------------------------------
  * ONE-WAY BLOCK CHECK (Instagram style)
  * userA = viewer or actor
@@ -408,11 +421,12 @@ router.get('/user/:userId', authMiddleware, async (req, res) => {
       .lean();
 
     await attachAccurateViewCounts(posts);
+    const postsWithLikedState = attachLikedByUser(posts, viewerId);
 
     const totalPosts = await Post.countDocuments({ userId, isActive: true, status: 'approved' });
 
     res.json({
-      posts,
+      posts: postsWithLikedState,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalPosts / limit),
@@ -491,12 +505,13 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
     .lean();
 
   await attachAccurateViewCounts(posts);
+  const postsWithLikedState = attachLikedByUser(posts, req.user.id);
 
   const totalPosts = await Post.countDocuments(filter);
 
   res.json({
     success: true,
-    posts,
+    posts: postsWithLikedState,
     pagination: {
       currentPage: page,
       totalPages: Math.ceil(totalPosts / limit),
@@ -545,6 +560,7 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
       .lean();
 
     await attachAccurateViewCounts(posts);
+    const postsWithLikedState = attachLikedByUser(posts, viewerId);
 
     const totalPosts = await Post.countDocuments({
       communityId,
@@ -559,7 +575,7 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
         name: community.name,
         displayName: community.displayName,
       },
-      posts,
+      posts: postsWithLikedState,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalPosts / limit),
@@ -594,8 +610,9 @@ router.get('/community-name/:name', authMiddleware, async (req, res) => {
       .lean();
 
     await attachAccurateViewCounts(posts);
+    const postsWithLikedState = attachLikedByUser(posts, req.user.id);
 
-    res.json({ community, posts });
+    res.json({ community, posts: postsWithLikedState });
   } catch (err) {
     console.error("❌ Error fetching posts by community name:", err);
     res.status(500).json({ error: 'Server error' });
@@ -624,6 +641,7 @@ router.get("/:postId", authMiddleware, async (req, res) => {
     }
 
     await attachAccurateViewCounts(post);
+    const postWithLikedState = attachLikedByUser(post, viewerId);
 
     // 🔒 One-way block enforcement (same logic as feed)
     const blocked = await isBlocked(viewerId, post.userId._id.toString());
@@ -631,7 +649,7 @@ router.get("/:postId", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "You cannot view this post" });
     }
 
-    res.json(post);
+    res.json(postWithLikedState);
 
   } catch (err) {
     console.error("❌ Failed to fetch post by ID:", err);

@@ -164,31 +164,38 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     if (!alreadyLiked && likedByUser) {
       await updatePostOwnerLikeMetrics(postOwnerId, updatedPost.likeCount);
 
-console.log("🧪 ABOUT TO UPDATE postsLiked for:", userId);
+      const rewardMarker = await Post.updateOne(
+        { _id: postId, rewardedLikeUsers: { $ne: userId } },
+        { $addToSet: { rewardedLikeUsers: userId } }
+      );
 
-const updatedVerification = await AppVerification.findOneAndUpdate(
-  { userId },
-  {
-    $inc: {
-      "metrics.postsLiked": 1,
-      "metrics.totalLikesCount": 1
-    }
-  },
-  { upsert: true, new: true }
-);
+      if (rewardMarker.modifiedCount > 0) {
+        const updatedVerification = await AppVerification.findOneAndUpdate(
+          { userId },
+          {
+            $inc: {
+              "metrics.postsLiked": 1,
+              "metrics.totalLikesCount": 1
+            }
+          },
+          { upsert: true, new: true }
+        );
 
-console.log(
-  "✅ postsLiked metric updated:",
-  updatedVerification?.metrics?.postsLiked
-);
+        console.log(
+          "✅ postsLiked metric updated:",
+          updatedVerification?.metrics?.postsLiked
+        );
 
-      await rewardService.reward(userId, REWARD_LIKE, {
-        fromUserId: postOwnerId,
-        type: "REWARD_POST_LIKE",
-        description: `Earned ${REWARD_LIKE} YKC for liking a post`,
-        relatedPostId: postId,
-        activityId: `post_like_${postId}_${userId}` 
-      });
+        await rewardService.reward(userId, REWARD_LIKE, {
+          fromUserId: postOwnerId,
+          type: "REWARD_POST_LIKE",
+          description: `Earned ${REWARD_LIKE} YKC for liking a post`,
+          relatedPostId: postId,
+          activityId: `post_like_${postId}_${userId}`
+        });
+      } else {
+        console.log(`ℹ️ Post like reward already granted for post=${postId} user=${userId}`);
+      }
 
       
 

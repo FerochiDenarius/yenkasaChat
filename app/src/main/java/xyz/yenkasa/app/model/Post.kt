@@ -51,7 +51,8 @@ data class Post(
     val updatedAt: String? = null,
 
     // Client-side UI state
-    var likedByCurrentUser: Boolean = false
+    @SerializedName("likedByUser")
+    var likedByUser: Boolean = false
 ) {
     fun effectiveImageUrls(): List<String> {
         return imageUrls.orEmpty()
@@ -92,7 +93,7 @@ data class Post(
                 location = json.optString("location", null),
                 createdAt = json.optString("createdAt"),
                 updatedAt = json.optString("updatedAt", null),
-                likedByCurrentUser = json.optBoolean("likedByCurrentUser", false),
+                likedByUser = json.optBoolean("likedByUser", json.optBoolean("likedByCurrentUser", false)),
                 userId = UserBasic.fromJson(json.optJSONObject("userId")),
                 communityId = CommunityBasic.fromJson(json.optJSONObject("communityId"))
             )

@@ -242,7 +242,7 @@ object SocketManager {
                 location = json.optString("location", null),
                 createdAt = json.optString("createdAt"),
                 updatedAt = json.optString("updatedAt", null),
-                likedByCurrentUser = json.optBoolean("likedByCurrentUser", false),
+                likedByUser = json.optBoolean("likedByUser", json.optBoolean("likedByCurrentUser", false)),
                 comments = null // or handle separately if needed
             )
         } catch (e: Exception) {

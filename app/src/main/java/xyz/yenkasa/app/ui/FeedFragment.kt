@@ -140,7 +140,7 @@ class FeedFragment : Fragment() {
                 if (!token.isNullOrEmpty()) {
                     FeedUtils.toggleLike(context, token, post) { liked, newLikeCount ->
                         val updatedPost = post.copy(
-                            likedByCurrentUser = liked,
+                            likedByUser = liked,
                             likeCount = newLikeCount
                         )
                         posts[position] = updatedPost

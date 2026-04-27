@@ -52,6 +52,7 @@ const postSchema = new Schema({
 
   // Engagement
   likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  rewardedLikeUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   likeCount: { type: Number, default: 0 },
   commentCount: { type: Number, default: 0 },
   shareCount: { type: Number, default: 0 },

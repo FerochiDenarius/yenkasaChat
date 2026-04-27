@@ -3,8 +3,43 @@ const authToken = localStorage.getItem("authToken") || "";
 const menuToggle = document.getElementById("menuToggle");
 const dashboardMenu = document.getElementById("dashboardMenu");
 const dashboardMenuCloseBtn = document.getElementById("dashboardMenuCloseBtn");
-const menuButtons = document.querySelectorAll(".dashboard-menu .tab-btn");
+const adminLogoutBtn = document.getElementById("adminLogoutBtn");
+const menuButtons = document.querySelectorAll(".admin-sidebar-nav .tab-btn[data-panel]");
 const panels = document.querySelectorAll(".super-admin-panel");
+const dashboardSearchInput = document.getElementById("dashboardSearchInput");
+const dashboardDateFilterBtn = document.getElementById("dashboardDateFilterBtn");
+const adminNotificationsBtn = document.getElementById("adminNotificationsBtn");
+const adminFullscreenBtn = document.getElementById("adminFullscreenBtn");
+const adminAvatarLabel = document.getElementById("adminAvatarLabel");
+const adminProfileSubtext = document.getElementById("adminProfileSubtext");
+const dashboardRefreshBtn = document.getElementById("dashboardRefreshBtn");
+
+const totalRevenueValue = document.getElementById("totalRevenueValue");
+const totalRevenueGrowth = document.getElementById("totalRevenueGrowth");
+const totalOrdersValue = document.getElementById("total-orders");
+const totalOrdersGrowth = document.getElementById("totalOrdersGrowth");
+const totalSellersValue = document.getElementById("totalSellersValue");
+const totalSellersGrowth = document.getElementById("totalSellersGrowth");
+const totalUsersValue = document.getElementById("totalUsersValue");
+const totalUsersGrowth = document.getElementById("totalUsersGrowth");
+const revenueOverviewTotal = document.getElementById("revenueOverviewTotal");
+const revenueOverviewGrowth = document.getElementById("revenueOverviewGrowth");
+const revenueChartSvg = document.getElementById("revenueChartSvg");
+const revenueChartLabels = document.getElementById("revenueChartLabels");
+const orderStatusRing = document.getElementById("orderStatusRing");
+const orderStatusTotal = document.getElementById("orderStatusTotal");
+const completedOrdersCount = document.getElementById("completedOrdersCount");
+const pendingOrdersCount = document.getElementById("pendingOrdersCount");
+const cancelledOrdersCount = document.getElementById("cancelledOrdersCount");
+const pendingPayoutsMini = document.getElementById("pendingPayoutsMini");
+const releasedPayoutsMini = document.getElementById("releasedPayoutsMini");
+const commissionTotalValue = document.getElementById("commission-total");
+const refundsMini = document.getElementById("refundsMini");
+const recentOrdersTableBody = document.getElementById("recentOrdersTableBody");
+const topSellersOverviewList = document.getElementById("topSellersOverviewList");
+const salesBars = document.getElementById("salesBars");
+const reportsOverviewCards = document.getElementById("reportsOverviewCards");
+
 const pendingPayoutsList = document.getElementById("pendingPayoutsList");
 const pendingPayoutsSectionList = document.getElementById("pendingPayoutsSectionList");
 const allOrdersList = document.getElementById("allOrdersList");
@@ -13,20 +48,30 @@ const releasedPayoutsList = document.getElementById("releasedPayoutsList");
 const sellersList = document.getElementById("sellersList");
 const sellerProductsList = document.getElementById("sellerProductsList");
 const usersList = document.getElementById("usersList");
+
 const superAdminNotificationCountText = document.getElementById("superAdminNotificationCountText");
 const superAdminNotificationsFeedback = document.getElementById("superAdminNotificationsFeedback");
 const superAdminNotificationsList = document.getElementById("superAdminNotificationsList");
 const refreshSuperAdminNotificationsBtn = document.getElementById("refreshSuperAdminNotificationsBtn");
 const markAllSuperAdminNotificationsReadBtn = document.getElementById("markAllSuperAdminNotificationsReadBtn");
 const superAdminNotificationFilterBar = document.getElementById("superAdminNotificationFilterBar");
+
 const storeProfileForm = document.getElementById("storeProfileForm");
 const storeProfileFeedback = document.getElementById("storeProfileFeedback");
 const storeProfileSaveBtn = document.getElementById("storeProfileSaveBtn");
 const storeProfileRefreshBtn = document.getElementById("storeProfileRefreshBtn");
 const storeLogoInput = document.getElementById("storeLogo");
 const storeLogoPreview = document.getElementById("storeLogoPreview");
+
 const API_BASE = "/triciabales-api";
-let loadedSuperAdminNotifications = [];
+const dashboardState = {
+  orders: [],
+  users: [],
+  sellers: [],
+  products: [],
+  refunds: [],
+  loadedSuperAdminNotifications: []
+};
 let activeSuperAdminNotificationFilter = "all";
 const hiddenSuperAdminNotificationIds = new Set(
   JSON.parse(localStorage.getItem("hiddenSuperAdminNotificationIds") || "[]").map(String)
@@ -70,26 +115,54 @@ async function readResponseData(response) {
   try {
     return JSON.parse(rawText);
   } catch {
-    return {
-      rawText
-    };
+    return { rawText };
   }
 }
 
 function formatStatus(status) {
-  if (!status) return "-";
+  if (!status) {
+    return "-";
+  }
 
-  return status
+  return String(status)
+    .toLowerCase()
     .split("_")
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
 
-function formatNotificationDate(value) {
-  if (!value) return "Just now";
+function formatCurrency(value) {
+  return `GH₵${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function formatCompactCurrency(value) {
+  return `GH₵${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Just now";
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function formatNotificationDate(value) {
+  if (!value) {
+    return "Just now";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Just now";
+  }
 
   return date.toLocaleString(undefined, {
     year: "numeric",
@@ -144,8 +217,91 @@ function notificationGroupTitle(group) {
   return "Older";
 }
 
+function getOrderDate(order) {
+  const candidates = [
+    order?.createdAt,
+    order?.orderedAt,
+    order?.updatedAt,
+    order?.date,
+    order?.orderDate,
+    order?.payoutReleasedAt
+  ];
+
+  for (const value of candidates) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  return null;
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getWeekRangeLabel() {
+  const now = new Date();
+  const dayIndex = now.getDay();
+  const mondayOffset = dayIndex === 0 ? -6 : 1 - dayIndex;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+
+  return `${formatter.format(monday)} - ${formatter.format(sunday)}`;
+}
+
+function percentageChange(current, previous) {
+  if (!previous && !current) {
+    return 0;
+  }
+
+  if (!previous) {
+    return 100;
+  }
+
+  return ((current - previous) / previous) * 100;
+}
+
+function formatGrowth(current, previous) {
+  const change = percentageChange(current, previous);
+  const rounded = Math.abs(change).toFixed(1);
+  const prefix = change >= 0 ? "+" : "-";
+  return `${prefix}${rounded}% vs last week`;
+}
+
+function initialsFromName(name, fallback = "YS") {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!parts.length) {
+    return fallback;
+  }
+
+  return parts.slice(0, 2).map(part => part[0].toUpperCase()).join("");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function visibleSuperAdminNotifications() {
-  return loadedSuperAdminNotifications.filter(notification => {
+  return dashboardState.loadedSuperAdminNotifications.filter(notification => {
     if (hiddenSuperAdminNotificationIds.has(String(notification.id))) {
       return false;
     }
@@ -156,6 +312,20 @@ function visibleSuperAdminNotifications() {
 
     return notificationDayGroup(notification.createdAt) === activeSuperAdminNotificationFilter;
   });
+}
+
+function isOrderCompleted(order) {
+  const deliveryStatus = String(order.deliveryStatus || "").toLowerCase();
+  const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+  return order.confirmedByBuyer === true
+    || deliveryStatus === "delivered"
+    || paymentStatus === "payout_released";
+}
+
+function isOrderCancelled(order) {
+  const deliveryStatus = String(order.deliveryStatus || "").toLowerCase();
+  const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+  return deliveryStatus === "cancelled" || paymentStatus === "cancelled" || paymentStatus === "payment_failed";
 }
 
 function isPayoutReleaseEligible(order) {
@@ -175,8 +345,20 @@ function isPendingPayoutOrder(order) {
     || paymentStatus === "payout_on_hold";
 }
 
+function getProductPrimaryImage(product) {
+  if (Array.isArray(product.imageUrls) && product.imageUrls.length) {
+    return product.imageUrls[0];
+  }
+
+  return product.imageUrl || "";
+}
+
 function closeMenu() {
-  dashboardMenu.classList.remove("open");
+  dashboardMenu?.classList.remove("open");
+}
+
+function openMenu() {
+  dashboardMenu?.classList.add("open");
 }
 
 function showPanel(panelName) {
@@ -204,7 +386,11 @@ function showPanel(panelName) {
 }
 
 function renderEmpty(target, message) {
-  target.innerHTML = `<p>${message}</p>`;
+  if (!target) {
+    return;
+  }
+
+  target.innerHTML = `<p>${escapeHtml(message)}</p>`;
 }
 
 function showSuperAdminNotificationFeedback(message, type = "info") {
@@ -315,7 +501,7 @@ async function saveStoreProfile(event) {
 }
 
 function renderSuperAdminNotifications(notifications = []) {
-  loadedSuperAdminNotifications = notifications;
+  dashboardState.loadedSuperAdminNotifications = notifications;
 
   if (!superAdminNotificationsList || !superAdminNotificationCountText) {
     return;
@@ -325,24 +511,22 @@ function renderSuperAdminNotifications(notifications = []) {
   const unreadCount = notifications.filter(notification => (
     !notification.readAt && !hiddenSuperAdminNotificationIds.has(String(notification.id))
   )).length;
+
   superAdminNotificationCountText.textContent = notifications.length
     ? `${notifications.length} notification${notifications.length === 1 ? "" : "s"} loaded. ${unreadCount} unread.`
     : "No notifications yet.";
 
   if (!filteredNotifications.length) {
     superAdminNotificationsList.innerHTML = `
-      <div class="notification-empty card">
-        <div class="card-content">
-          <h3>No ${activeSuperAdminNotificationFilter === "all" ? "" : activeSuperAdminNotificationFilter} notifications</h3>
-          <p>Order, payment, delivery, payout and sensitive admin activity will appear here.</p>
-        </div>
+      <div class="placeholder-message-card">
+        <h3>No ${activeSuperAdminNotificationFilter === "all" ? "" : activeSuperAdminNotificationFilter} notifications</h3>
+        <p>Order, payment, delivery, payout and sensitive admin activity will appear here.</p>
       </div>
     `;
     return;
   }
 
   const groups = ["today", "yesterday", "older"];
-
   superAdminNotificationsList.innerHTML = groups.map(group => {
     const groupNotifications = filteredNotifications.filter(notification => (
       notificationDayGroup(notification.createdAt) === group
@@ -357,18 +541,17 @@ function renderSuperAdminNotifications(notifications = []) {
         <div class="notification-group-title">${notificationGroupTitle(group)}</div>
         ${groupNotifications.map(notification => {
           const isUnread = !notification.readAt;
-
           return `
-            <article class="notification-card ${isUnread ? "unread" : ""}" data-notification-id="${notification.id}">
-              <div class="notification-icon">${notificationIcon(notification.type)}</div>
+            <article class="notification-card ${isUnread ? "unread" : ""}">
+              <div class="notification-icon">${escapeHtml(notificationIcon(notification.type))}</div>
               <div class="notification-body">
                 <div class="notification-card-head">
-                  <h3>${notification.title || "Notification"}</h3>
-                  <span>${formatNotificationDate(notification.createdAt)}</span>
+                  <h3>${escapeHtml(notification.title || "Notification")}</h3>
+                  <span>${escapeHtml(formatNotificationDate(notification.createdAt))}</span>
                 </div>
-                <p>${notification.message || ""}</p>
+                <p>${escapeHtml(notification.message || "")}</p>
                 <div class="notification-meta">
-                  <span>${notification.type || "GENERAL"}</span>
+                  <span>${escapeHtml(notification.type || "GENERAL")}</span>
                   ${isUnread ? `<button type="button" class="mark-read-btn" data-action="read" data-notification-id="${notification.id}">Mark read</button>` : `<span>Read</span>`}
                   <button type="button" class="mark-read-btn muted" data-action="hide" data-notification-id="${notification.id}">Hide</button>
                   <button type="button" class="mark-read-btn danger" data-action="delete" data-notification-id="${notification.id}">Delete</button>
@@ -434,10 +617,10 @@ async function markSuperAdminNotificationRead(notificationId) {
       throw new Error(data?.message || data?.error || "Could not mark notification as read");
     }
 
-    loadedSuperAdminNotifications = loadedSuperAdminNotifications.map(notification => (
+    dashboardState.loadedSuperAdminNotifications = dashboardState.loadedSuperAdminNotifications.map(notification => (
       String(notification.id) === String(notificationId) ? data : notification
     ));
-    renderSuperAdminNotifications(loadedSuperAdminNotifications);
+    renderSuperAdminNotifications(dashboardState.loadedSuperAdminNotifications);
   } catch (error) {
     console.error("[Yenkasa Store] Could not mark notification read", error);
     showSuperAdminNotificationFeedback(error.message, "error");
@@ -459,7 +642,7 @@ function hideSuperAdminNotification(notificationId) {
 
   hiddenSuperAdminNotificationIds.add(String(notificationId));
   saveHiddenSuperAdminNotifications();
-  renderSuperAdminNotifications(loadedSuperAdminNotifications);
+  renderSuperAdminNotifications(dashboardState.loadedSuperAdminNotifications);
 }
 
 async function deleteSuperAdminNotification(notificationId) {
@@ -488,12 +671,12 @@ async function deleteSuperAdminNotification(notificationId) {
       throw new Error(data?.message || data?.error || "Could not delete notification");
     }
 
-    loadedSuperAdminNotifications = loadedSuperAdminNotifications.filter(notification => (
+    dashboardState.loadedSuperAdminNotifications = dashboardState.loadedSuperAdminNotifications.filter(notification => (
       String(notification.id) !== String(notificationId)
     ));
     hiddenSuperAdminNotificationIds.delete(String(notificationId));
     saveHiddenSuperAdminNotifications();
-    renderSuperAdminNotifications(loadedSuperAdminNotifications);
+    renderSuperAdminNotifications(dashboardState.loadedSuperAdminNotifications);
   } catch (error) {
     console.error("[Yenkasa Store] Could not delete super admin notification", error);
     showSuperAdminNotificationFeedback(error.message, "error");
@@ -501,6 +684,10 @@ async function deleteSuperAdminNotification(notificationId) {
 }
 
 function renderPendingPayoutItems(target, orders) {
+  if (!target) {
+    return;
+  }
+
   if (!orders.length) {
     renderEmpty(target, "No pending seller payouts right now.");
     return;
@@ -514,43 +701,34 @@ function renderPendingPayoutItems(target, orders) {
     const sellerReceives = order.sellerPayoutAmount != null
       ? Number(order.sellerPayoutAmount)
       : total - commission;
-    const isOnHold = order.paymentStatus === "payout_on_hold";
-    const payoutStatusLabel = order.paymentStatus === "paid"
+    const isOnHold = String(order.paymentStatus || "") === "payout_on_hold";
+    const payoutStatusLabel = String(order.paymentStatus || "") === "paid"
       ? "Paid - Ready For Payout"
       : formatStatus(order.paymentStatus);
     const primaryAction = isOnHold
-      ? `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="resume">
-          Mark Ready
-        </button>`
-      : `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="release">
-          Release Payment
-        </button>`;
+      ? `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="resume">Mark Ready</button>`
+      : `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="release">Release Payment</button>`;
     const secondaryAction = isOnHold
       ? ""
-      : `<button class="manage-btn hold payout-action-btn" data-id="${order.id}" data-action="hold">
-          Hold Payout
-        </button>`;
+      : `<button class="manage-btn hold payout-action-btn" data-id="${order.id}" data-action="hold">Hold Payout</button>`;
 
     return `
       <div class="super-admin-item">
         <div class="super-admin-item-header">
           <div>
-            <strong>${order.sellerName || "Seller"}</strong>
-            <p>Order #${order.id}</p>
+            <strong>${escapeHtml(order.sellerName || "Seller")}</strong>
+            <p>Order #${escapeHtml(order.id || "-")}</p>
           </div>
-          <strong>GH₵${total.toFixed(2)}</strong>
+          <strong>${escapeHtml(formatCompactCurrency(total))}</strong>
         </div>
-        <p><strong>Seller Name:</strong> ${order.sellerName || "Seller"}</p>
-        <p><strong>Order #:</strong> ${order.id}</p>
-        <p><strong>Buyer:</strong> ${order.customerName || "-"}</p>
-        <p><strong>Delivery:</strong> ${formatStatus(order.deliveryStatus)}</p>
+        <p><strong>Buyer:</strong> ${escapeHtml(order.customerName || order.buyerName || "-")}</p>
+        <p><strong>Delivery:</strong> ${escapeHtml(formatStatus(order.deliveryStatus))}</p>
         <p><strong>Payout Trigger:</strong> ${order.confirmedByBuyer ? "Buyer confirmed" : "Seller marked delivered"}</p>
-        <p><strong>Total:</strong> GH₵${total.toFixed(2)}</p>
-        <p><strong>Commission:</strong> GH₵${commission.toFixed(2)}</p>
-        <p><strong>Seller Receives:</strong> GH₵${sellerReceives.toFixed(2)}</p>
-        <p><strong>Payout Status:</strong> ${payoutStatusLabel}</p>
-        ${order.payoutHeldAt ? `<p><strong>Held At:</strong> ${formatDateTime(order.payoutHeldAt)}</p>` : ""}
-        ${order.payoutHoldReason ? `<p><strong>Hold Reason:</strong> ${order.payoutHoldReason}</p>` : ""}
+        <p><strong>Commission:</strong> ${escapeHtml(formatCompactCurrency(commission))}</p>
+        <p><strong>Seller Receives:</strong> ${escapeHtml(formatCompactCurrency(sellerReceives))}</p>
+        <p><strong>Payout Status:</strong> ${escapeHtml(payoutStatusLabel)}</p>
+        ${order.payoutHeldAt ? `<p><strong>Held At:</strong> ${escapeHtml(formatDateTime(order.payoutHeldAt))}</p>` : ""}
+        ${order.payoutHoldReason ? `<p><strong>Hold Reason:</strong> ${escapeHtml(order.payoutHoldReason)}</p>` : ""}
         <div class="super-admin-actions">
           ${primaryAction}
           ${secondaryAction}
@@ -561,6 +739,10 @@ function renderPendingPayoutItems(target, orders) {
 }
 
 function renderAllOrders(orders) {
+  if (!allOrdersList) {
+    return;
+  }
+
   if (!orders.length) {
     renderEmpty(allOrdersList, "No orders found.");
     return;
@@ -575,17 +757,16 @@ function renderAllOrders(orders) {
       <div class="super-admin-item">
         <div class="super-admin-item-header">
           <div>
-            <strong>Order #${order.id}</strong>
-            <p>${order.sellerName || "Seller"} • ${order.buyerName || order.customerName || "Customer"}</p>
+            <strong>Order #${escapeHtml(order.id || "-")}</strong>
+            <p>${escapeHtml(order.sellerName || "Seller")} • ${escapeHtml(order.buyerName || order.customerName || "Customer")}</p>
           </div>
-          <strong>GH₵${total.toFixed(2)}</strong>
+          <strong>${escapeHtml(formatCompactCurrency(total))}</strong>
         </div>
-        <p><strong>Seller ID:</strong> ${order.sellerId || "-"}</p>
-        <p><strong>Buyer ID:</strong> ${order.buyerId || "-"}</p>
-        <p><strong>Buyer:</strong> ${order.buyerName || order.customerName || "-"}</p>
-        <p><strong>Buyer Email:</strong> ${order.buyerEmail || "-"}</p>
-        <p><strong>Payment:</strong> ${formatStatus(order.paymentStatus)}</p>
-        <p><strong>Delivery:</strong> ${formatStatus(order.deliveryStatus)}</p>
+        <p><strong>Seller ID:</strong> ${escapeHtml(order.sellerId || "-")}</p>
+        <p><strong>Buyer ID:</strong> ${escapeHtml(order.buyerId || "-")}</p>
+        <p><strong>Buyer Email:</strong> ${escapeHtml(order.buyerEmail || "-")}</p>
+        <p><strong>Payment:</strong> ${escapeHtml(formatStatus(order.paymentStatus))}</p>
+        <p><strong>Delivery:</strong> ${escapeHtml(formatStatus(order.deliveryStatus))}</p>
         <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
         <div class="super-admin-actions">
           <button
@@ -617,75 +798,30 @@ function renderRefundRequests(refunds) {
     const canProcess = status === "APPROVED";
 
     return `
-      <div class="super-admin-item refund-item">
+      <div class="super-admin-item">
         <div class="super-admin-item-header">
           <div>
-            <strong>Order #${refund.orderId}</strong>
-            <p>${formatStatus(status)} • ${formatDateTime(refund.createdAt)}</p>
+            <strong>Order #${escapeHtml(refund.orderId || "-")}</strong>
+            <p>${escapeHtml(formatStatus(status))} • ${escapeHtml(formatDateTime(refund.createdAt))}</p>
           </div>
-          <strong>GH₵${Number(refund.amount || 0).toFixed(2)}</strong>
+          <strong>${escapeHtml(formatCompactCurrency(refund.amount || 0))}</strong>
         </div>
-        <p><strong>Reason:</strong> ${refund.reason || "-"}</p>
-        <p><strong>Requested By:</strong> ${refund.requestedBy || "-"}</p>
-        <p><strong>Reviewed By:</strong> ${refund.reviewedBy || "-"}</p>
-        <p><strong>Reviewed At:</strong> ${formatDateTime(refund.reviewedAt)}</p>
-        <p><strong>Processed At:</strong> ${formatDateTime(refund.processedAt)}</p>
+        <p><strong>Reason:</strong> ${escapeHtml(refund.reason || "-")}</p>
+        <p><strong>Requested By:</strong> ${escapeHtml(refund.requestedBy || "-")}</p>
+        <p><strong>Reviewed By:</strong> ${escapeHtml(refund.reviewedBy || "-")}</p>
+        <p><strong>Reviewed At:</strong> ${escapeHtml(formatDateTime(refund.reviewedAt))}</p>
+        <p><strong>Processed At:</strong> ${escapeHtml(formatDateTime(refund.processedAt))}</p>
         <div class="super-admin-actions">
-          <button
-            type="button"
-            class="manage-btn status refund-status-btn"
-            data-id="${refund.id}"
-            data-status="APPROVED"
-            ${canReview ? "" : "disabled"}
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            class="manage-btn delete refund-status-btn"
-            data-id="${refund.id}"
-            data-status="REJECTED"
-            ${canReview ? "" : "disabled"}
-          >
-            Reject
-          </button>
-          <button
-            type="button"
-            class="manage-btn refund refund-status-btn"
-            data-id="${refund.id}"
-            data-status="PROCESSED"
-            ${canProcess ? "" : "disabled"}
-          >
-            Mark Processed
-          </button>
+          <button type="button" class="manage-btn status refund-status-btn" data-id="${refund.id}" data-status="APPROVED" ${canReview ? "" : "disabled"}>Approve</button>
+          <button type="button" class="manage-btn delete refund-status-btn" data-id="${refund.id}" data-status="REJECTED" ${canReview ? "" : "disabled"}>Reject</button>
+          <button type="button" class="manage-btn refund refund-status-btn" data-id="${refund.id}" data-status="PROCESSED" ${canProcess ? "" : "disabled"}>Mark Processed</button>
         </div>
       </div>
     `;
   }).join("");
 }
 
-function renderReleasedPayouts(orders) {
-  if (!orders.length) {
-    renderEmpty(releasedPayoutsList, "No payouts have been released yet.");
-    return;
-  }
-
-  releasedPayoutsList.innerHTML = orders.map(order => `
-    <div class="super-admin-item">
-      <div class="super-admin-item-header">
-        <div>
-          <strong>${order.sellerName || "Seller"}</strong>
-          <p>Order #${order.id}</p>
-        </div>
-        <strong>GH₵${Number(order.sellerPayoutAmount || 0).toFixed(2)}</strong>
-      </div>
-      <p><strong>Commission:</strong> GH₵${Number(order.commissionAmount || 0).toFixed(2)}</p>
-      <p><strong>Released At:</strong> ${order.payoutReleasedAt || "-"}</p>
-    </div>
-  `).join("");
-}
-
-function renderSellers(sellers, orders) {
+function buildSellerSummaries(sellers, orders) {
   const sellerMap = new Map();
 
   orders.forEach(order => {
@@ -707,7 +843,7 @@ function renderSellers(sellers, orders) {
     existing.totalOrders += 1;
     existing.totalSales += Number(order.total || 0);
 
-    if (order.paymentStatus !== "payout_released") {
+    if (String(order.paymentStatus || "").toLowerCase() !== "payout_released") {
       existing.pendingPayouts += 1;
     }
 
@@ -733,17 +869,24 @@ function renderSellers(sellers, orders) {
     existing.phone = user.phone || existing.phone;
     existing.verified = Boolean(user.emailVerified);
     existing.accountStatus = user.accountStatus || existing.accountStatus;
-
     sellerMap.set(sellerKey, existing);
   });
 
-  const sellerAccounts = Array.from(sellerMap.values()).sort((a, b) => {
-    if (b.totalOrders !== a.totalOrders) {
-      return b.totalOrders - a.totalOrders;
+  return Array.from(sellerMap.values()).sort((a, b) => {
+    if (b.totalSales !== a.totalSales) {
+      return b.totalSales - a.totalSales;
     }
 
-    return b.sellerId - a.sellerId;
+    return b.totalOrders - a.totalOrders;
   });
+}
+
+function renderSellers(sellers, orders) {
+  if (!sellersList) {
+    return;
+  }
+
+  const sellerAccounts = buildSellerSummaries(sellers, orders);
 
   if (!sellerAccounts.length) {
     renderEmpty(sellersList, "No registered sellers found.");
@@ -754,84 +897,61 @@ function renderSellers(sellers, orders) {
     <div class="super-admin-item">
       <div class="super-admin-item-header">
         <div>
-          <strong>${seller.sellerName}</strong>
-          <p>Seller ID: ${seller.sellerId}</p>
+          <strong>${escapeHtml(seller.sellerName)}</strong>
+          <p>Seller ID: ${escapeHtml(seller.sellerId)}</p>
         </div>
-        <strong>GH₵${seller.totalSales.toFixed(2)}</strong>
+        <strong>${escapeHtml(formatCompactCurrency(seller.totalSales))}</strong>
       </div>
-      <p><strong>Email:</strong> ${seller.email || "-"}</p>
-      <p><strong>Phone:</strong> ${seller.phone || "-"}</p>
-      <p><strong>Status:</strong> ${formatStatus(seller.accountStatus || "ACTIVE")}</p>
+      <p><strong>Email:</strong> ${escapeHtml(seller.email || "-")}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(seller.phone || "-")}</p>
+      <p><strong>Status:</strong> ${escapeHtml(formatStatus(seller.accountStatus || "ACTIVE"))}</p>
       <p><strong>Verified:</strong> ${seller.verified ? "Yes" : "No"}</p>
-      <p><strong>Total Orders:</strong> ${seller.totalOrders}</p>
-      <p><strong>Pending Payouts:</strong> ${seller.pendingPayouts}</p>
+      <p><strong>Total Orders:</strong> ${escapeHtml(seller.totalOrders)}</p>
+      <p><strong>Pending Payouts:</strong> ${escapeHtml(seller.pendingPayouts)}</p>
     </div>
   `).join("");
 }
 
-function formatDateTime(value) {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
-
 function renderUsers(users) {
+  if (!usersList) {
+    return;
+  }
+
   if (!Array.isArray(users) || !users.length) {
     renderEmpty(usersList, "No registered users found.");
     return;
   }
 
   usersList.innerHTML = users.map(user => {
-    const status = (user.accountStatus || "ACTIVE").toUpperCase();
+    const status = String(user.accountStatus || "ACTIVE").toUpperCase();
     const isSelf = Number(user.id) === Number(currentUser.id);
 
     return `
       <div class="super-admin-item">
         <div class="super-admin-item-header">
           <div>
-            <strong>${user.name || "User"}</strong>
-            <p>${user.email || "-"}</p>
+            <strong>${escapeHtml(user.name || "User")}</strong>
+            <p>${escapeHtml(user.email || "-")}</p>
           </div>
-          <strong>${user.role || "-"}</strong>
+          <strong>${escapeHtml(user.role || "-")}</strong>
         </div>
-        <p><strong>User ID:</strong> ${user.id || "-"}</p>
-        <p><strong>Status:</strong> ${status}</p>
+        <p><strong>User ID:</strong> ${escapeHtml(user.id || "-")}</p>
+        <p><strong>Status:</strong> ${escapeHtml(status)}</p>
         <p><strong>Verified:</strong> ${user.emailVerified ? "Yes" : "No"}</p>
-        <p><strong>Phone:</strong> ${user.phone || "-"}</p>
-        <p><strong>Suspended At:</strong> ${formatDateTime(user.suspendedAt)}</p>
-        <p><strong>Blocked At:</strong> ${formatDateTime(user.blockedAt)}</p>
-        <p><strong>Deleted At:</strong> ${formatDateTime(user.deletedAt)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(user.phone || "-")}</p>
+        <p><strong>Suspended At:</strong> ${escapeHtml(formatDateTime(user.suspendedAt))}</p>
+        <p><strong>Blocked At:</strong> ${escapeHtml(formatDateTime(user.blockedAt))}</p>
+        <p><strong>Deleted At:</strong> ${escapeHtml(formatDateTime(user.deletedAt))}</p>
         <div class="super-admin-actions">
-          ${user.emailVerified ? "" : `
-            <button class="manage-btn hold resend-verification-btn" data-email="${user.email || ""}">
-              Resend Verification
-            </button>
-          `}
-          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="ACTIVE">
-            Reactivate
-          </button>
-          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="SUSPENDED" ${isSelf ? "disabled" : ""}>
-            Suspend
-          </button>
-          <button class="manage-btn delete user-status-btn" data-id="${user.id}" data-status="BLOCKED" ${isSelf ? "disabled" : ""}>
-            Block
-          </button>
-          <button class="manage-btn delete user-delete-btn" data-id="${user.id}" ${isSelf ? "disabled" : ""}>
-            Delete
-          </button>
+          ${user.emailVerified ? "" : `<button class="manage-btn hold resend-verification-btn" data-email="${escapeHtml(user.email || "")}">Resend Verification</button>`}
+          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="ACTIVE">Reactivate</button>
+          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="SUSPENDED" ${isSelf ? "disabled" : ""}>Suspend</button>
+          <button class="manage-btn delete user-status-btn" data-id="${user.id}" data-status="BLOCKED" ${isSelf ? "disabled" : ""}>Block</button>
+          <button class="manage-btn delete user-delete-btn" data-id="${user.id}" ${isSelf ? "disabled" : ""}>Delete</button>
         </div>
       </div>
     `;
   }).join("");
-}
-
-function getProductPrimaryImage(product) {
-  if (Array.isArray(product.imageUrls) && product.imageUrls.length) {
-    return product.imageUrls[0];
-  }
-
-  return product.imageUrl || "";
 }
 
 function renderSellerProducts(sellers, products) {
@@ -854,9 +974,7 @@ function renderSellerProducts(sellers, products) {
 
   (Array.isArray(products) ? products : []).forEach(product => {
     const sellerId = Number(product.sellerId || 0);
-    if (!sellerId) {
-      return;
-    }
+    if (!sellerId) return;
 
     const existing = sellerMap.get(sellerId) || {
       sellerId,
@@ -895,16 +1013,16 @@ function renderSellerProducts(sellers, products) {
             <div class="super-admin-item" style="margin-top:14px;">
               <div class="super-admin-item-header">
                 <div>
-                  <strong>${product.name || "Untitled Product"}</strong>
-                  <p>${product.categoryType || product.category || "General"} • ${status}</p>
+                  <strong>${escapeHtml(product.name || "Untitled Product")}</strong>
+                  <p>${escapeHtml(product.categoryType || product.category || "General")} • ${escapeHtml(status)}</p>
                 </div>
-                <strong>GH₵${Number(product.price || 0).toFixed(2)}</strong>
+                <strong>${escapeHtml(formatCompactCurrency(product.price || 0))}</strong>
               </div>
-              ${imageUrl ? `<p><img src="${imageUrl}" alt="${product.name || "Product"}" style="width:88px;height:88px;object-fit:cover;border-radius:14px;border:1px solid rgba(15,23,42,0.08);"></p>` : ""}
-              <p><strong>Product ID:</strong> ${product.id || "-"}</p>
-              <p><strong>Description:</strong> ${product.description || "No description available."}</p>
-              <p><strong>Category:</strong> ${product.category || "-"}</p>
-              <p><strong>Status:</strong> ${status}</p>
+              ${imageUrl ? `<p><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(product.name || "Product")}" style="width:88px;height:88px;object-fit:cover;border-radius:14px;border:1px solid rgba(15,23,42,0.08);"></p>` : ""}
+              <p><strong>Product ID:</strong> ${escapeHtml(product.id || "-")}</p>
+              <p><strong>Description:</strong> ${escapeHtml(product.description || "No description available.")}</p>
+              <p><strong>Category:</strong> ${escapeHtml(product.category || "-")}</p>
+              <p><strong>Status:</strong> ${escapeHtml(status)}</p>
             </div>
           `;
         }).join("")
@@ -914,41 +1032,404 @@ function renderSellerProducts(sellers, products) {
       <div class="super-admin-item">
         <div class="super-admin-item-header">
           <div>
-            <strong>${seller.sellerName}</strong>
-            <p>Seller ID: ${seller.sellerId}</p>
+            <strong>${escapeHtml(seller.sellerName)}</strong>
+            <p>Seller ID: ${escapeHtml(seller.sellerId)}</p>
           </div>
-          <strong>${seller.products.length} product${seller.products.length === 1 ? "" : "s"}</strong>
+          <strong>${escapeHtml(seller.products.length)} product${seller.products.length === 1 ? "" : "s"}</strong>
         </div>
-        <p><strong>Email:</strong> ${seller.email}</p>
-        <p><strong>Phone:</strong> ${seller.phone}</p>
-        <p><strong>Status:</strong> ${formatStatus(String(seller.accountStatus || "ACTIVE").toUpperCase())}</p>
+        <p><strong>Email:</strong> ${escapeHtml(seller.email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(seller.phone)}</p>
+        <p><strong>Status:</strong> ${escapeHtml(formatStatus(String(seller.accountStatus || "ACTIVE").toUpperCase()))}</p>
         ${productMarkup}
       </div>
     `;
   }).join("");
 }
 
+function renderRecentOrdersTable(orders) {
+  if (!recentOrdersTableBody) {
+    return;
+  }
+
+  const recentOrders = orders
+    .slice()
+    .sort((a, b) => {
+      const dateA = getOrderDate(a)?.getTime() || 0;
+      const dateB = getOrderDate(b)?.getTime() || 0;
+      return dateB - dateA || Number(b.id || 0) - Number(a.id || 0);
+    })
+    .slice(0, 6);
+
+  if (!recentOrders.length) {
+    recentOrdersTableBody.innerHTML = `<tr><td colspan="5">No recent orders found.</td></tr>`;
+    return;
+  }
+
+  recentOrdersTableBody.innerHTML = recentOrders.map(order => {
+    let statusClass = "pending";
+    let statusLabel = "Pending";
+
+    if (isOrderCancelled(order)) {
+      statusClass = "cancelled";
+      statusLabel = "Cancelled";
+    } else if (isOrderCompleted(order)) {
+      statusClass = "completed";
+      statusLabel = "Completed";
+    }
+
+    return `
+      <tr>
+        <td>ORD-${escapeHtml(order.id || "-")}</td>
+        <td>${escapeHtml(order.buyerName || order.customerName || "-")}</td>
+        <td>${escapeHtml(order.sellerName || "-")}</td>
+        <td>${escapeHtml(formatCompactCurrency(order.total || 0))}</td>
+        <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderTopSellersOverview(sellers, orders) {
+  if (!topSellersOverviewList) {
+    return;
+  }
+
+  const summary = buildSellerSummaries(sellers, orders).slice(0, 5);
+
+  if (!summary.length) {
+    topSellersOverviewList.innerHTML = `<p>No top sellers available yet.</p>`;
+    return;
+  }
+
+  topSellersOverviewList.innerHTML = summary.map((seller, index) => `
+    <div class="top-seller-row">
+      <span class="top-seller-rank">${index + 1}</span>
+      <span class="top-seller-avatar">${escapeHtml(initialsFromName(seller.sellerName, "YS"))}</span>
+      <div class="top-seller-copy">
+        <strong>${escapeHtml(seller.sellerName)}</strong>
+        <span>${escapeHtml(seller.totalOrders)} order${seller.totalOrders === 1 ? "" : "s"}</span>
+      </div>
+      <span class="top-seller-amount">${escapeHtml(formatCompactCurrency(seller.totalSales))}</span>
+    </div>
+  `).join("");
+}
+
+function renderReportsOverview() {
+  if (!reportsOverviewCards) {
+    return;
+  }
+
+  const orders = dashboardState.orders;
+  const users = dashboardState.users;
+  const sellers = dashboardState.sellers;
+  const refunds = dashboardState.refunds;
+  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+
+  const cards = [
+    {
+      label: "Revenue Captured",
+      value: formatCompactCurrency(totalRevenue),
+      note: `${orders.length} orders tracked`
+    },
+    {
+      label: "Seller Base",
+      value: String(sellers.length),
+      note: `${users.length} total users on platform`
+    },
+    {
+      label: "Refund Exposure",
+      value: formatCompactCurrency(refunds.reduce((sum, refund) => sum + Number(refund.amount || 0), 0)),
+      note: `${refunds.length} refund request${refunds.length === 1 ? "" : "s"}`
+    },
+    {
+      label: "Live Products",
+      value: String(dashboardState.products.length),
+      note: "Current products visible in marketplace"
+    }
+  ];
+
+  reportsOverviewCards.innerHTML = cards.map(card => `
+    <article class="report-summary-card">
+      <span>${escapeHtml(card.label)}</span>
+      <strong>${escapeHtml(card.value)}</strong>
+      <p>${escapeHtml(card.note)}</p>
+    </article>
+  `).join("");
+}
+
+function buildWeeklyRevenueSeries(orders) {
+  const now = new Date();
+  const today = startOfDay(now);
+  const series = [];
+
+  for (let index = 6; index >= 0; index -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - index);
+    series.push({
+      label: date.toLocaleDateString(undefined, { weekday: "short" }),
+      date,
+      total: 0
+    });
+  }
+
+  orders.forEach(order => {
+    const orderDate = getOrderDate(order);
+    if (!orderDate) {
+      return;
+    }
+
+    const match = series.find(point => startOfDay(point.date).getTime() === startOfDay(orderDate).getTime());
+    if (match) {
+      match.total += Number(order.total || 0);
+    }
+  });
+
+  return series;
+}
+
+function renderRevenueChart(series) {
+  if (!revenueChartSvg || !revenueChartLabels) {
+    return;
+  }
+
+  if (!series.length) {
+    revenueChartSvg.innerHTML = "";
+    revenueChartLabels.innerHTML = "";
+    return;
+  }
+
+  const maxValue = Math.max(...series.map(point => point.total), 1);
+  const width = 640;
+  const height = 260;
+  const paddingX = 28;
+  const paddingTop = 20;
+  const paddingBottom = 28;
+  const innerWidth = width - (paddingX * 2);
+  const innerHeight = height - paddingTop - paddingBottom;
+
+  const points = series.map((point, index) => {
+    const x = paddingX + ((innerWidth / Math.max(series.length - 1, 1)) * index);
+    const y = paddingTop + (innerHeight - ((point.total / maxValue) * innerHeight));
+    return { x, y, total: point.total };
+  });
+
+  const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
+
+  revenueChartSvg.innerHTML = `
+    <defs>
+      <linearGradient id="adminRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(214,161,38,0.42)"></stop>
+        <stop offset="100%" stop-color="rgba(214,161,38,0.02)"></stop>
+      </linearGradient>
+    </defs>
+    ${[0.25, 0.5, 0.75, 1].map(level => {
+      const y = paddingTop + (innerHeight - (innerHeight * level));
+      return `<line x1="${paddingX}" y1="${y}" x2="${width - paddingX}" y2="${y}" stroke="rgba(60, 42, 24, 0.08)" stroke-width="1"></line>`;
+    }).join("")}
+    <path d="${areaPath}" fill="url(#adminRevenueGradient)" stroke="none"></path>
+    <path d="${linePath}" fill="none" stroke="#c79418" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+    ${points.map(point => `
+      <circle cx="${point.x}" cy="${point.y}" r="5" fill="#ffffff" stroke="#c79418" stroke-width="3"></circle>
+    `).join("")}
+  `;
+
+  revenueChartLabels.innerHTML = series.map(point => `<span>${escapeHtml(point.label)}</span>`).join("");
+}
+
+function buildOrderStatusSummary(orders) {
+  let completed = 0;
+  let pending = 0;
+  let cancelled = 0;
+
+  orders.forEach(order => {
+    if (isOrderCancelled(order)) {
+      cancelled += 1;
+      return;
+    }
+
+    if (isOrderCompleted(order)) {
+      completed += 1;
+      return;
+    }
+
+    pending += 1;
+  });
+
+  return { completed, pending, cancelled, total: orders.length };
+}
+
+function renderOrderStatusChart(summary) {
+  if (!orderStatusRing) {
+    return;
+  }
+
+  const total = Math.max(summary.total, 1);
+  const completedPercent = (summary.completed / total) * 360;
+  const pendingPercent = (summary.pending / total) * 360;
+  const cancelledPercent = (summary.cancelled / total) * 360;
+  const completedEnd = completedPercent;
+  const pendingEnd = completedPercent + pendingPercent;
+  const cancelledEnd = completedPercent + pendingPercent + cancelledPercent;
+
+  orderStatusRing.style.background = `conic-gradient(
+    #35aa56 0deg ${completedEnd}deg,
+    #f3b42e ${completedEnd}deg ${pendingEnd}deg,
+    #ef5a5a ${pendingEnd}deg ${cancelledEnd}deg,
+    #f0ece7 ${cancelledEnd}deg 360deg
+  )`;
+
+  orderStatusTotal.textContent = String(summary.total);
+  completedOrdersCount.textContent = `${summary.completed}`;
+  pendingOrdersCount.textContent = `${summary.pending}`;
+  cancelledOrdersCount.textContent = `${summary.cancelled}`;
+}
+
+function buildMonthlySalesBars(orders) {
+  const now = new Date();
+  const buckets = [];
+
+  for (let offset = 11; offset >= 0; offset -= 1) {
+    const bucketDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+    buckets.push({
+      label: bucketDate.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      date: startOfDay(bucketDate),
+      total: 0
+    });
+  }
+
+  orders.forEach(order => {
+    const date = getOrderDate(order);
+    if (!date) {
+      return;
+    }
+
+    const bucket = buckets.find(item => item.date.getTime() === startOfDay(date).getTime());
+    if (bucket) {
+      bucket.total += Number(order.total || 0);
+    }
+  });
+
+  return buckets;
+}
+
+function renderSalesBars(bars) {
+  if (!salesBars) {
+    return;
+  }
+
+  if (!bars.length) {
+    salesBars.innerHTML = "";
+    return;
+  }
+
+  const maxValue = Math.max(...bars.map(item => item.total), 1);
+  salesBars.innerHTML = bars.map(bar => {
+    const percent = Math.max(8, (bar.total / maxValue) * 100);
+    return `
+      <div class="sales-bar-column">
+        <div class="sales-bar-track">
+          <div class="sales-bar" style="--bar-height:${percent};" title="${escapeHtml(formatCompactCurrency(bar.total))}"></div>
+        </div>
+        <span class="sales-bar-label">${escapeHtml(bar.label.replace(/^[A-Za-z]+\s/, ""))}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderDashboardSummary() {
+  const orders = dashboardState.orders;
+  const users = dashboardState.users;
+  const sellers = dashboardState.sellers;
+  const refunds = dashboardState.refunds;
+  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const thisWeekStart = startOfDay(new Date());
+  thisWeekStart.setDate(thisWeekStart.getDate() - 6);
+  const previousWeekStart = new Date(thisWeekStart);
+  previousWeekStart.setDate(thisWeekStart.getDate() - 7);
+
+  const currentWeekOrders = orders.filter(order => {
+    const date = getOrderDate(order);
+    return date && date >= thisWeekStart;
+  });
+  const previousWeekOrders = orders.filter(order => {
+    const date = getOrderDate(order);
+    return date && date >= previousWeekStart && date < thisWeekStart;
+  });
+  const currentWeekRevenue = currentWeekOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const previousWeekRevenue = previousWeekOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const currentWeekUsers = users.filter(user => {
+    const date = getOrderDate(user);
+    return date && date >= thisWeekStart;
+  }).length;
+  const previousWeekUsers = users.filter(user => {
+    const date = getOrderDate(user);
+    return date && date >= previousWeekStart && date < thisWeekStart;
+  }).length;
+  const currentWeekSellers = sellers.filter(user => {
+    const date = getOrderDate(user);
+    return date && date >= thisWeekStart;
+  }).length;
+  const previousWeekSellers = sellers.filter(user => {
+    const date = getOrderDate(user);
+    return date && date >= previousWeekStart && date < thisWeekStart;
+  }).length;
+
+  totalRevenueValue.textContent = formatCurrency(totalRevenue);
+  totalRevenueGrowth.textContent = formatGrowth(currentWeekRevenue, previousWeekRevenue);
+  totalOrdersValue.textContent = String(orders.length);
+  totalOrdersGrowth.textContent = formatGrowth(currentWeekOrders.length, previousWeekOrders.length);
+  totalSellersValue.textContent = String(sellers.length);
+  totalSellersGrowth.textContent = formatGrowth(currentWeekSellers, previousWeekSellers);
+  totalUsersValue.textContent = String(users.length);
+  totalUsersGrowth.textContent = formatGrowth(currentWeekUsers, previousWeekUsers);
+
+  revenueOverviewTotal.textContent = formatCurrency(currentWeekRevenue);
+  revenueOverviewGrowth.textContent = formatGrowth(currentWeekRevenue, previousWeekRevenue);
+  renderRevenueChart(buildWeeklyRevenueSeries(orders));
+
+  const orderStatus = buildOrderStatusSummary(orders);
+  renderOrderStatusChart(orderStatus);
+
+  const pendingPayoutOrders = orders.filter(isPendingPayoutOrder);
+  const releasedPayoutOrders = orders.filter(order => String(order.paymentStatus || "").toLowerCase() === "payout_released");
+  const totalCommission = releasedPayoutOrders.reduce((sum, order) => sum + Number(order.commissionAmount || 0), 0);
+  const pendingPayoutAmount = pendingPayoutOrders.reduce((sum, order) => sum + Number(order.sellerPayoutAmount || 0), 0);
+  const releasedPayoutAmount = releasedPayoutOrders.reduce((sum, order) => sum + Number(order.sellerPayoutAmount || 0), 0);
+  const refundsAmount = refunds.reduce((sum, refund) => sum + Number(refund.amount || 0), 0);
+
+  pendingPayoutsMini.textContent = formatCurrency(pendingPayoutAmount);
+  releasedPayoutsMini.textContent = formatCurrency(releasedPayoutAmount);
+  commissionTotalValue.textContent = formatCurrency(totalCommission);
+  refundsMini.textContent = formatCurrency(refundsAmount);
+
+  renderRecentOrdersTable(orders);
+  renderTopSellersOverview(sellers, orders);
+  renderSalesBars(buildMonthlySalesBars(orders));
+  renderReportsOverview();
+}
+
 async function loadDashboard() {
   try {
-    const [ordersResponse, usersResponse, productsResponse] = await Promise.all([
-      fetch(
-        `${API_BASE}/api/orders`,
-        {
-          headers: getAuthHeaders()
-        }
-      ),
-      fetch(
-        `${API_BASE}/api/users`,
-        {
-          headers: getAuthHeaders()
-        }
-      ),
-      fetch(`${API_BASE}/api/triciabales`)
+    const [ordersResponse, usersResponse, productsResponse, refundsResponse] = await Promise.all([
+      fetch(`${API_BASE}/api/orders`, { headers: getAuthHeaders() }),
+      fetch(`${API_BASE}/api/users`, { headers: getAuthHeaders() }),
+      fetch(`${API_BASE}/api/triciabales`),
+      fetch(`${API_BASE}/api/refunds`, { headers: getAuthHeaders() })
     ]);
+
     const orders = await readResponseData(ordersResponse);
+    const usersPayload = await readResponseData(usersResponse);
+    const productsPayload = await readResponseData(productsResponse);
+    const refundsPayload = await readResponseData(refundsResponse);
 
     if (isAuthFailure(ordersResponse.status)) {
       handleUnauthorized(orders);
+      return;
+    }
+
+    if (isAuthFailure(usersResponse.status)) {
+      handleUnauthorized(usersPayload);
       return;
     }
 
@@ -956,54 +1437,45 @@ async function loadDashboard() {
       throw new Error("Could not load platform orders");
     }
 
-    const usersPayload = await readResponseData(usersResponse);
-
-    if (isAuthFailure(usersResponse.status)) {
-      handleUnauthorized(usersPayload);
-      return;
-    }
-
     if (!usersResponse.ok || !Array.isArray(usersPayload)) {
       throw new Error("Could not load seller accounts");
     }
-
-    const productsPayload = await readResponseData(productsResponse);
 
     if (!productsResponse.ok || !Array.isArray(productsPayload)) {
       throw new Error("Could not load seller products");
     }
 
-    const sellers = usersPayload.filter(user => (user.role || "").toUpperCase() === "SELLER");
+    if (refundsResponse.ok && Array.isArray(refundsPayload)) {
+      dashboardState.refunds = refundsPayload;
+      renderRefundRequests(refundsPayload);
+    } else {
+      dashboardState.refunds = [];
+      renderEmpty(refundRequestsList, "Unable to load refund requests.");
+    }
 
-    const readyPayouts = orders.filter(order =>
-      isPendingPayoutOrder(order) && order.paymentStatus !== "payout_on_hold"
-    );
-    const pendingPayouts = orders.filter(isPendingPayoutOrder);
-    const releasedPayouts = orders.filter(order => order.paymentStatus === "payout_released");
-    const totalCommission = releasedPayouts.reduce(
-      (sum, order) => sum + Number(order.commissionAmount || 0),
-      0
-    );
+    dashboardState.orders = Array.isArray(orders) ? orders : [];
+    dashboardState.users = usersPayload;
+    dashboardState.sellers = usersPayload.filter(user => String(user.role || "").toUpperCase() === "SELLER");
+    dashboardState.products = productsPayload;
 
-    document.getElementById("total-orders").textContent = orders.length;
-    document.getElementById("ready-payouts").textContent = readyPayouts.length;
-    document.getElementById("commission-total").textContent = `GH₵${totalCommission.toFixed(2)}`;
-
-    renderPendingPayoutItems(pendingPayoutsList, pendingPayouts);
-    renderPendingPayoutItems(pendingPayoutsSectionList, pendingPayouts);
-    renderAllOrders(orders);
-    renderReleasedPayouts(releasedPayouts);
-    renderSellers(sellers, orders);
-    renderSellerProducts(sellers, productsPayload);
-    loadRefundRequests();
-  } catch (err) {
-    console.error(err);
+    dashboardDateFilterBtn.textContent = getWeekRangeLabel();
+    renderDashboardSummary();
+    renderPendingPayoutItems(pendingPayoutsList, dashboardState.orders.filter(isPendingPayoutOrder));
+    renderPendingPayoutItems(pendingPayoutsSectionList, dashboardState.orders.filter(isPendingPayoutOrder));
+    renderAllOrders(dashboardState.orders);
+    renderReleasedPayouts(dashboardState.orders.filter(order => String(order.paymentStatus || "").toLowerCase() === "payout_released"));
+    renderSellers(dashboardState.sellers, dashboardState.orders);
+    renderUsers(dashboardState.users);
+    renderSellerProducts(dashboardState.sellers, dashboardState.products);
+  } catch (error) {
+    console.error(error);
     renderEmpty(pendingPayoutsList, "Unable to load dashboard.");
     renderEmpty(pendingPayoutsSectionList, "Unable to load pending payouts.");
     renderEmpty(allOrdersList, "Unable to load orders.");
     renderEmpty(releasedPayoutsList, "Unable to load released payouts.");
     renderEmpty(sellersList, "Unable to load sellers.");
     renderEmpty(sellerProductsList, "Unable to load seller products.");
+    renderEmpty(usersList, "Unable to load users.");
     renderEmpty(refundRequestsList, "Unable to load refunds.");
   }
 }
@@ -1028,44 +1500,128 @@ async function loadRefundRequests() {
       throw new Error(refunds?.error || "Could not load refunds");
     }
 
-    renderRefundRequests(refunds);
-  } catch (err) {
-    console.error(err);
+    dashboardState.refunds = Array.isArray(refunds) ? refunds : [];
+    renderRefundRequests(dashboardState.refunds);
+    renderDashboardSummary();
+  } catch (error) {
+    console.error(error);
     renderEmpty(refundRequestsList, "Unable to load refund requests.");
   }
 }
 
 async function loadUsers() {
   try {
-    const response = await fetch(
-      `${API_BASE}/api/users?includeDeleted=true`,
-      {
-        headers: getAuthHeaders()
-      }
-    );
-    const users = await response.json();
+    const response = await fetch(`${API_BASE}/api/users?includeDeleted=true`, {
+      headers: getAuthHeaders()
+    });
+    const users = await readResponseData(response);
 
     if (isAuthFailure(response.status)) {
       handleUnauthorized(users);
       return;
     }
 
-    if (!response.ok) {
-      throw new Error(users.message || users.error || "Could not load users");
+    if (!response.ok || !Array.isArray(users)) {
+      throw new Error(users?.message || users?.error || "Could not load users");
     }
 
+    dashboardState.users = users;
+    dashboardState.sellers = users.filter(user => String(user.role || "").toUpperCase() === "SELLER");
     renderUsers(users);
-  } catch (err) {
-    console.error(err);
+    renderSellers(dashboardState.sellers, dashboardState.orders);
+    renderSellerProducts(dashboardState.sellers, dashboardState.products);
+    renderDashboardSummary();
+  } catch (error) {
+    console.error(error);
     renderEmpty(usersList, "Unable to load registered users.");
   }
 }
 
-menuToggle.addEventListener("click", () => {
-  dashboardMenu.classList.toggle("open");
+function renderReleasedPayouts(orders) {
+  if (!releasedPayoutsList) {
+    return;
+  }
+
+  if (!orders.length) {
+    renderEmpty(releasedPayoutsList, "No payouts have been released yet.");
+    return;
+  }
+
+  releasedPayoutsList.innerHTML = orders.map(order => `
+    <div class="super-admin-item">
+      <div class="super-admin-item-header">
+        <div>
+          <strong>${escapeHtml(order.sellerName || "Seller")}</strong>
+          <p>Order #${escapeHtml(order.id || "-")}</p>
+        </div>
+        <strong>${escapeHtml(formatCompactCurrency(order.sellerPayoutAmount || 0))}</strong>
+      </div>
+      <p><strong>Commission:</strong> ${escapeHtml(formatCompactCurrency(order.commissionAmount || 0))}</p>
+      <p><strong>Released At:</strong> ${escapeHtml(formatDateTime(order.payoutReleasedAt))}</p>
+    </div>
+  `).join("");
+}
+
+async function handleLogout() {
+  try {
+    const response = await fetch("https://www.yenkasa.xyz/triciabales-api/api/users/logout", {
+      method: "POST",
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error("Logout request did not complete cleanly.");
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("loggedIn");
+    window.location.href = "/store/admin-login";
+  }
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+    return;
+  }
+
+  document.exitFullscreen?.().catch(() => {});
+}
+
+function filterSidebarItems(query) {
+  const normalizedQuery = String(query || "").trim().toLowerCase();
+  menuButtons.forEach(button => {
+    const matches = !normalizedQuery || button.textContent.toLowerCase().includes(normalizedQuery);
+    button.style.display = matches ? "" : "none";
+  });
+}
+
+menuToggle?.addEventListener("click", openMenu);
+dashboardMenuCloseBtn?.addEventListener("click", closeMenu);
+adminLogoutBtn?.addEventListener("click", handleLogout);
+adminNotificationsBtn?.addEventListener("click", () => showPanel("notifications"));
+adminFullscreenBtn?.addEventListener("click", toggleFullscreen);
+dashboardRefreshBtn?.addEventListener("click", loadDashboard);
+dashboardSearchInput?.addEventListener("input", event => {
+  filterSidebarItems(event.target.value);
 });
 
-dashboardMenuCloseBtn?.addEventListener("click", closeMenu);
+document.addEventListener("click", event => {
+  const panelButton = event.target.closest("[data-panel-link]");
+  if (panelButton) {
+    const target = panelButton.dataset.panelLink;
+    if (target) {
+      showPanel(target);
+    }
+  }
+
+  if (!event.target.closest(".admin-sidebar") && !event.target.closest("#menuToggle") && window.innerWidth <= 960) {
+    closeMenu();
+  }
+});
 
 menuButtons.forEach(button => {
   button.addEventListener("click", () => {
@@ -1083,6 +1639,7 @@ storeLogoInput?.addEventListener("change", () => {
 
   storeLogoPreview.src = URL.createObjectURL(file);
 });
+
 allOrdersList?.addEventListener("click", async event => {
   const button = event.target.closest(".refund-request-btn");
   if (!button || button.disabled) return;
@@ -1111,17 +1668,11 @@ allOrdersList?.addEventListener("click", async event => {
     button.disabled = true;
     button.textContent = "Saving...";
 
-    const response = await fetch(
-      `${API_BASE}/api/orders/${encodeURIComponent(orderId)}/refund`,
-      {
-        method: "POST",
-        headers: getJsonAuthHeaders(),
-        body: JSON.stringify({
-          amount,
-          reason: trimmedReason
-        })
-      }
-    );
+    const response = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/refund`, {
+      method: "POST",
+      headers: getJsonAuthHeaders(),
+      body: JSON.stringify({ amount, reason: trimmedReason })
+    });
     const data = await readResponseData(response);
 
     if (isAuthFailure(response.status)) {
@@ -1134,15 +1685,16 @@ allOrdersList?.addEventListener("click", async event => {
     }
 
     alert("Refund request recorded. Review it from the Refunds tab.");
-    loadDashboard();
+    await loadDashboard();
     showPanel("refunds");
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Unable to record refund request.");
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Unable to record refund request.");
     button.disabled = false;
     button.textContent = "Request Refund";
   }
 });
+
 refundRequestsList?.addEventListener("click", async event => {
   const button = event.target.closest(".refund-status-btn");
   if (!button || button.disabled) return;
@@ -1156,14 +1708,11 @@ refundRequestsList?.addEventListener("click", async event => {
     button.disabled = true;
     button.textContent = "Saving...";
 
-    const response = await fetch(
-      `${API_BASE}/api/refunds/${encodeURIComponent(refundId)}/status`,
-      {
-        method: "PUT",
-        headers: getJsonAuthHeaders(),
-        body: JSON.stringify({ status })
-      }
-    );
+    const response = await fetch(`${API_BASE}/api/refunds/${encodeURIComponent(refundId)}/status`, {
+      method: "PUT",
+      headers: getJsonAuthHeaders(),
+      body: JSON.stringify({ status })
+    });
     const data = await readResponseData(response);
 
     if (isAuthFailure(response.status)) {
@@ -1176,13 +1725,14 @@ refundRequestsList?.addEventListener("click", async event => {
     }
 
     alert("Refund status updated.");
-    loadRefundRequests();
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Unable to update refund status.");
-    loadRefundRequests();
+    await loadRefundRequests();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Unable to update refund status.");
+    await loadRefundRequests();
   }
 });
+
 superAdminNotificationFilterBar?.addEventListener("click", event => {
   const button = event.target.closest("[data-notification-filter]");
   if (!button) return;
@@ -1191,8 +1741,9 @@ superAdminNotificationFilterBar?.addEventListener("click", event => {
   superAdminNotificationFilterBar.querySelectorAll("[data-notification-filter]").forEach(filterButton => {
     filterButton.classList.toggle("active", filterButton === button);
   });
-  renderSuperAdminNotifications(loadedSuperAdminNotifications);
+  renderSuperAdminNotifications(dashboardState.loadedSuperAdminNotifications);
 });
+
 superAdminNotificationsList?.addEventListener("click", event => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
@@ -1214,7 +1765,7 @@ superAdminNotificationsList?.addEventListener("click", event => {
 });
 
 function attachReleaseHandler(target) {
-  target.addEventListener("click", async event => {
+  target?.addEventListener("click", async event => {
     const button = event.target.closest(".payout-action-btn");
     if (!button) return;
 
@@ -1243,16 +1794,13 @@ function attachReleaseHandler(target) {
       const confirmed = confirm(confirmMessage);
       if (!confirmed) return;
 
-      const response = await fetch(
-        `${API_BASE}/api/orders/${orderId}/status`,
-        {
-          method: "PUT",
-          headers: getJsonAuthHeaders(),
-          body: JSON.stringify(requestBody)
-        }
-      );
+      const response = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: getJsonAuthHeaders(),
+        body: JSON.stringify(requestBody)
+      });
 
-      const data = await response.json();
+      const data = await readResponseData(response);
 
       if (isAuthFailure(response.status)) {
         handleUnauthorized(data);
@@ -1260,21 +1808,19 @@ function attachReleaseHandler(target) {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to release payout");
+        throw new Error(data?.error || "Failed to release payout");
       }
 
       if (action === "release") {
-        alert(
-          `Seller payout released.\n\nCommission: GH₵${Number(data.commissionAmount || 0).toFixed(2)}\nSeller Gets: GH₵${Number(data.sellerPayoutAmount || 0).toFixed(2)}`
-        );
+        alert(`Seller payout released.\n\nCommission: ${formatCompactCurrency(data.commissionAmount || 0)}\nSeller Gets: ${formatCompactCurrency(data.sellerPayoutAmount || 0)}`);
       } else {
         alert(successMessage);
       }
 
-      loadDashboard();
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Unable to update payout.");
+      await loadDashboard();
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Unable to update payout.");
     }
   });
 }
@@ -1282,28 +1828,23 @@ function attachReleaseHandler(target) {
 attachReleaseHandler(pendingPayoutsList);
 attachReleaseHandler(pendingPayoutsSectionList);
 
-usersList.addEventListener("click", async event => {
+usersList?.addEventListener("click", async event => {
   const resendButton = event.target.closest(".resend-verification-btn");
   if (resendButton) {
     const email = resendButton.dataset.email;
     if (!email) return;
 
     try {
-      const response = await fetch(
-        "/triciabales-api/api/users/resend-verification",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ email })
-        }
-      );
+      const response = await fetch("/triciabales-api/api/users/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
 
-      const data = await response.json();
+      const data = await readResponseData(response);
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || "Could not resend verification email");
+        throw new Error(data?.message || data?.error || "Could not resend verification email");
       }
 
       const message = data.actionUrl
@@ -1312,9 +1853,9 @@ usersList.addEventListener("click", async event => {
 
       alert(message);
       return;
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
       return;
     }
   }
@@ -1322,22 +1863,18 @@ usersList.addEventListener("click", async event => {
   const deleteButton = event.target.closest(".user-delete-btn");
   if (deleteButton) {
     const userId = deleteButton.dataset.id;
-
     if (!userId) return;
 
     try {
       const confirmed = confirm("Delete this account? This will disable login and mark the account as deleted.");
       if (!confirmed) return;
 
-      const response = await fetch(
-        `${API_BASE}/api/users/${userId}`,
-        {
-          method: "DELETE",
-          headers: getAuthHeaders()
-        }
-      );
+      const response = await fetch(`${API_BASE}/api/users/${userId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
 
-      const data = await response.json();
+      const data = await readResponseData(response);
 
       if (isAuthFailure(response.status)) {
         handleUnauthorized(data);
@@ -1345,14 +1882,14 @@ usersList.addEventListener("click", async event => {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || "Could not delete account");
+        throw new Error(data?.message || data?.error || "Could not delete account");
       }
 
-      loadUsers();
+      await loadUsers();
       return;
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
       return;
     }
   }
@@ -1365,16 +1902,13 @@ usersList.addEventListener("click", async event => {
   if (!userId || !status) return;
 
   try {
-    const response = await fetch(
-      `${API_BASE}/api/users/${userId}/status`,
-      {
-        method: "PUT",
-        headers: getJsonAuthHeaders(),
-        body: JSON.stringify({ status })
-      }
-    );
+    const response = await fetch(`${API_BASE}/api/users/${userId}/status`, {
+      method: "PUT",
+      headers: getJsonAuthHeaders(),
+      body: JSON.stringify({ status })
+    });
 
-    const data = await response.json();
+    const data = await readResponseData(response);
 
     if (isAuthFailure(response.status)) {
       handleUnauthorized(data);
@@ -1382,16 +1916,24 @@ usersList.addEventListener("click", async event => {
     }
 
     if (!response.ok) {
-      throw new Error(data.message || data.error || "Could not update account status");
+      throw new Error(data?.message || data?.error || "Could not update account status");
     }
 
-    loadUsers();
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
+    await loadUsers();
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
   }
 });
 
+function hydrateAdminIdentity() {
+  adminAvatarLabel.textContent = initialsFromName(currentUser?.name, "SA");
+  adminProfileSubtext.textContent = currentUser?.name || "Marketplace owner";
+  dashboardDateFilterBtn.textContent = getWeekRangeLabel();
+}
+
+hydrateAdminIdentity();
+showPanel("dashboard");
 loadDashboard();
 loadUsers();
 loadStoreProfile();

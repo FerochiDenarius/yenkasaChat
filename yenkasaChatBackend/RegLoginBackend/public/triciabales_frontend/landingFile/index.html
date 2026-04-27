@@ -24,31 +24,144 @@
           <button type="button" class="topbar-icon-btn menu-trigger-btn" id="mobileMenuBtn" aria-label="Open menu">Menu</button>
         </div>
 
-        <div class="nav-links store-nav-panel" id="mainNav">
-          <button type="button" class="menu-close-btn" id="mainNavCloseBtn" aria-label="Close menu">Close</button>
-          <a href="#shop-categories">Categories</a>
-          <a href="#seller-showcase-anchor">Seller Picks</a>
-          <a href="/store/cart">Cart</a>
-          <a href="/store/orders">My Orders</a>
-          <a href="/store/notifications">Notifications</a>
-          <a href="/store/register" id="registerLink">Register</a>
-          <a href="/store/buyer-login" id="buyerLoginLink">Buyer Login</a>
-          <a href="/store/seller-login" class="seller-btn">Seller Dashboard</a>
-          <a href="/store/admin-login" class="admin-btn">Super Admin</a>
-          <a href="#" class="logout-btn hidden-nav-link" id="logoutLink">Logout</a>
-
-          <div class="nav-category-shortcuts" id="categoryMenuPanel">
-            <button type="button" data-category-filter="all">View All Products</button>
-            <button type="button" data-category-filter="bale">Bales</button>
-            <button type="button" data-category-filter="dress">Dresses</button>
-            <button type="button" data-category-filter="fabric">Fabrics</button>
-            <button type="button" data-category-filter="accessory">Accessories</button>
-            <button type="button" data-category-filter="ladies_wear">Fashion</button>
-            <button type="button" data-category-filter="shoe">Shoes</button>
-            <button type="button" data-category-filter="bag">Bags</button>
-            <button type="button" data-category-filter="beauty">Beauty</button>
+        <aside class="store-nav-panel" id="mainNav" aria-hidden="true">
+          <div class="store-drawer-head">
+            <div class="store-drawer-brand">
+              <img src="/store/assets/images/YenkasaStoreLogo.png" alt="Yenkasa Store logo">
+              <div class="store-drawer-brand-copy">
+                <strong>Yenkasa</strong>
+                <span>Shop. Sell. Grow.</span>
+              </div>
+            </div>
+            <button type="button" class="menu-close-btn" id="mainNavCloseBtn" aria-label="Close menu">&times;</button>
           </div>
-        </div>
+
+          <section class="store-drawer-welcome">
+            <div class="drawer-avatar">U</div>
+            <div class="drawer-welcome-copy">
+              <strong id="navWelcomeTitle">Welcome back!</strong>
+              <span id="navWelcomeText">Manage your store and grow your business.</span>
+            </div>
+            <span class="drawer-chevron">&rsaquo;</span>
+          </section>
+
+          <section class="drawer-section">
+            <span class="drawer-section-label">Store Menu</span>
+            <div class="drawer-link-list">
+              <a href="#shop-categories" class="drawer-link-item">
+                <span class="drawer-link-icon">[]</span>
+                <span class="drawer-link-copy">
+                  <strong>Categories</strong>
+                  <small>Browse all product categories</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="#seller-showcase-anchor" class="drawer-link-item">
+                <span class="drawer-link-icon">*</span>
+                <span class="drawer-link-copy">
+                  <strong>Seller Picks</strong>
+                  <small>Handpicked products for you</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="/store/cart" class="drawer-link-item">
+                <span class="drawer-link-icon">C</span>
+                <span class="drawer-link-copy">
+                  <strong>Cart</strong>
+                  <small>Review your selected items</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="/store/orders" class="drawer-link-item">
+                <span class="drawer-link-icon">O</span>
+                <span class="drawer-link-copy">
+                  <strong>My Orders</strong>
+                  <small>Track and manage orders</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="/store/notifications" class="drawer-link-item">
+                <span class="drawer-link-icon">N</span>
+                <span class="drawer-link-copy">
+                  <strong>Notifications</strong>
+                  <small>Stay updated with alerts</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="drawer-section">
+            <span class="drawer-section-label">Seller Tools</span>
+            <div class="drawer-link-list">
+              <a href="/store/seller-login" class="drawer-link-item seller-tool-card seller-tool-green">
+                <span class="drawer-link-icon">S</span>
+                <span class="drawer-link-copy">
+                  <strong>Seller Dashboard</strong>
+                  <small>Manage products, sales &amp; insights</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="/store/admin-login" class="drawer-link-item seller-tool-card seller-tool-gold">
+                <span class="drawer-link-icon">A</span>
+                <span class="drawer-link-copy">
+                  <strong>Super Admin</strong>
+                  <small>Platform management &amp; control</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="#" class="drawer-link-item seller-tool-card seller-tool-red hidden-nav-link" id="logoutLink">
+                <span class="drawer-link-icon">L</span>
+                <span class="drawer-link-copy">
+                  <strong>Logout</strong>
+                  <small>Sign out of your account</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="/store/register" class="drawer-link-item seller-tool-card seller-tool-plain" id="registerLink">
+                <span class="drawer-link-icon">R</span>
+                <span class="drawer-link-copy">
+                  <strong>Register</strong>
+                  <small>Create a buyer or seller account</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+              <a href="/store/buyer-login" class="drawer-link-item seller-tool-card seller-tool-plain" id="buyerLoginLink">
+                <span class="drawer-link-icon">B</span>
+                <span class="drawer-link-copy">
+                  <strong>Buyer Login</strong>
+                  <small>Access your shopper account</small>
+                </span>
+                <span class="drawer-chevron">&rsaquo;</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="drawer-section">
+            <span class="drawer-section-label">Shop by Category</span>
+            <div class="nav-category-shortcuts" id="categoryMenuPanel">
+              <button type="button" data-category-filter="dress">Dresses</button>
+              <button type="button" data-category-filter="fabric">Fabrics</button>
+              <button type="button" data-category-filter="accessory">Accessories</button>
+              <button type="button" data-category-filter="ladies_wear">Fashion</button>
+              <button type="button" data-category-filter="shoe">Shoes</button>
+              <button type="button" data-category-filter="bag">Bags</button>
+              <button type="button" data-category-filter="beauty">Beauty</button>
+              <button type="button" data-category-filter="all">View All Products</button>
+            </div>
+          </section>
+
+          <section class="drawer-support-card">
+            <div class="drawer-support-copy">
+              <strong>Need help?</strong>
+              <span>Our support team is here for you.</span>
+            </div>
+            <div class="drawer-support-actions">
+              <button type="button" class="drawer-support-btn drawer-support-live" id="menuLiveChatBtn">Live chat</button>
+              <button type="button" class="drawer-support-btn drawer-support-center" id="menuSupportCenterBtn">Support center</button>
+            </div>
+          </section>
+        </aside>
       </nav>
 
       <section class="hero-card-shell">

@@ -28,6 +28,10 @@ const heroCategoryCount = document.getElementById("heroCategoryCount");
 const viewAllProductsBtn = document.getElementById("viewAllProductsBtn");
 const supportEmailBtn = document.getElementById("supportEmailBtn");
 const floatingSupportBtn = document.getElementById("floatingSupportBtn");
+const menuLiveChatBtn = document.getElementById("menuLiveChatBtn");
+const menuSupportCenterBtn = document.getElementById("menuSupportCenterBtn");
+const navWelcomeTitle = document.getElementById("navWelcomeTitle");
+const navWelcomeText = document.getElementById("navWelcomeText");
 const liveChatLauncher = document.getElementById("liveChatLauncher");
 const supportModal = document.getElementById("supportModal");
 const supportForm = document.getElementById("supportForm");
@@ -128,6 +132,24 @@ function updateHomepageNav() {
   }
 
   if (currentUser) {
+    if (navWelcomeTitle) {
+      navWelcomeTitle.textContent = `Welcome back, ${currentUser.name || "shopper"}!`;
+    }
+    if (navWelcomeText) {
+      navWelcomeText.textContent = currentUser.role
+        ? `Signed in as ${String(currentUser.role).replace(/_/g, " ").toLowerCase()}.`
+        : "Manage your orders, cart and store activity.";
+    }
+  } else {
+    if (navWelcomeTitle) {
+      navWelcomeTitle.textContent = "Welcome back!";
+    }
+    if (navWelcomeText) {
+      navWelcomeText.textContent = "Manage your store and grow your business.";
+    }
+  }
+
+  if (currentUser) {
     logoutLink.classList.remove("hidden-nav-link");
     registerLink?.classList.add("hidden-nav-link");
     buyerLoginLink?.classList.add("hidden-nav-link");
@@ -166,10 +188,12 @@ async function logout() {
 
 function openMenu() {
   mainNav?.classList.add("open");
+  mainNav?.setAttribute("aria-hidden", "false");
 }
 
 function closeMenu() {
   mainNav?.classList.remove("open");
+  mainNav?.setAttribute("aria-hidden", "true");
 }
 
 logoutLink?.addEventListener("click", event => {
@@ -1050,6 +1074,15 @@ modalPrevBtn?.addEventListener("click", () => moveModalImage(-1));
 modalNextBtn?.addEventListener("click", () => moveModalImage(1));
 supportEmailBtn?.addEventListener("click", openSupportForm);
 floatingSupportBtn?.addEventListener("click", openSupportForm);
+menuSupportCenterBtn?.addEventListener("click", openSupportForm);
+menuLiveChatBtn?.addEventListener("click", () => {
+  if (window.yenkasaLiveChat && typeof window.yenkasaLiveChat.open === "function") {
+    window.yenkasaLiveChat.open();
+    return;
+  }
+
+  openSupportForm();
+});
 liveChatLauncher?.addEventListener("click", () => {
   if (window.yenkasaLiveChat && typeof window.yenkasaLiveChat.open === "function") {
     window.yenkasaLiveChat.open();

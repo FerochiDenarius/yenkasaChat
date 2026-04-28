@@ -5,6 +5,7 @@ const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const UserPrivacy = require('../models/userPrivacy.model');
+const rewardService = require('../services/reward.service');
 
 
 
@@ -66,6 +67,14 @@ if (!parentCommentId) {
     { _id: postId },
     { $inc: { commentCount: 1 } }
   );
+
+  await rewardService.reward(userId, REWARD_COMMENT, {
+    type: "REWARD_COMMENT",
+    description: `Earned ${REWARD_COMMENT} YKC for commenting on a post`,
+    relatedPostId: post._id,
+    relatedCommentId: comment._id,
+    activityId: `comment_${comment._id}_${userId}`,
+  });
 }
 
     if (!parentCommentId && post.userId._id.toString() !== userId) {

@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import Verification from "./pages/Verification";
 import Ads from "./pages/Ads";
 import Communities from "./pages/Communities";
+import CreatePost from "./pages/CreatePost";
 import PostDetails from "./pages/PostDetails";
 import { getToken } from "./utils/storage";
 
@@ -72,6 +73,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Verification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/create-post"
+          element={
+            <ProtectedRoute>
+              <CreatePost />
             </ProtectedRoute>
           }
         />

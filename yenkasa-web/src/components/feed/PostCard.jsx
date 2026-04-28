@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import {
+  buildAudioUrl,
   buildMediaUrl,
   buildVideoUrl,
   formatRelativeTime,
@@ -9,6 +10,7 @@ import {
 
 export default function PostCard({ post, onUpdate, detailMode = false }) {
   const navigate = useNavigate();
+  const cardRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -20,6 +22,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   const liked = post?.likedByUser === true;
   const mediaUrl = buildMediaUrl(post);
   const videoUrl = buildVideoUrl(post);
+  const audioUrl = buildAudioUrl(post);
   const username = post?.userId?.username || post?.username || "Yenkasa User";
   const communityName =
     post?.communityId?.displayName || post?.communityId?.name || "Yenkasa";
@@ -27,6 +30,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   const commentCount = Number(post?.commentCount || 0);
   const shareCount = Number(post?.shareCount || 0);
   const likeCount = Number(post?.likeCount || 0);
+  const viewCount = Number(post?.viewCount || post?.viewsCount || 0);
   const authorAvatar =
     post?.userId?.profileImage ||
     post?.userId?.profileImageUrl ||
@@ -35,8 +39,80 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   const isVideoPost =
     Boolean(videoUrl) ||
     String(post?.postType || "").toLowerCase() === "video";
+  const isAudioPost =
+    Boolean(audioUrl) ||
+    String(post?.postType || "").toLowerCase() === "audio";
 
   const visibleComments = useMemo(() => comments.filter(Boolean), [comments]);
+  const viewMediaType = isVideoPost ? "video" : isAudioPost ? "audio" : mediaUrl ? "image" : "text";
+
+  useEffect(() => {
+    if (!post?._id || !cardRef.current) return undefined;
+    const viewedKey = "yenkasa_viewed_post_ids";
+    const existing = readViewedPostIds(viewedKey);
+    if (existing.has(post._id)) return undefined;
+
+    const delayByType = {
+      image: 5000,
+      video: 10000,
+      audio: 20000,
+      text: 5000,
+    };
+    const watchDurationByType = {
+      image: 5,
+      video: 10,
+      audio: 20,
+      text: 5,
+    };
+
+    let timerId = null;
+    let recorded = false;
+
+    async function recordView() {
+      if (recorded) return;
+      recorded = true;
+      existing.add(post._id);
+      writeViewedPostIds(viewedKey, existing);
+
+      try {
+        const { data } = await api.post(`/views/${post._id}/view`, {
+          mediaType: viewMediaType,
+          watchDuration: watchDurationByType[viewMediaType] || 0,
+        });
+
+        if (Number.isFinite(Number(data?.viewCount))) {
+          onUpdate?.(post._id, { viewCount: Number(data.viewCount) });
+        }
+      } catch {
+        existing.delete(post._id);
+        writeViewedPostIds(viewedKey, existing);
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          if (!timerId) {
+            timerId = window.setTimeout(recordView, delayByType[viewMediaType] || 5000);
+          }
+          return;
+        }
+
+        if (timerId) {
+          window.clearTimeout(timerId);
+          timerId = null;
+        }
+      },
+      { threshold: [0, 0.6] }
+    );
+
+    observer.observe(cardRef.current);
+
+    return () => {
+      if (timerId) window.clearTimeout(timerId);
+      observer.disconnect();
+    };
+  }, [post?._id, viewMediaType, onUpdate]);
 
   function openPost() {
     if (detailMode || !post?._id) return;
@@ -119,7 +195,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   }
 
   return (
-    <article className="feed-post-card">
+    <article className="feed-post-card" ref={cardRef}>
       <header className="feed-post-card__header">
         <div className="feed-post-card__author-block">
           <span className="feed-post-card__avatar">
@@ -185,6 +261,15 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
             <span className="feed-post-card__media-badge">Video</span>
           </div>
         </button>
+      ) : isAudioPost ? (
+        <div className="feed-post-card__audio">
+          <div className="feed-post-card__audio-icon">♪</div>
+          <div>
+            <strong>Audio post</strong>
+            <span>{content || "Listen to this Yenkasa audio update."}</span>
+          </div>
+          <audio src={audioUrl} controls preload="metadata" />
+        </div>
       ) : mediaUrl ? (
         <button
           type="button"
@@ -218,6 +303,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
           <div className="feed-post-card__stats">
             <span>{likeCount} likes</span>
             <span>{commentCount} comments</span>
+            <span>{viewCount} views</span>
             <span>{shareCount} shares</span>
           </div>
         </button>
@@ -225,6 +311,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
         <div className="feed-post-card__stats">
           <span>{likeCount} likes</span>
           <span>{commentCount} comments</span>
+          <span>{viewCount} views</span>
           <span>{shareCount} shares</span>
         </div>
       )}
@@ -339,4 +426,22 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
       ) : null}
     </article>
   );
+}
+
+function readViewedPostIds(key) {
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeViewedPostIds(key, values) {
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(Array.from(values).slice(-300)));
+  } catch {
+    // Session storage may be unavailable in private browsing.
+  }
 }

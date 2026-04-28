@@ -24,6 +24,10 @@ export function buildVideoUrl(item) {
   return item?.videoUrl || item?.video || null;
 }
 
+export function buildAudioUrl(item) {
+  return item?.audioUrl || item?.audio || null;
+}
+
 export function formatRelativeTime(value) {
   if (!value) return "Just now";
   const date = new Date(value);

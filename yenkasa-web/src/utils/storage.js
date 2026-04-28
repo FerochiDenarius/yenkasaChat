@@ -1,4 +1,4 @@
-const TOKEN_KEY = "yenkasa_token";
+const TOKEN_KEY = "token";
 const USER_KEY = "yenkasa_user";
 
 export function getToken() {

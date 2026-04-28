@@ -1,12 +1,12 @@
 import axios from "axios";
-import { clearAuth, getToken } from "../utils/storage";
+import { clearAuth } from "../utils/storage";
 
 const api = axios.create({
-  baseURL: "/triciabales-api/api"
+  baseURL: "/api"
 });
 
 api.interceptors.request.use((config) => {
-  const token = getToken();
+  const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

@@ -12,10 +12,10 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      "/triciabales-api": {
+      "/api": {
         target: "https://www.yenkasa.xyz",
         changeOrigin: true,
-        secure: true
+        secure: false
       }
     }
   }

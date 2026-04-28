@@ -1,0 +1,116 @@
+.menu-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(31, 130, 81, 0.15), transparent 30%),
+    linear-gradient(180deg, #03140b 0%, #082012 100%);
+  color: #edf5ee;
+  padding: 0 0 32px;
+}
+
+.menu-page__shell {
+  width: min(100%, 500px);
+  margin: 0 auto;
+  padding: 18px 12px 24px;
+}
+
+.menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 18px;
+}
+
+.menu-header__logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+}
+
+.menu-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.menu-header p {
+  margin: 4px 0 0;
+  color: #a0b4a6;
+  font-size: 14px;
+}
+
+.menu-card {
+  background: linear-gradient(180deg, rgba(7, 39, 23, 0.96), rgba(5, 30, 18, 0.96));
+  border: 1px solid rgba(123, 184, 143, 0.12);
+  border-radius: 18px;
+  padding: 8px 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+}
+
+.menu-item {
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.menu-item__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  font-weight: 700;
+  background: rgba(125, 202, 149, 0.08);
+}
+
+.menu-item__icon--green {
+  color: #7dca95;
+}
+
+.menu-item__icon--gold {
+  color: #f1c34b;
+  background: rgba(241, 195, 75, 0.08);
+}
+
+.menu-item__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.menu-item__copy strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.menu-item__copy span {
+  color: #99aea0;
+  font-size: 13px;
+}
+
+.menu-item__chevron {
+  color: #90a297;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.menu-card__divider {
+  height: 1px;
+  margin: 8px 18px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.menu-item--danger .menu-item__copy strong,
+.menu-item--danger .menu-item__chevron {
+  color: #f1c34b;
+}
+
+.menu-item--danger .menu-item__copy span {
+  color: #c0b27c;
+}

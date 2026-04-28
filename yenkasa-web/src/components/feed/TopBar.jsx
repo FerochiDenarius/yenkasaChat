@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function TopBar() {
+  const navigate = useNavigate();
+
   return (
     <header className="feed-topbar">
-      <button className="feed-icon-btn" type="button" aria-label="Open menu">
+      <button className="feed-icon-btn" type="button" aria-label="Open menu" onClick={() => navigate("/menu")}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h10" />
         </svg>

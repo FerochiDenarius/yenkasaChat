@@ -1,0 +1,316 @@
+.account-page {
+  --account-bg: #080c0b;
+  --account-surface: #14191c;
+  --account-surface-strong: #0b2b20;
+  --account-border: rgba(255, 255, 255, 0.08);
+  --account-text: #f4f7f5;
+  --account-muted: #9aa59f;
+  --account-green: #1fc974;
+  --account-gold: #d6b249;
+  --account-red: #f15e5e;
+  min-height: 100vh;
+  background: var(--account-bg);
+  color: var(--account-text);
+  padding: 0 0 110px;
+}
+
+.account-page__shell {
+  width: min(100%, 500px);
+  margin: 0 auto;
+  padding: 16px 14px 24px;
+}
+
+.account-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.account-topbar__title {
+  flex: 1;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.account-circle-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--account-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--account-text);
+  font-size: 18px;
+}
+
+.account-hero {
+  border-radius: 20px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 92% 22%, rgba(31, 201, 116, 0.15), transparent 22%),
+    linear-gradient(180deg, #083122 0%, #092419 100%);
+  border: 1px solid rgba(31, 201, 116, 0.16);
+}
+
+.account-hero__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.account-hero__avatar-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.account-hero__avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid rgba(214, 178, 73, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.account-hero__camera {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(19, 25, 28, 0.96);
+  color: #fff;
+  font-size: 13px;
+}
+
+.account-hero__identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-hero__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-hero__name-row h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.account-hero__verified {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--account-gold);
+  color: #102117;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.account-hero__identity p {
+  margin: 6px 0 0;
+  color: #b1beb7;
+  font-size: 14px;
+}
+
+.account-hero__stats {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account-stat {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.account-stat + .account-stat {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.account-stat strong {
+  font-size: 22px;
+}
+
+.account-stat span {
+  color: #b1beb7;
+  font-size: 12px;
+}
+
+.account-wallet-card {
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid var(--account-border);
+  border-radius: 18px;
+  background: var(--account-surface);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-align: left;
+}
+
+.account-wallet-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(214, 178, 73, 0.12);
+  color: var(--account-gold);
+  font-size: 20px;
+}
+
+.account-wallet-card__body {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.account-wallet-card__body span {
+  color: var(--account-muted);
+  font-size: 12px;
+}
+
+.account-wallet-card__body strong {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.account-wallet-card__cta {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(214, 178, 73, 0.08);
+  color: var(--account-gold);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.account-section-label {
+  margin: 16px 6px 8px;
+  color: var(--account-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-surface {
+  border-radius: 18px;
+  background: var(--account-surface);
+  border: 1px solid var(--account-border);
+  overflow: hidden;
+}
+
+.account-info-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 14px 12px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.account-info-row__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 201, 116, 0.12);
+  color: var(--account-green);
+  font-size: 16px;
+}
+
+.account-info-row__icon.is-danger {
+  background: rgba(241, 94, 94, 0.12);
+  color: var(--account-red);
+}
+
+.account-info-row__body {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.account-info-row__body strong {
+  font-size: 15px;
+}
+
+.account-info-row__body span {
+  color: var(--account-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.account-info-row--danger .account-info-row__body strong {
+  color: var(--account-red);
+}
+
+.account-info-row__chevron {
+  color: var(--account-muted);
+  font-size: 18px;
+  text-align: right;
+}
+
+.account-divider {
+  height: 1px;
+  margin-left: 62px;
+  background: var(--account-border);
+}
+
+.account-loading {
+  padding: 14px 6px 0;
+  color: var(--account-muted);
+  font-size: 13px;
+}
+
+@media (prefers-color-scheme: light) {
+  .account-page {
+    --account-bg: #f4f6f5;
+    --account-surface: #ffffff;
+    --account-surface-strong: #eaf6ef;
+    --account-border: rgba(23, 45, 31, 0.08);
+    --account-text: #132016;
+    --account-muted: #6c7a71;
+    background:
+      radial-gradient(circle at top right, rgba(31, 201, 116, 0.08), transparent 24%),
+      linear-gradient(180deg, #f7f8f8 0%, #eef2f0 100%);
+  }
+
+  .account-circle-btn {
+    background: rgba(255, 255, 255, 0.84);
+  }
+
+  .account-hero {
+    background:
+      radial-gradient(circle at 92% 22%, rgba(31, 201, 116, 0.1), transparent 22%),
+      linear-gradient(180deg, #f6fffa 0%, #edf8f1 100%);
+  }
+
+  .account-hero__identity p,
+  .account-stat span {
+    color: #516057;
+  }
+
+  .account-wallet-card,
+  .account-surface {
+    box-shadow: 0 12px 32px rgba(17, 33, 22, 0.06);
+  }
+}

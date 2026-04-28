@@ -34,7 +34,7 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var editIdentifier: EditText
     private lateinit var editPassword: TextInputEditText
-    private lateinit var btnLogin: Button
+    private lateinit var btnLogin: View
     private lateinit var textRegisterLink: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var loginCard: View

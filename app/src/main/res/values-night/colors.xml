@@ -75,4 +75,21 @@
     <color name="chat_bubble_sent">#143A2D</color>
     <color name="chat_bubble_received">#1A2120</color>
     <color name="chat_reply_surface">#12201B</color>
+    <color name="login_background_start">#071411</color>
+    <color name="login_background_end">#0B1F1A</color>
+    <color name="login_background_glow">#123625</color>
+    <color name="login_card_background">#122C20</color>
+    <color name="login_card_stroke">#214935</color>
+    <color name="login_primary_text">#FFFFFF</color>
+    <color name="login_secondary_text">#C4CBC8</color>
+    <color name="login_gold">#F4C430</color>
+    <color name="login_gold_end">#FFB922</color>
+    <color name="login_green">#6DD95A</color>
+    <color name="login_deep_green">#071411</color>
+    <color name="login_input_background">#143021</color>
+    <color name="login_input_icon_bg">#1E422D</color>
+    <color name="login_input_text">#F1F6F3</color>
+    <color name="login_social_background">#12281E</color>
+    <color name="login_divider">#335342</color>
+    <color name="login_security_icon">#63D957</color>
 </resources>

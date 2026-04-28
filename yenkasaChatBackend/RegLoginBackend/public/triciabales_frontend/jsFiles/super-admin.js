@@ -319,7 +319,7 @@ function isOrderCompleted(order) {
   const paymentStatus = String(order.paymentStatus || "").toLowerCase();
   return order.confirmedByBuyer === true
     || deliveryStatus === "delivered"
-    || paymentStatus === "payout_released";
+    || paymentStatus === "paid";
 }
 
 function isOrderCancelled(order) {
@@ -328,21 +328,38 @@ function isOrderCancelled(order) {
   return deliveryStatus === "cancelled" || paymentStatus === "cancelled" || paymentStatus === "payment_failed";
 }
 
-function isPayoutReleaseEligible(order) {
-  return order.confirmedByBuyer === true
-    || String(order.deliveryStatus || "").toLowerCase() === "delivered";
+function isPaystackSplitOrder(order) {
+  return String(order.paymentMethod || "").toLowerCase() === "paystack"
+    && (
+      String(order.splitMode || order.paystackSplitMode || "").toLowerCase() === "paystack_subaccount"
+      || String(order.payoutStatus || "").toLowerCase() === "not_required"
+      || Boolean(order.sellerSubaccountCode)
+    );
+}
+
+function isLegacyPayoutOrder(order) {
+  const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+  const payoutStatus = String(order.payoutStatus || "").toLowerCase();
+  return paymentStatus === "ready_for_payout"
+    || paymentStatus === "payout_on_hold"
+    || paymentStatus === "payout_released"
+    || payoutStatus === "pending"
+    || payoutStatus === "released";
 }
 
 function isPendingPayoutOrder(order) {
-  const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+  return isPaystackSplitOrder(order) || isLegacyPayoutOrder(order);
+}
 
-  if (!isPayoutReleaseEligible(order) || order.payoutReleased === true) {
-    return false;
-  }
+function splitSettlementDetails(order) {
+  const gross = Number(order.grossAmount ?? order.total ?? 0);
+  const commission = Number(order.platformCommissionAmount ?? order.commissionAmount ?? gross * 0.10);
+  const settlement = Number(order.sellerSettlementAmount ?? order.sellerPayoutAmount ?? gross - commission);
+  return { gross, commission, settlement };
+}
 
-  return paymentStatus === "paid"
-    || paymentStatus === "ready_for_payout"
-    || paymentStatus === "payout_on_hold";
+function paymentApiErrorMessage(data, fallback) {
+  return data?.message || data?.error || data?.details || fallback;
 }
 
 function getProductPrimaryImage(product) {
@@ -689,28 +706,19 @@ function renderPendingPayoutItems(target, orders) {
   }
 
   if (!orders.length) {
-    renderEmpty(target, "No pending seller payouts right now.");
+    renderEmpty(target, "No split-payment orders to audit right now.");
     return;
   }
 
   target.innerHTML = orders.map(order => {
-    const total = Number(order.total || 0);
-    const commission = order.commissionAmount != null
-      ? Number(order.commissionAmount)
-      : total * 0.10;
-    const sellerReceives = order.sellerPayoutAmount != null
-      ? Number(order.sellerPayoutAmount)
-      : total - commission;
-    const isOnHold = String(order.paymentStatus || "") === "payout_on_hold";
-    const payoutStatusLabel = String(order.paymentStatus || "") === "paid"
-      ? "Paid - Ready For Payout"
-      : formatStatus(order.paymentStatus);
-    const primaryAction = isOnHold
-      ? `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="resume">Mark Ready</button>`
-      : `<button class="manage-btn status payout-action-btn" data-id="${order.id}" data-action="release">Release Payment</button>`;
-    const secondaryAction = isOnHold
-      ? ""
-      : `<button class="manage-btn hold payout-action-btn" data-id="${order.id}" data-action="hold">Hold Payout</button>`;
+    const { gross, commission, settlement } = splitSettlementDetails(order);
+    const splitOrder = isPaystackSplitOrder(order);
+    const legacyWarning = !splitOrder && isLegacyPayoutOrder(order)
+      ? `<div class="orders-feedback error">This order was created under the old payout flow. Check Paystack Dashboard before taking action.</div>`
+      : "";
+    const settlementMessage = splitOrder
+      ? "Payment split handled by Paystack. Manual payout release is not required."
+      : "Legacy payout state detected.";
 
     return `
       <div class="super-admin-item">
@@ -719,20 +727,19 @@ function renderPendingPayoutItems(target, orders) {
             <strong>${escapeHtml(order.sellerName || "Seller")}</strong>
             <p>Order #${escapeHtml(order.id || "-")}</p>
           </div>
-          <strong>${escapeHtml(formatCompactCurrency(total))}</strong>
+          <strong>${escapeHtml(formatCompactCurrency(gross))}</strong>
         </div>
+        ${legacyWarning}
         <p><strong>Buyer:</strong> ${escapeHtml(order.customerName || order.buyerName || "-")}</p>
+        <p><strong>Payment:</strong> ${escapeHtml(formatStatus(order.paymentStatus))}</p>
         <p><strong>Delivery:</strong> ${escapeHtml(formatStatus(order.deliveryStatus))}</p>
-        <p><strong>Payout Trigger:</strong> ${order.confirmedByBuyer ? "Buyer confirmed" : "Seller marked delivered"}</p>
-        <p><strong>Commission:</strong> ${escapeHtml(formatCompactCurrency(commission))}</p>
-        <p><strong>Seller Receives:</strong> ${escapeHtml(formatCompactCurrency(sellerReceives))}</p>
-        <p><strong>Payout Status:</strong> ${escapeHtml(payoutStatusLabel)}</p>
-        ${order.payoutHeldAt ? `<p><strong>Held At:</strong> ${escapeHtml(formatDateTime(order.payoutHeldAt))}</p>` : ""}
-        ${order.payoutHoldReason ? `<p><strong>Hold Reason:</strong> ${escapeHtml(order.payoutHoldReason)}</p>` : ""}
-        <div class="super-admin-actions">
-          ${primaryAction}
-          ${secondaryAction}
-        </div>
+        <p><strong>Paystack Reference:</strong> ${escapeHtml(order.paystackReference || "-")}</p>
+        <p><strong>Seller Subaccount:</strong> ${escapeHtml(order.sellerSubaccountCode || "-")}</p>
+        <p><strong>Yenkasa Commission:</strong> ${escapeHtml(formatCompactCurrency(commission))} <small>(10%)</small></p>
+        <p><strong>Seller Settlement:</strong> ${escapeHtml(formatCompactCurrency(settlement))} <small>(90%)</small></p>
+        <p><strong>Split Mode:</strong> ${escapeHtml(order.splitMode || order.paystackSplitMode || "-")}</p>
+        <p><strong>Settlement Status:</strong> ${splitOrder ? "Handled by Paystack" : escapeHtml(formatStatus(order.payoutStatus || order.paymentStatus))}</p>
+        <p>${escapeHtml(settlementMessage)}</p>
       </div>
     `;
   }).join("");
@@ -752,6 +759,11 @@ function renderAllOrders(orders) {
     const total = Number(order.total || 0);
     const paymentStatus = String(order.paymentStatus || "").toLowerCase();
     const canRequestRefund = total > 0 && paymentStatus !== "payment_failed" && paymentStatus !== "cancelled";
+    const splitOrder = isPaystackSplitOrder(order);
+    const legacyWarning = !splitOrder && isLegacyPayoutOrder(order)
+      ? `<div class="orders-feedback error">This order was created under the old payout flow. Check Paystack Dashboard before taking action.</div>`
+      : "";
+    const { commission, settlement } = splitSettlementDetails(order);
 
     return `
       <div class="super-admin-item">
@@ -762,12 +774,20 @@ function renderAllOrders(orders) {
           </div>
           <strong>${escapeHtml(formatCompactCurrency(total))}</strong>
         </div>
+        ${legacyWarning}
         <p><strong>Seller ID:</strong> ${escapeHtml(order.sellerId || "-")}</p>
         <p><strong>Buyer ID:</strong> ${escapeHtml(order.buyerId || "-")}</p>
         <p><strong>Buyer Email:</strong> ${escapeHtml(order.buyerEmail || "-")}</p>
         <p><strong>Payment:</strong> ${escapeHtml(formatStatus(order.paymentStatus))}</p>
         <p><strong>Delivery:</strong> ${escapeHtml(formatStatus(order.deliveryStatus))}</p>
         <p><strong>Buyer Confirmed:</strong> ${order.confirmedByBuyer ? "Yes" : "No"}</p>
+        ${splitOrder ? `
+          <p><strong>Settlement:</strong> Payment split handled by Paystack</p>
+          <p><strong>Paystack Reference:</strong> ${escapeHtml(order.paystackReference || "-")}</p>
+          <p><strong>Seller Subaccount:</strong> ${escapeHtml(order.sellerSubaccountCode || "-")}</p>
+          <p><strong>Yenkasa Commission:</strong> ${escapeHtml(formatCompactCurrency(commission))}</p>
+          <p><strong>Seller Settlement:</strong> ${escapeHtml(formatCompactCurrency(settlement))}</p>
+        ` : ""}
         <div class="super-admin-actions">
           <button
             type="button"
@@ -811,6 +831,7 @@ function renderRefundRequests(refunds) {
         <p><strong>Reviewed By:</strong> ${escapeHtml(refund.reviewedBy || "-")}</p>
         <p><strong>Reviewed At:</strong> ${escapeHtml(formatDateTime(refund.reviewedAt))}</p>
         <p><strong>Processed At:</strong> ${escapeHtml(formatDateTime(refund.processedAt))}</p>
+        <p><strong>Paystack:</strong> Refunds are processed through Paystack using the transaction reference.</p>
         <div class="super-admin-actions">
           <button type="button" class="manage-btn status refund-status-btn" data-id="${refund.id}" data-status="APPROVED" ${canReview ? "" : "disabled"}>Approve</button>
           <button type="button" class="manage-btn delete refund-status-btn" data-id="${refund.id}" data-status="REJECTED" ${canReview ? "" : "disabled"}>Reject</button>
@@ -843,7 +864,7 @@ function buildSellerSummaries(sellers, orders) {
     existing.totalOrders += 1;
     existing.totalSales += Number(order.total || 0);
 
-    if (String(order.paymentStatus || "").toLowerCase() !== "payout_released") {
+    if (!isPaystackSplitOrder(order) && isLegacyPayoutOrder(order)) {
       existing.pendingPayouts += 1;
     }
 

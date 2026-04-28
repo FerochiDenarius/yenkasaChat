@@ -417,6 +417,10 @@ app.get('/app-ads.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app-ads.txt'));
 });
 
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'images', 'yc.png'));
+});
+
 // ---------------------------------
 // Static Files
 // ---------------------------------

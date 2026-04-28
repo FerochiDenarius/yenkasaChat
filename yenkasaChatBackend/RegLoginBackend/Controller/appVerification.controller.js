@@ -84,7 +84,7 @@ exports.getDashboard = async (req, res) => {
     const userId = req.user.id;
 
     const user = await User.findById(userId).select(
-      "verified emailVerified phoneVerified createdAt role"
+      "verified emailVerified phoneVerified createdAt role roleName"
     );
 
     let appVerification = await AppVerification.findOne({ userId });
@@ -341,7 +341,7 @@ exports.getProgress = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select("createdAt role roleName");
     const appVerification = await AppVerification.findOne({ userId });
 
     if (!appVerification) {
@@ -414,7 +414,7 @@ exports.checkPhaseAdvancement = async (req, res) => {
       await appVerification.save();
     }
 
-    const user = await User.findById(userId).select("createdAt");
+    const user = await User.findById(userId).select("createdAt role roleName");
     await syncVerificationMetrics(appVerification, user);
 
     if (!isPhaseActive()) {

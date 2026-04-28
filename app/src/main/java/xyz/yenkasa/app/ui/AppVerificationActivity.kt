@@ -99,7 +99,14 @@ class AppVerificationActivity : AppCompatActivity() {
         btnAdvance = findViewById(R.id.btnAdvance)
         btnAdvance.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-            if (dashboardData?.appVerification?.progress?.allMet == true) {
+            val app = dashboardData?.appVerification
+            if (app?.rankingPeriodStatus != "active_phase") {
+                Toast.makeText(
+                    this,
+                    getString(R.string.ranking_prelaunch_copy),
+                    Toast.LENGTH_LONG
+                ).show()
+            } else if (app.progress.allMet) {
                 checkPhaseAdvancement()
             } else {
                 Toast.makeText(
@@ -143,6 +150,10 @@ class AppVerificationActivity : AppCompatActivity() {
         textMetricShares = findViewById(R.id.textMetricShares)
         textMetricSharesGoal = findViewById(R.id.textMetricSharesGoal)
         progressMetricShares = findViewById(R.id.progressMetricShares)
+
+        tabVerified.text = "Verified"
+        tabAdmin.text = "Rising Star"
+        tabModerator.text = "Legend"
     }
 
     private fun authHeader(): String = "Bearer ${TokenManager.getToken(this)}"
@@ -262,7 +273,11 @@ class AppVerificationActivity : AppCompatActivity() {
     private fun updateAdvancePhaseButton() {
         val met = dashboardData?.appVerification?.progress?.allMet == true
         btnAdvance.visibility = View.VISIBLE
-        btnAdvance.text = if (met) "Advance" else "View all ranks"
+        btnAdvance.text = if (dashboardData?.appVerification?.rankingPeriodStatus == "active_phase" && met) {
+            "Advance"
+        } else {
+            "View all ranks"
+        }
     }
 
     private fun checkPhaseAdvancement() {
@@ -330,23 +345,23 @@ class AppVerificationActivity : AppCompatActivity() {
         val metrics = app.currentMetrics
         val requirements = app.requirements
 
-        val currentRank = rankLabel(app.currentRankKey, app.currentPhase)
-        val nextRank = rankLabel(app.nextRankKey, app.currentPhase + 1)
-        val overallProgress = progressOverride ?: calculateOverallProgress(metrics, requirements)
+        val currentRank = rankLabel(app.currentRank ?: app.currentRankKey, app.currentPhase)
+        val nextRank = rankLabel(app.nextRank ?: app.nextRankKey, app.currentPhase).takeIf { it != "Unverified" } ?: "Top Rank"
+        val overallProgress = progressOverride ?: app.progressToNextRank ?: calculateOverallProgress(metrics, requirements)
 
         if (!userSelectedRankTab) {
-            selectedRankTab = rankTabForPhase(app.currentPhase)
+            selectedRankTab = rankTabForRole(app.currentRank ?: app.currentRankKey)
             highlightTab(selectedRankTab)
         }
 
         textStoreName.text = TokenManager.getUsername(this)?.takeIf { it.isNotBlank() } ?: "Yenkasa"
         bindAvatar()
         textRankChip.text = currentRank
-        textMemberSince.text = buildMemberSinceText(app.rankingPeriodLabel, app.phaseStartDate)
+        textMemberSince.text = buildRankingStatusText(app)
         textCurrentRank.text = currentRank
         textNextRank.text = nextRank
         textRequirementTitle.text = "To reach $nextRank"
-        imageVerificationShield.setImageResource(rankBadge(app.currentPhase))
+        imageVerificationShield.setImageResource(rankBadge(app.currentRank ?: app.currentRankKey))
         textProgressPercent.text = "$overallProgress%"
         progressCircle.setProgressCompat(overallProgress, true)
         progressRankBar.progress = overallProgress
@@ -370,8 +385,8 @@ class AppVerificationActivity : AppCompatActivity() {
             goalView = textMetricCommentsGoal,
             progressView = progressMetricComments,
             value = metrics.totalCommentsMade,
-            goal = requirements.comments,
-            label = "Goal: ${formatNumber(requirements.comments)}"
+            goal = requirements.commentsMade,
+            label = "Goal: ${formatNumber(requirements.commentsMade)}"
         )
 
         bindMetricCard(
@@ -379,8 +394,8 @@ class AppVerificationActivity : AppCompatActivity() {
             goalView = textMetricFollowingGoal,
             progressView = progressMetricFollowing,
             value = metrics.totalFollowing,
-            goal = requirements.followers,
-            label = "Goal: ${formatNumber(requirements.followers)}"
+            goal = requirements.following,
+            label = "Goal: ${formatNumber(requirements.following)}"
         )
 
         bindMetricCard(
@@ -414,12 +429,35 @@ class AppVerificationActivity : AppCompatActivity() {
 
         val rows = listOf(
             RequirementRow("Account Age", "Keep your account active", metrics.accountAge, requirements.accountAge, "days"),
-            RequirementRow("Comments Made", "Engage on posts", metrics.totalCommentsMade, requirements.comments, "left"),
-            RequirementRow("Following", "Support other users", metrics.totalFollowing, requirements.followers, "left"),
-            RequirementRow("Posts Liked", "Support posts you enjoy", metrics.postsLiked, requirements.maxLikes, "left"),
+            RequirementRow("Comments Made", "Engage on posts", metrics.totalCommentsMade, requirements.commentsMade, "left"),
+            RequirementRow("Following", "Support other users", metrics.totalFollowing, requirements.following, "left"),
+            RequirementRow("Posts Liked", "Support posts you enjoy", metrics.postsLiked, requirements.likesGiven, "left"),
             RequirementRow("Daily Logins", "Return daily and stay active", metrics.dailyLogins, requirements.dailyLogins, "left"),
             RequirementRow("Ads Viewed", "Watch rewarded ads", metrics.adsViewed, requirements.adsViewed, "left")
-        )
+        ) + buildList {
+            if (requirements.followers > 0) {
+                add(
+                    RequirementRow(
+                        "Followers",
+                        "Passive impact needed for this tier",
+                        metrics.totalFollowers,
+                        requirements.followers,
+                        "left"
+                    )
+                )
+            }
+            if (requirements.commentsReceived > 0) {
+                add(
+                    RequirementRow(
+                        "Comments Received",
+                        "Your content must attract replies",
+                        metrics.totalCommentsReceived,
+                        requirements.commentsReceived,
+                        "left"
+                    )
+                )
+            }
+        }
         rows.forEachIndexed { index, row ->
             requirementRows.addView(createRequirementRow(row))
             if (index != rows.lastIndex) {
@@ -585,33 +623,43 @@ class AppVerificationActivity : AppCompatActivity() {
     private fun calculateOverallProgress(metrics: VerificationMetrics, requirements: VerificationRequirements): Int {
         val values = listOf(
             percent(metrics.accountAge, requirements.accountAge),
-            percent(metrics.totalCommentsMade, requirements.comments),
-            percent(metrics.totalFollowing, requirements.followers),
-            percent(metrics.postsLiked, requirements.maxLikes),
+            percent(metrics.totalCommentsMade, requirements.commentsMade),
+            percent(metrics.totalFollowing, requirements.following),
+            percent(metrics.postsLiked, requirements.likesGiven),
             percent(metrics.dailyLogins, requirements.dailyLogins),
             percent(metrics.adsViewed, requirements.adsViewed)
-        )
+        ) + buildList {
+            if (requirements.followers > 0) add(percent(metrics.totalFollowers, requirements.followers))
+            if (requirements.commentsReceived > 0) add(percent(metrics.totalCommentsReceived, requirements.commentsReceived))
+        }
         return values.average().toInt().coerceIn(0, 100)
     }
 
     private fun currentRequirementPoints(metrics: VerificationMetrics, requirements: VerificationRequirements): Int {
         return listOf(
             metrics.accountAge to requirements.accountAge,
-            metrics.totalCommentsMade to requirements.comments,
-            metrics.totalFollowing to requirements.followers,
-            metrics.postsLiked to requirements.maxLikes,
+            metrics.totalCommentsMade to requirements.commentsMade,
+            metrics.totalFollowing to requirements.following,
+            metrics.postsLiked to requirements.likesGiven,
             metrics.dailyLogins to requirements.dailyLogins,
             metrics.adsViewed to requirements.adsViewed
+        ).plus(
+            listOf(
+                metrics.totalFollowers to requirements.followers,
+                metrics.totalCommentsReceived to requirements.commentsReceived
+            ).filter { it.second > 0 }
         ).sumOf { (current, target) -> current.coerceAtMost(target) }
     }
 
     private fun targetRequirementPoints(requirements: VerificationRequirements): Int {
         return requirements.accountAge +
-            requirements.comments +
-                requirements.followers +
-                requirements.maxLikes +
+            requirements.commentsMade +
+                requirements.following +
+                requirements.likesGiven +
             requirements.dailyLogins +
-            requirements.adsViewed
+            requirements.adsViewed +
+            requirements.followers +
+            requirements.commentsReceived
     }
 
     private fun percent(value: Int, target: Int): Int {
@@ -619,9 +667,11 @@ class AppVerificationActivity : AppCompatActivity() {
         return ((value.toFloat() / target.toFloat()) * 100f).toInt().coerceIn(0, 100)
     }
 
-    private fun rankLabel(rankKey: String?, phase: Int): String {
+    private fun rankLabel(rankKey: String?, phase: Int?): String {
         when (rankKey?.lowercase(Locale.getDefault())) {
             "verified" -> return "Verified"
+            "rising_star" -> return "Rising Star"
+            "legend" -> return "Legend"
             "admin" -> return "Admin"
             "moderator" -> return "Moderator"
             "junior_developer" -> return "Junior Developer"
@@ -629,27 +679,26 @@ class AppVerificationActivity : AppCompatActivity() {
         }
 
         return when {
-            phase <= 1 -> "Verified"
-            phase == 2 -> "Admin"
-            phase == 3 -> "Moderator"
-            phase == 4 -> "Junior Developer"
-            else -> "Senior Developer"
+            phase == null || phase <= 1 -> "Unverified"
+            else -> "Verified"
         }
     }
 
-    private fun rankBadge(phase: Int): Int {
-        return when {
-            phase <= 1 -> R.drawable.badge_verified
-            phase == 2 -> R.drawable.badge_admin
-            else -> R.drawable.badge_moderator
+    private fun rankBadge(rankKey: String?): Int {
+        return when (rankKey?.lowercase(Locale.getDefault())) {
+            "moderator" -> R.drawable.badge_moderator
+            "admin", "legend" -> R.drawable.badge_admin
+            "senior_developer" -> R.drawable.senior_developer_banner
+            "junior_developer" -> R.drawable.junior_developer_banner
+            else -> R.drawable.badge_verified
         }
     }
 
-    private fun rankTabForPhase(phase: Int): Int {
-        return when {
-            phase <= 1 -> 0
-            phase == 2 -> 1
-            else -> 2
+    private fun rankTabForRole(rankKey: String?): Int {
+        return when (rankKey?.lowercase(Locale.getDefault())) {
+            "rising_star" -> 1
+            "legend", "admin", "moderator", "junior_developer", "senior_developer" -> 2
+            else -> 0
         }
     }
 
@@ -675,6 +724,14 @@ class AppVerificationActivity : AppCompatActivity() {
         return if (periodLabel.isNullOrBlank()) memberSince else "$periodLabel • $memberSince"
     }
 
+    private fun buildRankingStatusText(app: xyz.yenkasa.app.model.AppVerification): String {
+        return when (app.rankingPeriodStatus) {
+            "pre_launch" -> "Pre-launch ranking period. Official Phase 1 begins on ${formatLaunchDate(app.officialPhaseStartDate ?: app.rankingLaunchDate)}. You can still earn ranks now."
+            "active_phase" -> getString(R.string.ranking_active_phase_copy)
+            else -> buildMemberSinceText(app.rankingPeriodLabel, app.phaseStartDate)
+        }
+    }
+
     private fun formatMemberSince(raw: String?): String {
         val formatted = try {
             if (raw.isNullOrBlank()) {
@@ -690,6 +747,23 @@ class AppVerificationActivity : AppCompatActivity() {
         }
 
         return formatted?.let { "Member since $it" } ?: "Member since your first login"
+    }
+
+    private fun formatLaunchDate(raw: String?): String {
+        val formatted = try {
+            if (raw.isNullOrBlank()) {
+                null
+            } else {
+                val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+                parser.timeZone = TimeZone.getTimeZone("UTC")
+                val date = parser.parse(raw)
+                date?.let { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(it) }
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        return formatted ?: "25 May 2026"
     }
 
     private fun formatNumber(value: Int): String {

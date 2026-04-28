@@ -159,16 +159,16 @@ appVerificationSchema.methods.checkRequirementsMet = function () {
 
   return {
     accountAge: m.accountAge >= req.accountAge,
-    comments: m.totalCommentsMade >= req.comments,
-    followers: m.totalFollowing >= req.followers,
-    maxLikes: m.postsLiked >= req.maxLikes,
+    comments: m.totalCommentsMade >= (req.totalCommentsMade || req.comments || 0),
+    followers: m.totalFollowing >= (req.totalFollowing || req.followers || 0),
+    maxLikes: m.postsLiked >= (req.postsLiked || req.maxLikes || 0),
     dailyLogins: m.dailyLogins >= req.dailyLogins,
     adsViewed: m.adsViewed >= req.adsViewed,
     allMet:
       m.accountAge >= req.accountAge &&
-      m.totalCommentsMade >= req.comments &&
-      m.totalFollowing >= req.followers &&
-      m.postsLiked >= req.maxLikes &&
+      m.totalCommentsMade >= (req.totalCommentsMade || req.comments || 0) &&
+      m.totalFollowing >= (req.totalFollowing || req.followers || 0) &&
+      m.postsLiked >= (req.postsLiked || req.maxLikes || 0) &&
       m.dailyLogins >= req.dailyLogins &&
       m.adsViewed >= req.adsViewed
   };

@@ -35,20 +35,27 @@ data class DetailsVerification(
 // APP VERIFICATION CORE
 // ===============================
 data class AppVerification(
-    val currentPhase: Int,
+    val currentPhase: Int? = null,
+    val currentRank: String? = null,
     val currentRankKey: String? = null,
+    val nextRank: String? = null,
     val nextRankKey: String? = null,
+    val progressToNextRank: Int? = null,
+    val rankingPeriodStatus: String? = null,
     val rankingPeriodLabel: String? = null,
+    val officialPhaseStartDate: String? = null,
     val rankingLaunchDate: String? = null,
     val hasVerifiedBanner: Boolean,
     val phaseStartDate: String? = null,
     val phaseEndDate: String? = null,
-    val daysRemaining: Int,
+    val daysRemaining: Int? = null,
 
     val requirements: VerificationRequirements,
     val currentMetrics: VerificationMetrics,
     val progress: VerificationProgress,
-    val phaseHistory: List<PhaseHistory>,
+    val phaseHistory: List<PhaseHistory> = emptyList(),
+    val activityMetrics: ActiveRankingMetrics? = null,
+    val performanceMetrics: AnalyticsOnlyMetrics? = null,
     val activeRankingMetrics: ActiveRankingMetrics? = null,
     val analyticsOnlyMetrics: AnalyticsOnlyMetrics? = null
 )
@@ -58,12 +65,16 @@ data class AppVerification(
 // REQUIREMENTS MODEL
 // ===============================
 data class VerificationRequirements(
-    val accountAge: Int,
-    val comments: Int,
-    val followers: Int,
-    val maxLikes: Int,
-    val dailyLogins: Int,
-    val adsViewed: Int,
+    val accountAge: Int = 0,
+    val commentsMade: Int = 0,
+    val following: Int = 0,
+    val likesGiven: Int = 0,
+    val dailyLogins: Int = 0,
+    val adsViewed: Int = 0,
+    val followers: Int = 0,
+    val commentsReceived: Int = 0,
+    val comments: Int = 0,
+    val maxLikes: Int = 0,
 
     // Optional scalability for moderator/admin/developer
     val roleMultiplier: Float? = 1.0f
@@ -124,15 +135,19 @@ data class VerificationMetrics(
 // PROGRESS MODEL
 // ===============================
 data class VerificationProgress(
-    val accountAge: Boolean,
-    val comments: Boolean,
-    val followers: Boolean,
-    val maxLikes: Boolean,
-    val dailyLogins: Boolean,
-    val adsViewed: Boolean,
+    val accountAge: Boolean = false,
+    val commentsMade: Boolean = false,
+    val following: Boolean = false,
+    val likesGiven: Boolean = false,
+    val dailyLogins: Boolean = false,
+    val adsViewed: Boolean = false,
+    val followers: Boolean = false,
+    val commentsReceived: Boolean = false,
+    val comments: Boolean = false,
+    val maxLikes: Boolean = false,
 
     // Whether all requirements have been completed
-    val allMet: Boolean
+    val allMet: Boolean = false
 )
 
 
@@ -195,20 +210,26 @@ data class VerificationMetricUpdateResponse(
 // VERIFICATION PROGRESS RESPONSE
 // ===============================
 data class VerificationProgressResponse(
-    val phase: Int,
-    val overallProgress: Int,
+    val phase: Int? = null,
+    val currentRank: String? = null,
+    val nextRank: String? = null,
+    val overallProgress: Int = 0,
     val detailedProgress: DetailedProgress,
     val requirements: VerificationRequirements,
     val currentMetrics: VerificationMetrics
 )
 
 data class DetailedProgress(
-    val accountAge: Float,
-    val comments: Float,
-    val followers: Float,
-    val maxLikes: Float,
-    val dailyLogins: Float,
-    val adsViewed: Float
+    val accountAge: Float = 0f,
+    val commentsMade: Float = 0f,
+    val following: Float = 0f,
+    val likesGiven: Float = 0f,
+    val dailyLogins: Float = 0f,
+    val adsViewed: Float = 0f,
+    val followers: Float = 0f,
+    val commentsReceived: Float = 0f,
+    val comments: Float = 0f,
+    val maxLikes: Float = 0f
 )
 
 
@@ -218,6 +239,9 @@ data class DetailedProgress(
 data class PhaseAdvancementResponse(
     val success: Boolean,
     val message: String,
+    val currentRank: String? = null,
+    val nextRank: String? = null,
+    val progressToNextRank: Int? = null,
     val newPhase: Int? = null,
     val hasVerifiedBanner: Boolean? = null,
     val nextRequirements: VerificationRequirements? = null,
@@ -284,4 +308,3 @@ data class AnalyticsOnlyMetrics(
     val totalRepliesReceived: Int = 0,
     val maxLikesOnPost: Int = 0
 )
-

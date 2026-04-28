@@ -76,6 +76,8 @@
     <string name="chat_media_redo">Redo</string>
     <string name="chat_emoji_title">Emoji</string>
     <string name="chat_emoji_recent_hint">Tap an emoji to insert it.</string>
+    <string name="ranking_prelaunch_copy">Pre-launch ranking period. Official Phase 1 begins on 25 May 2026. You can still earn ranks now.</string>
+    <string name="ranking_active_phase_copy">Phase 1 is active. Complete targets within the phase period.</string>
     <plurals name="chat_media_selected_count">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>

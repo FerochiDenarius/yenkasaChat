@@ -6,6 +6,8 @@ export default function PostCard({ post, onOptimisticLike }) {
   const [busy, setBusy] = useState(false);
   const imageUrl = buildMediaUrl(post);
   const likedByUser = post?.likedByUser === true;
+  const contentText = post?.text || post?.caption || "";
+  const communityName = post?.communityName || post?.communityId?.displayName || post?.communityId?.name;
 
   async function handleLike() {
     if (busy) return;
@@ -32,14 +34,14 @@ export default function PostCard({ post, onOptimisticLike }) {
           <p className="post-card__author">{getAuthorName(post)}</p>
           <p className="post-card__meta">{formatRelativeTime(post?.createdAt)}</p>
         </div>
-        {post?.communityName ? <span className="tag">{post.communityName}</span> : null}
+        {communityName ? <span className="tag">{communityName}</span> : null}
       </header>
 
-      {post?.text ? <p className="post-card__body">{post.text}</p> : null}
+      {contentText ? <p className="post-card__body">{contentText}</p> : null}
 
       {imageUrl ? (
         <div className="post-card__media">
-          <img src={imageUrl} alt={post?.text || "Post media"} />
+          <img src={imageUrl} alt={contentText || "Post media"} />
         </div>
       ) : null}
 

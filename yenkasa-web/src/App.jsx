@@ -1,5 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import Navbar from "./components/Navbar";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -21,9 +20,6 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const location = useLocation();
-  const showNav = !["/login", "/register"].includes(location.pathname);
-
   return (
     <div className="app-shell">
       <Routes>
@@ -71,7 +67,6 @@ export default function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      {showNav ? <Navbar /> : null}
     </div>
   );
 }

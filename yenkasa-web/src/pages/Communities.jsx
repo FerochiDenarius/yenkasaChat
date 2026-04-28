@@ -50,19 +50,29 @@ export default function Communities() {
 }
 
 function CommunityCard({ community }) {
+  const displayName = community?.displayName || community?.name || "Community";
+  const status = normalizedStatus(community);
+
   return (
     <article className="card community-card">
       <div className="split-row">
         <div>
-          <h3>{community?.name || "Community"}</h3>
+          <h3>{displayName}</h3>
           <p className="muted">{community?.description || "No description yet."}</p>
         </div>
-        {community?.approvalStatus ? <span className="tag">{community.approvalStatus}</span> : null}
+        <span className="tag">{status}</span>
       </div>
       <div className="community-card__meta">
         <span>Members {community?.memberCount || 0}</span>
         {community?.country ? <span>{community.country}</span> : null}
       </div>
+      {community?.creator?.username ? <p className="muted">Creator: {community.creator.username}</p> : null}
     </article>
   );
+}
+
+function normalizedStatus(community) {
+  if (!community?.isActive) return "rejected";
+  if (community?.isApproved) return "approved";
+  return "pending";
 }

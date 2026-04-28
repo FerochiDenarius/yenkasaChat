@@ -10,12 +10,18 @@ export function getAuthorName(post) {
 export function buildMediaUrl(item) {
   return (
     item?.imageUrl ||
+    item?.thumbnailUrl ||
+    item?.coverImage ||
     item?.mediaUrl ||
     item?.thumbnail ||
     item?.photoUrl ||
     item?.image ||
     null
   );
+}
+
+export function buildVideoUrl(item) {
+  return item?.videoUrl || item?.video || null;
 }
 
 export function formatRelativeTime(value) {

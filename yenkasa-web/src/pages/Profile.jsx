@@ -11,6 +11,9 @@ export default function Profile() {
   const storedUser = getStoredUser();
   const { data, loading, error } = useAsync(getProfile, true);
   const user = useMemo(() => data || storedUser || {}, [data, storedUser]);
+  const followersCount = user?.followersCount ?? user?.followers?.length ?? 0;
+  const followingCount = user?.followingCount ?? user?.following?.length ?? 0;
+  const roleName = user?.roleName || user?.role?.role || user?.role;
 
   return (
     <main className="page page--with-nav">
@@ -30,14 +33,14 @@ export default function Profile() {
             <h2>{user?.username || "Unknown user"}</h2>
             <p>{user?.email || user?.phoneNumber || "No contact info yet"}</p>
           </div>
-          <span className="tag">{readableRank(user?.roleName)}</span>
+          <span className="tag">{readableRank(roleName)}</span>
         </div>
         <p>{loading ? "Loading profile..." : user?.bio || "No bio added yet."}</p>
       </section>
 
       <section className="grid-two">
-        <MetricCard label="Followers" value={user?.followers?.length || 0} />
-        <MetricCard label="Following" value={user?.following?.length || 0} />
+        <MetricCard label="Followers" value={followersCount} />
+        <MetricCard label="Following" value={followingCount} />
       </section>
 
       <section className="card stack">

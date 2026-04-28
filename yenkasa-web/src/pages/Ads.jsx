@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { getAdsFeed, getMyAds } from "../api/ads";
+import AdCard from "../components/AdCard";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import { useAsync } from "../hooks/useAsync";
-import { buildMediaUrl, formatRelativeTime } from "../utils/format";
 
 export default function Ads() {
   const feedState = useAsync(getAdsFeed, true);
@@ -41,26 +41,5 @@ export default function Ads() {
         {myAds.length ? myAds.map((ad) => <AdCard key={`mine-${ad._id}`} ad={ad} />) : <EmptyState title="No submitted ads" description="Your ad submissions will appear here." />}
       </section>
     </main>
-  );
-}
-
-function AdCard({ ad }) {
-  const mediaUrl = buildMediaUrl(ad);
-  return (
-    <article className="card ad-card">
-      <div className="split-row">
-        <div>
-          <h3>{ad?.title || "Sponsored ad"}</h3>
-          <p className="muted">{ad?.approvalStatus || "approved"} · {formatRelativeTime(ad?.createdAt)}</p>
-        </div>
-        {ad?.rewardAmount ? <span className="tag">{ad.rewardAmount} YKC</span> : null}
-      </div>
-      {mediaUrl ? (
-        <div className="ad-card__media">
-          <img src={mediaUrl} alt={ad?.title || "Ad preview"} />
-        </div>
-      ) : null}
-      {ad?.ctaText ? <button className="secondary-btn">{ad.ctaText}</button> : null}
-    </article>
   );
 }

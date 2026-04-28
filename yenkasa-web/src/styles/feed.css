@@ -1,0 +1,490 @@
+.feed-home {
+  min-height: 100vh;
+  background: #f5f5f5;
+  color: #162018;
+  padding: 0 0 96px;
+}
+
+.feed-home__shell {
+  width: min(100%, 500px);
+  margin: 0 auto;
+  padding: 0 14px 24px;
+}
+
+.feed-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(245, 245, 245, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.feed-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.feed-brand__logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+.feed-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.feed-icon-btn {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  color: #1d2a20;
+}
+
+.feed-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.feed-icon-btn--ghost {
+  background: #f5f5f5;
+}
+
+.feed-topbar__dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #1e7d4f;
+  margin-left: 14px;
+  margin-top: -14px;
+}
+
+.feed-create-ad {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #173d2c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.feed-create-ad__plus {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.communities-bar {
+  margin: 8px 0 16px;
+}
+
+.communities-bar__scroller {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 0 10px;
+  scrollbar-width: none;
+}
+
+.communities-bar__scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.communities-bar__all,
+.community-pill {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  color: #4e5a51;
+}
+
+.communities-bar__all {
+  width: 82px;
+  padding: 10px 6px;
+  border-radius: 20px;
+  background: #eef3f0;
+}
+
+.communities-bar__all-icon,
+.community-pill__avatar {
+  width: 66px;
+  height: 66px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.communities-bar__all-icon {
+  background: linear-gradient(180deg, #f1f5f2 0%, #e7efea 100%);
+  color: #357b58;
+}
+
+.communities-bar__all-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.community-pill__avatar {
+  background: linear-gradient(180deg, #ebf8ef 0%, #d9efe2 100%);
+  border: 2px solid #7fd0a8;
+  box-shadow: 0 0 0 2px #f5f5f5 inset;
+}
+
+.community-pill__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.community-pill__avatar span {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1f4d35;
+}
+
+.communities-bar__all span:last-child,
+.community-pill__name {
+  width: 78px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #4f5d54;
+}
+
+.feed-tabs {
+  margin-bottom: 14px;
+  padding: 6px;
+  border-radius: 18px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 6px 18px rgba(18, 37, 25, 0.06);
+}
+
+.feed-tabs__group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.feed-tabs__tab {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  color: #7a877f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.feed-tabs__tab--active {
+  color: #1c7b4f;
+  background: #eef7f2;
+}
+
+.feed-tabs__sort {
+  position: relative;
+  min-width: 70px;
+  margin-left: auto;
+  padding: 0 24px 0 8px;
+  color: #5d695f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.feed-tabs__sort::after {
+  content: "▾";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #69756d;
+}
+
+.feed-tabs__sort select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.feed-post-list {
+  display: grid;
+  gap: 16px;
+}
+
+.feed-post-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 14px;
+  box-shadow: 0 10px 24px rgba(19, 39, 27, 0.08);
+}
+
+.feed-post-card__header,
+.feed-post-card__stats,
+.feed-post-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feed-post-card__author-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.feed-post-card__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e7efe9;
+  display: grid;
+  place-items: center;
+  color: #205239;
+  font-weight: 800;
+}
+
+.feed-post-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feed-post-card__author-meta strong {
+  font-size: 16px;
+}
+
+.feed-post-card__author-meta p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #7b8780;
+}
+
+.feed-post-card__author-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feed-verified-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: #1c7b4f;
+  color: #fff;
+  font-size: 11px;
+}
+
+.feed-post-card__content {
+  margin: 14px 0 10px;
+  color: #233026;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.feed-post-card__media,
+.feed-post-card__text-panel,
+.ad-card__media {
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.feed-post-card__media {
+  background: #edf2ef;
+  aspect-ratio: 1 / 1;
+}
+
+.feed-post-card__media img,
+.ad-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.feed-post-card__text-panel {
+  min-height: 280px;
+  padding: 22px;
+  display: grid;
+  place-items: center;
+  background: #1f49b8;
+  color: #fff;
+  text-align: center;
+  font-size: clamp(22px, 6vw, 28px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.feed-post-card__stats {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #7a867f;
+}
+
+.feed-post-card__actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf1ee;
+}
+
+.feed-post-card__action {
+  flex: 1 1 0;
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #667269;
+  font-weight: 600;
+}
+
+.feed-post-card__action.is-active {
+  color: #1c7b4f;
+}
+
+.feed-status-card,
+.feed-error-card,
+.empty-state {
+  padding: 18px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(19, 39, 27, 0.06);
+}
+
+.feed-error-card {
+  color: #9c3a3a;
+}
+
+.feed-floating-button {
+  position: fixed;
+  right: max(calc((100vw - min(100vw, 500px)) / 2 + 18px), 18px);
+  bottom: 84px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 0;
+  background: linear-gradient(180deg, #1f9b61 0%, #157a4a 100%);
+  color: #fff;
+  font-size: 34px;
+  line-height: 1;
+  box-shadow: 0 16px 30px rgba(20, 122, 74, 0.28);
+}
+
+.feed-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, 500px);
+  padding: 10px 14px 18px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  background: linear-gradient(180deg, rgba(245, 245, 245, 0.75), #ffffff 24%);
+  backdrop-filter: blur(14px);
+}
+
+.feed-bottom-nav__item {
+  min-height: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  color: #7e8a81;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.feed-bottom-nav__item--active {
+  color: #1c7b4f;
+}
+
+.feed-bottom-nav__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.ad-card {
+  background: #fff;
+  border: 0;
+  box-shadow: 0 10px 24px rgba(19, 39, 27, 0.08);
+  color: #172118;
+}
+
+.ad-card .muted,
+.ad-card .error-copy {
+  color: #728077;
+}
+
+.ad-card__media {
+  margin: 12px 0;
+  aspect-ratio: 16 / 10;
+  background: #f1f4f2;
+  position: relative;
+}
+
+.ad-card__type-tag {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: rgba(23, 61, 44, 0.88);
+  color: #fff;
+}
+
+@media (max-width: 380px) {
+  .feed-home__shell {
+    padding-inline: 10px;
+  }
+
+  .communities-bar__all span:last-child,
+  .community-pill__name {
+    width: 68px;
+  }
+}

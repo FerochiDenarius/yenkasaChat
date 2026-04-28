@@ -1,48 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:gravity="center_vertical"
-    android:background="?android:selectableItemBackground"
+    android:id="@+id/notificationCard"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/notification_card_stroke"
+    app:strokeWidth="1dp">
 
-    <ImageView
-        android:id="@+id/imgNotificationIcon"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
-        android:src="@drawable/ic_notifications"
-        app:tint="@color/yenkasa_black"/>
-
-    <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="0dp"
-        android:layout_weight="1"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp">
+        android:minHeight="92dp"
+        android:paddingStart="14dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="14dp">
+
+        <FrameLayout
+            android:id="@+id/iconContainer"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_notification_icon_container"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/imgNotificationIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_play_arrow"
+                app:tint="@color/yenkasa_black" />
+        </FrameLayout>
+
+        <ImageView
+            android:id="@+id/imgUnreadIndicator"
+            android:layout_width="9dp"
+            android:layout_height="9dp"
+            android:background="@drawable/unread_dot"
+            app:layout_constraintEnd_toEndOf="@id/iconContainer"
+            app:layout_constraintTop_toTopOf="@id/iconContainer" />
 
         <TextView
-            android:id="@+id/txtNotificationMessage"
-            android:text="Notification message..."
-            android:textSize="14sp"
+            android:id="@+id/txtNotificationTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="10dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="You earned 2 coins for watching a video"
             android:textColor="@color/yenkasa_black"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/rewardArea"
+            app:layout_constraintStart_toEndOf="@id/iconContainer"
+            app:layout_constraintTop_toTopOf="@id/iconContainer" />
+
+        <TextView
+            android:id="@+id/txtNotificationSubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginEnd="10dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="+2 YKC added to your wallet"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toStartOf="@id/rewardArea"
+            app:layout_constraintStart_toEndOf="@id/iconContainer"
+            app:layout_constraintTop_toBottomOf="@id/txtNotificationTitle" />
 
         <TextView
             android:id="@+id/txtNotificationTime"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="10dp"
             android:text="Just now"
-            android:textSize="11sp"
             android:textColor="@color/muted_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-    </LinearLayout>
+            android:textSize="12sp"
+            app:layout_constraintEnd_toStartOf="@id/rewardArea"
+            app:layout_constraintStart_toEndOf="@id/iconContainer"
+            app:layout_constraintTop_toBottomOf="@id/txtNotificationSubtitle" />
 
-    <ImageView
-        android:id="@+id/imgUnreadIndicator"
-        android:layout_width="10dp"
-        android:layout_height="10dp"
-        android:background="@drawable/unread_dot"
-        android:layout_marginStart="6dp"/>
-</LinearLayout>
+        <LinearLayout
+            android:id="@+id/rewardArea"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/txtRewardBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_notification_badge"
+                android:text="+2 YKC"
+                android:textColor="@color/notification_badge_text"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/imgNotificationArrow"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_chevron_right"
+                app:tint="@color/menu_chevron" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

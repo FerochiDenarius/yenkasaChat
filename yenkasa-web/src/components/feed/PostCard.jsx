@@ -1,29 +1,112 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { buildMediaUrl, formatRelativeTime } from "../../utils/format";
 
-export default function PostCard({ post, onUpdate }) {
+export default function PostCard({ post, onUpdate, detailMode = false }) {
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [commentOpen, setCommentOpen] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState("");
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+
   const liked = post?.likedByUser === true;
   const mediaUrl = buildMediaUrl(post);
   const username = post?.userId?.username || post?.username || "Yenkasa User";
-  const communityName = post?.communityId?.displayName || post?.communityId?.name || "Yenkasa";
+  const communityName =
+    post?.communityId?.displayName || post?.communityId?.name || "Yenkasa";
   const content = post?.text || post?.caption || "";
+  const commentCount = Number(post?.commentCount || 0);
+  const shareCount = Number(post?.shareCount || 0);
+  const likeCount = Number(post?.likeCount || 0);
+  const authorAvatar =
+    post?.userId?.profileImage ||
+    post?.userId?.profileImageUrl ||
+    post?.userId?.avatar ||
+    null;
+
+  const visibleComments = useMemo(() => comments.filter(Boolean), [comments]);
+
+  function openPost() {
+    if (detailMode || !post?._id) return;
+    navigate(`/post/${post._id}`);
+  }
 
   async function handleLike() {
     if (busy || !post?._id) return;
     setBusy(true);
 
     const nextLiked = !liked;
-    const nextLikeCount = Math.max(0, Number(post?.likeCount || 0) + (nextLiked ? 1 : -1));
-    onUpdate?.(post._id, { likedByUser: nextLiked, likeCount: nextLikeCount });
+    const optimisticLikeCount = Math.max(0, likeCount + (nextLiked ? 1 : -1));
+    onUpdate?.(post._id, {
+      likedByUser: nextLiked,
+      likeCount: optimisticLikeCount,
+    });
 
     try {
-      await api.post(`/social/like/${post._id}`);
+      const { data } = await api.post(`/social/like/${post._id}`);
+      onUpdate?.(post._id, {
+        likedByUser: Boolean(data?.likedByUser),
+        likeCount: Number(data?.likeCount ?? optimisticLikeCount),
+      });
     } catch {
-      onUpdate?.(post._id, { likedByUser: liked, likeCount: Number(post?.likeCount || 0) });
+      onUpdate?.(post._id, {
+        likedByUser: liked,
+        likeCount,
+      });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function toggleComments() {
+    const nextOpen = !commentOpen;
+    setCommentOpen(nextOpen);
+
+    if (!nextOpen || !post?._id || visibleComments.length || commentsLoading) return;
+
+    setCommentsLoading(true);
+    setCommentsError("");
+
+    try {
+      const { data } = await api.get(`/comments/post/${post._id}`);
+      const incoming = Array.isArray(data?.comments) ? data.comments : [];
+      setComments(incoming);
+    } catch {
+      setCommentsError("Could not load comments right now.");
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
+
+  async function handleSubmitComment(event) {
+    event.preventDefault();
+    if (!post?._id || !commentText.trim() || submittingComment) return;
+
+    setSubmittingComment(true);
+    setCommentsError("");
+
+    try {
+      const { data } = await api.post("/comments", {
+        postId: post._id,
+        text: commentText.trim(),
+      });
+
+      if (data?.comment) {
+        setComments((prev) => [...prev, data.comment]);
+      }
+      setCommentText("");
+      setCommentOpen(true);
+      onUpdate?.(post._id, {
+        commentCount: commentCount + 1,
+      });
+    } catch {
+      setCommentsError("Failed to add comment.");
+    } finally {
+      setSubmittingComment(false);
     }
   }
 
@@ -32,8 +115,8 @@ export default function PostCard({ post, onUpdate }) {
       <header className="feed-post-card__header">
         <div className="feed-post-card__author-block">
           <span className="feed-post-card__avatar">
-            {post?.userId?.profileImage ? (
-              <img src={post.userId.profileImage} alt={username} />
+            {authorAvatar ? (
+              <img src={authorAvatar} alt={username} />
             ) : (
               <span>{username.charAt(0).toUpperCase()}</span>
             )}
@@ -42,7 +125,7 @@ export default function PostCard({ post, onUpdate }) {
           <div className="feed-post-card__author-meta">
             <div className="feed-post-card__author-line">
               <strong>{username}</strong>
-              {(post?.userId?.verified || post?.userId?.roleName === "verified") ? (
+              {post?.userId?.verified || post?.userId?.roleName === "verified" ? (
                 <span className="feed-verified-badge">✓</span>
               ) : null}
             </div>
@@ -52,7 +135,11 @@ export default function PostCard({ post, onUpdate }) {
           </div>
         </div>
 
-        <button className="feed-icon-btn feed-icon-btn--ghost" type="button" aria-label="More options">
+        <button
+          className="feed-icon-btn feed-icon-btn--ghost"
+          type="button"
+          aria-label="More options"
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="5" r="1.6" />
             <circle cx="12" cy="12" r="1.6" />
@@ -61,41 +148,169 @@ export default function PostCard({ post, onUpdate }) {
         </button>
       </header>
 
-      {content ? <p className="feed-post-card__content">{content}</p> : null}
+      {content ? (
+        <button
+          type="button"
+          className="feed-post-card__content-button"
+          onClick={openPost}
+          disabled={detailMode}
+        >
+          <p className="feed-post-card__content">{content}</p>
+        </button>
+      ) : null}
 
       {mediaUrl ? (
-        <div className="feed-post-card__media">
-          <img src={mediaUrl} alt={content || username} />
-        </div>
+        <button
+          type="button"
+          className="feed-post-card__media-button"
+          onClick={openPost}
+          disabled={detailMode}
+        >
+          <div className="feed-post-card__media">
+            <img src={mediaUrl} alt={content || username} />
+          </div>
+        </button>
       ) : (
-        <div className="feed-post-card__text-panel">
-          <span>{content || "Share something with your community."}</span>
+        <button
+          type="button"
+          className="feed-post-card__text-panel-button"
+          onClick={openPost}
+          disabled={detailMode}
+        >
+          <div className="feed-post-card__text-panel">
+            <span>{content || "Share something with your community."}</span>
+          </div>
+        </button>
+      )}
+
+      {!detailMode ? (
+        <button
+          type="button"
+          className="feed-post-card__stats-button"
+          onClick={openPost}
+        >
+          <div className="feed-post-card__stats">
+            <span>{likeCount} likes</span>
+            <span>{commentCount} comments</span>
+            <span>{shareCount} shares</span>
+          </div>
+        </button>
+      ) : (
+        <div className="feed-post-card__stats">
+          <span>{likeCount} likes</span>
+          <span>{commentCount} comments</span>
+          <span>{shareCount} shares</span>
         </div>
       )}
 
-      <div className="feed-post-card__stats">
-        <span>{Number(post?.likeCount || 0)} likes</span>
-        <span>{Number(post?.commentCount || 0)} comments</span>
-        <span>{Number(post?.shareCount || 0)} shares</span>
-      </div>
-
       <footer className="feed-post-card__actions">
-        <button type="button" className={`feed-post-card__action${liked ? " is-active" : ""}`} onClick={handleLike}>
+        <button
+          type="button"
+          className={`feed-post-card__action${liked ? " is-active" : ""}`}
+          onClick={handleLike}
+        >
           <span>♡</span>
           <span>{liked ? "Liked" : "Like"}</span>
         </button>
-        <button type="button" className="feed-post-card__action">
+        <button
+          type="button"
+          className={`feed-post-card__action${commentOpen ? " is-active" : ""}`}
+          onClick={toggleComments}
+        >
           <span>◔</span>
           <span>Comment</span>
         </button>
-        <button type="button" className="feed-post-card__action">
+        <button
+          type="button"
+          className="feed-post-card__action"
+          onClick={async () => {
+            const shareUrl = `${window.location.origin}/web/post/${post?._id}`;
+            try {
+              if (navigator.share) {
+                await navigator.share({
+                  title: username,
+                  text: content || "Check out this post on Yenkasa.",
+                  url: shareUrl,
+                });
+              } else {
+                await navigator.clipboard.writeText(shareUrl);
+                window.alert("Post link copied.");
+              }
+            } catch {
+              // Ignore cancelled share
+            }
+          }}
+        >
           <span>↗</span>
           <span>Share</span>
         </button>
-        <button type="button" className="feed-post-card__action">
+        <button type="button" className="feed-post-card__action" onClick={openPost}>
           <span>⌑</span>
         </button>
       </footer>
+
+      {commentOpen ? (
+        <section className="feed-comments-panel">
+          <form className="feed-comment-form" onSubmit={handleSubmitComment}>
+            <textarea
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              placeholder="Write a comment..."
+              rows={2}
+            />
+            <button type="submit" disabled={submittingComment || !commentText.trim()}>
+              {submittingComment ? "Posting..." : "Post"}
+            </button>
+          </form>
+
+          {commentsLoading ? (
+            <div className="feed-comments-state">Loading comments...</div>
+          ) : null}
+
+          {commentsError ? (
+            <div className="feed-comments-error">{commentsError}</div>
+          ) : null}
+
+          {!commentsLoading && !visibleComments.length ? (
+            <div className="feed-comments-state">
+              No comments yet. Start the conversation.
+            </div>
+          ) : null}
+
+          {visibleComments.length ? (
+            <div className="feed-comments-list">
+              {visibleComments.map((comment) => {
+                const commentAuthor =
+                  comment?.userId?.username || comment?.username || "Yenkasa User";
+                const commentAvatar =
+                  comment?.userId?.profileImage || comment?.userId?.profileImageUrl || null;
+
+                return (
+                  <article
+                    className="feed-comment"
+                    key={comment?._id || `${commentAuthor}-${comment?.createdAt}`}
+                  >
+                    <span className="feed-comment__avatar">
+                      {commentAvatar ? (
+                        <img src={commentAvatar} alt={commentAuthor} />
+                      ) : (
+                        <span>{commentAuthor.charAt(0).toUpperCase()}</span>
+                      )}
+                    </span>
+                    <div className="feed-comment__body">
+                      <div className="feed-comment__meta">
+                        <strong>{commentAuthor}</strong>
+                        <span>{formatRelativeTime(comment?.createdAt)}</span>
+                      </div>
+                      <p>{comment?.text || ""}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </article>
   );
 }

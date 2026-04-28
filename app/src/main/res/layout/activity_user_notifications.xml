@@ -1,43 +1,173 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@color/yenkasa_amber"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/notification_page_background"
+    android:clipToPadding="false"
+    android:paddingStart="20dp"
+    android:paddingTop="28dp"
+    android:paddingEnd="20dp">
 
     <TextView
         android:id="@+id/notificationsTitle"
-        android:text="Notifications"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/yenkasa_black"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"/>
+        android:fontFamily="sans"
+        android:text="Notifications"
+        android:textColor="@color/yenkasa_black"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/btnNotificationSettings"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageButton
+        android:id="@+id/btnNotificationSettings"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Notification settings"
+        android:padding="10dp"
+        android:src="@drawable/ic_notification_settings"
+        app:layout_constraintBottom_toBottomOf="@id/notificationsTitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/notificationsTitle"
+        app:tint="@color/yenkasa_black" />
+
+    <HorizontalScrollView
+        android:id="@+id/filterScroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/notificationsTitle">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupNotificationFilters"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFilterAll"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:checkable="true"
+                android:checked="true"
+                android:text="All"
+                android:textColor="@color/selector_notification_chip_text"
+                app:checkedIconVisible="false"
+                app:chipBackgroundColor="@color/selector_notification_chip_background"
+                app:chipCornerRadius="20dp"
+                app:chipMinHeight="40dp"
+                app:chipStrokeColor="@color/transparent"
+                app:chipStrokeWidth="0dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFilterRewards"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:checkable="true"
+                android:text="Rewards"
+                android:textColor="@color/selector_notification_chip_text"
+                app:checkedIconVisible="false"
+                app:chipBackgroundColor="@color/selector_notification_chip_background"
+                app:chipCornerRadius="20dp"
+                app:chipMinHeight="40dp"
+                app:chipStrokeColor="@color/transparent"
+                app:chipStrokeWidth="0dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFilterComments"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:checkable="true"
+                android:text="Comments"
+                android:textColor="@color/selector_notification_chip_text"
+                app:checkedIconVisible="false"
+                app:chipBackgroundColor="@color/selector_notification_chip_background"
+                app:chipCornerRadius="20dp"
+                app:chipMinHeight="40dp"
+                app:chipStrokeColor="@color/transparent"
+                app:chipStrokeWidth="0dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFilterLikes"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:checkable="true"
+                android:text="Likes"
+                android:textColor="@color/selector_notification_chip_text"
+                app:checkedIconVisible="false"
+                app:chipBackgroundColor="@color/selector_notification_chip_background"
+                app:chipCornerRadius="20dp"
+                app:chipMinHeight="40dp"
+                app:chipStrokeColor="@color/transparent"
+                app:chipStrokeWidth="0dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFilterMentions"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:checkable="true"
+                android:text="Mentions"
+                android:textColor="@color/selector_notification_chip_text"
+                app:checkedIconVisible="false"
+                app:chipBackgroundColor="@color/selector_notification_chip_background"
+                app:chipCornerRadius="20dp"
+                app:chipMinHeight="40dp"
+                app:chipStrokeColor="@color/transparent"
+                app:chipStrokeWidth="0dp" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvNotifications"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:paddingBottom="10dp"/>
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingTop="4dp"
+        android:paddingBottom="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/filterScroll" />
 
     <ProgressBar
         android:id="@+id/progressNotifications"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="24dp"
-        android:visibility="gone" />
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/filterScroll" />
 
     <TextView
         android:id="@+id/textNotificationsState"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
         android:gravity="center"
-        android:textColor="@color/yenkasa_black"
-        android:textSize="14sp"
-        android:visibility="gone" />
-</LinearLayout>
+        android:lineSpacingExtra="4dp"
+        android:text="You're all caught up 🎉"
+        android:textColor="@color/menu_secondary_text"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/filterScroll" />
+</androidx.constraintlayout.widget.ConstraintLayout>

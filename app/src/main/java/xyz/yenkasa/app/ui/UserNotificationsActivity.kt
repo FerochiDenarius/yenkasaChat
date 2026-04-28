@@ -1,7 +1,6 @@
 package xyz.yenkasa.app.ui
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -25,10 +24,12 @@ import xyz.yenkasa.app.model.NotificationModel
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import com.google.gson.Gson
+import com.google.android.material.chip.ChipGroup
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import xyz.yenkasa.app.util.NotificationNavigation
 
 
 class UserNotificationsActivity : AppCompatActivity() {
@@ -37,8 +38,11 @@ class UserNotificationsActivity : AppCompatActivity() {
     private lateinit var rvNotifications: RecyclerView
     private lateinit var progressNotifications: ProgressBar
     private lateinit var textNotificationsState: TextView
+    private lateinit var chipGroupFilters: ChipGroup
 
     private var previousList: List<NotificationModel> = emptyList()
+    private var allNotifications: List<NotificationModel> = emptyList()
+    private var activeFilter: NotificationFilter = NotificationFilter.ALL
 
     private companion object {
         const val PREFS_NAME = "settings"
@@ -56,6 +60,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         rvNotifications = findViewById(R.id.rvNotifications)
         progressNotifications = findViewById(R.id.progressNotifications)
         textNotificationsState = findViewById(R.id.textNotificationsState)
+        chipGroupFilters = findViewById(R.id.chipGroupNotificationFilters)
         rvNotifications.layoutManager = LinearLayoutManager(this)
 
         adapter = NotificationAdapter(
@@ -66,6 +71,10 @@ class UserNotificationsActivity : AppCompatActivity() {
 
         rvNotifications.adapter = adapter
         adapter.attachSwipeToRecyclerView(rvNotifications)
+        findViewById<View>(R.id.btnNotificationSettings).setOnClickListener {
+            startActivity(android.content.Intent(this, SettingsActivity::class.java))
+        }
+        initFilters()
 
         loadNotifications()
         initSocketListeners()
@@ -90,6 +99,7 @@ class UserNotificationsActivity : AppCompatActivity() {
             ) {
                 if (!res.isSuccessful) {
                     Log.e("NOTIF", "Failed to load notifications: ${res.code()}")
+                    allNotifications = emptyList()
                     adapter.updateList(emptyList())
                     previousList = emptyList()
                     showMessageState("Could not load notifications. Pull back and try again.")
@@ -99,6 +109,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 val body = res.body()
                 if (body == null) {
                     Log.e("NOTIF", "Notifications response body was empty")
+                    allNotifications = emptyList()
                     adapter.updateList(emptyList())
                     previousList = emptyList()
                     showMessageState("No notifications yet.")
@@ -115,13 +126,14 @@ class UserNotificationsActivity : AppCompatActivity() {
                     newItems.forEach { triggerLocalNotification(it) }
                 }
 
-                adapter.updateList(newList)
+                allNotifications = newList
+                renderFilteredNotifications()
                 previousList = newList
-                showContentState(newList)
             }
 
             override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
                 Log.e("NOTIF", "Network error loading notifications", t)
+                allNotifications = emptyList()
                 adapter.updateList(emptyList())
                 previousList = emptyList()
                 showMessageState("Network error. Check your connection and try again.")
@@ -142,12 +154,12 @@ class UserNotificationsActivity : AppCompatActivity() {
                     val notif = parseNotification(data)
                     if (isMutedNotification(notif)) return@runOnUiThread
 
-                    val updated = adapter.itemsList.toMutableList()
+                    val updated = allNotifications.toMutableList()
                     updated.add(0, notif)
 
-                    adapter.updateList(updated)
+                    allNotifications = updated
+                    renderFilteredNotifications()
                     previousList = updated
-                    showContentState(updated)
                     triggerLocalNotification(notif)
 
                 } catch (e: Exception) {
@@ -161,7 +173,8 @@ class UserNotificationsActivity : AppCompatActivity() {
                 try {
                     val json = JSONObject(data.toString())
                     val id = json.getString("id")
-                    adapter.removeById(id)
+                    allNotifications = allNotifications.filterNot { it.id == id }
+                    renderFilteredNotifications()
                 } catch (_: Exception) {}
             }
         }
@@ -187,7 +200,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         progressNotifications.visibility = View.GONE
         if (items.isEmpty()) {
             rvNotifications.visibility = View.GONE
-            textNotificationsState.text = "No notifications yet."
+            textNotificationsState.text = "You're all caught up 🎉"
             textNotificationsState.visibility = View.VISIBLE
         } else {
             textNotificationsState.visibility = View.GONE

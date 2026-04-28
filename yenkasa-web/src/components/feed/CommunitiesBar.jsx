@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 
 const fallbackCommunities = [
@@ -9,12 +10,13 @@ const fallbackCommunities = [
 ];
 
 export default function CommunitiesBar() {
+  const navigate = useNavigate();
   const [communities, setCommunities] = useState([]);
 
   useEffect(() => {
     let mounted = true;
 
-    api.get("/communities/public")
+    api.get("/communities/public", { params: { country: "Ghana" } })
       .then(({ data }) => {
         if (!mounted) return;
         const items = Array.isArray(data) ? data : [];
@@ -36,7 +38,11 @@ export default function CommunitiesBar() {
   return (
     <section className="communities-bar">
       <div className="communities-bar__scroller">
-        <button className="communities-bar__all" type="button">
+        <button
+          className="communities-bar__all"
+          type="button"
+          onClick={() => navigate("/communities?country=Ghana")}
+        >
           <span className="communities-bar__all-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <rect x="4" y="4" width="6" height="6" rx="1.5" />
@@ -49,7 +55,27 @@ export default function CommunitiesBar() {
         </button>
 
         {items.map((community, index) => (
-          <button className="community-pill" key={community._id || community.id || index} type="button">
+          <button
+            className="community-pill"
+            key={community._id || community.id || index}
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams({
+                country: "Ghana",
+              });
+
+              if (community?._id || community?.id) {
+                params.set("communityId", community._id || community.id);
+              }
+
+              const communityName = community?.displayName || community?.name;
+              if (communityName) {
+                params.set("community", communityName);
+              }
+
+              navigate(`/communities?${params.toString()}`);
+            }}
+          >
             <span className="community-pill__avatar">
               {community.icon || community.coverImage ? (
                 <img

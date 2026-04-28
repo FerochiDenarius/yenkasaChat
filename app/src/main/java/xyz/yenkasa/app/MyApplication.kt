@@ -3,8 +3,6 @@ package xyz.yenkasa.app
 import android.app.Application
 import android.app.NotificationChannel // Added
 import android.app.NotificationManager // Added
-import android.app.PendingIntent
-import android.content.Intent
 import android.os.Build // Added
 import android.util.Log
 import com.cloudinary.android.MediaManager
@@ -23,13 +21,8 @@ import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
 import org.json.JSONObject
 import xyz.yenkasa.app.ui.CallNotificationHandler
-import xyz.yenkasa.app.ui.CoinWalletActivity
-import xyz.yenkasa.app.ui.ChatActivity
-import xyz.yenkasa.app.ui.CommentsActivity
-import xyz.yenkasa.app.ui.IncomingCallActivity
-import xyz.yenkasa.app.ui.MainActivity
-import xyz.yenkasa.app.ui.UserProfileActivity
 import xyz.yenkasa.app.util.CallPayloadUtils
+import xyz.yenkasa.app.util.NotificationNavigation
 
 
 class MyApplication : Application(), OSSubscriptionObserver {
@@ -124,7 +117,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
 
             val title = notif.title ?: "Notification"
             val body = notif.body ?: ""
-            val contentIntent = buildNotificationPendingIntent(notif.additionalData)
+            val contentIntent = NotificationNavigation.buildPendingIntent(this, notif.additionalData)
 
             // 🔔 Build our own custom notification with user-selected sound
             val builder = NotificationCompat.Builder(this, NEW_CHAT_MESSAGES_CHANNEL_ID)
@@ -147,7 +140,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 CallNotificationHandler.handleNotificationOpened(this, notification.additionalData ?: JSONObject())
                 return@setNotificationOpenedHandler
             }
-            openNotificationTarget(notification.additionalData)
+            startActivity(NotificationNavigation.buildIntent(this, notification.additionalData))
         }
 
         // Initial check for Player ID (as you have)
@@ -216,23 +209,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         }
     }
 
-    private fun buildNotificationPendingIntent(data: JSONObject?): PendingIntent {
-        val intent = buildNotificationIntent(data)
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
-
-        val requestCode = data?.optString("notificationId")
-            ?.takeIf { it.isNotBlank() }
-            ?.hashCode()
-            ?: System.currentTimeMillis().toInt()
-
-        return PendingIntent.getActivity(this, requestCode, intent, flags)
-    }
-
-    private fun openNotificationTarget(data: JSONObject?) {
-        startActivity(buildNotificationIntent(data))
-    }
-
     private fun isCallNotification(data: JSONObject?): Boolean {
         if (data == null) return false
         if (CallPayloadUtils.isDataCall(data)) return false
@@ -255,62 +231,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         val type = data.optString("type", "").lowercase()
         val targetType = data.optString("targetType", "").lowercase()
         return type == "reward" || type.startsWith("reward_") || targetType == "wallet"
-    }
-
-    private fun buildIncomingCallIntent(data: JSONObject?): Intent {
-        val callerId = data?.optString("callerId", data.optString("fromUserId", "")).orEmpty()
-        val callerName = data?.optString("callerName", "Unknown") ?: "Unknown"
-        val isVideo = when {
-            data?.has("isVideo") == true -> data.optBoolean("isVideo", true)
-            data?.has("video") == true -> data.optBoolean("video", true)
-            else -> data?.optString("callType", "video")?.equals("video", ignoreCase = true) ?: true
-        }
-        val roomUrl = data?.optString("roomUrl", "").orEmpty()
-        val token = data?.optString("token", data.optString("roomToken", "")).orEmpty()
-        val callType = data?.optString("callType", if (isVideo) "video" else "audio") ?: if (isVideo) "video" else "audio"
-
-        return Intent(this, IncomingCallActivity::class.java).apply {
-            putExtra("CALLER_ID", callerId)
-            putExtra("CALLER_NAME", callerName)
-            putExtra("IS_VIDEO_CALL", isVideo)
-            putExtra("CALL_TYPE", callType)
-            putExtra("ROOM_URL", roomUrl)
-            putExtra("ROOM_TOKEN", token)
-        }
-    }
-
-    private fun buildNotificationIntent(data: JSONObject?): Intent {
-        val targetType = data?.optString("targetType").orEmpty()
-        val targetId = data?.optString("targetId").orEmpty()
-        val activityId = data?.optString("activityId").orEmpty()
-
-        val intent = when (targetType) {
-            "call" -> if (CallPayloadUtils.isDataCall(data)) {
-                Intent(this, MainActivity::class.java)
-            } else {
-                buildIncomingCallIntent(data)
-            }
-            "chat" -> Intent(this, ChatActivity::class.java).apply {
-                putExtra("roomId", targetId.ifBlank {
-                    data?.optString("roomId").orEmpty().ifBlank { data?.optString("chatId").orEmpty() }
-                })
-            }
-            "wallet" -> Intent(this, CoinWalletActivity::class.java)
-            "post" -> Intent(this, CommentsActivity::class.java).apply {
-                putExtra("POST_ID", targetId.ifBlank { activityId })
-            }
-            "comment" -> Intent(this, CommentsActivity::class.java).apply {
-                putExtra("POST_ID", targetId.ifBlank { activityId })
-                putExtra("openComments", true)
-            }
-            "profile" -> Intent(this, UserProfileActivity::class.java).apply {
-                putExtra("USER_ID", targetId)
-            }
-            else -> Intent(this, MainActivity::class.java)
-        }
-
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        return intent
     }
 
     override fun onOSSubscriptionChanged(stateChanges: OSSubscriptionStateChanges) {

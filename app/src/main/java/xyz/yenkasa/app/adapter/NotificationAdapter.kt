@@ -1,16 +1,23 @@
 package xyz.yenkasa.app.adapter
 
-import android.graphics.Color
-import android.view.*
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.NotificationModel
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class NotificationAdapter(
     private var items: MutableList<NotificationModel>,
@@ -22,11 +29,13 @@ class NotificationAdapter(
         get() = items
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val msg: TextView = view.findViewById(R.id.txtNotificationMessage)
+        val title: TextView = view.findViewById(R.id.txtNotificationTitle)
+        val subtitle: TextView = view.findViewById(R.id.txtNotificationSubtitle)
         val time: TextView = view.findViewById(R.id.txtNotificationTime)
         val unreadDot: ImageView = view.findViewById(R.id.imgUnreadIndicator)
         val icon: ImageView = view.findViewById(R.id.imgNotificationIcon)
-        val container: View = view
+        val iconContainer: FrameLayout = view.findViewById(R.id.iconContainer)
+        val rewardBadge: TextView = view.findViewById(R.id.txtRewardBadge)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -39,23 +48,41 @@ class NotificationAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, pos: Int) {
         val item = items[pos]
+        val content = buildNotificationContent(item)
 
-        holder.msg.text = formatMessage(item)
+        holder.title.text = content.title
+        holder.title.setTypeface(null, Typeface.BOLD)
+        holder.subtitle.text = content.subtitle
         holder.time.text = formatRelativeTime(item.createdAt)
+        holder.unreadDot.visibility = if (item.status == "unread") View.VISIBLE else View.INVISIBLE
 
-        // unread highlight
-        val unread = item.status == "unread"
-        holder.unreadDot.visibility = if (unread) View.VISIBLE else View.INVISIBLE
-        holder.container.setBackgroundColor(
-            if (unread) Color.parseColor("#EFEFEF") else Color.TRANSPARENT
-        )
+        holder.icon.setImageResource(getNotificationIcon(item.type))
+        holder.iconContainer.background = roundedIconBackground(holder, getNotificationColor(item.type))
 
-        holder.icon.setImageResource(getIconForType(item.type))
+        if (content.rewardBadge == null) {
+            holder.rewardBadge.visibility = View.GONE
+        } else {
+            holder.rewardBadge.visibility = View.VISIBLE
+            holder.rewardBadge.text = content.rewardBadge
+        }
 
-        holder.itemView.setOnClickListener { onItemClick(item) }
+        holder.itemView.setOnClickListener {
+            holder.itemView.animate()
+                .scaleX(0.97f)
+                .scaleY(0.97f)
+                .setDuration(70)
+                .withEndAction {
+                    holder.itemView.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(90)
+                        .withEndAction { onItemClick(item) }
+                        .start()
+                }
+                .start()
+        }
     }
 
-    // ---------- NEW ----------
     fun markItemAsRead(id: String) {
         val index = items.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -70,17 +97,6 @@ class NotificationAdapter(
         if (index != -1) {
             items.removeAt(index)
             notifyItemRemoved(index)
-        }
-    }
-    // --------------------------
-
-    private fun formatMessage(n: NotificationModel): String {
-        return when (n.type.lowercase()) {
-            "like", "post_liked" -> "Someone liked your post"
-            "comment" -> "Someone commented on your post"
-            "follow" -> "New follower"
-            "post_approved" -> "Your post was approved"
-            else -> n.message ?: n.type
         }
     }
 
@@ -110,6 +126,85 @@ class NotificationAdapter(
         }
     }
 
+    fun getNotificationIcon(type: String): Int {
+        return when (type.lowercase()) {
+            "reward_post_view", "reward_post_view_received", "post_view", "view_milestone" -> R.drawable.ic_eye
+            "reward_post", "video" -> R.drawable.ic_play_arrow
+            "image", "reward_image" -> R.drawable.ic_image
+            "comment", "post_comment", "comment_reply", "comment_like", "reward_comment" -> R.drawable.ic_comment
+            "like", "post_liked", "post_like", "reward_post_like", "reward_comment_like" -> R.drawable.ic_heart_filled
+            "post_approved" -> R.drawable.ic_check_circle
+            "follow", "new_follower" -> R.drawable.ic_person_add
+            else -> R.drawable.ic_bell
+        }
+    }
+
+    fun getNotificationColor(type: String): Int {
+        return when (type.lowercase()) {
+            "reward_image", "image" -> R.color.notification_image_bg
+            "reward_post_view", "reward_post_view_received", "post_view", "view_milestone" -> R.color.notification_view_bg
+            "comment", "post_comment", "comment_reply", "comment_like", "reward_comment" -> R.color.notification_comment_bg
+            "like", "post_liked", "post_like", "reward_post_like", "reward_comment_like" -> R.color.notification_like_bg
+            else -> R.color.notification_video_bg
+        }
+    }
+
+    private fun buildNotificationContent(n: NotificationModel): NotificationContent {
+        val rawMessage = n.message?.trim().orEmpty()
+        val fallbackTitle = formatMessage(n)
+        val rewardAmount = extractRewardAmount(rawMessage)
+        val isReward = isRewardNotification(n) || rewardAmount != null
+
+        if (!isReward) {
+            return NotificationContent(
+                title = rawMessage.ifBlank { fallbackTitle },
+                subtitle = subtitleForType(n),
+                rewardBadge = null
+            )
+        }
+
+        val parts = rawMessage
+            .split(". ")
+            .map { it.trim().trimEnd('.') }
+            .filter { it.isNotBlank() }
+
+        val title = parts.firstOrNull()
+            ?.replaceFirst("^Earned".toRegex(), "You earned")
+            ?: fallbackTitle
+        val subtitle = parts.getOrNull(1)
+            ?: rewardAmount?.let { "$it added to your wallet" }
+            ?: "YKC added to your wallet"
+
+        return NotificationContent(
+            title = title,
+            subtitle = subtitle,
+            rewardBadge = rewardAmount
+        )
+    }
+
+    private fun formatMessage(n: NotificationModel): String {
+        return when (n.type.lowercase()) {
+            "like", "post_liked", "post_like" -> "Someone liked your post"
+            "comment", "post_comment" -> "Someone commented on your post"
+            "comment_reply" -> "Someone replied to your comment"
+            "follow", "new_follower" -> "New follower"
+            "post_approved" -> "Your post was approved"
+            "view_milestone" -> "Your post reached a new view milestone"
+            else -> n.message ?: n.type
+        }
+    }
+
+    private fun subtitleForType(n: NotificationModel): String {
+        return when (n.type.lowercase()) {
+            "follow", "new_follower" -> "Tap to view profile"
+            "post_comment", "comment", "comment_reply" -> "Tap to open the conversation"
+            "post_like", "post_liked", "like" -> "Tap to view the post"
+            "ad_approved", "ad_rejected" -> "Tap to view your ads"
+            "community_approved", "community_rejected" -> "Tap to view your communities"
+            else -> "Tap to view activity"
+        }
+    }
+
     private fun formatRelativeTime(iso: String?): String {
         if (iso == null) return "Just now"
         return try {
@@ -128,14 +223,26 @@ class NotificationAdapter(
         }
     }
 
-    private fun getIconForType(type: String): Int {
-        return when (type.lowercase()) {
-            "comment" -> R.drawable.ic_comment
-            "like", "post_liked" -> R.drawable.ic_like
-            "post_approved" -> R.drawable.ic_check_circle
-            "follow" -> R.drawable.ic_person_add
-            else -> R.drawable.ic_bell
+    private fun roundedIconBackground(holder: ViewHolder, colorRes: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = holder.itemView.resources.displayMetrics.density * 14f
+            setColor(ContextCompat.getColor(holder.itemView.context, colorRes))
         }
+    }
+
+    private fun extractRewardAmount(message: String): String? {
+        val match = Regex("""\+?(\d+(?:\.\d+)?)\s*YKC""", RegexOption.IGNORE_CASE)
+            .find(message)
+            ?: Regex("""earned\s+(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE).find(message)
+
+        val amount = match?.groupValues?.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return null
+        return "+$amount YKC"
+    }
+
+    private fun isRewardNotification(n: NotificationModel): Boolean {
+        val type = n.type.lowercase()
+        return type == "reward" || type.startsWith("reward_") || n.targetType?.lowercase() == "wallet"
     }
 
     class NotificationDiff(
@@ -146,6 +253,7 @@ class NotificationAdapter(
         override fun getNewListSize() = newList.size
         override fun areItemsTheSame(old: Int, new: Int) =
             oldList[old].id == newList[new].id
+
         override fun areContentsTheSame(old: Int, new: Int) =
             oldList[old] == newList[new]
     }
@@ -153,6 +261,7 @@ class NotificationAdapter(
     fun attachSwipeToRecyclerView(rv: RecyclerView) {
         val swipe = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
+
             override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
                 val position = vh.bindingAdapterPosition
                 if (position == RecyclerView.NO_POSITION) {
@@ -165,4 +274,10 @@ class NotificationAdapter(
         }
         ItemTouchHelper(swipe).attachToRecyclerView(rv)
     }
+
+    private data class NotificationContent(
+        val title: String,
+        val subtitle: String,
+        val rewardBadge: String?
+    )
 }

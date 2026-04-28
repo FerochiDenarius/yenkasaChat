@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import Verification from "./pages/Verification";
 import Ads from "./pages/Ads";
 import Communities from "./pages/Communities";
+import PostDetails from "./pages/PostDetails";
 import { getToken } from "./utils/storage";
 
 function ProtectedRoute({ children }) {
@@ -71,6 +72,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Verification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/post/:postId"
+          element={
+            <ProtectedRoute>
+              <PostDetails />
             </ProtectedRoute>
           }
         />

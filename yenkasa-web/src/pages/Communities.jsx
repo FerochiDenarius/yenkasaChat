@@ -1,17 +1,38 @@
 import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getCommunities, getMyCommunities } from "../api/communities";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import { useAsync } from "../hooks/useAsync";
 
 export default function Communities() {
-  const publicState = useAsync(() => getCommunities(), true);
+  const [searchParams] = useSearchParams();
+  const selectedCommunityId = searchParams.get("communityId");
+  const selectedCommunityName = searchParams.get("community");
+  const publicState = useAsync(() => getCommunities({ country: "Ghana" }), true);
   const mineState = useAsync(getMyCommunities, true);
 
   const publicCommunities = useMemo(() => {
     const payload = publicState.data;
     return Array.isArray(payload) ? payload : [];
   }, [publicState.data]);
+
+  const visiblePublicCommunities = useMemo(() => {
+    if (!selectedCommunityId && !selectedCommunityName) return publicCommunities;
+
+    const normalizedName = String(selectedCommunityName || "").trim().toLowerCase();
+    return publicCommunities.filter((community) => {
+      const idMatch =
+        selectedCommunityId &&
+        String(community?._id || community?.id || "") === selectedCommunityId;
+      const nameMatch =
+        normalizedName &&
+        String(community?.displayName || community?.name || "")
+          .trim()
+          .toLowerCase() === normalizedName;
+      return idMatch || nameMatch;
+    });
+  }, [publicCommunities, selectedCommunityId, selectedCommunityName]);
 
   const myCommunities = useMemo(() => {
     const payload = mineState.data;
@@ -25,15 +46,41 @@ export default function Communities() {
       <PageHeader
         eyebrow="Network"
         title="Communities"
-        subtitle="Discover public communities and track the ones you created."
+        subtitle={
+          selectedCommunityName
+            ? `Viewing ${selectedCommunityName} in Ghana.`
+            : "Discover Ghana communities and track the ones you created."
+        }
       />
 
       <section className="stack">
-        <h2 className="section-title">Public communities</h2>
-        {publicCommunities.length ? (
-          publicCommunities.map((community) => <CommunityCard key={community._id} community={community} />)
+        <h2 className="section-title">
+          {selectedCommunityName
+            ? `${selectedCommunityName} in Ghana`
+            : "Public communities in Ghana"}
+        </h2>
+        {visiblePublicCommunities.length ? (
+          visiblePublicCommunities.map((community) => (
+            <CommunityCard
+              key={community._id}
+              community={community}
+              selected={
+                String(community?._id || community?.id || "") === selectedCommunityId ||
+                String(community?.displayName || community?.name || "")
+                  .trim()
+                  .toLowerCase() === String(selectedCommunityName || "").trim().toLowerCase()
+              }
+            />
+          ))
         ) : (
-          <EmptyState title="No public communities" description="There are no public communities available right now." />
+          <EmptyState
+            title="No public communities"
+            description={
+              selectedCommunityName
+                ? `No approved Ghana community matched ${selectedCommunityName}.`
+                : "There are no approved Ghana communities available right now."
+            }
+          />
         )}
       </section>
 
@@ -49,12 +96,12 @@ export default function Communities() {
   );
 }
 
-function CommunityCard({ community }) {
+function CommunityCard({ community, selected = false }) {
   const displayName = community?.displayName || community?.name || "Community";
   const status = normalizedStatus(community);
 
   return (
-    <article className="card community-card">
+    <article className={`card community-card${selected ? " community-card--selected" : ""}`}>
       <div className="split-row">
         <div>
           <h3>{displayName}</h3>

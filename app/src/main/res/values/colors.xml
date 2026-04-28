@@ -94,6 +94,16 @@
         <color name="wallet_hero_start">#002515</color>
         <color name="wallet_hero_end">#00120A</color>
         <color name="wallet_negative">#D64A4A</color>
+        <color name="notification_page_background">#FBFAF6</color>
+        <color name="notification_card_stroke">#F0EFE8</color>
+        <color name="notification_chip_inactive">#F5F5F3</color>
+        <color name="notification_badge_bg">#EAF8EF</color>
+        <color name="notification_badge_text">#15803D</color>
+        <color name="notification_video_bg">#FFF0B8</color>
+        <color name="notification_image_bg">#E8DEFF</color>
+        <color name="notification_view_bg">#DDF7F4</color>
+        <color name="notification_comment_bg">#FFE1EE</color>
+        <color name="notification_like_bg">#FFE8DC</color>
 
         <color name="account_background">#F7FAF7</color>
         <color name="account_surface">#FFFFFF</color>

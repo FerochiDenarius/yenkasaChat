@@ -334,7 +334,13 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
             playerId: mod.playerId,
             title: "Pending Post",
             body: "A new post requires your approval.",
-            data: { postId: post._id.toString() }
+            data: {
+              type: "post_pending",
+              targetType: "post",
+              targetId: post._id.toString(),
+              activityId: post._id.toString(),
+              postId: post._id.toString()
+            }
           });
         }
       }

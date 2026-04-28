@@ -66,7 +66,10 @@ class UserNotificationsActivity : AppCompatActivity() {
         adapter = NotificationAdapter(
             items = mutableListOf(),
             onItemClick = { item -> handleNotificationClick(item) },
-            onSwipeDelete = { item -> markAsRead(item.id) }
+            onSwipeDelete = { item ->
+                allNotifications = allNotifications.filterNot { it.id == item.id }
+                markAsRead(item.id)
+            }
         )
 
         rvNotifications.adapter = adapter
@@ -219,6 +222,25 @@ class UserNotificationsActivity : AppCompatActivity() {
         return items.filterNot { isMutedNotification(it) }
     }
 
+    private fun initFilters() {
+        chipGroupFilters.setOnCheckedStateChangeListener { _, checkedIds ->
+            activeFilter = when (checkedIds.firstOrNull()) {
+                R.id.chipFilterRewards -> NotificationFilter.REWARDS
+                R.id.chipFilterComments -> NotificationFilter.COMMENTS
+                R.id.chipFilterLikes -> NotificationFilter.LIKES
+                R.id.chipFilterMentions -> NotificationFilter.MENTIONS
+                else -> NotificationFilter.ALL
+            }
+            renderFilteredNotifications()
+        }
+    }
+
+    private fun renderFilteredNotifications() {
+        val filtered = allNotifications.filter { activeFilter.matches(it) }
+        adapter.updateList(filtered)
+        showContentState(filtered)
+    }
+
     private fun isMutedNotification(notification: NotificationModel): Boolean {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val notificationsEnabled = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
@@ -239,6 +261,7 @@ class UserNotificationsActivity : AppCompatActivity() {
     private fun handleNotificationClick(item: NotificationModel) {
 
         // Remove visually & mark backend as read
+        allNotifications = allNotifications.filterNot { it.id == item.id }
         adapter.removeById(item.id)
         markAsRead(item.id)
 
@@ -248,196 +271,10 @@ class UserNotificationsActivity : AppCompatActivity() {
 
 
     private fun navigateFromNotification(item: NotificationModel) {
-
-        val type = item.type?.lowercase()
-        val targetType = item.targetType?.lowercase()
-        val targetId = item.targetId
-        val postId = item.postId ?: item.activityId
-
-        // ------------------------------------------------------
-        // PRIMARY ROUTING USING targetType
-        // ------------------------------------------------------
-        when (targetType) {
-
-            // ------------------------------------------------------
-            // PROFILE NOTIFICATIONS (follow, blocked, profile_view)
-            // ------------------------------------------------------
-            "profile" -> {
-                val intent = Intent(this, UserProfileActivity::class.java)
-                intent.putExtra("USER_ID", targetId)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // POST NOTIFICATIONS (post_like, post_comment, post_reply)
-            // ------------------------------------------------------
-            "post" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", targetId ?: postId)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // COMMENT NOTIFICATIONS (comment_like, comment_reply)
-            // ------------------------------------------------------
-            "comment" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", postId)
-                intent.putExtra("openComments", true)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // SYSTEM NOTIFICATIONS (system_block, system_unblock)
-            // ------------------------------------------------------
-            "system" -> {
-                when (type) {
-                    "system_block" ->
-                        Toast.makeText(this, "Your account has been restricted.", Toast.LENGTH_LONG).show()
-
-                    "system_unblock" ->
-                        Toast.makeText(this, "Your restrictions have been removed.", Toast.LENGTH_LONG).show()
-
-                    else ->
-                        Toast.makeText(this, item.message ?: "System notification", Toast.LENGTH_SHORT).show()
-                }
-                return
-            }
-
-            "wallet" -> {
-                startActivity(Intent(this, CoinWalletActivity::class.java))
-                return
-            }
-
-            "ad" -> {
-                startActivity(Intent(this, MyAdsActivity::class.java))
-                return
-            }
-
-            "community" -> {
-                startActivity(Intent(this, MyCommunitiesActivity::class.java))
-                return
-            }
+        if (item.targetType.equals("system", ignoreCase = true)) {
+            Toast.makeText(this, item.message ?: "System notification", Toast.LENGTH_SHORT).show()
         }
-
-        // ------------------------------------------------------
-        // SECONDARY ROUTING USING type (full explicit mapping)
-        // ------------------------------------------------------
-        when (type) {
-
-            // ------------------------------------------------------
-            // FOLLOW NOTIFICATIONS
-            // ------------------------------------------------------
-            "follow", "new_follower", "follow_request", "follow_accepted" -> {
-                val intent = Intent(this, UserProfileActivity::class.java)
-                intent.putExtra("USER_ID", targetId)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // POST LIKES
-            // ------------------------------------------------------
-            "post_like" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", postId)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // POST COMMENTS
-            // ------------------------------------------------------
-            "post_comment" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", postId)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // COMMENT REPLIES
-            // ------------------------------------------------------
-            "comment_reply" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", postId)
-                intent.putExtra("openComments", true)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // COMMENT LIKES
-            // ------------------------------------------------------
-            "comment_like" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", postId)
-                intent.putExtra("openComments", true)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // USER BLOCK NOTIFICATIONS
-            // ------------------------------------------------------
-            "blocked" -> {
-                val intent = Intent(this, UserProfileActivity::class.java)
-                intent.putExtra("USER_ID", targetId)   // open blocker profile
-                startActivity(intent)
-                return
-            }
-
-            "unblocked" -> {
-                val intent = Intent(this, UserProfileActivity::class.java)
-                intent.putExtra("USER_ID", targetId)
-                startActivity(intent)
-                return
-            }
-
-            // ------------------------------------------------------
-            // POST APPROVAL OR REVIEW
-            // ------------------------------------------------------
-            "post_under_review" -> {
-                Toast.makeText(this, item.message ?: "Your post is under review", Toast.LENGTH_LONG).show()
-                return
-            }
-
-            "post_approved" -> {
-                val intent = Intent(this, CommentsActivity::class.java)
-                intent.putExtra("POST_ID", targetId)
-                startActivity(intent)
-                return
-            }
-
-            "ad_approved", "ad_rejected" -> {
-                startActivity(Intent(this, MyAdsActivity::class.java))
-                return
-            }
-
-            "community_approved", "community_rejected" -> {
-                startActivity(Intent(this, MyCommunitiesActivity::class.java))
-                return
-            }
-
-            "reward", "reward_post", "reward_comment", "reward_comment_like",
-            "reward_post_like", "reward_post_view", "reward_post_view_received",
-            "reward_follow", "reward_verification", "reward_daily_login" -> {
-                startActivity(Intent(this, CoinWalletActivity::class.java))
-                return
-            }
-
-            // ------------------------------------------------------
-            // FALLBACK
-            // ------------------------------------------------------
-            else -> {
-                item.targetUrl?.let { url ->
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                } ?: Toast.makeText(this, "No navigation available", Toast.LENGTH_SHORT).show()
-            }
-        }
+        startActivity(NotificationNavigation.buildIntent(this, item))
     }
 
     // ============================================================
@@ -481,6 +318,7 @@ class UserNotificationsActivity : AppCompatActivity() {
             .setContentText(notification.message ?: "")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setContentIntent(NotificationNavigation.buildPendingIntent(this, notification))
 
         soundUri?.let { builder.setSound(it) }
 
@@ -490,5 +328,25 @@ class UserNotificationsActivity : AppCompatActivity() {
     private fun canPostLocalNotification(): Boolean {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private enum class NotificationFilter {
+        ALL,
+        REWARDS,
+        COMMENTS,
+        LIKES,
+        MENTIONS;
+
+        fun matches(notification: NotificationModel): Boolean {
+            val type = notification.type.lowercase()
+            val message = notification.message.orEmpty().lowercase()
+            return when (this) {
+                ALL -> true
+                REWARDS -> type == "reward" || type.startsWith("reward_") || notification.targetType?.lowercase() == "wallet"
+                COMMENTS -> "comment" in type || "reply" in type
+                LIKES -> "like" in type
+                MENTIONS -> "mention" in type || "mentioned" in message
+            }
+        }
     }
 }

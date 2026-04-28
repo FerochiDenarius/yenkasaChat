@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 
 const fallbackCommunities = [
@@ -9,8 +8,10 @@ const fallbackCommunities = [
   { _id: "creative", name: "Creative Artists Hub", country: "Ghana" }
 ];
 
-export default function CommunitiesBar() {
-  const navigate = useNavigate();
+export default function CommunitiesBar({
+  selectedCommunityId = null,
+  onSelectCommunity,
+}) {
   const [communities, setCommunities] = useState([]);
 
   useEffect(() => {
@@ -39,9 +40,11 @@ export default function CommunitiesBar() {
     <section className="communities-bar">
       <div className="communities-bar__scroller">
         <button
-          className="communities-bar__all"
+          className={`communities-bar__all${
+            !selectedCommunityId ? " communities-bar__all--active" : ""
+          }`}
           type="button"
-          onClick={() => navigate("/communities?country=Ghana")}
+          onClick={() => onSelectCommunity?.(null)}
         >
           <span className="communities-bar__all-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -56,25 +59,15 @@ export default function CommunitiesBar() {
 
         {items.map((community, index) => (
           <button
-            className="community-pill"
+            className={`community-pill${
+              String(community._id || community.id || "") ===
+              String(selectedCommunityId || "")
+                ? " community-pill--active"
+                : ""
+            }`}
             key={community._id || community.id || index}
             type="button"
-            onClick={() => {
-              const params = new URLSearchParams({
-                country: "Ghana",
-              });
-
-              if (community?._id || community?.id) {
-                params.set("communityId", community._id || community.id);
-              }
-
-              const communityName = community?.displayName || community?.name;
-              if (communityName) {
-                params.set("community", communityName);
-              }
-
-              navigate(`/communities?${params.toString()}`);
-            }}
+            onClick={() => onSelectCommunity?.(community)}
           >
             <span className="community-pill__avatar">
               {community.icon || community.coverImage ? (

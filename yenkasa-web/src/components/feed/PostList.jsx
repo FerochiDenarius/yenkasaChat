@@ -4,7 +4,7 @@ import AdCard from "../AdCard";
 import EmptyState from "../EmptyState";
 import PostCard from "./PostCard";
 
-export default function PostList({ activeTab, activeSort }) {
+export default function PostList({ activeTab, activeSort, selectedCommunity }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -14,7 +14,7 @@ export default function PostList({ activeTab, activeSort }) {
     setLoading(true);
     setError("");
 
-    loadFeed()
+    loadFeed(selectedCommunity?._id || selectedCommunity?.id)
       .then((feedItems) => {
         if (mounted) setItems(feedItems);
       })
@@ -31,7 +31,7 @@ export default function PostList({ activeTab, activeSort }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [selectedCommunity]);
 
   const filteredItems = useMemo(() => {
     const normalized = items.filter(Boolean);
@@ -88,7 +88,13 @@ export default function PostList({ activeTab, activeSort }) {
     return (
       <EmptyState
         title="No posts yet"
-        description="Your feed is empty for now. Join more communities or switch tabs."
+        description={
+          selectedCommunity
+            ? `No posts are available yet in ${
+                selectedCommunity.displayName || selectedCommunity.name || "this community"
+              }.`
+            : "Your feed is empty for now. Join more communities or switch tabs."
+        }
       />
     );
   }
@@ -110,8 +116,10 @@ export default function PostList({ activeTab, activeSort }) {
   );
 }
 
-async function loadFeed() {
-  const { data } = await api.get("/feed");
+async function loadFeed(communityId) {
+  const { data } = communityId
+    ? await api.get(`/posts/community/${communityId}`)
+    : await api.get("/feed");
   return normalizeFeedData(data);
 }
 

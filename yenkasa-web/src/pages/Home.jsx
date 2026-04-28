@@ -10,19 +10,27 @@ import "../styles/feed.css";
 export default function Home() {
   const [activeTab, setActiveTab] = useState("For You");
   const [activeSort, setActiveSort] = useState("Top");
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
 
   return (
     <main className="feed-home">
       <div className="feed-home__shell">
         <TopBar />
-        <CommunitiesBar />
+        <CommunitiesBar
+          selectedCommunityId={selectedCommunity?._id || selectedCommunity?.id || null}
+          onSelectCommunity={setSelectedCommunity}
+        />
         <FeedTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
           activeSort={activeSort}
           onSortChange={setActiveSort}
         />
-        <PostList activeTab={activeTab} activeSort={activeSort} />
+        <PostList
+          activeTab={activeTab}
+          activeSort={activeSort}
+          selectedCommunity={selectedCommunity}
+        />
       </div>
       <FloatingButton />
       <BottomNav />

@@ -144,7 +144,13 @@ await rewardService.reward(owner._id, 10, {
           playerId: owner.playerId,
           title: "Post Approved 🎉",
           body: "Your post is now live!",
-          data: { postId: post._id.toString() }
+          data: {
+            type: "post_approved",
+            targetType: "post",
+            targetId: post._id.toString(),
+            activityId: post._id.toString(),
+            postId: post._id.toString()
+          }
         });
       }
     }
@@ -219,7 +225,13 @@ await rewardService.reward(approver._id, 10, {
           playerId: owner.playerId,
           title: "Post Rejected",
           body: "Your post was rejected, but you earned 10 coins.",
-          data: { postId: post._id.toString() }
+          data: {
+            type: "post_rejected",
+            targetType: "post",
+            targetId: post._id.toString(),
+            activityId: post._id.toString(),
+            postId: post._id.toString()
+          }
         });
       }
     }

@@ -191,7 +191,13 @@ const ownerActivityId = `owner_${activityId}`;
               playerId: owner.playerId,
               title: "🎉 Post Milestone!",
               body: `Your post reached ${milestone.toLocaleString()} views.`,
-              data: { postId }
+              data: {
+                type: "view_milestone",
+                targetType: "post",
+                targetId: postId,
+                activityId: postId,
+                postId
+              }
             });
           }
         }

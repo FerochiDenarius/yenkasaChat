@@ -137,6 +137,10 @@
   background: #eef3f0;
 }
 
+.communities-bar__all--active {
+  box-shadow: inset 0 0 0 2px rgba(28, 123, 79, 0.14);
+}
+
 .communities-bar__all-icon,
 .community-pill__avatar {
   width: 66px;
@@ -178,6 +182,13 @@
   color: #1f4d35;
 }
 
+.community-pill--active .community-pill__avatar {
+  border-color: #1c7b4f;
+  box-shadow:
+    0 0 0 2px rgba(28, 123, 79, 0.16),
+    0 0 0 2px #f5f5f5 inset;
+}
+
 .communities-bar__all span:last-child,
 .community-pill__name {
   width: 78px;
@@ -185,6 +196,11 @@
   font-size: 11px;
   line-height: 1.25;
   color: #4f5d54;
+}
+
+.community-pill--active .community-pill__name {
+  color: #1c7b4f;
+  font-weight: 700;
 }
 
 .feed-tabs {
@@ -326,6 +342,25 @@
   line-height: 1.5;
 }
 
+.feed-post-card__content-button,
+.feed-post-card__media-button,
+.feed-post-card__text-panel-button,
+.feed-post-card__stats-button {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: inherit;
+  color: inherit;
+}
+
+.feed-post-card__content-button:disabled,
+.feed-post-card__media-button:disabled,
+.feed-post-card__text-panel-button:disabled {
+  cursor: default;
+}
+
 .feed-post-card__media,
 .feed-post-card__text-panel,
 .ad-card__media {
@@ -363,6 +398,10 @@
   margin-top: 12px;
   font-size: 12px;
   color: #7a867f;
+}
+
+.feed-post-card__stats-button {
+  cursor: pointer;
 }
 
 .feed-post-card__actions {

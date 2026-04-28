@@ -76,8 +76,10 @@ if (!parentCommentId) {
     type: "post_comment",
     senderId: userId,
     receiverId: post.userId._id,
-    activityId: post._id,
-    message: `${commenter.username} commented on your post`
+    activityId: post._id.toString(),
+    message: `${commenter.username} commented on your post`,
+    targetType: "post",
+    targetId: post._id.toString()
   });
 }
 
@@ -127,7 +129,8 @@ await sendNotification({
   activityId: parentCommentId, // ✅ FIX
   message: `${commenter.username} replied to your comment`,
   targetType: "comment",
-  targetId: parentCommentId
+  targetId: parentCommentId,
+  targetUrl: `/post/${post._id.toString()}?openComments=true`
 });
 
 }

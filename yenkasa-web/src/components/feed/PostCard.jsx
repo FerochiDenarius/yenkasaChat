@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
-import { buildMediaUrl, formatRelativeTime } from "../../utils/format";
+import {
+  buildMediaUrl,
+  buildVideoUrl,
+  formatRelativeTime,
+} from "../../utils/format";
 
 export default function PostCard({ post, onUpdate, detailMode = false }) {
   const navigate = useNavigate();
@@ -15,6 +19,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
 
   const liked = post?.likedByUser === true;
   const mediaUrl = buildMediaUrl(post);
+  const videoUrl = buildVideoUrl(post);
   const username = post?.userId?.username || post?.username || "Yenkasa User";
   const communityName =
     post?.communityId?.displayName || post?.communityId?.name || "Yenkasa";
@@ -27,6 +32,9 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
     post?.userId?.profileImageUrl ||
     post?.userId?.avatar ||
     null;
+  const isVideoPost =
+    Boolean(videoUrl) ||
+    String(post?.postType || "").toLowerCase() === "video";
 
   const visibleComments = useMemo(() => comments.filter(Boolean), [comments]);
 
@@ -159,7 +167,25 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
         </button>
       ) : null}
 
-      {mediaUrl ? (
+      {isVideoPost ? (
+        <button
+          type="button"
+          className="feed-post-card__media-button"
+          onClick={openPost}
+          disabled={detailMode}
+        >
+          <div className="feed-post-card__media feed-post-card__media--video">
+            <video
+              src={videoUrl}
+              poster={mediaUrl && mediaUrl !== videoUrl ? mediaUrl : undefined}
+              controls
+              preload="metadata"
+              playsInline
+            />
+            <span className="feed-post-card__media-badge">Video</span>
+          </div>
+        </button>
+      ) : mediaUrl ? (
         <button
           type="button"
           className="feed-post-card__media-button"

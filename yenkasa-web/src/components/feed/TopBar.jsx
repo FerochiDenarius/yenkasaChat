@@ -12,7 +12,11 @@ export default function TopBar() {
       </button>
 
       <div className="feed-brand">
-        <img src="/images/yc.png" alt="Yenkasa" className="feed-brand__logo" />
+        <img
+          src="/images/yenkasa_web_assets/yenkasa_logo.png"
+          alt="Yenkasa"
+          className="feed-brand__logo"
+        />
         <span>Yenkasa</span>
       </div>
 

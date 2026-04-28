@@ -3,24 +3,28 @@ package xyz.yenkasa.app.util
 object UserPermissions {
 
     private val rankOrder = listOf(
-        "user",
         "unverified",
         "verified",
         "admin",
         "moderator",
         "junior_developer",
-        "senior_developer",
-        "developer"
+        "senior_developer"
     )
 
-    private fun normalize(role: String?): String =
-        role?.trim()?.lowercase()?.replace(" ", "_") ?: "user"
+    private fun normalize(role: String?): String {
+        val normalized = role?.trim()?.lowercase()?.replace(" ", "_") ?: "unverified"
+        return when (normalized) {
+            "user" -> "unverified"
+            "developer" -> "senior_developer"
+            else -> normalized
+        }
+    }
 
     // 🟢 Can Post
     fun canPost(role: String?, verified: Boolean): Boolean {
         val r = normalize(role)
         return when (r) {
-            "user", "verified", "admin", "moderator", "developer",
+            "unverified", "verified", "admin", "moderator",
             "junior_developer", "senior_developer" -> true
             else -> false
         }
@@ -35,7 +39,7 @@ object UserPermissions {
     // 🟢 Can Create Communities
     fun canCreateCommunity(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "developer", "moderator", "admin")
+        return r in listOf("senior_developer", "junior_developer", "moderator", "admin")
     }
 
     // 🟢 Can Create Sponsored Ads
@@ -68,6 +72,7 @@ object UserPermissions {
         val target = normalize(targetRole)
         val actorRank = rankOrder.indexOf(actor)
         val targetRank = rankOrder.indexOf(target)
+        if (actorRank == -1 || targetRank == -1) return false
         return actorRank > targetRank
     }
 }

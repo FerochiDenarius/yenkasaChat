@@ -1,37 +1,95 @@
-const RANKING_LAUNCH_DATE = new Date(
+const OFFICIAL_PHASE_START_DATE = new Date(
   process.env.RANKING_LAUNCH_DATE || "2026-05-25T00:00:00.000Z"
 );
 
 const PRELAUNCH_LABEL = "Pre-launch ranking period";
+const OFFICIAL_LABEL = "Official ranking period";
 
-const VERIFIED_REQUIREMENTS = Object.freeze({
-  accountAge: 21,
-  comments: 30,
-  followers: 100,
-  maxLikes: 30,
-  dailyLogins: 30,
-  adsViewed: 100
-});
+const AUTO_RANKS = Object.freeze([
+  "unverified",
+  "verified",
+  "rising_star",
+  "legend",
+  "admin",
+  "moderator",
+]);
 
-function multiplyRequirements(base, factor) {
-  return {
-    accountAge: Math.floor(base.accountAge * factor),
-    comments: Math.floor(base.comments * factor),
-    followers: Math.floor(base.followers * factor),
-    maxLikes: Math.floor(base.maxLikes * factor),
-    dailyLogins: Math.floor(base.dailyLogins * factor),
-    adsViewed: Math.floor(base.adsViewed * factor)
-  };
-}
+const MANUAL_OVERRIDE_ROLES = Object.freeze([
+  "junior_developer",
+  "senior_developer",
+]);
+
+const ACTIVE_METRIC_KEYS = Object.freeze([
+  "accountAge",
+  "totalCommentsMade",
+  "totalFollowing",
+  "postsLiked",
+  "dailyLogins",
+  "adsViewed",
+]);
+
+const PASSIVE_METRIC_KEYS = Object.freeze([
+  "totalFollowers",
+  "totalCommentsReceived",
+]);
 
 const RANK_REQUIREMENTS = Object.freeze({
-  verified: VERIFIED_REQUIREMENTS,
-  admin: multiplyRequirements(VERIFIED_REQUIREMENTS, 2),
-  moderator: multiplyRequirements(VERIFIED_REQUIREMENTS, 3)
+  unverified: Object.freeze({}),
+  verified: Object.freeze({
+    accountAge: 21,
+    totalCommentsMade: 45,
+    totalFollowing: 21,
+    postsLiked: 50,
+    dailyLogins: 30,
+    adsViewed: 100,
+  }),
+  rising_star: Object.freeze({
+    accountAge: 63,
+    totalCommentsMade: 50,
+    totalFollowing: 130,
+    postsLiked: 200,
+    dailyLogins: 42,
+    adsViewed: 200,
+  }),
+  legend: Object.freeze({
+    accountAge: 90,
+    totalCommentsMade: 150,
+    totalFollowing: 200,
+    postsLiked: 300,
+    dailyLogins: 60,
+    adsViewed: 300,
+    totalFollowers: 100,
+    totalCommentsReceived: 50,
+  }),
+  admin: Object.freeze({
+    accountAge: 150,
+    totalCommentsMade: 400,
+    totalFollowing: 400,
+    postsLiked: 600,
+    dailyLogins: 130,
+    adsViewed: 700,
+    totalFollowers: 200,
+    totalCommentsReceived: 200,
+  }),
+  moderator: Object.freeze({
+    accountAge: 225,
+    totalCommentsMade: 600,
+    totalFollowing: 600,
+    postsLiked: 900,
+    dailyLogins: 195,
+    adsViewed: 1050,
+    totalFollowers: 300,
+    totalCommentsReceived: 300,
+  }),
 });
 
 module.exports = {
+  ACTIVE_METRIC_KEYS,
+  AUTO_RANKS,
+  MANUAL_OVERRIDE_ROLES,
+  OFFICIAL_LABEL,
+  OFFICIAL_PHASE_START_DATE,
+  PASSIVE_METRIC_KEYS,
   PRELAUNCH_LABEL,
-  RANKING_LAUNCH_DATE,
-  RANK_REQUIREMENTS
+  RANK_REQUIREMENTS,
 };

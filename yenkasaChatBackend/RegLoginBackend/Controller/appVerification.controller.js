@@ -1,22 +1,19 @@
 // controllers/appVerification.controller.js
 const AppVerification = require("../models/appverification.model");
 const User = require("../models/user.model");
-const auth = require('../middleware/auth');
 const { getUserPerformanceMetrics } = require("../services/userPerformanceMetrics");
-const { RANKING_LAUNCH_DATE } = require("../config/ranking.config");
+const {
+  buildRankSummary,
+  isPhaseActive,
+  normalizeMetrics,
+  splitMetrics,
+  syncUserRole,
+} = require("../services/ranking.service");
 
 
 // ensure all metrics are integers
 function sanitizeMetrics(metrics) {
-  const out = metrics?.toObject ? metrics.toObject() : { ...(metrics || {}) };
-  for (const k of Object.keys(out)) {
-    if (typeof out[k] === "number") {
-      out[k] = Math.floor(out[k]);
-    } else if (out[k] == null) {
-      out[k] = 0;
-    }
-  }
-  return out;
+  return normalizeMetrics(metrics);
 }
 
 // normalize phase history for frontend
@@ -75,6 +72,7 @@ metrics.validReports = lifetime.validReports || 0;
 
   appVerification.metrics = sanitizeMetrics(metrics);
   await appVerification.save();
+  await syncUserRole(user, appVerification.metrics);
   return appVerification;
 }
 
@@ -98,55 +96,51 @@ exports.getDashboard = async (req, res) => {
 
     await syncVerificationMetrics(appVerification, user);
 
-    const requirements = appVerification.getCurrentRequirements();
-    const progress = appVerification.checkRequirementsMet();
-    const now = new Date();
-
-    const daysRemaining = Math.max(
-      0,
-      Math.ceil((appVerification.phaseEndDate - now) / (1000 * 60 * 60 * 24))
-    );
+    const effectiveRole = user.roleName || user.role?.role || user.role;
+    const rankSummary = buildRankSummary(appVerification.metrics, effectiveRole);
+    const metricGroups = splitMetrics(appVerification.metrics);
+    const currentMetrics = sanitizeMetrics(appVerification.metrics);
+    const phaseActive = isPhaseActive();
 
     return res.json({
       detailsVerification: {
         email: user.emailVerified || false,
         phone: user.phoneVerified || false,
         basicPostingEnabled: user.verified || false,
-        userRole: user.role
+        userRole: user.roleName || user.role?.role || "unverified"
       },
 
       appVerification: {
-        currentPhase: appVerification.currentPhase,
-        currentRankKey: appVerification.getRankKeyForPhase(),
-        nextRankKey: appVerification.getNextRankKeyForPhase(),
-        rankingPeriodLabel: appVerification.getRankingPeriodLabel(),
-        rankingLaunchDate: RANKING_LAUNCH_DATE.toISOString(),
+        currentPhase: phaseActive ? appVerification.currentPhase : null,
+        currentRank: rankSummary.currentRank,
+        currentRankKey: rankSummary.currentRank,
+        nextRank: rankSummary.nextRank,
+        nextRankKey: rankSummary.nextRank,
+        progressToNextRank: rankSummary.progressToNextRank,
+        rankingPeriodStatus: rankSummary.rankingPeriodStatus,
+        rankingPeriodLabel: rankSummary.rankingPeriodLabel,
+        officialPhaseStartDate: rankSummary.officialPhaseStartDate,
+        rankingLaunchDate: rankSummary.officialPhaseStartDate,
         hasVerifiedBanner: appVerification.hasVerifiedBanner,
-        phaseStartDate: appVerification.phaseStartDate?.toISOString(),
-        phaseEndDate: appVerification.phaseEndDate?.toISOString(),
-        daysRemaining,
-        requirements,
-        currentMetrics: sanitizeMetrics(appVerification.metrics),
-        progress,
+        phaseStartDate: phaseActive ? appVerification.phaseStartDate?.toISOString() : null,
+        phaseEndDate: phaseActive ? appVerification.phaseEndDate?.toISOString() : null,
+        daysRemaining: phaseActive
+          ? Math.max(
+              0,
+              Math.ceil((appVerification.phaseEndDate - new Date()) / (1000 * 60 * 60 * 24))
+            )
+          : null,
+        requirements: rankSummary.requirements,
+        currentMetrics,
+        progress: rankSummary.progress,
         phaseHistory: formatPhaseHistory(appVerification.phaseHistory),
-        activeRankingMetrics: {
-          accountAge: appVerification.metrics.accountAge || 0,
-          totalCommentsMade: appVerification.metrics.totalCommentsMade || 0,
-          totalFollowing: appVerification.metrics.totalFollowing || 0,
-          postsLiked: appVerification.metrics.postsLiked || 0,
-          totalLikesGiven: appVerification.metrics.totalLikesCount || 0,
-          dailyLogins: appVerification.metrics.dailyLogins || 0,
-          adsViewed: appVerification.metrics.adsViewed || 0
-        },
-        analyticsOnlyMetrics: {
-          totalFollowers: appVerification.metrics.totalFollowers || 0,
-          totalLikesReceived: appVerification.metrics.totalLikesReceived || 0,
-          totalViewsReceived: appVerification.metrics.totalViewsReceived || 0,
-          totalCommentsReceived: appVerification.metrics.totalCommentsReceived || 0,
-          totalRepliesReceived: appVerification.metrics.totalRepliesReceived || 0,
-          maxLikesOnPost: appVerification.metrics.maxLikesOnPost || 0
-        }
-      }
+        activityMetrics: metricGroups.activityMetrics,
+        performanceMetrics: metricGroups.performanceMetrics,
+        activeRankingMetrics: metricGroups.activityMetrics,
+        analyticsOnlyMetrics: metricGroups.performanceMetrics,
+      },
+      userRole: rankSummary.currentRank,
+      performanceMetrics: metricGroups.performanceMetrics,
     });
 
   } catch (err) {
@@ -226,8 +220,8 @@ exports.updateMetrics = async (req, res) => {
 
 switch (type) {
 
-  case "comment":
   case "commentMade":
+  case "comment":
     m.totalComments += value || 1;
     m.totalCommentsMade += value || 1;
     break;
@@ -244,8 +238,9 @@ switch (type) {
     m.totalRepliesReceived += value || 1;
     break;
 
-  case "followMade":
   case "following":
+  case "follow":
+  case "followMade":
     m.totalFollowing += value || 1;
     break;
 
@@ -259,6 +254,8 @@ switch (type) {
     m.totalPostCount += value || 1;
     break;
 
+  case "likeGiven":
+  case "like":
   case "postLiked":
     m.postsLiked += value || 1;
     m.totalLikesCount += value || 1;
@@ -353,7 +350,8 @@ exports.getProgress = async (req, res) => {
 
     await syncVerificationMetrics(appVerification, user);
 
-    const reqs = appVerification.getCurrentRequirements();
+    const rankSummary = buildRankSummary(appVerification.metrics, user.roleName || user.role?.role || user.role);
+    const reqs = rankSummary.requirements;
     const metrics = sanitizeMetrics(appVerification.metrics);
 
     function pct(value, reqValue) {
@@ -362,24 +360,36 @@ exports.getProgress = async (req, res) => {
 
     const detailed = {
       accountAge: pct(metrics.accountAge, reqs.accountAge),
-      comments: pct(metrics.totalCommentsMade, reqs.comments),
-      followers: pct(metrics.totalFollowing, reqs.followers),
-      maxLikes: pct(metrics.postsLiked, reqs.maxLikes),
+      commentsMade: pct(metrics.totalCommentsMade, reqs.commentsMade),
+      following: pct(metrics.totalFollowing, reqs.following),
+      likesGiven: pct(metrics.postsLiked, reqs.likesGiven),
       dailyLogins: pct(metrics.dailyLogins, reqs.dailyLogins),
       adsViewed: pct(metrics.adsViewed, reqs.adsViewed),
+      followers: pct(metrics.totalFollowers, reqs.followers),
+      commentsReceived: pct(metrics.totalCommentsReceived, reqs.commentsReceived),
+
+      // Backward-compatible aliases.
+      comments: pct(metrics.totalCommentsMade, reqs.commentsMade),
+      maxLikes: pct(metrics.postsLiked, reqs.likesGiven),
     };
 
     const avg =
       (detailed.accountAge +
-        detailed.comments +
+        detailed.commentsMade +
+        detailed.following +
+        detailed.likesGiven +
         detailed.followers +
-        detailed.maxLikes +
         detailed.dailyLogins +
-        detailed.adsViewed) / 6;
+        detailed.adsViewed +
+        (reqs.followers > 0 ? detailed.followers : 0) +
+        (reqs.commentsReceived > 0 ? detailed.commentsReceived : 0)) /
+      (reqs.followers > 0 || reqs.commentsReceived > 0 ? 8 : 6);
 
     return res.json({
-      phase: appVerification.currentPhase,
-      overallProgress: Math.round(avg),
+      phase: isPhaseActive() ? appVerification.currentPhase : null,
+      currentRank: rankSummary.currentRank,
+      nextRank: rankSummary.nextRank,
+      overallProgress: rankSummary.progressToNextRank || Math.round(avg),
       detailedProgress: detailed,
       requirements: reqs,
       currentMetrics: metrics,
@@ -407,12 +417,25 @@ exports.checkPhaseAdvancement = async (req, res) => {
     const user = await User.findById(userId).select("createdAt");
     await syncVerificationMetrics(appVerification, user);
 
-    const result = await appVerification.checkPhaseAdvancement();
+    if (!isPhaseActive()) {
+      return res.json({
+        success: false,
+        message: "Phase system not active yet",
+      });
+    }
+
+    const currentRole = user.roleName || user.role?.role || user.role;
+    const rankSummary = buildRankSummary(appVerification.metrics, currentRole);
+    await syncUserRole(user, appVerification.metrics);
 
     return res.json({
       success: true,
-      message: "Phase advancement processed",
-      result
+      message: rankSummary.nextRank
+        ? `Ranking status refreshed. Next rank: ${rankSummary.nextRank.replace(/_/g, " ")}`
+        : `Ranking status refreshed. You are at the highest available rank.`,
+      currentRank: rankSummary.currentRank,
+      nextRank: rankSummary.nextRank,
+      progressToNextRank: rankSummary.progressToNextRank,
     });
 
   } catch (err) {

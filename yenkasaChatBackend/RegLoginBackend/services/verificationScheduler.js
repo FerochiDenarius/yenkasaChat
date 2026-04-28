@@ -5,12 +5,9 @@ const AppVerification = require("../models/appverification.model");
 const getUserMetrics =
   require("./userPerformanceMetrics").getUserPerformanceMetrics;
 const { reward } = require("./reward.service");
+const { buildRankSummary, isPhaseActive, syncUserRole } = require("./ranking.service");
 
 console.log("🕒 Yenkasa Verification Scheduler Initialized...");
-
-// Promotion thresholds
-const ADMIN_DAYS = 90;
-const MOD_DAYS = Math.floor(ADMIN_DAYS * 1.8); // 162
 
 /**
  * CRON: runs daily at midnight (Africa/Accra)
@@ -29,8 +26,7 @@ cron.schedule(
       const users = await User.find({});
       console.log(`👥 Checking ${users.length} users...`);
 
-      let promotedAdmins = 0;
-      let promotedModerators = 0;
+      let rankUpdates = 0;
       let advancedPhases = 0;
 
       for (const user of users) {
@@ -80,66 +76,28 @@ cron.schedule(
 
         await appVer.save();
 
-        // ==========================================================
-        // 3️⃣ PHASE ADVANCEMENT
-        // ==========================================================
-        const progress = appVer.checkRequirementsMet();
-        const now = new Date();
+        const previousRole = user.roleName || user.role?.role || "unverified";
+        const rankSummary = buildRankSummary(appVer.metrics, previousRole);
+        const syncedRole = await syncUserRole(user, appVer.metrics);
 
-        const canAdvance =
-          progress.allMet &&
-          now >= appVer.phaseEndDate &&
-          appVer.currentPhase < 6;
-
-        if (canAdvance) {
-          await appVer.advancePhase();
-          advancedPhases++;
-
-          console.log(
-            `🎉 ${user.username} advanced to Phase ${appVer.currentPhase}`
-          );
-
-          // ⭐ VERIFICATION COMPLETION REWARD (PHASE 6)
-          if (appVer.currentPhase === 6) {
-            let verifyReward = 100;
-
-            if (user.role === "admin") verifyReward = 300;
-            if (user.role === "moderator") verifyReward = 500;
-
-            await reward(user._id, verifyReward, {
-              type: "REWARD_VERIFICATION",
-              description: `Verification completed (+${verifyReward})`,
-            });
-
-            console.log(
-              `💎 Awarded ${verifyReward} coins to ${user.username} for verification completion`
-            );
-          }
+        if (syncedRole !== previousRole) {
+          rankUpdates++;
+          console.log(`🏅 RANK UPDATED: ${user.username} → ${syncedRole}`);
         }
 
         // ==========================================================
-        // 4️⃣ ROLE PROMOTION LOGIC
+        // 3️⃣ PHASE ADVANCEMENT (ONLY AFTER OFFICIAL LAUNCH)
         // ==========================================================
-        const accountAge = appVer.metrics.accountAge;
-        const dailyLogins = appVer.metrics.dailyLogins;
+        if (isPhaseActive()) {
+          const canAdvance =
+            rankSummary.progress.allMet &&
+            new Date() >= appVer.phaseEndDate &&
+            appVer.currentPhase < 6;
 
-        // Verified → Admin
-        if (user.role === "verified") {
-          if (accountAge >= ADMIN_DAYS && dailyLogins >= ADMIN_DAYS) {
-            user.role = "admin";
-            await user.save();
-            promotedAdmins++;
-            console.log(`⚙️ PROMOTED: ${user.username} → ADMIN`);
-          }
-        }
-
-        // Admin → Moderator
-        if (user.role === "admin") {
-          if (accountAge >= MOD_DAYS && dailyLogins >= MOD_DAYS) {
-            user.role = "moderator";
-            await user.save();
-            promotedModerators++;
-            console.log(`🛡️ PROMOTED: ${user.username} → MODERATOR`);
+          if (canAdvance) {
+            await appVer.advancePhase();
+            advancedPhases++;
+            console.log(`🎉 ${user.username} advanced to Phase ${appVer.currentPhase}`);
           }
         }
       }
@@ -147,8 +105,7 @@ cron.schedule(
       console.log(`
 ✨ Verification cycle completed!
 📈 Phase advancements: ${advancedPhases}
-⚙️ Admin promotions: ${promotedAdmins}
-🛡️ Moderator promotions: ${promotedModerators}
+🏅 Rank updates: ${rankUpdates}
 `);
 
     } catch (err) {

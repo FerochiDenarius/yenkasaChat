@@ -158,13 +158,14 @@ class MainActivity : AppCompatActivity() {
 
                     try {
                         val user = currentUser!!
-                        val roleName = user.role?.name ?: user.roleName ?: "user"
+                        val roleName = user.role?.name ?: user.roleName ?: if (user.verified) "verified" else "unverified"
                         val verified = user.verified
 
                         val userJson = JSONObject().apply {
                             put("_id", user._id)
                             put("username", user.username ?: "")
                             put("role", roleName)
+                            put("roleName", roleName)
                             put("verified", verified)
                             put("profileImage", user.profileImage ?: "")
                             put("email", user.email ?: "")

@@ -114,7 +114,7 @@ const userSchema = new Schema({
 
   roleName: {
     type: String,
-    default: 'user'
+    default: 'unverified'
   },
 
   // ===============================

@@ -230,10 +230,13 @@ class LoginActivity : AppCompatActivity() {
 
                     userViewModel.saveLoggedInMongoDbUserIdToTokenManager(user._id)
 
+                    val roleName = user.roleName ?: user.role?.name ?: if (user.verified) "verified" else "unverified"
+
                     val userJson = JSONObject().apply {
                         put("_id", user._id)
                         put("username", user.username ?: "")
-                        put("role", user.role ?: "user")
+                        put("role", roleName)
+                        put("roleName", roleName)
                         put("verified", user.verified)
                         put("profileImage", user.profileImage ?: "")
                         put("email", user.email ?: "")

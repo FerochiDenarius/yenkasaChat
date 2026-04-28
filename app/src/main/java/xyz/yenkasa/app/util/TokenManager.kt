@@ -410,31 +410,79 @@ object TokenManager {
             null
         }
     }
+
+    private fun normalizeRole(role: String?): String {
+        val normalized = role?.trim()?.lowercase()?.replace(" ", "_") ?: "unverified"
+        return when (normalized) {
+            "", "null" -> "unverified"
+            "user" -> "unverified"
+            "developer" -> "senior_developer"
+            else -> normalized
+        }
+    }
+
+    private fun extractRoleFromUserJson(userJson: String?): String? {
+        if (userJson.isNullOrBlank()) return null
+        return runCatching {
+            val json = JSONObject(userJson)
+
+            json.optString("roleName")
+                .takeIf { it.isNotBlank() && it.lowercase() != "null" }
+                ?.let { return@runCatching normalizeRole(it) }
+
+            when (val roleValue = json.opt("role")) {
+                is JSONObject -> {
+                    roleValue.optString("name")
+                        .takeIf { it.isNotBlank() && it.lowercase() != "null" }
+                        ?.let { return@runCatching normalizeRole(it) }
+                    roleValue.optString("roleName")
+                        .takeIf { it.isNotBlank() && it.lowercase() != "null" }
+                        ?.let { return@runCatching normalizeRole(it) }
+                }
+                is String -> {
+                    roleValue.takeIf { it.isNotBlank() && it.lowercase() != "null" }
+                        ?.let { return@runCatching normalizeRole(it) }
+                }
+            }
+
+            if (json.optBoolean("verified", false)) "verified" else "unverified"
+        }.getOrNull()
+    }
+
+    private fun syncRoleFlags(context: Context, normalizedRole: String) {
+        try {
+            val prefs = getEncryptedPrefs(context).edit()
+            val isAdmin = normalizedRole == "admin"
+            val isModerator = normalizedRole == "moderator"
+            val isDeveloper = normalizedRole in listOf("junior_developer", "senior_developer")
+            prefs.putBoolean(IS_ADMIN_KEY, isAdmin)
+            prefs.putBoolean(IS_MODERATOR_KEY, isModerator)
+            prefs.putBoolean(IS_DEVELOPER_KEY, isDeveloper)
+            prefs.apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing role flags", e)
+        }
+    }
     /**
-     * ✅ Returns the user's role from saved flags or JSON.
-     * Possible results: "admin", "moderator", "developer", or "user" (default).
+     * ✅ Returns the normalized user's role from saved JSON first, then legacy flags.
      */
     fun getUserRole(context: Context): String {
         return try {
-            // First, check explicit role flags
+            extractRoleFromUserJson(getUser(context))?.also { normalizedRole ->
+                syncRoleFlags(context, normalizedRole)
+                return normalizedRole
+            }
+
             when {
-                isAdmin(context) -> "admin"
+                isDeveloper(context) -> "senior_developer"
                 isModerator(context) -> "moderator"
-                isDeveloper(context) -> "developer"
-                else -> {
-                    // If no flags are set, try parsing from saved JSON
-                    val userJson = getUser(context)
-                    if (!userJson.isNullOrEmpty()) {
-                        val json = JSONObject(userJson)
-                        json.optString("role", "user").lowercase()
-                    } else {
-                        "user"
-                    }
-                }
+                isAdmin(context) -> "admin"
+                isVerified(context) -> "verified"
+                else -> "unverified"
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error determining user role: ${e.message}")
-            "user"
+            "unverified"
         }
     }
 
@@ -768,6 +816,7 @@ object TokenManager {
     fun saveUserJson(context: Context, userJson: String) {
         try {
             getEncryptedPrefs(context).edit().putString("user", userJson).apply()
+            extractRoleFromUserJson(userJson)?.let { syncRoleFlags(context, it) }
             Log.i(TAG, "🧩 Full user JSON saved successfully (${userJson.length} chars)")
         } catch (e: Exception) {
             Log.e(TAG, "Error saving full user JSON", e)

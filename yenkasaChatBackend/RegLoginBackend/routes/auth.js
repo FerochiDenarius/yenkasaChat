@@ -210,8 +210,12 @@ router.post('/login', async (req, res) => {
     const Permission = require('../models/permissions.model');
 
     if (!user.role || typeof user.role === 'string') {
-      const normalized = (user.role || 'user').toString().trim().toLowerCase().replace(/\s+/g, '_');
-      const defaultPerm = await Permission.findOne({ role: normalized }) || await Permission.findOne({ role: 'user' });
+      const normalized = (user.roleName || user.role?.role || 'unverified')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_');
+      const defaultPerm = await Permission.findOne({ role: normalized }) || await Permission.findOne({ role: 'unverified' });
 
       user.role = defaultPerm ? defaultPerm._id : null;
       await user.save(); // 🔹 Persist fix so next login is clean
@@ -249,7 +253,7 @@ router.post('/login', async (req, res) => {
     playerId: user.playerId || null,
     role: user.role || {},               // 👈 send full Permission object
     // optional: send string separately if needed
-    roleName: user.role?.role || 'user',
+    roleName: user.roleName || user.role?.role || 'unverified',
   },
   token: accessTokenValue,
   refreshToken: refreshTokenValue,

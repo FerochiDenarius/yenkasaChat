@@ -7,27 +7,27 @@ const { Schema } = mongoose;
 // Rank Order Hierarchy
 // --------------------------------------------
 const rankOrder = [
-  'user',
   'unverified',
   'verified',
+  'rising_star',
+  'legend',
   'admin',
   'moderator',
   'junior_developer',
   'senior_developer',
-  'developer',
 ];
 
 // --------------------------------------------
 // Utility: Normalize Role String
 // --------------------------------------------
 const normalize = (role = '') => {
-  if (!role) return 'user';
+  if (!role) return 'unverified';
 
   // Handle object reference (e.g., populated Permission doc)
   if (typeof role === 'object') {
     if (role.role) return String(role.role).trim().toLowerCase().replace(/\s+/g, '_');
     if (role.name) return String(role.name).trim().toLowerCase().replace(/\s+/g, '_');
-    return 'user';
+    return 'unverified';
   }
 
   // Handle array (if multiple roles)
@@ -36,7 +36,10 @@ const normalize = (role = '') => {
   }
 
   // Default string normalization
-  return String(role).trim().toLowerCase().replace(/\s+/g, '_') || 'user';
+  const normalized = String(role).trim().toLowerCase().replace(/\s+/g, '_') || 'unverified';
+  if (normalized === 'user') return 'unverified';
+  if (normalized === 'developer') return 'senior_developer';
+  return normalized;
 };
 
 
@@ -73,8 +76,16 @@ permissionSchema.statics.normalize = normalize;
 // Basic permission checks
 permissionSchema.statics.canPost = function (role, verified = false) {
   const r = normalize(role);
-  if (verified) return true;
-  return ['verified', 'admin', 'moderator', 'developer', 'junior_developer', 'senior_developer'].includes(r);
+  if (verified && r === 'unverified') return true;
+  return [
+    'verified',
+    'rising_star',
+    'legend',
+    'admin',
+    'moderator',
+    'junior_developer',
+    'senior_developer',
+  ].includes(r);
 };
 
 permissionSchema.statics.canApprove = function (role) {
@@ -84,7 +95,7 @@ permissionSchema.statics.canApprove = function (role) {
 
 permissionSchema.statics.canCreateCommunity = function (role) {
   const r = normalize(role);
-  return ['admin', 'moderator', 'developer', 'junior_developer', 'senior_developer'].includes(r);
+  return ['rising_star', 'legend', 'admin', 'moderator', 'junior_developer', 'senior_developer'].includes(r);
 };
 
 permissionSchema.statics.canAssignRoles = function (role) {
@@ -118,11 +129,11 @@ permissionSchema.statics.seedDefaults = async function () {
   const Permission = this;
 
   const defaults = {
-    user: { canPost: false },
     unverified: { canPost: false },
     verified: { canPost: true },
-    admin: { canPost: true, canApprove: true, canCreateCommunity: true },
-    moderator: {
+    rising_star: { canPost: true, canCreateCommunity: true },
+    legend: { canPost: true, canCreateCommunity: true },
+    admin: {
       canPost: true,
       canApprove: true,
       canCreateCommunity: true,
@@ -130,9 +141,13 @@ permissionSchema.statics.seedDefaults = async function () {
       canRevoke: true,
       canSuspend: true,
     },
-    developer: {
+    moderator: {
       canPost: true,
+      canApprove: true,
       canCreateCommunity: true,
+      canAssignRoles: true,
+      canRevoke: true,
+      canSuspend: true,
     },
     junior_developer: {
       canPost: true,

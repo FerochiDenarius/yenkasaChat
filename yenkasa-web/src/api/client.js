@@ -2,7 +2,7 @@ import axios from "axios";
 import { clearAuth, getToken } from "../utils/storage";
 
 const api = axios.create({
-  baseURL: "https://www.yenkasa.xyz/triciabales-api/api"
+  baseURL: "/triciabales-api/api"
 });
 
 api.interceptors.request.use((config) => {

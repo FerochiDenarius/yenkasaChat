@@ -52,6 +52,7 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
 require('./store/yenkasa-store-server')(app);
+require('./web/yenkasa-web-server')(app);
 
 
 

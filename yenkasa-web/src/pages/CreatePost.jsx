@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCommunities } from "../api/communities";
+import { getJoinedCommunities, getPrimaryCommunity } from "../api/communities";
 import { createPost } from "../api/posts";
 import { getStoredUser } from "../utils/storage";
 import "../styles/create-post.css";
@@ -13,6 +13,7 @@ const styles = [
   { id: "pink", label: "Aa", color: "#E24395", text: "#FFFFFF" },
   { id: "purple", label: "Aa", color: "#8D43E8", text: "#FFFFFF" },
   { id: "red", label: "Aa", color: "#EF3131", text: "#FFFFFF" },
+  { id: "night", label: "Aa", color: "#111827", text: "#FFFFFF" },
 ];
 
 export default function CreatePost() {
@@ -26,7 +27,7 @@ export default function CreatePost() {
   const [visibility, setVisibility] = useState("public");
   const [selectedStyle, setSelectedStyle] = useState(styles[0]);
   const [communities, setCommunities] = useState([]);
-  const [communityName, setCommunityName] = useState("");
+  const [selectedCommunityId, setSelectedCommunityId] = useState("");
   const [images, setImages] = useState([]);
   const [video, setVideo] = useState(null);
   const [audio, setAudio] = useState(null);
@@ -41,20 +42,18 @@ export default function CreatePost() {
 
   useEffect(() => {
     let active = true;
-    getCommunities({ country: user?.country || "Ghana" })
-      .then((data) => {
+    Promise.all([
+      getPrimaryCommunity().catch(() => ({ community: null })),
+      getJoinedCommunities().catch(() => ({ communities: [] })),
+    ])
+      .then(([primaryData, joinedData]) => {
         if (!active) return;
-        const items = Array.isArray(data) ? data : [];
+        const items = mergeCommunities(
+          primaryData?.community,
+          Array.isArray(joinedData?.communities) ? joinedData.communities : []
+        );
         setCommunities(items);
-        const primary =
-          user?.community?.displayName ||
-          user?.community?.name ||
-          user?.joinedCommunities?.[0]?.displayName ||
-          user?.joinedCommunities?.[0]?.name ||
-          items[0]?.displayName ||
-          items[0]?.name ||
-          "";
-        setCommunityName(primary);
+        setSelectedCommunityId(String(items[0]?._id || items[0]?.id || ""));
       })
       .catch(() => setCommunities([]));
 
@@ -79,6 +78,10 @@ export default function CreatePost() {
   }, [mediaPreview]);
 
   const charsLeft = text.length;
+  const selectedCommunity = communities.find(
+    (community) => String(community?._id || community?.id || "") === selectedCommunityId
+  );
+  const communityName = selectedCommunity?.displayName || selectedCommunity?.name || "";
   const canPost = Boolean(text.trim() || images.length || video || audio) && Boolean(communityName);
   const avatar =
     user?.profileImage ||
@@ -97,6 +100,7 @@ export default function CreatePost() {
     try {
       const response = await createPost({
         text,
+        communityId: selectedCommunityId,
         communityName,
         visibility,
         textBackgroundColor: selectedStyle.id === "plain" ? "" : selectedStyle.color,
@@ -152,18 +156,19 @@ export default function CreatePost() {
                 <strong>{username}</strong>
                 <label className="composer-community-inline">
                   <span>♙</span>
-                  <select value={communityName} onChange={(event) => setCommunityName(event.target.value)}>
+                  <select value={selectedCommunityId} onChange={(event) => setSelectedCommunityId(event.target.value)}>
                     {communities.length ? (
                       communities.map((community) => {
+                        const id = String(community._id || community.id || "");
                         const name = community.displayName || community.name;
                         return (
-                          <option value={name} key={community._id || name}>
+                          <option value={id} key={id || name}>
                             {name}
                           </option>
                         );
                       })
                     ) : (
-                      <option value={communityName}>{communityName || "Select community"}</option>
+                      <option value="">Select community</option>
                     )}
                   </select>
                 </label>
@@ -295,11 +300,12 @@ export default function CreatePost() {
               <strong>{communityName || "Select Community"}</strong>
               <small>{selectedCommunityMeta(communities, communityName)}</small>
             </span>
-            <select value={communityName} onChange={(event) => setCommunityName(event.target.value)}>
+            <select value={selectedCommunityId} onChange={(event) => setSelectedCommunityId(event.target.value)}>
               {communities.map((community) => {
+                const id = String(community._id || community.id || "");
                 const name = community.displayName || community.name;
                 return (
-                  <option value={name} key={community._id || name}>
+                  <option value={id} key={id || name}>
                     {name}
                   </option>
                 );
@@ -352,4 +358,19 @@ function selectedCommunityMeta(communities, communityName) {
   const count =
     members >= 1000 ? `${(members / 1000).toFixed(members >= 10000 ? 1 : 0)}K` : String(members);
   return `${count} members · ${selected?.communityType || "Public"}`;
+}
+
+function mergeCommunities(primary, joined) {
+  const ordered = [];
+  const seen = new Set();
+
+  [primary, ...(joined || [])].forEach((community) => {
+    if (!community) return;
+    const id = String(community._id || community.id || community.name || "");
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    ordered.push(community);
+  });
+
+  return ordered;
 }

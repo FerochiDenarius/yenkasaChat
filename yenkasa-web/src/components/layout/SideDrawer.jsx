@@ -4,12 +4,21 @@ import { clearAuth, getStoredUser } from "../../utils/storage";
 import "../../styles/layout.css";
 
 const menuItems = [
+  { icon: "◉", title: "Contacts", subtitle: "Manage saved contacts", to: "/contacts" },
+  { icon: "□", title: "Chat Rooms", subtitle: "View all your chats", to: "/chatrooms" },
+  { icon: "♙", title: "Account Info", subtitle: "Your account details", to: "/profile" },
+  { icon: "▣", title: "Wallet", subtitle: "Your YKC balance", to: "/wallet" },
+  { icon: "✎", title: "Edit Profile", subtitle: "Update your profile", to: "/edit-profile" },
+  { icon: "✓", title: "Verify Account", subtitle: "Verification options", to: "/verify-account" },
+  { icon: "⬡", title: "Yenkasa Verification", subtitle: "Secure your identity", to: "/verification" },
+  { icon: "☰", title: "Communities", subtitle: "Join or create communities", to: "/communities" },
   { icon: "◌", title: "My Ads", subtitle: "Track your sponsored posts", to: "/ads" },
-  { icon: "◔", title: "Notifications", subtitle: "View account alerts", to: "/notifications" },
-  { icon: "⚙", title: "Settings", subtitle: "Privacy and preferences", to: "/settings" },
+  { icon: "◫", title: "My Communities", subtitle: "Track communities you created", to: "/my-communities" },
   { icon: "✓", title: "Post Approvals", subtitle: "Review pending posts", to: "/post-approvals", reviewOnly: true },
   { icon: "◎", title: "Approve Ads", subtitle: "Review sponsored ads", to: "/approve-ads", reviewOnly: true },
   { icon: "◈", title: "Approve Communities", subtitle: "Review community requests", to: "/approve-communities", reviewOnly: true },
+  { icon: "◔", title: "Notifications", subtitle: "See your alerts", to: "/notifications" },
+  { icon: "⚙", title: "Settings", subtitle: "Privacy and preferences", to: "/settings" },
 ];
 
 const reviewerRoles = new Set([

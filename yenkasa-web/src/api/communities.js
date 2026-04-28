@@ -9,3 +9,13 @@ export async function getMyCommunities() {
   const { data } = await api.get("/communities/user/my-communities");
   return data;
 }
+
+export async function getPrimaryCommunity() {
+  const { data } = await api.get("/communities/user/community");
+  return data;
+}
+
+export async function getJoinedCommunities() {
+  const { data } = await api.get("/communities/user/joined-communities");
+  return data;
+}

@@ -5,7 +5,9 @@ const mongoose = require('mongoose');
 const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
 const Message = require('../models/message.model');
+const Notification = require('../models/notifications.model');
 const authMiddleware = require('../middleware/auth');
+const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
 
 // --- CREATE OR REUSE A CHAT ROOM ---
 router.post('/', authMiddleware, async (req, res) => {
@@ -35,6 +37,49 @@ router.post('/', authMiddleware, async (req, res) => {
 
     if (otherUser._id.toString() === userId) {
       return res.status(400).json({ success: false, message: 'You cannot create a room with yourself' });
+    }
+
+    const permission = await canMessageUser(userId, otherUser._id);
+    if (!permission.allowed) {
+      if (permission.reason === 'requires_approval') {
+        await Notification.findOneAndUpdate(
+          {
+            type: 'message_request',
+            senderId: userId,
+            receiverId: otherUser._id,
+            status: 'unread'
+          },
+          {
+            $setOnInsert: {
+              type: 'message_request',
+              senderId: userId,
+              receiverId: otherUser._id,
+              message: 'wants to message you',
+              activityId: userId,
+              targetType: 'profile',
+              targetId: userId,
+              createdAt: new Date()
+            }
+          },
+          { upsert: true, new: true }
+        );
+
+        return res.status(202).json({
+          success: false,
+          message: 'Message request sent',
+          reason: permission.reason,
+          receiverId: otherUser._id
+        });
+      }
+
+      const status = permission.reason === 'blocked' ? 403 : 423;
+      return res.status(status).json({
+        success: false,
+        message: permission.reason === 'requires_approval'
+          ? 'This user requires message approval'
+          : permission.message,
+        reason: permission.reason
+      });
     }
 
  const existingRoom = await ChatRoom.findOne({
@@ -100,6 +145,10 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No other participant found' });
     }
 
+    if (await areUsersBlocked(userId, otherParticipant._id)) {
+      return res.status(403).json({ success: false, message: 'Room unavailable' });
+    }
+
     res.json({
       success: true,
       participant: {
@@ -136,6 +185,10 @@ router.get('/:roomId/receiver', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Receiver not found' });
     }
 
+    if (await areUsersBlocked(userId, receiver._id)) {
+      return res.status(403).json({ success: false, message: 'Receiver unavailable' });
+    }
+
     res.json({
       success: true,
       receiver: {
@@ -169,6 +222,10 @@ router.get('/', authMiddleware, async (req, res) => {
 
     const enrichedRooms = await Promise.all(chatRoomsFromDB.map(async (room) => {
       const otherParticipantObject = room.participants.find(p => p && p._id && p._id.toString() !== userId);
+
+      if (otherParticipantObject && await areUsersBlocked(userId, otherParticipantObject._id)) {
+        return null;
+      }
 
       let participantForClient = null;
       if (otherParticipantObject) {

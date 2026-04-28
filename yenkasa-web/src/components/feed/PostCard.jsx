@@ -53,15 +53,15 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
     if (existing.has(post._id)) return undefined;
 
     const delayByType = {
-      image: 5000,
+      image: 3000,
       video: 10000,
-      audio: 20000,
+      audio: 5000,
       text: 5000,
     };
     const watchDurationByType = {
-      image: 5,
+      image: 3,
       video: 10,
-      audio: 20,
+      audio: 5,
       text: 5,
     };
 

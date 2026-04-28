@@ -4,6 +4,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
+const { areUsersBlocked } = require("../services/privacy.service");
 
 // helper - compute targetUrl from type/activityId (update to match your app routes)
 function computeTarget(notification) {
@@ -46,10 +47,15 @@ function shouldDeliverNotification(user, type, targetType) {
 
 router.post("/create", auth, async (req, res) => {
   try {
-    const { type, senderId, receiverId, activityId, message } = req.body;
+    const { type, receiverId, activityId, message } = req.body;
+    const senderId = req.user.id;
 
     if (!type || !senderId || !receiverId || !message) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    if (req.body.senderId && req.body.senderId.toString() !== senderId.toString()) {
+      return res.status(403).json({ message: "Cannot create notification as another user" });
     }
 
     // ------------------------------------
@@ -132,6 +138,10 @@ router.post("/create", auth, async (req, res) => {
     const receiver = await User.findById(receiverId).select("notificationPreferences");
     if (!receiver) {
       return res.status(404).json({ message: "Receiver not found" });
+    }
+
+    if (await areUsersBlocked(senderId, receiverId)) {
+      return res.status(403).json({ message: "Notification blocked by privacy settings" });
     }
 
     if (!shouldDeliverNotification(receiver, type, targetType)) {

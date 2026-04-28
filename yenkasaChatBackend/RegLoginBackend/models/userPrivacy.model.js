@@ -9,8 +9,14 @@ const UserPrivacySchema = new mongoose.Schema({
     // USERS YOU HAVE BLOCKED
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+    // USERS YOU HAVE APPROVED TO MESSAGE YOU WHEN PRIVACY REQUIRES APPROVAL
+    approvedMessageUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
     // USERS YOU HIDE (mute from feed)
     hiddenUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    // COMMUNITIES WHOSE MEMBERS YOU BLOCK FROM SEEING YOUR POSTS
+    blockedCommunities: [{ type: mongoose.Schema.Types.ObjectId, ref: "Community" }],
 
     // COMMUNITY VISIBILITY SETTINGS (THIS IS THE IMPORTANT PART)
     visibilitySettings: [

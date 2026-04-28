@@ -9,6 +9,7 @@ export async function createPost(payload) {
   if (!hasFiles) {
     const { data } = await api.post("/posts", {
       text: payload.text,
+      communityId: payload.communityId,
       communityName: payload.communityName,
       visibility: payload.visibility,
       postType: payload.postType || "text",
@@ -21,6 +22,7 @@ export async function createPost(payload) {
 
   const formData = new FormData();
   formData.append("text", payload.text || "");
+  formData.append("communityId", payload.communityId || "");
   formData.append("communityName", payload.communityName || "");
   formData.append("visibility", payload.visibility || "public");
   formData.append("postType", payload.postType || "text");

@@ -9,6 +9,7 @@ const User = require('../models/user.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const unreadCountService = require('../services/unreadCount.service');
 const { sendPushNotification } = require('../utils/onesignal');
+const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
 
 // --- OneSignal Config ---
 const ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID;
@@ -83,6 +84,25 @@ router.post('/', auth, async (req, res) => {
     const senderAppUserId = req.user.id.toString();
     const senderUsername = req.user.username || 'A user';
     const senderPlayerIdFromPayload = cleanPushId(playerId);
+    const participantAppUserIds = chatRoom.participants.map(p => p.toString());
+
+    if (!participantAppUserIds.includes(senderAppUserId)) {
+      return res.status(403).json({ error: 'Not authorized for this room' });
+    }
+
+    const recipientAppUserIds = participantAppUserIds.filter(id => id !== senderAppUserId);
+
+    for (const recipientId of recipientAppUserIds) {
+      const permission = await canMessageUser(senderAppUserId, recipientId);
+      if (!permission.allowed) {
+        return res.status(permission.reason === 'blocked' ? 403 : 423).json({
+          error: permission.reason === 'requires_approval'
+            ? 'This user requires message approval'
+            : permission.message,
+          reason: permission.reason
+        });
+      }
+    }
 
     if (senderPlayerIdFromPayload) {
       try {
@@ -127,9 +147,6 @@ router.post('/', auth, async (req, res) => {
     console.log(`[MessagesRoute] ✅ Message saved with ID: ${newMessage._id}`);
 
     // --- Push Notification Logic (unchanged) ---
-    const participantAppUserIds = chatRoom.participants.map(p => p.toString());
-    const recipientAppUserIds = participantAppUserIds.filter(id => id !== senderAppUserId);
-
     if (recipientAppUserIds.length > 0) {
       for (const recipientId of recipientAppUserIds) {
         await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);
@@ -249,6 +266,12 @@ router.get('/:roomId', auth, async (req, res) => {
     const chatRoom = await ChatRoom.findOne({ _id: roomId, participants: userId });
     if (!chatRoom) return res.status(403).json({ error: 'Not authorized for this room' });
 
+    for (const participantId of chatRoom.participants.map(id => id.toString())) {
+      if (participantId !== userId && await areUsersBlocked(userId, participantId)) {
+        return res.status(403).json({ error: 'Not authorized for this room' });
+      }
+    }
+
     const messages = await Message.find({ roomId })
       .sort({ timestamp: 1 })
       .populate({
@@ -362,6 +385,9 @@ router.post('/:roomId/mark-as-read', auth, async (req, res) => {
   }
 
   try {
+    const chatRoom = await ChatRoom.findOne({ _id: roomId, participants: userId });
+    if (!chatRoom) return res.status(403).json({ message: 'Not authorized for this room' });
+
     await UnreadMessageCount.updateOne(
       { userId, roomId },
       { $set: { count: 0 } },

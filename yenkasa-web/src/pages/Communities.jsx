@@ -44,6 +44,7 @@ export default function Communities() {
   return (
     <main className="page page--with-nav">
       <PageHeader
+        showBack
         eyebrow="Network"
         title="Communities"
         subtitle={

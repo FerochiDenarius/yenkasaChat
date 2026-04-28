@@ -26,6 +26,7 @@ export default function Ads() {
   return (
     <main className="page page--with-nav">
       <PageHeader
+        showBack
         eyebrow="Sponsored"
         title="Ads"
         subtitle="Browse approved sponsored ads and review your own submissions."

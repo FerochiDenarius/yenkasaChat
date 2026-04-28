@@ -268,6 +268,9 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                         Toast.makeText(this@ChatRoomsActivity, "Chat room created!", Toast.LENGTH_SHORT).show()
                         inputUsername.setText("")
                         loadChatRooms() // Refresh the list
+                    } else if (response.code() == 202 && responseBody?.message != null) {
+                        Toast.makeText(this@ChatRoomsActivity, responseBody.message, Toast.LENGTH_LONG).show()
+                        inputUsername.setText("")
                     } else {
                         val errorMsg = parseError(response)
                         val successFlag = responseBody?.success

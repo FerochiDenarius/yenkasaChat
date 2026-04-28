@@ -116,7 +116,8 @@ class UserProfileActivity : AppCompatActivity() {
                             intent.putExtra("roomId", roomId)
                             startActivity(intent)
                         } else {
-                            Toast.makeText(this@UserProfileActivity, "Could not open chat", Toast.LENGTH_SHORT).show()
+                            val message = response.body()?.message ?: "Could not open chat"
+                            Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
                         }
                     }
 

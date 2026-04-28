@@ -6,6 +6,7 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const UserPrivacy = require('../models/userPrivacy.model');
 const rewardService = require('../services/reward.service');
+const { areUsersBlocked } = require('../services/privacy.service');
 
 
 
@@ -20,15 +21,7 @@ const REWARD_COMMENT_LIKE = 1;
  * BLOCK CHECK helper
  * --------------------------------------------------- */
 async function isBlocked(userA, userB) {
-  const [a, b] = await Promise.all([
-    UserPrivacy.findOne({ userId: userA }).lean(),
-    UserPrivacy.findOne({ userId: userB }).lean()
-  ]);
-
-  return (
-    a?.blockedUsers?.includes(userB) ||
-    b?.blockedUsers?.includes(userA)
-  );
+  return areUsersBlocked(userA, userB);
 }
 
 

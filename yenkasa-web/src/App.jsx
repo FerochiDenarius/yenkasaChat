@@ -110,6 +110,46 @@ export default function App() {
           }
         />
         <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage title="Contacts" subtitle="Manage saved contacts." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chatrooms"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage title="Chat Rooms" subtitle="View and continue your chats." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit-profile"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage title="Edit Profile" subtitle="Update your profile information." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/verify-account"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage title="Verify Account" subtitle="Email and phone verification options." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-communities"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage title="My Communities" subtitle="Communities you created or manage." />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/settings"
           element={
             <ProtectedRoute>

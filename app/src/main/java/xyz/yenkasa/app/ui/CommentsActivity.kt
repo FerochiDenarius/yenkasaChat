@@ -22,7 +22,6 @@ import xyz.yenkasa.app.model.Comment
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
-import xyz.yenkasa.app.util.PostNotificationSender
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import retrofit2.Call
@@ -155,12 +154,6 @@ class CommentsActivity : AppCompatActivity() {
 
                                         editComment.text.clear()
                                         Toast.makeText(this@CommentsActivity, "Reply posted", Toast.LENGTH_SHORT).show()
-                                        PostNotificationSender.sendPostComment(
-                                            this@CommentsActivity,
-                                            currentPost,
-                                            postId,
-                                            text
-                                        )
                                         loadComments()
                                         resetSendButton()
 
@@ -508,12 +501,6 @@ class CommentsActivity : AppCompatActivity() {
 
                                 // Optionally update RecyclerView
                                 // commentsAdapter.addComment(comment)
-                                PostNotificationSender.sendPostComment(
-                                    this@CommentsActivity,
-                                    currentPost,
-                                    postId,
-                                    comment.text
-                                )
                                 loadComments()
                                 resetSendButton()
                                 editComment.text.clear()

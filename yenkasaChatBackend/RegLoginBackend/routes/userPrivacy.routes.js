@@ -6,14 +6,14 @@ const UserPrivacy = require("../models/userPrivacy.model");
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
 const Community = require("../models/community.model");
+const {
+    VALID_PRIVACY_LEVELS,
+    approveMessageUser,
+    canMessageUser,
+    ensurePrivacy,
+    hasId
+} = require("../services/privacy.service");
 
-
-// ensure privacy doc
-async function ensurePrivacy(userId) {
-    let doc = await UserPrivacy.findOne({ userId });
-    if (!doc) doc = await UserPrivacy.create({ userId });
-    return doc;
-}
 
 // ────────────────────────────────────────────
 // GET CURRENT PRIVACY LEVEL
@@ -32,7 +32,12 @@ router.get("/get", auth, async (req, res) => {
 // ────────────────────────────────────────────
 router.put("/set-privacy", auth, async (req, res) => {
     try {
-        const { privacyLevel } = req.query;
+        const privacyLevel = req.query.privacyLevel || req.body?.privacyLevel;
+
+        if (!VALID_PRIVACY_LEVELS.has(privacyLevel)) {
+            return res.status(400).json({ message: "Invalid privacy level" });
+        }
+
         const doc = await ensurePrivacy(req.user.id);
 
         doc.privacyLevel = privacyLevel;
@@ -49,10 +54,10 @@ router.put("/set-privacy", auth, async (req, res) => {
 // ────────────────────────────────────────────
 router.post("/block", auth, async (req, res) => {
     try {
-        const { targetId } = req.body;
+        const targetId = req.body.targetId || req.body.blockedUserId;
         const userId = req.user.id;
 
-        if (!targetId) {
+        if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
             return res.status(400).json({ message: "targetId is required" });
         }
 
@@ -61,26 +66,34 @@ router.post("/block", auth, async (req, res) => {
             return res.status(400).json({ message: "You cannot block yourself" });
         }
 
+        const targetUser = await User.findById(targetId).select("_id");
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
         const doc = await ensurePrivacy(userId);
 
-        const alreadyBlocked = doc.blockedUsers.some(id => id.toString() === targetId);
+        const alreadyBlocked = hasId(doc.blockedUsers, targetId);
         if (alreadyBlocked) {
             return res.status(400).json({ message: "User is already blocked" });
         }
 
         // Add to block list
         doc.blockedUsers.push(targetId);
+        doc.approvedMessageUsers = doc.approvedMessageUsers.filter(id => id.toString() !== targetId);
         await doc.save();
 
-        // 🔔 BLOCK NOTIFICATION
-        await Notification.create({
-            type: "blocked",
-            senderId: userId,
-            receiverId: targetId,
-            message: "has blocked you",
-            activityId: `block_${userId}_${targetId}_${Date.now()}`,
-            targetType: "profile",
-            targetId: userId     // open the blocker’s profile
+        await UserPrivacy.updateOne(
+            { userId: targetId },
+            { $pull: { approvedMessageUsers: userId } }
+        );
+
+        await Notification.deleteMany({
+            type: { $in: ["message_request", "message_request_approved"] },
+            $or: [
+                { senderId: userId, receiverId: targetId },
+                { senderId: targetId, receiverId: userId }
+            ]
         });
 
         return res.json({ success: true, message: "User blocked" });
@@ -97,17 +110,17 @@ router.post("/block", auth, async (req, res) => {
 // ────────────────────────────────────────────
 router.post("/unblock", auth, async (req, res) => {
     try {
-        const { targetId } = req.body;
+        const targetId = req.body.targetId || req.body.blockedUserId;
         const userId = req.user.id;
 
-        if (!targetId) {
+        if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
             return res.status(400).json({ message: "targetId is required" });
         }
 
         const doc = await ensurePrivacy(userId);
 
         // Check if already unblocked
-        const wasBlocked = doc.blockedUsers.some(id => id.toString() === targetId);
+        const wasBlocked = hasId(doc.blockedUsers, targetId);
 
         if (!wasBlocked) {
             return res.status(400).json({ message: "User is not blocked" });
@@ -120,26 +133,15 @@ router.post("/unblock", auth, async (req, res) => {
         const targetUser = await User.findById(targetId)
             .select("_id username profileImage role");
 
-        // 🔔 SEND UNBLOCK NOTIFICATION
-        await Notification.create({
-            type: "unblocked",
-            senderId: userId,               // the one doing the unblock
-            receiverId: targetId,           // the one being unblocked
-            message: "has unblocked you",
-            activityId: `unblock_${userId}_${targetId}_${Date.now()}`,
-            targetType: "profile",
-            targetId: userId                // open the unblocker’s profile
-        });
-
         return res.json({
             success: true,
             message: "User unblocked",
-            user: {
+            user: targetUser ? {
                 userId: targetUser._id,
                 username: targetUser.username,
                 avatar: targetUser.profileImage,
                 roleName: targetUser.role?.name ?? "user"
-            }
+            } : null
         });
 
     } catch (err) {
@@ -217,26 +219,55 @@ router.post("/message-request", auth, async (req, res) => {
     try {
         const { receiverId } = req.body;
 
-        const doc = await ensurePrivacy(receiverId);
-
-        if (doc.privacyLevel === "nobody") {
-            return res.json({ allowed: false, message: "User does not accept messages" });
+        if (!receiverId || !mongoose.Types.ObjectId.isValid(receiverId)) {
+            return res.status(400).json({ allowed: false, message: "receiverId is required" });
         }
 
-        if (doc.privacyLevel === "everyone") {
+        if (receiverId === req.user.id) {
+            return res.status(400).json({ allowed: false, message: "You cannot message yourself" });
+        }
+
+        const receiver = await User.findById(receiverId).select("_id");
+        if (!receiver) {
+            return res.status(404).json({ allowed: false, message: "User not found" });
+        }
+
+        const permission = await canMessageUser(req.user.id, receiverId);
+
+        if (permission.allowed) {
             return res.json({ allowed: true, message: "Open chat immediately" });
         }
 
+        if (permission.reason === "blocked") {
+            return res.status(403).json({ allowed: false, message: "Unable to send message request" });
+        }
+
+        if (permission.reason === "not_accepting") {
+            return res.json({ allowed: false, message: "User does not accept messages" });
+        }
+
         // requires approval → create notification request
-        await Notification.create({
-            type: "message_request",
-            senderId: req.user.id,
-            receiverId,
-            message: "wants to message you",
-            activityId: req.user.id,
-             targetType: "profile",
-             targetId: req.user.id
-        });
+        await Notification.findOneAndUpdate(
+            {
+                type: "message_request",
+                senderId: req.user.id,
+                receiverId,
+                status: "unread"
+            },
+            {
+                $setOnInsert: {
+                    type: "message_request",
+                    senderId: req.user.id,
+                    receiverId,
+                    message: "wants to message you",
+                    activityId: req.user.id,
+                    targetType: "profile",
+                    targetId: req.user.id,
+                    createdAt: new Date()
+                }
+            },
+            { upsert: true, new: true }
+        );
 
         res.json({ allowed: false, message: "Request sent" });
 
@@ -250,18 +281,40 @@ router.post("/message-request", auth, async (req, res) => {
 // ────────────────────────────────────────────
 router.post("/approve-request", auth, async (req, res) => {
     try {
-        const { requestId, senderId } = req.body;
+        const requestId = req.body?.requestId || req.query?.requestId;
+        let senderId = req.body?.senderId || req.query?.senderId;
 
-        await Notification.findByIdAndUpdate(requestId, { status: "read" });
+        let request = null;
+        if (requestId && mongoose.Types.ObjectId.isValid(requestId)) {
+            request = await Notification.findOne({
+                _id: requestId,
+                receiverId: req.user.id,
+                type: "message_request"
+            });
+            senderId = senderId || request?.senderId?.toString();
+        }
+
+        if (!senderId || !mongoose.Types.ObjectId.isValid(senderId)) {
+            return res.status(400).json({ message: "senderId or valid requestId is required" });
+        }
+
+        await approveMessageUser(req.user.id, senderId);
+
+        if (request?._id) {
+            await Notification.findByIdAndUpdate(request._id, {
+                status: "read",
+                readAt: new Date()
+            });
+        }
 
         await Notification.create({
             type: "message_request_approved",
             senderId: req.user.id,
             receiverId: senderId,
             message: "approved your message request",
-            activityId: senderId,
-             targetType: "profile",
-            targetId: senderId
+            activityId: req.user.id,
+            targetType: "profile",
+            targetId: req.user.id
             
         });
 
@@ -278,9 +331,13 @@ router.post("/approve-request", auth, async (req, res) => {
 router.post("/block-community", auth, async (req, res) => {
     try {
         const { communityId } = req.body;
+        if (!communityId || !mongoose.Types.ObjectId.isValid(communityId)) {
+            return res.status(400).json({ message: "Valid communityId is required" });
+        }
+
         const doc = await ensurePrivacy(req.user.id);
 
-        if (!doc.blockedCommunities.includes(communityId)) {
+        if (!hasId(doc.blockedCommunities, communityId)) {
             doc.blockedCommunities.push(communityId);
             await doc.save();
         }
@@ -298,9 +355,13 @@ router.post("/block-community", auth, async (req, res) => {
 router.post("/unblock-community", auth, async (req, res) => {
     try {
         const { communityId } = req.body;
+        if (!communityId || !mongoose.Types.ObjectId.isValid(communityId)) {
+            return res.status(400).json({ message: "Valid communityId is required" });
+        }
+
         const doc = await ensurePrivacy(req.user.id);
 
-        doc.blockedCommunities = doc.blockedCommunities.filter(id => id != communityId);
+        doc.blockedCommunities = doc.blockedCommunities.filter(id => id.toString() !== communityId);
         await doc.save();
 
         res.json({ message: "Community unblocked" });
@@ -380,9 +441,13 @@ router.post("/community-visibility", auth, async (req, res) => {
 router.post("/hide-user", auth, async (req, res) => {
     try {
         const { targetId } = req.body;
+        if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
+            return res.status(400).json({ message: "targetId is required" });
+        }
+
         const doc = await ensurePrivacy(req.user.id);
 
-        if (!doc.hiddenUsers.includes(targetId)) {
+        if (!hasId(doc.hiddenUsers, targetId)) {
             doc.hiddenUsers.push(targetId);
             await doc.save();
         }
@@ -400,9 +465,13 @@ router.post("/hide-user", auth, async (req, res) => {
 router.post("/unhide-user", auth, async (req, res) => {
     try {
         const { targetId } = req.body;
+        if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
+            return res.status(400).json({ message: "targetId is required" });
+        }
+
         const doc = await ensurePrivacy(req.user.id);
 
-        doc.hiddenUsers = doc.hiddenUsers.filter(id => id != targetId);
+        doc.hiddenUsers = doc.hiddenUsers.filter(id => id.toString() !== targetId);
         await doc.save();
 
         res.json({ message: "User unhidden" });

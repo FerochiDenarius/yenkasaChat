@@ -172,6 +172,8 @@ class ContactsActivity : AppCompatActivity() {
                             putExtra("contactName", contact.username)
                         }
                         startActivity(intent)
+                    } else if (response.code() == 202 && responseBody?.message != null) {
+                        Toast.makeText(this@ContactsActivity, responseBody.message, Toast.LENGTH_LONG).show()
                     } else {
                         val errorMsg = parseError(response)
                         val successFlag = responseBody?.success
@@ -202,4 +204,3 @@ class ContactsActivity : AppCompatActivity() {
         }
     }
 }
-

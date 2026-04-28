@@ -7,7 +7,7 @@ import PostList from "../components/feed/PostList";
 import TopBar from "../components/feed/TopBar";
 import "../styles/feed.css";
 
-export default function Home() {
+export default function Home({ onOpenMenu }) {
   const [activeTab, setActiveTab] = useState("For You");
   const [activeSort, setActiveSort] = useState("Top");
   const [selectedCommunity, setSelectedCommunity] = useState(null);
@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <main className="feed-home">
       <div className="feed-home__shell">
-        <TopBar />
+        <TopBar onOpenMenu={onOpenMenu} />
         <CommunitiesBar
           selectedCommunityId={selectedCommunity?._id || selectedCommunity?.id || null}
           onSelectCommunity={setSelectedCommunity}

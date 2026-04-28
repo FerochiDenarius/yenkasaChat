@@ -34,7 +34,7 @@ export default function Menu() {
           <MenuItem icon="⌕" title="Contacts" subtitle="Manage saved contacts" onClick={() => comingSoon("Contacts")} />
           <MenuItem icon="◫" title="Chat Rooms" subtitle="View all your chats" onClick={() => comingSoon("Chat Rooms")} />
           <MenuItem icon="◎" title="Account Info" subtitle="Your account details" to="/profile" />
-          <MenuItem icon="▣" title="Wallet" subtitle="Your YKC balance" onClick={() => comingSoon("Wallet")} />
+          <MenuItem icon="▣" title="Wallet" subtitle="Your YKC balance" to="/wallet" />
           <MenuItem icon="✎" title="Edit Profile" subtitle="Update your profile" to="/profile" />
           <MenuItem icon="⬡" title="Verify Account" subtitle="Verification options" onClick={() => comingSoon("Verify Account")} />
           <MenuItem icon="🛡" title="Yenkasa Verification" subtitle="Secure your identity" to="/verification" />

@@ -4,7 +4,7 @@ const items = [
   { to: "/", label: "Home", icon: "⌂" },
   { to: "/ads", label: "Explore", icon: "◎" },
   { to: "/communities", label: "Communities", icon: "◌" },
-  { to: "/verification", label: "Wallet", icon: "▣" },
+  { to: "/wallet", label: "Wallet", icon: "▣" },
   { to: "/profile", label: "Profile", icon: "◔" }
 ];
 

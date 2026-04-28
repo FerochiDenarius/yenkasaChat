@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui
 
 import android.Manifest
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -13,6 +14,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.MyApplication
@@ -52,6 +55,7 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        configureSystemBars()
         setContentView(R.layout.activity_user_notifications)
 
         TokenManager.getUserId(this)?.let { SocketManager.ensureConnected(it) }
@@ -81,6 +85,19 @@ class UserNotificationsActivity : AppCompatActivity() {
 
         loadNotifications()
         initSocketListeners()
+    }
+
+    private fun configureSystemBars() {
+        val backgroundColor = ContextCompat.getColor(this, R.color.notification_page_background)
+        window.statusBarColor = backgroundColor
+        window.navigationBarColor = backgroundColor
+
+        val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val lightBars = nightMode != Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = lightBars
+            isAppearanceLightNavigationBars = lightBars
+        }
     }
 
     override fun onDestroy() {

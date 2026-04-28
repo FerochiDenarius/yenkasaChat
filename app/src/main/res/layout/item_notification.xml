@@ -9,7 +9,7 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="@color/white"
+    app:cardBackgroundColor="@color/notification_card_background"
     app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
     app:strokeColor="@color/notification_card_stroke"
@@ -39,7 +39,7 @@
                 android:layout_height="24dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_play_arrow"
-                app:tint="@color/yenkasa_black" />
+                app:tint="@color/notification_icon_tint" />
         </FrameLayout>
 
         <ImageView
@@ -59,7 +59,7 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:text="You earned 2 coins for watching a video"
-            android:textColor="@color/yenkasa_black"
+            android:textColor="@color/notification_primary_text"
             android:textSize="14sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@id/rewardArea"
@@ -76,7 +76,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="+2 YKC added to your wallet"
-            android:textColor="@color/feed_secondary_text"
+            android:textColor="@color/notification_secondary_text"
             android:textSize="13sp"
             app:layout_constraintEnd_toStartOf="@id/rewardArea"
             app:layout_constraintStart_toEndOf="@id/iconContainer"
@@ -90,7 +90,7 @@
             android:layout_marginTop="6dp"
             android:layout_marginEnd="10dp"
             android:text="Just now"
-            android:textColor="@color/muted_text"
+            android:textColor="@color/notification_muted_text"
             android:textSize="12sp"
             app:layout_constraintEnd_toStartOf="@id/rewardArea"
             app:layout_constraintStart_toEndOf="@id/iconContainer"

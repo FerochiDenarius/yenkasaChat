@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans"
         android:text="Notifications"
-        android:textColor="@color/yenkasa_black"
+        android:textColor="@color/notification_primary_text"
         android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@id/btnNotificationSettings"
@@ -33,7 +33,7 @@
         app:layout_constraintBottom_toBottomOf="@id/notificationsTitle"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/notificationsTitle"
-        app:tint="@color/yenkasa_black" />
+        app:tint="@color/notification_primary_text" />
 
     <HorizontalScrollView
         android:id="@+id/filterScroll"
@@ -163,7 +163,7 @@
         android:gravity="center"
         android:lineSpacingExtra="4dp"
         android:text="You're all caught up 🎉"
-        android:textColor="@color/menu_secondary_text"
+        android:textColor="@color/notification_muted_text"
         android:textSize="16sp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"

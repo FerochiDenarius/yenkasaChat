@@ -154,7 +154,7 @@ export default function Profile() {
         <button
           type="button"
           className="account-wallet-card"
-          onClick={() => window.alert("Wallet web page is the next screen to wire.")}
+          onClick={() => navigate("/wallet")}
         >
           <div className="account-wallet-card__icon">🪙</div>
           <div className="account-wallet-card__body">

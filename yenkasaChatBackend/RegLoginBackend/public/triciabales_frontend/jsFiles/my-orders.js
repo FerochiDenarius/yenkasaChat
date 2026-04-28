@@ -34,12 +34,10 @@ function getStatusClass(type, value) {
     if (normalized === "paid") return "paid";
     if (
       normalized === "awaiting_payment" ||
-      normalized === "awaiting_transfer" ||
-      normalized === "ready_for_payout"
+      normalized === "awaiting_transfer"
     ) {
       return "awaiting";
     }
-    if (normalized === "payout_released") return "paid";
     return "unpaid";
   }
 

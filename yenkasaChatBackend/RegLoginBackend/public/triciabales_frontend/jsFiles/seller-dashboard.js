@@ -715,7 +715,7 @@ async function loadSellerOrders() {
     const orders = await response.json();
     const paidOrders = orders.filter(order => order.paymentStatus === "paid");
     const awaitingOrders = orders.filter(order =>
-      order.paymentStatus === "awaiting_payment" || order.paymentStatus === "ready_for_payout"
+      order.paymentStatus === "awaiting_payment"
     );
     const completedOrders = orders.filter(order => order.deliveryStatus === "delivered");
 

@@ -162,17 +162,8 @@ sellerOrdersList.addEventListener("click", async event => {
     }
 
     if (action === "release") {
-      const confirmed = confirm(
-        "Release seller payment after deducting 10% commission?"
-      );
-
-      if (!confirmed) {
-        return;
-      }
-
-      body = {
-        releasePayout: "true"
-      };
+      alert("This order uses Paystack split settlement. Manual payout release is not required.");
+      return;
     }
 
     const response = await fetch(
@@ -189,14 +180,6 @@ sellerOrdersList.addEventListener("click", async event => {
     }
 
     const updatedOrder = await response.json();
-
-    if (action === "release") {
-      alert(
-        `Seller payout released.\n\nCommission: GH₵${Number(updatedOrder.commissionAmount || 0).toFixed(2)}\nSeller Gets: GH₵${Number(updatedOrder.sellerPayoutAmount || 0).toFixed(2)}`
-      );
-      loadSellerOrders();
-      return;
-    }
 
     alert(
       action === "accept"
@@ -503,19 +486,7 @@ async function loadSellerOrders() {
             </button>
           `
         : "";
-      const releasePaymentBtn = canReleasePayout &&
-        paymentStatus === "ready_for_payout" &&
-        order.confirmedByBuyer === true
-        ? `
-            <button
-              class="manage-btn status order-action-btn release-payment-btn"
-              data-id="${order.id}"
-              data-action="release"
-            >
-              Release Seller Payment
-            </button>
-          `
-        : "";
+      const releasePaymentBtn = "";
 
       return `
         <div class="manage-item" style="align-items:flex-start; flex-direction:column;">

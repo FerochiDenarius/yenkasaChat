@@ -70,6 +70,7 @@ const dashboardState = {
   sellers: [],
   products: [],
   refunds: [],
+  paymentAudit: [],
   loadedSuperAdminNotifications: []
 };
 let activeSuperAdminNotificationFilter = "all";
@@ -334,6 +335,7 @@ function isPaystackSplitOrder(order) {
       String(order.splitMode || order.paystackSplitMode || "").toLowerCase() === "paystack_subaccount"
       || String(order.payoutStatus || "").toLowerCase() === "not_required"
       || Boolean(order.sellerSubaccountCode)
+      || order.splitUsed === true
     );
 }
 
@@ -353,8 +355,8 @@ function isPendingPayoutOrder(order) {
 
 function splitSettlementDetails(order) {
   const gross = Number(order.grossAmount ?? order.total ?? 0);
-  const commission = Number(order.platformCommissionAmount ?? order.commissionAmount ?? gross * 0.10);
-  const settlement = Number(order.sellerSettlementAmount ?? order.sellerPayoutAmount ?? gross - commission);
+  const commission = Number(order.platformCommissionAmount ?? order.platformCommission ?? order.commissionAmount ?? gross * 0.10);
+  const settlement = Number(order.sellerSettlementAmount ?? order.sellerExpectedSettlement ?? order.sellerPayoutAmount ?? gross - commission);
   return { gross, commission, settlement };
 }
 
@@ -408,6 +410,10 @@ function renderEmpty(target, message) {
   }
 
   target.innerHTML = `<p>${escapeHtml(message)}</p>`;
+}
+
+function legacyPayoutWarning() {
+  return "This order was created under the old payout flow. Check Paystack Dashboard before taking action.";
 }
 
 function showSuperAdminNotificationFeedback(message, type = "info") {
@@ -714,7 +720,7 @@ function renderPendingPayoutItems(target, orders) {
     const { gross, commission, settlement } = splitSettlementDetails(order);
     const splitOrder = isPaystackSplitOrder(order);
     const legacyWarning = !splitOrder && isLegacyPayoutOrder(order)
-      ? `<div class="orders-feedback error">This order was created under the old payout flow. Check Paystack Dashboard before taking action.</div>`
+      ? `<div class="orders-feedback error">${legacyPayoutWarning()}</div>`
       : "";
     const settlementMessage = splitOrder
       ? "Payment split handled by Paystack. Manual payout release is not required."
@@ -725,20 +731,20 @@ function renderPendingPayoutItems(target, orders) {
         <div class="super-admin-item-header">
           <div>
             <strong>${escapeHtml(order.sellerName || "Seller")}</strong>
-            <p>Order #${escapeHtml(order.id || "-")}</p>
+            <p>Order #${escapeHtml(order.id || order.orderId || "-")}</p>
           </div>
           <strong>${escapeHtml(formatCompactCurrency(gross))}</strong>
         </div>
         ${legacyWarning}
-        <p><strong>Buyer:</strong> ${escapeHtml(order.customerName || order.buyerName || "-")}</p>
-        <p><strong>Payment:</strong> ${escapeHtml(formatStatus(order.paymentStatus))}</p>
+        <p><strong>Buyer:</strong> ${escapeHtml(order.customerName || order.buyerName || order.buyerEmail || "-")}</p>
+        <p><strong>Payment:</strong> ${escapeHtml(formatStatus(order.paymentStatus || order.transactionStatus))}</p>
         <p><strong>Delivery:</strong> ${escapeHtml(formatStatus(order.deliveryStatus))}</p>
         <p><strong>Paystack Reference:</strong> ${escapeHtml(order.paystackReference || "-")}</p>
         <p><strong>Seller Subaccount:</strong> ${escapeHtml(order.sellerSubaccountCode || "-")}</p>
         <p><strong>Yenkasa Commission:</strong> ${escapeHtml(formatCompactCurrency(commission))} <small>(10%)</small></p>
         <p><strong>Seller Settlement:</strong> ${escapeHtml(formatCompactCurrency(settlement))} <small>(90%)</small></p>
         <p><strong>Split Mode:</strong> ${escapeHtml(order.splitMode || order.paystackSplitMode || "-")}</p>
-        <p><strong>Settlement Status:</strong> ${splitOrder ? "Handled by Paystack" : escapeHtml(formatStatus(order.payoutStatus || order.paymentStatus))}</p>
+        <p><strong>Settlement Status:</strong> ${splitOrder ? "Handled by Paystack" : escapeHtml(formatStatus(order.payoutStatus || order.paymentStatus || order.transactionStatus))}</p>
         <p>${escapeHtml(settlementMessage)}</p>
       </div>
     `;
@@ -761,7 +767,7 @@ function renderAllOrders(orders) {
     const canRequestRefund = total > 0 && paymentStatus !== "payment_failed" && paymentStatus !== "cancelled";
     const splitOrder = isPaystackSplitOrder(order);
     const legacyWarning = !splitOrder && isLegacyPayoutOrder(order)
-      ? `<div class="orders-feedback error">This order was created under the old payout flow. Check Paystack Dashboard before taking action.</div>`
+      ? `<div class="orders-feedback error">${legacyPayoutWarning()}</div>`
       : "";
     const { commission, settlement } = splitSettlementDetails(order);
 
@@ -928,7 +934,7 @@ function renderSellers(sellers, orders) {
       <p><strong>Status:</strong> ${escapeHtml(formatStatus(seller.accountStatus || "ACTIVE"))}</p>
       <p><strong>Verified:</strong> ${seller.verified ? "Yes" : "No"}</p>
       <p><strong>Total Orders:</strong> ${escapeHtml(seller.totalOrders)}</p>
-      <p><strong>Pending Payouts:</strong> ${escapeHtml(seller.pendingPayouts)}</p>
+      <p><strong>Legacy Payout Risk:</strong> ${escapeHtml(seller.pendingPayouts)}</p>
     </div>
   `).join("");
 }
@@ -1412,11 +1418,11 @@ function renderDashboardSummary() {
   const orderStatus = buildOrderStatusSummary(orders);
   renderOrderStatusChart(orderStatus);
 
-  const pendingPayoutOrders = orders.filter(isPendingPayoutOrder);
-  const releasedPayoutOrders = orders.filter(order => String(order.paymentStatus || "").toLowerCase() === "payout_released");
-  const totalCommission = releasedPayoutOrders.reduce((sum, order) => sum + Number(order.commissionAmount || 0), 0);
-  const pendingPayoutAmount = pendingPayoutOrders.reduce((sum, order) => sum + Number(order.sellerPayoutAmount || 0), 0);
-  const releasedPayoutAmount = releasedPayoutOrders.reduce((sum, order) => sum + Number(order.sellerPayoutAmount || 0), 0);
+  const settlementOrders = orders.filter(isPaystackSplitOrder);
+  const legacyPayoutOrders = orders.filter(order => !isPaystackSplitOrder(order) && isLegacyPayoutOrder(order));
+  const totalCommission = settlementOrders.reduce((sum, order) => sum + splitSettlementDetails(order).commission, 0);
+  const pendingPayoutAmount = legacyPayoutOrders.reduce((sum, order) => sum + Number(order.sellerPayoutAmount || 0), 0);
+  const releasedPayoutAmount = settlementOrders.reduce((sum, order) => sum + splitSettlementDetails(order).settlement, 0);
   const refundsAmount = refunds.reduce((sum, refund) => sum + Number(refund.amount || 0), 0);
 
   pendingPayoutsMini.textContent = formatCurrency(pendingPayoutAmount);
@@ -1432,17 +1438,19 @@ function renderDashboardSummary() {
 
 async function loadDashboard() {
   try {
-    const [ordersResponse, usersResponse, productsResponse, refundsResponse] = await Promise.all([
+    const [ordersResponse, usersResponse, productsResponse, refundsResponse, paymentAuditResponse] = await Promise.all([
       fetch(`${API_BASE}/api/orders`, { headers: getAuthHeaders() }),
       fetch(`${API_BASE}/api/users`, { headers: getAuthHeaders() }),
       fetch(`${API_BASE}/api/triciabales`),
-      fetch(`${API_BASE}/api/refunds`, { headers: getAuthHeaders() })
+      fetch(`${API_BASE}/api/refunds`, { headers: getAuthHeaders() }),
+      fetch(`${API_BASE}/api/paystack/audit`, { headers: getAuthHeaders() })
     ]);
 
     const orders = await readResponseData(ordersResponse);
     const usersPayload = await readResponseData(usersResponse);
     const productsPayload = await readResponseData(productsResponse);
     const refundsPayload = await readResponseData(refundsResponse);
+    const paymentAuditPayload = await readResponseData(paymentAuditResponse);
 
     if (isAuthFailure(ordersResponse.status)) {
       handleUnauthorized(orders);
@@ -1478,20 +1486,23 @@ async function loadDashboard() {
     dashboardState.users = usersPayload;
     dashboardState.sellers = usersPayload.filter(user => String(user.role || "").toUpperCase() === "SELLER");
     dashboardState.products = productsPayload;
+    dashboardState.paymentAudit = paymentAuditResponse.ok && Array.isArray(paymentAuditPayload?.orders)
+      ? paymentAuditPayload.orders
+      : dashboardState.orders.filter(isPaystackSplitOrder);
 
     dashboardDateFilterBtn.textContent = getWeekRangeLabel();
     renderDashboardSummary();
     renderPendingPayoutItems(pendingPayoutsList, dashboardState.orders.filter(isPendingPayoutOrder));
     renderPendingPayoutItems(pendingPayoutsSectionList, dashboardState.orders.filter(isPendingPayoutOrder));
     renderAllOrders(dashboardState.orders);
-    renderReleasedPayouts(dashboardState.orders.filter(order => String(order.paymentStatus || "").toLowerCase() === "payout_released"));
+    renderReleasedPayouts(dashboardState.paymentAudit);
     renderSellers(dashboardState.sellers, dashboardState.orders);
     renderUsers(dashboardState.users);
     renderSellerProducts(dashboardState.sellers, dashboardState.products);
   } catch (error) {
     console.error(error);
     renderEmpty(pendingPayoutsList, "Unable to load dashboard.");
-    renderEmpty(pendingPayoutsSectionList, "Unable to load pending payouts.");
+    renderEmpty(pendingPayoutsSectionList, "Unable to load settlement audit.");
     renderEmpty(allOrdersList, "Unable to load orders.");
     renderEmpty(releasedPayoutsList, "Unable to load released payouts.");
     renderEmpty(sellersList, "Unable to load sellers.");
@@ -1564,23 +1575,30 @@ function renderReleasedPayouts(orders) {
   }
 
   if (!orders.length) {
-    renderEmpty(releasedPayoutsList, "No payouts have been released yet.");
+    renderEmpty(releasedPayoutsList, "No Paystack split settlements recorded yet.");
     return;
   }
 
-  releasedPayoutsList.innerHTML = orders.map(order => `
-    <div class="super-admin-item">
-      <div class="super-admin-item-header">
-        <div>
-          <strong>${escapeHtml(order.sellerName || "Seller")}</strong>
-          <p>Order #${escapeHtml(order.id || "-")}</p>
+  releasedPayoutsList.innerHTML = orders.map(order => {
+    const { gross, commission, settlement } = splitSettlementDetails(order);
+    return `
+      <div class="super-admin-item">
+        <div class="super-admin-item-header">
+          <div>
+            <strong>${escapeHtml(order.sellerName || "Seller")}</strong>
+            <p>Order #${escapeHtml(order.id || "-")}</p>
+          </div>
+          <strong>${escapeHtml(formatCompactCurrency(settlement))}</strong>
         </div>
-        <strong>${escapeHtml(formatCompactCurrency(order.sellerPayoutAmount || 0))}</strong>
+        <p><strong>Gross Amount:</strong> ${escapeHtml(formatCompactCurrency(gross))}</p>
+        <p><strong>Yenkasa Commission:</strong> ${escapeHtml(formatCompactCurrency(commission))} <small>(10%)</small></p>
+        <p><strong>Seller Settlement:</strong> ${escapeHtml(formatCompactCurrency(settlement))} <small>(90%)</small></p>
+        <p><strong>Paystack Reference:</strong> ${escapeHtml(order.paystackReference || "-")}</p>
+        <p><strong>Seller Subaccount:</strong> ${escapeHtml(order.sellerSubaccountCode || "-")}</p>
+        <p><strong>Settlement Status:</strong> Handled by Paystack</p>
       </div>
-      <p><strong>Commission:</strong> ${escapeHtml(formatCompactCurrency(order.commissionAmount || 0))}</p>
-      <p><strong>Released At:</strong> ${escapeHtml(formatDateTime(order.payoutReleasedAt))}</p>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
 async function handleLogout() {
@@ -1784,70 +1802,6 @@ superAdminNotificationsList?.addEventListener("click", event => {
     deleteSuperAdminNotification(notificationId);
   }
 });
-
-function attachReleaseHandler(target) {
-  target?.addEventListener("click", async event => {
-    const button = event.target.closest(".payout-action-btn");
-    if (!button) return;
-
-    const orderId = button.dataset.id;
-    const action = button.dataset.action;
-    if (!orderId || !action) return;
-
-    try {
-      let requestBody;
-      let confirmMessage;
-      let successMessage;
-
-      if (action === "hold") {
-        requestBody = { holdPayout: "true" };
-        confirmMessage = "Hold this seller payout for manual review?";
-        successMessage = "Payout placed on hold.";
-      } else if (action === "resume") {
-        requestBody = { resumePayout: "true" };
-        confirmMessage = "Move this payout back to ready for release?";
-        successMessage = "Payout moved back to ready for release.";
-      } else {
-        requestBody = { releasePayout: "true" };
-        confirmMessage = "Release seller payment after deducting 10% commission?";
-      }
-
-      const confirmed = confirm(confirmMessage);
-      if (!confirmed) return;
-
-      const response = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: getJsonAuthHeaders(),
-        body: JSON.stringify(requestBody)
-      });
-
-      const data = await readResponseData(response);
-
-      if (isAuthFailure(response.status)) {
-        handleUnauthorized(data);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to release payout");
-      }
-
-      if (action === "release") {
-        alert(`Seller payout released.\n\nCommission: ${formatCompactCurrency(data.commissionAmount || 0)}\nSeller Gets: ${formatCompactCurrency(data.sellerPayoutAmount || 0)}`);
-      } else {
-        alert(successMessage);
-      }
-
-      await loadDashboard();
-    } catch (error) {
-      console.error(error);
-      alert(error.message || "Unable to update payout.");
-    }
-  });
-}
-
-attachReleaseHandler(pendingPayoutsList);
-attachReleaseHandler(pendingPayoutsSectionList);
 
 usersList?.addEventListener("click", async event => {
   const resendButton = event.target.closest(".resend-verification-btn");

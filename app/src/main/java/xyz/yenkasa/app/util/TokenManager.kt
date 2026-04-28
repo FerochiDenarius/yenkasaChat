@@ -41,6 +41,9 @@ object TokenManager {
     private const val GENDER_KEY = "user_gender"
     private const val DOB_KEY = "user_dob"
     private const val DASHBOARD_CACHE_KEY = "verification_dashboard_json"
+    private const val FEED_CACHE_PREF_NAME = "yenkasa_cache"
+    private const val FEED_CACHE_KEY = "feed_cache"
+    private const val FEED_CACHE_COMMUNITY_NAMES_KEY = "feed_cache_community_names"
     private const val FIRST_LAUNCH_KEY = "first_launch_completed"
     private const val POLICIES_ACCEPTED_KEY = "policies_accepted"
     private const val EMAIL_VERIFIED_KEY = "email_verified"
@@ -1048,6 +1051,45 @@ object TokenManager {
             Log.i("TokenManager", "🧹 Dashboard cache cleared.")
         } catch (e: Exception) {
             Log.e("TokenManager", "Error clearing dashboard cache", e)
+        }
+    }
+
+    fun saveFeedCache(context: Context, json: String) {
+        try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(FEED_CACHE_KEY, json).apply()
+            Log.i(TAG, "📦 Feed cache saved.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving feed cache", e)
+        }
+    }
+
+    fun getFeedCache(context: Context): String? {
+        return try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.getString(FEED_CACHE_KEY, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading feed cache", e)
+            null
+        }
+    }
+
+    fun saveFeedCacheCommunityNames(context: Context, names: String) {
+        try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(FEED_CACHE_COMMUNITY_NAMES_KEY, names).apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving feed cache community names", e)
+        }
+    }
+
+    fun getFeedCacheCommunityNames(context: Context): String? {
+        return try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.getString(FEED_CACHE_COMMUNITY_NAMES_KEY, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading feed cache community names", e)
+            null
         }
     }
 

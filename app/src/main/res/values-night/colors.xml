@@ -53,6 +53,9 @@
     <color name="account_accent_green">#61A92F</color>
     <color name="account_accent_gold">#D1B45A</color>
     <color name="account_danger">#FF594D</color>
+    <color name="media_badge_bg">#143023</color>
+    <color name="media_badge_stroke">#27543E</color>
+    <color name="media_badge_text">#DDF5E3</color>
     <color name="community_create_button_bg">#101417</color>
     <color name="community_create_button_text">#EAF4EA</color>
     <color name="chat_picker_background">#0A0E0D</color>

@@ -19,7 +19,8 @@ object FeedUtils {
         context: Context,
         token: String,
         post: Post,
-        onLikeUpdated: (liked: Boolean, likeCount: Int) -> Unit
+        onLikeUpdated: (liked: Boolean, likeCount: Int) -> Unit,
+        onError: (() -> Unit)? = null
     ) {
         ApiClient.apiService.toggleLike("Bearer $token", post._id)
             .enqueue(object : Callback<LikeResponse> {
@@ -42,12 +43,14 @@ object FeedUtils {
                             "FeedUtils",
                             "⚠️ Like failed -> code=${response.code()}, msg=${response.message()}"
                         )
+                        onError?.invoke()
                         Toast.makeText(context, "Failed to like post", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<LikeResponse>, t: Throwable) {
                     Log.e("FeedUtils", "❌ Like toggle error: ${t.message}", t)
+                    onError?.invoke()
                     Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })

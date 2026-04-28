@@ -13,10 +13,14 @@ function computeTarget(notification) {
         if (targetType === "profile") return `/profile/${targetId}`;
         if (targetType === "comment") return `/post/${targetId}?openComments=true`;
         if (targetType === "wallet") return `/wallet/${targetId}`;
+        if (targetType === "ad") return `/ads/mine`;
+        if (targetType === "community") return `/communities/mine`;
     }
 
     if (type === "reward") return "/wallet";
     if (type === "post_approved") return `/admin/post-approval/${activityId}`;
+    if (type === "ad_approved" || type === "ad_rejected") return "/ads/mine";
+    if (type === "community_approved" || type === "community_rejected") return "/communities/mine";
     if (type === "comment") return `/post/${activityId}?openComments=true`;
     if (type === "like" || type === "post_liked") return `/post/${activityId}`;
 

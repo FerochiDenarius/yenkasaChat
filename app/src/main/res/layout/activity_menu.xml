@@ -544,6 +544,204 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/btnMyAds"
+                style="@style/MenuItemStyle"
+                android:minHeight="58dp"
+                android:foreground="?android:attr/selectableItemBackground">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_menu_icon_container">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_wallet"
+                        app:tint="@color/menu_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="My Ads"
+                        android:textColor="@color/menu_primary_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="See pending, approved, and rejected ads"
+                        android:textColor="@color/menu_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnMyCommunities"
+                style="@style/MenuItemStyle"
+                android:minHeight="58dp"
+                android:foreground="?android:attr/selectableItemBackground">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_menu_icon_container">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_communities"
+                        app:tint="@color/menu_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="My Communities"
+                        android:textColor="@color/menu_primary_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="See your created communities and status"
+                        android:textColor="@color/menu_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnAdsApproval"
+                style="@style/MenuItemStyle"
+                android:minHeight="58dp"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_menu_icon_container">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_approval"
+                        app:tint="@color/menu_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Approve Ads"
+                        android:textColor="@color/menu_primary_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Review pending ads"
+                        android:textColor="@color/menu_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnCommunityApproval"
+                style="@style/MenuItemStyle"
+                android:minHeight="58dp"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_menu_icon_container">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_approval"
+                        app:tint="@color/menu_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Approve Communities"
+                        android:textColor="@color/menu_primary_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Review pending communities"
+                        android:textColor="@color/menu_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/btnNotifications"
                 style="@style/MenuItemStyle"
                 android:minHeight="58dp"

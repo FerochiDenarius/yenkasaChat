@@ -15,6 +15,7 @@ data class AdModel(
     val _id: String,
 
     val title: String? = null,
+    val createdAt: String? = null,
 
     // MEDIA
     val imageUrl: String? = null,
@@ -34,6 +35,8 @@ data class AdModel(
     // SPONSOR DATA
     val sponsorName: String? = null,
     val campaignId: String? = null,
+    val submittedBy: UserBasic? = null,
+    val submittedByRole: String? = null,
     val approvalStatus: String? = null,
     val isActive: Boolean = false,
     val rejectionReason: String? = null

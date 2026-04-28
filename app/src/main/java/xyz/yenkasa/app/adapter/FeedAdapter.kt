@@ -167,4 +167,18 @@ class FeedAdapter(
     fun pauseAllVideos() {
         internalPostAdapter.pauseAllVideos()
     }
+
+    fun autoPlayCenteredVideo(recyclerView: RecyclerView, adapterPosition: Int) {
+        val item = items.getOrNull(adapterPosition) as? Post ?: return
+        if (item.videoUrl.isNullOrBlank()) return
+
+        if (currentPostsForInternal.size != totalPostsCount()) {
+            currentPostsForInternal = extractPosts(items)
+            internalPostAdapter.updatePosts(currentPostsForInternal)
+        }
+
+        val holder = recyclerView.findViewHolderForAdapterPosition(adapterPosition) as? PostAdapter.PostViewHolder
+            ?: return
+        internalPostAdapter.autoPlayIfVideo(computePostIndex(adapterPosition), holder)
+    }
 }

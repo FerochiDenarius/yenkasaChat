@@ -427,6 +427,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.stopFetchingMessages()
         }
+        if (::messageAdapter.isInitialized) {
+            messageAdapter.pauseAllVideos()
+        }
         webSocketManager.release(this)
         super.onStop()
     }
@@ -435,6 +438,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     override fun onDestroy() {
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.cleanup()
+        }
+        if (::messageAdapter.isInitialized) {
+            messageAdapter.pauseAllVideos()
         }
         SocketManager.off("getOnlineUsers")
         SocketManager.off("userStatusChanged")

@@ -17,7 +17,9 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.CoinBalanceResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.WalletBalanceManager
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -59,11 +61,19 @@ class MenuActivity : AppCompatActivity() {
         val btnVerifyAccount = findViewById<LinearLayout>(R.id.btnVerifyAccount)
         val btnSettings = findViewById<LinearLayout>(R.id.btnSettings)
         val btnPostApproval = findViewById<LinearLayout>(R.id.btnPostApproval)
+        val btnMyAds = findViewById<LinearLayout>(R.id.btnMyAds)
+        val btnMyCommunities = findViewById<LinearLayout>(R.id.btnMyCommunities)
+        val btnAdsApproval = findViewById<LinearLayout>(R.id.btnAdsApproval)
+        val btnCommunityApproval = findViewById<LinearLayout>(R.id.btnCommunityApproval)
         val btnLogout = findViewById<LinearLayout>(R.id.btnLogout)
         val btnCommunities = findViewById<LinearLayout>(R.id.btnCommunities)
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
         val walletBalanceChip = findViewById<LinearLayout>(R.id.walletBalanceChip)
         textMenuWalletBalance = findViewById(R.id.textMenuWalletBalance)
+        val canReview = UserPermissions.canApprove(resolveCurrentRole())
+
+        btnAdsApproval.visibility = if (canReview) View.VISIBLE else View.GONE
+        btnCommunityApproval.visibility = if (canReview) View.VISIBLE else View.GONE
 
         textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
         loadWalletBalance()
@@ -125,6 +135,26 @@ class MenuActivity : AppCompatActivity() {
         btnPostApproval.setOnClickListener {
             Log.d(TAG, "PostApproval clicked")
             startActivity(Intent(this, PostApprovalActivity::class.java))
+        }
+
+        btnMyAds.setOnClickListener {
+            Log.d(TAG, "MyAds clicked")
+            startActivity(Intent(this, MyAdsActivity::class.java))
+        }
+
+        btnMyCommunities.setOnClickListener {
+            Log.d(TAG, "MyCommunities clicked")
+            startActivity(Intent(this, MyCommunitiesActivity::class.java))
+        }
+
+        btnAdsApproval.setOnClickListener {
+            Log.d(TAG, "AdsApproval clicked")
+            startActivity(Intent(this, AdsApprovalActivity::class.java))
+        }
+
+        btnCommunityApproval.setOnClickListener {
+            Log.d(TAG, "CommunityApproval clicked")
+            startActivity(Intent(this, CommunityApprovalActivity::class.java))
         }
 
         // ✔ Notifications
@@ -200,5 +230,22 @@ class MenuActivity : AppCompatActivity() {
                     textMenuWalletBalance.text = "${TokenManager.getCoins(this@MenuActivity)} YKC"
                 }
             })
+    }
+
+    private fun resolveCurrentRole(): String {
+        val userJson = TokenManager.getUser(this)
+        if (!userJson.isNullOrBlank()) {
+            runCatching {
+                val json = JSONObject(userJson)
+                json.optString("roleName").takeIf { it.isNotBlank() }?.let { return it }
+                when (val roleValue = json.opt("role")) {
+                    is JSONObject -> roleValue.optString("name").takeIf { it.isNotBlank() }?.let { return it }
+                    is String -> roleValue.takeIf { it.isNotBlank() }?.let { return it }
+                }
+            }.onFailure {
+                Log.w(TAG, "Unable to parse saved role JSON: ${it.message}")
+            }
+        }
+        return TokenManager.getUserRole(this)
     }
 }

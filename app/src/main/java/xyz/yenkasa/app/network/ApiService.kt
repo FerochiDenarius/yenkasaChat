@@ -435,7 +435,7 @@ interface ApiService {
     @GET("communities/user/my-communities")
     fun getMyCommunities(
         @Header("Authorization") token: String
-    ): Call<List<Community>>
+    ): Call<MyCommunitiesResponse>
 
     @GET("communities")
     fun getCommunities(
@@ -471,6 +471,24 @@ interface ApiService {
     fun getUserPrimaryCommunity(
         @Header("Authorization") token: String
     ): Call<UserPrimaryCommunityResponse>
+
+    @GET("communities/pending")
+    fun getPendingCommunities(
+        @Header("Authorization") token: String
+    ): Call<MyCommunitiesResponse>
+
+    @POST("communities/{communityId}/approve")
+    fun approveCommunity(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String
+    ): Call<GenericResponse>
+
+    @HTTP(method = "DELETE", path = "communities/{communityId}", hasBody = true)
+    fun rejectCommunity(
+        @Header("Authorization") token: String,
+        @Path("communityId") communityId: String,
+        @Body body: Map<String, String>
+    ): Call<GenericResponse>
 
 
 

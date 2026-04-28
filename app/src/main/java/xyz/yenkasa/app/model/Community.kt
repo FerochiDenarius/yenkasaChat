@@ -30,6 +30,8 @@ data class Community(
     @SerializedName("createdBy")
     val createdById: String? = null,
 
+    val creator: UserBasic? = null,
+
     val moderators: List<String> = emptyList(),
     val pinnedPosts: List<String> = emptyList(),
 
@@ -88,4 +90,9 @@ data class Community(
 data class UserPrimaryCommunityResponse(
     val success: Boolean,
     val community: Community? // reuse your existing Community model
+)
+
+data class MyCommunitiesResponse(
+    val communities: List<Community> = emptyList(),
+    val count: Int = 0
 )

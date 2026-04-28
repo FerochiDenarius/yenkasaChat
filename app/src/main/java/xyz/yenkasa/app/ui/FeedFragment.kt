@@ -1,18 +1,28 @@
 package xyz.yenkasa.app.ui
 
 import android.app.AlertDialog
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.*
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.google.gson.Gson
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.FeedAdapter
 import xyz.yenkasa.app.adapter.FeedCommunityStoryAdapter
@@ -28,16 +38,20 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.adapter.AdBinder
+import xyz.yenkasa.app.work.FeedSyncWorker
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 
 
 class FeedFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
+    private lateinit var footerProgressBar: ProgressBar
     private lateinit var emptyView: TextView
+    private lateinit var offlineBanner: TextView
     private lateinit var communityNameView: TextView
     private lateinit var fabCreatePost: FloatingActionButton
     private lateinit var selectedCommunitiesText: TextView
@@ -54,6 +68,8 @@ class FeedFragment : Fragment() {
     private var userId: String? = null
     private var currentPage = 1
     private var isLoading = false
+    private var isLastPage = false
+    private var hasShownCachedFeed = false
     private var selectedFeedTabId = R.id.tabForYou
     private var selectedFeedMode = FeedMode.FOR_YOU
     private var followingUserIds: Set<String>? = null
@@ -62,6 +78,9 @@ class FeedFragment : Fragment() {
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
+    private val gson = Gson()
+    private var connectivityManager: ConnectivityManager? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     private enum class FeedMode {
         FOR_YOU,
@@ -83,6 +102,10 @@ class FeedFragment : Fragment() {
         setupRecyclerView()
         setupCommunityStoryRecyclerView()
         setupFeedTabs()
+        setupInfiniteScroll()
+        loadCachedFeed()
+        scheduleBackgroundFeedSync()
+        setupNetworkMonitoring()
 
         loadSponsoredAds()
         recyclerView.post { fetchCommunitiesAndFeed() }
@@ -114,7 +137,9 @@ class FeedFragment : Fragment() {
     private fun initViews(view: View) {
         recyclerView = view.findViewById(R.id.recyclerViewFeed)
         progressBar = view.findViewById(R.id.progressBarFeed)
+        footerProgressBar = view.findViewById(R.id.progressBarFeedFooter)
         emptyView = view.findViewById(R.id.textEmptyFeed)
+        offlineBanner = view.findViewById(R.id.textOfflineBanner)
         communityNameView = view.findViewById(R.id.textCommunityNameHeader)
         fabCreatePost = requireActivity().findViewById(R.id.fabCreatePost)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
@@ -138,15 +163,36 @@ class FeedFragment : Fragment() {
                 val token = TokenManager.getToken(context)
 
                 if (!token.isNullOrEmpty()) {
-                    FeedUtils.toggleLike(context, token, post) { liked, newLikeCount ->
-                        val updatedPost = post.copy(
-                            likedByUser = liked,
-                            likeCount = newLikeCount
+                    val adapterPosition = position.coerceIn(0, posts.lastIndex)
+                    val previousPost = posts.getOrNull(adapterPosition)
+                    if (previousPost != null) {
+                        val optimisticPost = previousPost.copy(
+                            likedByUser = !previousPost.likedByUser,
+                            likeCount = if (previousPost.likedByUser) {
+                                (previousPost.likeCount - 1).coerceAtLeast(0)
+                            } else {
+                                previousPost.likeCount + 1
+                            }
                         )
-                        posts[position] = updatedPost
+                        posts[adapterPosition] = optimisticPost
+                        renderPosts()
+                        saveCurrentFeedCache()
 
-                        val mixed = buildMixedFeed(posts)
-                        feedAdapter.updateItems(mixed)
+                        FeedUtils.toggleLike(context, token, previousPost, { liked, newLikeCount ->
+                            val updatedPost = post.copy(
+                                likedByUser = liked,
+                                likeCount = newLikeCount
+                            )
+                            posts[adapterPosition] = updatedPost
+                            renderPosts()
+                            saveCurrentFeedCache()
+                        }, onError = {
+                            posts[adapterPosition] = previousPost
+                            lifecycleScope.launch {
+                                renderPosts()
+                                saveCurrentFeedCache()
+                            }
+                        })
                     }
                 }
             },
@@ -185,6 +231,35 @@ class FeedFragment : Fragment() {
         recyclerView.adapter = feedAdapter
     }
 
+    private fun setupInfiniteScroll() {
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy <= 0) return
+
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
+                val totalItemCount = layoutManager.itemCount
+                preloadFeedAround(lastVisible)
+
+                if (!isLoading && !isLastPage && lastVisible >= totalItemCount - 3) {
+                    loadFeed(currentPage + 1)
+                }
+            }
+
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState != RecyclerView.SCROLL_STATE_IDLE) return
+
+                val first = layoutManager.findFirstVisibleItemPosition()
+                val last = layoutManager.findLastVisibleItemPosition()
+                if (first == RecyclerView.NO_POSITION || last == RecyclerView.NO_POSITION) return
+
+                val center = (first + last) / 2
+                feedAdapter.autoPlayCenteredVideo(recyclerView, center)
+            }
+        })
+    }
+
     private fun setupCommunityStoryRecyclerView() {
         communityStoryAdapter = FeedCommunityStoryAdapter(
             onAllCommunitiesClick = { selectAllCommunitiesFromStory() },
@@ -208,6 +283,7 @@ class FeedFragment : Fragment() {
                 }
                 updateFeedTabVisualState()
                 currentPage = 1
+                isLastPage = false
                 loadFeed()
             }
         }
@@ -452,6 +528,8 @@ class FeedFragment : Fragment() {
         selectedCommunities.addAll(allCommunities.filter { !it.id.isNullOrBlank() })
         saveSelectedCommunities()
         updateSelectedCommunitiesUI()
+        currentPage = 1
+        isLastPage = false
         loadFeed()
     }
 
@@ -464,6 +542,8 @@ class FeedFragment : Fragment() {
         selectedCommunities.add(community)
         saveSelectedCommunities()
         updateSelectedCommunitiesUI()
+        currentPage = 1
+        isLastPage = false
         loadFeed()
     }
 
@@ -499,6 +579,8 @@ class FeedFragment : Fragment() {
                 applySelectedCommunityIds(selectedIds)
                 saveSelectedCommunities()
                 updateSelectedCommunitiesUI()
+                currentPage = 1
+                isLastPage = false
                 loadFeed()
                 dialog.dismiss()
             }
@@ -619,8 +701,18 @@ class FeedFragment : Fragment() {
             return
         }
 
+        if (!isOnline()) {
+            updateOfflineBanner(true)
+            if (posts.isEmpty() && !hasShownCachedFeed) {
+                loadCachedFeed()
+            }
+            return
+        } else {
+            updateOfflineBanner(false)
+        }
+
         isLoading = true
-        showLoading(true)
+        showLoading(true, page <= 1)
 
         val names = selectedCommunities.mapNotNull { it.displayName ?: it.name }
         if (names.isEmpty()) {
@@ -630,11 +722,12 @@ class FeedFragment : Fragment() {
 
             emptyView.visibility = View.VISIBLE
             isLoading = false
-            showLoading(false)
+            showLoading(false, page <= 1)
             return
         }
 
         val namesString = names.joinToString(",")
+        TokenManager.saveFeedCacheCommunityNames(requireContext(), namesString)
 
         ApiClient.apiService.getPostsByCommunities(
             "Bearer $token",
@@ -645,17 +738,25 @@ class FeedFragment : Fragment() {
 
             override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
                 isLoading = false
-                showLoading(false)
+                showLoading(false, page <= 1)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val sourcePosts = response.body()!!.posts
+                    val body = response.body()!!
+                    val sourcePosts = body.posts
                     mergeCommunityStoryPreviews(sourcePosts)
+                    val filteredPosts = applyFeedMode(sourcePosts)
 
-                    posts.clear()
-                    posts.addAll(applyFeedMode(sourcePosts))
-                    val mixedList = buildMixedFeed(posts)
-                    feedAdapter.updateItems(mixedList)
-                    emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+                    if (page == 1) {
+                        posts.clear()
+                        posts.addAll(filteredPosts)
+                    } else {
+                        posts.addAll(mergeUniquePosts(posts, filteredPosts))
+                    }
+
+                    currentPage = page
+                    isLastPage = body.pagination.currentPage >= body.pagination.totalPages || filteredPosts.isEmpty()
+                    renderPosts()
+                    saveCurrentFeedCache()
                 } else {
                     Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                 }
@@ -663,7 +764,7 @@ class FeedFragment : Fragment() {
 
             override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
                 isLoading = false
-                showLoading(false)
+                showLoading(false, page <= 1)
                 Log.e("FeedFragment", "Network failure: ${t.message}")
             }
         })
@@ -804,8 +905,9 @@ class FeedFragment : Fragment() {
         })
     }
 
-    private fun showLoading(show: Boolean) {
-        progressBar.visibility = if (show && currentPage == 1) View.VISIBLE else View.GONE
+    private fun showLoading(show: Boolean, isFirstPage: Boolean) {
+        progressBar.visibility = if (show && isFirstPage && posts.isEmpty()) View.VISIBLE else View.GONE
+        footerProgressBar.visibility = if (show && !isFirstPage && posts.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun updateSourcePostViewCount(postId: String, viewsCount: Int) {
@@ -820,12 +922,11 @@ class FeedFragment : Fragment() {
         SocketManager.on("newPost") { data ->
             try {
                 val json = data as JSONObject
-                val newPost = Post.fromJson(json)
+                    val newPost = Post.fromJson(json)
                 lifecycleScope.launch {
                     posts.add(0, newPost)
-                    val mixed = buildMixedFeed(posts)
-                    feedAdapter.updateItems(mixed)
-
+                    renderPosts()
+                    saveCurrentFeedCache()
                     recyclerView.scrollToPosition(0)
                 }
             } catch (e: Exception) {
@@ -857,8 +958,8 @@ class FeedFragment : Fragment() {
                     val index = posts.indexOfFirst { it._id == postId }
                     if (index >= 0) {
                         posts[index] = posts[index].copy(likeCount = likeCount)
-                        val mixed = buildMixedFeed(posts)
-                        feedAdapter.updateItems(mixed)
+                        renderPosts()
+                        saveCurrentFeedCache()
                     }
                 }
             } catch (e: Exception) {
@@ -930,7 +1031,8 @@ class FeedFragment : Fragment() {
             ) {
                 if (response.isSuccessful) {
                     posts.removeAll { it._id == post._id }
-                    feedAdapter.updateItems(buildMixedFeed(posts))
+                    renderPosts()
+                    saveCurrentFeedCache()
                     Toast.makeText(requireContext(), "Post deleted", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
@@ -953,7 +1055,8 @@ class FeedFragment : Fragment() {
                 response: Response<GenericResponse>
             ) {
                 posts.removeAll { it._id == post._id }
-                feedAdapter.updateItems(buildMixedFeed(posts))
+                renderPosts()
+                saveCurrentFeedCache()
                 Toast.makeText(requireContext(), "Post hidden", Toast.LENGTH_SHORT).show()
             }
 
@@ -1004,6 +1107,7 @@ class FeedFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        updateOfflineBanner(!isOnline())
     }
 
     override fun onPause() {
@@ -1016,6 +1120,125 @@ class FeedFragment : Fragment() {
         feedAdapter.pauseAllVideos()
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
+        connectivityManager?.let { manager ->
+            networkCallback?.let { callback ->
+                runCatching { manager.unregisterNetworkCallback(callback) }
+            }
+        }
+    }
+
+    private fun renderPosts() {
+        feedAdapter.updateItems(buildMixedFeed(posts))
+        emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+        if (posts.isNotEmpty()) {
+            preloadFeedAround(layoutManager.findFirstVisibleItemPosition().coerceAtLeast(0))
+        }
+    }
+
+    private fun mergeUniquePosts(existing: List<Post>, incoming: List<Post>): List<Post> {
+        val existingIds = existing.map { it._id }.toMutableSet()
+        return incoming.filter { existingIds.add(it._id) }
+    }
+
+    private fun loadCachedFeed() {
+        val raw = TokenManager.getFeedCache(requireContext()) ?: return
+        runCatching {
+            gson.fromJson(raw, CachedFeedPayload::class.java)
+        }.onSuccess { cached ->
+            if (cached != null && cached.posts.isNotEmpty()) {
+                posts.clear()
+                posts.addAll(cached.posts)
+                currentPage = cached.currentPage.coerceAtLeast(1)
+                isLastPage = cached.isLastPage
+                hasShownCachedFeed = true
+                renderPosts()
+            }
+        }.onFailure {
+            Log.w("FeedFragment", "Failed to parse cached feed", it)
+        }
+    }
+
+    private fun saveCurrentFeedCache() {
+        runCatching {
+            val payload = CachedFeedPayload(
+                posts = posts.toList(),
+                currentPage = currentPage,
+                isLastPage = isLastPage
+            )
+            TokenManager.saveFeedCache(requireContext(), gson.toJson(payload))
+        }.onFailure {
+            Log.e("FeedFragment", "Failed to save feed cache", it)
+        }
+    }
+
+    private fun preloadFeedAround(anchorPosition: Int) {
+        if (!isAdded || posts.isEmpty()) return
+
+        val start = anchorPosition.coerceAtLeast(0)
+        val end = (start + 5).coerceAtMost(posts.lastIndex)
+        for (index in start..end) {
+            val post = posts[index]
+            post.effectiveImageUrls().firstOrNull()?.let { url ->
+                Glide.with(this).load(url).preload()
+            }
+            post.videoUrl?.takeIf { it.isNotBlank() }?.let { url ->
+                Glide.with(this).load(url).preload()
+            }
+            post.userId.profileImage?.takeIf { it.isNotBlank() }?.let { url ->
+                Glide.with(this).load(url).preload()
+            }
+        }
+    }
+
+    private fun updateOfflineBanner(isOffline: Boolean) {
+        if (!::offlineBanner.isInitialized) return
+        offlineBanner.visibility = if (isOffline) View.VISIBLE else View.GONE
+    }
+
+    private fun isOnline(): Boolean {
+        val manager = connectivityManager
+            ?: requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun setupNetworkMonitoring() {
+        connectivityManager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val manager = connectivityManager ?: return
+        updateOfflineBanner(!isOnline())
+
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    updateOfflineBanner(false)
+                    if (posts.isEmpty() || hasShownCachedFeed) {
+                        loadFeed(1)
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    updateOfflineBanner(!isOnline())
+                }
+            }
+        }
+
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        runCatching { manager.registerNetworkCallback(request, networkCallback!!) }
+    }
+
+    private fun scheduleBackgroundFeedSync() {
+        val workRequest = PeriodicWorkRequestBuilder<FeedSyncWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(requireContext().applicationContext)
+            .enqueueUniquePeriodicWork(
+                "feed_sync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                workRequest
+            )
     }
 
 }

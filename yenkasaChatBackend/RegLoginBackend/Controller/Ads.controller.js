@@ -46,6 +46,12 @@ function publicAdFilter() {
   };
 }
 
+async function getAdReviewers() {
+  return User.find({
+    roleName: { $in: Array.from(AD_REVIEWER_ROLES) }
+  }).select("_id username playerId");
+}
+
 
 // GET /ads/feed?page=&limit=
 exports.getAdsFeed = async (req, res) => {
@@ -231,13 +237,15 @@ exports.createAd = async (req, res) => {
 
    const finalAdType = (adType || "sponsor").toLowerCase();
 
+const autoApprove = canReviewAds(normalizedRole);
+
 const adData = {
   title,
   rewardYKC: Number(rewardAmount || rewardYKC) || 5,
   sponsorId: userId,
   adType: finalAdType,
-  isActive: false,
-  approvalStatus: "pending",
+  isActive: autoApprove,
+  approvalStatus: autoApprove ? "approved" : "pending",
   submittedBy: userId,
   submittedByRole: normalizedRole,
   ctaText: ctaText || "",
@@ -289,9 +297,29 @@ if (!adData.imageUrl && !adData.videoUrl) {
 
     const ad = await Ad.create(adData);
 
+    if (!autoApprove) {
+      const reviewers = await getAdReviewers();
+      for (const reviewer of reviewers) {
+        if (String(reviewer._id) === String(userId)) continue;
+        await sendNotification({
+          type: "ad_pending",
+          senderId: userId,
+          receiverId: reviewer._id,
+          activityId: `ad_pending_${ad._id}`,
+          targetType: "ad",
+          targetId: ad._id.toString(),
+          message: "A new sponsored ad is awaiting approval.",
+          push: true,
+          pushTitle: "Pending Sponsored Ad",
+          pushBody: "A new sponsored ad is waiting for approval.",
+          pushData: { adId: ad._id.toString() }
+        });
+      }
+    }
+
     return res.json({
       success: true,
-      message: "Ad submitted for approval.",
+      message: autoApprove ? "Ad created and approved successfully." : "Ad submitted for approval.",
       ad: normalizeAdForClient(ad.toObject())
     });
 
@@ -423,6 +451,23 @@ exports.approveAd = async (req, res) => {
     ad.rejectionReason = "";
     await ad.save();
 
+    const owner = await User.findById(ad.submittedBy).select("_id playerId");
+    if (owner) {
+      await sendNotification({
+        type: "ad_approved",
+        senderId: req.user.id,
+        receiverId: owner._id,
+        activityId: `ad_approved_${ad._id}`,
+        targetType: "ad",
+        targetId: ad._id.toString(),
+        message: "Your sponsored ad has been approved and is now live.",
+        push: true,
+        pushTitle: "Ad Approved",
+        pushBody: "Your sponsored ad is now live.",
+        pushData: { adId: ad._id.toString() }
+      });
+    }
+
     return res.json({ success: true, ad: normalizeAdForClient(ad.toObject()) });
   } catch (err) {
     console.error("❌ Failed to approve ad:", err);
@@ -454,6 +499,27 @@ exports.rejectAd = async (req, res) => {
     ad.approvedBy = null;
     ad.approvedAt = null;
     await ad.save();
+
+    const owner = await User.findById(ad.submittedBy).select("_id playerId");
+    if (owner) {
+      await sendNotification({
+        type: "ad_rejected",
+        senderId: req.user.id,
+        receiverId: owner._id,
+        activityId: `ad_rejected_${ad._id}`,
+        targetType: "ad",
+        targetId: ad._id.toString(),
+        message: ad.rejectionReason
+          ? `Your sponsored ad was rejected: ${ad.rejectionReason}`
+          : "Your sponsored ad was rejected.",
+        push: true,
+        pushTitle: "Ad Rejected",
+        pushBody: ad.rejectionReason
+          ? `Reason: ${ad.rejectionReason}`
+          : "Your sponsored ad was rejected.",
+        pushData: { adId: ad._id.toString() }
+      });
+    }
 
     return res.json({ success: true, ad: normalizeAdForClient(ad.toObject()) });
   } catch (err) {

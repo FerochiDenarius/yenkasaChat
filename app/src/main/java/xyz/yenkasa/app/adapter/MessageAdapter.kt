@@ -50,6 +50,10 @@ class MessageAdapter(
     companion object {
         private const val TYPE_SENT = 1
         private const val TYPE_RECEIVED = 2
+        private var currentVideoView: VideoView? = null
+        private var currentVideoOverlay: ImageView? = null
+        private var currentVideoPreview: ImageView? = null
+        private var currentVideoUrl: String? = null
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -100,6 +104,7 @@ class MessageAdapter(
         protected val videoView: VideoView? = itemView.findViewById(R.id.videoMessage)
         protected val videoPlayOverlay: ImageView? = itemView.findViewById(R.id.imageVideoPlayOverlay)
         protected val mediaFallbackText: TextView? = itemView.findViewById(R.id.textMediaFallback)
+        private var lastVideoClickTime = 0L
 
         protected val audioContainer: LinearLayout? = itemView.findViewById(R.id.audioContainer)
         protected val btnPlayAudio: ImageButton? = itemView.findViewById(R.id.btnPlayAudio)
@@ -473,20 +478,89 @@ class MessageAdapter(
                 .into(messageImage)
 
             val playInline = View.OnClickListener {
+                val now = System.currentTimeMillis()
+                if (now - lastVideoClickTime < 300L) return@OnClickListener
+                lastVideoClickTime = now
+
+                val inlineVideoView = videoView ?: return@OnClickListener
+                val sameVideo = currentVideoView === inlineVideoView && currentVideoUrl == videoUrl
+
+                if (!sameVideo) {
+                    pauseCurrentVideo()
+                    currentVideoView = inlineVideoView
+                    currentVideoOverlay = videoPlayOverlay
+                    currentVideoPreview = messageImage
+                    currentVideoUrl = videoUrl
+                    inlineVideoView.setVideoURI(Uri.parse(videoUrl))
+                }
+
                 videoPlayOverlay?.visibility = View.GONE
                 messageImage.visibility = View.GONE
-                videoView?.visibility = View.VISIBLE
-                videoView?.setVideoURI(Uri.parse(videoUrl))
-                videoView?.setOnPreparedListener { mp ->
+                inlineVideoView.visibility = View.VISIBLE
+                inlineVideoView.setOnPreparedListener { mp ->
                     mp.isLooping = false
-                    videoView.start()
-                    videoView.setOnClickListener {
-                        if (videoView.isPlaying) videoView.pause() else videoView.start()
+                    if (sameVideo && inlineVideoView.isPlaying) {
+                        inlineVideoView.pause()
+                        videoPlayOverlay?.visibility = View.VISIBLE
+                        return@setOnPreparedListener
                     }
+                    inlineVideoView.start()
+                    videoPlayOverlay?.visibility = View.GONE
+                }
+                inlineVideoView.setOnCompletionListener {
+                    videoPlayOverlay?.visibility = View.VISIBLE
+                    messageImage.visibility = View.VISIBLE
+                    inlineVideoView.visibility = View.GONE
+                    if (currentVideoView === inlineVideoView) {
+                        currentVideoView = null
+                        currentVideoOverlay = null
+                        currentVideoPreview = null
+                        currentVideoUrl = null
+                    }
+                }
+                inlineVideoView.setOnErrorListener { _, _, _ ->
+                    Log.e("MessageAdapter", "Video playback failed: $videoUrl")
+                    mediaFallbackText?.apply {
+                        text = context.getString(R.string.chat_video_failed_retry)
+                        visibility = View.VISIBLE
+                        setOnClickListener { bindVideoMedia(videoUrl, context) }
+                    }
+                    videoPlayOverlay?.visibility = View.VISIBLE
+                    messageImage.visibility = View.VISIBLE
+                    inlineVideoView.visibility = View.GONE
+                    if (currentVideoView === inlineVideoView) {
+                        currentVideoView = null
+                        currentVideoOverlay = null
+                        currentVideoPreview = null
+                        currentVideoUrl = null
+                    }
+                    true
                 }
             }
             messageImage.setOnClickListener(playInline)
             videoPlayOverlay?.setOnClickListener(playInline)
+            videoView?.setOnClickListener {
+                val now = System.currentTimeMillis()
+                if (now - lastVideoClickTime < 300L) return@setOnClickListener
+                lastVideoClickTime = now
+
+                if (videoView.isPlaying) {
+                    videoView.pause()
+                    videoPlayOverlay?.visibility = View.VISIBLE
+                } else {
+                    if (currentVideoView !== videoView) {
+                        pauseCurrentVideo()
+                        currentVideoView = videoView
+                        currentVideoOverlay = videoPlayOverlay
+                        currentVideoPreview = messageImage
+                        currentVideoUrl = videoUrl
+                    }
+                    videoView.start()
+                    videoPlayOverlay?.visibility = View.GONE
+                    messageImage.visibility = View.GONE
+                    videoView.visibility = View.VISIBLE
+                }
+            }
         }
 
         private fun String?.isLikelyImageUrl(): Boolean {
@@ -522,7 +596,11 @@ class MessageAdapter(
             mediaFallbackText?.visibility = View.GONE
             mediaFallbackText?.setOnClickListener(null)
             videoView?.setOnClickListener(null)
-            videoView?.stopPlayback()
+            if (currentVideoView === videoView) {
+                pauseCurrentVideo()
+            } else {
+                videoView?.suspend()
+            }
             videoView?.visibility = View.GONE
 
             audioContainer?.visibility = View.GONE
@@ -568,7 +646,11 @@ class MessageAdapter(
             Glide.with(itemView).clear(messageImage)
             messageImage.tag = null
             messageImage.setImageDrawable(null)
-            videoView?.stopPlayback()
+            if (currentVideoView === videoView) {
+                pauseCurrentVideo()
+            } else {
+                videoView?.suspend()
+            }
         }
 
         private fun GlideException?.hasSocketClosedCause(): Boolean {
@@ -577,6 +659,24 @@ class MessageAdapter(
                 return true
             }
             return false
+        }
+
+        private fun pauseCurrentVideo() {
+            currentVideoView?.let { activeView ->
+                runCatching {
+                    if (activeView.isPlaying) {
+                        activeView.pause()
+                    }
+                    activeView.suspend()
+                }
+            }
+            currentVideoOverlay?.visibility = View.VISIBLE
+            currentVideoPreview?.visibility = View.VISIBLE
+            currentVideoView?.visibility = View.GONE
+            currentVideoView = null
+            currentVideoOverlay = null
+            currentVideoPreview = null
+            currentVideoUrl = null
         }
     }
 
@@ -607,5 +707,23 @@ class MessageAdapter(
 
         override fun areContentsTheSame(oldItem: ChatMessage, newItem: ChatMessage) =
             oldItem == newItem
+    }
+
+    fun pauseAllVideos() {
+        currentVideoView?.let { activeView ->
+            runCatching {
+                if (activeView.isPlaying) {
+                    activeView.pause()
+                }
+                activeView.suspend()
+            }
+        }
+        currentVideoOverlay?.visibility = View.VISIBLE
+        currentVideoPreview?.visibility = View.VISIBLE
+        currentVideoView?.visibility = View.GONE
+        currentVideoView = null
+        currentVideoOverlay = null
+        currentVideoPreview = null
+        currentVideoUrl = null
     }
 }

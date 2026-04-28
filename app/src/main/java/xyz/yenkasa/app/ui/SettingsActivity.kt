@@ -1,35 +1,34 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Intent
+import android.content.res.Configuration
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.LinearLayout
+import android.widget.ImageButton
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import org.json.JSONObject
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.network.ApiClient
-import xyz.yenkasa.app.util.TokenManager
-import xyz.yenkasa.app.network.ApiService
-import xyz.yenkasa.app.model.UserPrivacyModel
 import xyz.yenkasa.app.model.NotificationPreferencesResponse
 import xyz.yenkasa.app.model.UpdateNotificationPreferencesRequest
+import xyz.yenkasa.app.model.UserPrivacyModel
+import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.util.AppUrls
-import android.widget.Switch
-import androidx.appcompat.app.AlertDialog
-import android.media.MediaPlayer
-import android.view.View
-import android.net.Uri
-
-
-
-
-
-
+import xyz.yenkasa.app.util.TokenManager
 
 
 class SettingsActivity : AppCompatActivity() {
 
+    private lateinit var buttonSettingsBack: ImageButton
     private lateinit var itemPrivacyLevel: LinearLayout
     private lateinit var itemWhoYouBlocked: LinearLayout
     private lateinit var itemWhoBlockedYou: LinearLayout
@@ -70,6 +69,13 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.menu_background)
+        window.navigationBarColor = ContextCompat.getColor(this, R.color.menu_background)
+        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+        if (!isNightMode) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        }
 
         bindViews()
         setClickListeners()
@@ -78,6 +84,7 @@ class SettingsActivity : AppCompatActivity() {
 
 
     private fun bindViews() {
+        buttonSettingsBack = findViewById(R.id.buttonSettingsBack)
         itemPrivacyLevel = findViewById(R.id.itemPrivacyLevel)
         itemWhoYouBlocked = findViewById(R.id.itemWhoYouBlocked)
         itemWhoBlockedYou = findViewById(R.id.itemWhoBlockedYou)
@@ -96,7 +103,7 @@ class SettingsActivity : AppCompatActivity() {
         itemModerationDashboard = findViewById(R.id.itemModerationDashboard)
         moderationHeader = findViewById(R.id.moderationHeader)
 
-        val role = TokenManager.getUserRole(this)
+        val role = resolveCurrentRole()
 
         if (role in listOf(
                 "moderator",
@@ -124,6 +131,9 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setClickListeners() {
+        buttonSettingsBack.setOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
 
         // ✔ Open Privacy Selection
         itemPrivacyLevel.setOnClickListener {
@@ -319,6 +329,23 @@ class SettingsActivity : AppCompatActivity() {
                 MediaPlayer.create(this, resId).start()
             }
             .show()
+    }
+
+    private fun resolveCurrentRole(): String {
+        val userJson = TokenManager.getUser(this)
+        if (!userJson.isNullOrBlank()) {
+            runCatching {
+                val json = JSONObject(userJson)
+                json.optString("roleName").takeIf { it.isNotBlank() }?.let { return it }
+                when (val roleValue = json.opt("role")) {
+                    is JSONObject -> roleValue.optString("name").takeIf { it.isNotBlank() }?.let { return it }
+                    is String -> roleValue.takeIf { it.isNotBlank() }?.let { return it }
+                }
+            }.onFailure {
+                Log.w(TAG, "Unable to parse role JSON: ${it.message}")
+            }
+        }
+        return TokenManager.getUserRole(this)
     }
 
 }

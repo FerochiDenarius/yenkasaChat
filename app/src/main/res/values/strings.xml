@@ -71,6 +71,7 @@
     <string name="chat_media_add_emoji_title">Choose emoji</string>
     <string name="chat_media_apply">Apply</string>
     <string name="chat_media_save">Save edits</string>
+    <string name="back">Back</string>
     <string name="chat_media_undo">Undo</string>
     <string name="chat_media_redo">Redo</string>
     <string name="chat_emoji_title">Emoji</string>

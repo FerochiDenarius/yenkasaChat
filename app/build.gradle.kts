@@ -16,8 +16,8 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 28
-        versionName = "0.2.2"
+        versionCode = 30
+        versionName = "0.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -93,6 +93,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("androidx.fragment:fragment-ktx:1.6.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
     implementation("com.github.yalantis:ucrop:2.2.8")

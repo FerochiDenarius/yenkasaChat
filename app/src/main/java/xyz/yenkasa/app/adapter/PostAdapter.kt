@@ -58,6 +58,10 @@ class PostAdapter(
 
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
+    companion object {
+        var currentPlayer: ExoPlayer? = null
+    }
+
     // Single ExoPlayer for all video playback
     private var exoPlayer: ExoPlayer? = null
     private var currentPlayingPosition: Int = -1
@@ -117,6 +121,7 @@ class PostAdapter(
         val btnVideoPlay: ImageButton = itemRoot.findViewById(R.id.btnVideoPlay)
         val btnPlayPause: ImageButton? = itemRoot.findViewById(R.id.btnPlayPause)
         private var mediaAspectKey: String? = null
+        private var lastVideoClickTime = 0L
 
         // AUDIO
         val audioIcon: LinearLayout = itemRoot.findViewById(R.id.audioIcon)
@@ -289,29 +294,24 @@ class PostAdapter(
             } catch (_: Exception) {}
 
             btnVideoPlay.setOnClickListener {
-                // prevent double clicks while preparing
+                val now = System.currentTimeMillis()
+                if (now - lastVideoClickTime < 300L) return@setOnClickListener
+                lastVideoClickTime = now
                 if (isPreparing) return@setOnClickListener
-                throttleTap(btnVideoPlay, 700L)
 
                 // Hide thumbnail UI, show player
                 imageVideoThumbnail.visibility = View.GONE
                 btnVideoPlay.visibility = View.GONE
                 playerView?.visibility = View.VISIBLE
-                btnPlayPause?.visibility = View.GONE
 
                 playVideoRequested(position)
             }
 
             btnPlayPause?.setOnClickListener {
-                throttleTap(it, 250L)
+                val now = System.currentTimeMillis()
+                if (now - lastVideoClickTime < 300L) return@setOnClickListener
+                lastVideoClickTime = now
                 toggleRequested(position)
-                btnPlayPause?.setImageResource(
-                    if (exoPlayer?.isPlaying == true) {
-                        R.drawable.ic_pause_circle
-                    } else {
-                        R.drawable.ic_play_circle
-                    }
-                )
             }
         }
 
@@ -514,15 +514,19 @@ class PostAdapter(
 
     override fun onViewDetachedFromWindow(holder: PostViewHolder) {
         super.onViewDetachedFromWindow(holder)
-        // Don't stop video playback here. Only detach player view if not active.
+        if (holder.bindingAdapterPosition == currentPlayingPosition) {
+            pauseAllVideos()
+        }
         holder.safeDetachPlayerView()
         holder.releaseAudio()
     }
 
     override fun onViewRecycled(holder: PostViewHolder) {
         super.onViewRecycled(holder)
+        if (holder.bindingAdapterPosition == currentPlayingPosition) {
+            pauseAllVideos()
+        }
         holder.releaseAudio()
-        // If not active playing item, fully detach
         holder.safeDetachPlayerView()
     }
 
@@ -540,7 +544,7 @@ class PostAdapter(
                         } catch (_: Exception) {}
                     }
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        // If playing changed, you could update UI for btnPlayPause via notifyItemChanged
+                        updateCurrentPlayerControls(isPlaying)
                     }
                 })
             }
@@ -558,7 +562,7 @@ class PostAdapter(
         ensurePlayer()
 
         if (currentPlayingPosition != -1 && currentPlayingPosition != position) {
-
+            currentPlayer?.pause()
             detachPlayer()
         }
 
@@ -578,10 +582,12 @@ class PostAdapter(
                     player.clearMediaItems()
                     player.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
                     player.prepare()
+                    currentPlayer = player
                     player.play()
                 }
 
                 currentPlayingPosition = position
+                updateCurrentPlayerControls(true)
                 startVideoTimer(posts[position])
                 recordVisibleView(posts[position]._id, 10)
             } catch (e: Exception) {
@@ -602,6 +608,8 @@ class PostAdapter(
             player.pause()
             videoTimer?.cancel()
         } else {
+            currentPlayer?.pause()
+            currentPlayer = player
             player.play()
             posts.getOrNull(position)?.let { startVideoTimer(it) }
         }
@@ -620,6 +628,7 @@ class PostAdapter(
         } catch (_: Exception) {}
         videoTimer?.cancel()
         currentPlayingPosition = -1
+        currentPlayer = null
         detachPlayer()
     }
 
@@ -694,6 +703,7 @@ class PostAdapter(
             exoPlayer?.pause()
         } catch (_: Exception) {}
         videoTimer?.cancel()
+        updateCurrentPlayerControls(false)
     }
 
     fun releaseResources() {
@@ -702,6 +712,29 @@ class PostAdapter(
             exoPlayer = null
         } catch (_: Exception) {}
         videoTimer?.cancel()
+        currentPlayer = null
+    }
+
+    fun autoPlayIfVideo(position: Int, holder: PostViewHolder) {
+        val post = posts.getOrNull(position) ?: return
+        if (post.videoUrl.isNullOrBlank()) return
+        if (currentPlayingPosition == position && exoPlayer?.isPlaying == true) return
+
+        holder.imageVideoThumbnail.visibility = View.GONE
+        holder.btnVideoPlay.visibility = View.GONE
+        holder.playerView?.visibility = View.VISIBLE
+        playVideoAtPosition(position, holder)
+    }
+
+    private fun updateCurrentPlayerControls(isPlaying: Boolean) {
+        val playerView = currentPlayerView ?: return
+        val playPauseButton = playerView.rootView.findViewById<ImageButton?>(R.id.btnPlayPause)
+        val playButton = playerView.rootView.findViewById<ImageButton?>(R.id.btnVideoPlay)
+        playPauseButton?.visibility = if (isPlaying) View.GONE else View.VISIBLE
+        playPauseButton?.setImageResource(
+            if (isPlaying) R.drawable.ic_pause_circle else R.drawable.ic_play_circle
+        )
+        playButton?.visibility = View.GONE
     }
 
     // View tracking used previously

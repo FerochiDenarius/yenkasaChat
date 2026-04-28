@@ -298,6 +298,16 @@ class UserNotificationsActivity : AppCompatActivity() {
                 startActivity(Intent(this, CoinWalletActivity::class.java))
                 return
             }
+
+            "ad" -> {
+                startActivity(Intent(this, MyAdsActivity::class.java))
+                return
+            }
+
+            "community" -> {
+                startActivity(Intent(this, MyCommunitiesActivity::class.java))
+                return
+            }
         }
 
         // ------------------------------------------------------
@@ -386,6 +396,16 @@ class UserNotificationsActivity : AppCompatActivity() {
                 val intent = Intent(this, CommentsActivity::class.java)
                 intent.putExtra("POST_ID", targetId)
                 startActivity(intent)
+                return
+            }
+
+            "ad_approved", "ad_rejected" -> {
+                startActivity(Intent(this, MyAdsActivity::class.java))
+                return
+            }
+
+            "community_approved", "community_rejected" -> {
+                startActivity(Intent(this, MyCommunitiesActivity::class.java))
                 return
             }
 

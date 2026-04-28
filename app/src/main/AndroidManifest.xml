@@ -101,6 +101,10 @@
         <activity
             android:name=".ui.CreateAdActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity android:name=".ui.MyAdsActivity" />
+        <activity android:name=".ui.AdsApprovalActivity" />
+        <activity android:name=".ui.MyCommunitiesActivity" />
+        <activity android:name=".ui.CommunityApprovalActivity" />
         <activity android:name=".ui.PrivacySettingsActivity" />
         <activity android:name=".ui.BlockedUsersActivity" />
         <activity android:name=".ui.WhoBlockedYouActivity" />

@@ -8,10 +8,16 @@ data class FeedResponse(
     val pagination: PaginationInfo  // pagination info
 )
 
+data class CachedFeedPayload(
+    val posts: List<Post>,
+    val currentPage: Int = 1,
+    val isLastPage: Boolean = false,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
 // Like/unlike response
 data class FeedItem(
     val __isAd: Boolean = false,
     val post: Post? = null,
     val ad: AdModel? = null
 )
-

@@ -11,6 +11,7 @@ const Permission = require('../models/permissions.model');
 const rewardService = require('../services/reward.service');
 const { getUserCommunities } = require('../helpers/community.helper');
 const allowCommunityCreation = require('../middleware/allowCommunityCreation');
+const { sendNotification } = require('../services/notification.service');
 
 function escapeRegex(value) {
   return value.toString().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -36,6 +37,30 @@ function countryScopedQuery(value) {
   }
 
   return { country: countryRegex(country) };
+}
+
+const COMMUNITY_REVIEWER_ROLES = new Set([
+  'admin',
+  'moderator',
+  'developer',
+  'junior_developer',
+  'senior_developer',
+]);
+
+function normalizedRoleName(user) {
+  return Permission.normalize(
+    user?.roleName || user?.role?.name || user?.role || ''
+  );
+}
+
+function canReviewCommunity(user) {
+  return COMMUNITY_REVIEWER_ROLES.has(normalizedRoleName(user));
+}
+
+async function getCommunityReviewers() {
+  return User.find({
+    roleName: { $in: Array.from(COMMUNITY_REVIEWER_ROLES) }
+  }).select('_id username playerId');
 }
 
 
@@ -142,6 +167,35 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('❌ Failed to fetch communities:', err);
     res.status(500).json({ error: 'Failed to retrieve communities' });
+  }
+});
+
+// ✅ Get pending communities for review
+router.get('/pending', authMiddleware, async (req, res) => {
+  try {
+    if (!canReviewCommunity(req.user)) {
+      return res.status(403).json({ error: 'Not authorized to review communities' });
+    }
+
+    const pendingCommunities = await Community.find({
+      isApproved: false,
+      isActive: true,
+      ...countryScopedQuery(req.user.country || 'Ghana')
+    })
+      .populate('createdBy', 'username profileImage verified roleName')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      communities: pendingCommunities.map((community) => ({
+        ...community,
+        creator: community.createdBy || null,
+      })),
+      count: pendingCommunities.length,
+    });
+  } catch (err) {
+    console.error('❌ Failed to fetch pending communities:', err);
+    res.status(500).json({ error: 'Failed to retrieve pending communities' });
   }
 });
 
@@ -370,6 +424,9 @@ async function createCommunityHandler(req, res) {
       });
     }
 
+    const roleName = normalizedRoleName(user);
+    const autoApprove = COMMUNITY_REVIEWER_ROLES.has(roleName);
+
     // Create new community
     const community = await Community.create({
       name: name.toLowerCase().trim(),
@@ -384,7 +441,7 @@ async function createCommunityHandler(req, res) {
       communityLevel: communityLevel || (location ? "town" : "interest"),
       createdBy: userId,
       moderators: [userId],
-      isApproved: false, // pending admin approval
+      isApproved: autoApprove,
     });
 
     // ---------------------------------------------
@@ -399,9 +456,31 @@ async function createCommunityHandler(req, res) {
       activityId,
     });
 
+    if (!autoApprove) {
+      const reviewers = await getCommunityReviewers();
+      for (const reviewer of reviewers) {
+        if (String(reviewer._id) === String(userId)) continue;
+        await sendNotification({
+          type: 'community_pending',
+          senderId: userId,
+          receiverId: reviewer._id,
+          activityId: `community_pending_${community._id}`,
+          targetType: 'community',
+          targetId: community._id.toString(),
+          message: 'A new community is awaiting approval.',
+          push: true,
+          pushTitle: 'Pending Community',
+          pushBody: 'A new community is waiting for approval.',
+          pushData: { communityId: community._id.toString() }
+        });
+      }
+    }
+
     return res.status(201).json({
       success: true,
-      message: "Community created! Pending admin approval.",
+      message: autoApprove
+        ? "Community created and approved successfully."
+        : "Community created! Pending admin approval.",
       community: {
         id: community._id,
         name: community.name,
@@ -412,7 +491,9 @@ async function createCommunityHandler(req, res) {
         coins: COMMUNITY_CREATION_REWARD,
         transaction: tx,
       },
-      note: "Your community will be visible once approved by an admin",
+      note: autoApprove
+        ? "Your community is live and visible now."
+        : "Your community will be visible once approved by an admin",
     });
 
   } catch (err) {
@@ -509,6 +590,10 @@ router.put("/:communityId", authMiddleware, async (req, res) => {
 // ✅ Approve community (ADMIN ONLY)
 router.post('/:communityId/approve', authMiddleware, async (req, res) => {
   try {
+    if (!canReviewCommunity(req.user)) {
+      return res.status(403).json({ error: 'Not authorized to approve communities' });
+    }
+
     const adminId = req.user.id;
     const { communityId } = req.params;
 
@@ -533,6 +618,20 @@ router.post('/:communityId/approve', authMiddleware, async (req, res) => {
       description: `Your community '${community.displayName}' was approved`,
       relatedCommunityId: communityId,
       activityId,
+    });
+
+    await sendNotification({
+      type: 'community_approved',
+      senderId: adminId,
+      receiverId: community.createdBy,
+      activityId,
+      targetType: 'community',
+      targetId: community._id.toString(),
+      message: `Your community '${community.displayName}' has been approved and is now visible.`,
+      push: true,
+      pushTitle: 'Community Approved',
+      pushBody: `Your community '${community.displayName}' is now live.`,
+      pushData: { communityId: community._id.toString() }
     });
 
     return res.json({
@@ -560,7 +659,10 @@ router.post('/:communityId/approve', authMiddleware, async (req, res) => {
 // ✅ Reject/Delete community (ADMIN ONLY)
 router.delete('/:communityId', authMiddleware, async (req, res) => {
   try {
-    // TODO: Add admin check middleware
+    if (!canReviewCommunity(req.user)) {
+      return res.status(403).json({ error: 'Not authorized to reject communities' });
+    }
+
     const adminId = req.user.id;
     const { communityId } = req.params;
     const { reason } = req.body;
@@ -576,6 +678,24 @@ router.delete('/:communityId', authMiddleware, async (req, res) => {
 
     // ⭐ Add activity ID for metrics tracking
     const activityId = `delete_community_${adminId}_${communityId}_${Date.now()}`;
+
+    await sendNotification({
+      type: 'community_rejected',
+      senderId: adminId,
+      receiverId: community.createdBy,
+      activityId,
+      targetType: 'community',
+      targetId: community._id.toString(),
+      message: reason
+        ? `Your community '${community.displayName}' was rejected: ${reason}`
+        : `Your community '${community.displayName}' was rejected.`,
+      push: true,
+      pushTitle: 'Community Rejected',
+      pushBody: reason
+        ? `Reason: ${reason}`
+        : `Your community '${community.displayName}' was rejected.`,
+      pushData: { communityId: community._id.toString() }
+    });
 
     return res.json({
       success: true,

@@ -34,6 +34,21 @@
         tools:text="Music Lovers Ghana, Health Ghana" />
 
     <TextView
+        android:id="@+id/textOfflineBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_feed_filter_bar"
+        android:gravity="center"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
+        android:text="Offline mode: showing saved feed"
+        android:textColor="@color/feed_secondary_text"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/textCommunityNameHeader"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -131,6 +146,14 @@
             android:text="No posts yet."
             android:textColor="@color/feed_secondary_text"
             android:textSize="13sp"
+            android:visibility="gone" />
+
+        <ProgressBar
+            android:id="@+id/progressBarFeedFooter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="28dp"
             android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

@@ -153,7 +153,14 @@ class CreateCommunityActivity : AppCompatActivity() {
                     response: Response<CreateCommunityResponse>
                 ) {
                     if (response.isSuccessful && response.body() != null) {
-                        handleCommunitySubmitSuccess("Community created successfully!")
+                        val body = response.body()!!
+                        handleCommunitySubmitSuccess(
+                            body.message ?: if (body.community?.isApproved == true) {
+                                "Community created and approved successfully!"
+                            } else {
+                                "Community created successfully!"
+                            }
+                        )
                     } else if (response.code() == 404 || response.code() == 405) {
                         retryCreateCommunityFallback(token, request)
                     } else {
@@ -182,7 +189,14 @@ class CreateCommunityActivity : AppCompatActivity() {
                     response: Response<CreateCommunityResponse>
                 ) {
                     if (response.isSuccessful && response.body() != null) {
-                        handleCommunitySubmitSuccess("Community created successfully!")
+                        val body = response.body()!!
+                        handleCommunitySubmitSuccess(
+                            body.message ?: if (body.community?.isApproved == true) {
+                                "Community created and approved successfully!"
+                            } else {
+                                "Community created successfully!"
+                            }
+                        )
                     } else {
                         resetCreateButton()
                         showCreateCommunityError(response)

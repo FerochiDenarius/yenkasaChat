@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getChatRoom, getChatRoomReceiver } from "../api/chatrooms";
 import { getRoomMessages, markRoomAsRead, sendRoomMessage } from "../api/messages";
 import { formatRelativeTime } from "../utils/format";
+import { handleDynamicImageError, staticImage } from "../utils/images";
 import "../styles/chatrooms.css";
 
 export default function ChatRoomThread() {
@@ -106,8 +107,10 @@ export default function ChatRoomThread() {
             className="chatroom-thread-header__avatar"
             src={
               participant?.profileImage ||
-              "/images/yenkasa_web_assets/yenkasa_logo.png"
+              participant?.avatar ||
+              staticImage("default.png")
             }
+            onError={handleDynamicImageError}
             alt={title}
           />
           <div className="chatroom-thread-header__copy">

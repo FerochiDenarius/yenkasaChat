@@ -292,6 +292,10 @@
   gap: 7px;
 }
 
+.chatroom-options-anchor {
+  position: relative;
+}
+
 .chatroom-circle-btn {
   width: 38px;
   height: 38px;
@@ -305,6 +309,36 @@
 
 .chatroom-circle-btn span {
   display: inline-block;
+}
+
+.chatroom-options-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 210px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 253, 249, 0.98);
+  border: 1px solid rgba(98, 135, 77, 0.14);
+  box-shadow: 0 18px 38px rgba(54, 73, 45, 0.16);
+  display: grid;
+  gap: 4px;
+  z-index: 8;
+}
+
+.chatroom-options-menu button {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 12px;
+  text-align: left;
+  background: transparent;
+  color: #324328;
+  font-size: 0.92rem;
+}
+
+.chatroom-options-menu button:hover {
+  background: rgba(87, 130, 61, 0.08);
 }
 
 .error-banner {

@@ -13,7 +13,7 @@ import Communities from "./pages/Communities";
 import CreatePost from "./pages/CreatePost";
 import PostDetails from "./pages/PostDetails";
 import EditProfile from "./pages/EditProfile";
-import ChatRooms from "./pages/ChatRooms";
+import ChatPage from "./pages/ChatPage";
 import Settings from "./pages/Settings";
 import PostApprovals from "./pages/PostApprovals";
 import PlaceholderPage from "./pages/PlaceholderPage";
@@ -137,7 +137,7 @@ export default function App() {
           path="/chatrooms"
           element={
             <ProtectedRoute>
-              <ChatRooms />
+              <ChatPage />
             </ProtectedRoute>
           }
         />
@@ -145,7 +145,7 @@ export default function App() {
           path="/chatrooms/:roomId"
           element={
             <ProtectedRoute>
-              <ChatRooms />
+              <ChatPage />
             </ProtectedRoute>
           }
         />

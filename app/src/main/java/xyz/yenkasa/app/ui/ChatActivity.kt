@@ -1239,13 +1239,23 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun setupKeyboardAwareChatInput() {
+        val chatContentLayout = findViewById<View>(R.id.chatContentLayout)
         val messageInputLayout = findViewById<View>(R.id.messageInputLayout)
         val emojiShortcut = findViewById<View>(R.id.buttonEmojiShortcut)
         val stickerShortcut = findViewById<View>(R.id.buttonStickerShortcut)
+        val originalContentTopPadding = chatContentLayout.paddingTop
         val originalRecyclerBottomPadding = recyclerView.paddingBottom
         var wasKeyboardVisible = false
 
         ViewCompat.setOnApplyWindowInsetsListener(chatRootLayout) { _, insets ->
+            val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            chatContentLayout.setPadding(
+                chatContentLayout.paddingLeft,
+                originalContentTopPadding + statusBarTop,
+                chatContentLayout.paddingRight,
+                chatContentLayout.paddingBottom
+            )
+
             val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
             val keyboardOffset = if (isKeyboardVisible) {
                 getKeyboardOverlapHeight()

@@ -425,6 +425,142 @@ textarea {
   border: 1px dashed var(--border);
 }
 
+.moderation-page {
+  display: grid;
+  gap: 16px;
+}
+
+.moderation-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(19, 38, 31, 0.96), rgba(12, 26, 21, 0.96));
+  border: 1px solid var(--border);
+}
+
+.moderation-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.moderation-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.moderation-list {
+  display: grid;
+  gap: 16px;
+}
+
+.moderation-card {
+  padding: 14px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(19, 38, 31, 0.98), rgba(12, 26, 21, 0.98));
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.moderation-card__header,
+.moderation-card__actions,
+.moderation-card__author {
+  display: flex;
+  align-items: center;
+}
+
+.moderation-card__header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.moderation-card__author {
+  min-width: 0;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.moderation-card__author > span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.moderation-card__author strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.moderation-card__author small {
+  color: var(--muted);
+}
+
+.moderation-card__text {
+  margin-top: 14px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.moderation-card__text.has-background {
+  min-height: 220px;
+  padding: 22px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.moderation-card__media {
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.moderation-card__media img,
+.moderation-card__media video {
+  width: 100%;
+  max-height: 460px;
+  display: block;
+  object-fit: cover;
+}
+
+.moderation-card__audio {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.moderation-card__actions {
+  margin-top: 14px;
+  gap: 10px;
+}
+
+.moderation-card__actions button {
+  flex: 1;
+}
+
+.moderation-card__reject {
+  color: #ffd6d6;
+  border-color: rgba(255, 109, 109, 0.28);
+}
+
 .bottom-nav {
   position: fixed;
   left: 50%;

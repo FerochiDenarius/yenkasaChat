@@ -8,6 +8,7 @@
     android:background="@drawable/bg_chat_conversation_surface">
 
     <LinearLayout
+        android:id="@+id/chatContentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"

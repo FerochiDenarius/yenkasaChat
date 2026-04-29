@@ -17,13 +17,17 @@ const styles = [
   { id: "night", label: "Aa", color: "#111827", text: "#FFFFFF" },
 ];
 
+function getInitialTheme() {
+  return "light";
+}
+
 export default function CreatePost() {
   const navigate = useNavigate();
   const imageInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const audioInputRef = useRef(null);
   const user = useMemo(() => getStoredUser() || {}, []);
-  const [theme, setTheme] = useState(() => localStorage.getItem("yenkasa_create_theme") || "light");
+  const [theme] = useState(getInitialTheme);
   const [text, setText] = useState("");
   const [visibility, setVisibility] = useState("public");
   const [selectedStyle, setSelectedStyle] = useState(styles[0]);
@@ -36,10 +40,6 @@ export default function CreatePost() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    localStorage.setItem("yenkasa_create_theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     let active = true;
@@ -136,13 +136,6 @@ export default function CreatePost() {
             <p>Share your vibe with the community ✨</p>
           </div>
           <div className="create-post-top__actions">
-            <button
-              type="button"
-              className="create-post-pill"
-              onClick={() => setTheme((value) => (value === "light" ? "dark" : "light"))}
-            >
-              {theme === "light" ? "Dark" : "Light"}
-            </button>
             <button type="button" className="create-post-pill create-post-pill--draft">
               Drafts
             </button>

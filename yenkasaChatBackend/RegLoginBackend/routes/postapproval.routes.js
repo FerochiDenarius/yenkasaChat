@@ -129,7 +129,7 @@ await rewardService.reward(owner._id, 10, {
 });
 
 // ⭐ Reward the APPROVER (their work)
-await rewardService.reward(owner._id, 10, {
+await rewardService.reward(approver._id, 10, {
   type: "REWARD_POST_APPROVED",
   description: "You earned 10 YKC for your post approval",
   relatedPostId: post._id,

@@ -1,4 +1,5 @@
 .create-post-page {
+  color-scheme: light;
   min-height: 100vh;
   background:
     radial-gradient(circle at 76% 4%, rgba(255, 210, 77, 0.32), transparent 20%),
@@ -21,6 +22,7 @@
 }
 
 .create-post-page[data-theme="dark"] {
+  color-scheme: dark;
   --create-bg: #090b16;
   --create-bg-top: #161125;
   --create-text: #f8f6ff;
@@ -37,6 +39,29 @@
   margin: 0 auto;
   display: grid;
   gap: 20px;
+}
+
+.create-post-page select,
+.create-post-page textarea,
+.create-post-page input,
+.create-post-page option {
+  color-scheme: inherit;
+}
+
+.create-post-page[data-theme="light"] select,
+.create-post-page[data-theme="light"] textarea,
+.create-post-page[data-theme="light"] input {
+  color: #080b22;
+}
+
+.create-post-page[data-theme="light"] option {
+  background: #ffffff;
+  color: #080b22;
+}
+
+.create-post-page[data-theme="dark"] option {
+  background: #151626;
+  color: #f8f6ff;
 }
 
 .create-post-top {
@@ -93,7 +118,8 @@
 }
 
 .create-post-pill--draft {
-  display: none;
+  display: inline-flex;
+  align-items: center;
 }
 
 .composer-card,
@@ -511,13 +537,6 @@
 
 .schedule-button span {
   font-size: 24px;
-}
-
-@media (min-width: 620px) {
-  .create-post-pill--draft {
-    display: inline-flex;
-    align-items: center;
-  }
 }
 
 @media (max-width: 420px) {

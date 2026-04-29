@@ -108,7 +108,9 @@ export default function Profile() {
     Number(followStats?.followersCount ?? user?.followersCount ?? user?.followers?.length ?? 0);
   const followingCount =
     Number(followStats?.followingCount ?? user?.followingCount ?? user?.following?.length ?? 0);
-  const isFollowing = Boolean(followStats?.isFollowing ?? user?.isFollowing);
+  const isFollowing = Boolean(
+    followStats?.isFollowing ?? followStats?.isFollowedByViewer ?? user?.isFollowing
+  );
   const coinBalance = Number(user?.coinsBalance ?? storedUser?.coinsBalance ?? 0);
   const username = user?.username || "Yenkasa";
   const handleTag = `@${String(username).trim().toLowerCase()}`;

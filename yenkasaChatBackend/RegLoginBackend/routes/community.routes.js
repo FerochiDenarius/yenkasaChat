@@ -47,19 +47,54 @@ const COMMUNITY_REVIEWER_ROLES = new Set([
   'senior_developer',
 ]);
 
+const COMMUNITY_REVIEWER_ROLE_VARIANTS = [
+  'admin',
+  'Admin',
+  'moderator',
+  'Moderator',
+  'developer',
+  'Developer',
+  'junior_developer',
+  'junior developer',
+  'Junior Developer',
+  'senior_developer',
+  'senior developer',
+  'Senior Developer',
+];
+
 function normalizedRoleName(user) {
   return Permission.normalize(
-    user?.roleName || user?.role?.name || user?.role || ''
+    user?.roleName || user?.role?.role || user?.role?.name || user?.role || ''
   );
 }
 
-function canReviewCommunity(user) {
-  return COMMUNITY_REVIEWER_ROLES.has(normalizedRoleName(user));
+async function hydrateUserRole(user) {
+  const userId = user?._id || user?.id;
+  if (!userId) return user;
+  if (user?.role && typeof user.role === 'object' && (user.role.role || user.role.name)) {
+    return user;
+  }
+  return User.findById(userId)
+    .populate('role', 'role name')
+    .select('username playerId role roleName country')
+    .lean();
+}
+
+async function canReviewCommunity(user) {
+  const hydratedUser = await hydrateUserRole(user);
+  return COMMUNITY_REVIEWER_ROLES.has(normalizedRoleName(hydratedUser));
 }
 
 async function getCommunityReviewers() {
+  const reviewerPermissions = await Permission.find({
+    role: { $in: ['admin', 'moderator', 'junior_developer', 'senior_developer'] }
+  }).select('_id');
+
   return User.find({
-    roleName: { $in: Array.from(COMMUNITY_REVIEWER_ROLES) }
+    $or: [
+      { roleName: { $in: COMMUNITY_REVIEWER_ROLE_VARIANTS } },
+      { role: { $in: reviewerPermissions.map(permission => permission._id) } }
+    ]
   }).select('_id username playerId');
 }
 
@@ -95,12 +130,12 @@ router.get('/public', async (req, res) => {
     const query = { isApproved: true, isActive: true };
 
     if (country) {
-      query.country = new RegExp(`^${escapeRegex(country)}$`, 'i');
+      Object.assign(query, countryScopedQuery(country));
     }
 
     const communities = await Community.find(query)
       .sort({ country: 1, state: 1, city: 1, town: 1, displayName: 1 })
-      .select('_id name displayName description location categories country state city town communityLevel communityType memberCount postCount');
+      .select('_id name displayName description location categories icon coverImage country state city town communityLevel communityType memberCount postCount');
 
     res.json(communities);
   } catch (err) {
@@ -173,7 +208,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // ✅ Get pending communities for review
 router.get('/pending', authMiddleware, async (req, res) => {
   try {
-    if (!canReviewCommunity(req.user)) {
+    if (!(await canReviewCommunity(req.user))) {
       return res.status(403).json({ error: 'Not authorized to review communities' });
     }
 
@@ -370,11 +405,10 @@ function normalizeRole(value) {
 }
 
 function canManageCommunity(user, community) {
-  const roleName = normalizeRole(user.roleName || user.role?.role || user.role);
+  const roleName = Permission.normalize(user.roleName || user.role?.role || user.role);
   const privilegedRoles = new Set([
     'admin',
     'moderator',
-    'developer',
     'junior_developer',
     'senior_developer',
   ]);
@@ -424,7 +458,8 @@ async function createCommunityHandler(req, res) {
       });
     }
 
-    const roleName = normalizedRoleName(user);
+    const roleUser = await hydrateUserRole(user);
+    const roleName = normalizedRoleName(roleUser);
     const autoApprove = COMMUNITY_REVIEWER_ROLES.has(roleName);
 
     // Create new community
@@ -441,7 +476,13 @@ async function createCommunityHandler(req, res) {
       communityLevel: communityLevel || (location ? "town" : "interest"),
       createdBy: userId,
       moderators: [userId],
+      members: [userId],
+      memberCount: 1,
       isApproved: autoApprove,
+    });
+
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { joinedCommunities: community._id }
     });
 
     // ---------------------------------------------
@@ -590,7 +631,7 @@ router.put("/:communityId", authMiddleware, async (req, res) => {
 // ✅ Approve community (ADMIN ONLY)
 router.post('/:communityId/approve', authMiddleware, async (req, res) => {
   try {
-    if (!canReviewCommunity(req.user)) {
+    if (!(await canReviewCommunity(req.user))) {
       return res.status(403).json({ error: 'Not authorized to approve communities' });
     }
 
@@ -608,7 +649,15 @@ router.post('/:communityId/approve', authMiddleware, async (req, res) => {
     }
 
     community.isApproved = true;
+    if (!community.members.some(member => member.toString() === community.createdBy.toString())) {
+      community.members.push(community.createdBy);
+    }
+    community.memberCount = community.members.length;
     await community.save();
+
+    await User.findByIdAndUpdate(community.createdBy, {
+      $addToSet: { joinedCommunities: community._id }
+    });
 
     // ⭐ Reward community creator (10 YKC)
     const activityId = `approve_community_${adminId}_${communityId}_${Date.now()}`;
@@ -659,7 +708,7 @@ router.post('/:communityId/approve', authMiddleware, async (req, res) => {
 // ✅ Reject/Delete community (ADMIN ONLY)
 router.delete('/:communityId', authMiddleware, async (req, res) => {
   try {
-    if (!canReviewCommunity(req.user)) {
+    if (!(await canReviewCommunity(req.user))) {
       return res.status(403).json({ error: 'Not authorized to reject communities' });
     }
 
@@ -716,23 +765,58 @@ router.delete('/:communityId', authMiddleware, async (req, res) => {
 router.get('/user/joined-communities', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    const userCountry = req.user.country || 'Ghana';
+    const user = await User.findById(userId).select('country community joinedCommunities').lean();
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
 
-    // Fetch communities where user is a member and community is active
-    const joinedCommunities = await Community.find({
-      members: userId,
+    const userCountry = user.country || 'Ghana';
+    const memberCommunityIds = await Community.find({
+      $and: [
+        {
+          $or: [
+            { members: userId },
+            { createdBy: userId }
+          ]
+        },
+        countryScopedQuery(userCountry)
+      ],
       isActive: true,
-      isApproved: true,
-      ...countryScopedQuery(userCountry)
-    })
-      .sort({ name: 1 })
-      .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel') // ADDED fields
-      .lean();
+      isApproved: true
+    }).distinct('_id');
+
+    const communityIds = [
+      ...(user.joinedCommunities || []),
+      ...memberCommunityIds,
+      ...(user.community ? [user.community] : [])
+    ];
+    const uniqueCommunityIds = [...new Set(
+      communityIds
+        .filter(Boolean)
+        .map(id => id.toString())
+    )];
+
+    const joinedCommunities = uniqueCommunityIds.length
+      ? await Community.find({
+          _id: { $in: uniqueCommunityIds },
+          isActive: true,
+          isApproved: true,
+          ...countryScopedQuery(userCountry)
+        })
+          .sort({ name: 1 })
+          .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
+          .lean()
+      : [];
 
     res.json({
       success: true,
       count: joinedCommunities.length,
-      communities: joinedCommunities
+      communities: joinedCommunities.map((community) => ({
+        ...community,
+        isJoined: true,
+        isMember: true,
+        isRegistration: user.community?.toString() === community._id.toString()
+      }))
     });
   } catch (err) {
     console.error('❌ Failed to fetch joined communities:', err);
@@ -767,7 +851,7 @@ router.get('/user/community', authMiddleware, async (req, res) => {
             isApproved: true,
             ...countryScopedQuery(user.country || "Ghana")
         })
-            .select('_id name displayName memberCount location country state city town communityLevel')
+            .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
             .lean();
 
         console.log("🏛️ Loaded primary community:", community);
@@ -801,73 +885,54 @@ router.get('/user/all-communities', authMiddleware, async (req, res) => {
     }
 
     const userCountry = user.country || 'Ghana';
-    const finalCommunities = [];
-
-    // 1️⃣ Registration community
-    if (user.community) {
-      console.log("➡️ Fetching registration community:", user.community);
-
-      const primary = await Community.findOne({
-        _id: user.community,
-        isActive: true,
-        isApproved: true,
-        ...countryScopedQuery(userCountry)
-      })
-        .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
-        .lean();
-
-      console.log("🏛️ Loaded primary:", primary);
-
-      if (primary) {
-        finalCommunities.push({
-          ...primary,
-          isRegistration: true,
-          isJoined: true
-        });
-        console.log("✅ Added primary community to finalCommunities");
-      } else {
-        console.log("⚠️ Primary community reference exists but not found in DB");
-      }
-    } else {
-      console.log("⚠️ User has NO primary community assigned");
-    }
-
-    // 2️⃣ Joined communities
-    console.log("➡️ Fetching joined communities for user:", userId);
-
-    const joined = await Community.find({
-      members: userId,
+    const memberCommunityIds = await Community.find({
+      $and: [
+        {
+          $or: [
+            { members: userId },
+            { createdBy: userId }
+          ]
+        },
+        countryScopedQuery(userCountry)
+      ],
       isActive: true,
-      isApproved: true,
-      ...countryScopedQuery(userCountry)
-    })
+      isApproved: true
+    }).distinct('_id');
+
+    const communityIds = [
+      ...(user.community ? [user.community] : []),
+      ...(user.joinedCommunities || []),
+      ...memberCommunityIds
+    ];
+    const uniqueCommunityIds = [...new Set(
+      communityIds
+        .filter(Boolean)
+        .map(id => id.toString())
+    )];
+
+    const finalCommunities = uniqueCommunityIds.length
+      ? await Community.find({
+          _id: { $in: uniqueCommunityIds },
+          isActive: true,
+          isApproved: true,
+          ...countryScopedQuery(userCountry)
+        })
       .sort({ name: 1 })
       .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
-      .lean();
-
-    console.log(`📦 Joined communities found: ${joined.length}`);
-    console.log("🔍 Joined list:", joined);
-
-    // 3️⃣ Add joined communities except primary
-    joined.forEach(c => {
-      if (c._id.toString() !== user.community?.toString()) {
-        console.log("➕ Adding joined community:", c._id);
-        finalCommunities.push({
-          ...c,
-          isRegistration: false,
-          isJoined: true
-        });
-      } else {
-        console.log("⏭️ Skipping primary (already added):", c._id);
-      }
-    });
+      .lean()
+      : [];
 
     console.log("✅ Final communities prepared:", finalCommunities);
 
     return res.json({
       success: true,
       count: finalCommunities.length,
-      communities: finalCommunities
+      communities: finalCommunities.map((community) => ({
+        ...community,
+        isRegistration: user.community?.toString() === community._id.toString(),
+        isJoined: true,
+        isMember: true
+      }))
     });
 
   } catch (err) {

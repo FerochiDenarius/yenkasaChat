@@ -8,7 +8,7 @@ import {
   markNotificationRead,
   updateNotificationPreferences,
 } from "../api/notifications";
-import { staticImage } from "../utils/images";
+import { handleDynamicImageError, handleStaticImageError, staticImage } from "../utils/images";
 import "../styles/notifications.css";
 
 export default function Notifications() {
@@ -201,8 +201,9 @@ export default function Notifications() {
         {!loading && !notifications.length ? (
           <div className="notifications-empty">
             <img
-              src={staticImage("yenkasa_web_assets/yenkasa_logo.png")}
+              src={staticImage("logo.png")}
               alt="Yenkasa"
+              onError={(event) => handleStaticImageError(event, "logo.png")}
             />
             <strong>No notifications yet</strong>
             <p>Likes, comments, approvals, and account alerts will appear here.</p>
@@ -233,7 +234,13 @@ export default function Notifications() {
                   className="notification-card__avatar"
                   src={
                     notification?.sender?.avatar ||
-                    staticImage("yenkasa_web_assets/yenkasa_logo.png")
+                    notification?.sender?.profileImage ||
+                    staticImage("logo.png")
+                  }
+                  onError={
+                    notification?.sender?.avatar || notification?.sender?.profileImage
+                      ? handleDynamicImageError
+                      : (event) => handleStaticImageError(event, "logo.png")
                   }
                   alt={notification?.sender?.username || "Notification"}
                 />

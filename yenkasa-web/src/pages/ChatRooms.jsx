@@ -354,7 +354,7 @@ export default function ChatRooms() {
                 disabled={!draft.trim() || sending || !roomId}
                 aria-label="Send message"
               >
-                <span className={sending ? "icon-loader" : "icon-mic"} />
+                <span className={sending ? "icon-loader" : "icon-send"} />
               </button>
             </form>
           </section>

@@ -6,37 +6,37 @@ async function getUserCommunities(userId) {
   const user = await User.findById(userId).lean();
   if (!user) throw new Error('User not found');
 
-  const communities = [];
+  const communityIds = [
+    ...(user.community ? [user.community] : []),
+    ...(user.joinedCommunities || [])
+  ];
+  const createdCommunityIds = await Community.find({
+    createdBy: userId,
+    isActive: true,
+    isApproved: true
+  }).distinct('_id');
+  const uniqueCommunityIds = [...new Set(
+    [...communityIds, ...createdCommunityIds]
+      .filter(Boolean)
+      .map(id => id.toString())
+  )];
 
-  // Primary (registration) community
-  if (user.community) {
-    const primary = await Community.findById(user.community)
-      .select('_id name displayName memberCount location')
-      .lean();
-    if (primary) {
-      communities.push({
-        ...primary,
-        isRegistration: true
-      });
-    }
-  }
+  if (!uniqueCommunityIds.length) return [];
 
-  // Other joined communities
-  if (user.joinedCommunities?.length) {
-    const otherIds = user.joinedCommunities.filter(
-      cId => cId.toString() !== user.community?.toString()
-    );
+  const communities = await Community.find({
+    _id: { $in: uniqueCommunityIds },
+    isActive: true,
+    isApproved: true
+  })
+    .select('_id name displayName memberCount postCount location categories icon coverImage country state city town communityLevel')
+    .lean();
 
-    if (otherIds.length) {
-      const joined = await Community.find({ _id: { $in: otherIds }, isActive: true })
-        .select('_id name displayName memberCount location')
-        .lean();
-
-      joined.forEach(c => communities.push({ ...c, isRegistration: false }));
-    }
-  }
-
-  return communities;
+  return communities.map((community) => ({
+    ...community,
+    isRegistration: user.community?.toString() === community._id.toString(),
+    isJoined: true,
+    isMember: true
+  }));
 }
 
 module.exports = { getUserCommunities };

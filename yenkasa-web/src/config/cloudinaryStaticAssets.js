@@ -1,0 +1,3 @@
+export const CLOUDINARY_STATIC_IMAGES = {};
+
+export default CLOUDINARY_STATIC_IMAGES;

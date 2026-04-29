@@ -20,6 +20,7 @@ import xyz.yenkasa.app.model.GenericResponse
 import xyz.yenkasa.app.model.MyCommunitiesResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -91,8 +92,18 @@ class CommunityApprovalActivity : AppCompatActivity() {
                     response: Response<MyCommunitiesResponse>
                 ) {
                     progressBar.visibility = View.GONE
-                    allCommunities = response.body()?.communities.orEmpty()
-                    filterCommunities(searchInput.text?.toString().orEmpty())
+                    if (response.isSuccessful) {
+                        allCommunities = response.body()?.communities.orEmpty()
+                        filterCommunities(searchInput.text?.toString().orEmpty())
+                    } else {
+                        allCommunities = emptyList()
+                        adapter.submit(emptyList())
+                        emptyView.visibility = View.VISIBLE
+                        emptyView.text = when (response.code()) {
+                            403 -> "Your rank is not allowed to review communities. Admin, Moderator, Junior Developer, and Senior Developer can approve communities."
+                            else -> parseErrorMessage(response, "Failed to load pending communities.")
+                        }
+                    }
                 }
 
                 override fun onFailure(call: Call<MyCommunitiesResponse>, t: Throwable) {
@@ -125,7 +136,11 @@ class CommunityApprovalActivity : AppCompatActivity() {
                         filterCommunities(searchInput.text?.toString().orEmpty())
                         Toast.makeText(this@CommunityApprovalActivity, "Community approved", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@CommunityApprovalActivity, "Failed to approve community", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@CommunityApprovalActivity,
+                            parseErrorMessage(response, "Failed to approve community"),
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
 
@@ -159,7 +174,11 @@ class CommunityApprovalActivity : AppCompatActivity() {
                         filterCommunities(searchInput.text?.toString().orEmpty())
                         Toast.makeText(this@CommunityApprovalActivity, "Community rejected", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@CommunityApprovalActivity, "Failed to reject community", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@CommunityApprovalActivity,
+                            parseErrorMessage(response, "Failed to reject community"),
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
 
@@ -167,5 +186,17 @@ class CommunityApprovalActivity : AppCompatActivity() {
                     Toast.makeText(this@CommunityApprovalActivity, "Reject failed", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    private fun parseErrorMessage(response: Response<*>, fallback: String): String {
+        val raw = response.errorBody()?.string().orEmpty()
+        if (raw.isBlank()) return fallback
+
+        return runCatching {
+            val json = JSONObject(raw)
+            json.optString("message")
+                .ifBlank { json.optString("error") }
+                .ifBlank { fallback }
+        }.getOrDefault(fallback)
     }
 }

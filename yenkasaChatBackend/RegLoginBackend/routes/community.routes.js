@@ -133,7 +133,7 @@ router.get('/public', async (req, res) => {
 
     const communities = await Community.find(query)
       .sort({ country: 1, state: 1, city: 1, town: 1, displayName: 1 })
-      .select('_id name displayName description location categories icon coverImage country state city town communityLevel communityType memberCount postCount');
+      .select('_id name displayName description location categories icon coverImage country state city town communityLevel communityType memberCount postCount isActive isApproved isPrivate');
 
     console.log('FETCHED COMMUNITIES:', communities.length, { country });
     res.json(communities);
@@ -281,7 +281,7 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       });
     }
 
-    if (user.joinedCommunities.includes(communityId)) {
+    if ((user.joinedCommunities || []).some(id => id.toString() === communityId.toString())) {
       return res.status(400).json({ error: 'Already a member of this community' });
     }
 
@@ -289,7 +289,7 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'This is already your primary community' });
     }
 
-    if (user.joinedCommunities.length >= 5) {
+    if ((user.joinedCommunities || []).length >= 5) {
       return res.status(403).json({
         error: 'You can only join up to 5 communities',
         message: 'You can select 2 communities at signup and join 3 more in the app.'
@@ -297,13 +297,13 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
     }
 
     // ---- UPDATE USER ----
-    if (!user.joinedCommunities.includes(communityId)) {
+    if (!(user.joinedCommunities || []).some(id => id.toString() === communityId.toString())) {
       user.joinedCommunities.push(communityId);
     }
     await user.save();
 
     // ---- UPDATE COMMUNITY ----
-    if (!community.members.includes(userId)) {
+    if (!community.members.some(id => id.toString() === userId.toString())) {
       community.members.push(userId);
       community.memberCount = community.members.length;
       community.markModified('members');

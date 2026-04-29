@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
 const Post = require("../models/post.model");
+const Community = require("../models/community.model");
 const UserPrivacy = require("../models/userPrivacy.model");
 const Ad = require("../models/Ad.model"); // ⭐ ADD THIS
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
@@ -33,6 +34,11 @@ function attachLikedByUser(posts, viewerId) {
   }));
 }
 
+function countryQuery(value) {
+  const country = (value || "Ghana").toString().trim();
+  return { country: new RegExp(`^${country}$`, "i") };
+}
+
 // -----------------------------------------------------
 // ✅ FEED WITH ADS MIXED IN
 // -----------------------------------------------------
@@ -46,10 +52,17 @@ router.get("/", auth, async (req, res) => {
     // 1️⃣ FETCH POSTS (same as before)
     // ===============================
     const blockedUserIds = await getBlockedRelationshipUserIds(req.user.id);
+    const allowedCommunityIds = await Community.find({
+      ...countryQuery(req.user.country || "Ghana"),
+      isActive: true,
+      isApproved: true
+    }).distinct("_id");
+
     const postFilter = {
       isActive: true,
       status: "approved",
-      userId: { $nin: blockedUserIds }
+      userId: { $nin: blockedUserIds },
+      communityId: { $in: allowedCommunityIds }
     };
 
     const posts = await Post.find(postFilter)

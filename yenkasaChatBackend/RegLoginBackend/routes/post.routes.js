@@ -21,20 +21,11 @@ const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
 
 function normalizeCountry(value) {
-  return (value || "Ghana").toString().trim().toLowerCase();
+  return (value ?? "").toString().trim().toLowerCase();
 }
 
 function countryQuery(value) {
   const country = value || "Ghana";
-  if (normalizeCountry(country) === "ghana") {
-    return {
-      $or: [
-        { country: new RegExp(`^${country}$`, "i") },
-        { country: { $in: [null, ""] } }
-      ]
-    };
-  }
-
   return { country: new RegExp(`^${country}$`, "i") };
 }
 

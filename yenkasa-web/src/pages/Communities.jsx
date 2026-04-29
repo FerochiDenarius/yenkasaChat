@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   getCommunities,
@@ -12,6 +12,7 @@ import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import { useAsync } from "../hooks/useAsync";
 import { requestWalletRefresh } from "../utils/walletEvents";
+import "../styles/communities.css";
 
 export default function Communities() {
   const [searchParams] = useSearchParams();
@@ -20,7 +21,8 @@ export default function Communities() {
   const [busyCommunityId, setBusyCommunityId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const publicState = useAsync(() => getCommunities({ country: "Ghana" }), true);
+  const loadGhanaCommunities = useCallback(() => getCommunities({ country: "Ghana" }), []);
+  const publicState = useAsync(loadGhanaCommunities, true);
   const mineState = useAsync(getMyCommunities, true);
   const joinedState = useAsync(getJoinedCommunities, true);
   const primaryState = useAsync(getPrimaryCommunity, true);
@@ -95,9 +97,9 @@ export default function Communities() {
       setMessage(response?.message || (action === "leave" ? "Left community." : "Joined community."));
       if (action === "join") requestWalletRefresh("join_community");
       await Promise.all([
-        publicState.run(),
-        joinedState.run(),
-        primaryState.run(),
+        publicState.execute(),
+        joinedState.execute(),
+        primaryState.execute(),
       ]);
     } catch (requestError) {
       setError(
@@ -123,34 +125,57 @@ export default function Communities() {
         }
       />
 
-      <section className="stack">
-        <h2 className="section-title">
-          {selectedCommunityName
-            ? `${selectedCommunityName} in Ghana`
-            : "Public communities in Ghana"}
-        </h2>
+      <section className="communities-hero-card">
+        <div>
+          <span className="communities-hero-card__eyebrow">Ghana network</span>
+          <h2>{selectedCommunityName ? selectedCommunityName : "Find your people"}</h2>
+          <p>
+            Join approved communities, leave groups you no longer need, and keep your feed focused.
+          </p>
+        </div>
+        <div className="communities-hero-card__badge">
+          <span>{publicCommunities.length}</span>
+          <small>live communities</small>
+        </div>
+      </section>
+
+      <section className="communities-panel">
+        <div className="communities-section-head">
+          <div>
+            <span>Explore</span>
+            <h2>
+              {selectedCommunityName
+                ? `${selectedCommunityName} in Ghana`
+                : "Public communities in Ghana"}
+            </h2>
+          </div>
+        </div>
         {message ? <div className="success-banner">{message}</div> : null}
         {error ? <div className="error-banner">{error}</div> : null}
-        {visiblePublicCommunities.length ? (
-          visiblePublicCommunities.map((community) => (
-            <CommunityCard
-              key={community._id}
-              community={community}
-              isMember={membershipIds.has(String(community?._id || community?.id || ""))}
-              isPrimary={
-                String(primaryCommunity?._id || primaryCommunity?.id || "") ===
-                String(community?._id || community?.id || "")
-              }
-              busy={busyCommunityId === String(community?._id || community?.id || "")}
-              onMembership={handleMembership}
-              selected={
-                String(community?._id || community?.id || "") === selectedCommunityId ||
-                String(community?.displayName || community?.name || "")
-                  .trim()
-                  .toLowerCase() === String(selectedCommunityName || "").trim().toLowerCase()
-              }
-            />
-          ))
+        {publicState.loading ? (
+          <div className="feed-status-card">Loading Ghana communities...</div>
+        ) : visiblePublicCommunities.length ? (
+          <div className="communities-grid">
+            {visiblePublicCommunities.map((community) => (
+              <CommunityCard
+                key={community._id || community.id}
+                community={community}
+                isMember={membershipIds.has(String(community?._id || community?.id || ""))}
+                isPrimary={
+                  String(primaryCommunity?._id || primaryCommunity?.id || "") ===
+                  String(community?._id || community?.id || "")
+                }
+                busy={busyCommunityId === String(community?._id || community?.id || "")}
+                onMembership={handleMembership}
+                selected={
+                  String(community?._id || community?.id || "") === selectedCommunityId ||
+                  String(community?.displayName || community?.name || "")
+                    .trim()
+                    .toLowerCase() === String(selectedCommunityName || "").trim().toLowerCase()
+                }
+              />
+            ))}
+          </div>
         ) : (
           <EmptyState
             title="No public communities"
@@ -163,40 +188,54 @@ export default function Communities() {
         )}
       </section>
 
-      <section className="stack">
-        <h2 className="section-title">Joined communities</h2>
+      <section className="communities-panel">
+        <div className="communities-section-head">
+          <div>
+            <span>Your feed</span>
+            <h2>Joined communities</h2>
+          </div>
+        </div>
         {joinedCommunities.length ? (
-          joinedCommunities.map((community) => (
-            <CommunityCard
-              key={`joined-${community._id || community.id}`}
-              community={community}
-              isMember
-              isPrimary={community?.isRegistration}
-              busy={busyCommunityId === String(community?._id || community?.id || "")}
-              onMembership={handleMembership}
-            />
-          ))
+          <div className="communities-grid">
+            {joinedCommunities.map((community) => (
+              <CommunityCard
+                key={`joined-${community._id || community.id}`}
+                community={community}
+                isMember
+                isPrimary={community?.isRegistration}
+                busy={busyCommunityId === String(community?._id || community?.id || "")}
+                onMembership={handleMembership}
+              />
+            ))}
+          </div>
         ) : (
           <EmptyState title="No joined communities" description="Communities you join will appear here." />
         )}
       </section>
 
-      <section className="stack">
-        <h2 className="section-title">My created communities</h2>
+      <section className="communities-panel">
+        <div className="communities-section-head">
+          <div>
+            <span>Created by you</span>
+            <h2>My created communities</h2>
+          </div>
+        </div>
         {myCommunities.length ? (
-          myCommunities.map((community) => (
-            <CommunityCard
-              key={`mine-${community._id}`}
-              community={community}
-              isMember={membershipIds.has(String(community?._id || community?.id || ""))}
-              isPrimary={
-                String(primaryCommunity?._id || primaryCommunity?.id || "") ===
-                String(community?._id || community?.id || "")
-              }
-              busy={busyCommunityId === String(community?._id || community?.id || "")}
-              onMembership={handleMembership}
-            />
-          ))
+          <div className="communities-grid">
+            {myCommunities.map((community) => (
+              <CommunityCard
+                key={`mine-${community._id || community.id}`}
+                community={community}
+                isMember={membershipIds.has(String(community?._id || community?.id || ""))}
+                isPrimary={
+                  String(primaryCommunity?._id || primaryCommunity?.id || "") ===
+                  String(community?._id || community?.id || "")
+                }
+                busy={busyCommunityId === String(community?._id || community?.id || "")}
+                onMembership={handleMembership}
+              />
+            ))}
+          </div>
         ) : (
           <EmptyState title="No created communities" description="Communities you create will appear here." />
         )}
@@ -216,23 +255,30 @@ function CommunityCard({
   const displayName = community?.displayName || community?.name || "Community";
   const status = normalizedStatus(community);
   const communityId = community?._id || community?.id;
+  const memberCount = Number(community?.memberCount || 0);
   const canJoin = status === "approved" && !isMember;
   const canLeave = isMember && !isPrimary;
 
   return (
-    <article className={`card community-card${selected ? " community-card--selected" : ""}`}>
-      <div className="split-row">
-        <div>
-          <h3>{displayName}</h3>
-          <p className="muted">{community?.description || "No description yet."}</p>
+    <article className={`community-card${selected ? " community-card--selected" : ""}`}>
+      <div className="community-card__top">
+        <div className="community-card__avatar">
+          {community?.icon ? <img src={community.icon} alt="" /> : <span>{initials(displayName)}</span>}
         </div>
-        <span className="tag">{isPrimary ? "primary" : isMember ? "joined" : status}</span>
+        <div className="community-card__title">
+          <h3>{displayName}</h3>
+          <p>{community?.description || "No description yet."}</p>
+        </div>
+        <span className={`community-status community-status--${isPrimary ? "primary" : isMember ? "joined" : status}`}>
+          {isPrimary ? "primary" : isMember ? "joined" : status}
+        </span>
       </div>
       <div className="community-card__meta">
-        <span>Members {community?.memberCount || 0}</span>
+        <span>{formatMembers(memberCount)} members</span>
+        <span>{community?.isPrivate ? "Private" : "Public"}</span>
         {community?.country ? <span>{community.country}</span> : null}
       </div>
-      {community?.creator?.username ? <p className="muted">Creator: {community.creator.username}</p> : null}
+      {community?.creator?.username ? <p className="community-card__creator">Creator: {community.creator.username}</p> : null}
       <div className="community-card__actions">
         {canJoin ? (
           <button
@@ -241,7 +287,7 @@ function CommunityCard({
             disabled={busy || !communityId}
             onClick={() => onMembership?.(community, "join")}
           >
-            {busy ? "Joining..." : "Join community"}
+            {busy ? "Joining..." : "Join"}
           </button>
         ) : null}
         {canLeave ? (
@@ -264,7 +310,23 @@ function CommunityCard({
 }
 
 function normalizedStatus(community) {
-  if (!community?.isActive) return "rejected";
-  if (community?.isApproved) return "approved";
+  if (community?.isActive === false) return "rejected";
+  if (community?.isApproved !== false) return "approved";
   return "pending";
+}
+
+function initials(value) {
+  return String(value || "Y")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function formatMembers(value) {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return value.toString();
 }

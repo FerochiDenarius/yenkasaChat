@@ -12,6 +12,7 @@ import Communities from "./pages/Communities";
 import CreatePost from "./pages/CreatePost";
 import PostDetails from "./pages/PostDetails";
 import EditProfile from "./pages/EditProfile";
+import ChatRooms from "./pages/ChatRooms";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
@@ -123,7 +124,15 @@ export default function App() {
           path="/chatrooms"
           element={
             <ProtectedRoute>
-              <PlaceholderPage title="Chat Rooms" subtitle="View and continue your chats." />
+              <ChatRooms />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chatrooms/:roomId"
+          element={
+            <ProtectedRoute>
+              <ChatRooms />
             </ProtectedRoute>
           }
         />

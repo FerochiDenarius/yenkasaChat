@@ -179,6 +179,8 @@
         <color name="login_social_background">#FFFFFF</color>
         <color name="login_divider">#E6E1D8</color>
         <color name="login_security_icon">#3CBF4C</color>
+        <color name="register_segment_selected">#FFF5D6</color>
+        <color name="register_error_background">#FFF1F1</color>
 
 
 

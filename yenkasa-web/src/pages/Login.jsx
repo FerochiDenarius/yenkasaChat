@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginRequest } from "../api/auth";
+import { handleStaticImageError, staticImage } from "../utils/images";
 import { saveAuth } from "../utils/storage";
 
 export default function Login() {
@@ -39,7 +40,11 @@ export default function Login() {
       <section className="auth-panel auth-panel--login">
         <div className="auth-logo-wrap">
           <div className="auth-logo-emblem">
-            <span>Y</span>
+            <img
+              src={staticImage("logo.png")}
+              alt="Yenkasa"
+              onError={(event) => handleStaticImageError(event, "logo.png")}
+            />
           </div>
         </div>
 

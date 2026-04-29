@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Verification from "./pages/Verification";
+import Notifications from "./pages/Notifications";
 import VerifyAccount from "./pages/VerifyAccount";
 import Wallet from "./pages/Wallet";
 import Ads from "./pages/Ads";
@@ -16,6 +17,7 @@ import ChatRooms from "./pages/ChatRooms";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
+import NotificationSoundBridge from "./components/notifications/NotificationSoundBridge";
 import { getToken } from "./utils/storage";
 
 function ProtectedRoute({ children }) {
@@ -35,6 +37,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {getToken() ? <NotificationSoundBridge /> : null}
       {menuOpen ? <Backdrop onClick={closeMenu} /> : null}
       <SideDrawer open={menuOpen} onClose={closeMenu} />
       <Routes>
@@ -108,7 +111,7 @@ export default function App() {
           path="/notifications"
           element={
             <ProtectedRoute>
-              <PlaceholderPage title="Notifications" subtitle="Alerts, rewards, comments, and account activity." />
+              <Notifications />
             </ProtectedRoute>
           }
         />

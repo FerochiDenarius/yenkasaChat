@@ -41,7 +41,13 @@ export default function PostCard({ post, onOptimisticLike }) {
 
       {imageUrl ? (
         <div className="post-card__media">
-          <img src={imageUrl} alt={contentText || "Post media"} />
+          <img
+            src={imageUrl}
+            alt={contentText || "Post media"}
+            onError={(event) => {
+              event.currentTarget.src = "/images/default.png";
+            }}
+          />
         </div>
       ) : null}
 

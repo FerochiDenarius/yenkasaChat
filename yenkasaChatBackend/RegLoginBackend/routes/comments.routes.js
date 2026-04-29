@@ -6,7 +6,7 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const UserPrivacy = require('../models/userPrivacy.model');
 const rewardService = require('../services/reward.service');
-const { areUsersBlocked } = require('../services/privacy.service');
+const { areUsersBlocked, getBlockedRelationshipUserIds } = require('../services/privacy.service');
 
 
 
@@ -185,8 +185,14 @@ router.get('/post/:postId', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "You cannot view comments due to privacy settings" });
     }
 
-    // Fetch comments only AFTER block validation
-    const comments = await Comment.find({ postId, isActive: true })
+    const blockedUserIds = await getBlockedRelationshipUserIds(viewerId);
+
+    // Fetch comments only AFTER block validation, excluding users either side blocked.
+    const comments = await Comment.find({
+      postId,
+      isActive: true,
+      userId: { $nin: blockedUserIds }
+    })
       .populate('userId', 'username profileImage verified roleName')
       .sort({ createdAt: 1 })
       .skip((page - 1) * limit)
@@ -225,7 +231,8 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
     const commentOwnerId = comment.userId._id.toString();
     const liker = await User.findById(userId);
 
-    // PRIVACY CHECK
+    // Blocked relationships should not be able to interact directly, even if
+    // a stale client still has a comment id.
     if (await isBlocked(userId, commentOwnerId)) {
       return res.status(403).json({
         message: "Blocked due to privacy settings",

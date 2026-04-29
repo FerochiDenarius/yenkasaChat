@@ -108,12 +108,8 @@
   width: 20px;
   height: 20px;
   border-radius: 999px;
-  display: inline-grid;
-  place-items: center;
-  background: var(--account-gold);
-  color: #102117;
-  font-size: 12px;
-  font-weight: 900;
+  display: inline-block;
+  object-fit: contain;
 }
 
 .account-hero__identity p {

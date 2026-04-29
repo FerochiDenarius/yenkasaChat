@@ -850,6 +850,9 @@ class PostAdapter(
     // Helpers for ViewHolder (small extension function)
     private fun PostViewHolder.updateLikeButton(isLiked: Boolean, btn: ImageButton) {
         btn.setImageResource(if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
+        btn.imageTintList = ColorStateList.valueOf(
+            ContextCompat.getColor(btn.context, R.color.yenkasa_emerald)
+        )
     }
 
     private fun formatTime(ms: Long): String {

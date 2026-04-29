@@ -5,11 +5,13 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Verification from "./pages/Verification";
+import VerifyAccount from "./pages/VerifyAccount";
 import Wallet from "./pages/Wallet";
 import Ads from "./pages/Ads";
 import Communities from "./pages/Communities";
 import CreatePost from "./pages/CreatePost";
 import PostDetails from "./pages/PostDetails";
+import EditProfile from "./pages/EditProfile";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
@@ -129,7 +131,7 @@ export default function App() {
           path="/edit-profile"
           element={
             <ProtectedRoute>
-              <PlaceholderPage title="Edit Profile" subtitle="Update your profile information." />
+              <EditProfile />
             </ProtectedRoute>
           }
         />
@@ -137,7 +139,7 @@ export default function App() {
           path="/verify-account"
           element={
             <ProtectedRoute>
-              <PlaceholderPage title="Verify Account" subtitle="Email and phone verification options." />
+              <VerifyAccount />
             </ProtectedRoute>
           }
         />

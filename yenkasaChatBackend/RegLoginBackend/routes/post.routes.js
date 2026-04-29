@@ -18,6 +18,7 @@ const rewardService = require('../services/reward.service');
 
 const UserPrivacy = require("../models/userPrivacy.model");
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
+const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
 
 function normalizeCountry(value) {
   return (value || "Ghana").toString().trim().toLowerCase();
@@ -492,10 +493,12 @@ router.get('/by-communities', authMiddleware, async (req, res) => {
   page = parseInt(page);
   limit = parseInt(limit);
   const skip = (page - 1) * limit;
+  const blockedUserIds = await getBlockedRelationshipUserIds(req.user.id);
 
   const filter = {
     isActive: true,
     status: "approved",
+    userId: { $nin: blockedUserIds },
     $or: [
       { communityId: { $in: allowedCommunityIds } },
       { communityName: { $in: allowedCommunityNames } }

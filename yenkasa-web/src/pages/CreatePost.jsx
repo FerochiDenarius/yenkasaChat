@@ -87,7 +87,7 @@ export default function CreatePost() {
     user?.profileImage ||
     user?.profilePicUrl ||
     user?.avatar ||
-    "/images/yenkasa_web_assets/yenkasa_logo.png";
+    "/images/default.png";
   const username = user?.username || "Yenkasa";
 
   async function handleSubmit(event) {
@@ -151,7 +151,13 @@ export default function CreatePost() {
         <section className="composer-card">
           <div className="composer-card__head">
             <div className="composer-author">
-              <img src={avatar} alt={username} />
+              <img
+                src={avatar}
+                alt={username}
+                onError={(event) => {
+                  event.currentTarget.src = "/images/default.png";
+                }}
+              />
               <div>
                 <strong>{username}</strong>
                 <label className="composer-community-inline">
@@ -204,7 +210,14 @@ export default function CreatePost() {
             <div className="composer-media-preview">
               {mediaPreview.map((item) =>
                 item.type.startsWith("image/") ? (
-                  <img src={item.url} alt={item.name} key={item.url} />
+                  <img
+                    src={item.url}
+                    alt={item.name}
+                    key={item.url}
+                    onError={(event) => {
+                      event.currentTarget.src = "/images/default.png";
+                    }}
+                  />
                 ) : (
                   <div className="composer-media-file" key={item.url}>
                     <span>{item.type.startsWith("video/") ? "▶" : "♪"}</span>

@@ -74,6 +74,9 @@ export default function CommunitiesBar({
                 <img
                   src={community.icon || community.coverImage}
                   alt={community.displayName || community.name || "Community"}
+                  onError={(event) => {
+                    event.currentTarget.src = "/images/default.png";
+                  }}
                 />
               ) : (
                 <span>{initials(community.displayName || community.name)}</span>

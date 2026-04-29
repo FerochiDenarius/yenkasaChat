@@ -165,9 +165,15 @@ export default function Verification() {
               <div className="verification-hero__content">
                 <div className="verification-hero__avatar">
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt={userName} />
+                    <img
+                      src={avatarUrl}
+                      alt={userName}
+                      onError={(event) => {
+                        event.currentTarget.src = "/images/default.png";
+                      }}
+                    />
                   ) : (
-                    <img src="/images/yc.png" alt="Yenkasa" />
+                    <img src="/images/ykc.png" alt="Yenkasa" />
                   )}
                 </div>
 
@@ -361,7 +367,7 @@ function RankShield({ rank }) {
     <div className={`verification-shield verification-shield--${rankClass}`}>
       <div className="verification-shield__glow" />
       <div className="verification-shield__body">
-        <img src="/images/yc.png" alt="Yenkasa badge" />
+        <img src="/images/ykc.png" alt="Yenkasa badge" />
         <span>{label}</span>
       </div>
     </div>

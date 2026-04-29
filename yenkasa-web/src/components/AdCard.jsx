@@ -19,7 +19,13 @@ export default function AdCard({ ad, compact = false }) {
 
       {mediaUrl ? (
         <div className="ad-card__media">
-          <img src={mediaUrl} alt={ad?.title || "Ad preview"} />
+          <img
+            src={mediaUrl}
+            alt={ad?.title || "Ad preview"}
+            onError={(event) => {
+              event.currentTarget.src = "/images/default.png";
+            }}
+          />
           {!ad?.imageUrl && videoUrl ? <span className="tag ad-card__type-tag">Video</span> : null}
         </div>
       ) : null}

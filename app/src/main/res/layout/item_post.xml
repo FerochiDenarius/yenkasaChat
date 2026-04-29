@@ -366,7 +366,7 @@
             android:contentDescription="Like"
             android:padding="9dp"
             android:src="@drawable/ic_heart_outline"
-            app:tint="@color/feed_secondary_text" />
+            app:tint="@color/yenkasa_emerald" />
 
         <TextView
             android:id="@+id/textLikeCount"

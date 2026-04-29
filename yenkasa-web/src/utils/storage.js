@@ -20,6 +20,13 @@ export function getStoredUser() {
   }
 }
 
+export function updateStoredUser(updates) {
+  const current = getStoredUser() || {};
+  const next = { ...current, ...(updates || {}) };
+  localStorage.setItem(USER_KEY, JSON.stringify(next));
+  return next;
+}
+
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);

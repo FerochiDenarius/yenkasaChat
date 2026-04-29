@@ -364,6 +364,16 @@ function paymentApiErrorMessage(data, fallback) {
   return data?.message || data?.error || data?.details || fallback;
 }
 
+function canCancelOrder(order) {
+  const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+  const deliveryStatus = String(order.deliveryStatus || "").toLowerCase();
+  return paymentStatus !== "paid"
+    && paymentStatus !== "refunded"
+    && paymentStatus !== "partially_refunded"
+    && paymentStatus !== "cancelled"
+    && deliveryStatus !== "cancelled";
+}
+
 function getProductPrimaryImage(product) {
   if (Array.isArray(product.imageUrls) && product.imageUrls.length) {
     return product.imageUrls[0];
@@ -765,6 +775,7 @@ function renderAllOrders(orders) {
     const total = Number(order.total || 0);
     const paymentStatus = String(order.paymentStatus || "").toLowerCase();
     const canRequestRefund = total > 0 && paymentStatus !== "payment_failed" && paymentStatus !== "cancelled";
+    const canCancel = canCancelOrder(order);
     const splitOrder = isPaystackSplitOrder(order);
     const legacyWarning = !splitOrder && isLegacyPayoutOrder(order)
       ? `<div class="orders-feedback error">${legacyPayoutWarning()}</div>`
@@ -803,6 +814,14 @@ function renderAllOrders(orders) {
             ${canRequestRefund ? "" : "disabled"}
           >
             Request Refund
+          </button>
+          <button
+            type="button"
+            class="manage-btn delete cancel-order-btn"
+            data-id="${order.id}"
+            ${canCancel ? "" : "disabled"}
+          >
+            Cancel Order
           </button>
         </div>
       </div>
@@ -1680,6 +1699,46 @@ storeLogoInput?.addEventListener("change", () => {
 });
 
 allOrdersList?.addEventListener("click", async event => {
+  const cancelButton = event.target.closest(".cancel-order-btn");
+  if (cancelButton) {
+    if (cancelButton.disabled) return;
+
+    const orderId = cancelButton.dataset.id;
+    if (!orderId) return;
+
+    const confirmed = confirm("Cancel this unpaid order? Paid Paystack orders must be refunded instead.");
+    if (!confirmed) return;
+
+    try {
+      cancelButton.disabled = true;
+      cancelButton.textContent = "Cancelling...";
+
+      const response = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/cancel`, {
+        method: "PUT",
+        headers: getAuthHeaders()
+      });
+      const data = await readResponseData(response);
+
+      if (isAuthFailure(response.status)) {
+        handleUnauthorized(data);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(paymentApiErrorMessage(data, "Could not cancel order"));
+      }
+
+      alert(data?.message || "Order cancelled successfully.");
+      await loadDashboard();
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Unable to cancel order.");
+      cancelButton.disabled = false;
+      cancelButton.textContent = "Cancel Order";
+    }
+    return;
+  }
+
   const button = event.target.closest(".refund-request-btn");
   if (!button || button.disabled) return;
 

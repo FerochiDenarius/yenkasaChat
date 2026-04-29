@@ -11,6 +11,7 @@ import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -276,6 +277,10 @@ class UserNotificationsActivity : AppCompatActivity() {
     // WHEN USER TAPS A NOTIFICATION
     // ============================================================
     private fun handleNotificationClick(item: NotificationModel) {
+        if (item.type.equals("message_request", ignoreCase = true)) {
+            showMessageRequestDialog(item)
+            return
+        }
 
         // Remove visually & mark backend as read
         allNotifications = allNotifications.filterNot { it.id == item.id }
@@ -284,6 +289,54 @@ class UserNotificationsActivity : AppCompatActivity() {
 
         // Navigate correctly
         navigateFromNotification(item)
+    }
+
+    private fun showMessageRequestDialog(item: NotificationModel) {
+        val requesterName = item.sender?.username ?: "This user"
+
+        AlertDialog.Builder(this)
+            .setTitle("Message request")
+            .setMessage("$requesterName wants to message you.")
+            .setPositiveButton("Approve") { _, _ ->
+                approveMessageRequest(item)
+            }
+            .setNegativeButton("View profile") { _, _ ->
+                navigateFromNotification(item)
+            }
+            .setNeutralButton("Cancel", null)
+            .show()
+    }
+
+    private fun approveMessageRequest(item: NotificationModel) {
+        ApiClient.apiService.approveMessageRequest(item.id)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        allNotifications = allNotifications.filterNot { it.id == item.id }
+                        adapter.removeById(item.id)
+                        markAsRead(item.id)
+                        Toast.makeText(
+                            this@UserNotificationsActivity,
+                            "Message request approved",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            this@UserNotificationsActivity,
+                            "Could not approve request",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(
+                        this@UserNotificationsActivity,
+                        "Network error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
     }
 
 

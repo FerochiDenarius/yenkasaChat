@@ -200,7 +200,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
         <div className="feed-post-card__author-block">
           <span className="feed-post-card__avatar">
             {authorAvatar ? (
-              <img src={authorAvatar} alt={username} />
+              <img src={authorAvatar} alt={username} onError={useDefaultImage} />
             ) : (
               <span>{username.charAt(0).toUpperCase()}</span>
             )}
@@ -210,7 +210,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
             <div className="feed-post-card__author-line">
               <strong>{username}</strong>
               {post?.userId?.verified || post?.userId?.roleName === "verified" ? (
-                <span className="feed-verified-badge">✓</span>
+                <img className="feed-verified-badge" src="/images/verified.png" alt="Verified" />
               ) : null}
             </div>
             <p>
@@ -278,7 +278,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
           disabled={detailMode}
         >
           <div className="feed-post-card__media">
-            <img src={mediaUrl} alt={content || username} />
+            <img src={mediaUrl} alt={content || username} onError={useDefaultImage} />
           </div>
         </button>
       ) : (
@@ -405,7 +405,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
                   >
                     <span className="feed-comment__avatar">
                       {commentAvatar ? (
-                        <img src={commentAvatar} alt={commentAuthor} />
+                        <img src={commentAvatar} alt={commentAuthor} onError={useDefaultImage} />
                       ) : (
                         <span>{commentAuthor.charAt(0).toUpperCase()}</span>
                       )}
@@ -426,6 +426,10 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
       ) : null}
     </article>
   );
+}
+
+function useDefaultImage(event) {
+  event.currentTarget.src = "/images/default.png";
 }
 
 function readViewedPostIds(key) {

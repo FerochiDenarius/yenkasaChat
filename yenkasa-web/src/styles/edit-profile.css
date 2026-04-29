@@ -1,0 +1,353 @@
+.edit-profile-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 86% 24%, rgba(0, 133, 77, 0.18), transparent 25%),
+    radial-gradient(circle at 20% 84%, rgba(0, 133, 77, 0.12), transparent 24%),
+    #030808;
+  color: #f8fbfa;
+  padding: 0 0 36px;
+}
+
+.edit-profile-shell {
+  width: min(100%, 500px);
+  margin: 0 auto;
+  padding: 32px 20px 28px;
+}
+
+.edit-profile-header {
+  position: relative;
+  min-height: 84px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.edit-profile-header h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.edit-profile-header p {
+  margin: 10px 0 0;
+  color: #a9afad;
+  font-size: 16px;
+}
+
+.edit-profile-back {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.edit-profile-identity {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 26px;
+}
+
+.edit-profile-avatar-wrap {
+  position: relative;
+  width: 146px;
+  height: 146px;
+  border-radius: 999px;
+  padding: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(230, 190, 73, 0.78)),
+    #0b1b15;
+}
+
+.edit-profile-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: block;
+  border: 4px solid #05100d;
+}
+
+.edit-profile-camera {
+  position: absolute;
+  right: -6px;
+  bottom: 12px;
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  border: 0;
+  background: #12923d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+.edit-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.edit-profile-name-row strong {
+  font-size: 30px;
+}
+
+.edit-profile-name-row img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.edit-profile-identity > span {
+  color: #b6bcba;
+  font-size: 20px;
+}
+
+.edit-profile-alert {
+  margin: 0 0 14px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(22, 163, 74, 0.14);
+  color: #86efac;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+}
+
+.edit-profile-alert--error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.edit-profile-form {
+  display: grid;
+  gap: 14px;
+}
+
+.edit-profile-form::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.edit-profile-row,
+.edit-profile-password-row {
+  min-height: 76px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  background: rgba(17, 23, 26, 0.88);
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  color: inherit;
+}
+
+.edit-profile-row:first-child {
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+}
+
+.edit-profile-row:nth-of-type(6) {
+  border-bottom-left-radius: 22px;
+  border-bottom-right-radius: 22px;
+}
+
+.edit-profile-row__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #062c1d;
+  color: #20c46b;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.edit-profile-row__icon--gold {
+  background: rgba(255, 209, 84, 0.1);
+  color: #ffd154;
+}
+
+.edit-profile-row__body {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.edit-profile-row__body > span {
+  color: #a6adab;
+  font-size: 15px;
+}
+
+.edit-profile-row input,
+.edit-profile-row select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 20px;
+  outline: 0;
+}
+
+.edit-profile-row select {
+  color-scheme: dark;
+}
+
+.edit-profile-row__chevron {
+  color: #a8afad;
+  font-size: 20px;
+  text-align: right;
+}
+
+.edit-profile-password-row {
+  margin-top: 6px;
+  border-radius: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.edit-profile-password-row span:nth-child(2) {
+  display: grid;
+  gap: 6px;
+}
+
+.edit-profile-password-row strong {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.edit-profile-password-row small {
+  color: #a6adab;
+  font-size: 15px;
+}
+
+.edit-profile-save {
+  margin-top: 16px;
+  min-height: 76px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #075f43 0%, #11a53f 100%);
+  color: #fff;
+  display: grid;
+  grid-template-columns: 1fr 62px;
+  align-items: center;
+  padding: 0 12px 0 34px;
+  font-size: 25px;
+  font-weight: 900;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.24);
+}
+
+.edit-profile-save strong {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #ffd154;
+  color: #ffd154;
+  font-size: 28px;
+}
+
+.edit-profile-save:disabled,
+.edit-profile-camera:disabled {
+  opacity: 0.7;
+}
+
+.edit-profile-secure {
+  margin-top: 22px;
+  text-align: center;
+  color: #a6adab;
+  font-size: 14px;
+}
+
+.edit-profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.65);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.edit-profile-modal__card {
+  width: min(100%, 360px);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #101719;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.edit-profile-modal__card h2 {
+  margin: 0;
+}
+
+.edit-profile-modal__card label {
+  display: grid;
+  gap: 8px;
+  color: #a6adab;
+}
+
+.edit-profile-modal__card input {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  padding: 13px 14px;
+  font: inherit;
+}
+
+.edit-profile-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.edit-profile-modal__actions button {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 800;
+}
+
+.edit-profile-modal__actions button:last-child {
+  background: #12923d;
+  color: #fff;
+}
+
+@media (max-width: 420px) {
+  .edit-profile-shell {
+    padding-inline: 16px;
+  }
+
+  .edit-profile-header h1 {
+    font-size: 27px;
+  }
+
+  .edit-profile-row,
+  .edit-profile-password-row {
+    grid-template-columns: 50px minmax(0, 1fr) 20px;
+    padding-inline: 14px;
+  }
+
+  .edit-profile-row input,
+  .edit-profile-row select {
+    font-size: 18px;
+  }
+}

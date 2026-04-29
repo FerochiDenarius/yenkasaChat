@@ -1,11 +1,13 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.FrameLayout
+import androidx.core.content.ContextCompat
 import androidx.media3.ui.PlayerView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
@@ -37,6 +39,7 @@ object PostBinder {
         val likeCount = root.findViewById<TextView>(R.id.textLikeCount)
         val commentCount = root.findViewById<TextView>(R.id.textCommentCount)
         val viewCount = root.findViewById<TextView>(R.id.textViewCount)
+        val likeButton = root.findViewById<ImageButton>(R.id.btnLike)
 
         val mediaContainer = root.findViewById<FrameLayout>(R.id.mediaContainer)
         val textBackgroundPost = root.findViewById<TextView>(R.id.textPostBackgroundContent)
@@ -104,6 +107,10 @@ object PostBinder {
         likeCount.text = "${post.likeCount} likes"
         commentCount.text = "${post.commentCount} comments"
         viewCount.text = "👁 ${post.viewCount}"
+        likeButton.setImageResource(if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
+        likeButton.imageTintList = ColorStateList.valueOf(
+            ContextCompat.getColor(context, R.color.yenkasa_emerald)
+        )
 
         mediaContainer.visibility = if (hasMedia || hasTextBackground) View.VISIBLE else View.GONE
         if (hasTextBackground) {

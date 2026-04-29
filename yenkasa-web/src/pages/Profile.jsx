@@ -81,7 +81,7 @@ export default function Profile() {
     user?.profileImage ||
     user?.profilePicUrl ||
     user?.avatar ||
-    "/images/yenkasa_web_assets/yenkasa_logo.png";
+    "/images/default.png";
   const followersCount =
     Number(followStats?.followersCount ?? user?.followersCount ?? user?.followers?.length ?? 0);
   const followingCount =
@@ -122,7 +122,14 @@ export default function Profile() {
         <section className="account-hero">
           <div className="account-hero__header">
             <div className="account-hero__avatar-wrap">
-              <img className="account-hero__avatar" src={profileImage} alt={username} />
+              <img
+                className="account-hero__avatar"
+                src={profileImage}
+                alt={username}
+                onError={(event) => {
+                  event.currentTarget.src = "/images/default.png";
+                }}
+              />
               <button
                 type="button"
                 className="account-hero__camera"
@@ -137,7 +144,7 @@ export default function Profile() {
               <div className="account-hero__name-row">
                 <h1>{username}</h1>
                 {(user?.verified || roleName !== "unverified") && (
-                  <span className="account-hero__verified">✓</span>
+                  <img className="account-hero__verified" src="/images/verified.png" alt="Verified" />
                 )}
               </div>
               <p>{handleTag}</p>
@@ -218,7 +225,7 @@ export default function Profile() {
             icon="✎"
             title="Edit Profile"
             value="Update your profile information"
-            onClick={() => window.alert("Edit profile page is next to wire.")}
+            onClick={() => navigate("/edit-profile")}
           />
           <Divider />
           <InfoRow

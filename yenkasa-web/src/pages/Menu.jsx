@@ -23,7 +23,7 @@ export default function Menu() {
     <main className="menu-page">
       <div className="menu-page__shell">
         <header className="menu-header">
-          <img src="/images/yc.png" alt="Yenkasa" className="menu-header__logo" />
+          <img src="/images/logo.png" alt="Yenkasa" className="menu-header__logo" />
           <div>
             <h1>Yenkasa</h1>
             <p>Secure. Connect. Earn.</p>

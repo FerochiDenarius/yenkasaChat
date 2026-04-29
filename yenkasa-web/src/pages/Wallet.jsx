@@ -119,7 +119,7 @@ export default function Wallet() {
 
         <section className="wallet-hero">
           <div className="wallet-coin-mark" aria-hidden="true">
-            <img src="/images/yenkasa_web_assets/yenkasa_logo.png" alt="" />
+            <img src="/images/logo.png" alt="" />
           </div>
           <div>
             <span className="wallet-hero__label">Current Balance <b>◎</b></span>
@@ -260,7 +260,7 @@ function TransactionRow({ transaction, walletId }) {
   return (
     <article className="wallet-transaction">
       <div className="wallet-transaction__coin">
-        <img src="/images/yenkasa_web_assets/yenkasa_logo.png" alt="" />
+        <img src="/images/logo.png" alt="" />
         <span className={`wallet-transaction__icon${incoming ? " is-in" : " is-out"}`}>
           {iconForTransaction(transaction.type, incoming)}
         </span>

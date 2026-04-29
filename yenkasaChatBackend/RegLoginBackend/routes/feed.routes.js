@@ -6,6 +6,7 @@ const Post = require("../models/post.model");
 const UserPrivacy = require("../models/userPrivacy.model");
 const Ad = require("../models/Ad.model"); // ⭐ ADD THIS
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
+const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
 
 /* ---------------------------------------------------
  * Helper: Get ALL users that viewer cannot see
@@ -44,7 +45,14 @@ router.get("/", auth, async (req, res) => {
     // ===============================
     // 1️⃣ FETCH POSTS (same as before)
     // ===============================
-    const posts = await Post.find({ isActive: true, status: "approved" })
+    const blockedUserIds = await getBlockedRelationshipUserIds(req.user.id);
+    const postFilter = {
+      isActive: true,
+      status: "approved",
+      userId: { $nin: blockedUserIds }
+    };
+
+    const posts = await Post.find(postFilter)
       .populate("userId", "username profileImage verified roleName")
       .populate("communityId", "name displayName")
       .sort({ createdAt: -1 })
@@ -55,10 +63,7 @@ router.get("/", auth, async (req, res) => {
     await attachAccurateViewCounts(posts);
     const postsWithLikedState = attachLikedByUser(posts, req.user.id);
 
-    const totalPosts = await Post.countDocuments({
-      isActive: true,
-      status: "approved",
-    });
+    const totalPosts = await Post.countDocuments(postFilter);
 
     // ===============================
     // 2️⃣ FETCH ADS

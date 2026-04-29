@@ -38,6 +38,25 @@ async function areUsersBlocked(userA, userB) {
   return hasId(privacyA?.blockedUsers, userB) || hasId(privacyB?.blockedUsers, userA);
 }
 
+async function hasUserBlocked(blockerId, blockedId) {
+  if (!blockerId || !blockedId) return false;
+  const privacy = await getPrivacy(blockerId);
+  return hasId(privacy?.blockedUsers, blockedId);
+}
+
+async function getBlockedRelationshipUserIds(viewerId) {
+  const viewer = normalizeId(viewerId);
+  if (!viewer) return [];
+
+  const myPrivacy = await getPrivacy(viewer);
+  const iBlocked = myPrivacy?.blockedUsers?.map(id => normalizeId(id)).filter(Boolean) || [];
+
+  const blockedMeDocs = await UserPrivacy.find({ blockedUsers: viewer }).select("userId").lean();
+  const blockedMe = blockedMeDocs.map(doc => normalizeId(doc.userId)).filter(Boolean);
+
+  return [...new Set([...iBlocked, ...blockedMe])];
+}
+
 async function canMessageUser(senderId, receiverId) {
   const sender = normalizeId(senderId);
   const receiver = normalizeId(receiverId);
@@ -88,5 +107,7 @@ module.exports = {
   areUsersBlocked,
   canMessageUser,
   ensurePrivacy,
-  hasId
+  getBlockedRelationshipUserIds,
+  hasId,
+  hasUserBlocked
 };

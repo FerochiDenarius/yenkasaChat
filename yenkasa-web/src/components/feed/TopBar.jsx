@@ -13,7 +13,7 @@ export default function TopBar({ onOpenMenu }) {
 
       <div className="feed-brand">
         <img
-          src="/images/yenkasa_web_assets/yenkasa_logo.png"
+          src="/images/logo.png"
           alt="Yenkasa"
           className="feed-brand__logo"
         />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   createChatRoom,
@@ -20,6 +20,7 @@ const CURRENT_USER = getStoredUser() || {};
 export default function ChatRooms() {
   const navigate = useNavigate();
   const { roomId } = useParams();
+  const threadEndRef = useRef(null);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -33,10 +34,12 @@ export default function ChatRooms() {
 
   useEffect(() => {
     let active = true;
+    let pollId;
 
-    async function loadRooms() {
-      setLoadingRooms(true);
-      setError("");
+    async function loadRooms(showLoader = true) {
+      if (showLoader) {
+        setLoadingRooms(true);
+      }
       try {
         const data = await getChatRooms();
         if (!active) return;
@@ -54,28 +57,36 @@ export default function ChatRooms() {
             "Failed to load chat rooms."
         );
       } finally {
-        if (active) setLoadingRooms(false);
+        if (active && showLoader) setLoadingRooms(false);
       }
     }
 
+    setError("");
     loadRooms();
+    pollId = window.setInterval(() => {
+      loadRooms(false);
+    }, 8000);
+
     return () => {
       active = false;
+      if (pollId) window.clearInterval(pollId);
     };
   }, [navigate, roomId]);
 
   useEffect(() => {
     let active = true;
+    let pollId;
 
-    async function loadThread() {
+    async function loadThread(showLoader = true) {
       if (!roomId) {
         setParticipant(null);
         setMessages([]);
         return;
       }
 
-      setLoadingThread(true);
-      setError("");
+      if (showLoader) {
+        setLoadingThread(true);
+      }
 
       try {
         const [roomDetails, receiverDetails, roomMessages] = await Promise.all([
@@ -109,15 +120,25 @@ export default function ChatRooms() {
             "Failed to load this chat."
         );
       } finally {
-        if (active) setLoadingThread(false);
+        if (active && showLoader) setLoadingThread(false);
       }
     }
 
+    setError("");
     loadThread();
+    pollId = window.setInterval(() => {
+      loadThread(false);
+    }, 4000);
+
     return () => {
       active = false;
+      if (pollId) window.clearInterval(pollId);
     };
   }, [roomId]);
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: "end" });
+  }, [groupedMessages.length, roomId]);
 
   const groupedMessages = useMemo(() => {
     const groups = [];
@@ -225,7 +246,7 @@ export default function ChatRooms() {
               onClick={() => navigate("/")}
               aria-label="Back"
             >
-              ←
+              <span className="icon-arrow-left" />
             </button>
             <div className="chatroom-hero-header__identity">
               <img
@@ -250,13 +271,13 @@ export default function ChatRooms() {
             </div>
             <div className="chatroom-hero-header__actions">
               <button type="button" className="chatroom-circle-btn" aria-label="Video call">
-                ◫
+                <span className="icon-video-camera" />
               </button>
               <button type="button" className="chatroom-circle-btn" aria-label="Voice call">
-                ☎
+                <span className="icon-phone" />
               </button>
               <button type="button" className="chatroom-circle-btn" aria-label="More">
-                ⋮
+                <span className="icon-dots-vertical" />
               </button>
             </div>
           </header>
@@ -308,11 +329,12 @@ export default function ChatRooms() {
                   </article>
                 );
               })}
+            <div ref={threadEndRef} />
           </section>
 
           <form className="chatroom-composer" onSubmit={handleSend}>
             <button type="button" className="chatroom-composer__addon" aria-label="More actions">
-              +
+              <span className="icon-plus" />
             </button>
             <textarea
               value={draft}
@@ -326,7 +348,7 @@ export default function ChatRooms() {
               disabled={!draft.trim() || sending || !roomId}
               aria-label="Send message"
             >
-              {sending ? "…" : "◉"}
+              <span className={sending ? "icon-loader" : "icon-mic"} />
             </button>
           </form>
         </section>
@@ -389,6 +411,9 @@ export default function ChatRooms() {
                       <strong>{itemParticipant?.username || "Unknown user"}</strong>
                       <small>{renderPreview(room?.lastMessage)}</small>
                     </div>
+                    {room?.unreadCount ? (
+                      <span className="chatrooms-room__unread">{room.unreadCount}</span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -407,45 +432,97 @@ function isOwnMessage(message) {
 }
 
 function renderMessageContent(message) {
-  if (message?.imageUrl) {
-    return (
-      <div className="chatroom-message__bubble chatroom-message__bubble--media">
-        <img src={message.imageUrl} alt="Sent media" />
-      </div>
-    );
-  }
+  return (
+    <div className="chatroom-message__bubble">
+      {message?.repliedTo ? (
+        <div className="chatroom-message__reply">
+          <strong>
+            {message?.repliedTo?.sender?.username ||
+              message?.repliedTo?.senderId?.username ||
+              "Reply"}
+          </strong>
+          <span>{renderReplyPreview(message.repliedTo)}</span>
+        </div>
+      ) : null}
 
-  if (message?.videoUrl) {
-    return (
-      <div className="chatroom-message__bubble chatroom-message__bubble--media">
-        <video src={message.videoUrl} controls playsInline preload="metadata" />
-      </div>
-    );
-  }
+      {message?.imageUrl ? (
+        <div className="chatroom-message__media-block">
+          <img src={message.imageUrl} alt="Sent media" />
+        </div>
+      ) : null}
 
-  if (message?.audioUrl) {
-    return (
-      <div className="chatroom-message__bubble chatroom-message__bubble--media">
-        <audio src={message.audioUrl} controls preload="metadata" />
-      </div>
-    );
-  }
+      {message?.videoUrl ? (
+        <div className="chatroom-message__media-block">
+          <video src={message.videoUrl} controls playsInline preload="metadata" />
+        </div>
+      ) : null}
 
-  if (message?.fileUrl) {
-    return (
-      <div className="chatroom-message__bubble">
-        <a href={message.fileUrl} target="_blank" rel="noreferrer">
-          Open file
+      {message?.audioUrl ? (
+        <div className="chatroom-message__audio-block">
+          <audio src={message.audioUrl} controls preload="metadata" />
+        </div>
+      ) : null}
+
+      {message?.fileUrl ? (
+        <a
+          className="chatroom-message__resource"
+          href={message.fileUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="chatroom-message__resource-icon">📄</span>
+          <span>
+            <strong>{extractFileLabel(message.fileUrl)}</strong>
+            <small>Open file</small>
+          </span>
         </a>
-      </div>
-    );
-  }
+      ) : null}
 
-  return <div className="chatroom-message__bubble">{message?.text || "Unsupported message"}</div>;
+      {message?.location?.latitude != null && message?.location?.longitude != null ? (
+        <a
+          className="chatroom-message__resource"
+          href={`https://maps.google.com/?q=${message.location.latitude},${message.location.longitude}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="chatroom-message__resource-icon">📍</span>
+          <span>
+            <strong>Shared location</strong>
+            <small>
+              {message.location.latitude.toFixed(4)}, {message.location.longitude.toFixed(4)}
+            </small>
+          </span>
+        </a>
+      ) : null}
+
+      {message?.contactInfo ? (
+        <div className="chatroom-message__resource">
+          <span className="chatroom-message__resource-icon">👤</span>
+          <span>
+            <strong>Shared contact</strong>
+            <small>{message.contactInfo}</small>
+          </span>
+        </div>
+      ) : null}
+
+      {message?.text ? <div className="chatroom-message__text">{message.text}</div> : null}
+
+      {!message?.text &&
+      !message?.imageUrl &&
+      !message?.videoUrl &&
+      !message?.audioUrl &&
+      !message?.fileUrl &&
+      !message?.location &&
+      !message?.contactInfo ? (
+        <div className="chatroom-message__text">Unsupported message</div>
+      ) : null}
+    </div>
+  );
 }
 
 function renderPreview(message) {
   if (!message) return "No messages yet";
+  if (message?.repliedTo && message?.text) return `↩ ${message.text}`;
   if (message?.text) return message.text;
   if (message?.imageUrl) return "📷 Photo";
   if (message?.audioUrl) return "🎤 Audio";
@@ -454,6 +531,28 @@ function renderPreview(message) {
   if (message?.location) return "📍 Location";
   if (message?.contactInfo) return "👤 Contact";
   return "Unsupported message";
+}
+
+function renderReplyPreview(message) {
+  if (!message) return "Message";
+  if (message?.text) return message.text;
+  if (message?.imageUrl) return "📷 Photo";
+  if (message?.audioUrl) return "🎤 Audio";
+  if (message?.videoUrl) return "🎬 Video";
+  if (message?.fileUrl) return "📄 File";
+  if (message?.location) return "📍 Location";
+  if (message?.contactInfo) return "👤 Contact";
+  return "Message";
+}
+
+function extractFileLabel(url) {
+  try {
+    const pathname = new URL(url).pathname;
+    const last = pathname.split("/").filter(Boolean).pop();
+    return last || "Attachment";
+  } catch {
+    return "Attachment";
+  }
 }
 
 function formatClock(value) {

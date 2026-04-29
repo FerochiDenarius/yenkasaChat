@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import PostContainer from "../common/PostContainer";
 import {
   buildAudioUrl,
   buildMediaUrl,
@@ -397,26 +398,30 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
           onClick={openPost}
           disabled={detailMode}
         >
-          <div className="feed-post-card__media feed-post-card__media--video">
-            <video
-              src={videoUrl}
-              poster={mediaUrl && mediaUrl !== videoUrl ? mediaUrl : undefined}
-              controls
-              preload="metadata"
-              playsInline
-            />
-            <span className="feed-post-card__media-badge">Video</span>
-          </div>
+          <PostContainer className="video-post">
+            <div className="feed-post-card__media feed-post-card__media--video">
+              <video
+                src={videoUrl}
+                poster={mediaUrl && mediaUrl !== videoUrl ? mediaUrl : undefined}
+                controls
+                preload="metadata"
+                playsInline
+              />
+              <span className="feed-post-card__media-badge">Video</span>
+            </div>
+          </PostContainer>
         </button>
       ) : isAudioPost ? (
-        <div className="feed-post-card__audio">
-          <div className="feed-post-card__audio-icon">♪</div>
-          <div>
-            <strong>Audio post</strong>
-            <span>{content || "Listen to this Yenkasa audio update."}</span>
+        <PostContainer className="audio-post">
+          <div className="feed-post-card__audio">
+            <div className="feed-post-card__audio-icon">♪</div>
+            <div>
+              <strong>Audio post</strong>
+              <span>{content || "Listen to this Yenkasa audio update."}</span>
+            </div>
+            <audio src={audioUrl} controls preload="metadata" />
           </div>
-          <audio src={audioUrl} controls preload="metadata" />
-        </div>
+        </PostContainer>
       ) : mediaUrl ? (
         <button
           type="button"
@@ -424,9 +429,11 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
           onClick={openPost}
           disabled={detailMode}
         >
-          <div className="feed-post-card__media">
-            <img src={mediaUrl} alt={content || username} onError={useDefaultImage} />
-          </div>
+          <PostContainer className="image-post">
+            <div className="feed-post-card__media">
+              <img src={mediaUrl} alt={content || username} onError={useDefaultImage} />
+            </div>
+          </PostContainer>
         </button>
       ) : (
         <button
@@ -435,9 +442,11 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
           onClick={openPost}
           disabled={detailMode}
         >
-          <div className="feed-post-card__text-panel">
-            <span>{content || "Share something with your community."}</span>
-          </div>
+          <PostContainer className="text-post">
+            <div className="feed-post-card__text-panel">
+              <span>{content || "Share something with your community."}</span>
+            </div>
+          </PostContainer>
         </button>
       )}
 

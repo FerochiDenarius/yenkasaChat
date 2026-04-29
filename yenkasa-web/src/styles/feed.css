@@ -998,6 +998,61 @@
   background: #f7faf8;
 }
 
+.post-container {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.post-container > .feed-post-card__media,
+.post-container > .feed-post-card__text-panel,
+.post-container > .feed-post-card__audio,
+.post-container > .post-card__media {
+  margin: 0;
+}
+
+.audio-post {
+  margin-top: 14px;
+}
+
+.yenkasa-watermark {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+
+.yenkasa-watermark img {
+  width: 72px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.24));
+}
+
+.audio-post .yenkasa-watermark,
+.text-post .yenkasa-watermark {
+  opacity: 0.28;
+}
+
+.video-post .yenkasa-watermark {
+  opacity: 0.32;
+}
+
+@media (max-width: 600px) {
+  .yenkasa-watermark img {
+    width: 48px;
+  }
+
+  .yenkasa-watermark {
+    top: 10px;
+    right: 10px;
+    opacity: 0.3;
+  }
+}
+
 @media (max-width: 380px) {
   .feed-home__shell {
     padding-inline: 10px;

@@ -40,6 +40,7 @@ export default function ChatWindow({
   onSelectBackground,
   onBack,
   onViewContact,
+  onOpenProfile,
   onMuteNotifications,
   onClearChat,
   textareaRef,
@@ -88,7 +89,12 @@ export default function ChatWindow({
         <button type="button" className="chatroom-circle-btn" onClick={onBack} aria-label="Back">
           <span className="icon-arrow-left" />
         </button>
-        <div className="chatroom-hero-header__identity">
+        <button
+          type="button"
+          className="chatroom-hero-header__identity chatroom-hero-header__identity--button"
+          onClick={onOpenProfile}
+          aria-label={participant?.username ? `Open ${participant.username}'s profile` : "Open profile"}
+        >
           <img
             src={getUserImage(participant) || staticImage("default.png")}
             onError={handleDynamicImageError}
@@ -105,7 +111,7 @@ export default function ChatWindow({
                 : "Select a room to start"}
             </span>
           </div>
-        </div>
+        </button>
         <div className="chatroom-hero-header__actions">
           <button type="button" className="chatroom-circle-btn" aria-label="Video call">
             <span className="icon-video-camera" />

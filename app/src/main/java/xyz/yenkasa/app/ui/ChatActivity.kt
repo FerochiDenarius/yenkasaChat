@@ -487,6 +487,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun setupListeners() {
         findViewById<ImageView>(R.id.imageViewBackButton).setOnClickListener { finish() }
         moreOptionsButton.setOnClickListener { showChatOptionsMenu(it) }
+        imageViewReceiverPicture.setOnClickListener { openReceiverProfile() }
+        textViewReceiverName.setOnClickListener { openReceiverProfile() }
+        textViewOnlineStatus.setOnClickListener { openReceiverProfile() }
 
         buttonCancelReply.setOnClickListener { clearReplyingTo() }
 
@@ -1082,7 +1085,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                     true
                 }
                 MENU_VIEW_CONTACT -> {
-                    Toast.makeText(this, "View contact will be added next.", Toast.LENGTH_SHORT).show()
+                    openReceiverProfile()
                     true
                 }
                 MENU_MUTE_NOTIFICATIONS -> {
@@ -1097,6 +1100,20 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
         }
         popup.show()
+    }
+
+    private fun openReceiverProfile() {
+        val receiverId = receiverParticipant?._id
+        if (receiverId.isNullOrBlank()) {
+            Toast.makeText(this, "User profile unavailable.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        startActivity(
+            Intent(this, UserProfileActivity::class.java).apply {
+                putExtra("USER_ID", receiverId)
+            }
+        )
     }
 
     private fun showChatBackgroundPicker() {

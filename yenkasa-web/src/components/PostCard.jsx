@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toggleLike } from "../api/feed";
+import PostContainer from "./common/PostContainer";
 import { buildMediaUrl, formatRelativeTime, getAuthorName } from "../utils/format";
 import { handleDynamicImageError } from "../utils/images";
 
@@ -41,13 +42,15 @@ export default function PostCard({ post, onOptimisticLike }) {
       {contentText ? <p className="post-card__body">{contentText}</p> : null}
 
       {imageUrl ? (
-        <div className="post-card__media">
-          <img
-            src={imageUrl}
-            alt={contentText || "Post media"}
-            onError={handleDynamicImageError}
-          />
-        </div>
+        <PostContainer className="image-post">
+          <div className="post-card__media">
+            <img
+              src={imageUrl}
+              alt={contentText || "Post media"}
+              onError={handleDynamicImageError}
+            />
+          </div>
+        </PostContainer>
       ) : null}
 
       <footer className="post-card__footer">

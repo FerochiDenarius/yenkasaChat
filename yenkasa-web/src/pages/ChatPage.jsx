@@ -45,6 +45,10 @@ export default function ChatPage() {
     chat.setChatNotice("View contact will be added next.");
   }
 
+  function handleOpenProfile() {
+    handleViewContact();
+  }
+
   function handleMuteNotifications() {
     chat.setChatNotice("Mute notifications will be added next.");
   }
@@ -133,6 +137,7 @@ export default function ChatPage() {
             onSelectBackground={chat.setBackgroundPreset}
             onBack={handleBack}
             onViewContact={handleViewContact}
+            onOpenProfile={handleOpenProfile}
             onMuteNotifications={handleMuteNotifications}
             onClearChat={handleClearChat}
             textareaRef={chat.composerTextareaRef}

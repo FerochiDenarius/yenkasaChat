@@ -50,7 +50,9 @@ export default function ChatRooms() {
   const [sending, setSending] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [error, setError] = useState("");
+  const [roomsError, setRoomsError] = useState("");
+  const [threadError, setThreadError] = useState("");
+  const [composerError, setComposerError] = useState("");
   const [searchUsername, setSearchUsername] = useState("");
   const [draft, setDraft] = useState("");
   const [participant, setParticipant] = useState(null);
@@ -126,7 +128,7 @@ export default function ChatRooms() {
         setRooms(normalizeChatRooms(nextRooms, currentUserId));
       } catch (requestError) {
         if (!active) return;
-        setError(
+        setRoomsError(
           requestError?.response?.data?.message ||
             requestError?.response?.data?.error ||
             "Failed to load chat rooms."
@@ -136,7 +138,7 @@ export default function ChatRooms() {
       }
     }
 
-    setError("");
+    setRoomsError("");
     loadRooms();
     pollId = window.setInterval(() => {
       loadRooms(false);
@@ -193,7 +195,7 @@ export default function ChatRooms() {
         await markRoomAsRead(roomId).catch(() => null);
       } catch (requestError) {
         if (!active) return;
-        setError(
+        setThreadError(
           requestError?.response?.data?.message ||
             requestError?.response?.data?.error ||
             "Failed to load this chat."
@@ -203,7 +205,7 @@ export default function ChatRooms() {
       }
     }
 
-    setError("");
+    setThreadError("");
     loadThread();
     pollId = window.setInterval(() => {
       loadThread(false);
@@ -248,12 +250,12 @@ export default function ChatRooms() {
     if (!username || creatingRoom) return;
 
     setCreatingRoom(true);
-    setError("");
+    setRoomsError("");
 
     try {
       const response = await createChatRoom(username);
       if (!response?.success || !response?.roomId) {
-        setError(response?.message || "Could not create chat room.");
+        setRoomsError(response?.message || "Could not create chat room.");
         return;
       }
 
@@ -274,7 +276,7 @@ export default function ChatRooms() {
       setSearchUsername("");
       navigate(`/chatrooms/${response.roomId}`);
     } catch (requestError) {
-      setError(
+      setRoomsError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
           "Unable to start that chat."
@@ -291,7 +293,7 @@ export default function ChatRooms() {
 
     setSending(true);
     setUploadingMedia(Boolean(selectedMedia));
-    setError("");
+    setComposerError("");
     try {
       const payload = { roomId };
       if (text) payload.text = text;
@@ -325,7 +327,7 @@ export default function ChatRooms() {
       );
       scrollThreadToBottom("smooth");
     } catch (requestError) {
-      setError(
+      setComposerError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
           requestError?.message ||
@@ -384,7 +386,7 @@ export default function ChatRooms() {
     }
 
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      setError("Audio recording is not available in this browser.");
+      setComposerError("Audio recording is not available in this browser.");
       return;
     }
 
@@ -428,10 +430,10 @@ export default function ChatRooms() {
       recorder.start();
       setRecording(true);
       setAttachOpen(false);
-      setError("");
+      setComposerError("");
     } catch (requestError) {
       setRecording(false);
-      setError(
+      setComposerError(
         requestError?.message ||
           "Microphone permission is needed before sending an audio message."
       );
@@ -578,7 +580,9 @@ export default function ChatRooms() {
               </section>
             ) : null}
 
-            {error ? <div className="error-banner">{error}</div> : null}
+            {threadError || composerError ? (
+              <div className="error-banner">{threadError || composerError}</div>
+            ) : null}
 
             <section className="chatroom-thread-body" ref={threadBodyRef}>
               {loadingThread ? (
@@ -789,6 +793,8 @@ export default function ChatRooms() {
             </form>
 
             <section className="chatrooms-sidebar__list">
+              {roomsError ? <div className="error-banner">{roomsError}</div> : null}
+
               {loadingRooms ? (
                 <div className="chatrooms-status-card">Loading chat rooms...</div>
               ) : null}

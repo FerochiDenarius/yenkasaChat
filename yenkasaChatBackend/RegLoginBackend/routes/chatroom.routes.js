@@ -6,6 +6,7 @@ const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
 const Message = require('../models/message.model');
 const Notification = require('../models/notifications.model');
+const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const authMiddleware = require('../middleware/auth');
 const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
 
@@ -245,6 +246,11 @@ router.get('/', authMiddleware, async (req, res) => {
         .populate('senderId', 'username profileImage _id')
         .lean();
 
+      const unreadCountDoc = await UnreadMessageCount
+        .findOne({ userId, roomId: room._id })
+        .select('count')
+        .lean();
+
       const roomForClient = {
         _id: room._id,
         participants: participantForClient ? [participantForClient] : [],
@@ -261,7 +267,7 @@ router.get('/', authMiddleware, async (req, res) => {
           timestamp: lastMessageFromDB.createdAt
         } : null,
         lastMessageTime: lastMessageFromDB?.createdAt || room.updatedAt || room.createdAt,
-        unreadCount: 0,
+        unreadCount: Number(unreadCountDoc?.count || 0),
         createdAt: room.createdAt,
       };
 

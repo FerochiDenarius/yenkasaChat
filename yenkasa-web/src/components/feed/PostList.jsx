@@ -59,10 +59,12 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
 
     const combined = [];
     let adIndex = 0;
+    let googleAdIndex = 0;
     filteredPosts.forEach((item, index) => {
       combined.push(item);
       if ((index + 1) % FEED_AD_INTERVAL === 0) {
-        if (adsOnly.length) {
+        const useSponsoredAd = adsOnly.length && googleAdIndex % 2 === 0;
+        if (useSponsoredAd) {
           const adItem = adsOnly[adIndex % adsOnly.length];
           combined.push({
             ...adItem,
@@ -76,6 +78,7 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
             slotKey: `${activeTab}-${activeSort}-${selectedCommunity?._id || selectedCommunity?.id || "all"}-${index + 1}`
           });
         }
+        googleAdIndex += 1;
       }
     });
     return combined;

@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 
 data class BlockedUserModel(
-    @SerializedName("userId")
+    @SerializedName(value = "userId", alternate = ["_id"])
     val userId: String,
 
     @SerializedName("username")

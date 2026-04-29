@@ -12,6 +12,7 @@ import com.cloudinary.android.callback.UploadCallback
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.ApiService
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -27,6 +28,9 @@ class ChatMessageHandler(
     interface ChatMessageCallback {
         fun onMessageSent(message: ChatMessage)
         fun onError(error: String)
+        fun onSendRejected(code: Int, reason: String?, message: String) {
+            onError(message)
+        }
         fun onUploadStarted(type: String) {}
     }
 
@@ -225,7 +229,11 @@ class ChatMessageHandler(
                 } else {
                     val errorBodyString = response.errorBody()?.string() ?: "Unknown error"
                     Log.e("ChatMessageHandler", "Send message to backend failed. Code: ${response.code()}, ErrorBody: $errorBodyString, Message: ${response.message()}")
-                    callback.onError("Message send failed: $errorBodyString (Code: ${response.code()})")
+                    callback.onSendRejected(
+                        response.code(),
+                        parseErrorReason(errorBodyString),
+                        friendlySendError(response.code(), errorBodyString)
+                    )
                 }
             }
 
@@ -235,5 +243,27 @@ class ChatMessageHandler(
                 callback.onError("Send error: ${t.message}")
             }
         })
+    }
+
+    private fun parseErrorReason(errorBody: String): String? {
+        return runCatching { JSONObject(errorBody).optString("reason").ifBlank { null } }.getOrNull()
+    }
+
+    private fun friendlySendError(code: Int, errorBody: String): String {
+        val json = runCatching { JSONObject(errorBody) }.getOrNull()
+        val reason = json?.optString("reason").orEmpty()
+        val serverMessage = json?.optString("error").orEmpty()
+            .ifBlank { json?.optString("message").orEmpty() }
+
+        return when {
+            code == 423 && reason == "requires_approval" ->
+                "This person requires approval before you can message them."
+            code == 423 && reason == "not_accepting" ->
+                "This person is not accepting messages right now."
+            code == 403 && reason == "blocked" ->
+                "You cannot message this person because of privacy settings."
+            serverMessage.isNotBlank() -> serverMessage
+            else -> "Message could not be sent. Please try again."
+        }
     }
 }

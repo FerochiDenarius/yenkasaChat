@@ -159,12 +159,21 @@ router.get("/blocked-users", auth, async (req, res) => {
     try {
         const doc = await ensurePrivacy(req.user.id);
 
-        // Populate user details based on doc.blockedUsers array
-        const blockedUsers = await User.find({
+        const users = await User.find({
             _id: { $in: doc.blockedUsers }
         })
-        .select("_id username profileImage bio verified roleName")  // tidy, safe fields
+        .select("_id username profileImage bio verified roleName role")
         .lean();
+
+        const blockedUsers = users.map(user => ({
+            userId: user._id.toString(),
+            username: user.username,
+            profileImage: user.profileImage,
+            bio: user.bio,
+            verified: user.verified,
+            roleName: user.roleName || user.role?.name || "user",
+            dateBlocked: doc.updatedAt || null
+        }));
 
         res.json(blockedUsers);
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:padding="16dp"
-    android:background="@color/yenkasa_amber"
+    android:background="@color/menu_background"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -11,7 +11,7 @@
         android:text="Blocked Users"
         android:textSize="22sp"
         android:textStyle="bold"
-        android:textColor="@color/yenkasa_black"
+        android:textColor="@color/menu_primary_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
@@ -20,6 +20,8 @@
         android:id="@+id/rvBlockedUsers"
         android:layout_below="@id/titleBlocked"
         android:layout_marginTop="14dp"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
@@ -27,7 +29,7 @@
     <TextView
         android:id="@+id/txtEmpty"
         android:text="Loading..."
-        android:textColor="@color/muted_text"
+        android:textColor="@color/menu_secondary_text"
         android:textSize="14sp"
         android:gravity="center"
         android:visibility="gone"

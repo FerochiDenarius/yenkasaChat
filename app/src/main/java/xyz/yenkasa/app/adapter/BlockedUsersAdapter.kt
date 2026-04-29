@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
@@ -27,7 +28,9 @@ class BlockedUsersAdapter(
         val txtUsername: TextView = view.findViewById(R.id.txtUsername)
         val txtRole: TextView = view.findViewById(R.id.txtUserRole)
         val txtDate: TextView = view.findViewById(R.id.txtDateBlocked)
-        val iconUnblock: ImageView = view.findViewById(R.id.iconUnblock)  // <-- CORRECT ICON
+        val layoutUnblock: LinearLayout = view.findViewById(R.id.layoutUnblock)
+        val iconUnblock: ImageView = view.findViewById(R.id.iconUnblock)
+        val textUnblock: TextView = view.findViewById(R.id.textUnblock)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -65,9 +68,12 @@ class BlockedUsersAdapter(
         holder.txtDate.text = user.dateBlocked?.let { "Blocked: $it" } ?: ""
 
         // UNBLOCK ICON click
-        holder.iconUnblock.setOnClickListener {
+        val unblockClick = View.OnClickListener {
             unblockUser(user.userId, holder)
         }
+        holder.layoutUnblock.setOnClickListener(unblockClick)
+        holder.iconUnblock.setOnClickListener(unblockClick)
+        holder.textUnblock.setOnClickListener(unblockClick)
     }
 
     private fun unblockUser(userId: String, holder: ViewHolder) {

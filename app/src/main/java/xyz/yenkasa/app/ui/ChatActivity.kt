@@ -59,6 +59,8 @@ import xyz.yenkasa.app.model.ChatMediaItem
 import xyz.yenkasa.app.model.Contact
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
+import xyz.yenkasa.app.model.ApiResponse
+import xyz.yenkasa.app.model.MessageRequest
 import xyz.yenkasa.app.model.Participant
 import xyz.yenkasa.app.model.PresenceResponse
 import xyz.yenkasa.app.network.ApiClient
@@ -1763,6 +1765,51 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onError(error: String) {
         chatActivityHelper.onErrorFromHandler(error)
+        resetFailedOutgoingState()
+    }
+
+    override fun onSendRejected(code: Int, reason: String?, message: String) {
+        if (code == 423 && reason == "requires_approval") {
+            sendMessageApprovalRequest(message)
+            resetFailedOutgoingState()
+            return
+        }
+
+        onError(message)
+    }
+
+    private fun sendMessageApprovalRequest(fallbackMessage: String) {
+        val receiverId = receiverParticipant?._id
+        if (receiverId.isNullOrBlank()) {
+            Toast.makeText(this, fallbackMessage, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        ApiClient.apiService.sendMessageRequest(MessageRequest(receiverId, null))
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            this@ChatActivity,
+                            "Message request sent. You can chat after they approve it.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        Toast.makeText(this@ChatActivity, parseError(response), Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(
+                        this@ChatActivity,
+                        "Could not send message request: ${t.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            })
+    }
+
+    private fun resetFailedOutgoingState() {
         if (isUploadingPendingMedia) {
             isUploadingPendingMedia = false
             updateComposerActionButtons()

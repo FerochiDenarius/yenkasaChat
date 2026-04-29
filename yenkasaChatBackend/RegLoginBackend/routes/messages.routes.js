@@ -6,6 +6,7 @@ const auth = require('../middleware/auth');
 const Message = require('../models/message.model');
 const ChatRoom = require('../models/chatroom.model');
 const User = require('../models/user.model');
+const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const unreadCountService = require('../services/unreadCount.service');
 const { sendPushNotification } = require('../utils/onesignal');
@@ -95,9 +96,33 @@ router.post('/', auth, async (req, res) => {
     for (const recipientId of recipientAppUserIds) {
       const permission = await canMessageUser(senderAppUserId, recipientId);
       if (!permission.allowed) {
+        if (permission.reason === 'requires_approval') {
+          await Notification.findOneAndUpdate(
+            {
+              type: 'message_request',
+              senderId: senderAppUserId,
+              receiverId: recipientId,
+              status: 'unread'
+            },
+            {
+              $setOnInsert: {
+                type: 'message_request',
+                senderId: senderAppUserId,
+                receiverId: recipientId,
+                message: 'wants to message you',
+                activityId: senderAppUserId,
+                targetType: 'profile',
+                targetId: senderAppUserId,
+                createdAt: new Date()
+              }
+            },
+            { upsert: true, new: true }
+          );
+        }
+
         return res.status(permission.reason === 'blocked' ? 403 : 423).json({
           error: permission.reason === 'requires_approval'
-            ? 'This user requires message approval'
+            ? 'Message request sent. You can chat after they approve it.'
             : permission.message,
           reason: permission.reason
         });

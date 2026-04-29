@@ -1,8 +1,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="horizontal"
-    android:padding="12dp"
+    android:padding="14dp"
     android:gravity="center_vertical"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/bg_blocked_user_card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -25,21 +27,21 @@
         <TextView
             android:id="@+id/txtUsername"
             android:textSize="15sp"
-            android:textColor="@color/yenkasa_black"
+            android:textColor="@color/menu_primary_text"
             android:textStyle="bold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <TextView
             android:id="@+id/txtUserRole"
-            android:textColor="@color/muted_text"
+            android:textColor="@color/menu_secondary_text"
             android:textSize="12sp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <TextView
             android:id="@+id/txtDateBlocked"
-            android:textColor="@color/muted_text"
+            android:textColor="@color/menu_secondary_text"
             android:textSize="11sp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
@@ -52,23 +54,23 @@
         android:id="@+id/layoutUnblock"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="4dp"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="?android:selectableItemBackgroundBorderless">
+        android:background="@drawable/bg_unblock_button"
+        android:clickable="true"
+        android:focusable="true">
 
         <ImageView
             android:id="@+id/iconUnblock"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:padding="4dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:src="@drawable/ic_unblock"
             android:contentDescription="Unblock user"
-            android:background="?android:selectableItemBackgroundBorderless"
-            app:tint="@color/red"
-            android:clickable="true"
-            android:focusable="true"
-            />
+            app:tint="@color/white" />
 
 
         <TextView
@@ -76,7 +78,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Unblock"
-            android:textColor="@color/red"
+            android:textColor="@color/white"
+            android:textStyle="bold"
             android:textSize="14sp"
             android:layout_marginStart="4dp"/>
     </LinearLayout>

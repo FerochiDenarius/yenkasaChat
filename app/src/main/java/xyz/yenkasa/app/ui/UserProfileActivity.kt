@@ -23,6 +23,7 @@ import xyz.yenkasa.app.model.UnblockUserRequest
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ProfileResponse
 import xyz.yenkasa.app.model.FollowResponse
+import xyz.yenkasa.app.model.FeedResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -121,6 +122,8 @@ class UserProfileActivity : AppCompatActivity() {
         postAdapter = ProfilePostAdapter(userPostsList) { post -> openPostFromGrid(post) }
 
         recyclerUserPosts.layoutManager = GridLayoutManager(this, 3)
+        recyclerUserPosts.setHasFixedSize(true)
+        recyclerUserPosts.itemAnimator = null
         recyclerUserPosts.adapter = postAdapter
     }
 
@@ -213,22 +216,7 @@ class UserProfileActivity : AppCompatActivity() {
                     if (response.isSuccessful && response.body() != null) {
                         val profile = response.body()!!
                         updateUI(profile)
-
-                        val profilePosts = profile.posts ?: emptyList()
-
-                        Log.d(
-                            TAG,
-                            "✅ Loaded ${profilePosts.size} posts for user ${profile.username}"
-                        )
-
-                        // ✅ Update RecyclerView
-                        userPostsList.clear()
-                        userPostsList.addAll(profilePosts)
-                        postAdapter.submitPosts(profilePosts)
-
-                        // ✅ Update UI count
-                        postsCountView.text = profilePosts.size.toString()
-                        showPostsContent(profilePosts.isNotEmpty())
+                        fetchUserPosts(userId, token)
                     } else {
                         Log.e(
                             TAG,
@@ -243,6 +231,42 @@ class UserProfileActivity : AppCompatActivity() {
                     showPostsMessage("Could not load posts.")
                 }
             })
+    }
+
+    private fun fetchUserPosts(userId: String, token: String) {
+        ApiClient.apiService.getUserPosts(
+            userId = userId,
+            token = "Bearer $token",
+            page = 1,
+            limit = 30
+        ).enqueue(object : Callback<FeedResponse> {
+            override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
+                if (response.isSuccessful && response.body() != null) {
+                    val fetchedPosts = response.body()!!.posts
+                        .sortedByDescending { it.createdAt ?: "" }
+
+                    Log.d(TAG, "✅ Loaded ${fetchedPosts.size} posts from /posts/user/$userId")
+
+                    userPostsList.clear()
+                    userPostsList.addAll(fetchedPosts)
+                    postAdapter.submitPosts(fetchedPosts)
+                    postsCountView.text = fetchedPosts.size.toString()
+                    showPostsContent(fetchedPosts.isNotEmpty())
+                } else {
+                    Log.e(TAG, "❌ User posts load failed: ${response.code()} ${response.message()}")
+                    showPostsMessage(
+                        if (response.code() == 404) "Posts route not available."
+                        else if (response.code() == 403) "You cannot view this user's posts."
+                        else "Could not load posts."
+                    )
+                }
+            }
+
+            override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
+                Log.e(TAG, "⚠️ Network error while fetching user posts: ${t.message}", t)
+                showPostsMessage("Could not load posts.")
+            }
+        })
     }
 
     private fun updateUI(profile: ProfileResponse) {

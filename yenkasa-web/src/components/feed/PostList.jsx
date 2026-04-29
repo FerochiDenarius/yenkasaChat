@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import AdCard from "../AdCard";
 import EmptyState from "../EmptyState";
+import GoogleFeedAd from "./GoogleFeedAd";
 import PostCard from "./PostCard";
+
+const FEED_AD_INTERVAL = 5;
 
 export default function PostList({ activeTab, activeSort, selectedCommunity }) {
   const [items, setItems] = useState([]);
@@ -58,9 +61,21 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
     let adIndex = 0;
     filteredPosts.forEach((item, index) => {
       combined.push(item);
-      if ((index + 1) % 4 === 0 && adsOnly[adIndex]) {
-        combined.push(adsOnly[adIndex]);
-        adIndex += 1;
+      if ((index + 1) % FEED_AD_INTERVAL === 0) {
+        if (adsOnly.length) {
+          const adItem = adsOnly[adIndex % adsOnly.length];
+          combined.push({
+            ...adItem,
+            key: `${adItem.key || adItem.ad?._id || "ad"}-${index + 1}`
+          });
+          adIndex += 1;
+        } else {
+          combined.push({
+            key: `google-feed-ad-${index + 1}`,
+            type: "google-ad",
+            slotKey: `${activeTab}-${activeSort}-${selectedCommunity?._id || selectedCommunity?.id || "all"}-${index + 1}`
+          });
+        }
       }
     });
     return combined;
@@ -104,6 +119,8 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
       {filteredItems.map((item, index) =>
         item.type === "ad" ? (
           <AdCard key={item.key || `ad-${index}`} ad={item.ad} compact />
+        ) : item.type === "google-ad" ? (
+          <GoogleFeedAd key={item.key || `google-ad-${index}`} slotKey={item.slotKey || item.key} />
         ) : (
           <PostCard
             key={item.key || item.post?._id || `post-${index}`}
@@ -117,10 +134,18 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
 }
 
 async function loadFeed(communityId) {
-  const { data } = communityId
+  const feedRequest = communityId
     ? await api.get(`/posts/community/${communityId}`)
     : await api.get("/feed");
-  return normalizeFeedData(data);
+  const sponsoredRequest = api.get("/ads/feed").catch(() => null);
+  const sponsoredResponse = await sponsoredRequest;
+  const feedItems = normalizeFeedData(feedRequest.data);
+  const feedAdIds = new Set(feedItems.filter((item) => item.type === "ad").map((item) => item.ad?._id));
+  const sponsoredAds = normalizeSponsoredAds(sponsoredResponse?.data).filter(
+    (item) => !feedAdIds.has(item.ad?._id)
+  );
+
+  return [...feedItems, ...sponsoredAds];
 }
 
 function normalizeFeedData(data) {
@@ -148,6 +173,24 @@ function normalizeFeedData(data) {
       post
     };
   });
+}
+
+function normalizeSponsoredAds(data) {
+  const ads = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.ads)
+      ? data.ads
+      : Array.isArray(data?.feed)
+        ? data.feed
+        : [];
+
+  return ads
+    .filter(Boolean)
+    .map((ad, index) => ({
+      key: ad?._id || `sponsored-ad-${index}`,
+      type: "ad",
+      ad
+    }));
 }
 
 function engagementScore(post) {

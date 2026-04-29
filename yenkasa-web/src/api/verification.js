@@ -10,6 +10,11 @@ export async function getVerificationProgress() {
   return data;
 }
 
+export async function trackAdView() {
+  const { data } = await api.post("/app-verification/track-ad-view");
+  return data;
+}
+
 export async function requestEmailVerification() {
   const { data } = await api.post("/email-verification/request");
   return data;

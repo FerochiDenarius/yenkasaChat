@@ -907,6 +907,60 @@
   color: #fff;
 }
 
+.google-feed-ad {
+  min-height: 180px;
+  border-radius: 20px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(19, 39, 27, 0.08);
+  color: #172118;
+  overflow: hidden;
+}
+
+.google-feed-ad__label {
+  margin-bottom: 10px;
+  color: #728077;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.google-feed-ad__slot {
+  display: block;
+  width: 100%;
+  min-height: 140px;
+}
+
+.google-feed-ad--unfilled,
+.google-feed-ad--failed {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.google-feed-ad--unfilled .google-feed-ad__label,
+.google-feed-ad--unfilled .google-feed-ad__slot,
+.google-feed-ad--failed .google-feed-ad__label,
+.google-feed-ad--failed .google-feed-ad__slot {
+  display: none;
+}
+
+.google-feed-ad__placeholder {
+  min-height: 120px;
+  border: 1px dashed #cbd6cf;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: #607269;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  background: #f7faf8;
+}
+
 @media (max-width: 380px) {
   .feed-home__shell {
     padding-inline: 10px;

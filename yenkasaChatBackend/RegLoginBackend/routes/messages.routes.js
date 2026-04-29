@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const multer = require('multer');
+const streamifier = require('streamifier');
 
 const auth = require('../middleware/auth');
 const Message = require('../models/message.model');
@@ -11,6 +13,25 @@ const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const unreadCountService = require('../services/unreadCount.service');
 const { sendPushNotification } = require('../utils/onesignal');
 const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
+const { cloudinary } = require('../config/cloudinary');
+
+const chatMediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 60 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    const allowed =
+      file.mimetype.startsWith('image/') ||
+      file.mimetype.startsWith('video/') ||
+      file.mimetype.startsWith('audio/') ||
+      file.mimetype === 'application/pdf' ||
+      file.mimetype === 'text/plain' ||
+      file.mimetype === 'application/zip' ||
+      file.mimetype === 'application/msword' ||
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+    cb(allowed ? null : new Error('Unsupported chat file type'), allowed);
+  }
+});
 
 // --- OneSignal Config ---
 const ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID;
@@ -34,6 +55,76 @@ const maskPushId = (value) => {
 
 const firstValidPushId = (...values) =>
   values.map(cleanPushId).find(Boolean) || null;
+
+function resolveChatUploadType(file, requestedType = '') {
+  const type = String(requestedType || '').toLowerCase();
+  if (['image', 'video', 'audio', 'file'].includes(type)) return type;
+  if (file?.mimetype?.startsWith('image/')) return 'image';
+  if (file?.mimetype?.startsWith('video/')) return 'video';
+  if (file?.mimetype?.startsWith('audio/')) return 'audio';
+  return 'file';
+}
+
+function uploadChatMediaToCloudinary(file, type) {
+  const resourceType = type === 'video' || type === 'audio'
+    ? 'video'
+    : type === 'image'
+      ? 'image'
+      : 'auto';
+
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: process.env.CLOUDINARY_CHAT_MEDIA_FOLDER || 'yenkasa/chat/media',
+        resource_type: resourceType,
+        use_filename: true,
+        unique_filename: true,
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result);
+      }
+    );
+
+    streamifier.createReadStream(file.buffer).pipe(uploadStream);
+  });
+}
+
+// ✅ POST: Upload web chat media to Cloudinary before sending a message URL
+router.post('/upload', auth, chatMediaUpload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No chat media file uploaded' });
+  }
+
+  try {
+    const type = resolveChatUploadType(req.file, req.body?.type);
+    const result = await uploadChatMediaToCloudinary(req.file, type);
+    const messageKey = type === 'image'
+      ? 'imageUrl'
+      : type === 'video'
+        ? 'videoUrl'
+        : type === 'audio'
+          ? 'audioUrl'
+          : 'fileUrl';
+
+    res.json({
+      success: true,
+      type,
+      messageKey,
+      url: result.secure_url,
+      publicId: result.public_id,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      bytes: result.bytes,
+    });
+  } catch (err) {
+    console.error('[MessagesRoute] ❌ Chat media upload failed:', err.message);
+    res.status(500).json({ error: 'Failed to upload chat media' });
+  }
+});
 
 // ✅ POST: Send a message (supports repliedTo)
 router.post('/', auth, async (req, res) => {

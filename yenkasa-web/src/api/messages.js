@@ -10,6 +10,17 @@ export async function sendRoomMessage(payload) {
   return data;
 }
 
+export async function uploadRoomMedia(file, type = "file") {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("type", type);
+
+  const { data } = await api.post("/messages/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
 export async function markRoomAsRead(roomId) {
   const { data } = await api.post(`/messages/${roomId}/mark-as-read`);
   return data;

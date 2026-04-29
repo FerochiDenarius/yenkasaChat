@@ -253,8 +253,7 @@ class RegisterActivity : AppCompatActivity() {
 
                     val communities = response.body().orEmpty()
                         .filter { community ->
-                            community.country.equals(country, ignoreCase = true) ||
-                                (country.equals("Ghana", ignoreCase = true) && community.country.isNullOrBlank())
+                            community.country.equals(country, ignoreCase = true)
                         }
 
                     if (communities.isEmpty()) {

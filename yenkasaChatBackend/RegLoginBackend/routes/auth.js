@@ -95,7 +95,7 @@ router.post('/register', async (req, res) => {
     }
 
     const invalidCountryCommunity = communities.find((community) => {
-      const communityCountry = (community.country || "Ghana").trim().toLowerCase();
+      const communityCountry = (community.country || "").trim().toLowerCase();
       return communityCountry !== selectedCountry.toLowerCase();
     });
 

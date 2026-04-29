@@ -11,5 +11,6 @@ data class CreatedCommunityPayload(
     val id: String = "",
     val name: String = "",
     val displayName: String = "",
+    val country: String? = null,
     val isApproved: Boolean = false
 )

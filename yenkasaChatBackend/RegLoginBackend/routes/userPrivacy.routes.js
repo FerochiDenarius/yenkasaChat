@@ -387,9 +387,7 @@ router.get("/community-visibility", auth, async (req, res) => {
     try {
         const doc = await ensurePrivacy(req.user.id);
         const country = req.user.country || "Ghana";
-        const countryFilter = country.toLowerCase() === "ghana"
-            ? { $or: [{ country: new RegExp(`^${country}$`, "i") }, { country: { $in: [null, ""] } }] }
-            : { country: new RegExp(`^${country}$`, "i") };
+        const countryFilter = { country: new RegExp(`^${country}$`, "i") };
 
         const communities = await Community.find({
             isActive: true,

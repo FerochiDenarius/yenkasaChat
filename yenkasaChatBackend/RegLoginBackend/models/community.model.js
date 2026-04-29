@@ -2,6 +2,14 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+function normalizeCommunityCountry(value) {
+  const raw = (value || 'Ghana').toString().trim();
+  const normalized = raw.toLowerCase();
+  if (normalized === 'ghana') return 'Ghana';
+  if (normalized === 'nigeria') return 'Nigeria';
+  return raw || 'Ghana';
+}
+
 const communitySchema = new Schema({
   name: {
     type: String,
@@ -80,8 +88,10 @@ const communitySchema = new Schema({
 
   country: {
     type: String,
+    required: true,
     default: 'Ghana',
-    trim: true
+    trim: true,
+    set: normalizeCommunityCountry
   },
 
   state: {

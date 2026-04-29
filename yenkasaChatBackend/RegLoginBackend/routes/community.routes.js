@@ -18,25 +18,23 @@ function escapeRegex(value) {
 }
 
 function normalizeCountry(value) {
-  return (value || 'Ghana').toString().trim().toLowerCase();
+  return (value ?? '').toString().trim().toLowerCase();
+}
+
+function normalizeCountryLabel(value) {
+  const raw = (value || 'Ghana').toString().trim();
+  const normalized = raw.toLowerCase();
+  if (normalized === 'ghana') return 'Ghana';
+  if (normalized === 'nigeria') return 'Nigeria';
+  return raw || 'Ghana';
 }
 
 function countryRegex(value) {
-  return new RegExp(`^${escapeRegex(value || 'Ghana')}$`, 'i');
+  return new RegExp(`^${escapeRegex(normalizeCountryLabel(value))}$`, 'i');
 }
 
 function countryScopedQuery(value) {
-  const country = value || 'Ghana';
-  if (normalizeCountry(country) === 'ghana') {
-    return {
-      $or: [
-        { country: countryRegex(country) },
-        { country: { $in: [null, ''] } }
-      ]
-    };
-  }
-
-  return { country: countryRegex(country) };
+  return { country: countryRegex(value) };
 }
 
 const COMMUNITY_REVIEWER_ROLES = new Set([
@@ -126,17 +124,18 @@ const requireVerified = (req, res, next) => {
 
 router.get('/public', async (req, res) => {
   try {
-    const { country } = req.query;
-    const query = { isApproved: true, isActive: true };
-
-    if (country) {
-      Object.assign(query, countryScopedQuery(country));
-    }
+    const country = normalizeCountryLabel(req.query.country || 'Ghana');
+    const query = {
+      isApproved: true,
+      isActive: true,
+      ...countryScopedQuery(country)
+    };
 
     const communities = await Community.find(query)
       .sort({ country: 1, state: 1, city: 1, town: 1, displayName: 1 })
       .select('_id name displayName description location categories icon coverImage country state city town communityLevel communityType memberCount postCount');
 
+    console.log('FETCHED COMMUNITIES:', communities.length, { country });
     res.json(communities);
   } catch (err) {
     console.error('Community fetch error:', err);
@@ -157,7 +156,7 @@ router.get('/', authMiddleware, async (req, res) => {
       order = 'desc'
     } = req.query;
 
-    const userCountry = req.user?.country || 'Ghana';
+    const userCountry = normalizeCountryLabel(req.user?.country || 'Ghana');
     let query = {
       isActive: true,
       isApproved: true,
@@ -275,9 +274,10 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (normalizeCountry(community.country) !== normalizeCountry(user.country)) {
+    const userCountry = normalizeCountryLabel(user.country || 'Ghana');
+    if (normalizeCountry(community.country) !== normalizeCountry(userCountry)) {
       return res.status(403).json({
-        error: `This community is not available for ${user.country || 'your country'}`
+        error: `This community is not available for ${userCountry}`
       });
     }
 
@@ -424,6 +424,7 @@ function canManageCommunity(user, community) {
 // -----------------------------
 async function createCommunityHandler(req, res) {
   try {
+    console.log("NEW COMMUNITY:", req.body);
     const {
       name,
       displayName,
@@ -451,7 +452,7 @@ async function createCommunityHandler(req, res) {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const userCountry = user.country || "Ghana";
+    const userCountry = normalizeCountryLabel(user.country || requestedCountry || "Ghana");
     if (requestedCountry && normalizeCountry(requestedCountry) !== normalizeCountry(userCountry)) {
       return res.status(403).json({
         error: `You can only create communities in ${userCountry} for now`
@@ -526,6 +527,7 @@ async function createCommunityHandler(req, res) {
         id: community._id,
         name: community.name,
         displayName: community.displayName,
+        country: community.country,
         isApproved: community.isApproved,
       },
       reward: {
@@ -617,6 +619,11 @@ router.put("/:communityId", authMiddleware, async (req, res) => {
         description: community.description,
         location: community.location,
         categories: community.categories,
+        country: community.country,
+        state: community.state,
+        city: community.city,
+        town: community.town,
+        communityLevel: community.communityLevel,
         isPrivate: community.isPrivate,
         isActive: community.isActive,
         isApproved: community.isApproved,
@@ -690,6 +697,7 @@ router.post('/:communityId/approve', authMiddleware, async (req, res) => {
         id: community._id,
         name: community.name,
         displayName: community.displayName,
+        country: community.country,
         isApproved: true
       },
       reward: {
@@ -770,7 +778,7 @@ router.get('/user/joined-communities', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    const userCountry = user.country || 'Ghana';
+    const userCountry = normalizeCountryLabel(user.country || 'Ghana');
     const memberCommunityIds = await Community.find({
       $and: [
         {
@@ -884,7 +892,7 @@ router.get('/user/all-communities', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    const userCountry = user.country || 'Ghana';
+    const userCountry = normalizeCountryLabel(user.country || 'Ghana');
     const memberCommunityIds = await Community.find({
       $and: [
         {

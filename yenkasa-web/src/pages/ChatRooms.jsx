@@ -10,29 +10,69 @@ import {
   getRoomMessages,
   markRoomAsRead,
   sendRoomMessage,
+  uploadRoomMedia,
 } from "../api/messages";
 import ChatSectionNav from "../components/chat/ChatSectionNav";
 import { handleDynamicImageError, staticImage } from "../utils/images";
 import { getStoredUser } from "../utils/storage";
 import "../styles/chatrooms.css";
 
+const CHAT_BACKGROUND_PRESETS = [
+  { key: "default", label: "Default" },
+  { key: "cream", label: "Cream" },
+  { key: "savanna", label: "Savanna" },
+  { key: "mint", label: "Mint" },
+  { key: "ocean", label: "Ocean" },
+  { key: "sunset", label: "Sunset" },
+  { key: "graphite", label: "Graphite" },
+];
+
 export default function ChatRooms() {
   const navigate = useNavigate();
   const { roomId } = useParams();
   const threadEndRef = useRef(null);
+  const threadBodyRef = useRef(null);
   const roomsRef = useRef([]);
+  const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const audioInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const customBackgroundInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordingStreamRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const lastScrolledRoomRef = useRef("");
+  const previousMessageCountRef = useRef(0);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [error, setError] = useState("");
   const [searchUsername, setSearchUsername] = useState("");
   const [draft, setDraft] = useState("");
   const [participant, setParticipant] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [backgroundPickerOpen, setBackgroundPickerOpen] = useState(false);
+  const [chatBackground, setChatBackground] = useState(() =>
+    window.localStorage.getItem("yenkasa_chat_background") || "default"
+  );
+  const [customBackground, setCustomBackground] = useState(() =>
+    window.localStorage.getItem("yenkasa_chat_custom_background") || ""
+  );
+  const [swipeState, setSwipeState] = useState(null);
   const currentUser = useMemo(() => getStoredUser() || {}, []);
   const currentUserId = getUserId(currentUser);
+  const canSend = Boolean(draft.trim() || selectedMedia);
+  const threadStyle =
+    chatBackground === "custom" && customBackground
+      ? { "--chat-custom-background": `url("${customBackground}")` }
+      : undefined;
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room?._id === roomId) || null,
@@ -62,6 +102,14 @@ export default function ChatRooms() {
   useEffect(() => {
     roomsRef.current = rooms;
   }, [rooms]);
+
+  useEffect(() => {
+    return () => {
+      if (selectedMedia?.previewUrl) {
+        window.URL.revokeObjectURL(selectedMedia.previewUrl);
+      }
+    };
+  }, [selectedMedia]);
 
   useEffect(() => {
     let active = true;
@@ -168,8 +216,31 @@ export default function ChatRooms() {
   }, [currentUserId, roomId]);
 
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ block: "end" });
+    const isNewRoom = lastScrolledRoomRef.current !== String(roomId || "");
+    const previousCount = previousMessageCountRef.current;
+    const nextCount = groupedMessages.length;
+
+    if (isNewRoom) {
+      scrollThreadToBottom("auto");
+      lastScrolledRoomRef.current = String(roomId || "");
+    } else if (nextCount > previousCount && isNearThreadBottom()) {
+      scrollThreadToBottom("smooth");
+    }
+
+    previousMessageCountRef.current = nextCount;
   }, [groupedMessages.length, roomId]);
+
+  function scrollThreadToBottom(behavior = "smooth") {
+    window.requestAnimationFrame(() => {
+      threadEndRef.current?.scrollIntoView({ block: "end", behavior });
+    });
+  }
+
+  function isNearThreadBottom() {
+    const element = threadBodyRef.current;
+    if (!element) return true;
+    return element.scrollHeight - element.scrollTop - element.clientHeight < 160;
+  }
 
   async function handleCreateRoom(event) {
     event.preventDefault();
@@ -216,14 +287,30 @@ export default function ChatRooms() {
   async function handleSend(event) {
     event.preventDefault();
     const text = draft.trim();
-    if (!roomId || !text || sending) return;
+    if (!roomId || !canSend || sending || uploadingMedia) return;
 
     setSending(true);
+    setUploadingMedia(Boolean(selectedMedia));
     setError("");
     try {
-      const created = await sendRoomMessage({ roomId, text });
+      const payload = { roomId };
+      if (text) payload.text = text;
+      if (replyingTo?._id) payload.repliedTo = replyingTo._id;
+
+      if (selectedMedia?.file) {
+        const uploadResult = await uploadRoomMedia(selectedMedia.file, selectedMedia.type);
+        if (!uploadResult?.url || !uploadResult?.messageKey) {
+          throw new Error("Chat media upload did not return a usable URL.");
+        }
+        payload[uploadResult.messageKey] = uploadResult.url;
+      }
+
+      const created = await sendRoomMessage(payload);
       setMessages((prev) => [...prev, created]);
       setDraft("");
+      clearReplyingTo();
+      clearSelectedMedia();
+      setAttachOpen(false);
       setRooms((prev) =>
         prev.map((room) =>
           room._id === roomId
@@ -236,22 +323,185 @@ export default function ChatRooms() {
             : room
         )
       );
+      scrollThreadToBottom("smooth");
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
+          requestError?.message ||
           "Failed to send message."
       );
     } finally {
       setSending(false);
+      setUploadingMedia(false);
     }
+  }
+
+  function handleMediaPick(event, forcedType) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const type = forcedType || inferUploadType(file);
+    if (selectedMedia?.previewUrl) {
+      window.URL.revokeObjectURL(selectedMedia.previewUrl);
+    }
+
+    setSelectedMedia({
+      file,
+      type,
+      name: file.name || `${type} upload`,
+      previewUrl: window.URL.createObjectURL(file),
+    });
+    setAttachOpen(false);
+  }
+
+  function clearSelectedMedia() {
+    setSelectedMedia((current) => {
+      if (current?.previewUrl) {
+        window.URL.revokeObjectURL(current.previewUrl);
+      }
+      return null;
+    });
+  }
+
+  function showReply(message) {
+    setReplyingTo(message);
+    setAttachOpen(false);
+    window.requestAnimationFrame(() => {
+      document.querySelector(".chatroom-composer textarea")?.focus();
+    });
+  }
+
+  function clearReplyingTo() {
+    setReplyingTo(null);
+  }
+
+  async function toggleAudioRecording() {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setError("Audio recording is not available in this browser.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordingChunksRef.current = [];
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordingChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        const file = new File([blob], `audio_${Date.now()}.webm`, {
+          type: blob.type,
+        });
+        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+        recordingStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        setRecording(false);
+        if (blob.size) {
+          if (selectedMedia?.previewUrl) {
+            window.URL.revokeObjectURL(selectedMedia.previewUrl);
+          }
+          setSelectedMedia({
+            file,
+            type: "audio",
+            name: "Voice message",
+            previewUrl: window.URL.createObjectURL(blob),
+          });
+        }
+      };
+
+      recorder.start();
+      setRecording(true);
+      setAttachOpen(false);
+      setError("");
+    } catch (requestError) {
+      setRecording(false);
+      setError(
+        requestError?.message ||
+          "Microphone permission is needed before sending an audio message."
+      );
+    }
+  }
+
+  function handleBackgroundSelect(nextBackground) {
+    setChatBackground(nextBackground);
+    window.localStorage.setItem("yenkasa_chat_background", nextBackground);
+    setBackgroundPickerOpen(false);
+  }
+
+  function handleCustomBackground(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      setCustomBackground(result);
+      setChatBackground("custom");
+      window.localStorage.setItem("yenkasa_chat_custom_background", result);
+      window.localStorage.setItem("yenkasa_chat_background", "custom");
+      setBackgroundPickerOpen(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function startSwipe(event, message) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    setSwipeState({
+      id: message?._id,
+      startX: event.clientX,
+      startY: event.clientY,
+      deltaX: 0,
+    });
+  }
+
+  function moveSwipe(event, message) {
+    if (!swipeState || swipeState.id !== message?._id) return;
+    const deltaX = event.clientX - swipeState.startX;
+    const deltaY = event.clientY - swipeState.startY;
+    if (Math.abs(deltaY) > 40 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      setSwipeState(null);
+      return;
+    }
+    setSwipeState((current) =>
+      current && current.id === message?._id
+        ? { ...current, deltaX: Math.max(-72, Math.min(72, deltaX)) }
+        : current
+    );
+  }
+
+  function endSwipe(message) {
+    if (!swipeState || swipeState.id !== message?._id) return;
+    if (Math.abs(swipeState.deltaX) > 52) {
+      showReply(message);
+    }
+    setSwipeState(null);
   }
 
   return (
     <main className="chatrooms-page">
       <div className="chatrooms-workspace">
         {roomId ? (
-          <section className="chatroom-thread-panel">
+          <section
+            className={`chatroom-thread-panel chatroom-thread-panel--${chatBackground}`}
+            style={threadStyle}
+          >
             <header className="chatroom-hero-header">
               <button
                 type="button"
@@ -288,15 +538,49 @@ export default function ChatRooms() {
                 <button type="button" className="chatroom-circle-btn" aria-label="Voice call">
                   <span className="icon-phone" />
                 </button>
-                <button type="button" className="chatroom-circle-btn" aria-label="More">
+                <button
+                  type="button"
+                  className="chatroom-circle-btn"
+                  aria-label="More"
+                  onClick={() => setBackgroundPickerOpen((open) => !open)}
+                >
                   <span className="icon-dots-vertical" />
                 </button>
               </div>
             </header>
 
+            {backgroundPickerOpen ? (
+              <section className="chatroom-background-picker">
+                <strong>Chat background</strong>
+                <div>
+                  {CHAT_BACKGROUND_PRESETS.map((preset) => (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      className={`chatroom-bg-swatch chatroom-bg-swatch--${preset.key}${
+                        chatBackground === preset.key ? " is-active" : ""
+                      }`}
+                      onClick={() => handleBackgroundSelect(preset.key)}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`chatroom-bg-swatch chatroom-bg-swatch--custom${
+                      chatBackground === "custom" ? " is-active" : ""
+                    }`}
+                    onClick={() => customBackgroundInputRef.current?.click()}
+                  >
+                    Custom
+                  </button>
+                </div>
+              </section>
+            ) : null}
+
             {error ? <div className="error-banner">{error}</div> : null}
 
-            <section className="chatroom-thread-body">
+            <section className="chatroom-thread-body" ref={threadBodyRef}>
               {loadingThread ? (
                 <div className="chatrooms-status-card chatrooms-status-card--center">
                   Loading chat...
@@ -324,10 +608,34 @@ export default function ChatRooms() {
                   const bubbleClass = ownMessage
                     ? "chatroom-message chatroom-message--own"
                     : "chatroom-message";
+                  const swipeDelta =
+                    swipeState?.id === message?._id ? swipeState.deltaX : 0;
 
                   return (
-                    <article key={entry.key} className={bubbleClass}>
+                    <article
+                      key={entry.key}
+                      className={`${bubbleClass}${Math.abs(swipeDelta) > 16 ? " is-swiping" : ""}`}
+                      style={
+                        swipeDelta
+                          ? { transform: `translateX(${swipeDelta}px)` }
+                          : undefined
+                      }
+                      onPointerDown={(event) => startSwipe(event, message)}
+                      onPointerMove={(event) => moveSwipe(event, message)}
+                      onPointerUp={() => endSwipe(message)}
+                      onPointerCancel={() => setSwipeState(null)}
+                    >
+                      {Math.abs(swipeDelta) > 16 ? (
+                        <span className="chatroom-message__reply-cue">↩</span>
+                      ) : null}
                       {renderMessageContent(message)}
+                      <button
+                        type="button"
+                        className="chatroom-message__reply-btn"
+                        onClick={() => showReply(message)}
+                      >
+                        Reply
+                      </button>
                       <span className="chatroom-message__time">
                         {formatClock(message?.timestamp || message?.createdAt)}
                         {ownMessage ? " ✓✓" : ""}
@@ -339,23 +647,125 @@ export default function ChatRooms() {
             </section>
 
             <form className="chatroom-composer" onSubmit={handleSend}>
-              <button type="button" className="chatroom-composer__addon" aria-label="More actions">
+              {replyingTo ? (
+                <div className="chatroom-reply-preview">
+                  <span>
+                    <strong>{replyingToLabel(replyingTo, currentUserId, participant)}</strong>
+                    <small>{renderReplyPreview(replyingTo)}</small>
+                  </span>
+                  <button type="button" onClick={clearReplyingTo} aria-label="Cancel reply">
+                    ×
+                  </button>
+                </div>
+              ) : null}
+
+              {selectedMedia ? (
+                <div className="chatroom-media-preview">
+                  {selectedMedia.type === "image" ? (
+                    <img src={selectedMedia.previewUrl} alt={selectedMedia.name} />
+                  ) : selectedMedia.type === "video" ? (
+                    <video src={selectedMedia.previewUrl} muted playsInline />
+                  ) : selectedMedia.type === "audio" ? (
+                    <audio src={selectedMedia.previewUrl} controls />
+                  ) : (
+                    <span className="chatroom-media-preview__file">📄</span>
+                  )}
+                  <span>
+                    <strong>{selectedMediaLabel(selectedMedia)}</strong>
+                    <small>{uploadingMedia ? "Uploading..." : "Ready to send"}</small>
+                  </span>
+                  <button type="button" onClick={clearSelectedMedia} aria-label="Remove media">
+                    ×
+                  </button>
+                </div>
+              ) : null}
+
+              {attachOpen ? (
+                <div className="chatroom-attach-menu">
+                  <button type="button" onClick={() => imageInputRef.current?.click()}>
+                    Photo
+                  </button>
+                  <button type="button" onClick={() => videoInputRef.current?.click()}>
+                    Video
+                  </button>
+                  <button type="button" onClick={() => audioInputRef.current?.click()}>
+                    Audio
+                  </button>
+                  <button type="button" onClick={() => fileInputRef.current?.click()}>
+                    File
+                  </button>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                className="chatroom-composer__addon"
+                aria-label="More actions"
+                onClick={() => setAttachOpen((open) => !open)}
+              >
                 <span className="icon-plus" />
               </button>
               <textarea
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  if (attachOpen) setAttachOpen(false);
+                }}
                 rows={1}
                 placeholder="Type a message..."
               />
+              {!canSend ? (
+                <button
+                  type="button"
+                  className={`chatroom-composer__mic${recording ? " is-recording" : ""}`}
+                  onClick={toggleAudioRecording}
+                  aria-label={recording ? "Stop recording" : "Record audio"}
+                >
+                  <span>{recording ? "■" : "●"}</span>
+                </button>
+              ) : null}
               <button
                 type="submit"
                 className="chatroom-composer__send"
-                disabled={!draft.trim() || sending || !roomId}
+                disabled={!canSend || sending || uploadingMedia || !roomId}
                 aria-label="Send message"
               >
-                <span className={sending ? "icon-loader" : "icon-send"} />
+                <span className={sending || uploadingMedia ? "icon-loader" : "icon-send"} />
               </button>
+              <input
+                ref={imageInputRef}
+                className="chatroom-hidden-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) => handleMediaPick(event, "image")}
+              />
+              <input
+                ref={videoInputRef}
+                className="chatroom-hidden-input"
+                type="file"
+                accept="video/*"
+                onChange={(event) => handleMediaPick(event, "video")}
+              />
+              <input
+                ref={audioInputRef}
+                className="chatroom-hidden-input"
+                type="file"
+                accept="audio/*"
+                onChange={(event) => handleMediaPick(event, "audio")}
+              />
+              <input
+                ref={fileInputRef}
+                className="chatroom-hidden-input"
+                type="file"
+                onChange={(event) => handleMediaPick(event, "file")}
+              />
+              <input
+                ref={customBackgroundInputRef}
+                className="chatroom-hidden-input"
+                type="file"
+                accept="image/*"
+                onChange={handleCustomBackground}
+              />
             </form>
           </section>
         ) : (
@@ -433,6 +843,39 @@ export default function ChatRooms() {
 
 function getUserId(user) {
   return String(user?._id || user?.id || user?.userId || user?.uid || "");
+}
+
+function inferUploadType(file) {
+  if (file?.type?.startsWith("image/")) return "image";
+  if (file?.type?.startsWith("video/")) return "video";
+  if (file?.type?.startsWith("audio/")) return "audio";
+  return "file";
+}
+
+function selectedMediaLabel(media) {
+  if (!media) return "";
+  if (media.type === "image") return "Photo ready";
+  if (media.type === "video") return "Video ready";
+  if (media.type === "audio") return "Audio ready";
+  return media.name || "File ready";
+}
+
+function replyingToLabel(message, currentUserId, participant) {
+  const senderId =
+    message?.senderId?._id ||
+    message?.senderId?.id ||
+    message?.senderId ||
+    message?.sender?._id ||
+    message?.sender?.id ||
+    "";
+
+  if (String(senderId) === String(currentUserId)) return "Replying to you";
+  const name =
+    message?.sender?.username ||
+    message?.senderId?.username ||
+    participant?.username ||
+    "this message";
+  return `Replying to ${name}`;
 }
 
 function getUserImage(user) {

@@ -242,6 +242,14 @@ interface ApiService {
     @GET("posts/my")
     fun getMyPosts(@Header("Authorization") token: String): Call<List<Post>>
 
+    @GET("posts/user/{userId}")
+    fun getUserPosts(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 30
+    ): Call<FeedResponse>
+
 
 
     // =====================

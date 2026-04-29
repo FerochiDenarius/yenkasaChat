@@ -59,6 +59,9 @@ export default function NotificationSoundBridge() {
 }
 
 function playNotificationChime(context) {
+  const selectedSound = window.localStorage.getItem("yenkasa_notification_sound") || "sound_default";
+  if (selectedSound === "sound_off") return;
+
   const AudioContextCtor =
     window.AudioContext || window.webkitAudioContext || null;
   const audioContext = context || (AudioContextCtor ? new AudioContextCtor() : null);
@@ -74,13 +77,15 @@ function playNotificationChime(context) {
     gain.gain.exponentialRampToValueAtTime(0.11, now + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
 
-    oscillatorA.type = "sine";
-    oscillatorA.frequency.setValueAtTime(880, now);
-    oscillatorA.frequency.exponentialRampToValueAtTime(1174, now + 0.14);
+    const profile = resolveSoundProfile(selectedSound);
 
-    oscillatorB.type = "triangle";
-    oscillatorB.frequency.setValueAtTime(660, now + 0.02);
-    oscillatorB.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+    oscillatorA.type = profile.primaryType;
+    oscillatorA.frequency.setValueAtTime(profile.primaryFrom, now);
+    oscillatorA.frequency.exponentialRampToValueAtTime(profile.primaryTo, now + 0.14);
+
+    oscillatorB.type = profile.secondaryType;
+    oscillatorB.frequency.setValueAtTime(profile.secondaryFrom, now + 0.02);
+    oscillatorB.frequency.exponentialRampToValueAtTime(profile.secondaryTo, now + 0.2);
 
     oscillatorA.connect(gain);
     oscillatorB.connect(gain);
@@ -92,5 +97,55 @@ function playNotificationChime(context) {
     oscillatorB.stop(now + 0.42);
   } catch {
     // Ignore browser audio failures silently.
+  }
+}
+
+function resolveSoundProfile(soundId) {
+  switch (soundId) {
+    case "sound_chime":
+      return {
+        primaryType: "triangle",
+        primaryFrom: 740,
+        primaryTo: 988,
+        secondaryType: "sine",
+        secondaryFrom: 988,
+        secondaryTo: 1318,
+      };
+    case "sound_bell":
+      return {
+        primaryType: "sine",
+        primaryFrom: 1046,
+        primaryTo: 1318,
+        secondaryType: "triangle",
+        secondaryFrom: 784,
+        secondaryTo: 1046,
+      };
+    case "sound_soft":
+      return {
+        primaryType: "sine",
+        primaryFrom: 660,
+        primaryTo: 880,
+        secondaryType: "sine",
+        secondaryFrom: 440,
+        secondaryTo: 660,
+      };
+    case "sound_alert":
+      return {
+        primaryType: "square",
+        primaryFrom: 880,
+        primaryTo: 988,
+        secondaryType: "triangle",
+        secondaryFrom: 698,
+        secondaryTo: 784,
+      };
+    default:
+      return {
+        primaryType: "sine",
+        primaryFrom: 880,
+        primaryTo: 1174,
+        secondaryType: "triangle",
+        secondaryFrom: 660,
+        secondaryTo: 880,
+      };
   }
 }

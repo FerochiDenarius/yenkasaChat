@@ -14,6 +14,7 @@ import CreatePost from "./pages/CreatePost";
 import PostDetails from "./pages/PostDetails";
 import EditProfile from "./pages/EditProfile";
 import ChatRooms from "./pages/ChatRooms";
+import Settings from "./pages/Settings";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
@@ -167,7 +168,7 @@ export default function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <PlaceholderPage title="Settings" subtitle="Privacy, account preferences, and security controls." />
+              <Settings />
             </ProtectedRoute>
           }
         />

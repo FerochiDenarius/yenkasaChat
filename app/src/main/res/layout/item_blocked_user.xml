@@ -1,88 +1,136 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
-    android:padding="14dp"
-    android:gravity="center_vertical"
-    android:layout_marginBottom="10dp"
-    android:background="@drawable/bg_blocked_user_card"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:layout_marginStart="4dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginEnd="4dp"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/blocked_surface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="5dp"
+    app:strokeColor="@color/blocked_card_stroke"
+    app:strokeWidth="1dp">
 
-    <!-- LEFT: Avatar -->
-    <ImageView
-        android:id="@+id/imgAvatar"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
-        android:src="@drawable/ic_user_placeholder"
-        android:layout_marginEnd="12dp"
-        android:contentDescription="Profile picture" />
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="132dp"
+        android:paddingStart="16dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="16dp">
 
-    <!-- MIDDLE: Username, Role, Date -->
-    <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="0dp"
-        android:layout_weight="1"
-        android:layout_height="wrap_content">
+        <ImageView
+            android:id="@+id/imgAvatar"
+            android:layout_width="78dp"
+            android:layout_height="78dp"
+            android:contentDescription="Profile picture"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_user_placeholder"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/txtUsername"
-            android:textSize="15sp"
-            android:textColor="@color/menu_primary_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/blocked_primary_text"
+            android:textSize="19sp"
             android:textStyle="bold"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            app:layout_constraintEnd_toStartOf="@id/layoutUnblock"
+            app:layout_constraintStart_toEndOf="@id/imgAvatar"
+            app:layout_constraintTop_toTopOf="@id/imgAvatar"
+            tools:text="kinspirion" />
 
         <TextView
             android:id="@+id/txtUserRole"
-            android:textColor="@color/menu_secondary_text"
-            android:textSize="12sp"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_blocked_badge"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="12dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="5dp"
+            android:textColor="@color/blocked_badge_text"
+            android:textSize="13sp"
+            app:layout_constraintStart_toEndOf="@id/imgAvatar"
+            app:layout_constraintTop_toBottomOf="@id/txtUsername"
+            tools:text="Unverified" />
 
         <TextView
             android:id="@+id/txtDateBlocked"
-            android:textColor="@color/menu_secondary_text"
-            android:textSize="11sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-    </LinearLayout>
-
-    <!-- RIGHT: Unblock icon -->
-    <!-- RIGHT: Unblock action area -->
-    <LinearLayout
-        android:id="@+id/layoutUnblock"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="12dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="8dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_unblock_button"
-        android:clickable="true"
-        android:focusable="true">
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/blocked_secondary_text"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toStartOf="@id/layoutUnblock"
+            app:layout_constraintStart_toEndOf="@id/imgAvatar"
+            app:layout_constraintTop_toBottomOf="@id/txtUserRole"
+            tools:text="Blocked on May 12, 2024" />
 
         <ImageView
-            android:id="@+id/iconUnblock"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:src="@drawable/ic_unblock"
-            android:contentDescription="Unblock user"
-            app:tint="@color/white" />
+            android:id="@+id/iconMore"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_more_vert"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/blocked_secondary_text" />
 
-
-        <TextView
-            android:id="@+id/textUnblock"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/layoutUnblock"
+            android:layout_width="78dp"
             android:layout_height="wrap_content"
-            android:text="Unblock"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginStart="4dp"/>
-    </LinearLayout>
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/iconMore">
 
+            <FrameLayout
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:background="@drawable/bg_blocked_unblock_circle">
 
-</LinearLayout>
+                <ImageView
+                    android:id="@+id/iconUnblock"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="Unblock user"
+                    android:src="@drawable/ic_unblock"
+                    app:tint="@color/blocked_red" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/textUnblock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:text="Unblock"
+                android:textColor="@color/blocked_red"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

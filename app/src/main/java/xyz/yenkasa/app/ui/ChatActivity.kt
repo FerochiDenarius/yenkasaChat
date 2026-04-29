@@ -1869,8 +1869,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun parseError(response: Response<*>): String {
         return try {
-            response.errorBody()?.string()?.ifBlank { null }
-                ?: "Error ${response.code()} ${response.message()}"
+            val rawError = response.errorBody()?.string()?.ifBlank { null }
+            if (response.code() == 403 && rawError?.contains("blocked", ignoreCase = true) == true) {
+                "You can’t send this message because this user has blocked you."
+            } else {
+                rawError ?: "Error ${response.code()} ${response.message()}"
+            }
         } catch (e: IOException) {
             "Error ${response.code()}"
         }

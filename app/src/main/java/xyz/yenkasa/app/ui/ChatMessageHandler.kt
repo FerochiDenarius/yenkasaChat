@@ -16,6 +16,7 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.util.Locale
 
 class ChatMessageHandler(
     private val context: Context,
@@ -254,6 +255,7 @@ class ChatMessageHandler(
         val reason = json?.optString("reason").orEmpty()
         val serverMessage = json?.optString("error").orEmpty()
             .ifBlank { json?.optString("message").orEmpty() }
+        val lowerMessage = serverMessage.lowercase(Locale.US)
 
         return when {
             code == 423 && reason == "requires_approval" ->
@@ -263,7 +265,9 @@ class ChatMessageHandler(
             code == 423 && reason == "not_community_member" ->
                 "Only people who share a community with this person can message them."
             code == 403 && reason == "blocked" ->
-                "You cannot message this person because of privacy settings."
+                "You can’t send this message because this user has blocked you."
+            reason.contains("blocked", ignoreCase = true) || lowerMessage.contains("blocked") ->
+                "You can’t send this message because this user has blocked you."
             serverMessage.isNotBlank() -> serverMessage
             else -> "Message could not be sent. Please try again."
         }

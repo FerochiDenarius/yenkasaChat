@@ -1,7 +1,10 @@
 package xyz.yenkasa.app.ui
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -20,8 +23,12 @@ class BlockedUsersActivity : AppCompatActivity() {
 
     private lateinit var adapter: BlockedUsersAdapter
     private lateinit var emptyText: TextView
+    private lateinit var emptySubtitle: TextView
+    private lateinit var emptyState: View
     private lateinit var progress: ProgressBar
+    private lateinit var searchInput: EditText
     private var token: String? = null
+    private val allBlockedUsers = mutableListOf<BlockedUserModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,11 +38,32 @@ class BlockedUsersActivity : AppCompatActivity() {
 
         val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvBlockedUsers)
         emptyText = findViewById(R.id.txtEmpty)
+        emptySubtitle = findViewById(R.id.textEmptySubtitle)
+        emptyState = findViewById(R.id.emptyStateBlocked)
         progress = findViewById(R.id.progressBar)
+        searchInput = findViewById(R.id.editSearchBlockedUsers)
+
+        findViewById<View>(R.id.btnBack).setOnClickListener {
+            finish()
+        }
 
         rv.layoutManager = LinearLayoutManager(this)
-        adapter = BlockedUsersAdapter(mutableListOf())
+        rv.setHasFixedSize(false)
+        adapter = BlockedUsersAdapter(mutableListOf()) { removedUser ->
+            allBlockedUsers.removeAll { it.userId == removedUser.userId }
+            updateEmptyState()
+        }
         rv.adapter = adapter
+
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterBlockedUsers(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
 
         loadBlockedUsers()
     }
@@ -43,7 +71,7 @@ class BlockedUsersActivity : AppCompatActivity() {
 
     private fun loadBlockedUsers() {
         progress.visibility = View.VISIBLE
-        emptyText.visibility = View.GONE
+        emptyState.visibility = View.GONE
 
         ApiClient.apiService.getBlockedUsers("Bearer $token")
             .enqueue(object : Callback<List<BlockedUserModel>> {
@@ -60,22 +88,43 @@ class BlockedUsersActivity : AppCompatActivity() {
                         return
                     }
 
-                    val list = response.body()!!
-                    if (list.isEmpty()) {
-                        emptyText.visibility = View.VISIBLE
-                        emptyText.text = "No blocked users"
-                    } else {
-                        emptyText.visibility = View.GONE
-                    }
-
-                    adapter.update(list)
+                    allBlockedUsers.clear()
+                    allBlockedUsers.addAll(response.body()!!)
+                    filterBlockedUsers(searchInput.text?.toString().orEmpty())
                 }
 
                 override fun onFailure(call: Call<List<BlockedUserModel>>, t: Throwable) {
                     progress.visibility = View.GONE
-                    emptyText.visibility = View.VISIBLE
+                    emptyState.visibility = View.VISIBLE
                     emptyText.text = "Connection error"
+                    emptySubtitle.text = "We could not load your blocked users. Check your connection and try again."
                 }
             })
+    }
+
+    private fun filterBlockedUsers(query: String) {
+        val normalizedQuery = query.trim()
+        val filtered = if (normalizedQuery.isBlank()) {
+            allBlockedUsers
+        } else {
+            allBlockedUsers.filter { user ->
+                user.username.contains(normalizedQuery, ignoreCase = true) ||
+                    user.roleName.orEmpty().contains(normalizedQuery, ignoreCase = true) ||
+                    user.role?.name.orEmpty().contains(normalizedQuery, ignoreCase = true)
+            }
+        }
+
+        adapter.update(filtered)
+        updateEmptyState(isSearchEmpty = normalizedQuery.isNotBlank() && filtered.isEmpty())
+    }
+
+    private fun updateEmptyState(isSearchEmpty: Boolean = false) {
+        emptyState.visibility = View.VISIBLE
+        emptyText.text = if (isSearchEmpty) "No matching users" else "You’re in control"
+        emptySubtitle.text = if (isSearchEmpty) {
+            "Try a different username or clear the search to see all blocked users."
+        } else {
+            "Manage your blocked users and keep your experience safe and comfortable."
+        }
     }
 }

@@ -17,10 +17,14 @@ import xyz.yenkasa.app.network.ApiClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 
 class BlockedUsersAdapter(
-    private val items: MutableList<BlockedUserModel>
+    private val items: MutableList<BlockedUserModel>,
+    private val onItemRemoved: ((BlockedUserModel) -> Unit)? = null
 ) : RecyclerView.Adapter<BlockedUsersAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -57,7 +61,7 @@ class BlockedUsersAdapter(
         val finalRole = when {
             !user.roleName.isNullOrBlank() -> user.roleName!!
             !user.role?.name.isNullOrBlank() -> user.role!!.name!!
-            else -> "User"
+            else -> "Unverified"
         }
 
         holder.txtRole.text = finalRole
@@ -65,7 +69,7 @@ class BlockedUsersAdapter(
             .replaceFirstChar { it.uppercase() }
 
         // Blocked date
-        holder.txtDate.text = user.dateBlocked?.let { "Blocked: $it" } ?: ""
+        holder.txtDate.text = user.dateBlocked?.let { "Blocked on ${formatBlockedDate(it)}" } ?: ""
 
         // UNBLOCK ICON click
         val unblockClick = View.OnClickListener {
@@ -87,8 +91,10 @@ class BlockedUsersAdapter(
 
                     val pos = holder.bindingAdapterPosition
                     if (pos != RecyclerView.NO_POSITION) {
+                        val removed = items[pos]
                         items.removeAt(pos)
                         notifyItemRemoved(pos)
+                        onItemRemoved?.invoke(removed)
                     }
 
                     Toast.makeText(
@@ -120,5 +126,27 @@ class BlockedUsersAdapter(
         items.clear()
         items.addAll(list)
         notifyDataSetChanged()
+    }
+
+    private fun formatBlockedDate(rawDate: String): String {
+        val trimmed = rawDate.trim()
+        if (trimmed.isBlank()) return trimmed
+
+        val output = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd"
+        )
+
+        for (pattern in patterns) {
+            runCatching {
+                val parser = SimpleDateFormat(pattern, Locale.US)
+                parser.timeZone = TimeZone.getTimeZone("UTC")
+                parser.parse(trimmed)?.let { return output.format(it) }
+            }
+        }
+
+        return trimmed
     }
 }

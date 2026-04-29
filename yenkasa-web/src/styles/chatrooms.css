@@ -1,5 +1,6 @@
 .chatrooms-page {
   min-height: 100vh;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   background:
     radial-gradient(circle at top left, rgba(201, 232, 200, 0.22), transparent 24%),
     linear-gradient(180deg, #faf8f2 0%, #f6f1e8 100%);
@@ -7,7 +8,7 @@
 }
 
 .chatrooms-workspace {
-  width: min(100%, 1460px);
+  width: min(100%, 520px);
   min-height: 100vh;
   margin: 0 auto;
   display: grid;
@@ -420,7 +421,7 @@
 
 .chatroom-composer {
   position: sticky;
-  bottom: 0;
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -621,43 +622,6 @@
 .chatrooms-status-card--center {
   margin: auto 0;
   text-align: center;
-}
-
-@media (min-width: 960px) {
-  .chatrooms-page {
-    padding: 18px;
-  }
-
-  .chatrooms-workspace {
-    grid-template-columns: minmax(0, 1fr) 360px;
-    min-height: calc(100vh - 36px);
-    border-radius: 30px;
-    overflow: hidden;
-    box-shadow: 0 24px 70px rgba(62, 68, 45, 0.14);
-  }
-
-  .chatroom-thread-panel {
-    order: 1;
-    border-right: 1px solid rgba(120, 134, 101, 0.16);
-    min-height: calc(100vh - 36px);
-  }
-
-  .chatrooms-sidebar {
-    order: 2;
-    min-height: calc(100vh - 36px);
-    border-top: 0;
-  }
-}
-
-@media (max-width: 959px) {
-  .chatrooms-sidebar {
-    order: 1;
-  }
-
-  .chatroom-thread-panel {
-    order: 2;
-    min-height: calc(100vh - 140px);
-  }
 }
 
 @media (max-width: 640px) {

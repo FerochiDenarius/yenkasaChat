@@ -1,0 +1,244 @@
+.settings-page {
+  min-height: 100vh;
+  padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(circle at top right, rgba(44, 130, 77, 0.12), transparent 24%),
+    linear-gradient(180deg, #0e1511 0%, #101913 100%);
+  color: #f2f7f3;
+}
+
+.settings-shell {
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: 20px 14px 24px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.settings-header__back {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #f2f7f3;
+  font-size: 1.25rem;
+}
+
+.settings-header h1 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.settings-header p {
+  margin: 4px 0 0;
+  color: #95a79a;
+  font-size: 0.92rem;
+}
+
+.settings-loading {
+  padding: 18px 2px;
+  color: #95a79a;
+}
+
+.settings-card {
+  margin-top: 14px;
+  padding: 8px 0;
+  border-radius: 22px;
+  background: rgba(21, 32, 26, 0.94);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.16);
+}
+
+.settings-card h2 {
+  margin: 0;
+  padding: 10px 16px 8px;
+  font-size: 1rem;
+  color: #d8e8dc;
+}
+
+.settings-card--danger h2 {
+  color: #f0bbb7;
+}
+
+.settings-row {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.settings-row + .settings-row {
+  border-top: 1px solid rgba(116, 140, 121, 0.14);
+}
+
+.settings-row.is-disabled {
+  opacity: 0.58;
+}
+
+.settings-row__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: rgba(31, 201, 116, 0.12);
+  color: #1ec974;
+  font-size: 1rem;
+}
+
+.is-danger .settings-row__icon {
+  background: rgba(255, 109, 109, 0.12);
+  color: #ff8d8d;
+}
+
+.settings-row__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row__copy strong {
+  display: block;
+  font-size: 0.96rem;
+}
+
+.settings-row__copy small {
+  display: block;
+  margin-top: 4px;
+  color: #95a79a;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.settings-row__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #c2d3c6;
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.settings-row__meta i {
+  font-style: normal;
+  color: #7f9485;
+}
+
+.settings-switch {
+  width: 56px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: #314238;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.18s ease;
+}
+
+.settings-switch span {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(10, 18, 11, 0.24);
+  transition: transform 0.18s ease;
+}
+
+.settings-switch.is-on {
+  background: #2d8c56;
+}
+
+.settings-switch.is-on span {
+  transform: translateX(24px);
+}
+
+.settings-select-wrap {
+  position: relative;
+  width: 124px;
+  flex: 0 0 124px;
+}
+
+.settings-select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #97ab9b;
+  pointer-events: none;
+}
+
+.settings-select-wrap select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid rgba(116, 140, 121, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f2f7f3;
+  padding: 0 28px 0 10px;
+  appearance: none;
+}
+
+@media (prefers-color-scheme: light) {
+  .settings-page {
+    background:
+      radial-gradient(circle at top right, rgba(44, 130, 77, 0.08), transparent 24%),
+      linear-gradient(180deg, #f7faf6 0%, #eef4ee 100%);
+    color: #1d271f;
+  }
+
+  .settings-header__back {
+    background: #fff;
+    color: #1d271f;
+    box-shadow: 0 10px 22px rgba(32, 55, 34, 0.08);
+  }
+
+  .settings-header p {
+    color: #647365;
+  }
+
+  .settings-loading {
+    color: #647365;
+  }
+
+  .settings-card {
+    background: #fff;
+    box-shadow: 0 16px 30px rgba(32, 55, 34, 0.08);
+  }
+
+  .settings-card h2 {
+    color: #223225;
+  }
+
+  .settings-row__copy small,
+  .settings-row__meta,
+  .settings-row__meta i {
+    color: #687868;
+  }
+
+  .settings-select-wrap::after {
+    color: #687868;
+  }
+
+  .settings-select-wrap select {
+    background: #f7faf6;
+    color: #1d271f;
+    border-color: rgba(87, 113, 92, 0.18);
+  }
+
+  .settings-switch {
+    background: #d7e0d8;
+  }
+}

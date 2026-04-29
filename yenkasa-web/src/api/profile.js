@@ -5,8 +5,23 @@ export async function getProfile() {
   return data;
 }
 
-export async function getUserProfile() {
+export async function getUserProfile(userId) {
+  if (userId) {
+    const { data } = await api.get(`/profile/users/${userId}/profile`);
+    return data;
+  }
+
   const { data } = await api.get("/users/me");
+  return data;
+}
+
+export async function followUser(userId) {
+  const { data } = await api.post(`/follow/${userId}/follow`);
+  return data;
+}
+
+export async function unfollowUser(userId) {
+  const { data } = await api.post(`/follow/${userId}/unfollow`);
   return data;
 }
 

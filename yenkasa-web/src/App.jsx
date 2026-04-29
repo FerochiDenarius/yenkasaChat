@@ -15,6 +15,7 @@ import PostDetails from "./pages/PostDetails";
 import EditProfile from "./pages/EditProfile";
 import ChatRooms from "./pages/ChatRooms";
 import Settings from "./pages/Settings";
+import PostApprovals from "./pages/PostApprovals";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
@@ -70,6 +71,14 @@ export default function App() {
         />
         <Route
           path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/:userId"
           element={
             <ProtectedRoute>
               <Profile />
@@ -176,7 +185,7 @@ export default function App() {
           path="/post-approvals"
           element={
             <ProtectedRoute>
-              <PlaceholderPage title="Post Approvals" subtitle="Moderator queue for reviewing pending posts." />
+              <PostApprovals />
             </ProtectedRoute>
           }
         />

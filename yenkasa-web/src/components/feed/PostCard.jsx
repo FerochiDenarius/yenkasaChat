@@ -44,6 +44,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
     post?.userId?.profileImageUrl ||
     post?.userId?.avatar ||
     null;
+  const authorId = post?.userId?._id || post?.userId?.id || post?.userId || post?.authorId || "";
   const isVideoPost =
     Boolean(videoUrl) ||
     String(post?.postType || "").toLowerCase() === "video";
@@ -126,6 +127,12 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   function openPost() {
     if (detailMode || !post?._id) return;
     navigate(`/post/${post._id}`);
+  }
+
+  function openUserProfile(userId) {
+    const id = String(userId || "");
+    if (!id) return;
+    navigate(`/profile/${id}`);
   }
 
   async function handleLike() {
@@ -327,7 +334,12 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   return (
     <article className="feed-post-card" ref={cardRef}>
       <header className="feed-post-card__header">
-        <div className="feed-post-card__author-block">
+        <button
+          type="button"
+          className="feed-post-card__author-block feed-post-card__author-button"
+          onClick={() => openUserProfile(authorId)}
+          disabled={!authorId}
+        >
           <span className="feed-post-card__avatar">
             {authorAvatar ? (
               <img src={authorAvatar} alt={username} onError={useDefaultImage} />
@@ -352,7 +364,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
               {communityName} <span>•</span> {formatRelativeTime(post?.createdAt)}
             </p>
           </div>
-        </div>
+        </button>
 
         <button
           className="feed-icon-btn feed-icon-btn--ghost"
@@ -519,6 +531,8 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
                   comment?.userId?.username || comment?.username || "Yenkasa User";
                 const commentAvatar =
                   comment?.userId?.profileImage || comment?.userId?.profileImageUrl || null;
+                const commentAuthorId =
+                  comment?.userId?._id || comment?.userId?.id || comment?.userId || "";
                 const commentLiked = isCommentLiked(comment, currentUserId);
                 const commentLikeCount = getCommentLikeCount(comment);
                 const commentPending = pendingCommentLikes.has(comment?._id);
@@ -528,16 +542,27 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
                     className="feed-comment"
                     key={comment?._id || `${commentAuthor}-${comment?.createdAt}`}
                   >
-                    <span className="feed-comment__avatar">
+                    <button
+                      type="button"
+                      className="feed-comment__avatar feed-comment__avatar-button"
+                      onClick={() => openUserProfile(commentAuthorId)}
+                      disabled={!commentAuthorId}
+                    >
                       {commentAvatar ? (
                         <img src={commentAvatar} alt={commentAuthor} onError={useDefaultImage} />
                       ) : (
                         <span>{commentAuthor.charAt(0).toUpperCase()}</span>
                       )}
-                    </span>
+                    </button>
                     <div className="feed-comment__body">
                       <div className="feed-comment__meta">
-                        <strong>{commentAuthor}</strong>
+                        <button
+                          type="button"
+                          onClick={() => openUserProfile(commentAuthorId)}
+                          disabled={!commentAuthorId}
+                        >
+                          {commentAuthor}
+                        </button>
                         <span>{formatRelativeTime(comment?.createdAt)}</span>
                       </div>
                       <p>{comment?.text || ""}</p>

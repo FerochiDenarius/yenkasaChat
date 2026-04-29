@@ -19,3 +19,13 @@ export async function getJoinedCommunities() {
   const { data } = await api.get("/communities/user/joined-communities");
   return data;
 }
+
+export async function joinCommunity(communityId) {
+  const { data } = await api.post(`/communities/${communityId}/join`);
+  return data;
+}
+
+export async function leaveCommunity(communityId) {
+  const { data } = await api.post(`/communities/${communityId}/leave`);
+  return data;
+}

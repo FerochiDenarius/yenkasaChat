@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
+import { createChatRoom } from "../api/chatrooms";
+import { followUser, getUserProfile, unfollowUser } from "../api/profile";
 import BottomNav from "../components/feed/BottomNav";
+import PostCard from "../components/feed/PostCard";
 import { clearAuth, getStoredUser } from "../utils/storage";
 import { readableRank } from "../utils/format";
 import {
@@ -13,14 +16,21 @@ import "../styles/account.css";
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { userId: routeUserId } = useParams();
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const [profile, setProfile] = useState(null);
   const [followStats, setFollowStats] = useState(null);
   const [primaryCommunity, setPrimaryCommunity] = useState(null);
   const [joinedCommunities, setJoinedCommunities] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [postCount, setPostCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [followBusy, setFollowBusy] = useState(false);
+  const [chatBusy, setChatBusy] = useState(false);
+
+  const viewerId = String(storedUser?._id || storedUser?.id || "");
+  const isOwnProfile = !routeUserId || String(routeUserId) === viewerId;
 
   useEffect(() => {
     let active = true;
@@ -30,17 +40,23 @@ export default function Profile() {
       setError("");
 
       try {
-        const profileResponse = await api.get("/profile");
+        const profileResponse = isOwnProfile
+          ? await api.get("/profile")
+          : { data: await getUserProfile(routeUserId) };
         if (!active) return;
 
         const currentProfile = profileResponse.data || {};
         setProfile(currentProfile);
 
-        const userId = currentProfile?._id || storedUser?._id || storedUser?.id;
+        const userId = currentProfile?._id || routeUserId || storedUser?._id || storedUser?.id;
         const requests = [
           userId ? api.get(`/follow/${userId}/follow-stats`) : Promise.resolve({ data: null }),
-          api.get("/communities/user/community").catch(() => ({ data: { community: null } })),
-          api.get("/communities/user/joined-communities").catch(() => ({ data: { communities: [] } })),
+          isOwnProfile
+            ? api.get("/communities/user/community").catch(() => ({ data: { community: null } }))
+            : Promise.resolve({ data: { community: null } }),
+          isOwnProfile
+            ? api.get("/communities/user/joined-communities").catch(() => ({ data: { communities: [] } }))
+            : Promise.resolve({ data: { communities: [] } }),
           userId ? api.get(`/posts/user/${userId}`) : Promise.resolve({ data: { posts: [] } }),
         ];
 
@@ -61,6 +77,7 @@ export default function Profile() {
             ? postsResponse.data.posts.length
             : 0
         );
+        setPosts(Array.isArray(postsResponse?.data?.posts) ? postsResponse.data.posts : []);
       } catch (requestError) {
         if (!active) return;
         setError(
@@ -78,7 +95,7 @@ export default function Profile() {
     return () => {
       active = false;
     };
-  }, [storedUser]);
+  }, [isOwnProfile, routeUserId, storedUser]);
 
   const user = profile || storedUser || {};
   const roleName = user?.roleName || user?.role?.role || user?.role || "unverified";
@@ -91,6 +108,7 @@ export default function Profile() {
     Number(followStats?.followersCount ?? user?.followersCount ?? user?.followers?.length ?? 0);
   const followingCount =
     Number(followStats?.followingCount ?? user?.followingCount ?? user?.following?.length ?? 0);
+  const isFollowing = Boolean(followStats?.isFollowing ?? user?.isFollowing);
   const coinBalance = Number(user?.coinsBalance ?? storedUser?.coinsBalance ?? 0);
   const username = user?.username || "Yenkasa";
   const handleTag = `@${String(username).trim().toLowerCase()}`;
@@ -98,6 +116,62 @@ export default function Profile() {
     followStats?.createdAt || user?.createdAt || storedUser?.createdAt
   );
   const communitiesText = buildCommunitiesText(primaryCommunity, joinedCommunities);
+
+  async function handleFollowToggle() {
+    const targetId = user?._id || routeUserId;
+    if (!targetId || followBusy || isOwnProfile) return;
+
+    setFollowBusy(true);
+    setError("");
+
+    try {
+      const response = isFollowing ? await unfollowUser(targetId) : await followUser(targetId);
+      setFollowStats((current) => ({
+        ...(current || {}),
+        isFollowing: Boolean(response?.isFollowing),
+        followersCount: Number(response?.followersCount ?? followersCount),
+        followingCount,
+      }));
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.error ||
+          requestError?.response?.data?.message ||
+          "Could not update follow status."
+      );
+    } finally {
+      setFollowBusy(false);
+    }
+  }
+
+  async function handleMessageUser() {
+    if (!username || chatBusy || isOwnProfile) return;
+
+    setChatBusy(true);
+    setError("");
+
+    try {
+      const response = await createChatRoom(username);
+      if (response?.roomId) {
+        navigate(`/chatrooms/${response.roomId}`);
+        return;
+      }
+      setError(response?.message || "Message request sent.");
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ||
+          requestError?.response?.data?.error ||
+          "Could not open chat."
+      );
+    } finally {
+      setChatBusy(false);
+    }
+  }
+
+  function handlePostUpdate(postId, changes) {
+    setPosts((current) =>
+      current.map((post) => (post?._id === postId ? { ...post, ...changes } : post))
+    );
+  }
 
   return (
     <main className="account-page">
@@ -111,15 +185,19 @@ export default function Profile() {
           >
             ←
           </button>
-          <div className="account-topbar__title">Account Info</div>
-          <button
-            type="button"
-            className="account-circle-btn"
-            onClick={() => window.alert("Settings page is the next web screen to wire.")}
-            aria-label="Open settings"
-          >
-            ⚙
-          </button>
+          <div className="account-topbar__title">{isOwnProfile ? "Account Info" : "Profile"}</div>
+          {isOwnProfile ? (
+            <button
+              type="button"
+              className="account-circle-btn"
+              onClick={() => navigate("/settings")}
+              aria-label="Open settings"
+            >
+              ⚙
+            </button>
+          ) : (
+            <span className="account-circle-btn account-circle-btn--spacer" aria-hidden="true" />
+          )}
         </header>
 
         {error ? <div className="error-banner">{error}</div> : null}
@@ -133,14 +211,16 @@ export default function Profile() {
                 alt={username}
                 onError={handleDynamicImageError}
               />
-              <button
-                type="button"
-                className="account-hero__camera"
-                onClick={() => window.alert("Profile photo editing will be wired next.")}
-                aria-label="Change profile photo"
-              >
-                📷
-              </button>
+              {isOwnProfile ? (
+                <button
+                  type="button"
+                  className="account-hero__camera"
+                  onClick={() => navigate("/edit-profile")}
+                  aria-label="Change profile photo"
+                >
+                  📷
+                </button>
+              ) : null}
             </div>
 
             <div className="account-hero__identity">
@@ -166,18 +246,34 @@ export default function Profile() {
           </div>
         </section>
 
-        <button
-          type="button"
-          className="account-wallet-card"
-          onClick={() => navigate("/wallet")}
-        >
-          <div className="account-wallet-card__icon">🪙</div>
-          <div className="account-wallet-card__body">
-            <span>YenkasaCoins</span>
-            <strong>{formatCoins(coinBalance)}</strong>
+        {isOwnProfile ? (
+          <button
+            type="button"
+            className="account-wallet-card"
+            onClick={() => navigate("/wallet")}
+          >
+            <div className="account-wallet-card__icon">YKC</div>
+            <div className="account-wallet-card__body">
+              <span>YenkasaCoins</span>
+              <strong>{formatCoins(coinBalance)}</strong>
+            </div>
+            <span className="account-wallet-card__cta">View Wallet ›</span>
+          </button>
+        ) : (
+          <div className="account-profile-actions">
+            <button
+              type="button"
+              className={`primary-btn${isFollowing ? " account-following-btn" : ""}`}
+              onClick={handleFollowToggle}
+              disabled={followBusy}
+            >
+              {followBusy ? "Working..." : isFollowing ? "Following" : "Follow"}
+            </button>
+            <button type="button" className="secondary-btn" onClick={handleMessageUser} disabled={chatBusy}>
+              {chatBusy ? "Opening..." : "Message"}
+            </button>
           </div>
-          <span className="account-wallet-card__cta">View Wallet ›</span>
-        </button>
+        )}
 
         <SectionLabel>About You</SectionLabel>
         <section className="account-surface">
@@ -203,49 +299,64 @@ export default function Profile() {
           />
         </section>
 
-        <SectionLabel>Contact Information</SectionLabel>
-        <section className="account-surface">
-          <InfoRow
-            icon="✉"
-            title="Email"
-            value={user?.email || "Not provided"}
-            onClick={() => {}}
-          />
-          <Divider />
-          <InfoRow
-            icon="📞"
-            title="Phone"
-            value={user?.phone || user?.phoneNumber || "Not provided"}
-            onClick={() => {}}
-          />
-        </section>
+        {isOwnProfile ? (
+          <>
+            <SectionLabel>Contact Information</SectionLabel>
+            <section className="account-surface">
+              <InfoRow
+                icon="✉"
+                title="Email"
+                value={user?.email || "Not provided"}
+                onClick={() => {}}
+              />
+              <Divider />
+              <InfoRow
+                icon="📞"
+                title="Phone"
+                value={user?.phone || user?.phoneNumber || "Not provided"}
+                onClick={() => {}}
+              />
+            </section>
 
-        <SectionLabel>Account</SectionLabel>
-        <section className="account-surface">
-          <InfoRow
-            icon="🛡"
-            title="Security"
-            value="Password, 2FA, and security settings"
-            onClick={() => window.alert("Security settings page is next to wire.")}
-          />
-          <Divider />
-          <InfoRow
-            icon="✎"
-            title="Edit Profile"
-            value="Update your profile information"
-            onClick={() => navigate("/edit-profile")}
-          />
-          <Divider />
-          <InfoRow
-            icon="⇠"
-            title="Log Out"
-            value="Sign out of your account"
-            danger
-            onClick={() => {
-              clearAuth();
-              navigate("/login", { replace: true });
-            }}
-          />
+            <SectionLabel>Account</SectionLabel>
+            <section className="account-surface">
+              <InfoRow
+                icon="🛡"
+                title="Security"
+                value="Password, 2FA, and security settings"
+                onClick={() => navigate("/settings")}
+              />
+              <Divider />
+              <InfoRow
+                icon="✎"
+                title="Edit Profile"
+                value="Update your profile information"
+                onClick={() => navigate("/edit-profile")}
+              />
+              <Divider />
+              <InfoRow
+                icon="⇠"
+                title="Log Out"
+                value="Sign out of your account"
+                danger
+                onClick={() => {
+                  clearAuth();
+                  navigate("/login", { replace: true });
+                }}
+              />
+            </section>
+          </>
+        ) : null}
+
+        <SectionLabel>Posts</SectionLabel>
+        <section className="account-posts-list">
+          {posts.length ? (
+            posts.map((post) => (
+              <PostCard key={post?._id} post={post} onUpdate={handlePostUpdate} />
+            ))
+          ) : (
+            <div className="account-empty-posts">No public posts yet.</div>
+          )}
         </section>
 
         {loading ? <div className="account-loading">Loading account info...</div> : null}

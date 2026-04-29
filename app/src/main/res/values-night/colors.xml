@@ -39,6 +39,13 @@
     <color name="wallet_accent_green">#61A92F</color>
     <color name="wallet_accent_gold">#D1B45A</color>
     <color name="wallet_border">#0D3A24</color>
+    <color name="feed_wallet_float_start">#10251B</color>
+    <color name="feed_wallet_float_end">#07150F</color>
+    <color name="feed_wallet_delta_background">#2F2710</color>
+    <color name="feed_wallet_delta_stroke">#D1B45A</color>
+    <color name="feed_wallet_coin_start">#D1B45A</color>
+    <color name="feed_wallet_coin_end">#6A5418</color>
+    <color name="feed_wallet_coin_stroke">#F4D76E</color>
     <color name="wallet_hero_start">#001F12</color>
     <color name="wallet_hero_end">#000D07</color>
     <color name="wallet_negative">#D56A5D</color>

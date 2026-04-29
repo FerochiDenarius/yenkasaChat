@@ -464,6 +464,19 @@
   min-width: 0;
 }
 
+.feed-post-card__author-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feed-post-card__author-button:disabled {
+  cursor: default;
+}
+
 .feed-post-card__avatar {
   width: 42px;
   height: 42px;
@@ -758,6 +771,16 @@
   flex: 0 0 34px;
 }
 
+.feed-comment__avatar-button {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.feed-comment__avatar-button:disabled {
+  cursor: default;
+}
+
 .feed-comment__avatar img {
   width: 100%;
   height: 100%;
@@ -778,6 +801,20 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
+}
+
+.feed-comment__meta button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #213126;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.feed-comment__meta button:disabled {
+  cursor: default;
 }
 
 .feed-comment__meta span {

@@ -131,7 +131,7 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingTop="2dp"
-            android:paddingBottom="92dp"
+            android:paddingBottom="164dp"
             android:scrollbars="vertical" />
 
         <ProgressBar
@@ -161,5 +161,154 @@
             android:layout_gravity="bottom|center_horizontal"
             android:layout_marginBottom="28dp"
             android:visibility="gone" />
+
+        <FrameLayout
+            android:id="@+id/floatingWalletCard"
+            android:layout_width="wrap_content"
+            android:layout_height="68dp"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="28dp"
+            android:background="@drawable/bg_feed_wallet_float"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:minWidth="176dp"
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/floatingWalletCoinContainer"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_feed_wallet_coin">
+
+                    <ImageView
+                        android:id="@+id/imageFloatingWalletCoin"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/feed_wallet_open"
+                        android:src="@drawable/ic_coin" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textFloatingWalletLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/feed_wallet_label"
+                        android:textColor="@color/wallet_secondary_text"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textFloatingWalletBalance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/wallet_primary_text"
+                        android:textSize="19sp"
+                        android:textStyle="bold"
+                        tools:text="6,327" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutFloatingWalletSparkles"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:alpha="0"
+                android:translationY="4dp">
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="@drawable/bg_feed_wallet_spark" />
+
+                <View
+                    android:layout_width="4dp"
+                    android:layout_height="4dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="@drawable/bg_feed_wallet_spark" />
+
+                <View
+                    android:layout_width="5dp"
+                    android:layout_height="5dp"
+                    android:background="@drawable/bg_feed_wallet_spark" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/layoutFloatingWalletDrops"
+                android:layout_width="54dp"
+                android:layout_height="58dp"
+                android:layout_gravity="top|start"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <ImageView
+                    android:id="@+id/imageFloatingWalletDropOne"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="top|center_horizontal"
+                    android:alpha="0"
+                    android:src="@drawable/ic_coin" />
+
+                <ImageView
+                    android:id="@+id/imageFloatingWalletDropTwo"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="top|start"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginTop="8dp"
+                    android:alpha="0"
+                    android:src="@drawable/ic_coin" />
+
+                <ImageView
+                    android:id="@+id/imageFloatingWalletDropThree"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginEnd="6dp"
+                    android:alpha="0"
+                    android:src="@drawable/ic_coin" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/textFloatingWalletDelta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:background="@drawable/bg_feed_wallet_delta"
+                android:includeFontPadding="false"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="5dp"
+                android:textColor="@color/wallet_primary_text"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:translationY="8dp"
+                android:visibility="gone"
+                tools:text="+120 YKC" />
+        </FrameLayout>
     </FrameLayout>
 </LinearLayout>

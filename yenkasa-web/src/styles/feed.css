@@ -131,15 +131,15 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(circle at 35% 28%, #fff6a5 0 14%, transparent 15%),
-    linear-gradient(145deg, #f9d64a 0%, #dfa80c 100%);
-  color: #084024;
-  font-size: 10px;
-  font-weight: 900;
-  box-shadow:
-    inset 0 0 0 2px rgba(8, 64, 36, 0.18),
-    0 5px 12px rgba(169, 119, 0, 0.24);
+  overflow: hidden;
+  background: #f2c22f;
+  box-shadow: 0 5px 12px rgba(169, 119, 0, 0.24);
+}
+
+.floating-wallet__coin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .floating-wallet__body {

@@ -10,42 +10,50 @@ import {
 } from "../utils/images";
 import "../styles/verification.css";
 
-const RANK_TABS = ["verified", "rising_star", "legend"];
+const RANK_TABS = ["verified", "admin", "moderator"];
 
 const METRIC_CARDS = [
   {
     key: "views",
     label: "Views",
     goalLabel: "Views tracked",
-    icon: "◉",
+    icon: "eye",
     current: (metrics, performance) =>
       performance?.viewsReceived ??
       performance?.totalViewsReceived ??
       metrics?.totalViewsReceived ??
       0,
-    goal: () => 0,
+    goal: (requirements) =>
+      requirements?.views ??
+      requirements?.viewsReceived ??
+      requirements?.totalViewsReceived ??
+      0,
   },
   {
     key: "comments",
     label: "Comments",
-    icon: "✎",
+    icon: "pencil",
     current: (metrics) => metrics?.totalCommentsMade ?? 0,
     goal: (requirements) => requirements?.commentsMade ?? 0,
   },
   {
-    key: "following",
-    label: "Following",
-    icon: "◎",
-    current: (metrics) => metrics?.totalFollowing ?? 0,
-    goal: (requirements) => requirements?.following ?? 0,
+    key: "followers",
+    label: "Followers",
+    icon: "users",
+    current: (metrics) => metrics?.totalFollowers ?? metrics?.followers ?? 0,
+    goal: (requirements) => requirements?.followers ?? 0,
   },
   {
-    key: "likes",
-    label: "Likes Given",
-    goalLabel: "Posts liked tracked",
-    icon: "↗",
-    current: (metrics) => metrics?.postsLiked ?? 0,
-    goal: () => 0,
+    key: "shares",
+    label: "Shares",
+    icon: "share",
+    current: (metrics, performance) =>
+      metrics?.totalShares ??
+      metrics?.shares ??
+      performance?.totalShares ??
+      performance?.shares ??
+      0,
+    goal: (requirements) => requirements?.shares ?? requirements?.postsShared ?? 0,
   },
 ];
 
@@ -177,9 +185,9 @@ export default function Verification() {
                     />
                   ) : (
                     <img
-                      src={staticImage("ykc.png")}
+                      src={staticImage("logo.png")}
                       alt="Yenkasa"
-                      onError={(event) => handleStaticImageError(event, "ykc.png")}
+                      onError={(event) => handleStaticImageError(event, "logo.png")}
                     />
                   )}
                 </div>
@@ -207,7 +215,8 @@ export default function Verification() {
                   }`}
                   onClick={() => setSelectedTab(tab)}
                 >
-                  {rankLabel(tab)}
+                  <Icon name={rankIcon(tab)} />
+                  <span>{rankTabLabel(tab)}</span>
                 </button>
               ))}
             </section>
@@ -296,7 +305,9 @@ export default function Verification() {
                   const remaining = Math.max(0, row.target - row.current);
                   return (
                     <div className="verification-requirement" key={row.key}>
-                      <div className="verification-requirement__dot">{row.icon}</div>
+                      <div className="verification-requirement__dot">
+                        <Icon name={row.icon} />
+                      </div>
                       <div>
                         <div className="verification-requirement__title">{row.title}</div>
                         <div className="verification-requirement__helper">{row.helper}</div>
@@ -321,6 +332,9 @@ export default function Verification() {
             </section>
 
             <section className="verification-footer-card">
+              <div className="verification-footer-card__icon">
+                <Icon name="crown" />
+              </div>
               <div className="verification-footer-card__copy">
                 <strong>You&apos;re doing great!</strong>
                 <p>Keep engaging to unlock higher ranks and more Yenkasa benefits.</p>
@@ -355,7 +369,9 @@ function ProgressRing({ value }) {
 function MetricCard({ icon, label, value, goalLabel, progress }) {
   return (
     <article className="verification-metric-card">
-      <div className="verification-metric-card__icon">{icon}</div>
+      <div className="verification-metric-card__icon">
+        <Icon name={icon} />
+      </div>
       <div className="verification-metric-card__value">{formatNumber(value)}</div>
       <div className="verification-metric-card__label">{label}</div>
       <div className="verification-metric-card__goal">{goalLabel}</div>
@@ -367,22 +383,41 @@ function MetricCard({ icon, label, value, goalLabel, progress }) {
 }
 
 function RankShield({ rank }) {
-  const label = rankLabel(rank).toUpperCase();
   const rankClass = String(rank || "verified").toLowerCase();
+  const emblem = rankEmblem(rank);
 
   return (
     <div className={`verification-shield verification-shield--${rankClass}`}>
       <div className="verification-shield__glow" />
       <div className="verification-shield__body">
         <img
-          src={staticImage("ykc.png")}
-          alt="Yenkasa badge"
-          onError={(event) => handleStaticImageError(event, "ykc.png")}
+          src={staticImage(emblem)}
+          alt={`${rankLabel(rank)} badge`}
+          onError={(event) => handleStaticImageError(event, emblem)}
         />
-        <span>{label}</span>
       </div>
     </div>
   );
+}
+
+function rankEmblem(rankKey) {
+  const normalized = String(rankKey || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "admin":
+      return "admin.png";
+    case "moderator":
+      return "moderator.png";
+    case "junior_developer":
+      return "junior_developer_banner.png";
+    case "senior_developer":
+      return "senior_developer_banner.png";
+    case "verified":
+    case "rising_star":
+    case "legend":
+    default:
+      return "verified.png";
+  }
 }
 
 function rankLabel(rankKey) {
@@ -390,7 +425,7 @@ function rankLabel(rankKey) {
 
   switch (normalized) {
     case "verified":
-      return "Verified";
+      return "Verified Member";
     case "rising_star":
       return "Rising Star";
     case "legend":
@@ -408,18 +443,23 @@ function rankLabel(rankKey) {
   }
 }
 
+function rankTabLabel(rankKey) {
+  const normalized = String(rankKey || "").trim().toLowerCase();
+  if (normalized === "verified") return "Verified";
+  return rankLabel(normalized);
+}
+
+function rankIcon(rankKey) {
+  const normalized = String(rankKey || "").trim().toLowerCase();
+  if (normalized === "admin") return "crown";
+  if (normalized === "moderator") return "shield";
+  return "verified";
+}
+
 function rankTabForRole(rankKey) {
   const normalized = String(rankKey || "").trim().toLowerCase();
-  if (normalized === "rising_star") return "rising_star";
-  if (
-    normalized === "legend" ||
-    normalized === "admin" ||
-    normalized === "moderator" ||
-    normalized === "junior_developer" ||
-    normalized === "senior_developer"
-  ) {
-    return "legend";
-  }
+  if (normalized === "admin") return "admin";
+  if (normalized === "moderator") return "moderator";
   return "verified";
 }
 
@@ -465,17 +505,20 @@ function formatLaunchDate(raw) {
 
 function calculateOverallProgress(metrics, requirements) {
   const values = [
-    calculatePercent(metrics?.accountAge, requirements?.accountAge),
+    calculatePercent(
+      metrics?.totalViewsReceived,
+      requirements?.views ?? requirements?.viewsReceived ?? requirements?.totalViewsReceived
+    ),
     calculatePercent(metrics?.totalCommentsMade, requirements?.commentsMade),
-    calculatePercent(metrics?.totalFollowing, requirements?.following),
-    calculatePercent(metrics?.postsLiked, requirements?.likesGiven),
+    calculatePercent(metrics?.totalFollowers ?? metrics?.followers, requirements?.followers),
+    calculatePercent(
+      metrics?.totalShares ?? metrics?.shares,
+      requirements?.shares ?? requirements?.postsShared
+    ),
     calculatePercent(metrics?.dailyLogins, requirements?.dailyLogins),
     calculatePercent(metrics?.adsViewed, requirements?.adsViewed),
   ];
 
-  if ((requirements?.followers || 0) > 0) {
-    values.push(calculatePercent(metrics?.totalFollowers, requirements?.followers));
-  }
   if ((requirements?.commentsReceived || 0) > 0) {
     values.push(
       calculatePercent(
@@ -490,13 +533,15 @@ function calculateOverallProgress(metrics, requirements) {
 
 function currentRequirementPoints(metrics, requirements) {
   return [
-    [metrics?.accountAge, requirements?.accountAge],
+    [
+      metrics?.totalViewsReceived,
+      requirements?.views ?? requirements?.viewsReceived ?? requirements?.totalViewsReceived,
+    ],
     [metrics?.totalCommentsMade, requirements?.commentsMade],
-    [metrics?.totalFollowing, requirements?.following],
-    [metrics?.postsLiked, requirements?.likesGiven],
+    [metrics?.totalFollowers ?? metrics?.followers, requirements?.followers],
+    [metrics?.totalShares ?? metrics?.shares, requirements?.shares ?? requirements?.postsShared],
     [metrics?.dailyLogins, requirements?.dailyLogins],
     [metrics?.adsViewed, requirements?.adsViewed],
-    [metrics?.totalFollowers, requirements?.followers],
     [metrics?.totalCommentsReceived, requirements?.commentsReceived],
   ]
     .filter(([, target]) => Number(target || 0) > 0)
@@ -508,13 +553,12 @@ function currentRequirementPoints(metrics, requirements) {
 
 function targetRequirementPoints(requirements) {
   return [
-    requirements?.accountAge,
+    requirements?.views ?? requirements?.viewsReceived ?? requirements?.totalViewsReceived,
     requirements?.commentsMade,
-    requirements?.following,
-    requirements?.likesGiven,
+    requirements?.followers,
+    requirements?.shares ?? requirements?.postsShared,
     requirements?.dailyLogins,
     requirements?.adsViewed,
-    requirements?.followers,
     requirements?.commentsReceived,
   ].reduce((sum, value) => sum + Number(value || 0), 0);
 }
@@ -522,13 +566,18 @@ function targetRequirementPoints(requirements) {
 function buildRequirementRows(metrics, requirements) {
   const rows = [
     {
-      key: "account-age",
-      title: "Account Age",
-      helper: "Keep your account active",
-      current: Number(metrics?.accountAge || 0),
-      target: Number(requirements?.accountAge || 0),
-      remainingLabel: "days",
-      icon: "◉",
+      key: "views",
+      title: "Views",
+      helper: "Get more views on your posts",
+      current: Number(metrics?.totalViewsReceived || 0),
+      target: Number(
+        requirements?.views ||
+          requirements?.viewsReceived ||
+          requirements?.totalViewsReceived ||
+          0
+      ),
+      remainingLabel: "left",
+      icon: "eye",
     },
     {
       key: "comments-made",
@@ -537,25 +586,25 @@ function buildRequirementRows(metrics, requirements) {
       current: Number(metrics?.totalCommentsMade || 0),
       target: Number(requirements?.commentsMade || 0),
       remainingLabel: "left",
-      icon: "✎",
+      icon: "pencil",
     },
     {
-      key: "following",
-      title: "Following",
-      helper: "Support other users",
-      current: Number(metrics?.totalFollowing || 0),
-      target: Number(requirements?.following || 0),
+      key: "followers",
+      title: "Followers",
+      helper: "Grow your followers",
+      current: Number(metrics?.totalFollowers || metrics?.followers || 0),
+      target: Number(requirements?.followers || 0),
       remainingLabel: "left",
-      icon: "◎",
+      icon: "users",
     },
     {
-      key: "likes-given",
-      title: "Posts Liked",
-      helper: "Support posts you enjoy",
-      current: Number(metrics?.postsLiked || 0),
-      target: Number(requirements?.likesGiven || 0),
+      key: "shares",
+      title: "Shares",
+      helper: "Share your content",
+      current: Number(metrics?.totalShares || metrics?.shares || 0),
+      target: Number(requirements?.shares || requirements?.postsShared || 0),
       remainingLabel: "left",
-      icon: "↗",
+      icon: "share",
     },
     {
       key: "daily-logins",
@@ -564,7 +613,7 @@ function buildRequirementRows(metrics, requirements) {
       current: Number(metrics?.dailyLogins || 0),
       target: Number(requirements?.dailyLogins || 0),
       remainingLabel: "left",
-      icon: "◌",
+      icon: "verified",
     },
     {
       key: "ads-viewed",
@@ -573,21 +622,9 @@ function buildRequirementRows(metrics, requirements) {
       current: Number(metrics?.adsViewed || 0),
       target: Number(requirements?.adsViewed || 0),
       remainingLabel: "left",
-      icon: "▣",
+      icon: "eye",
     },
   ];
-
-  if (Number(requirements?.followers || 0) > 0) {
-    rows.push({
-      key: "followers",
-      title: "Followers",
-      helper: "Passive impact needed for this tier",
-      current: Number(metrics?.totalFollowers || 0),
-      target: Number(requirements?.followers || 0),
-      remainingLabel: "left",
-      icon: "◍",
-    });
-  }
 
   if (Number(requirements?.commentsReceived || 0) > 0) {
     rows.push({
@@ -597,11 +634,71 @@ function buildRequirementRows(metrics, requirements) {
       current: Number(metrics?.totalCommentsReceived || 0),
       target: Number(requirements?.commentsReceived || 0),
       remainingLabel: "left",
-      icon: "◈",
+      icon: "pencil",
     });
   }
 
   return rows.filter((row) => row.target > 0);
+}
+
+function Icon({ name }) {
+  switch (name) {
+    case "crown":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m3 7 4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7Z" />
+          <path d="M5 21h14" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" />
+          <path d="m9 12 2 2 4-5" />
+        </svg>
+      );
+    case "pencil":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+          <path d="m13 7 4 4" />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M16 11a4 4 0 1 0-8 0" />
+          <path d="M4 20c1.2-3 4-5 8-5s6.8 2 8 5" />
+          <path d="M18 8a3 3 0 0 1 2 5" />
+          <path d="M6 8a3 3 0 0 0-2 5" />
+        </svg>
+      );
+    case "share":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <path d="m8.7 10.7 6.6-4.4" />
+          <path d="m8.7 13.3 6.6 4.4" />
+        </svg>
+      );
+    case "eye":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
+    case "verified":
+    default:
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" />
+          <path d="m8.5 12 2.2 2.2L15.8 9" />
+        </svg>
+      );
+  }
 }
 
 function calculatePercent(current, target) {

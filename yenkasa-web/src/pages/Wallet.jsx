@@ -121,9 +121,9 @@ export default function Wallet() {
         <section className="wallet-hero">
           <div className="wallet-coin-mark" aria-hidden="true">
             <img
-              src={staticImage("logo.png")}
+              src={staticImage("ykc.png")}
               alt=""
-              onError={(event) => handleStaticImageError(event, "logo.png")}
+              onError={(event) => handleStaticImageError(event, "ykc.png")}
             />
           </div>
           <div>
@@ -266,9 +266,9 @@ function TransactionRow({ transaction, walletId }) {
     <article className="wallet-transaction">
       <div className="wallet-transaction__coin">
         <img
-          src={staticImage("logo.png")}
+          src={staticImage("ykc.png")}
           alt=""
-          onError={(event) => handleStaticImageError(event, "logo.png")}
+          onError={(event) => handleStaticImageError(event, "ykc.png")}
         />
         <span className={`wallet-transaction__icon${incoming ? " is-in" : " is-out"}`}>
           {iconForTransaction(transaction.type, incoming)}

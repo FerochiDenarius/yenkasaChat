@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getWalletBalance } from "../../api/wallet";
 import { formatNumber } from "../../utils/format";
+import { handleStaticImageError, staticImage } from "../../utils/images";
 import { WALLET_REFRESH_EVENT } from "../../utils/walletEvents";
 
 export default function FloatingWalletBalance() {
@@ -73,7 +74,13 @@ export default function FloatingWalletBalance() {
       onClick={() => navigate("/wallet")}
       aria-label="Open wallet"
     >
-      <span className="floating-wallet__coin">YKC</span>
+      <span className="floating-wallet__coin" aria-hidden="true">
+        <img
+          src={staticImage("ykc.png")}
+          alt=""
+          onError={(event) => handleStaticImageError(event, "ykc.png")}
+        />
+      </span>
       <span className="floating-wallet__body">
         <small>Wallet</small>
         <strong>{balance === null ? "..." : formatNumber(balance)}</strong>

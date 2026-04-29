@@ -2,9 +2,11 @@ package xyz.yenkasa.app.ui
 
 import android.animation.ValueAnimator
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -32,6 +34,7 @@ import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -41,6 +44,7 @@ import retrofit2.Response
 import xyz.yenkasa.app.adapter.AdBinder
 import xyz.yenkasa.app.work.FeedSyncWorker
 import java.text.SimpleDateFormat
+import java.text.NumberFormat
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
@@ -59,6 +63,13 @@ class FeedFragment : Fragment() {
     private lateinit var communitiesBar: View
     private lateinit var communityStoryRecyclerView: RecyclerView
     private lateinit var feedTabs: List<TextView>
+    private lateinit var floatingWalletCard: View
+    private lateinit var floatingWalletCoinContainer: View
+    private lateinit var floatingWalletCoinView: ImageView
+    private lateinit var floatingWalletBalanceView: TextView
+    private lateinit var floatingWalletDeltaView: TextView
+    private lateinit var floatingWalletSparklesView: View
+    private lateinit var floatingWalletDropViews: List<ImageView>
 
     private val posts = mutableListOf<Post>()
     private lateinit var feedAdapter: FeedAdapter
@@ -80,12 +91,26 @@ class FeedFragment : Fragment() {
     private var communitiesBarHidden = false
     private var communitiesBarNaturalHeight = 0
     private var communitiesBarAnimator: ValueAnimator? = null
+    private var walletBalanceAnimator: ValueAnimator? = null
+    private var walletReceiverRegistered = false
+    private var currentWalletBalance = 0
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
     private val gson = Gson()
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
+    private val walletBalanceReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
+            val newBalance = intent.getIntExtra(
+                WalletBalanceManager.EXTRA_BALANCE,
+                currentWalletBalance
+            )
+            updateFloatingWalletBalance(newBalance, animate = newBalance > currentWalletBalance)
+        }
+    }
 
     private enum class FeedMode {
         FOR_YOU,
@@ -104,6 +129,7 @@ class FeedFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         initAuth()
         initViews(view)
+        setupFloatingWallet()
         setupRecyclerView()
         setupCommunityStoryRecyclerView()
         setupFeedTabs()
@@ -150,6 +176,17 @@ class FeedFragment : Fragment() {
         communitiesBar = view.findViewById(R.id.layoutFeedCommunitiesBar)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
         communityStoryRecyclerView = view.findViewById(R.id.recyclerViewFeedCommunities)
+        floatingWalletCard = view.findViewById(R.id.floatingWalletCard)
+        floatingWalletCoinContainer = view.findViewById(R.id.floatingWalletCoinContainer)
+        floatingWalletCoinView = view.findViewById(R.id.imageFloatingWalletCoin)
+        floatingWalletBalanceView = view.findViewById(R.id.textFloatingWalletBalance)
+        floatingWalletDeltaView = view.findViewById(R.id.textFloatingWalletDelta)
+        floatingWalletSparklesView = view.findViewById(R.id.layoutFloatingWalletSparkles)
+        floatingWalletDropViews = listOf(
+            view.findViewById(R.id.imageFloatingWalletDropOne),
+            view.findViewById(R.id.imageFloatingWalletDropTwo),
+            view.findViewById(R.id.imageFloatingWalletDropThree)
+        )
         feedTabs = listOf(
             view.findViewById(R.id.tabForYou),
             view.findViewById(R.id.tabFollowing),
@@ -160,6 +197,202 @@ class FeedFragment : Fragment() {
         communitiesBar.post {
             communitiesBarNaturalHeight = communitiesBar.height
         }
+    }
+
+    private fun setupFloatingWallet() {
+        currentWalletBalance = TokenManager.getCoins(requireContext())
+        renderFloatingWalletBalance(currentWalletBalance)
+        floatingWalletDeltaView.visibility = View.GONE
+        floatingWalletSparklesView.alpha = 0f
+        floatingWalletCard.setOnClickListener {
+            startActivity(Intent(requireContext(), CoinWalletActivity::class.java))
+        }
+    }
+
+    private fun renderFloatingWalletBalance(balance: Int) {
+        floatingWalletBalanceView.text = NumberFormat.getIntegerInstance(Locale.getDefault())
+            .format(balance)
+    }
+
+    private fun updateFloatingWalletBalance(newBalance: Int, animate: Boolean) {
+        val oldBalance = currentWalletBalance
+        TokenManager.saveCoins(requireContext(), newBalance)
+
+        if (!animate || newBalance <= oldBalance) {
+            walletBalanceAnimator?.cancel()
+            currentWalletBalance = newBalance
+            renderFloatingWalletBalance(newBalance)
+            if (newBalance < oldBalance) {
+                resetFloatingWalletPulse()
+            }
+            return
+        }
+
+        walletBalanceAnimator?.cancel()
+        ValueAnimator.ofInt(oldBalance, newBalance).apply {
+            duration = 700L
+            addUpdateListener { animator ->
+                currentWalletBalance = animator.animatedValue as Int
+                renderFloatingWalletBalance(currentWalletBalance)
+            }
+            start()
+            walletBalanceAnimator = this
+        }
+
+        animateFloatingWalletGain(newBalance - oldBalance)
+    }
+
+    private fun animateFloatingWalletGain(delta: Int) {
+        if (delta <= 0) return
+
+        floatingWalletDeltaView.animate().cancel()
+        floatingWalletCard.animate().cancel()
+        floatingWalletCoinContainer.animate().cancel()
+        floatingWalletCoinView.animate().cancel()
+        floatingWalletSparklesView.animate().cancel()
+        floatingWalletDropViews.forEach { dropView -> dropView.animate().cancel() }
+
+        floatingWalletDeltaView.text = "+${
+            NumberFormat.getIntegerInstance(Locale.getDefault()).format(delta)
+        } YKC"
+        floatingWalletDeltaView.visibility = View.VISIBLE
+        floatingWalletDeltaView.alpha = 1f
+        floatingWalletDeltaView.translationY = 12f
+
+        floatingWalletSparklesView.alpha = 0f
+        floatingWalletSparklesView.translationY = 8f
+
+        animateFloatingWalletDrops()
+
+        floatingWalletCard.animate()
+            .scaleX(1.04f)
+            .scaleY(1.04f)
+            .setDuration(180L)
+            .withEndAction {
+                floatingWalletCard.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(220L)
+                    .start()
+            }
+            .start()
+
+        floatingWalletCoinContainer.animate()
+            .scaleX(1.12f)
+            .scaleY(1.12f)
+            .setDuration(180L)
+            .withEndAction {
+                floatingWalletCoinContainer.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(220L)
+                    .start()
+            }
+            .start()
+
+        floatingWalletCoinView.animate()
+            .rotationBy(360f)
+            .setDuration(700L)
+            .start()
+
+        floatingWalletSparklesView.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(180L)
+            .withEndAction {
+                floatingWalletSparklesView.animate()
+                    .alpha(0f)
+                    .translationY(-10f)
+                    .setDuration(620L)
+                    .start()
+            }
+            .start()
+
+        floatingWalletDeltaView.animate()
+            .translationY(-18f)
+            .alpha(0f)
+            .setStartDelay(450L)
+            .setDuration(900L)
+            .withEndAction {
+                floatingWalletDeltaView.visibility = View.GONE
+                floatingWalletDeltaView.translationY = 12f
+                floatingWalletDeltaView.alpha = 1f
+            }
+            .start()
+    }
+
+    private fun animateFloatingWalletDrops() {
+        val offsetsX = listOf(0f, 12f, -10f)
+        val startY = listOf(-28f, -18f, -24f)
+        val endY = listOf(28f, 24f, 26f)
+
+        floatingWalletDropViews.forEachIndexed { index, dropView ->
+            dropView.animate().cancel()
+            dropView.alpha = 0f
+            dropView.translationX = offsetsX[index]
+            dropView.translationY = startY[index]
+            dropView.scaleX = 0.82f
+            dropView.scaleY = 0.82f
+            dropView.rotation = when (index) {
+                0 -> -14f
+                1 -> 9f
+                else -> 16f
+            }
+
+            dropView.animate()
+                .alpha(1f)
+                .translationX(0f)
+                .translationY(endY[index])
+                .rotationBy(220f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setStartDelay((index * 90).toLong())
+                .setDuration(420L)
+                .withEndAction {
+                    dropView.animate()
+                        .alpha(0f)
+                        .scaleX(0.72f)
+                        .scaleY(0.72f)
+                        .setDuration(120L)
+                        .withEndAction {
+                            dropView.alpha = 0f
+                            dropView.translationX = 0f
+                            dropView.translationY = 0f
+                            dropView.scaleX = 1f
+                            dropView.scaleY = 1f
+                            dropView.rotation = 0f
+                        }
+                        .start()
+                }
+                .start()
+        }
+    }
+
+    private fun resetFloatingWalletPulse() {
+        floatingWalletCard.animate().cancel()
+        floatingWalletCoinContainer.animate().cancel()
+        floatingWalletCoinView.animate().cancel()
+        floatingWalletSparklesView.animate().cancel()
+        floatingWalletDeltaView.animate().cancel()
+        floatingWalletDropViews.forEach { dropView ->
+            dropView.animate().cancel()
+            dropView.alpha = 0f
+            dropView.translationX = 0f
+            dropView.translationY = 0f
+            dropView.scaleX = 1f
+            dropView.scaleY = 1f
+            dropView.rotation = 0f
+        }
+        floatingWalletCard.scaleX = 1f
+        floatingWalletCard.scaleY = 1f
+        floatingWalletCoinContainer.scaleX = 1f
+        floatingWalletCoinContainer.scaleY = 1f
+        floatingWalletCoinView.rotation = 0f
+        floatingWalletSparklesView.alpha = 0f
+        floatingWalletSparklesView.translationY = 8f
+        floatingWalletDeltaView.visibility = View.GONE
+        floatingWalletDeltaView.alpha = 1f
+        floatingWalletDeltaView.translationY = 12f
     }
 
 
@@ -1181,6 +1414,9 @@ class FeedFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         updateOfflineBanner(!isOnline())
+        currentWalletBalance = TokenManager.getCoins(requireContext())
+        renderFloatingWalletBalance(currentWalletBalance)
+        WalletBalanceManager.refreshBalance(requireContext())
     }
 
     override fun onPause() {
@@ -1190,6 +1426,8 @@ class FeedFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        walletBalanceAnimator?.cancel()
+        resetFloatingWalletPulse()
         feedAdapter.pauseAllVideos()
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
@@ -1198,6 +1436,27 @@ class FeedFragment : Fragment() {
                 runCatching { manager.unregisterNetworkCallback(callback) }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!walletReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                requireContext(),
+                walletBalanceReceiver,
+                IntentFilter(WalletBalanceManager.ACTION_BALANCE_UPDATED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            walletReceiverRegistered = true
+        }
+    }
+
+    override fun onStop() {
+        if (walletReceiverRegistered) {
+            requireContext().unregisterReceiver(walletBalanceReceiver)
+            walletReceiverRegistered = false
+        }
+        super.onStop()
     }
 
     private fun renderPosts() {

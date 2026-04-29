@@ -6,6 +6,9 @@ const STATIC_IMAGE_ALIASES = {
   "coin.png": "ykc.png",
   "ykc-coin.png": "ykc.png",
   "verification-badge.png": "verified.png",
+  "badge_verified.png": "verified.png",
+  "badge_admin.png": "admin.png",
+  "badge_moderator.png": "moderator.png",
 };
 
 function normalizeStaticImageName(name) {

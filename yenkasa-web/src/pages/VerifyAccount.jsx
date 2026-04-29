@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserProfile, updateUserProfile } from "../api/profile";
 import { confirmEmailVerification, requestEmailVerification } from "../api/verification";
+import { handleStaticImageError, staticImage } from "../utils/images";
 import { getStoredUser, updateStoredUser } from "../utils/storage";
 import "../styles/verify-account.css";
 
@@ -140,7 +141,12 @@ export default function VerifyAccount() {
     return (
       <main className="verify-account-page verify-account-page--success">
         <section className="verify-success-card">
-          <img className="verify-success-logo" src="/images/logo.png" alt="Yenkasa" />
+          <img
+            className="verify-success-logo"
+            src={staticImage("logo.png")}
+            alt="Yenkasa"
+            onError={(event) => handleStaticImageError(event, "logo.png")}
+          />
           <div className="verify-confetti" aria-hidden="true">
             <span />
             <span />
@@ -154,7 +160,11 @@ export default function VerifyAccount() {
           <p>Your account has been verified and is now secure.</p>
 
           <div className="verify-success-info">
-            <img src="/images/verified.png" alt="" />
+            <img
+              src={staticImage("verified.png")}
+              alt=""
+              onError={(event) => handleStaticImageError(event, "verified.png")}
+            />
             <div>
               <strong>Account Verified</strong>
               <span>You can now access all features and enjoy a seamless experience.</span>
@@ -185,7 +195,11 @@ export default function VerifyAccount() {
         </button>
 
         <header className="verify-account-header">
-          <img src="/images/logo.png" alt="Yenkasa" />
+          <img
+            src={staticImage("logo.png")}
+            alt="Yenkasa"
+            onError={(event) => handleStaticImageError(event, "logo.png")}
+          />
           <h1>Verification</h1>
           <p>Secure your account in a few simple steps</p>
         </header>
@@ -290,7 +304,11 @@ export default function VerifyAccount() {
         </form>
 
         <footer className="verify-secure-card">
-          <img src="/images/verified.png" alt="" />
+          <img
+            src={staticImage("verified.png")}
+            alt=""
+            onError={(event) => handleStaticImageError(event, "verified.png")}
+          />
           <div>
             <strong>Your information is encrypted and secure</strong>
             <span>We take your security seriously</span>

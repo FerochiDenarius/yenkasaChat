@@ -2,7 +2,7 @@ package xyz.yenkasa.app.model
 
 data class UserPrivacyModel(
     val userId: String,
-    val privacyLevel: String, // "everyone", "requires_approval", "nobody"
+    val privacyLevel: String, // "everyone", "community_members", "requires_approval", "nobody"
     val blockedUsers: List<String>,
     val hiddenFromPostsUsers: List<String>,
     val hiddenFromCommunities: List<String>
@@ -28,5 +28,4 @@ data class PrivacyResponse(
     val hiddenFromPostsUsers: List<String>,
     val hiddenFromCommunities: List<String>
 )
-
 

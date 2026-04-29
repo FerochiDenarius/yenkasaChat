@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const UserPrivacy = require("../models/userPrivacy.model");
+const User = require("../models/user.model");
 
-const VALID_PRIVACY_LEVELS = new Set(["everyone", "requires_approval", "nobody"]);
+const VALID_PRIVACY_LEVELS = new Set(["everyone", "community_members", "requires_approval", "nobody"]);
 
 function normalizeId(value) {
   if (!value) return "";
@@ -57,6 +58,28 @@ async function getBlockedRelationshipUserIds(viewerId) {
   return [...new Set([...iBlocked, ...blockedMe])];
 }
 
+function communityIdsForUser(user) {
+  if (!user) return [];
+
+  const ids = [];
+  if (user.community) ids.push(normalizeId(user.community));
+  if (Array.isArray(user.joinedCommunities)) {
+    user.joinedCommunities.forEach(id => ids.push(normalizeId(id)));
+  }
+
+  return [...new Set(ids.filter(Boolean))];
+}
+
+async function shareCommunity(userA, userB) {
+  const [a, b] = await Promise.all([
+    User.findById(userA).select("community joinedCommunities").lean(),
+    User.findById(userB).select("community joinedCommunities").lean()
+  ]);
+
+  const aCommunities = new Set(communityIdsForUser(a));
+  return communityIdsForUser(b).some(id => aCommunities.has(id));
+}
+
 async function canMessageUser(senderId, receiverId) {
   const sender = normalizeId(senderId);
   const receiver = normalizeId(receiverId);
@@ -81,6 +104,17 @@ async function canMessageUser(senderId, receiverId) {
 
   if (privacyLevel === "nobody") {
     return { allowed: false, reason: "not_accepting", message: "This user is not accepting messages" };
+  }
+
+  if (privacyLevel === "community_members" && !hasId(receiverPrivacy?.approvedMessageUsers, sender)) {
+    const isCommunityMember = await shareCommunity(sender, receiver);
+    if (!isCommunityMember) {
+      return {
+        allowed: false,
+        reason: "not_community_member",
+        message: "Only people who share a community with this user can message them"
+      };
+    }
   }
 
   if (privacyLevel === "requires_approval" && !hasId(receiverPrivacy?.approvedMessageUsers, sender)) {

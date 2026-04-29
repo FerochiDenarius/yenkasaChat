@@ -260,6 +260,8 @@ class ChatMessageHandler(
                 "This person requires approval before you can message them."
             code == 423 && reason == "not_accepting" ->
                 "This person is not accepting messages right now."
+            code == 423 && reason == "not_community_member" ->
+                "Only people who share a community with this person can message them."
             code == 403 && reason == "blocked" ->
                 "You cannot message this person because of privacy settings."
             serverMessage.isNotBlank() -> serverMessage

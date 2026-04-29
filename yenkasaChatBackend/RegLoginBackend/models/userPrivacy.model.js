@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const UserPrivacySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", unique: true },
 
-    // everyone | requires_approval | nobody
+    // everyone | community_members | requires_approval | nobody
     privacyLevel: { type: String, default: "everyone" },
 
     // USERS YOU HAVE BLOCKED

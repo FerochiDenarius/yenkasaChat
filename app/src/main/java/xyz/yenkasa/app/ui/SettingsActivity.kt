@@ -218,6 +218,7 @@ class SettingsActivity : AppCompatActivity() {
 
                 when (response.body()!!.privacyLevel) {
                     "everyone" -> privacySummaryText.text = "Everyone can message you"
+                    "community_members" -> privacySummaryText.text = "Community members can message you"
                     "requires_approval" -> privacySummaryText.text = "Message requests required"
                     "nobody" -> privacySummaryText.text = "No one can message you"
                 }

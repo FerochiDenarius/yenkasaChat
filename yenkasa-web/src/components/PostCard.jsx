@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toggleLike } from "../api/feed";
 import { buildMediaUrl, formatRelativeTime, getAuthorName } from "../utils/format";
+import { handleDynamicImageError } from "../utils/images";
 
 export default function PostCard({ post, onOptimisticLike }) {
   const [busy, setBusy] = useState(false);
@@ -44,9 +45,7 @@ export default function PostCard({ post, onOptimisticLike }) {
           <img
             src={imageUrl}
             alt={contentText || "Post media"}
-            onError={(event) => {
-              event.currentTarget.src = "/images/default.png";
-            }}
+            onError={handleDynamicImageError}
           />
         </div>
       ) : null}

@@ -1,4 +1,5 @@
 import { buildMediaUrl, buildVideoUrl, formatRelativeTime } from "../utils/format";
+import { handleDynamicImageError } from "../utils/images";
 
 export default function AdCard({ ad, compact = false }) {
   const mediaUrl = buildMediaUrl(ad);
@@ -22,9 +23,7 @@ export default function AdCard({ ad, compact = false }) {
           <img
             src={mediaUrl}
             alt={ad?.title || "Ad preview"}
-            onError={(event) => {
-              event.currentTarget.src = "/images/default.png";
-            }}
+            onError={handleDynamicImageError}
           />
           {!ad?.imageUrl && videoUrl ? <span className="tag ad-card__type-tag">Video</span> : null}
         </div>

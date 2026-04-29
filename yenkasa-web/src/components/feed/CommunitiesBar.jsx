@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
+import { handleDynamicImageError } from "../../utils/images";
 
 const fallbackCommunities = [
   { _id: "all", name: "Music Lovers Ghana", country: "Ghana" },
@@ -74,9 +75,7 @@ export default function CommunitiesBar({
                 <img
                   src={community.icon || community.coverImage}
                   alt={community.displayName || community.name || "Community"}
-                  onError={(event) => {
-                    event.currentTarget.src = "/images/default.png";
-                  }}
+                  onError={handleDynamicImageError}
                 />
               ) : (
                 <span>{initials(community.displayName || community.name)}</span>

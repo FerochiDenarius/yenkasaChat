@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getJoinedCommunities, getPrimaryCommunity } from "../api/communities";
 import { createPost } from "../api/posts";
+import { handleDynamicImageError, staticImage } from "../utils/images";
 import { getStoredUser } from "../utils/storage";
 import "../styles/create-post.css";
 
@@ -87,7 +88,7 @@ export default function CreatePost() {
     user?.profileImage ||
     user?.profilePicUrl ||
     user?.avatar ||
-    "/images/default.png";
+    staticImage("default.png");
   const username = user?.username || "Yenkasa";
 
   async function handleSubmit(event) {
@@ -154,9 +155,7 @@ export default function CreatePost() {
               <img
                 src={avatar}
                 alt={username}
-                onError={(event) => {
-                  event.currentTarget.src = "/images/default.png";
-                }}
+                onError={handleDynamicImageError}
               />
               <div>
                 <strong>{username}</strong>
@@ -214,9 +213,7 @@ export default function CreatePost() {
                     src={item.url}
                     alt={item.name}
                     key={item.url}
-                    onError={(event) => {
-                      event.currentTarget.src = "/images/default.png";
-                    }}
+                    onError={handleDynamicImageError}
                   />
                 ) : (
                   <div className="composer-media-file" key={item.url}>

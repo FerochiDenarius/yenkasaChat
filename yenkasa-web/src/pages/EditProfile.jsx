@@ -6,6 +6,11 @@ import {
   updateUserProfile,
   uploadProfilePicture,
 } from "../api/profile";
+import {
+  handleDynamicImageError,
+  handleStaticImageError,
+  staticImage,
+} from "../utils/images";
 import { getStoredUser, updateStoredUser } from "../utils/storage";
 import "../styles/edit-profile.css";
 
@@ -24,7 +29,10 @@ export default function EditProfile() {
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const [form, setForm] = useState(() => normalizeUser(storedUser));
   const [profileImage, setProfileImage] = useState(
-    storedUser?.profileImage || storedUser?.profilePicUrl || storedUser?.avatar || "/images/default.png"
+    storedUser?.profileImage ||
+      storedUser?.profilePicUrl ||
+      storedUser?.avatar ||
+      staticImage("default.png")
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,7 +53,7 @@ export default function EditProfile() {
         const user = await getUserProfile();
         if (!active) return;
         setForm(normalizeUser(user));
-        setProfileImage(user?.profileImage || "/images/default.png");
+        setProfileImage(user?.profileImage || staticImage("default.png"));
         updateStoredUser(user);
       } catch (requestError) {
         if (!active) return;
@@ -178,9 +186,7 @@ export default function EditProfile() {
               src={profileImage}
               alt={form.username || "Profile"}
               className="edit-profile-avatar"
-              onError={(event) => {
-                event.currentTarget.src = "/images/default.png";
-              }}
+              onError={handleDynamicImageError}
             />
             <button
               type="button"
@@ -201,7 +207,11 @@ export default function EditProfile() {
           </div>
           <div className="edit-profile-name-row">
             <strong>{form.username || "Username"}</strong>
-            <img src="/images/verified.png" alt="Verified" />
+            <img
+              src={staticImage("verified.png")}
+              alt="Verified"
+              onError={(event) => handleStaticImageError(event, "verified.png")}
+            />
           </div>
           <span>{form.phoneNumber || "No phone number"}</span>
         </section>

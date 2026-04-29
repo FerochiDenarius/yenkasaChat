@@ -156,7 +156,63 @@
         <item name="android:textSize">12sp</item>
         <item name="android:textStyle">bold</item>
     </style>
+    <style name="PrivacyOptionRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">82dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingEnd">6dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:background">?android:selectableItemBackground</item>
+    </style>
 
+    <style name="PrivacySelectionIndicator">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:layout_marginStart">2dp</item>
+        <item name="android:layout_marginEnd">14dp</item>
+        <item name="android:background">@drawable/bg_privacy_indicator_unselected</item>
+    </style>
 
+    <style name="PrivacyOptionIcon">
+        <item name="android:layout_width">46dp</item>
+        <item name="android:layout_height">46dp</item>
+        <item name="android:background">@drawable/bg_privacy_option_icon</item>
+        <item name="android:padding">12dp</item>
+    </style>
+
+    <style name="PrivacyOptionTextColumn">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="PrivacyOptionTitle" parent="Widget.AppCompat.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/menu_primary_text</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="PrivacyOptionSubtitle" parent="Widget.AppCompat.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:textColor">@color/menu_secondary_text</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="PrivacyOptionDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginStart">58dp</item>
+        <item name="android:background">@color/menu_surface_stroke</item>
+    </style>
 
 </resources>

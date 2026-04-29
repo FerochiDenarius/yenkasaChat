@@ -4,6 +4,11 @@ import api from "../api/client";
 import BottomNav from "../components/feed/BottomNav";
 import { clearAuth, getStoredUser } from "../utils/storage";
 import { readableRank } from "../utils/format";
+import {
+  handleDynamicImageError,
+  handleStaticImageError,
+  staticImage,
+} from "../utils/images";
 import "../styles/account.css";
 
 export default function Profile() {
@@ -81,7 +86,7 @@ export default function Profile() {
     user?.profileImage ||
     user?.profilePicUrl ||
     user?.avatar ||
-    "/images/default.png";
+    staticImage("default.png");
   const followersCount =
     Number(followStats?.followersCount ?? user?.followersCount ?? user?.followers?.length ?? 0);
   const followingCount =
@@ -126,9 +131,7 @@ export default function Profile() {
                 className="account-hero__avatar"
                 src={profileImage}
                 alt={username}
-                onError={(event) => {
-                  event.currentTarget.src = "/images/default.png";
-                }}
+                onError={handleDynamicImageError}
               />
               <button
                 type="button"
@@ -144,7 +147,12 @@ export default function Profile() {
               <div className="account-hero__name-row">
                 <h1>{username}</h1>
                 {(user?.verified || roleName !== "unverified") && (
-                  <img className="account-hero__verified" src="/images/verified.png" alt="Verified" />
+                  <img
+                    className="account-hero__verified"
+                    src={staticImage("verified.png")}
+                    alt="Verified"
+                    onError={(event) => handleStaticImageError(event, "verified.png")}
+                  />
                 )}
               </div>
               <p>{handleTag}</p>

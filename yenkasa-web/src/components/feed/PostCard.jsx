@@ -7,6 +7,7 @@ import {
   buildVideoUrl,
   formatRelativeTime,
 } from "../../utils/format";
+import { handleDynamicImageError, handleStaticImageError, staticImage } from "../../utils/images";
 
 export default function PostCard({ post, onUpdate, detailMode = false }) {
   const navigate = useNavigate();
@@ -210,7 +211,12 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
             <div className="feed-post-card__author-line">
               <strong>{username}</strong>
               {post?.userId?.verified || post?.userId?.roleName === "verified" ? (
-                <img className="feed-verified-badge" src="/images/verified.png" alt="Verified" />
+                <img
+                  className="feed-verified-badge"
+                  src={staticImage("verified.png")}
+                  alt="Verified"
+                  onError={(event) => handleStaticImageError(event, "verified.png")}
+                />
               ) : null}
             </div>
             <p>
@@ -429,7 +435,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
 }
 
 function useDefaultImage(event) {
-  event.currentTarget.src = "/images/default.png";
+  handleDynamicImageError(event);
 }
 
 function readViewedPostIds(key) {

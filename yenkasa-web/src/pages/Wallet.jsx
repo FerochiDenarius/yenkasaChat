@@ -8,6 +8,7 @@ import {
 } from "../api/wallet";
 import BottomNav from "../components/feed/BottomNav";
 import { formatNumber, formatRelativeTime } from "../utils/format";
+import { handleStaticImageError, staticImage } from "../utils/images";
 import "../styles/wallet.css";
 
 export default function Wallet() {
@@ -119,7 +120,11 @@ export default function Wallet() {
 
         <section className="wallet-hero">
           <div className="wallet-coin-mark" aria-hidden="true">
-            <img src="/images/logo.png" alt="" />
+            <img
+              src={staticImage("logo.png")}
+              alt=""
+              onError={(event) => handleStaticImageError(event, "logo.png")}
+            />
           </div>
           <div>
             <span className="wallet-hero__label">Current Balance <b>◎</b></span>
@@ -260,7 +265,11 @@ function TransactionRow({ transaction, walletId }) {
   return (
     <article className="wallet-transaction">
       <div className="wallet-transaction__coin">
-        <img src="/images/logo.png" alt="" />
+        <img
+          src={staticImage("logo.png")}
+          alt=""
+          onError={(event) => handleStaticImageError(event, "logo.png")}
+        />
         <span className={`wallet-transaction__icon${incoming ? " is-in" : " is-out"}`}>
           {iconForTransaction(transaction.type, incoming)}
         </span>

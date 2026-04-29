@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { handleStaticImageError, staticImage } from "../../utils/images";
 import { clearAuth, getStoredUser } from "../../utils/storage";
 import "../../styles/layout.css";
 
@@ -49,7 +50,11 @@ export default function SideDrawer({ open, onClose }) {
     <aside className={`side-drawer${open ? " side-drawer--open" : ""}`} aria-hidden={!open}>
       <header className="side-drawer__header">
         <div className="side-drawer__brand">
-          <img src="/images/logo.png" alt="Yenkasa" />
+          <img
+            src={staticImage("logo.png")}
+            alt="Yenkasa"
+            onError={(event) => handleStaticImageError(event, "logo.png")}
+          />
           <div>
             <strong>Yenkasa</strong>
             <span>Secure. Connect. Earn.</span>

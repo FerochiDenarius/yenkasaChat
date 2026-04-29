@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { getVerificationDashboard, getVerificationProgress } from "../api/verification";
 import { formatNumber, readableRank } from "../utils/format";
 import { getStoredUser } from "../utils/storage";
+import {
+  handleDynamicImageError,
+  handleStaticImageError,
+  staticImage,
+} from "../utils/images";
 import "../styles/verification.css";
 
 const RANK_TABS = ["verified", "rising_star", "legend"];
@@ -168,12 +173,14 @@ export default function Verification() {
                     <img
                       src={avatarUrl}
                       alt={userName}
-                      onError={(event) => {
-                        event.currentTarget.src = "/images/default.png";
-                      }}
+                      onError={handleDynamicImageError}
                     />
                   ) : (
-                    <img src="/images/ykc.png" alt="Yenkasa" />
+                    <img
+                      src={staticImage("ykc.png")}
+                      alt="Yenkasa"
+                      onError={(event) => handleStaticImageError(event, "ykc.png")}
+                    />
                   )}
                 </div>
 
@@ -367,7 +374,11 @@ function RankShield({ rank }) {
     <div className={`verification-shield verification-shield--${rankClass}`}>
       <div className="verification-shield__glow" />
       <div className="verification-shield__body">
-        <img src="/images/ykc.png" alt="Yenkasa badge" />
+        <img
+          src={staticImage("ykc.png")}
+          alt="Yenkasa badge"
+          onError={(event) => handleStaticImageError(event, "ykc.png")}
+        />
         <span>{label}</span>
       </div>
     </div>

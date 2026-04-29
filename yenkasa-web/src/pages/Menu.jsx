@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MenuItem from "../components/menu/MenuItem";
+import { handleStaticImageError, staticImage } from "../utils/images";
 import { clearAuth, getStoredUser } from "../utils/storage";
 import "../styles/menu.css";
 
@@ -23,7 +24,12 @@ export default function Menu() {
     <main className="menu-page">
       <div className="menu-page__shell">
         <header className="menu-header">
-          <img src="/images/logo.png" alt="Yenkasa" className="menu-header__logo" />
+          <img
+            src={staticImage("logo.png")}
+            alt="Yenkasa"
+            className="menu-header__logo"
+            onError={(event) => handleStaticImageError(event, "logo.png")}
+          />
           <div>
             <h1>Yenkasa</h1>
             <p>Secure. Connect. Earn.</p>

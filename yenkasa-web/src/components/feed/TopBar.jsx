@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { handleStaticImageError, staticImage } from "../../utils/images";
 
 export default function TopBar({ onOpenMenu }) {
   const navigate = useNavigate();
@@ -13,9 +14,10 @@ export default function TopBar({ onOpenMenu }) {
 
       <div className="feed-brand">
         <img
-          src="/images/logo.png"
+          src={staticImage("logo.png")}
           alt="Yenkasa"
           className="feed-brand__logo"
+          onError={(event) => handleStaticImageError(event, "logo.png")}
         />
         <span>Yenkasa</span>
       </div>

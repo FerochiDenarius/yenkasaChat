@@ -1,58 +1,282 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="18dp"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/yenkasa_amber">
+    android:background="@color/menu_background"
+    android:fillViewport="true">
 
-    <TextView
-        android:text="Message Privacy"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="@color/yenkasa_black"
-        android:layout_marginBottom="16dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-    <RadioGroup
-        android:id="@+id/privacyOptions"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="22dp"
+        android:paddingTop="26dp"
+        android:paddingEnd="22dp"
+        android:paddingBottom="28dp">
 
-        <RadioButton
-            android:id="@+id/rbEveryone"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:background="@drawable/bg_privacy_header_icon"
+                android:contentDescription="Message privacy"
+                android:padding="13dp"
+                android:src="@drawable/ic_privacy"
+                app:tint="@color/menu_accent" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Message Privacy"
+                    android:textColor="@color/menu_primary_text"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Control who can send you messages."
+                    android:textColor="@color/menu_secondary_text"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/privacyOptionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_privacy_panel"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:id="@+id/optionEveryone"
+                style="@style/PrivacyOptionRow">
+
+                <View
+                    android:id="@+id/indicatorEveryone"
+                    style="@style/PrivacySelectionIndicator" />
+
+                <ImageView
+                    style="@style/PrivacyOptionIcon"
+                    android:src="@drawable/ic_group"
+                    app:tint="@color/menu_accent" />
+
+                <LinearLayout
+                    style="@style/PrivacyOptionTextColumn">
+
+                    <TextView
+                        style="@style/PrivacyOptionTitle"
+                        android:text="Everyone" />
+
+                    <TextView
+                        style="@style/PrivacyOptionSubtitle"
+                        android:text="Anyone can message you" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <View style="@style/PrivacyOptionDivider" />
+
+            <LinearLayout
+                android:id="@+id/optionCommunity"
+                style="@style/PrivacyOptionRow">
+
+                <View
+                    android:id="@+id/indicatorCommunity"
+                    style="@style/PrivacySelectionIndicator" />
+
+                <ImageView
+                    style="@style/PrivacyOptionIcon"
+                    android:src="@drawable/ic_community_placeholder"
+                    app:tint="@color/menu_accent" />
+
+                <LinearLayout
+                    style="@style/PrivacyOptionTextColumn">
+
+                    <TextView
+                        style="@style/PrivacyOptionTitle"
+                        android:text="Community Members" />
+
+                    <TextView
+                        style="@style/PrivacyOptionSubtitle"
+                        android:text="People in your communities can message you" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <View style="@style/PrivacyOptionDivider" />
+
+            <LinearLayout
+                android:id="@+id/optionApproval"
+                style="@style/PrivacyOptionRow">
+
+                <View
+                    android:id="@+id/indicatorApproval"
+                    style="@style/PrivacySelectionIndicator" />
+
+                <ImageView
+                    style="@style/PrivacyOptionIcon"
+                    android:src="@drawable/ic_shield"
+                    app:tint="@color/menu_accent" />
+
+                <LinearLayout
+                    style="@style/PrivacyOptionTextColumn">
+
+                    <TextView
+                        style="@style/PrivacyOptionTitle"
+                        android:text="Requires Approval" />
+
+                    <TextView
+                        style="@style/PrivacyOptionSubtitle"
+                        android:text="You approve who can message you" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_privacy_recommended_badge"
+                    android:paddingStart="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="5dp"
+                    android:text="Recommended"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <View style="@style/PrivacyOptionDivider" />
+
+            <LinearLayout
+                android:id="@+id/optionNobody"
+                style="@style/PrivacyOptionRow">
+
+                <View
+                    android:id="@+id/indicatorNobody"
+                    style="@style/PrivacySelectionIndicator" />
+
+                <ImageView
+                    style="@style/PrivacyOptionIcon"
+                    android:src="@drawable/ic_blocked"
+                    app:tint="@color/menu_accent" />
+
+                <LinearLayout
+                    style="@style/PrivacyOptionTextColumn">
+
+                    <TextView
+                        style="@style/PrivacyOptionTitle"
+                        android:text="Nobody" />
+
+                    <TextView
+                        style="@style/PrivacyOptionSubtitle"
+                        android:text="No one can message you" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="6dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="@color/menu_secondary_text" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="This won’t affect your existing conversations."
+                    android:textColor="@color/menu_secondary_text"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSavePrivacy"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_privacy_save_button"
+            android:text="Save Changes"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="34dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/txtMessageRequestsHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Message Requests (0)"
+                android:textColor="@color/menu_primary_text"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Everyone"
-            android:textSize="15sp"
-            android:textColor="@color/yenkasa_black" />
+            android:layout_marginTop="6dp"
+            android:text="People who want to message you."
+            android:textColor="@color/menu_secondary_text"
+            android:textSize="14sp" />
 
-        <RadioButton
-            android:id="@+id/rbApproval"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/messageRequestsList"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Requires Approval"
-            android:textSize="15sp"
-            android:textColor="@color/yenkasa_black" />
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_privacy_panel"
+            android:elevation="1dp"
+            android:orientation="vertical" />
 
-        <RadioButton
-            android:id="@+id/rbNobody"
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/txtMessageRequestsEmpty"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Nobody"
-            android:textSize="15sp"
-            android:textColor="@color/yenkasa_black" />
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:text="No message requests."
+            android:textColor="@color/menu_secondary_text"
+            android:textSize="14sp"
+            android:visibility="gone" />
 
-    </RadioGroup>
-
-    <Button
-        android:id="@+id/btnSavePrivacy"
-        android:text="Save"
-        android:layout_marginTop="20dp"
-        android:backgroundTint="@color/yenkasa_black"
-        android:textColor="@color/yenkasa_amber"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-</LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="Only you can see your message requests."
+            android:textColor="@color/menu_secondary_text"
+            android:textSize="12sp" />
+    </LinearLayout>
+</ScrollView>

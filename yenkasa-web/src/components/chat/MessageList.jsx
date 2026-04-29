@@ -9,6 +9,8 @@ export default function MessageList({
   onSwipeEnd,
   onSwipeCancel,
   onReply,
+  onEdit,
+  onDelete,
 }) {
   return groupedMessages.map((entry) => (
     <MessageItem
@@ -21,6 +23,8 @@ export default function MessageList({
       onSwipeEnd={onSwipeEnd}
       onSwipeCancel={onSwipeCancel}
       onReply={onReply}
+      onEdit={onEdit}
+      onDelete={onDelete}
     />
   ));
 }

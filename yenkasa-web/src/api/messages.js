@@ -25,3 +25,13 @@ export async function markRoomAsRead(roomId) {
   const { data } = await api.post(`/messages/${roomId}/mark-as-read`);
   return data;
 }
+
+export async function editRoomMessage(messageId, text) {
+  const { data } = await api.patch(`/messages/${messageId}`, { text });
+  return data;
+}
+
+export async function deleteRoomMessage(messageId) {
+  await api.delete(`/messages/${messageId}`);
+  return true;
+}

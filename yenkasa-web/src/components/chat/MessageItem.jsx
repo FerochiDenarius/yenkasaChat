@@ -1,3 +1,5 @@
+import { useState } from "react";
+import ChatMessageMenu from "./ChatMessageMenu";
 import {
   extractFileLabel,
   formatClock,
@@ -14,7 +16,11 @@ export default function MessageItem({
   onSwipeEnd,
   onSwipeCancel,
   onReply,
+  onEdit,
+  onDelete,
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   if (entry.type === "divider") {
     return (
       <div className="chatroom-date-chip">
@@ -24,9 +30,19 @@ export default function MessageItem({
   }
 
   const message = entry.message;
+  const messageId = message?._id || message?.id || "";
   const ownMessage = isOwnMessage(message, currentUser);
   const bubbleClass = ownMessage ? "chatroom-message chatroom-message--own" : "chatroom-message";
-  const swipeDelta = swipeState?.id === message?._id ? swipeState.deltaX : 0;
+  const swipeDelta = swipeState?.id === messageId ? swipeState.deltaX : 0;
+  const canEdit =
+    ownMessage &&
+    Boolean(message?.text) &&
+    !message?.imageUrl &&
+    !message?.videoUrl &&
+    !message?.audioUrl &&
+    !message?.fileUrl &&
+    !message?.location &&
+    !message?.contactInfo;
 
   return (
     <article
@@ -40,6 +56,33 @@ export default function MessageItem({
       {Math.abs(swipeDelta) > 16 ? (
         <span className="chatroom-message__reply-cue">↩</span>
       ) : null}
+      <div className="chatroom-message__menu-anchor">
+        <button
+          type="button"
+          className="chatroom-message__menu-button"
+          aria-label="Message actions"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span className="icon-dots-vertical" />
+        </button>
+        <ChatMessageMenu
+          open={menuOpen}
+          isOwnMessage={ownMessage}
+          canEdit={canEdit}
+          onReply={() => {
+            setMenuOpen(false);
+            onReply(message);
+          }}
+          onEdit={() => {
+            setMenuOpen(false);
+            onEdit(message);
+          }}
+          onDelete={() => {
+            setMenuOpen(false);
+            onDelete(message);
+          }}
+        />
+      </div>
       <div className="chatroom-message__bubble">
         {message?.repliedTo ? (
           <div className="chatroom-message__reply">

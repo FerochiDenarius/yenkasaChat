@@ -18,7 +18,11 @@ object WalletBalanceManager {
 
     fun applyKnownBalance(context: Context, balance: Int, walletId: String? = null) {
         val appContext = context.applicationContext
+        val previousBalance = TokenManager.getCoins(appContext)
         TokenManager.saveCoins(appContext, balance)
+
+        if (previousBalance == balance) return
+
         appContext.sendBroadcast(
             Intent(ACTION_BALANCE_UPDATED)
                 .setPackage(appContext.packageName)
@@ -54,8 +58,14 @@ object WalletBalanceManager {
     }
 
     fun refreshAfterReward(context: Context, rewardAmount: Int?) {
-        if ((rewardAmount ?: 0) > 0) {
-            refreshBalance(context)
-        }
+        val amount = rewardAmount ?: 0
+        if (amount <= 0) return
+
+        val appContext = context.applicationContext
+        val optimisticBalance = TokenManager.getCoins(appContext) + amount
+        applyKnownBalance(appContext, optimisticBalance)
+
+        // Reconcile with the server in case another transaction changed the balance.
+        refreshBalance(appContext)
     }
 }

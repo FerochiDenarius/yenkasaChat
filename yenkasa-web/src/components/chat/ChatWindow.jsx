@@ -23,6 +23,8 @@ export default function ChatWindow({
   onSwipeEnd,
   onSwipeCancel,
   onReply,
+  onEditMessage,
+  onDeleteMessage,
   draft,
   setDraft,
   onSend,
@@ -35,6 +37,8 @@ export default function ChatWindow({
   onClearSelectedMedia,
   replyingTo,
   onClearReply,
+  editingMessageId,
+  onCancelEdit,
   onPickMedia,
   onPickCustomBackground,
   onSelectBackground,
@@ -175,6 +179,8 @@ export default function ChatWindow({
             onSwipeEnd={onSwipeEnd}
             onSwipeCancel={onSwipeCancel}
             onReply={onReply}
+            onEdit={onEditMessage}
+            onDelete={onDeleteMessage}
           />
         ) : null}
         <div ref={threadEndRef} />
@@ -196,6 +202,8 @@ export default function ChatWindow({
         currentUserId={currentUserId}
         participant={participant}
         onClearReply={onClearReply}
+        editingMessageId={editingMessageId}
+        onCancelEdit={onCancelEdit}
         onPickMedia={onPickMedia}
         textareaRef={textareaRef}
       />

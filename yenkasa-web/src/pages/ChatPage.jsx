@@ -67,9 +67,11 @@ export default function ChatPage() {
 
   function handleSwipeStart(event, message) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    const messageId = message?._id || message?.id;
+    if (!messageId) return;
     chat.setChatNotice("");
     chat.setSwipeState?.({
-      id: message?._id,
+      id: messageId,
       startX: event.clientX,
       startY: event.clientY,
       deltaX: 0,
@@ -77,7 +79,8 @@ export default function ChatPage() {
   }
 
   function handleSwipeMove(event, message) {
-    if (!chat.swipeState || chat.swipeState.id !== message?._id) return;
+    const messageId = message?._id || message?.id;
+    if (!chat.swipeState || chat.swipeState.id !== messageId) return;
     const deltaX = event.clientX - chat.swipeState.startX;
     const deltaY = event.clientY - chat.swipeState.startY;
     if (Math.abs(deltaY) > 40 && Math.abs(deltaY) > Math.abs(deltaX)) {
@@ -92,7 +95,8 @@ export default function ChatPage() {
   }
 
   function handleSwipeEnd(message) {
-    if (!chat.swipeState || chat.swipeState.id !== message?._id) return;
+    const messageId = message?._id || message?.id;
+    if (!chat.swipeState || chat.swipeState.id !== messageId) return;
     if (Math.abs(chat.swipeState.deltaX) > 52) {
       chat.showReply(message);
     }
@@ -120,6 +124,8 @@ export default function ChatPage() {
             onSwipeEnd={handleSwipeEnd}
             onSwipeCancel={() => chat.setSwipeState?.(null)}
             onReply={chat.showReply}
+            onEditMessage={chat.startEditingMessage}
+            onDeleteMessage={chat.removeMessage}
             draft={chat.draft}
             setDraft={chat.setDraft}
             onSend={chat.sendMessage}
@@ -132,6 +138,8 @@ export default function ChatPage() {
             onClearSelectedMedia={chat.clearSelectedMedia}
             replyingTo={chat.replyingTo}
             onClearReply={chat.clearReplyingTo}
+            editingMessageId={chat.editingMessageId}
+            onCancelEdit={chat.cancelEditingMessage}
             onPickMedia={handlePickMedia}
             onPickCustomBackground={handlePickCustomBackground}
             onSelectBackground={chat.setBackgroundPreset}

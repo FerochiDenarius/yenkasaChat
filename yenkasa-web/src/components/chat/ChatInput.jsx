@@ -20,6 +20,8 @@ export default function ChatInput({
   currentUserId,
   participant,
   onClearReply,
+  editingMessageId,
+  onCancelEdit,
   onPickMedia,
   textareaRef,
 }) {
@@ -39,6 +41,18 @@ export default function ChatInput({
         participant={participant}
         onClear={onClearReply}
       />
+
+      {editingMessageId ? (
+        <div className="chatroom-edit-preview">
+          <span>
+            <strong>Editing message</strong>
+            <small>Update the text and send to save changes.</small>
+          </span>
+          <button type="button" onClick={onCancelEdit} aria-label="Cancel edit">
+            ×
+          </button>
+        </div>
+      ) : null}
 
       {selectedMedia ? (
         <div className="chatroom-media-preview">

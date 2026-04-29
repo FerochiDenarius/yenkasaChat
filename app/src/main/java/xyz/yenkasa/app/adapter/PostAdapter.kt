@@ -760,6 +760,10 @@ class PostAdapter(
                     response.body()?.let { body ->
                         if (body.success) {
                             applyViewCount(postId, maxOf(body.viewsCount, body.viewCount))
+                            WalletBalanceManager.refreshAfterReward(
+                                context,
+                                body.rewardAmount ?: body.rewardTransaction?.amount
+                            )
                         }
                     }
                 }
@@ -788,6 +792,10 @@ class PostAdapter(
                     response.body()?.let { body ->
                         if (body.success) {
                             applyViewCount(postId, maxOf(body.viewsCount, body.viewCount))
+                            WalletBalanceManager.refreshAfterReward(
+                                context,
+                                body.rewardAmount ?: body.rewardTransaction?.amount
+                            )
                         }
                     }
                 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { sendRoomMessage, uploadRoomMedia } from "../api/messages";
+import { deleteRoomMessage, editRoomMessage, sendRoomMessage, uploadRoomMedia } from "../api/messages";
 
 export default function useChatComposer({
   roomId,
@@ -27,6 +27,7 @@ export default function useChatComposer({
   );
   const [swipeState, setSwipeState] = useState(null);
   const [draft, setDraft] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState("");
 
   const canSend = Boolean(draft.trim() || selectedMedia);
   const threadStyle =
@@ -55,6 +56,30 @@ export default function useChatComposer({
     setChatNotice("");
 
     try {
+      if (editingMessageId) {
+        const updated = await editRoomMessage(editingMessageId, text);
+        setMessages((prev) =>
+          prev.map((message) =>
+            (message?._id || message?.id) === editingMessageId ? updated : message
+          )
+        );
+        setRooms((prev) =>
+          prev.map((room) =>
+            room._id === roomId && room?.lastMessage && (room.lastMessage?._id || room.lastMessage?.id) === editingMessageId
+              ? {
+                  ...room,
+                  lastMessage: updated,
+                  lastMessageTime:
+                    updated?.timestamp || updated?.createdAt || room.lastMessageTime,
+                }
+              : room
+          )
+        );
+        setDraft("");
+        setEditingMessageId("");
+        return true;
+      }
+
       const payload = { roomId };
       if (text) payload.text = text;
       if (replyingTo?._id) payload.repliedTo = replyingTo._id;
@@ -117,12 +142,62 @@ export default function useChatComposer({
   }
 
   function showReply(message) {
+    setEditingMessageId("");
     setReplyingTo(message);
     window.requestAnimationFrame(() => composerTextareaRef.current?.focus());
   }
 
   function clearReplyingTo() {
     setReplyingTo(null);
+  }
+
+  function startEditingMessage(message) {
+    const messageId = message?._id || message?.id;
+    if (!messageId || !message?.text || message?.imageUrl || message?.videoUrl || message?.audioUrl || message?.fileUrl) {
+      setComposerError("Only plain text messages can be edited.");
+      return;
+    }
+    setReplyingTo(null);
+    clearSelectedMedia();
+    setEditingMessageId(String(messageId));
+    setDraft(message.text || "");
+    window.requestAnimationFrame(() => composerTextareaRef.current?.focus());
+  }
+
+  async function removeMessage(message) {
+    const messageId = message?._id || message?.id;
+    if (!messageId) return false;
+    if (!window.confirm("Delete this message?")) return false;
+    setComposerError("");
+    setChatNotice("");
+    try {
+      await deleteRoomMessage(messageId);
+      setMessages((prev) => prev.filter((item) => (item?._id || item?.id) !== messageId));
+      setRooms((prev) =>
+        prev.map((room) =>
+          room._id === roomId && (room.lastMessage?._id || room.lastMessage?.id) === messageId
+            ? { ...room, lastMessage: null }
+            : room
+        )
+      );
+      if (editingMessageId === String(messageId)) {
+        setEditingMessageId("");
+        setDraft("");
+      }
+      return true;
+    } catch (requestError) {
+      setComposerError(
+        requestError?.response?.data?.message ||
+          requestError?.response?.data?.error ||
+          "Failed to delete message."
+      );
+      return false;
+    }
+  }
+
+  function cancelEditingMessage() {
+    setEditingMessageId("");
+    setDraft("");
   }
 
   async function toggleAudioRecording() {
@@ -195,6 +270,7 @@ export default function useChatComposer({
     replyingTo,
     selectedMedia,
     chatBackground,
+    editingMessageId,
     swipeState,
     setSwipeState,
     draft,
@@ -206,6 +282,9 @@ export default function useChatComposer({
     clearSelectedMedia,
     showReply,
     clearReplyingTo,
+    startEditingMessage,
+    removeMessage,
+    cancelEditingMessage,
     toggleAudioRecording,
     setBackgroundPreset,
     setCustomBackgroundFile,

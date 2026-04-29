@@ -178,6 +178,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:resize_mode="fit"
+                app:surface_type="texture_view"
                 app:use_controller="true" />
 
             <ImageView
@@ -347,6 +348,23 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:tint="@color/white" />
+
+            <ImageView
+                android:id="@+id/imageYenkasaWatermark"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="12dp"
+                android:alpha="0.32"
+                android:clickable="false"
+                android:contentDescription="@null"
+                android:elevation="6dp"
+                android:focusable="false"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_yenkasa_logo"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </FrameLayout>
 

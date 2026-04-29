@@ -1,13 +1,18 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -34,14 +39,27 @@ import xyz.yenkasa.app.model.ApiResponse
 class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var imageProfile: ImageView
+    private lateinit var headerUsernameView: TextView
     private lateinit var usernameView: TextView
+    private lateinit var iconVerified: ImageView
+    private lateinit var iconHeaderVerified: ImageView
+    private lateinit var rowLocation: LinearLayout
+    private lateinit var locationView: TextView
+    private lateinit var bioView: TextView
+    private lateinit var rowExternalLink: LinearLayout
+    private lateinit var externalLinkView: TextView
+    private lateinit var rowJoined: LinearLayout
+    private lateinit var joinedView: TextView
     private lateinit var followersCountView: TextView
     private lateinit var followingCountView: TextView
     private lateinit var postsCountView: TextView
     private lateinit var recyclerUserPosts: RecyclerView
+    private lateinit var loadingPostsLayout: LinearLayout
+    private lateinit var postsStateView: TextView
     private lateinit var btnFollow: Button
     private lateinit var btnMessage: Button
     private lateinit var btnBlock: Button
+    private lateinit var btnMore: ImageButton
 
     private lateinit var postAdapter: ProfilePostAdapter
     private val userPostsList = mutableListOf<Post>()
@@ -72,14 +90,31 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun bindViews() {
         imageProfile = findViewById(R.id.imageProfile)
+        headerUsernameView = findViewById(R.id.textHeaderUsername)
         usernameView = findViewById(R.id.textUsername)
+        iconVerified = findViewById(R.id.iconVerified)
+        iconHeaderVerified = findViewById(R.id.iconHeaderVerified)
+        rowLocation = findViewById(R.id.rowLocation)
+        locationView = findViewById(R.id.textLocation)
+        bioView = findViewById(R.id.textBio)
+        rowExternalLink = findViewById(R.id.rowExternalLink)
+        externalLinkView = findViewById(R.id.textExternalLink)
+        rowJoined = findViewById(R.id.rowJoined)
+        joinedView = findViewById(R.id.textJoined)
         followersCountView = findViewById(R.id.textFollowersCount)
         followingCountView = findViewById(R.id.textFollowingCount)
         postsCountView = findViewById(R.id.textPostsCount)
         recyclerUserPosts = findViewById(R.id.recyclerUserPosts)
+        loadingPostsLayout = findViewById(R.id.layoutLoadingPosts)
+        postsStateView = findViewById(R.id.textPostsState)
         btnFollow = findViewById(R.id.btnFollow)
         btnMessage = findViewById(R.id.btnMessage)
         btnBlock = findViewById(R.id.btnBlock)
+        btnMore = findViewById(R.id.btnProfileActionMore)
+
+        btnFollow.backgroundTintList = null
+        btnMessage.backgroundTintList = null
+        btnBlock.backgroundTintList = null
     }
 
     private fun setupRecyclerView() {
@@ -94,6 +129,13 @@ class UserProfileActivity : AppCompatActivity() {
             val intent = Intent(this, ProfileImagePreviewActivity::class.java)
             intent.putExtra("IMAGE_URL", imageProfile.tag as? String ?: "")
             startActivity(intent)
+        }
+        findViewById<View>(R.id.btnUserProfileBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnUserProfileMore).setOnClickListener {
+            Toast.makeText(this, "More options", Toast.LENGTH_SHORT).show()
+        }
+        btnMore.setOnClickListener {
+            Toast.makeText(this, "More options", Toast.LENGTH_SHORT).show()
         }
 
         btnFollow.setOnClickListener { toggleFollowUser() }
@@ -130,8 +172,29 @@ class UserProfileActivity : AppCompatActivity() {
 
         btnBlock.setOnClickListener { toggleBlockUser() }
 
+        findViewById<View>(R.id.layoutFollowersStat).setOnClickListener { openFollowList("followers") }
+        findViewById<View>(R.id.layoutFollowingStat).setOnClickListener { openFollowList("following") }
         followersCountView.setOnClickListener { openFollowList("followers") }
         followingCountView.setOnClickListener { openFollowList("following") }
+
+        findViewById<View>(R.id.navUserProfileHome).setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            })
+            finish()
+        }
+        findViewById<View>(R.id.navUserProfileSearch).setOnClickListener {
+            startActivity(Intent(this, CommunitiesActivity::class.java))
+        }
+        findViewById<View>(R.id.navUserProfileCreate).setOnClickListener {
+            startActivity(Intent(this, PostActivity::class.java))
+        }
+        findViewById<View>(R.id.navUserProfileWallet).setOnClickListener {
+            startActivity(Intent(this, CoinWalletActivity::class.java))
+        }
+        findViewById<View>(R.id.navUserProfileProfile).setOnClickListener {
+            startActivity(Intent(this, AccountInfoActivity::class.java))
+        }
     }
 
     private fun fetchUserProfile() {
@@ -139,6 +202,7 @@ class UserProfileActivity : AppCompatActivity() {
         val userId = intent.getStringExtra("USER_ID") ?: return
 
         val path = "profile/users/$userId/profile"
+        showPostsLoading("Loading posts...")
 
         ApiClient.apiService.getProfileDynamic(path, "Bearer $token")
             .enqueue(object : Callback<ProfileResponse> {
@@ -163,17 +227,20 @@ class UserProfileActivity : AppCompatActivity() {
                         postAdapter.submitPosts(profilePosts)
 
                         // ✅ Update UI count
-                        postsCountView.text = "${profilePosts.size}\nPosts"
+                        postsCountView.text = profilePosts.size.toString()
+                        showPostsContent(profilePosts.isNotEmpty())
                     } else {
                         Log.e(
                             TAG,
                             "❌ Profile load failed: ${response.code()} ${response.message()}"
                         )
+                        showPostsMessage("Could not load posts.")
                     }
                 }
 
                 override fun onFailure(call: Call<ProfileResponse>, t: Throwable) {
                     Log.e(TAG, "⚠️ Network error while fetching profile: ${t.message}", t)
+                    showPostsMessage("Could not load posts.")
                 }
             })
     }
@@ -181,10 +248,35 @@ class UserProfileActivity : AppCompatActivity() {
     private fun updateUI(profile: ProfileResponse) {
         if (isFinishing || isDestroyed) return
 
+        headerUsernameView.text = profile.username
         usernameView.text = profile.username
-        followersCountView.text = "${profile.followersCount ?: profile.followers.size}\nFollowers"
-        followingCountView.text = "${profile.followingCount ?: profile.following.size}\nFollowing"
-        postsCountView.text = "${profile.posts?.size ?: 0}\nPosts"
+        followersCountView.text = (profile.followersCount ?: profile.followers.size).toString()
+        followingCountView.text = (profile.followingCount ?: profile.following.size).toString()
+        postsCountView.text = (profile.posts?.size ?: 0).toString()
+
+        val verified = profile.verified == true
+        iconVerified.visibility = if (verified) View.VISIBLE else View.GONE
+        iconHeaderVerified.visibility = if (verified) View.VISIBLE else View.GONE
+
+        val locationText = profile.location?.takeIf { it.isNotBlank() }
+            ?: profile.community?.name?.takeIf { it.isNotBlank() }
+            ?: "Location"
+        locationView.text = locationText
+        rowLocation.visibility = View.VISIBLE
+
+        bioView.text = profile.bio?.takeIf { it.isNotBlank() } ?: "No bio yet."
+
+        val externalLink = profile.externalLink?.takeIf { it.isNotBlank() }
+            ?: profile.website?.takeIf { it.isNotBlank() }
+        rowExternalLink.visibility = if (externalLink.isNullOrBlank()) View.GONE else View.VISIBLE
+        externalLinkView.text = externalLink.orEmpty()
+        rowExternalLink.setOnClickListener {
+            openExternalLink(externalLink)
+        }
+
+        val joinedText = formatJoinDate(profile.createdAt)
+        rowJoined.visibility = if (joinedText == null) View.GONE else View.VISIBLE
+        joinedView.text = joinedText.orEmpty()
 
         val rawImageUrl = profile.profileImage?.trim().orEmpty()
         val imageUrl = when {
@@ -205,8 +297,40 @@ class UserProfileActivity : AppCompatActivity() {
         isFollowing = profile.isFollowing
         isBlocked = profile.isBlocked
 
-        btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
+        updateActionButtons()
+    }
+
+    private fun showPostsLoading(message: String) {
+        recyclerUserPosts.visibility = View.GONE
+        loadingPostsLayout.visibility = View.VISIBLE
+        postsStateView.text = message
+    }
+
+    private fun showPostsContent(hasPosts: Boolean) {
+        recyclerUserPosts.visibility = if (hasPosts) View.VISIBLE else View.GONE
+        loadingPostsLayout.visibility = if (hasPosts) View.GONE else View.VISIBLE
+        postsStateView.text = if (hasPosts) "" else "No posts yet."
+    }
+
+    private fun showPostsMessage(message: String) {
+        recyclerUserPosts.visibility = View.GONE
+        loadingPostsLayout.visibility = View.VISIBLE
+        postsStateView.text = message
+    }
+
+    private fun updateActionButtons() {
+        btnFollow.text = if (isFollowing) "Following" else "Follow"
+        btnFollow.setBackgroundResource(
+            if (isFollowing) R.drawable.bg_profile_secondary_button else R.drawable.bg_profile_follow_button
+        )
+        btnFollow.setTextColor(
+            ContextCompat.getColor(this, if (isFollowing) R.color.account_primary_text else R.color.white)
+        )
+
         btnBlock.text = if (isBlocked) "Unblock" else "Block"
+        btnBlock.setTextColor(
+            ContextCompat.getColor(this, if (isBlocked) R.color.account_accent_green else R.color.account_danger)
+        )
     }
 
     private fun toggleFollowUser() {
@@ -226,7 +350,7 @@ class UserProfileActivity : AppCompatActivity() {
                 if (response.isSuccessful && result != null) {
                     WalletBalanceManager.refreshAfterReward(this@UserProfileActivity, result.coinsRewarded)
                     isFollowing = result.isFollowing ?: !isFollowing
-                    btnFollow.text = if (isFollowing) "Unfollow" else "Follow"
+                    updateActionButtons()
 
                     Toast.makeText(
                         this@UserProfileActivity,
@@ -283,7 +407,7 @@ class UserProfileActivity : AppCompatActivity() {
 
                     // Update UI
                     isBlocked = !isBlocked
-                    btnBlock.text = if (isBlocked) "Unblock" else "Block"
+                    updateActionButtons()
                 } else {
                     Toast.makeText(this@UserProfileActivity, "Failed to update block", Toast.LENGTH_SHORT).show()
                 }
@@ -326,5 +450,27 @@ class UserProfileActivity : AppCompatActivity() {
             putExtra("USERNAME", post.userId.username)
             putExtra("CAPTION", post.caption ?: "")
         })
+    }
+
+    private fun openExternalLink(rawUrl: String?) {
+        if (rawUrl.isNullOrBlank()) return
+        val normalizedUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+            rawUrl
+        } else {
+            "https://$rawUrl"
+        }
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(normalizedUrl)))
+    }
+
+    private fun formatJoinDate(createdAt: String?): String? {
+        if (createdAt.isNullOrBlank()) return null
+        val parsed = runCatching {
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }.parse(createdAt)
+        }.getOrNull() ?: return null
+
+        val formatted = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.US).format(parsed)
+        return "Joined $formatted"
     }
 }

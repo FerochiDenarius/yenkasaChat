@@ -12,16 +12,15 @@ import {
   sendRoomMessage,
 } from "../api/messages";
 import ChatSectionNav from "../components/chat/ChatSectionNav";
-import { staticImage } from "../utils/images";
+import { handleDynamicImageError, staticImage } from "../utils/images";
 import { getStoredUser } from "../utils/storage";
 import "../styles/chatrooms.css";
-
-const CURRENT_USER = getStoredUser() || {};
 
 export default function ChatRooms() {
   const navigate = useNavigate();
   const { roomId } = useParams();
   const threadEndRef = useRef(null);
+  const roomsRef = useRef([]);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -32,6 +31,37 @@ export default function ChatRooms() {
   const [draft, setDraft] = useState("");
   const [participant, setParticipant] = useState(null);
   const [messages, setMessages] = useState([]);
+  const currentUser = useMemo(() => getStoredUser() || {}, []);
+  const currentUserId = getUserId(currentUser);
+
+  const selectedRoom = useMemo(
+    () => rooms.find((room) => room?._id === roomId) || null,
+    [rooms, roomId]
+  );
+
+  const groupedMessages = useMemo(() => {
+    const groups = [];
+    let lastLabel = "";
+
+    for (const message of messages.filter(Boolean)) {
+      const label = formatDateChip(message?.timestamp || message?.createdAt);
+      if (label !== lastLabel) {
+        groups.push({ type: "divider", label, key: `divider-${label}` });
+        lastLabel = label;
+      }
+      groups.push({
+        type: "message",
+        message,
+        key: message?._id || `${label}-${groups.length}`,
+      });
+    }
+
+    return groups;
+  }, [messages]);
+
+  useEffect(() => {
+    roomsRef.current = rooms;
+  }, [rooms]);
 
   useEffect(() => {
     let active = true;
@@ -45,7 +75,7 @@ export default function ChatRooms() {
         const data = await getChatRooms();
         if (!active) return;
         const nextRooms = Array.isArray(data) ? data : [];
-        setRooms(nextRooms);
+        setRooms(normalizeChatRooms(nextRooms, currentUserId));
       } catch (requestError) {
         if (!active) return;
         setError(
@@ -68,7 +98,7 @@ export default function ChatRooms() {
       active = false;
       if (pollId) window.clearInterval(pollId);
     };
-  }, [navigate, roomId]);
+  }, [currentUserId]);
 
   useEffect(() => {
     let active = true;
@@ -97,7 +127,11 @@ export default function ChatRooms() {
         setParticipant(
           receiverDetails?.receiver ||
             roomDetails?.participant ||
-            rooms.find((room) => room?._id === roomId)?.participants?.[0] ||
+            getRoomParticipant(roomDetails, currentUserId) ||
+            getRoomParticipant(
+              roomsRef.current.find((room) => room?._id === roomId),
+              currentUserId
+            ) ||
             null
         );
         setMessages(Array.isArray(roomMessages) ? roomMessages : []);
@@ -131,32 +165,11 @@ export default function ChatRooms() {
       active = false;
       if (pollId) window.clearInterval(pollId);
     };
-  }, [roomId]);
+  }, [currentUserId, roomId]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: "end" });
   }, [groupedMessages.length, roomId]);
-
-  const groupedMessages = useMemo(() => {
-    const groups = [];
-    let lastLabel = "";
-
-    for (const message of messages.filter(Boolean)) {
-      const label = formatDateChip(message?.timestamp || message?.createdAt);
-      if (label !== lastLabel) {
-        groups.push({ type: "divider", label, key: `divider-${label}` });
-        lastLabel = label;
-      }
-      groups.push({ type: "message", message, key: message?._id || `${label}-${groups.length}` });
-    }
-
-    return groups;
-  }, [messages]);
-
-  const selectedRoom = useMemo(
-    () => rooms.find((room) => room?._id === roomId) || null,
-    [rooms, roomId]
-  );
 
   async function handleCreateRoom(event) {
     event.preventDefault();
@@ -183,7 +196,9 @@ export default function ChatRooms() {
 
       setRooms((prev) => {
         const exists = prev.some((room) => room._id === nextRoom._id);
-        return exists ? prev : [nextRoom, ...prev];
+        return exists
+          ? prev
+          : normalizeChatRooms([nextRoom, ...prev], currentUserId);
       });
       setSearchUsername("");
       navigate(`/chatrooms/${response.roomId}`);
@@ -249,10 +264,9 @@ export default function ChatRooms() {
               <div className="chatroom-hero-header__identity">
                 <img
                   src={
-                    participant?.profileImage ||
-                    participant?.avatar ||
-                    staticImage("yenkasa_web_assets/yenkasa_logo.png")
+                    getUserImage(participant) || staticImage("default.png")
                   }
+                  onError={handleDynamicImageError}
                   alt={participant?.username || "Yenkasa chat"}
                 />
                 <div>
@@ -306,7 +320,7 @@ export default function ChatRooms() {
                   }
 
                   const message = entry.message;
-                  const ownMessage = isOwnMessage(message);
+                  const ownMessage = isOwnMessage(message, currentUser);
                   const bubbleClass = ownMessage
                     ? "chatroom-message chatroom-message--own"
                     : "chatroom-message";
@@ -377,7 +391,7 @@ export default function ChatRooms() {
 
               {!loadingRooms &&
                 rooms.map((room) => {
-                  const itemParticipant = room?.participants?.[0] || null;
+                  const itemParticipant = getRoomParticipant(room, currentUserId);
                   const isActive = room?._id === roomId;
 
                   return (
@@ -390,10 +404,9 @@ export default function ChatRooms() {
                       <img
                         className="chatrooms-room__avatar"
                         src={
-                          itemParticipant?.profileImage ||
-                          itemParticipant?.avatar ||
-                          staticImage("yenkasa_web_assets/yenkasa_logo.png")
+                          getUserImage(itemParticipant) || staticImage("default.png")
                         }
+                        onError={handleDynamicImageError}
                         alt={itemParticipant?.username || "Chat room"}
                       />
                       <div className="chatrooms-room__copy">
@@ -418,10 +431,88 @@ export default function ChatRooms() {
   );
 }
 
-function isOwnMessage(message) {
-  const currentUserId =
-    CURRENT_USER?._id || CURRENT_USER?.id || CURRENT_USER?.userId || "";
-  const senderId = message?.senderId?._id || message?.senderId || "";
+function getUserId(user) {
+  return String(user?._id || user?.id || user?.userId || user?.uid || "");
+}
+
+function getUserImage(user) {
+  return (
+    user?.displayImage ||
+    user?.profileImage ||
+    user?.profileImageUrl ||
+    user?.profilePicUrl ||
+    user?.avatar ||
+    user?.photoUrl ||
+    ""
+  );
+}
+
+function getRoomParticipant(room, currentUserId) {
+  const participants = Array.isArray(room?.participants)
+    ? room.participants.filter(Boolean)
+    : [];
+  const seen = new Set();
+  const uniqueParticipants = participants.filter((participant) => {
+    const id = getUserId(participant);
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  const others = uniqueParticipants.filter(
+    (participant) => getUserId(participant) !== String(currentUserId || "")
+  );
+
+  return (
+    others[0] ||
+    room?.participant ||
+    room?.receiver ||
+    room?.user ||
+    uniqueParticipants[0] ||
+    null
+  );
+}
+
+function normalizeChatRooms(rooms, currentUserId) {
+  const uniqueByParticipant = new Map();
+
+  for (const room of rooms.filter(Boolean)) {
+    const participant = getRoomParticipant(room, currentUserId);
+    const key = getUserId(participant) || room?._id;
+    if (!key || uniqueByParticipant.has(key)) continue;
+    uniqueByParticipant.set(key, room);
+  }
+
+  return Array.from(uniqueByParticipant.values()).sort((left, right) => {
+    const leftTime = getRoomActivityTime(left);
+    const rightTime = getRoomActivityTime(right);
+    if (rightTime !== leftTime) return rightTime - leftTime;
+    return Number(right?.unreadCount || 0) - Number(left?.unreadCount || 0);
+  });
+}
+
+function getRoomActivityTime(room) {
+  const value =
+    room?.lastMessageTime ||
+    room?.lastMessage?.timestamp ||
+    room?.lastMessage?.createdAt ||
+    room?.createdAt;
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function isOwnMessage(message, currentUser) {
+  const currentUserId = getUserId(currentUser);
+  const senderId =
+    message?.senderId?._id ||
+    message?.senderId?.id ||
+    message?.senderId ||
+    message?.sender?._id ||
+    message?.sender?.id ||
+    message?.sender ||
+    message?.userId?._id ||
+    message?.userId?.id ||
+    message?.userId ||
+    "";
   return String(senderId) === String(currentUserId);
 }
 

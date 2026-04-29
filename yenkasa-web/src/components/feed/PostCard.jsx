@@ -8,17 +8,24 @@ import {
   formatRelativeTime,
 } from "../../utils/format";
 import { handleDynamicImageError, handleStaticImageError, staticImage } from "../../utils/images";
+import { getStoredUser } from "../../utils/storage";
+import { requestWalletRefresh } from "../../utils/walletEvents";
 
 export default function PostCard({ post, onUpdate, detailMode = false }) {
   const navigate = useNavigate();
   const cardRef = useRef(null);
+  const currentUser = useMemo(() => getStoredUser() || {}, []);
+  const currentUserId = String(currentUser?._id || currentUser?.id || "");
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState("");
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [pendingCommentLikes, setPendingCommentLikes] = useState(() => new Set());
 
   const liked = post?.likedByUser === true;
   const mediaUrl = buildMediaUrl(post);
@@ -84,6 +91,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
         if (Number.isFinite(Number(data?.viewCount))) {
           onUpdate?.(post._id, { viewCount: Number(data.viewCount) });
         }
+        requestWalletRefresh("post_view");
       } catch {
         existing.delete(post._id);
         writeViewedPostIds(viewedKey, existing);
@@ -137,6 +145,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
         likedByUser: Boolean(data?.likedByUser),
         likeCount: Number(data?.likeCount ?? optimisticLikeCount),
       });
+      if (data?.likedByUser) requestWalletRefresh("post_like");
     } catch {
       onUpdate?.(post._id, {
         likedByUser: liked,
@@ -188,10 +197,130 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
       onUpdate?.(post._id, {
         commentCount: commentCount + 1,
       });
+      requestWalletRefresh("comment");
     } catch {
       setCommentsError("Failed to add comment.");
     } finally {
       setSubmittingComment(false);
+    }
+  }
+
+  async function handleCommentLike(comment) {
+    const commentId = comment?._id;
+    if (!commentId || pendingCommentLikes.has(commentId)) return;
+
+    const liked = isCommentLiked(comment, currentUserId);
+    const nextLiked = !liked;
+    const originalLikeCount = getCommentLikeCount(comment);
+    const nextLikeCount = Math.max(0, originalLikeCount + (nextLiked ? 1 : -1));
+    const originalLikes = Array.isArray(comment?.likes) ? comment.likes : [];
+    const nextLikes = updateLikesList(originalLikes, currentUserId, nextLiked);
+
+    setPendingCommentLikes((prev) => new Set(prev).add(commentId));
+    setComments((prev) =>
+      prev.map((item) =>
+        item?._id === commentId
+          ? { ...item, likedByUser: nextLiked, likes: nextLikes, likeCount: nextLikeCount }
+          : item
+      )
+    );
+
+    try {
+      const { data } = await api.post("/comments/toggle-like", {
+        commentId,
+        like: nextLiked,
+      });
+
+      setComments((prev) =>
+        prev.map((item) =>
+          item?._id === commentId
+            ? {
+                ...item,
+                likedByUser: Boolean(data?.liked ?? nextLiked),
+                likes: updateLikesList(
+                  Array.isArray(item?.likes) ? item.likes : [],
+                  currentUserId,
+                  Boolean(data?.liked ?? nextLiked)
+                ),
+                likeCount: Number(data?.likeCount ?? nextLikeCount),
+              }
+            : item
+        )
+      );
+      if (data?.liked ?? nextLiked) requestWalletRefresh("comment_like");
+    } catch {
+      setComments((prev) =>
+        prev.map((item) =>
+          item?._id === commentId
+            ? {
+                ...item,
+                likedByUser: liked,
+                likes: originalLikes,
+                likeCount: originalLikeCount,
+              }
+            : item
+        )
+      );
+      setCommentsError("Failed to update comment like.");
+    } finally {
+      setPendingCommentLikes((prev) => {
+        const next = new Set(prev);
+        next.delete(commentId);
+        return next;
+      });
+    }
+  }
+
+  async function handleShare() {
+    if (!post?._id || sharing) return;
+
+    const shareUrl = `${window.location.origin}/web/post/${post._id}`;
+    const shareText = content || "Check out this post on Yenkasa.";
+    const previousShareCount = shareCount;
+    const nextShareCount = previousShareCount + 1;
+
+    setSharing(true);
+    setShareStatus("");
+    onUpdate?.(post._id, { shareCount: nextShareCount });
+
+    try {
+      const { data } = await api.post(`/posts/${post._id}/share`);
+      if (Number.isFinite(Number(data?.shareCount))) {
+        onUpdate?.(post._id, { shareCount: Number(data.shareCount) });
+      }
+      requestWalletRefresh("post_share");
+    } catch {
+      onUpdate?.(post._id, { shareCount: previousShareCount });
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: username,
+          text: shareText,
+          url: shareUrl,
+        });
+        setShareStatus("Shared");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+        setShareStatus("Post link copied");
+      } else {
+        window.prompt("Copy this post link:", shareUrl);
+        setShareStatus("Copy the post link");
+      }
+    } catch (shareError) {
+      if (shareError?.name !== "AbortError") {
+        try {
+          await navigator.clipboard?.writeText(`${shareText}\n${shareUrl}`);
+          setShareStatus("Post link copied");
+        } catch {
+          window.prompt("Copy this post link:", shareUrl);
+          setShareStatus("Copy the post link");
+        }
+      }
+    } finally {
+      setSharing(false);
+      window.setTimeout(() => setShareStatus(""), 2500);
     }
   }
 
@@ -341,32 +470,19 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
         </button>
         <button
           type="button"
-          className="feed-post-card__action"
-          onClick={async () => {
-            const shareUrl = `${window.location.origin}/web/post/${post?._id}`;
-            try {
-              if (navigator.share) {
-                await navigator.share({
-                  title: username,
-                  text: content || "Check out this post on Yenkasa.",
-                  url: shareUrl,
-                });
-              } else {
-                await navigator.clipboard.writeText(shareUrl);
-                window.alert("Post link copied.");
-              }
-            } catch {
-              // Ignore cancelled share
-            }
-          }}
+          className={`feed-post-card__action${sharing ? " is-active" : ""}`}
+          onClick={handleShare}
+          disabled={sharing}
         >
           <span>↗</span>
-          <span>Share</span>
+          <span>{sharing ? "Sharing" : "Share"}</span>
         </button>
         <button type="button" className="feed-post-card__action" onClick={openPost}>
           <span>⌑</span>
         </button>
       </footer>
+
+      {shareStatus ? <div className="feed-share-status">{shareStatus}</div> : null}
 
       {commentOpen ? (
         <section className="feed-comments-panel">
@@ -403,6 +519,9 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
                   comment?.userId?.username || comment?.username || "Yenkasa User";
                 const commentAvatar =
                   comment?.userId?.profileImage || comment?.userId?.profileImageUrl || null;
+                const commentLiked = isCommentLiked(comment, currentUserId);
+                const commentLikeCount = getCommentLikeCount(comment);
+                const commentPending = pendingCommentLikes.has(comment?._id);
 
                 return (
                   <article
@@ -422,6 +541,18 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
                         <span>{formatRelativeTime(comment?.createdAt)}</span>
                       </div>
                       <p>{comment?.text || ""}</p>
+                      <div className="feed-comment__actions">
+                        <button
+                          type="button"
+                          className={commentLiked ? "is-active" : ""}
+                          onClick={() => handleCommentLike(comment)}
+                          disabled={commentPending}
+                        >
+                          {commentLiked ? "Liked" : "Like"}
+                        </button>
+                        <span>{commentLikeCount} likes</span>
+                        {comment?.replyCount ? <span>{comment.replyCount} replies</span> : null}
+                      </div>
                     </div>
                   </article>
                 );
@@ -436,6 +567,40 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
 
 function useDefaultImage(event) {
   handleDynamicImageError(event);
+}
+
+function isCommentLiked(comment, currentUserId) {
+  if (comment?.likedByUser === true || comment?.liked === true) return true;
+  if (!currentUserId || !Array.isArray(comment?.likes)) return false;
+  return comment.likes.some((item) => {
+    const id = typeof item === "string" ? item : item?._id || item?.id;
+    return String(id || "") === currentUserId;
+  });
+}
+
+function getCommentLikeCount(comment) {
+  const likeCount = Number(comment?.likeCount);
+  if (Number.isFinite(likeCount)) return likeCount;
+  return Array.isArray(comment?.likes) ? comment.likes.length : 0;
+}
+
+function updateLikesList(likes, currentUserId, shouldLike) {
+  if (!currentUserId) return likes;
+  const existing = likes.filter(Boolean);
+  const hasUser = existing.some((item) => {
+    const id = typeof item === "string" ? item : item?._id || item?.id;
+    return String(id || "") === currentUserId;
+  });
+
+  if (shouldLike && !hasUser) return [...existing, currentUserId];
+  if (!shouldLike && hasUser) {
+    return existing.filter((item) => {
+      const id = typeof item === "string" ? item : item?._id || item?.id;
+      return String(id || "") !== currentUserId;
+    });
+  }
+
+  return existing;
 }
 
 function readViewedPostIds(key) {

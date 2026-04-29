@@ -1,5 +1,6 @@
 package xyz.yenkasa.app.ui
 
+import android.animation.ValueAnimator
 import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
@@ -55,6 +56,7 @@ class FeedFragment : Fragment() {
     private lateinit var communityNameView: TextView
     private lateinit var fabCreatePost: FloatingActionButton
     private lateinit var selectedCommunitiesText: TextView
+    private lateinit var communitiesBar: View
     private lateinit var communityStoryRecyclerView: RecyclerView
     private lateinit var feedTabs: List<TextView>
 
@@ -75,6 +77,9 @@ class FeedFragment : Fragment() {
     private var followingUserIds: Set<String>? = null
     private var communityStoryPreviews: Map<String, CommunityStoryPreview> = emptyMap()
     private var sponsoredAds: List<AdModel> = emptyList()
+    private var communitiesBarHidden = false
+    private var communitiesBarNaturalHeight = 0
+    private var communitiesBarAnimator: ValueAnimator? = null
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
@@ -142,6 +147,7 @@ class FeedFragment : Fragment() {
         offlineBanner = view.findViewById(R.id.textOfflineBanner)
         communityNameView = view.findViewById(R.id.textCommunityNameHeader)
         fabCreatePost = requireActivity().findViewById(R.id.fabCreatePost)
+        communitiesBar = view.findViewById(R.id.layoutFeedCommunitiesBar)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
         communityStoryRecyclerView = view.findViewById(R.id.recyclerViewFeedCommunities)
         feedTabs = listOf(
@@ -150,6 +156,10 @@ class FeedFragment : Fragment() {
             view.findViewById(R.id.tabTrending),
             view.findViewById(R.id.tabTop)
         )
+
+        communitiesBar.post {
+            communitiesBarNaturalHeight = communitiesBar.height
+        }
     }
 
 
@@ -235,6 +245,7 @@ class FeedFragment : Fragment() {
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
+                updateCommunitiesBarForScroll(recyclerView, dy)
                 if (dy <= 0) return
 
                 val lastVisible = layoutManager.findLastVisibleItemPosition()
@@ -258,6 +269,68 @@ class FeedFragment : Fragment() {
                 feedAdapter.autoPlayCenteredVideo(recyclerView, center)
             }
         })
+    }
+
+    private fun updateCommunitiesBarForScroll(recyclerView: RecyclerView, dy: Int) {
+        if (!::communitiesBar.isInitialized) return
+
+        if (!recyclerView.canScrollVertically(-1)) {
+            showCommunitiesBar()
+            return
+        }
+
+        when {
+            dy > 10 -> hideCommunitiesBar()
+            dy < -10 -> showCommunitiesBar()
+        }
+    }
+
+    private fun hideCommunitiesBar() {
+        if (communitiesBarHidden || communitiesBar.height == 0) return
+
+        val startHeight = communitiesBar.height
+        communitiesBarNaturalHeight = maxOf(communitiesBarNaturalHeight, startHeight)
+        communitiesBarHidden = true
+        communitiesBarAnimator?.cancel()
+
+        communitiesBarAnimator = ValueAnimator.ofInt(startHeight, 0).apply {
+            duration = 200
+            addUpdateListener { animator ->
+                val height = animator.animatedValue as Int
+                val progress = if (communitiesBarNaturalHeight == 0) 0f else height.toFloat() / communitiesBarNaturalHeight
+                communitiesBar.layoutParams = communitiesBar.layoutParams.apply {
+                    this.height = height
+                }
+                communitiesBar.translationY = -(communitiesBarNaturalHeight - height).toFloat()
+                communitiesBar.alpha = progress
+            }
+            start()
+        }
+    }
+
+    private fun showCommunitiesBar() {
+        val targetHeight = communitiesBarNaturalHeight.takeIf { it > 0 }
+            ?: (communityStoryRecyclerView.height + selectedCommunitiesText.height).takeIf { it > 0 }
+            ?: return
+
+        if (!communitiesBarHidden && communitiesBar.height == targetHeight && communitiesBar.alpha == 1f) return
+
+        communitiesBarHidden = false
+        communitiesBarAnimator?.cancel()
+
+        communitiesBarAnimator = ValueAnimator.ofInt(communitiesBar.height, targetHeight).apply {
+            duration = 200
+            addUpdateListener { animator ->
+                val height = animator.animatedValue as Int
+                val progress = height.toFloat() / targetHeight
+                communitiesBar.layoutParams = communitiesBar.layoutParams.apply {
+                    this.height = height
+                }
+                communitiesBar.translationY = -(targetHeight - height).toFloat()
+                communitiesBar.alpha = progress
+            }
+            start()
+        }
     }
 
     private fun setupCommunityStoryRecyclerView() {

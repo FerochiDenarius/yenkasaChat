@@ -103,6 +103,180 @@
   line-height: 1;
 }
 
+.floating-wallet {
+  position: fixed;
+  top: 72px;
+  right: max(14px, calc((100vw - 500px) / 2 + 14px));
+  z-index: 45;
+  min-width: 138px;
+  min-height: 54px;
+  border: 1px solid rgba(22, 122, 72, 0.18);
+  border-radius: 999px;
+  padding: 7px 13px 7px 7px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(239, 248, 242, 0.94)),
+    #fff;
+  box-shadow: 0 16px 36px rgba(12, 48, 28, 0.16);
+  color: #0d3a22;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  overflow: visible;
+  backdrop-filter: blur(14px);
+}
+
+.floating-wallet__coin {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 35% 28%, #fff6a5 0 14%, transparent 15%),
+    linear-gradient(145deg, #f9d64a 0%, #dfa80c 100%);
+  color: #084024;
+  font-size: 10px;
+  font-weight: 900;
+  box-shadow:
+    inset 0 0 0 2px rgba(8, 64, 36, 0.18),
+    0 5px 12px rgba(169, 119, 0, 0.24);
+}
+
+.floating-wallet__body {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.floating-wallet__body small {
+  color: #66816f;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.floating-wallet__body strong {
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.floating-wallet__delta {
+  position: absolute;
+  right: 10px;
+  top: -19px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #15a452;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 8px 16px rgba(21, 164, 82, 0.25);
+  animation: wallet-delta-rise 1.6s ease both;
+}
+
+.floating-wallet--gain .floating-wallet__coin {
+  animation: wallet-coin-pop 0.72s ease both;
+}
+
+.floating-wallet__drops {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.floating-wallet__drops i {
+  position: absolute;
+  top: -8px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #f5c928;
+  box-shadow: inset 0 0 0 2px rgba(8, 64, 36, 0.18);
+  animation: wallet-drop 0.95s ease both;
+}
+
+.floating-wallet__drops i:nth-child(1) {
+  left: 22px;
+}
+
+.floating-wallet__drops i:nth-child(2) {
+  left: 45px;
+  animation-delay: 0.12s;
+}
+
+.floating-wallet__drops i:nth-child(3) {
+  left: 68px;
+  animation-delay: 0.22s;
+}
+
+@keyframes wallet-coin-pop {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.18) rotate(-10deg);
+  }
+  70% {
+    transform: scale(0.96) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes wallet-delta-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(1);
+  }
+}
+
+@keyframes wallet-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.72);
+  }
+  20% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(26px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(34px) scale(0.65);
+  }
+}
+
+.communities-wrapper {
+  position: sticky;
+  top: 60px;
+  z-index: 10;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  will-change: transform, opacity;
+}
+
+.communities-wrapper.hide {
+  pointer-events: none;
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.communities-wrapper.show {
+  pointer-events: auto;
+  transform: translateY(0);
+  opacity: 1;
+}
+
 .communities-bar {
   margin: 8px 0 16px;
 }
@@ -548,6 +722,17 @@
   color: #a13e3e;
 }
 
+.feed-share-status {
+  margin-top: 10px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #edf8f1;
+  color: #187447;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
 .feed-comments-list {
   display: grid;
   gap: 10px;
@@ -604,6 +789,33 @@
   color: #233026;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.feed-comment__actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #7b8780;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.feed-comment__actions button {
+  border: 0;
+  background: transparent;
+  color: #667269;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+}
+
+.feed-comment__actions button.is-active {
+  color: #1c7b4f;
+}
+
+.feed-comment__actions button:disabled {
+  opacity: 0.5;
 }
 
 .feed-status-card,

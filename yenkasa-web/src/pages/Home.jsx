@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomNav from "../components/feed/BottomNav";
 import CommunitiesBar from "../components/feed/CommunitiesBar";
 import FeedTabs from "../components/feed/FeedTabs";
 import FloatingButton from "../components/feed/FloatingButton";
+import FloatingWalletBalance from "../components/feed/FloatingWalletBalance";
 import PostList from "../components/feed/PostList";
 import TopBar from "../components/feed/TopBar";
 import "../styles/feed.css";
@@ -11,15 +12,38 @@ export default function Home({ onOpenMenu }) {
   const [activeTab, setActiveTab] = useState("For You");
   const [activeSort, setActiveSort] = useState("Top");
   const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [showCommunities, setShowCommunities] = useState(true);
+  const lastScrollY = useRef(0);
+  const showCommunitiesRef = useRef(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const nextShowCommunities =
+        currentY < 50 || currentY <= lastScrollY.current;
+
+      if (showCommunitiesRef.current !== nextShowCommunities) {
+        showCommunitiesRef.current = nextShowCommunities;
+        setShowCommunities(nextShowCommunities);
+      }
+
+      lastScrollY.current = currentY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <main className="feed-home">
       <div className="feed-home__shell">
         <TopBar onOpenMenu={onOpenMenu} />
-        <CommunitiesBar
-          selectedCommunityId={selectedCommunity?._id || selectedCommunity?.id || null}
-          onSelectCommunity={setSelectedCommunity}
-        />
+        <div className={`communities-wrapper ${showCommunities ? "show" : "hide"}`}>
+          <CommunitiesBar
+            selectedCommunityId={selectedCommunity?._id || selectedCommunity?.id || null}
+            onSelectCommunity={setSelectedCommunity}
+          />
+        </div>
         <FeedTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -32,6 +56,7 @@ export default function Home({ onOpenMenu }) {
           selectedCommunity={selectedCommunity}
         />
       </div>
+      <FloatingWalletBalance />
       <FloatingButton />
       <BottomNav />
     </main>

@@ -26,6 +26,9 @@ data class ProfileResponse(
     val coinsBalance: Int? = null,
     val walletId: String? = null,
     val bio: String? = null,
+    val website: String? = null,
+    val externalLink: String? = null,
+    val createdAt: String? = null,
 
     val community: CommunitySummary? = null,
     val followersCount: Int? = null,

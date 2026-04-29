@@ -7,31 +7,37 @@
     android:background="@color/feed_background"
     android:orientation="vertical">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewFeedCommunities"
-        android:layout_width="match_parent"
-        android:layout_height="98dp"
-        android:background="@color/feed_surface"
-        android:clipToPadding="false"
-        android:overScrollMode="never"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:scrollbars="none"
-        tools:itemCount="5"
-        tools:listitem="@layout/item_feed_community_story" />
-
-    <TextView
-        android:id="@+id/textSelectedCommunities"
+    <LinearLayout
+        android:id="@+id/layoutFeedCommunitiesBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/feed_surface"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:paddingHorizontal="16dp"
-        android:paddingBottom="8dp"
-        android:textColor="@color/feed_secondary_text"
-        android:textSize="11sp"
-        tools:text="Music Lovers Ghana, Health Ghana" />
+        android:orientation="vertical">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewFeedCommunities"
+            android:layout_width="match_parent"
+            android:layout_height="98dp"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:scrollbars="none"
+            tools:itemCount="5"
+            tools:listitem="@layout/item_feed_community_story" />
+
+        <TextView
+            android:id="@+id/textSelectedCommunities"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="8dp"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="11sp"
+            tools:text="Music Lovers Ghana, Health Ghana" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/textOfflineBanner"

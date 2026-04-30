@@ -702,6 +702,32 @@ module.exports = function (app) {
     }
   });
 
+  app.put('/triciabales-api/api/users/:id/seller-approval', async (req, res) => {
+    try {
+      const response = await axios.put(
+        `${API_BASE}/api/users/${req.params.id}/seller-approval`,
+        req.body,
+        {
+          headers: forwardHeaders(req, {
+            'Content-Type': 'application/json'
+          })
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        'SELLER APPROVAL ERROR:',
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  });
+
   app.delete('/triciabales-api/api/users/:id', async (req, res) => {
     try {
       const response = await axios.delete(

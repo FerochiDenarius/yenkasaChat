@@ -516,6 +516,35 @@ const STORE_LANDING_DIR = path.join(STORE_PUBLIC_DIR, 'landingFile');
 const STORE_LOGO_PATH = path.join(STORE_PUBLIC_DIR, 'images', 'YenkasaStoreLogo.png');
 const BLOG_DIR = path.join(__dirname, 'public', 'blog');
 const BLOG_POSTS_DIR = path.join(BLOG_DIR, 'posts');
+const BLOG_ENGAGEMENT_DIR = path.join(__dirname, 'data');
+const BLOG_ENGAGEMENT_PATH = path.join(BLOG_ENGAGEMENT_DIR, 'blog-engagement.json');
+
+function isValidBlogSlug(slug) {
+  return /^[a-z0-9-]+$/i.test(String(slug || ''));
+}
+
+function readBlogEngagement() {
+  try {
+    if (!fs.existsSync(BLOG_ENGAGEMENT_PATH)) return {};
+    return JSON.parse(fs.readFileSync(BLOG_ENGAGEMENT_PATH, 'utf8'));
+  } catch (err) {
+    console.error('Failed to read blog engagement data:', err.message);
+    return {};
+  }
+}
+
+function writeBlogEngagement(data) {
+  fs.mkdirSync(BLOG_ENGAGEMENT_DIR, { recursive: true });
+  fs.writeFileSync(BLOG_ENGAGEMENT_PATH, JSON.stringify(data, null, 2));
+}
+
+function getBlogEngagementRecord(slug) {
+  const data = readBlogEngagement();
+  if (!data[slug]) {
+    data[slug] = { slug, views: 0, likes: 0 };
+  }
+  return { data, record: data[slug] };
+}
 const STORE_PAGE_ALIASES = new Map(Object.entries({
   '': 'index.html',
   'home': 'index.html',
@@ -680,9 +709,45 @@ app.get('/blog', (req, res) => {
   res.sendFile(path.join(BLOG_DIR, 'index.html'));
 });
 
+app.get('/api/blog/:slug/views', (req, res) => {
+  const slug = String(req.params.slug || '');
+  if (!isValidBlogSlug(slug)) return res.status(400).json({ message: 'Invalid blog slug' });
+
+  const { record } = getBlogEngagementRecord(slug);
+  res.json({ slug, views: record.views || 0 });
+});
+
+app.post('/api/blog/:slug/view', (req, res) => {
+  const slug = String(req.params.slug || '');
+  if (!isValidBlogSlug(slug)) return res.status(400).json({ message: 'Invalid blog slug' });
+
+  const { data, record } = getBlogEngagementRecord(slug);
+  record.views = Number(record.views || 0) + 1;
+  writeBlogEngagement(data);
+  res.json({ slug, views: record.views });
+});
+
+app.get('/api/blog/:slug/likes', (req, res) => {
+  const slug = String(req.params.slug || '');
+  if (!isValidBlogSlug(slug)) return res.status(400).json({ message: 'Invalid blog slug' });
+
+  const { record } = getBlogEngagementRecord(slug);
+  res.json({ slug, likes: record.likes || 0 });
+});
+
+app.post('/api/blog/:slug/like', (req, res) => {
+  const slug = String(req.params.slug || '');
+  if (!isValidBlogSlug(slug)) return res.status(400).json({ message: 'Invalid blog slug' });
+
+  const { data, record } = getBlogEngagementRecord(slug);
+  record.likes = Number(record.likes || 0) + 1;
+  writeBlogEngagement(data);
+  res.json({ slug, likes: record.likes });
+});
+
 app.get('/blog/:slug', (req, res, next) => {
   const slug = String(req.params.slug || '');
-  if (!/^[a-z0-9-]+$/i.test(slug)) return next();
+  if (!isValidBlogSlug(slug)) return next();
 
   const filePath = path.join(BLOG_POSTS_DIR, `${slug}.html`);
   res.sendFile(filePath, err => {

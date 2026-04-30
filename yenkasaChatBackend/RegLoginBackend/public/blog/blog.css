@@ -200,6 +200,33 @@ a {
   font-size: 0.94rem;
 }
 
+.blog-engagement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 14px 0 0;
+  padding: 9px 10px 9px 14px;
+  border: 1px solid var(--blog-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--blog-green-deep);
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(2, 42, 32, 0.08);
+}
+
+.blog-engagement button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: var(--blog-green);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
 .featured-image {
   overflow: hidden;
   border-radius: 24px;

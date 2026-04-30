@@ -301,6 +301,45 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function sellerApprovalStatus(user) {
+  const status = String(user?.sellerApprovalStatus || "").trim().toUpperCase();
+  return status || "APPROVED";
+}
+
+function sellerApprovalClass(status) {
+  const normalized = String(status || "").toLowerCase().replace(/_/g, "-");
+  if (normalized === "approved") return "approved";
+  if (normalized === "rejected") return "rejected";
+  return "pending";
+}
+
+function sellerById(sellerId) {
+  return dashboardState.sellers.find(seller => String(seller.id) === String(sellerId));
+}
+
+function detailRow(label, value) {
+  return `
+    <div class="seller-review-detail">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value || "-")}</strong>
+    </div>
+  `;
+}
+
+function sellerDocumentLink(label, url) {
+  if (!url) {
+    return detailRow(label, "-");
+  }
+
+  const safeUrl = escapeHtml(url);
+  return `
+    <div class="seller-review-detail">
+      <span>${escapeHtml(label)}</span>
+      <a href="${safeUrl}" target="_blank" rel="noopener">Open document</a>
+    </div>
+  `;
+}
+
 function visibleSuperAdminNotifications() {
   return dashboardState.loadedSuperAdminNotifications.filter(notification => {
     if (hiddenSuperAdminNotificationIds.has(String(notification.id))) {
@@ -905,6 +944,8 @@ function buildSellerSummaries(sellers, orders) {
       phone: "-",
       verified: false,
       accountStatus: "ACTIVE",
+      sellerApprovalStatus: sellerApprovalStatus(user),
+      raw: user,
       totalOrders: 0,
       totalSales: 0,
       pendingPayouts: 0
@@ -915,6 +956,8 @@ function buildSellerSummaries(sellers, orders) {
     existing.phone = user.phone || existing.phone;
     existing.verified = Boolean(user.emailVerified);
     existing.accountStatus = user.accountStatus || existing.accountStatus;
+    existing.sellerApprovalStatus = sellerApprovalStatus(user);
+    existing.raw = user;
     sellerMap.set(sellerKey, existing);
   });
 
@@ -939,23 +982,176 @@ function renderSellers(sellers, orders) {
     return;
   }
 
-  sellersList.innerHTML = sellerAccounts.map(seller => `
-    <div class="super-admin-item">
-      <div class="super-admin-item-header">
-        <div>
-          <strong>${escapeHtml(seller.sellerName)}</strong>
-          <p>Seller ID: ${escapeHtml(seller.sellerId)}</p>
+  sellersList.innerHTML = sellerAccounts.map(seller => {
+    const approvalStatus = seller.sellerApprovalStatus || "APPROVED";
+    const isApproved = approvalStatus === "APPROVED";
+    const isRejected = approvalStatus === "REJECTED";
+
+    return `
+      <div class="super-admin-item seller-review-card">
+        <div class="super-admin-item-header">
+          <div>
+            <strong>${escapeHtml(seller.sellerName)}</strong>
+            <p>Seller ID: ${escapeHtml(seller.sellerId)}</p>
+          </div>
+          <div class="seller-card-metrics">
+            <strong>${escapeHtml(formatCompactCurrency(seller.totalSales))}</strong>
+            <span class="seller-approval-chip ${sellerApprovalClass(approvalStatus)}">${escapeHtml(formatStatus(approvalStatus))}</span>
+          </div>
         </div>
-        <strong>${escapeHtml(formatCompactCurrency(seller.totalSales))}</strong>
+        <div class="seller-card-grid">
+          <p><strong>Email:</strong> ${escapeHtml(seller.email || "-")}</p>
+          <p><strong>Phone:</strong> ${escapeHtml(seller.phone || "-")}</p>
+          <p><strong>Account:</strong> ${escapeHtml(formatStatus(seller.accountStatus || "ACTIVE"))}</p>
+          <p><strong>Email Verified:</strong> ${seller.verified ? "Yes" : "No"}</p>
+          <p><strong>Shop:</strong> ${escapeHtml(seller.raw?.shopName || "-")}</p>
+          <p><strong>Total Orders:</strong> ${escapeHtml(seller.totalOrders)}</p>
+        </div>
+        <div class="super-admin-actions">
+          <button type="button" class="manage-btn refund seller-review-btn" data-id="${escapeHtml(seller.sellerId)}">Review Details</button>
+          <button type="button" class="manage-btn status seller-approval-btn" data-id="${escapeHtml(seller.sellerId)}" data-status="APPROVED" ${isApproved ? "disabled" : ""}>Approve Seller</button>
+          <button type="button" class="manage-btn delete seller-approval-btn" data-id="${escapeHtml(seller.sellerId)}" data-status="REJECTED" ${isRejected ? "disabled" : ""}>Reject</button>
+          <button type="button" class="manage-btn hold seller-approval-btn" data-id="${escapeHtml(seller.sellerId)}" data-status="PENDING_REVIEW" ${approvalStatus === "PENDING_REVIEW" ? "disabled" : ""}>Mark Pending</button>
+        </div>
       </div>
-      <p><strong>Email:</strong> ${escapeHtml(seller.email || "-")}</p>
-      <p><strong>Phone:</strong> ${escapeHtml(seller.phone || "-")}</p>
-      <p><strong>Status:</strong> ${escapeHtml(formatStatus(seller.accountStatus || "ACTIVE"))}</p>
-      <p><strong>Verified:</strong> ${seller.verified ? "Yes" : "No"}</p>
-      <p><strong>Total Orders:</strong> ${escapeHtml(seller.totalOrders)}</p>
-      <p><strong>Legacy Payout Risk:</strong> ${escapeHtml(seller.pendingPayouts)}</p>
-    </div>
-  `).join("");
+    `;
+  }).join("");
+}
+
+function closeSellerReviewModal() {
+  document.querySelector(".seller-review-overlay")?.remove();
+}
+
+function openSellerReviewModal(sellerId) {
+  const seller = sellerById(sellerId);
+
+  if (!seller) {
+    alert("Seller details are not loaded yet.");
+    return;
+  }
+
+  const approvalStatus = sellerApprovalStatus(seller);
+  const overlay = document.createElement("div");
+  overlay.className = "seller-review-overlay";
+  overlay.innerHTML = `
+    <aside class="seller-review-modal" role="dialog" aria-modal="true" aria-label="Seller review">
+      <div class="seller-review-head">
+        <div>
+          <span class="seller-approval-chip ${sellerApprovalClass(approvalStatus)}">${escapeHtml(formatStatus(approvalStatus))}</span>
+          <h3>${escapeHtml(seller.name || "Seller")}</h3>
+          <p>${escapeHtml(seller.email || "-")}</p>
+        </div>
+        <button type="button" class="seller-review-close" aria-label="Close seller review">×</button>
+      </div>
+
+      <section class="seller-review-section">
+        <h4>Identity</h4>
+        <div class="seller-review-grid">
+          ${detailRow("Seller ID", seller.id)}
+          ${detailRow("Phone", seller.phone)}
+          ${detailRow("Residential Address", seller.address)}
+          ${detailRow("Date of Birth", seller.dateOfBirth)}
+          ${detailRow("ID Type", formatStatus(seller.idType))}
+          ${detailRow("ID Number", seller.idNumber)}
+          ${sellerDocumentLink("ID Picture", seller.idImageUrl)}
+        </div>
+      </section>
+
+      <section class="seller-review-section">
+        <h4>Business</h4>
+        <div class="seller-review-grid">
+          ${detailRow("Shop Name", seller.shopName)}
+          ${detailRow("Shop Address", seller.shopAddress)}
+          ${detailRow("Proof of Operation", seller.proofOfOperation)}
+          ${detailRow("Account Status", formatStatus(seller.accountStatus || "ACTIVE"))}
+          ${detailRow("Email Verified", seller.emailVerified ? "Yes" : "No")}
+          ${detailRow("Referral Code", seller.referralCode)}
+        </div>
+      </section>
+
+      <section class="seller-review-section">
+        <h4>Payout</h4>
+        <div class="seller-review-grid">
+          ${detailRow("Payout Method", seller.payoutMethod)}
+          ${detailRow("MoMo Network", seller.momoNetwork)}
+          ${detailRow("MoMo Number", seller.momoNumber)}
+          ${detailRow("Account Name", seller.bankAccountName)}
+          ${detailRow("Paystack Subaccount", seller.paystackSubaccountCode)}
+          ${detailRow("Paystack Status", seller.paystackSubaccountStatus)}
+        </div>
+      </section>
+
+      <section class="seller-review-section">
+        <h4>Review Note</h4>
+        <textarea id="sellerReviewNoteInput" rows="3" placeholder="Optional note for this review">${escapeHtml(seller.sellerReviewNote || "")}</textarea>
+        ${seller.sellerReviewedAt ? `<p class="seller-review-footnote">Last reviewed ${escapeHtml(formatDateTime(seller.sellerReviewedAt))}</p>` : ""}
+      </section>
+
+      <div class="seller-review-actions">
+        <button type="button" class="manage-btn status seller-modal-approval-btn" data-id="${escapeHtml(seller.id)}" data-status="APPROVED">Approve Seller</button>
+        <button type="button" class="manage-btn delete seller-modal-approval-btn" data-id="${escapeHtml(seller.id)}" data-status="REJECTED">Reject</button>
+        <button type="button" class="manage-btn hold seller-modal-approval-btn" data-id="${escapeHtml(seller.id)}" data-status="PENDING_REVIEW">Keep Pending</button>
+      </div>
+    </aside>
+  `;
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay || event.target.closest(".seller-review-close")) {
+      closeSellerReviewModal();
+      return;
+    }
+
+    const button = event.target.closest(".seller-modal-approval-btn");
+    if (!button || button.disabled) return;
+
+    updateSellerApproval(button.dataset.id, button.dataset.status, button);
+  });
+
+  document.body.appendChild(overlay);
+}
+
+async function updateSellerApproval(sellerId, approvalStatus, button) {
+  if (!sellerId || !approvalStatus) return;
+
+  const reviewNote = document.getElementById("sellerReviewNoteInput")?.value?.trim() || "";
+  const confirmed = confirm(`Update this seller approval to ${formatStatus(approvalStatus)}?`);
+  if (!confirmed) return;
+
+  const originalText = button?.textContent;
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Saving...";
+    }
+
+    const response = await fetch(`${API_BASE}/api/users/${encodeURIComponent(sellerId)}/seller-approval`, {
+      method: "PUT",
+      headers: getJsonAuthHeaders(),
+      body: JSON.stringify({ approvalStatus, reviewNote })
+    });
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || "Could not update seller approval");
+    }
+
+    closeSellerReviewModal();
+    await loadUsers();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Unable to update seller approval.");
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
 }
 
 function renderUsers(users) {
@@ -1860,6 +2056,19 @@ superAdminNotificationsList?.addEventListener("click", event => {
   if (action === "delete") {
     deleteSuperAdminNotification(notificationId);
   }
+});
+
+sellersList?.addEventListener("click", event => {
+  const reviewButton = event.target.closest(".seller-review-btn");
+  if (reviewButton) {
+    openSellerReviewModal(reviewButton.dataset.id);
+    return;
+  }
+
+  const approvalButton = event.target.closest(".seller-approval-btn");
+  if (!approvalButton || approvalButton.disabled) return;
+
+  updateSellerApproval(approvalButton.dataset.id, approvalButton.dataset.status, approvalButton);
 });
 
 usersList?.addEventListener("click", async event => {

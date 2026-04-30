@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title desc">
+  <title id="title">Home boutique business in Ghana</title>
+  <desc id="desc">Illustration of a home boutique clothing rack, boxes, and online shop screen.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff8df"/>
+      <stop offset=".6" stop-color="#ecf5ef"/>
+      <stop offset="1" stop-color="#0d5f45"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#bg)"/>
+  <path d="M170 592h430M230 180v412M540 180v412M210 180h350" stroke="#043f2e" stroke-width="18" stroke-linecap="round"/>
+  <path d="M300 218h110l42 258H258z" fill="#fffdf4" stroke="#f2c94c" stroke-width="12"/>
+  <path d="M318 218c10 32 58 32 68 0" fill="none" stroke="#f2c94c" stroke-width="12" stroke-linecap="round"/>
+  <path d="M430 226h82l36 238H394z" fill="#043f2e" stroke="#fffdf4" stroke-width="10"/>
+  <rect x="665" y="130" width="330" height="470" rx="46" fill="#062f24"/>
+  <rect x="700" y="176" width="260" height="364" rx="28" fill="#fffdf4"/>
+  <rect x="730" y="214" width="200" height="44" rx="22" fill="#f2c94c"/>
+  <rect x="730" y="300" width="86" height="96" rx="16" fill="#e9f1ea"/>
+  <rect x="842" y="300" width="86" height="96" rx="16" fill="#e9f1ea"/>
+  <rect x="730" y="432" width="172" height="52" rx="26" fill="#043f2e"/>
+  <rect x="150" y="610" width="230" height="78" rx="18" fill="#f2c94c"/>
+  <rect x="420" y="622" width="170" height="66" rx="16" fill="#fffdf4"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title desc">
+  <title id="title">Get more fashion customers in Ghana</title>
+  <desc id="desc">Illustration of Ghana fashion shoppers browsing products on a trusted marketplace.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#043f2e"/>
+      <stop offset=".48" stop-color="#0d5f45"/>
+      <stop offset="1" stop-color="#fff8df"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#bg)"/>
+  <circle cx="230" cy="235" r="76" fill="#f2c94c"/>
+  <circle cx="430" cy="235" r="76" fill="#fffdf4"/>
+  <circle cx="630" cy="235" r="76" fill="#f2c94c"/>
+  <path d="M130 520c18-116 182-116 200 0" fill="#fffdf4" opacity=".96"/>
+  <path d="M330 520c18-116 182-116 200 0" fill="#f2c94c" opacity=".96"/>
+  <path d="M530 520c18-116 182-116 200 0" fill="#fffdf4" opacity=".96"/>
+  <rect x="770" y="150" width="300" height="420" rx="42" fill="#fffdf4"/>
+  <rect x="805" y="194" width="230" height="152" rx="24" fill="#f2c94c"/>
+  <path d="M870 244c18-42 74-42 92 0l30 78H840z" fill="#043f2e"/>
+  <rect x="805" y="386" width="230" height="28" rx="14" fill="#dce9df"/>
+  <rect x="805" y="438" width="170" height="28" rx="14" fill="#dce9df"/>
+  <rect x="805" y="494" width="186" height="54" rx="27" fill="#043f2e"/>
+</svg>

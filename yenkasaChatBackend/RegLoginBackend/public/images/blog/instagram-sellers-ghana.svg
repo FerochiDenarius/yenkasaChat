@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title desc">
+  <title id="title">Instagram sellers in Ghana losing customers</title>
+  <desc id="desc">Illustration of phone messages, fashion products, and a trusted marketplace card.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff8df"/>
+      <stop offset=".54" stop-color="#f4e1ef"/>
+      <stop offset="1" stop-color="#043f2e"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#f8dc68"/>
+      <stop offset="1" stop-color="#c99612"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#bg)"/>
+  <rect x="120" y="110" width="360" height="520" rx="44" fill="#111827"/>
+  <rect x="152" y="158" width="296" height="420" rx="28" fill="#fffdf4"/>
+  <rect x="180" y="198" width="220" height="48" rx="24" fill="#f2c94c"/>
+  <rect x="180" y="272" width="178" height="42" rx="21" fill="#e8ece8"/>
+  <rect x="250" y="336" width="160" height="42" rx="21" fill="#fce6f1"/>
+  <rect x="180" y="402" width="206" height="42" rx="21" fill="#e8ece8"/>
+  <text x="300" y="229" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#043f2e">Available?</text>
+  <rect x="610" y="156" width="430" height="320" rx="38" fill="#fffdf4"/>
+  <rect x="650" y="200" width="148" height="150" rx="22" fill="url(#gold)"/>
+  <path d="M688 250c18-42 74-42 92 0l28 78H660z" fill="#043f2e"/>
+  <rect x="835" y="210" width="150" height="26" rx="13" fill="#dce9df"/>
+  <rect x="835" y="262" width="116" height="26" rx="13" fill="#dce9df"/>
+  <rect x="835" y="322" width="132" height="54" rx="27" fill="#043f2e"/>
+  <path d="M682 542h330" stroke="#f2c94c" stroke-width="20" stroke-linecap="round"/>
+  <path d="M724 590h246" stroke="#fffdf4" stroke-width="18" stroke-linecap="round"/>
+</svg>

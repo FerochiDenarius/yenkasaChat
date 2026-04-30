@@ -496,7 +496,10 @@ app.use(deleteAccountPage);
 // Error Handling
 // ---------------------------------
 app.use((req, res, next) => {
-  if (req.originalUrl.startsWith("/api/")) {
+  if (
+    req.originalUrl.startsWith("/api/") &&
+    !req.originalUrl.startsWith("/api/blog/")
+  ) {
     return res.status(404).json({ error: "API route not found" });
   }
   next();

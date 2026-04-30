@@ -1203,6 +1203,19 @@
     grid-template-columns: 1fr;
   }
 
+  .seller-card-grid,
+  .seller-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-card-metrics {
+    justify-items: start;
+  }
+
+  .seller-review-modal {
+    padding: 20px;
+  }
+
   .admin-dashboard-footer {
     flex-direction: column;
   }

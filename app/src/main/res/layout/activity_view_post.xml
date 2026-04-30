@@ -153,7 +153,7 @@
                     android:focusable="false"
                     android:importantForAccessibility="no"
                     android:scaleType="fitCenter"
-                    android:src="@drawable/ic_yenkasa_logo" />
+                    android:src="@drawable/yenkasa_post_watermark" />
             </FrameLayout>
 
             <!-- Divider -->

@@ -6,16 +6,18 @@
   <title>Yenkasa Portfolio | Bright Kofi Ofosu Menya</title>
   <style>
     :root {
-      --primary: #0f172a;
-      --secondary: #1e293b;
-      --accent: #f59e0b;
-      --accent-dark: #d97706;
-      --light: #f8fafc;
-      --muted: #94a3b8;
-      --card: #ffffff;
-      --border: #e2e8f0;
+      --primary: #f8fafc;
+      --secondary: #d7e4dd;
+      --accent: #f2c94c;
+      --accent-dark: #f59e0b;
+      --green: #22c55e;
+      --green-deep: #0b5d3b;
+      --light: #07120f;
+      --muted: #9fb2aa;
+      --card: rgba(255, 255, 255, 0.075);
+      --border: rgba(255, 255, 255, 0.13);
       --success: #16a34a;
-      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.26);
     }
 
     * {
@@ -30,9 +32,26 @@
 
     body {
       font-family: Arial, Helvetica, sans-serif;
-      background: var(--light);
+      background:
+        linear-gradient(135deg, rgba(34, 197, 94, 0.16), transparent 24rem),
+        linear-gradient(225deg, rgba(242, 201, 76, 0.12), transparent 28rem),
+        linear-gradient(135deg, #06110e 0%, #0b1220 48%, #0f1c35 100%);
       color: var(--primary);
       line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -30%;
+      z-index: -1;
+      background:
+        linear-gradient(115deg, transparent 0 28%, rgba(34, 197, 94, 0.11) 34%, transparent 45%),
+        linear-gradient(245deg, transparent 0 30%, rgba(242, 201, 76, 0.09) 38%, transparent 50%);
+      filter: blur(18px);
+      animation: backgroundShift 14s ease-in-out infinite alternate;
+      pointer-events: none;
     }
 
     a {
@@ -54,7 +73,7 @@
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: rgba(255,255,255,0.95);
+      background: rgba(6, 17, 14, 0.82);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
     }
@@ -68,13 +87,34 @@
     }
 
     .brand {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
     }
 
-    .brand span {
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: #fff;
+      padding: 5px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .brand-text {
+      display: inline-flex;
+      flex-direction: column;
+      line-height: 1.05;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .brand-text span {
       color: var(--accent);
+      font-size: 0.82rem;
+      letter-spacing: 0;
     }
 
     .nav-links {
@@ -95,8 +135,12 @@
     }
 
     .hero {
-      padding: 72px 0 48px;
-      background: linear-gradient(135deg, #fff7ed, #ffffff 40%, #f8fafc 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 86px 0 58px;
+      background:
+        linear-gradient(120deg, rgba(11, 93, 59, 0.42), transparent 44%),
+        linear-gradient(315deg, rgba(245, 158, 11, 0.18), transparent 42%);
     }
 
     .hero-grid {
@@ -110,17 +154,24 @@
       font-size: clamp(2rem, 5vw, 3.5rem);
       line-height: 1.1;
       margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(34px);
+      animation: fadeUp 0.9s ease forwards;
     }
 
     .hero-text h1 span {
-      color: var(--accent-dark);
+      color: var(--accent);
+      text-shadow: 0 0 28px rgba(242, 201, 76, 0.22);
     }
 
     .hero-text p {
       font-size: 1.06rem;
-      color: #334155;
+      color: var(--secondary);
       max-width: 650px;
       margin-bottom: 24px;
+      opacity: 0;
+      transform: translateY(24px);
+      animation: fadeUp 0.9s ease 0.16s forwards;
     }
 
     .hero-actions {
@@ -128,6 +179,9 @@
       gap: 14px;
       flex-wrap: wrap;
       margin-bottom: 24px;
+      opacity: 0;
+      transform: translateY(22px);
+      animation: fadeUp 0.9s ease 0.3s forwards;
     }
 
     .btn {
@@ -139,19 +193,22 @@
     }
 
     .btn-primary {
-      background: var(--accent);
-      color: #111827;
+      background: linear-gradient(45deg, var(--green-deep), var(--green));
+      color: #fff;
+      box-shadow: 0 14px 34px rgba(34, 197, 94, 0.22);
     }
 
     .btn-primary:hover {
-      background: var(--accent-dark);
+      background: linear-gradient(45deg, var(--green), var(--accent));
       color: white;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 18px 44px rgba(34, 197, 94, 0.35);
     }
 
     .btn-outline {
-      border: 1px solid var(--border);
-      background: white;
-      color: var(--primary);
+      border: 1px solid rgba(34, 197, 94, 0.48);
+      background: rgba(255, 255, 255, 0.04);
+      color: #d9f99d;
     }
 
     .btn-outline:hover {
@@ -175,6 +232,7 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
     }
 
     .stat-card {
@@ -184,22 +242,36 @@
 
     .stat-card h3 {
       font-size: 1.4rem;
-      color: var(--accent-dark);
+      color: var(--accent);
       margin-bottom: 6px;
     }
 
     .hero-visual {
-      background: var(--primary);
+      background: rgba(255, 255, 255, 0.075);
       color: white;
       padding: 28px;
       border-radius: 28px;
       box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(18px);
+      opacity: 0;
+      transform: translateX(36px);
+      animation: fadeSide 0.9s ease 0.22s forwards;
     }
 
     .hero-visual h3 {
       font-size: 1.4rem;
       margin-bottom: 14px;
       color: #fde68a;
+    }
+
+    .hero-logo {
+      width: min(270px, 100%);
+      margin-bottom: 22px;
+      border-radius: 24px;
+      background: #fff;
+      padding: 14px;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.22);
     }
 
     .hero-visual p {
@@ -235,7 +307,7 @@
     }
 
     .section-header p {
-      color: #475569;
+      color: var(--muted);
       max-width: 760px;
     }
 
@@ -281,7 +353,7 @@
     .skill-card p,
     .contact-card p,
     .review-card p {
-      color: #475569;
+      color: var(--muted);
       margin-bottom: 16px;
     }
 
@@ -293,9 +365,9 @@
     }
 
     .tag {
-      background: #fff7ed;
-      color: #b45309;
-      border: 1px solid #fed7aa;
+      background: rgba(242, 201, 76, 0.12);
+      color: #fde68a;
+      border: 1px solid rgba(242, 201, 76, 0.22);
       padding: 7px 12px;
       border-radius: 999px;
       font-size: 0.86rem;
@@ -315,11 +387,13 @@
     }
 
     .download-box {
-      background: linear-gradient(135deg, #0f172a, #1e293b);
+      background: linear-gradient(135deg, rgba(11, 93, 59, 0.85), rgba(15, 23, 42, 0.92));
       color: white;
       padding: 26px;
       border-radius: 24px;
       margin-top: 24px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
     }
 
     .download-box p {
@@ -328,16 +402,17 @@
     }
 
     .reviews {
-      background: #fff;
+      background: rgba(255, 255, 255, 0.035);
     }
 
     .review-form {
       margin-top: 24px;
-      background: white;
+      background: var(--card);
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
       border-radius: 22px;
       padding: 24px;
+      backdrop-filter: blur(16px);
     }
 
     .form-grid {
@@ -353,7 +428,8 @@
       border-radius: 14px;
       border: 1px solid #cbd5e1;
       font: inherit;
-      background: white;
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f172a;
     }
 
     textarea {
@@ -366,7 +442,7 @@
     }
 
     .footer {
-      background: var(--primary);
+      background: rgba(6, 17, 14, 0.92);
       color: #cbd5e1;
       text-align: center;
       padding: 30px 16px;
@@ -375,6 +451,40 @@
 
     .footer strong {
       color: white;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeSide {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes backgroundShift {
+      from {
+        transform: translate3d(-1.5rem, -1rem, 0) rotate(0deg);
+      }
+      to {
+        transform: translate3d(1.5rem, 1rem, 0) rotate(2deg);
+      }
     }
 
     @media (max-width: 950px) {
@@ -411,7 +521,10 @@
 <body>
   <nav class="navbar">
     <div class="container nav-wrap">
-      <a href="#home" class="brand">Yenkasa<span>Portfolio</span></a>
+      <a href="#home" class="brand" aria-label="Yenkasa Portfolio home">
+        <img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech logo" class="brand-logo">
+        <span class="brand-text">Yenkasa<span>Portfolio</span></span>
+      </a>
       <div class="nav-links">
         <a href="#home">Home</a>
         <a href="#about">About</a>
@@ -427,7 +540,7 @@
   <header class="hero" id="home">
     <div class="container hero-grid">
       <div class="hero-text">
-        <h1>Building digital products with <span>Yenkasa</span> vision.</h1>
+        <h1>Building digital products with <span>Yenkasa Vision</span>.</h1>
         <p>
           I am a developer and founder building practical digital solutions, including the Yenkasa App,
           Yenkasa Store, and web platforms that help people connect, discover, and do business online.
@@ -440,7 +553,7 @@
 
         <div class="hero-stats">
           <div class="stat-card">
-            <h3>3+</h3>
+            <h3>5+</h3>
             <p>Main Products</p>
           </div>
           <div class="stat-card">
@@ -454,7 +567,8 @@
         </div>
       </div>
 
-      <div class="hero-visual">
+      <div class="hero-visual glass-card">
+        <img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech logo" class="hero-logo">
         <h3>What this portfolio covers</h3>
         <p>
           A dynamic portfolio website where visitors can explore my projects, download my app, contact me on WhatsApp,
@@ -521,6 +635,37 @@
             <span class="tag">Paystack Ready</span>
           </div>
           <div class="project-links">
+            <a href="https://www.yenkasa.xyz/store" target="_blank">Visit Store</a>
+          </div>
+        </article>
+
+        <article class="project-card">
+          <h3>Yenkasa Web</h3>
+          <p>
+            A web version of Yenkasa with feed, communities, ads, profiles, wallet, notifications, and account features for desktop and mobile browsers.
+          </p>
+          <div class="tag-row">
+            <span class="tag">React Web App</span>
+            <span class="tag">Communities</span>
+            <span class="tag">Responsive UI</span>
+          </div>
+          <div class="project-links">
+            <a href="https://www.yenkasa.xyz/web" target="_blank">Open Yenkasa Web</a>
+          </div>
+        </article>
+
+        <article class="project-card">
+          <h3>Yenkasa Store Blog</h3>
+          <p>
+            An SEO-focused blog system for Yenkasa Store, built to educate Ghanaian fashion vendors and drive sellers to list products online.
+          </p>
+          <div class="tag-row">
+            <span class="tag">SEO Blog</span>
+            <span class="tag">Vendor Growth</span>
+            <span class="tag">Node Routes</span>
+          </div>
+          <div class="project-links">
+            <a href="https://www.yenkasa.xyz/blog" target="_blank">Read Blog</a>
             <a href="https://www.yenkasa.xyz/store" target="_blank">Visit Store</a>
           </div>
         </article>
@@ -665,5 +810,23 @@
   <footer class="footer">
     <p><strong>© 2026 Yenkasa Portfolio.</strong> Built under Yenkasa Soft O Tech.</p>
   </footer>
+  <script>
+    const revealItems = document.querySelectorAll(
+      '.section-header, .project-card, .skill-card, .review-card, .review-form, .contact-card, .download-box'
+    );
+
+    revealItems.forEach((item) => item.classList.add('reveal'));
+
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.14 });
+
+    revealItems.forEach((item) => revealObserver.observe(item));
+  </script>
 </body>
 </html>

@@ -245,6 +245,7 @@ router.post('/', auth, async (req, res) => {
     // ✅ Create message object with repliedTo reference
     const newMessage = new Message({
       roomId,
+      conversationId: roomId,
       senderId: senderAppUserId,
       text: text ? text.trim().substring(0, 2000) : null,
       imageUrl,
@@ -353,12 +354,12 @@ router.post('/', auth, async (req, res) => {
     // ✅ Populate sender and repliedTo message before sending response
     const populatedMessage = await Message.findById(newMessage._id)
       .populate({
-        path: 'senderId',
+        path: 'sender',
         select: 'username profileImage _id',
       })
       .populate({
         path: 'repliedTo',
-        populate: { path: 'senderId', select: 'username profileImage _id' },
+        populate: { path: 'sender', select: 'username profileImage _id' },
       })
       .lean();
 
@@ -369,43 +370,125 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// ✅ GET: Messages for a chat room (includes repliedTo data)
-router.get('/:roomId', auth, async (req, res) => {
-  const { roomId } = req.params;
-  const userId = req.user.id;
+async function resolveMessageRoomId(id, userId) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return { status: 'invalid', roomId: null, chatRoom: null };
+  }
 
-  if (!mongoose.Types.ObjectId.isValid(roomId)) {
-    return res.status(400).json({ error: 'Invalid roomId' });
+  const chatRoom = await ChatRoom.findOne({ _id: id, participants: userId });
+  if (chatRoom) {
+    return { status: 'room', roomId: chatRoom._id, chatRoom };
+  }
+
+  const targetUser = await User.findById(id).select('_id').lean();
+  if (!targetUser) {
+    return { status: 'missing', roomId: id, chatRoom: null };
+  }
+
+  const directRoom = await ChatRoom.findOne({
+    participants: {
+      $size: 2,
+      $all: [
+        new mongoose.Types.ObjectId(userId),
+        new mongoose.Types.ObjectId(id)
+      ]
+    }
+  });
+
+  if (!directRoom) {
+    return { status: 'empty_user_conversation', roomId: null, chatRoom: null, targetUserId: id };
+  }
+
+  return { status: 'user', roomId: directRoom._id, chatRoom: directRoom, targetUserId: id };
+}
+
+async function fetchMessagesForConversation(req, res) {
+  const id = req.params.id || req.params.userId;
+  const userId = req.user.id.toString();
+
+  console.log("Fetching messages for:", id);
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    console.warn('[MessagesRoute] ⚠️ Invalid message conversation id:', id);
+    return res.json([]);
   }
 
   try {
-    const chatRoom = await ChatRoom.findOne({ _id: roomId, participants: userId });
-    if (!chatRoom) return res.status(403).json({ error: 'Not authorized for this room' });
+    const resolved = await resolveMessageRoomId(id, userId);
 
-    for (const participantId of chatRoom.participants.map(id => id.toString())) {
+    if (resolved.status === 'empty_user_conversation' || resolved.status === 'missing') {
+      console.log('[MessagesRoute] No chat room/messages found; returning empty array:', {
+        requestedId: id,
+        status: resolved.status
+      });
+      return res.json([]);
+    }
+
+    if (!resolved.chatRoom || !resolved.roomId) {
+      return res.json([]);
+    }
+
+    const chatRoom = resolved.chatRoom;
+    const roomId = resolved.roomId;
+    const participantIds = chatRoom.participants.map(participantId => participantId.toString());
+
+    if (!participantIds.includes(userId)) {
+      console.warn('[MessagesRoute] ⚠️ User tried to fetch room they do not belong to:', {
+        requestedId: id,
+        resolvedRoomId: roomId.toString(),
+        userId
+      });
+      return res.status(403).json({ error: 'Not authorized for this room' });
+    }
+
+    for (const participantId of participantIds) {
       if (participantId !== userId && await areUsersBlocked(userId, participantId)) {
+        console.warn('[MessagesRoute] ⚠️ Message fetch blocked by privacy settings:', {
+          requestedId: id,
+          roomId: roomId.toString(),
+          userId,
+          participantId
+        });
         return res.status(403).json({ error: 'Not authorized for this room' });
       }
     }
 
-    const messages = await Message.find({ roomId })
+    const messages = await Message.find({
+      $or: [
+        { roomId },
+        { conversationId: roomId },
+        { conversationId: id }
+      ]
+    })
       .sort({ timestamp: 1 })
       .populate({
-        path: 'senderId',
+        path: 'sender',
         select: 'username profileImage _id',
       })
       .populate({
         path: 'repliedTo',
-        populate: { path: 'senderId', select: 'username profileImage _id' },
+        populate: { path: 'sender', select: 'username profileImage _id' },
       }) // ✅ Include repliedTo data
       .lean();
+
+    console.log('[MessagesRoute] ✅ Messages fetched:', {
+      requestedId: id,
+      roomId: roomId.toString(),
+      count: messages.length
+    });
 
     res.json(messages);
   } catch (err) {
     console.error('[MessagesRoute] ❌ Error fetching messages:', err.message);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
-});
+}
+
+// ✅ GET: Messages by direct user id. Returns [] if no room/messages exist.
+router.get('/user/:userId', auth, fetchMessagesForConversation);
+
+// ✅ GET: Messages for a chat room/conversation ID, with user ID fallback
+router.get('/:id', auth, fetchMessagesForConversation);
 
 // ✅ PATCH: Edit a text message owned by the logged-in user
 router.patch('/:messageId', auth, async (req, res) => {

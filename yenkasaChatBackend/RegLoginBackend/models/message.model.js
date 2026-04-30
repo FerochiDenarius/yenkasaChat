@@ -7,6 +7,14 @@ const messageSchema = new mongoose.Schema({
     ref: 'ChatRoom'
   },
 
+  // Backward-compatible alias used by older clients for the same chat room id.
+  conversationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: false,
+    ref: 'ChatRoom',
+    index: true
+  },
+
   // Keep this a string for API stability (your clients expect string id)
   senderId: {
     type: String,

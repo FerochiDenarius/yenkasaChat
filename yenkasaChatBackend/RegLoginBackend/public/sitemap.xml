@@ -2,6 +2,23 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
   <url>
+    <loc>https://www.yenkasa.xyz/web</loc>
+  </url>
+
+  <!-- WEB PAGES -->
+  <url>
+    <loc>https://www.yenkasa.xyz/web/login</loc>
+  </url>
+
+  <url>
+    <loc>https://www.yenkasa.xyz/web/verification</loc>
+  </url>
+
+  <url>
+    <loc>https://www.yenkasa.xyz/web/registration</loc>
+  </url>
+
+  <url>
     <loc>https://www.yenkasa.xyz/blog</loc>
   </url>
 

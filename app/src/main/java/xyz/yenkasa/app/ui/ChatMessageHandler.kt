@@ -264,10 +264,12 @@ class ChatMessageHandler(
                 "This person is not accepting messages right now."
             code == 423 && reason == "not_community_member" ->
                 "Only people who share a community with this person can message them."
-            code == 403 && reason == "blocked" ->
+            code == 403 && reason == "blocked_by_user" ->
                 "You can’t send this message because this user has blocked you."
+            code == 403 && reason == "you_blocked_user" ->
+                "You blocked this user. Unblock them before messaging."
             reason.contains("blocked", ignoreCase = true) || lowerMessage.contains("blocked") ->
-                "You can’t send this message because this user has blocked you."
+                serverMessage.ifBlank { "You can’t send this message because messaging is blocked." }
             serverMessage.isNotBlank() -> serverMessage
             else -> "Message could not be sent. Please try again."
         }

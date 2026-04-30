@@ -262,10 +262,10 @@ io.on('connection', (socket) => {
     socket.emit('getOnlineUsers', getOnlineUserIds());
   });
 
-  socket.on('joinChatRoom', async (roomId) => {
+  socket.on('joinChatRoom', async (payload) => {
     try {
-      const normalizedRoomId = roomId?.toString();
-      const normalizedUserId = socket.data.userId;
+      const normalizedRoomId = (payload?.roomId || payload)?.toString();
+      const normalizedUserId = (socket.data.userId || payload?.userId)?.toString();
       if (!normalizedRoomId || !mongoose.Types.ObjectId.isValid(normalizedRoomId) || !normalizedUserId) {
         return;
       }

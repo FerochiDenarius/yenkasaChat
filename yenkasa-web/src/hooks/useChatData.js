@@ -20,6 +20,7 @@ export default function useChatData(roomId) {
   const roomsRef = useRef([]);
   const lastScrolledRoomRef = useRef("");
   const previousMessageCountRef = useRef(0);
+  const shouldStickToBottomRef = useRef(true);
 
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
@@ -37,6 +38,19 @@ export default function useChatData(roomId) {
   useEffect(() => {
     roomsRef.current = rooms;
   }, [rooms]);
+
+  useEffect(() => {
+    const element = threadBodyRef.current;
+    if (!element) return undefined;
+
+    const updateStickiness = () => {
+      shouldStickToBottomRef.current = isNearThreadBottom(threadBodyRef);
+    };
+
+    updateStickiness();
+    element.addEventListener("scroll", updateStickiness, { passive: true });
+    return () => element.removeEventListener("scroll", updateStickiness);
+  }, [roomId]);
 
   useEffect(() => {
     let active = true;
@@ -129,17 +143,18 @@ export default function useChatData(roomId) {
   useEffect(() => {
     const isNewRoom = lastScrolledRoomRef.current !== String(roomId || "");
     const previousCount = previousMessageCountRef.current;
-    const nextCount = groupedMessages.length;
+    const nextCount = messages.length;
 
     if (isNewRoom) {
-      scrollThreadToBottom(threadEndRef, "auto");
+      scrollThreadToBottom(threadBodyRef, threadEndRef, "auto", true);
       lastScrolledRoomRef.current = String(roomId || "");
-    } else if (nextCount > previousCount && isNearThreadBottom(threadBodyRef)) {
-      scrollThreadToBottom(threadEndRef, "smooth");
+      shouldStickToBottomRef.current = true;
+    } else if (nextCount > previousCount && shouldStickToBottomRef.current) {
+      scrollThreadToBottom(threadBodyRef, threadEndRef, "smooth", true);
     }
 
     previousMessageCountRef.current = nextCount;
-  }, [groupedMessages.length, roomId]);
+  }, [messages.length, roomId]);
 
   async function createRoomByUsername(username) {
     const value = username.trim();
@@ -197,10 +212,21 @@ export default function useChatData(roomId) {
   };
 }
 
-function scrollThreadToBottom(threadEndRef, behavior = "smooth") {
-  window.requestAnimationFrame(() => {
+function scrollThreadToBottom(threadBodyRef, threadEndRef, behavior = "smooth", force = false) {
+  const scroll = () => {
+    const element = threadBodyRef.current;
+    if (element && (force || isNearThreadBottom(threadBodyRef))) {
+      element.scrollTop = element.scrollHeight;
+    }
     threadEndRef.current?.scrollIntoView({ block: "end", behavior });
+  };
+
+  window.requestAnimationFrame(() => {
+    scroll();
+    window.requestAnimationFrame(scroll);
   });
+  window.setTimeout(scroll, 120);
+  window.setTimeout(scroll, 320);
 }
 
 function isNearThreadBottom(threadBodyRef) {

@@ -150,10 +150,13 @@ class ChatActivityHelper(
                                 lastMessageTimestamp = newestTimestampInBatch
                             }
 
-                            callback.updateMessages(messages.toList())
                         }
+                        callback.updateMessages(messages.toList())
+                        markRoomAsRead()
                     } else {
-                        Log.e("ChatActivityHelper", "Fetch failed: ${parseError(response)}")
+                        val error = friendlyFetchError(response)
+                        Log.e("ChatActivityHelper", "Fetch failed: $error")
+                        callback.showToast(error, Toast.LENGTH_LONG)
                     }
                 }
 
@@ -203,6 +206,7 @@ class ChatActivityHelper(
             currentMessages.add(message)
             callback.updateMessages(currentMessages)
             lastMessageTimestamp = parseTimestamp(message.timestamp)
+            markRoomAsRead()
         }
     }
 
@@ -408,5 +412,33 @@ fun cleanup() {
         } catch (e: IOException) {
             "Error parsing server response"
         }
+    }
+
+    private fun friendlyFetchError(response: Response<*>): String {
+        val raw = parseError(response)
+        val json = runCatching { JSONObject(raw) }.getOrNull()
+        val reason = json?.optString("reason").orEmpty()
+        val serverMessage = json?.optString("error").orEmpty()
+            .ifBlank { json?.optString("message").orEmpty() }
+        return when (reason) {
+            "blocked_by_user" -> "You can’t view this chat because this user has blocked you."
+            "you_blocked_user" -> "You blocked this user. Unblock them before messaging."
+            else -> serverMessage.ifBlank { raw.ifBlank { "Failed to load this chat." } }
+        }
+    }
+
+    fun markRoomAsRead() {
+        if (roomId.isBlank()) return
+        ApiClient.apiService.markMessagesAsRead(roomId).enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (!response.isSuccessful) {
+                    Log.w("ChatActivityHelper", "Mark-as-read failed: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.w("ChatActivityHelper", "Mark-as-read request failed: ${t.message}")
+            }
+        })
     }
 }

@@ -49,6 +49,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.gson.Gson
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.EmojiPickerAdapter
@@ -129,6 +130,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private lateinit var videoCallButton: ImageView
     private val webSocketManager = WebSocketProvider.instance
     private var receiverParticipant: Participant? = null
+    private val chatMessageGson = Gson()
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
@@ -387,6 +389,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         setupPresenceListeners()
+        setupRealtimeMessageListeners()
 
         // --- Listen for signaling messages (CALL_REQUEST / ACCEPT / REJECT) ---
         lifecycleScope.launch {
@@ -423,9 +426,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.startFetchingMessagesRepeatedly()
         }
+        joinRealtimeChatRoom()
     }
 
     override fun onStop() {
+        leaveRealtimeChatRoom()
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.stopFetchingMessages()
         }
@@ -446,6 +451,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
         SocketManager.off("getOnlineUsers")
         SocketManager.off("userStatusChanged")
+        SocketManager.off("presence:update")
+        SocketManager.off("messageCreated")
+        SocketManager.off("messageEdited")
+        SocketManager.off("messageDeleted")
         super.onDestroy()
     }
 
@@ -1359,6 +1368,79 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         SocketManager.requestOnlineUsers()
+    }
+
+    private fun setupRealtimeMessageListeners() {
+        SocketManager.ensureConnected(senderId)
+        joinRealtimeChatRoom()
+
+        SocketManager.on("messageCreated") { data ->
+            val incoming = parseSocketMessage(data) ?: return@on
+            if (incoming.roomId != roomId) return@on
+            runOnUiThread {
+                upsertRealtimeMessage(incoming)
+                if (::chatActivityHelper.isInitialized) {
+                    chatActivityHelper.markRoomAsRead()
+                }
+            }
+        }
+
+        SocketManager.on("messageEdited") { data ->
+            val edited = parseSocketMessage(data) ?: return@on
+            if (edited.roomId != roomId) return@on
+            runOnUiThread { upsertRealtimeMessage(edited) }
+        }
+
+        SocketManager.on("messageDeleted") { data ->
+            val json = parseSocketJson(data) ?: return@on
+            if (json.optString("roomId") != roomId) return@on
+            val deletedMessageId = json.optString("messageId")
+            if (deletedMessageId.isBlank()) return@on
+            runOnUiThread {
+                val updatedMessages = messageAdapter.currentList
+                    .filterNot { it.id == deletedMessageId }
+                updateMessages(updatedMessages)
+            }
+        }
+    }
+
+    private fun joinRealtimeChatRoom() {
+        val activeRoomId = roomId ?: return
+        val payload = JSONObject()
+            .put("roomId", activeRoomId)
+            .put("userId", senderId)
+        SocketManager.emit("joinChatRoom", payload)
+    }
+
+    private fun leaveRealtimeChatRoom() {
+        val activeRoomId = roomId ?: return
+        SocketManager.emit("leaveChatRoom", activeRoomId)
+    }
+
+    private fun parseSocketJson(data: Any): JSONObject? {
+        return when (data) {
+            is JSONObject -> data
+            else -> runCatching { JSONObject(data.toString()) }.getOrNull()
+        }
+    }
+
+    private fun parseSocketMessage(data: Any): ChatMessage? {
+        val json = parseSocketJson(data) ?: return null
+        return runCatching {
+            chatMessageGson.fromJson(json.toString(), ChatMessage::class.java)
+        }.getOrNull()
+    }
+
+    private fun upsertRealtimeMessage(message: ChatMessage) {
+        val messageId = message.id
+        val currentMessages = messageAdapter.currentList.toMutableList()
+        val existingIndex = currentMessages.indexOfFirst { it.id == messageId && messageId != null }
+        if (existingIndex >= 0) {
+            currentMessages[existingIndex] = message
+        } else {
+            currentMessages.add(message)
+        }
+        updateMessages(currentMessages)
     }
 
     private fun handlePresenceChangedEvent(data: Any) {

@@ -94,8 +94,20 @@ async function canMessageUser(senderId, receiverId) {
 
   const [senderPrivacy, receiverPrivacy] = await getPrivacyPair(sender, receiver);
 
-  if (hasId(senderPrivacy?.blockedUsers, receiver) || hasId(receiverPrivacy?.blockedUsers, sender)) {
-    return { allowed: false, reason: "blocked", message: "You cannot message this user" };
+  if (hasId(senderPrivacy?.blockedUsers, receiver)) {
+    return {
+      allowed: false,
+      reason: "you_blocked_user",
+      message: "You have blocked this user. Unblock them before messaging."
+    };
+  }
+
+  if (hasId(receiverPrivacy?.blockedUsers, sender)) {
+    return {
+      allowed: false,
+      reason: "blocked_by_user",
+      message: "You have been blocked by this user."
+    };
   }
 
   const privacyLevel = VALID_PRIVACY_LEVELS.has(receiverPrivacy?.privacyLevel)

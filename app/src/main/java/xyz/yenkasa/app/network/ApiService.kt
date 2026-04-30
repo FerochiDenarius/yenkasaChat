@@ -131,6 +131,9 @@ interface ApiService {
     @GET("messages/{roomId}")
     fun getMessages(@Path("roomId") roomId: String): Call<List<ChatMessage>>
 
+    @POST("messages/{roomId}/mark-as-read")
+    fun markMessagesAsRead(@Path("roomId") roomId: String): Call<ResponseBody>
+
     @PATCH("messages/{messageId}")
     suspend fun editMessage(
         @Path("messageId") messageId: String,

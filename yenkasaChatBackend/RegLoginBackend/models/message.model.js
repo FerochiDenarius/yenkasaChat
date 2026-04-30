@@ -95,7 +95,5 @@ function autoPopulate(next) {
 
 // run for find, findOne, findOneAndUpdate, findById, etc.
 messageSchema.pre(/^find/, autoPopulate);
-messageSchema.pre('findOne', autoPopulate);
-messageSchema.pre('findOneAndUpdate', autoPopulate);
 
 module.exports = mongoose.model('Message', messageSchema);

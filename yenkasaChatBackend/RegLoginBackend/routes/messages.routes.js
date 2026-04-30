@@ -12,7 +12,7 @@ const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const unreadCountService = require('../services/unreadCount.service');
 const { sendPushNotification } = require('../utils/onesignal');
-const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
+const { canMessageUser } = require('../services/privacy.service');
 const { cloudinary } = require('../config/cloudinary');
 
 const chatMediaUpload = multer({
@@ -29,7 +29,7 @@ const chatMediaUpload = multer({
       file.mimetype === 'application/msword' ||
       file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-    cb(allowed ? null : new Error('Unsupported chat file type'), allowed);
+    cb(allowed ? null : new Error('Unsupported file type'), allowed);
   }
 });
 
@@ -156,8 +156,9 @@ router.post('/', auth, async (req, res) => {
     typeof location.latitude === 'number' &&
     typeof location.longitude === 'number';
 
+  const normalizedText = typeof text === 'string' ? text.trim() : '';
   const hasContent =
-    text ||
+    normalizedText ||
     imageUrl ||
     audioUrl ||
     videoUrl ||
@@ -211,7 +212,7 @@ router.post('/', auth, async (req, res) => {
           );
         }
 
-        return res.status(permission.reason === 'blocked' ? 403 : 423).json({
+        return res.status(permission.reason?.includes('blocked') ? 403 : 423).json({
           error: permission.reason === 'requires_approval'
             ? 'Message request sent. You can chat after they approve it.'
             : permission.message,
@@ -247,7 +248,7 @@ router.post('/', auth, async (req, res) => {
       roomId,
       conversationId: roomId,
       senderId: senderAppUserId,
-      text: text ? text.trim().substring(0, 2000) : null,
+      text: normalizedText ? normalizedText.substring(0, 2000) : null,
       imageUrl,
       audioUrl,
       videoUrl,
@@ -363,6 +364,20 @@ router.post('/', auth, async (req, res) => {
       })
       .lean();
 
+    if (global.io) {
+      const targetRooms = [
+        newMessage.roomId.toString(),
+        senderAppUserId,
+        ...recipientAppUserIds
+      ];
+      global.io.to(targetRooms).emit('messageCreated', populatedMessage);
+      global.io.to(targetRooms).emit('chatRoomUpdated', {
+        roomId: newMessage.roomId.toString(),
+        lastMessage: populatedMessage,
+        lastMessageTime: populatedMessage?.timestamp || populatedMessage?.createdAt || new Date().toISOString()
+      });
+    }
+
     res.status(201).json(populatedMessage);
   } catch (err) {
     console.error('[MessagesRoute] ❌ Error saving message:', err.message);
@@ -442,14 +457,20 @@ async function fetchMessagesForConversation(req, res) {
     }
 
     for (const participantId of participantIds) {
-      if (participantId !== userId && await areUsersBlocked(userId, participantId)) {
+      if (participantId !== userId) {
+        const permission = await canMessageUser(userId, participantId);
+        if (!permission.allowed && permission.reason?.includes('blocked')) {
         console.warn('[MessagesRoute] ⚠️ Message fetch blocked by privacy settings:', {
           requestedId: id,
           roomId: roomId.toString(),
           userId,
           participantId
         });
-        return res.status(403).json({ error: 'Not authorized for this room' });
+          return res.status(403).json({
+            error: permission.message,
+            reason: permission.reason
+          });
+        }
       }
     }
 
@@ -531,7 +552,12 @@ router.patch('/:messageId', auth, async (req, res) => {
       .lean();
 
     if (global.io) {
-      global.io.to(message.roomId.toString()).emit('messageEdited', updatedMessage);
+      const editRoom = await ChatRoom.findById(message.roomId).select('participants').lean();
+      const targetRooms = [
+        message.roomId.toString(),
+        ...(editRoom?.participants || []).map(participantId => participantId.toString())
+      ];
+      global.io.to(targetRooms).emit('messageEdited', updatedMessage);
     }
 
     res.json(updatedMessage);
@@ -558,10 +584,15 @@ router.delete('/:messageId', auth, async (req, res) => {
       return res.status(403).json({ error: 'You can only delete your own messages' });
     }
 
+    const deleteRoom = await ChatRoom.findById(message.roomId).select('participants').lean();
     await message.deleteOne();
 
     if (global.io) {
-      global.io.to(message.roomId.toString()).emit('messageDeleted', {
+      const targetRooms = [
+        message.roomId.toString(),
+        ...(deleteRoom?.participants || []).map(participantId => participantId.toString())
+      ];
+      global.io.to(targetRooms).emit('messageDeleted', {
         messageId,
         roomId: message.roomId.toString()
       });

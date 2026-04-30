@@ -10,6 +10,14 @@ const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const authMiddleware = require('../middleware/auth');
 const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function participantKeyFor(userA, userB) {
+  return [userA.toString(), userB.toString()].sort().join(':');
+}
+
 // --- CREATE OR REUSE A CHAT ROOM ---
 router.post('/', authMiddleware, async (req, res) => {
   const userId = req.user.id;
@@ -30,7 +38,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 
   try {
-    const otherUser = await User.findOne({ username: new RegExp(`^${recipientUsername}$`, 'i') });
+    const otherUser = await User.findOne({ username: new RegExp(`^${escapeRegExp(recipientUsername)}$`, 'i') });
 
     if (!otherUser) {
       return res.status(404).json({ success: false, message: 'Recipient not found' });
@@ -73,7 +81,7 @@ router.post('/', authMiddleware, async (req, res) => {
         });
       }
 
-      const status = permission.reason === 'blocked' ? 403 : 423;
+      const status = permission.reason?.includes('blocked') ? 403 : 423;
       return res.status(status).json({
         success: false,
         message: permission.reason === 'requires_approval'
@@ -83,9 +91,13 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
- const existingRoom = await ChatRoom.findOne({
-  participants: { $size: 2, $all: [userId, otherUser._id] },
-});
+    const participantKey = participantKeyFor(userId, otherUser._id);
+    const existingRoom = await ChatRoom.findOne({
+      $or: [
+        { participantKey },
+        { participants: { $size: 2, $all: [userId, otherUser._id] } },
+      ],
+    });
 
 
     if (existingRoom) {
@@ -106,8 +118,31 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const newRoom = new ChatRoom({
       participants: [new mongoose.Types.ObjectId(userId), otherUser._id],
+      participantKey,
     });
-    await newRoom.save();
+    try {
+      await newRoom.save();
+    } catch (saveErr) {
+      if (saveErr?.code === 11000) {
+        const existingAfterRace = await ChatRoom.findOne({ participantKey });
+        if (existingAfterRace) {
+          return res.json({
+            success: true,
+            roomId: existingAfterRace._id,
+            message: 'Chat room already exists',
+            participant: {
+              _id: otherUser._id,
+              username: otherUser.username,
+              avatar: otherUser.avatar || otherUser.profileImage || null,
+              online: otherUser.online || false,
+              isOnline: otherUser.online || false,
+              lastSeen: otherUser.lastSeen || null
+            }
+          });
+        }
+      }
+      throw saveErr;
+    }
 
     res.status(201).json({
       success: true,

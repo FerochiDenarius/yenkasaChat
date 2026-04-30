@@ -28,7 +28,8 @@ module.exports = async (req, res, next) => {
   }
 
   const token = parts[1];
-  console.log(`AUTH_DEBUG: Received token: ${token}`);
+  const maskedToken = `${token.slice(0, 8)}...${token.slice(-6)}`;
+  console.log(`AUTH_DEBUG: Received token: ${maskedToken}`);
 
   const serverTimestampBeforeVerify = Date.now();
   const serverDateBeforeVerify = new Date(serverTimestampBeforeVerify).toISOString();

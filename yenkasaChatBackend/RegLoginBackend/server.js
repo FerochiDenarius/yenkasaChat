@@ -14,6 +14,7 @@ const morgan = require('morgan');
 const http = require('http');
 const { Server } = require("socket.io");
 const User = require('./models/user.model'); // ✅ Add this
+const ChatRoom = require('./models/chatroom.model');
 const StoreProfile = require('./models/storeProfile.model');
 // 🪙 Coins & Verification system
 const CoinSupply = require('./models/coinSupply');
@@ -259,6 +260,33 @@ io.on('connection', (socket) => {
 
   socket.on('requestOnlineUsers', () => {
     socket.emit('getOnlineUsers', getOnlineUserIds());
+  });
+
+  socket.on('joinChatRoom', async (roomId) => {
+    try {
+      const normalizedRoomId = roomId?.toString();
+      const normalizedUserId = socket.data.userId;
+      if (!normalizedRoomId || !mongoose.Types.ObjectId.isValid(normalizedRoomId) || !normalizedUserId) {
+        return;
+      }
+
+      const room = await ChatRoom.findOne({
+        _id: normalizedRoomId,
+        participants: normalizedUserId
+      }).select('_id').lean();
+
+      if (!room) return;
+      socket.join(normalizedRoomId);
+      console.log(`💬 Socket ${socket.id} joined chat room ${normalizedRoomId}`);
+    } catch (err) {
+      console.error('❌ Error joining chat room:', err.message);
+    }
+  });
+
+  socket.on('leaveChatRoom', (roomId) => {
+    const normalizedRoomId = roomId?.toString();
+    if (!normalizedRoomId) return;
+    socket.leave(normalizedRoomId);
   });
 
   // ✅ User disconnects

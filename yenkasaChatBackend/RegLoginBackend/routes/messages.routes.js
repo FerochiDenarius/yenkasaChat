@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const multer = require('multer');
-const streamifier = require('streamifier');
+const { Readable } = require('stream');
 
 const auth = require('../middleware/auth');
 const Message = require('../models/message.model');
@@ -89,7 +89,7 @@ function uploadChatMediaToCloudinary(file, type) {
       }
     );
 
-    streamifier.createReadStream(file.buffer).pipe(uploadStream);
+    Readable.from(file.buffer).pipe(uploadStream);
   });
 }
 

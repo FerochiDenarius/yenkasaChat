@@ -75,12 +75,16 @@
 }
 
 .topbar-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(116, 83, 52, 0.12);
   background: #fffaf5;
   color: #3f2e22;
   padding: 12px 16px;
   border-radius: 999px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 

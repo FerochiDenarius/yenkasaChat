@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title desc">
+  <title id="title">Start a fashion business in Ghana</title>
+  <desc id="desc">Illustration of a seller dashboard, fashion stock, delivery package, and growth chart.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#043f2e"/>
+      <stop offset=".56" stop-color="#0d5f45"/>
+      <stop offset="1" stop-color="#fff8df"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#f8dc68"/>
+      <stop offset="1" stop-color="#c99612"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#bg)"/>
+  <rect x="110" y="112" width="520" height="392" rx="36" fill="#fffdf4"/>
+  <rect x="146" y="152" width="180" height="138" rx="22" fill="#f2c94c"/>
+  <rect x="356" y="152" width="230" height="28" rx="14" fill="#dce9df"/>
+  <rect x="356" y="204" width="176" height="28" rx="14" fill="#dce9df"/>
+  <rect x="146" y="332" width="440" height="112" rx="24" fill="#eef6ef"/>
+  <path d="M182 408 270 368l86 20 112-78 82 32" fill="none" stroke="#043f2e" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="270" cy="368" r="16" fill="#f2c94c"/>
+  <circle cx="468" cy="310" r="16" fill="#f2c94c"/>
+  <path d="M747 218h164l68 332H680z" fill="#fffdf4" stroke="#f2c94c" stroke-width="14"/>
+  <path d="M786 218c14 48 64 48 78 0" fill="none" stroke="#f2c94c" stroke-width="14" stroke-linecap="round"/>
+  <rect x="754" y="450" width="230" height="150" rx="20" fill="url(#gold)"/>
+  <path d="M754 494h230M870 450v150" stroke="#043f2e" stroke-width="10" opacity=".5"/>
+  <text x="370" y="615" font-family="Arial, sans-serif" font-size="44" font-weight="800" fill="#fffdf4">Build, list, sell, grow</text>
+</svg>

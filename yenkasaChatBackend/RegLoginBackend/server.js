@@ -486,6 +486,8 @@ app.use((err, req, res, next) => {
 const STORE_PUBLIC_DIR = path.join(__dirname, 'public', 'triciabales_frontend');
 const STORE_LANDING_DIR = path.join(STORE_PUBLIC_DIR, 'landingFile');
 const STORE_LOGO_PATH = path.join(STORE_PUBLIC_DIR, 'images', 'YenkasaStoreLogo.png');
+const BLOG_DIR = path.join(__dirname, 'public', 'blog');
+const BLOG_POSTS_DIR = path.join(BLOG_DIR, 'posts');
 const STORE_PAGE_ALIASES = new Map(Object.entries({
   '': 'index.html',
   'home': 'index.html',
@@ -644,6 +646,20 @@ app.get('/triciabales_frontend/landingFile/:page', (req, res, next) => {
   const alias = STORE_FILE_TO_ALIAS.get(page);
   if (!alias && page !== 'index.html') return next();
   res.redirect(301, `${storePathForAlias(alias)}${getQueryString(req)}`);
+});
+
+app.get('/blog', (req, res) => {
+  res.sendFile(path.join(BLOG_DIR, 'index.html'));
+});
+
+app.get('/blog/:slug', (req, res, next) => {
+  const slug = String(req.params.slug || '');
+  if (!/^[a-z0-9-]+$/i.test(slug)) return next();
+
+  const filePath = path.join(BLOG_POSTS_DIR, `${slug}.html`);
+  res.sendFile(filePath, err => {
+    if (err) next();
+  });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

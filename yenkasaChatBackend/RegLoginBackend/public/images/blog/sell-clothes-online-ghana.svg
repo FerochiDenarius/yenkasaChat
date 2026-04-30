@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" role="img" aria-labelledby="title desc">
+  <title id="title">Sell clothes online in Ghana</title>
+  <desc id="desc">Illustration of fashion products, a phone shop screen, and Ghana-inspired green and gold shapes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff8df"/>
+      <stop offset="0.45" stop-color="#eaf5ec"/>
+      <stop offset="1" stop-color="#043f2e"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#f7d95c"/>
+      <stop offset="1" stop-color="#c99612"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#bg)"/>
+  <circle cx="1030" cy="120" r="190" fill="#f2c94c" opacity=".35"/>
+  <circle cx="150" cy="620" r="170" fill="#0d5f45" opacity=".22"/>
+  <rect x="470" y="105" width="310" height="540" rx="46" fill="#062f24"/>
+  <rect x="500" y="145" width="250" height="460" rx="28" fill="#fffdf4"/>
+  <rect x="525" y="178" width="200" height="160" rx="20" fill="#f2c94c"/>
+  <path d="M586 229c18-38 68-38 86 0l30 71H556z" fill="#043f2e"/>
+  <rect x="525" y="372" width="200" height="24" rx="12" fill="#dce9df"/>
+  <rect x="525" y="414" width="150" height="24" rx="12" fill="#dce9df"/>
+  <rect x="525" y="480" width="166" height="58" rx="29" fill="url(#gold)"/>
+  <path d="M252 216h136l54 330H198z" fill="#ffffff" stroke="#043f2e" stroke-width="12"/>
+  <path d="M285 216c12 42 58 42 70 0" fill="none" stroke="#043f2e" stroke-width="12" stroke-linecap="round"/>
+  <path d="M846 238h138l48 288H798z" fill="#f8f2e3" stroke="#f2c94c" stroke-width="12"/>
+  <path d="M879 238c10 36 52 36 62 0" fill="none" stroke="#f2c94c" stroke-width="12" stroke-linecap="round"/>
+  <text x="600" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="46" font-weight="800" fill="#fffdf4">Yenkasa Store</text>
+</svg>

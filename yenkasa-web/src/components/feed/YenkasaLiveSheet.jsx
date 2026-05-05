@@ -20,6 +20,7 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [duelBusy, setDuelBusy] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -27,13 +28,13 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
     let cancelled = false;
     let timerId = null;
 
-    const run = async () => {
+    const run = async (isInitial = false) => {
       if (document.hidden) {
         timerId = window.setTimeout(run, 5000);
         return;
       }
 
-      if (!cancelled) setLoading((prev) => prev && payload === null);
+      if (!cancelled && isInitial) setLoading(true);
 
       try {
         const data = await getLiveMetrics(windowKey);
@@ -52,13 +53,13 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
 
     setLoading(true);
     setError("");
-    run();
+    run(true);
 
     return () => {
       cancelled = true;
       if (timerId) window.clearTimeout(timerId);
     };
-  }, [open, payload, windowKey]);
+  }, [open, reloadKey, windowKey]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -140,7 +141,10 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
               key={item.key}
               type="button"
               className={`feed-live-chip${windowKey === item.key ? " feed-live-chip--active" : ""}`}
-              onClick={() => setWindowKey(item.key)}
+              onClick={() => {
+                setPayload(null);
+                setWindowKey(item.key);
+              }}
             >
               {item.label}
             </button>
@@ -225,7 +229,15 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
         {error ? (
           <div className="feed-live-error">
             <span>⚠️ {error}</span>
-            <button type="button" onClick={() => { setPayload(null); setLoading(true); setError(""); }}>
+            <button
+              type="button"
+              onClick={() => {
+                setPayload(null);
+                setLoading(true);
+                setError("");
+                setReloadKey((prev) => prev + 1);
+              }}
+            >
               Retry
             </button>
           </div>
@@ -251,10 +263,7 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
           {liveEvents.length ? (
             <div className="feed-live-events__list">
               {liveEvents.map((event, index) => (
-                <div
-                  key={event.id || `${event.text}-${index}`}
-                  className={`feed-live-event${event.isCurrentUser ? " feed-live-event--you" : ""}`}
-                >
+                <div key={event.id || `${event.text}-${index}`} className={`feed-live-event${event.isCurrentUser ? " feed-live-event--you" : ""}`}>
                   {event.profileImage ? (
                     <img
                       src={event.profileImage}
@@ -317,8 +326,11 @@ function LeaderboardCard({ section, onQuickAction }) {
               <span className="feed-live-row__avatar-fallback">{String(row.username || "Y").charAt(0)}</span>
             )}
             <div className="feed-live-row__body">
-              <strong>{row.username}</strong>
-              <small>{row.liveTitle || row.progressHint}</small>
+              <div className="feed-live-row__title">
+                <strong>{row.username}</strong>
+                {row.liveTitle ? <em>{row.liveTitle}</em> : null}
+              </div>
+              <small>{row.progressHint}</small>
             </div>
             <div className="feed-live-row__score">
               <strong>{row.count}</strong>

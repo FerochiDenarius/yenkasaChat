@@ -13,6 +13,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Build
 import android.util.Log
 import android.view.*
 import android.widget.*
@@ -23,7 +24,9 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
 import xyz.yenkasa.app.R
@@ -34,6 +37,7 @@ import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.WalletBalanceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
@@ -42,6 +46,16 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.adapter.AdBinder
+import xyz.yenkasa.app.ui.feed.FeedCacheController
+import xyz.yenkasa.app.ui.feed.FeedChromeController
+import xyz.yenkasa.app.ui.feed.FeedCommunityController
+import xyz.yenkasa.app.ui.feed.FeedNetworkController
+import xyz.yenkasa.app.ui.feed.FeedPostActionsController
+import xyz.yenkasa.app.ui.feed.FeedSocketController
+import xyz.yenkasa.app.ui.feed.FeedTabsController
+import xyz.yenkasa.app.ui.feed.FeedTimeUtils
+import xyz.yenkasa.app.ui.player.YenkasaPlayerActions
+import xyz.yenkasa.app.ui.player.YenkasaPlayerFeedAdapter
 import xyz.yenkasa.app.work.FeedSyncWorker
 import java.text.SimpleDateFormat
 import java.text.NumberFormat
@@ -51,6 +65,9 @@ import java.util.concurrent.TimeUnit
 
 
 class FeedFragment : Fragment() {
+    companion object {
+        const val USE_YENKASA_PLAYER_VIEW = true
+    }
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
@@ -62,21 +79,18 @@ class FeedFragment : Fragment() {
     private lateinit var fabYenkasaLive: FloatingActionButton
     private lateinit var selectedCommunitiesText: TextView
     private lateinit var communitiesBar: View
+    private lateinit var feedFilterBar: View
     private lateinit var communityStoryRecyclerView: RecyclerView
     private lateinit var feedTabs: List<TextView>
-    private lateinit var floatingWalletCard: View
-    private lateinit var floatingWalletCoinContainer: View
-    private lateinit var floatingWalletCoinView: ImageView
-    private lateinit var floatingWalletBalanceView: TextView
-    private lateinit var floatingWalletDeltaView: TextView
-    private lateinit var floatingWalletSparklesView: View
-    private lateinit var floatingWalletDropViews: List<ImageView>
+    private lateinit var floatingWalletViews: FeedChromeController.FloatingWalletViews
 
     private val posts = mutableListOf<Post>()
     private lateinit var feedAdapter: FeedAdapter
+    private var playerFeedAdapter: YenkasaPlayerFeedAdapter? = null
     private lateinit var communityStoryAdapter: FeedCommunityStoryAdapter
 
     private lateinit var layoutManager: LinearLayoutManager
+    private var pagerSnapHelper: PagerSnapHelper? = null
 
     private var token: String? = null
     private var userId: String? = null
@@ -84,41 +98,43 @@ class FeedFragment : Fragment() {
     private var isLoading = false
     private var isLastPage = false
     private var hasShownCachedFeed = false
-    private var selectedFeedTabId = R.id.tabForYou
-    private var selectedFeedMode = FeedMode.FOR_YOU
     private var followingUserIds: Set<String>? = null
-    private var communityStoryPreviews: Map<String, CommunityStoryPreview> = emptyMap()
     private var sponsoredAds: List<AdModel> = emptyList()
     private var communitiesBarHidden = false
     private var communitiesBarNaturalHeight = 0
     private var communitiesBarAnimator: ValueAnimator? = null
-    private var walletBalanceAnimator: ValueAnimator? = null
     private var walletReceiverRegistered = false
-    private var currentWalletBalance = 0
-    private var liveSheetController: YenkasaLiveSheetController? = null
 
-    private var allCommunities: List<Community> = emptyList()
-    private val selectedCommunities = mutableSetOf<Community>()
-    private val gson = Gson()
-    private var connectivityManager: ConnectivityManager? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private lateinit var tabsController: FeedTabsController
+    private lateinit var communityController: FeedCommunityController
+    private lateinit var networkController: FeedNetworkController
+    private lateinit var postActionsController: FeedPostActionsController
+    private lateinit var socketController: FeedSocketController
+    private lateinit var cacheController: FeedCacheController
+    private lateinit var chromeController: FeedChromeController
+
+    private val selectedFeedMode: FeedTabsController.FeedMode
+        get() = tabsController.selectedMode
+    private val allCommunities: List<Community>
+        get() = communityController.allCommunities
+    private val selectedCommunities: MutableSet<Community>
+        get() = communityController.selectedCommunities
+    private val communityStoryPreviews: Map<String, CommunityStoryPreview>
+        get() = communityController.communityStoryPreviews
 
     private val walletBalanceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
             val newBalance = intent.getIntExtra(
                 WalletBalanceManager.EXTRA_BALANCE,
-                currentWalletBalance
+                chromeController.currentWalletBalance
             )
-            updateFloatingWalletBalance(newBalance, animate = newBalance > currentWalletBalance)
+            chromeController.updateFloatingWalletBalance(
+                newBalance = newBalance,
+                animate = newBalance > chromeController.currentWalletBalance,
+                walletViews = floatingWalletViews
+            )
         }
-    }
-
-    private enum class FeedMode {
-        FOR_YOU,
-        FOLLOWING,
-        TRENDING,
-        TOP
     }
 
     override fun onCreateView(
@@ -131,30 +147,97 @@ class FeedFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         initAuth()
         initViews(view)
-        setupFloatingWallet()
-        setupYenkasaLive()
+        initControllers()
+        chromeController.setupInitialChrome(
+            walletViews = floatingWalletViews,
+            fabYenkasaLive = fabYenkasaLive,
+            communityStoryRecyclerView = communityStoryRecyclerView,
+            recyclerView = recyclerView,
+            communitiesBar = communitiesBar,
+            feedFilterBar = feedFilterBar,
+            mainAppBar = requireActivity().findViewById(R.id.mainAppBar),
+            fabCreatePost = fabCreatePost,
+            usePlayerChrome = USE_YENKASA_PLAYER_VIEW,
+            userIdProvider = { userId },
+            onFeedFocusRequested = { recyclerView.smoothScrollToPosition(0) }
+        )
         setupRecyclerView()
-        setupCommunityStoryRecyclerView()
-        setupFeedTabs()
+        if (!USE_YENKASA_PLAYER_VIEW) {
+            communityStoryAdapter = communityController.setupStoryRecyclerView(
+                recyclerView = communityStoryRecyclerView,
+                onAllCommunitiesClick = {
+                    communityController.handleSelectAllCommunities(
+                        onNoCommunities = { openCommunitySelectorOrToast() },
+                        onSelectionChanged = { syncCommunitySelectionUi() },
+                        onFeedReloadRequested = { reloadFeedFromStart() }
+                    )
+                },
+                onCommunityClick = { community ->
+                    communityController.handleSelectCommunity(
+                        community = community,
+                        onSelectionChanged = { syncCommunitySelectionUi() },
+                        onFeedReloadRequested = { reloadFeedFromStart() }
+                    )
+                }
+            )
+            setupFeedTabs()
+        }
         setupInfiniteScroll()
         loadCachedFeed()
         scheduleBackgroundFeedSync()
         setupNetworkMonitoring()
 
         loadSponsoredAds()
-        recyclerView.post { fetchCommunitiesAndFeed() }
+        recyclerView.post {
+            communityController.fetchCommunitiesAndSelection(
+                onSelectionReady = {
+                    communityController.loadCommunityStoryPreviews {
+                        communityController.updateCommunityStoryRow(
+                            if (::communityStoryAdapter.isInitialized) communityStoryAdapter else null
+                        )
+                    }
+                    loadFeed()
+                },
+                onSelectionChanged = { syncCommunitySelectionUi() }
+            )
+        }
         trackDailyLogin()
 
-        fabCreatePost.isEnabled = true
-        fabCreatePost.alpha = 1f
-        fabCreatePost.setOnClickListener {
-            val intent = Intent(requireContext(), PostActivity::class.java)
-            intent.putExtra("userId", userId)
-            startActivity(intent)
-        }
+        socketController.connect(userId)
+    }
 
-        SocketManager.ensureConnected(userId)
-        setupSocketListeners()
+    private fun initControllers() {
+        tabsController = FeedTabsController(requireContext())
+        communityController = FeedCommunityController(
+            requireContext(),
+            tokenProvider = { token },
+            userIdProvider = { userId }
+        )
+        networkController = FeedNetworkController(this)
+        cacheController = FeedCacheController(requireContext(), Gson())
+        postActionsController = FeedPostActionsController(
+            fragment = this,
+            tokenProvider = { token },
+            postsProvider = { posts },
+            onPostsChanged = { renderPosts() },
+            onCacheChanged = { saveCurrentFeedCache() }
+        )
+        socketController = FeedSocketController(
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            postsProvider = { posts },
+            onPostsChanged = { renderPosts() },
+            onCacheChanged = { saveCurrentFeedCache() },
+            onScrollToTop = { recyclerView.scrollToPosition(0) },
+            onViewCountUpdated = { postId, viewsCount ->
+                updateSourcePostViewCount(postId, viewsCount)
+                if (!USE_YENKASA_PLAYER_VIEW) {
+                    feedAdapter.updatePostViewCount(postId, viewsCount)
+                } else {
+                    renderPosts()
+                }
+            }
+        )
+        chromeController = FeedChromeController(this)
     }
 
     private fun initAuth() {
@@ -178,18 +261,21 @@ class FeedFragment : Fragment() {
         fabCreatePost = requireActivity().findViewById(R.id.fabCreatePost)
         fabYenkasaLive = requireActivity().findViewById(R.id.btnYenkasaLive)
         communitiesBar = view.findViewById(R.id.layoutFeedCommunitiesBar)
+        feedFilterBar = view.findViewById(R.id.feedFilterBar)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
         communityStoryRecyclerView = view.findViewById(R.id.recyclerViewFeedCommunities)
-        floatingWalletCard = view.findViewById(R.id.floatingWalletCard)
-        floatingWalletCoinContainer = view.findViewById(R.id.floatingWalletCoinContainer)
-        floatingWalletCoinView = view.findViewById(R.id.imageFloatingWalletCoin)
-        floatingWalletBalanceView = view.findViewById(R.id.textFloatingWalletBalance)
-        floatingWalletDeltaView = view.findViewById(R.id.textFloatingWalletDelta)
-        floatingWalletSparklesView = view.findViewById(R.id.layoutFloatingWalletSparkles)
-        floatingWalletDropViews = listOf(
-            view.findViewById(R.id.imageFloatingWalletDropOne),
-            view.findViewById(R.id.imageFloatingWalletDropTwo),
-            view.findViewById(R.id.imageFloatingWalletDropThree)
+        floatingWalletViews = FeedChromeController.FloatingWalletViews(
+            walletCard = view.findViewById(R.id.floatingWalletCard),
+            coinContainer = view.findViewById(R.id.floatingWalletCoinContainer),
+            coinView = view.findViewById(R.id.imageFloatingWalletCoin),
+            balanceView = view.findViewById(R.id.textFloatingWalletBalance),
+            deltaView = view.findViewById(R.id.textFloatingWalletDelta),
+            sparklesView = view.findViewById(R.id.layoutFloatingWalletSparkles),
+            dropViews = listOf(
+                view.findViewById(R.id.imageFloatingWalletDropOne),
+                view.findViewById(R.id.imageFloatingWalletDropTwo),
+                view.findViewById(R.id.imageFloatingWalletDropThree)
+            )
         )
         feedTabs = listOf(
             view.findViewById(R.id.tabForYou),
@@ -203,275 +289,114 @@ class FeedFragment : Fragment() {
         }
     }
 
-    private fun setupFloatingWallet() {
-        currentWalletBalance = TokenManager.getCoins(requireContext())
-        renderFloatingWalletBalance(currentWalletBalance)
-        floatingWalletDeltaView.visibility = View.GONE
-        floatingWalletSparklesView.alpha = 0f
-        floatingWalletCard.setOnClickListener {
-            startActivity(Intent(requireContext(), CoinWalletActivity::class.java))
-        }
-    }
-
-    private fun setupYenkasaLive() {
-        liveSheetController?.detach()
-        liveSheetController = YenkasaLiveSheetController(this) { action ->
-            when (action) {
-                "comment", "view", "like" -> recyclerView.smoothScrollToPosition(0)
-                "follow" -> {
-                    recyclerView.smoothScrollToPosition(0)
-                    communityStoryRecyclerView.smoothScrollToPosition(0)
-                    Toast.makeText(
-                        requireContext(),
-                        "Explore profiles and communities to follow.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }.also { controller ->
-            controller.attach(fabYenkasaLive)
-        }
-    }
-
-    private fun renderFloatingWalletBalance(balance: Int) {
-        floatingWalletBalanceView.text = NumberFormat.getIntegerInstance(Locale.getDefault())
-            .format(balance)
-    }
-
-    private fun updateFloatingWalletBalance(newBalance: Int, animate: Boolean) {
-        val oldBalance = currentWalletBalance
-        TokenManager.saveCoins(requireContext(), newBalance)
-
-        if (!animate || newBalance <= oldBalance) {
-            walletBalanceAnimator?.cancel()
-            currentWalletBalance = newBalance
-            renderFloatingWalletBalance(newBalance)
-            if (newBalance < oldBalance) {
-                resetFloatingWalletPulse()
-            }
-            return
-        }
-
-        walletBalanceAnimator?.cancel()
-        ValueAnimator.ofInt(oldBalance, newBalance).apply {
-            duration = 700L
-            addUpdateListener { animator ->
-                currentWalletBalance = animator.animatedValue as Int
-                renderFloatingWalletBalance(currentWalletBalance)
-            }
-            start()
-            walletBalanceAnimator = this
-        }
-
-        animateFloatingWalletGain(newBalance - oldBalance)
-    }
-
-    private fun animateFloatingWalletGain(delta: Int) {
-        if (delta <= 0) return
-
-        floatingWalletDeltaView.animate().cancel()
-        floatingWalletCard.animate().cancel()
-        floatingWalletCoinContainer.animate().cancel()
-        floatingWalletCoinView.animate().cancel()
-        floatingWalletSparklesView.animate().cancel()
-        floatingWalletDropViews.forEach { dropView -> dropView.animate().cancel() }
-
-        floatingWalletDeltaView.text = "+${
-            NumberFormat.getIntegerInstance(Locale.getDefault()).format(delta)
-        } YKC"
-        floatingWalletDeltaView.visibility = View.VISIBLE
-        floatingWalletDeltaView.alpha = 1f
-        floatingWalletDeltaView.translationY = 12f
-
-        floatingWalletSparklesView.alpha = 0f
-        floatingWalletSparklesView.translationY = 8f
-
-        animateFloatingWalletDrops()
-
-        floatingWalletCard.animate()
-            .scaleX(1.04f)
-            .scaleY(1.04f)
-            .setDuration(180L)
-            .withEndAction {
-                floatingWalletCard.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(220L)
-                    .start()
-            }
-            .start()
-
-        floatingWalletCoinContainer.animate()
-            .scaleX(1.12f)
-            .scaleY(1.12f)
-            .setDuration(180L)
-            .withEndAction {
-                floatingWalletCoinContainer.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(220L)
-                    .start()
-            }
-            .start()
-
-        floatingWalletCoinView.animate()
-            .rotationBy(360f)
-            .setDuration(700L)
-            .start()
-
-        floatingWalletSparklesView.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setDuration(180L)
-            .withEndAction {
-                floatingWalletSparklesView.animate()
-                    .alpha(0f)
-                    .translationY(-10f)
-                    .setDuration(620L)
-                    .start()
-            }
-            .start()
-
-        floatingWalletDeltaView.animate()
-            .translationY(-18f)
-            .alpha(0f)
-            .setStartDelay(450L)
-            .setDuration(900L)
-            .withEndAction {
-                floatingWalletDeltaView.visibility = View.GONE
-                floatingWalletDeltaView.translationY = 12f
-                floatingWalletDeltaView.alpha = 1f
-            }
-            .start()
-    }
-
-    private fun animateFloatingWalletDrops() {
-        val offsetsX = listOf(0f, 12f, -10f)
-        val startY = listOf(-28f, -18f, -24f)
-        val endY = listOf(28f, 24f, 26f)
-
-        floatingWalletDropViews.forEachIndexed { index, dropView ->
-            dropView.animate().cancel()
-            dropView.alpha = 0f
-            dropView.translationX = offsetsX[index]
-            dropView.translationY = startY[index]
-            dropView.scaleX = 0.82f
-            dropView.scaleY = 0.82f
-            dropView.rotation = when (index) {
-                0 -> -14f
-                1 -> 9f
-                else -> 16f
-            }
-
-            dropView.animate()
-                .alpha(1f)
-                .translationX(0f)
-                .translationY(endY[index])
-                .rotationBy(220f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setStartDelay((index * 90).toLong())
-                .setDuration(420L)
-                .withEndAction {
-                    dropView.animate()
-                        .alpha(0f)
-                        .scaleX(0.72f)
-                        .scaleY(0.72f)
-                        .setDuration(120L)
-                        .withEndAction {
-                            dropView.alpha = 0f
-                            dropView.translationX = 0f
-                            dropView.translationY = 0f
-                            dropView.scaleX = 1f
-                            dropView.scaleY = 1f
-                            dropView.rotation = 0f
-                        }
-                        .start()
-                }
-                .start()
-        }
-    }
-
-    private fun resetFloatingWalletPulse() {
-        floatingWalletCard.animate().cancel()
-        floatingWalletCoinContainer.animate().cancel()
-        floatingWalletCoinView.animate().cancel()
-        floatingWalletSparklesView.animate().cancel()
-        floatingWalletDeltaView.animate().cancel()
-        floatingWalletDropViews.forEach { dropView ->
-            dropView.animate().cancel()
-            dropView.alpha = 0f
-            dropView.translationX = 0f
-            dropView.translationY = 0f
-            dropView.scaleX = 1f
-            dropView.scaleY = 1f
-            dropView.rotation = 0f
-        }
-        floatingWalletCard.scaleX = 1f
-        floatingWalletCard.scaleY = 1f
-        floatingWalletCoinContainer.scaleX = 1f
-        floatingWalletCoinContainer.scaleY = 1f
-        floatingWalletCoinView.rotation = 0f
-        floatingWalletSparklesView.alpha = 0f
-        floatingWalletSparklesView.translationY = 8f
-        floatingWalletDeltaView.visibility = View.GONE
-        floatingWalletDeltaView.alpha = 1f
-        floatingWalletDeltaView.translationY = 12f
-    }
-
 
     private fun setupRecyclerView() {
         layoutManager = LinearLayoutManager(requireContext())
 
+        if (USE_YENKASA_PLAYER_VIEW) {
+            playerFeedAdapter = YenkasaPlayerFeedAdapter(
+                requireContext(),
+                object : YenkasaPlayerActions {
+                    override fun onOpenMenu() {
+                        startActivity(Intent(requireContext(), MenuActivity::class.java))
+                    }
+
+                    override fun onOpenProfile(userId: String) {
+                        postActionsController.openUserProfile(userId)
+                    }
+
+                    override fun onLike(post: Post, position: Int) {
+                        postActionsController.handleLike(post, position)
+                    }
+
+                    override fun onComment(post: Post, position: Int) {
+                        postActionsController.openComments(post)
+                    }
+
+                    override fun onShare(post: Post) {
+                        postActionsController.sharePost(post)
+                    }
+
+                    override fun onReward(post: Post) {
+                        startActivity(Intent(requireContext(), CoinWalletActivity::class.java))
+                    }
+
+                    override fun onOpenWallet() {
+                        startActivity(Intent(requireContext(), CoinWalletActivity::class.java))
+                    }
+
+                    override fun onOpenLiveArena() {
+                        chromeController.showLiveSheet()
+                    }
+
+                    override fun onCreateSponsoredAd() {
+                        val role = TokenManager.getUserRole(requireContext())
+                        if (TokenManager.isVerified(requireContext()) || UserPermissions.canCreateAd(role)) {
+                            startActivity(Intent(requireContext(), CreateAdActivity::class.java))
+                        } else {
+                            Toast.makeText(
+                                requireContext(),
+                                "Ad creation is available for approved creators.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+
+                    override fun onCommunitySelected(community: Community?) {
+                        if (community == null) {
+                            communityController.handleSelectAllCommunities(
+                                onNoCommunities = { openCommunitySelectorOrToast() },
+                                onSelectionChanged = { syncCommunitySelectionUi() },
+                                onFeedReloadRequested = { reloadFeedFromStart() }
+                            )
+                        } else {
+                            communityController.handleSelectCommunity(
+                                community = community,
+                                onSelectionChanged = { syncCommunitySelectionUi() },
+                                onFeedReloadRequested = { reloadFeedFromStart() }
+                            )
+                        }
+                    }
+
+                    override fun onSeeAllCommunities() {
+                        openCommunitySelectorOrToast()
+                    }
+
+                    override fun onShowPostOptions(post: Post) {
+                        postActionsController.showPostOptionsBottomSheet(post)
+                    }
+
+                    override fun onNavigateTo(position: Int) {
+                        if (position in posts.indices) {
+                            recyclerView.smoothScrollToPosition(position)
+                        }
+                    }
+                },
+                onViewCountUpdated = { postId, viewsCount ->
+                    updateSourcePostViewCount(postId, viewsCount)
+                }
+            )
+
+            recyclerView.layoutManager = layoutManager
+            recyclerView.adapter = playerFeedAdapter
+            recyclerView.itemAnimator = null
+            pagerSnapHelper?.attachToRecyclerView(null)
+            pagerSnapHelper = PagerSnapHelper().also { it.attachToRecyclerView(recyclerView) }
+            return
+        }
+
         feedAdapter = FeedAdapter(
             requireContext(),
-            onLikeClick = { post, position ->
-                val context = requireContext()
-                val token = TokenManager.getToken(context)
-
-                if (!token.isNullOrEmpty()) {
-                    val adapterPosition = position.coerceIn(0, posts.lastIndex)
-                    val previousPost = posts.getOrNull(adapterPosition)
-                    if (previousPost != null) {
-                        val optimisticPost = previousPost.copy(
-                            likedByUser = !previousPost.likedByUser,
-                            likeCount = if (previousPost.likedByUser) {
-                                (previousPost.likeCount - 1).coerceAtLeast(0)
-                            } else {
-                                previousPost.likeCount + 1
-                            }
-                        )
-                        posts[adapterPosition] = optimisticPost
-                        renderPosts()
-                        saveCurrentFeedCache()
-
-                        FeedUtils.toggleLike(context, token, previousPost, { liked, newLikeCount ->
-                            val updatedPost = post.copy(
-                                likedByUser = liked,
-                                likeCount = newLikeCount
-                            )
-                            posts[adapterPosition] = updatedPost
-                            renderPosts()
-                            saveCurrentFeedCache()
-                        }, onError = {
-                            posts[adapterPosition] = previousPost
-                            lifecycleScope.launch {
-                                renderPosts()
-                                saveCurrentFeedCache()
-                            }
-                        })
-                    }
-                }
-            },
-            onCommentClick = { post, _ -> openComments(post) },
-            onUserClick = { id -> openUserProfile(id) },
+            onLikeClick = { post, position -> postActionsController.handleLike(post, position) },
+            onCommentClick = { post, _ -> postActionsController.openComments(post) },
+            onUserClick = { id -> postActionsController.openUserProfile(id) },
             onPostClick = { post ->
                 when {
-                    !post.videoUrl.isNullOrEmpty() -> openVideo(post)
-                    !post.audioUrl.isNullOrEmpty() -> openAudio(post)
+                    !post.videoUrl.isNullOrEmpty() || !post.audioUrl.isNullOrEmpty() || post.effectiveImageUrls().isNotEmpty() ->
+                        postActionsController.openMedia(post)
                 }
             },
-            onShareClick = { post -> sharePost(post) },
+            onShareClick = { post -> postActionsController.sharePost(post) },
             onViewCountUpdated = { postId, viewsCount ->
                 updateSourcePostViewCount(postId, viewsCount)
             },
@@ -479,19 +404,19 @@ class FeedFragment : Fragment() {
         )
 // 🔥 CONNECT POST OPTIONS (delete / hide / flag / download)
         feedAdapter.onDelete = { post ->
-            confirmDeletePost(post)
+            postActionsController.confirmDeletePost(post)
         }
 
         feedAdapter.onHide = { post ->
-            hidePost(post)
+            postActionsController.hidePost(post)
         }
 
         feedAdapter.onFlag = { post ->
-            flagPost(post)
+            postActionsController.flagPost(post)
         }
 
         feedAdapter.onDownload = { post ->
-            downloadPost(post)
+            postActionsController.downloadPost(post)
         }
 
         recyclerView.layoutManager = layoutManager
@@ -502,6 +427,15 @@ class FeedFragment : Fragment() {
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
+                if (USE_YENKASA_PLAYER_VIEW) {
+                    if (dy <= 0) return
+                    val lastVisible = layoutManager.findLastVisibleItemPosition()
+                    val totalItemCount = layoutManager.itemCount
+                    if (!isLoading && !isLastPage && lastVisible >= totalItemCount - 3) {
+                        loadFeed(currentPage + 1)
+                    }
+                    return
+                }
                 updateCommunitiesBarForScroll(recyclerView, dy)
                 if (dy <= 0) return
 
@@ -516,6 +450,20 @@ class FeedFragment : Fragment() {
 
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
+                if (USE_YENKASA_PLAYER_VIEW) {
+                    if (newState != RecyclerView.SCROLL_STATE_IDLE) {
+                        playerFeedAdapter?.pauseActive(recyclerView)
+                        return
+                    }
+
+                    val snapView = pagerSnapHelper?.findSnapView(layoutManager) ?: return
+                    val position = recyclerView.getChildAdapterPosition(snapView)
+                    if (position != RecyclerView.NO_POSITION) {
+                        playerFeedAdapter?.setActivePosition(recyclerView, position)
+                    }
+                    return
+                }
+
                 if (newState != RecyclerView.SCROLL_STATE_IDLE) return
 
                 val first = layoutManager.findFirstVisibleItemPosition()
@@ -590,134 +538,12 @@ class FeedFragment : Fragment() {
         }
     }
 
-    private fun setupCommunityStoryRecyclerView() {
-        communityStoryAdapter = FeedCommunityStoryAdapter(
-            onAllCommunitiesClick = { selectAllCommunitiesFromStory() },
-            onCommunityClick = { community -> selectCommunityFromStory(community) }
-        )
-
-        communityStoryRecyclerView.layoutManager =
-            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        communityStoryRecyclerView.adapter = communityStoryAdapter
-    }
-
     private fun setupFeedTabs() {
-        feedTabs.forEach { tab ->
-            tab.setOnClickListener {
-                selectedFeedTabId = tab.id
-                selectedFeedMode = when (tab.id) {
-                    R.id.tabFollowing -> FeedMode.FOLLOWING
-                    R.id.tabTrending -> FeedMode.TRENDING
-                    R.id.tabTop -> FeedMode.TOP
-                    else -> FeedMode.FOR_YOU
-                }
-                updateFeedTabVisualState()
-                currentPage = 1
-                isLastPage = false
-                loadFeed()
-            }
+        tabsController.bindTabs(feedTabs) {
+            currentPage = 1
+            isLastPage = false
+            loadFeed()
         }
-        updateFeedTabVisualState()
-    }
-
-    private fun updateFeedTabVisualState() {
-        feedTabs.forEach { tab ->
-            val selected = tab.id == selectedFeedTabId
-            tab.setTextColor(
-                ContextCompat.getColor(
-                    requireContext(),
-                    if (selected) R.color.feed_accent else R.color.feed_secondary_text
-                )
-            )
-            tab.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
-            tab.setBackgroundResource(
-                if (selected) R.drawable.bg_feed_tab_selected else R.drawable.bg_feed_tab_unselected
-            )
-        }
-    }
-
-    private fun openImage(post: Post) {
-        val intent = Intent(requireContext(), PostMediaActivity::class.java)
-        intent.putExtra("MEDIA_URL", post.effectiveImageUrls().firstOrNull())
-        intent.putExtra("MEDIA_TYPE", "image")
-        intent.putExtra("POST_ID", post._id)
-        intent.putExtra("USERNAME", post.userId.username)
-        intent.putExtra("CAPTION", post.caption ?: "")
-        startActivity(intent)
-    }
-
-    private fun openVideo(post: Post) {
-        val intent = Intent(requireContext(), PostMediaActivity::class.java)
-        intent.putExtra("MEDIA_URL", post.videoUrl)
-        intent.putExtra("MEDIA_TYPE", "video")
-        intent.putExtra("POST_ID", post._id)
-        intent.putExtra("USERNAME", post.userId.username)
-        intent.putExtra("CAPTION", post.caption ?: "")
-        startActivity(intent)
-    }
-
-
-    private fun openAudio(post: Post) {
-        val intent = Intent(requireContext(), PostMediaActivity::class.java)
-        intent.putExtra("MEDIA_URL", post.audioUrl)
-        intent.putExtra("MEDIA_TYPE", "audio")
-        intent.putExtra("POST_ID", post._id)
-        intent.putExtra("USERNAME", post.userId.username)
-        intent.putExtra("CAPTION", post.caption ?: "")
-        startActivity(intent)
-    }
-
-
-    private fun sharePost(post: Post) {
-        token?.takeIf { it.isNotBlank() }?.let { authToken ->
-            ApiClient.apiService.recordPostShare(post._id, "Bearer $authToken")
-                .enqueue(object : Callback<GenericResponse> {
-                    override fun onResponse(
-                        call: Call<GenericResponse>,
-                        response: Response<GenericResponse>
-                    ) {
-                        if (!response.isSuccessful) {
-                            Log.w("FeedFragment", "Failed to record share for ${post._id}: ${response.code()}")
-                        }
-                    }
-
-                    override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                        Log.w("FeedFragment", "Failed to record share for ${post._id}: ${t.message}")
-                    }
-                })
-        }
-
-        val shareIntent = Intent(Intent.ACTION_SEND)
-        shareIntent.type = "text/plain"
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
-        shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
-        startActivity(Intent.createChooser(shareIntent, "Share via"))
-    }
-
-
-    private fun fetchCommunitiesAndFeed() {
-        val auth = "Bearer $token"
-
-        ApiClient.apiService.getCommunities(auth)
-            .enqueue(object : Callback<List<Community>> {
-                override fun onResponse(
-                    call: Call<List<Community>>,
-                    response: Response<List<Community>>
-                ) {
-                    if (!response.isSuccessful || response.body() == null) {
-                        fallbackCommunity()
-                        return
-                    }
-
-                    allCommunities = response.body()!!
-                    loadCommunityStoryPreviews()
-                    fetchUserMembership()
-                }
-
-                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
-                    fallbackCommunity()
-                }
-            })
     }
 
 
@@ -775,258 +601,10 @@ class FeedFragment : Fragment() {
     }
 
 
-    private fun fetchUserMembership() {
-        val auth = "Bearer $token"
-
-        ApiClient.apiService.getUserPrimaryCommunity(auth)
-            .enqueue(object : Callback<UserPrimaryCommunityResponse> {
-                override fun onResponse(
-                    call: Call<UserPrimaryCommunityResponse>,
-                    response: Response<UserPrimaryCommunityResponse>
-                ) {
-                    fetchJoinedCommunities(response.body()?.community)
-                }
-
-                override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
-                    fetchJoinedCommunities(null)
-                }
-            })
-    }
-
-    private fun fetchJoinedCommunities(primary: Community?) {
-        val auth = "Bearer $token"
-
-        ApiClient.apiService.getJoinedCommunities(auth)
-            .enqueue(object : Callback<JoinedCommunitiesResponse> {
-                override fun onResponse(
-                    call: Call<JoinedCommunitiesResponse>,
-                    response: Response<JoinedCommunitiesResponse>
-                ) {
-                    if (!response.isSuccessful || response.body() == null) {
-                        fallbackCommunity()
-                        return
-                    }
-
-                    val joined = response.body()!!.communities
-                    selectedCommunities.clear()
-
-                    val defaultSelectionIds = mutableSetOf<String>()
-                    primary?.id?.let { defaultSelectionIds.add(it) }
-                    defaultSelectionIds.addAll(joined.mapNotNull { it.id })
-
-                    val savedSelectionIds = getSavedSelectedCommunityIds()
-                    applySelectedCommunityIds(savedSelectionIds ?: defaultSelectionIds)
-
-                    if (selectedCommunities.isEmpty()) {
-                        when {
-                            savedSelectionIds == null && allCommunities.isNotEmpty() -> {
-                                selectedCommunities.add(allCommunities.first())
-                            }
-                            savedSelectionIds?.isNotEmpty() == true -> {
-                                applySelectedCommunityIds(defaultSelectionIds)
-                                if (selectedCommunities.isEmpty() && allCommunities.isNotEmpty()) {
-                                    selectedCommunities.add(allCommunities.first())
-                                }
-                            }
-                        }
-                    }
-
-                    updateSelectedCommunitiesUI()
-                    loadFeed()
-                }
-
-                override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
-                    fallbackCommunity()
-                }
-            })
-    }
-
-    private fun fallbackCommunity() {
-        allCommunities = emptyList()
-        selectedCommunities.clear()
-        updateSelectedCommunitiesUI()
-        loadFeed()
-    }
-
-    private fun selectAllCommunitiesFromStory() {
-        if (allCommunities.isEmpty()) {
-            showCommunitySelectorDialog()
-            return
-        }
-
-        selectedCommunities.clear()
-        selectedCommunities.addAll(allCommunities.filter { !it.id.isNullOrBlank() })
-        saveSelectedCommunities()
-        updateSelectedCommunitiesUI()
-        currentPage = 1
-        isLastPage = false
-        loadFeed()
-    }
-
-    private fun selectCommunityFromStory(community: Community) {
-        if (community.id.isNullOrBlank()) {
-            return
-        }
-
-        selectedCommunities.clear()
-        selectedCommunities.add(community)
-        saveSelectedCommunities()
-        updateSelectedCommunitiesUI()
-        currentPage = 1
-        isLastPage = false
-        loadFeed()
-    }
-
-    private fun showCommunitySelectorDialog() {
-        if (allCommunities.isEmpty()) {
-            Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val selectedIds = selectedCommunities.mapNotNull { it.id }.toMutableSet()
-        val names = allCommunities
-            .map { it.displayName ?: it.name ?: "Unnamed community" }
-            .toTypedArray()
-        val checkedItems = BooleanArray(allCommunities.size) { i ->
-            allCommunities[i].id in selectedIds
-        }
-
-        val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Select Communities")
-            .setMultiChoiceItems(names, checkedItems) { _, which, isChecked ->
-                val community = allCommunities[which]
-                val communityId = community.id
-
-                if (!communityId.isNullOrBlank()) {
-                    if (isChecked) {
-                        selectedIds.add(communityId)
-                    } else {
-                        selectedIds.remove(communityId)
-                    }
-                }
-            }
-            .setPositiveButton("OK") { dialog, _ ->
-                applySelectedCommunityIds(selectedIds)
-                saveSelectedCommunities()
-                updateSelectedCommunitiesUI()
-                currentPage = 1
-                isLastPage = false
-                loadFeed()
-                dialog.dismiss()
-            }
-            .setNeutralButton("Select all", null)
-            .setNegativeButton("Cancel", null)
-            .create()
-
-        dialog.setOnShowListener {
-            val actionColor = ContextCompat.getColor(requireContext(), R.color.yenkasa_emerald)
-            val cancelColor = ContextCompat.getColor(requireContext(), R.color.yenkasa_black)
-
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.setTextColor(actionColor)
-            dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.setTextColor(cancelColor)
-            dialog.getButton(DialogInterface.BUTTON_NEUTRAL)?.setTextColor(actionColor)
-            dialog.getButton(DialogInterface.BUTTON_NEUTRAL)?.setOnClickListener {
-                selectedIds.clear()
-                allCommunities.forEachIndexed { index, community ->
-                    community.id?.let { selectedIds.add(it) }
-                    dialog.listView?.setItemChecked(index, true)
-                }
-            }
-            dialog.listView?.isVerticalScrollBarEnabled = true
-        }
-
-        dialog.show()
-    }
-
-    private fun applySelectedCommunityIds(selectedIds: Set<String>) {
-        selectedCommunities.clear()
-        selectedCommunities.addAll(
-            allCommunities.filter { community ->
-                val communityId = community.id
-                communityId != null && selectedIds.contains(communityId)
-            }
-        )
-    }
-
-    private fun saveSelectedCommunities() {
-        val selectedIds = selectedCommunities.mapNotNull { it.id }.toSet()
-        TokenManager.saveSelectedCommunityIds(requireContext(), userId, selectedIds)
-    }
-
-    private fun getSavedSelectedCommunityIds(): Set<String>? {
-        return TokenManager.getSelectedCommunityIds(requireContext(), userId)
-    }
-
-    private fun updateSelectedCommunitiesUI() {
-        val text = selectedCommunities.joinToString(", ") { it.displayName ?: it.name ?: "Unknown" }
-        selectedCommunitiesText.text = if (text.isEmpty()) "No community selected" else text
-
-        communityNameView.text = when (selectedCommunities.size) {
-            0 -> "No Community"
-            1 -> selectedCommunities.first().displayName ?: selectedCommunities.first().name ?: "Unnamed"
-            else -> "Multiple Communities"
-        }
-
-        updateCommunityStoryRow()
-    }
-
-    private fun updateCommunityStoryRow() {
-        if (!::communityStoryAdapter.isInitialized) return
-        communityStoryAdapter.submitCommunities(
-            sortCommunitiesForStoryRow(allCommunities),
-            selectedCommunities.mapNotNull { it.id }.toSet(),
-            communityStoryPreviews
-        )
-    }
-
-    private fun sortCommunitiesForStoryRow(communities: List<Community>): List<Community> {
-        val recentIds = TokenManager.getRecentPostedCommunityIds(requireContext())
-        if (recentIds.isEmpty()) return communities
-
-        val recentOrder = recentIds.withIndex().associate { it.value to it.index }
-        return communities.sortedWith(
-            compareBy<Community> { community ->
-                recentOrder[community.id] ?: Int.MAX_VALUE
-            }.thenBy { community ->
-                community.displayName ?: community.name ?: ""
-            }
-        )
-    }
-
-    private fun loadCommunityStoryPreviews() {
-        val authToken = token ?: return
-        val names = allCommunities
-            .mapNotNull { it.displayName ?: it.name }
-            .filter { it.isNotBlank() }
-
-        if (names.isEmpty()) {
-            communityStoryPreviews = emptyMap()
-            updateCommunityStoryRow()
-            return
-        }
-
-        ApiClient.apiService.getPostsByCommunities(
-            "Bearer $authToken",
-            names.joinToString(","),
-            1,
-            100
-        ).enqueue(object : Callback<FeedResponse> {
-            override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
-                if (response.isSuccessful && response.body() != null) {
-                    mergeCommunityStoryPreviews(response.body()!!.posts)
-                }
-            }
-
-            override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
-                Log.w("FeedFragment", "Failed to load community previews: ${t.message}")
-            }
-        })
-    }
-
     private fun loadFeed(page: Int = 1) {
         if (isLoading) return
 
-        if (selectedFeedMode == FeedMode.FOLLOWING && followingUserIds == null) {
+        if (selectedFeedMode == FeedTabsController.FeedMode.FOLLOWING && followingUserIds == null) {
             fetchFollowingUserIds { loadFeed(page) }
             return
         }
@@ -1047,9 +625,7 @@ class FeedFragment : Fragment() {
         val names = selectedCommunities.mapNotNull { it.displayName ?: it.name }
         if (names.isEmpty()) {
             posts.clear()
-            val mixedList = buildMixedFeed(posts)
-            feedAdapter.updateItems(mixedList)
-
+            renderPosts()
             emptyView.visibility = View.VISIBLE
             isLoading = false
             showLoading(false, page <= 1)
@@ -1073,8 +649,11 @@ class FeedFragment : Fragment() {
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
                     val sourcePosts = body.posts
-                    mergeCommunityStoryPreviews(sourcePosts)
-                    val filteredPosts = applyFeedMode(sourcePosts)
+                    communityController.mergeCommunityStoryPreviews(sourcePosts)
+                    communityController.updateCommunityStoryRow(
+                        if (::communityStoryAdapter.isInitialized) communityStoryAdapter else null
+                    )
+                    val filteredPosts = tabsController.applyFeedMode(sourcePosts, followingUserIds)
 
                     if (page == 1) {
                         posts.clear()
@@ -1131,101 +710,6 @@ class FeedFragment : Fragment() {
             })
     }
 
-    private fun applyFeedMode(sourcePosts: List<Post>): List<Post> {
-        return when (selectedFeedMode) {
-            FeedMode.FOR_YOU -> sourcePosts
-            FeedMode.FOLLOWING -> {
-                val ids = followingUserIds.orEmpty()
-                sourcePosts
-                    .filter { ids.contains(it.userId.id) }
-                    .sortedByDescending { parsePostTimestampMillis(it.createdAt) ?: 0L }
-            }
-            FeedMode.TRENDING -> sourcePosts.sortedWith(
-                compareByDescending<Post> {
-                    it.likeCount + it.commentCount + it.shareCount + it.viewCount
-                }.thenByDescending {
-                    parsePostTimestampMillis(it.createdAt) ?: 0L
-                }
-            )
-            FeedMode.TOP -> sourcePosts.sortedByDescending {
-                parsePostTimestampMillis(it.createdAt) ?: 0L
-            }
-        }
-    }
-
-    private fun mergeCommunityStoryPreviews(sourcePosts: List<Post>) {
-        val nextPreviews = communityStoryPreviews.toMutableMap()
-        buildCommunityStoryPreviewMap(sourcePosts).forEach { (communityId, preview) ->
-            val current = nextPreviews[communityId]
-            if (current == null || preview.createdAtMillis >= current.createdAtMillis) {
-                nextPreviews[communityId] = preview
-            }
-        }
-        communityStoryPreviews = nextPreviews
-        updateCommunityStoryRow()
-    }
-
-    private fun buildCommunityStoryPreviewMap(sourcePosts: List<Post>): Map<String, CommunityStoryPreview> {
-        return sourcePosts
-            .sortedByDescending { parsePostTimestampMillis(it.createdAt) ?: 0L }
-            .mapNotNull { post ->
-                val communityId = post.communityId?.id ?: return@mapNotNull null
-                val mediaUrl = post.effectiveImageUrls().firstOrNull()
-                    ?: post.videoUrl?.takeIf { it.isNotBlank() }
-                val text = post.caption
-                    ?.trim()
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { if (it.length > 44) "${it.take(41)}..." else it }
-
-                if (mediaUrl.isNullOrBlank() && text.isNullOrBlank()) {
-                    return@mapNotNull null
-                }
-
-                communityId to CommunityStoryPreview(
-                    mediaUrl = mediaUrl,
-                    text = text,
-                    createdAtMillis = parsePostTimestampMillis(post.createdAt) ?: 0L
-                )
-            }
-            .distinctBy { it.first }
-            .toMap()
-    }
-
-    private fun parsePostTimestampMillis(rawTimestamp: String?): Long? {
-        if (rawTimestamp.isNullOrBlank()) return null
-
-        rawTimestamp.toLongOrNull()?.let { value ->
-            return if (value < 10_000_000_000L) value * 1000 else value
-        }
-
-        val formats = listOf(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-            "yyyy-MM-dd'T'HH:mm:ssXXX"
-        )
-
-        return formats.firstNotNullOfOrNull { pattern ->
-            runCatching {
-                SimpleDateFormat(pattern, Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                }.parse(rawTimestamp)?.time
-            }.getOrNull()
-        }
-    }
-
-    private fun openComments(post: Post) {
-        val intent = Intent(requireContext(), CommentsActivity::class.java)
-        intent.putExtra("POST_ID", post._id)
-        startActivity(intent)
-    }
-
-    private fun openUserProfile(userId: String) {
-        val intent = Intent(requireContext(), UserProfileActivity::class.java)
-        intent.putExtra("USER_ID", userId)
-        startActivity(intent)
-    }
-
     private fun trackDailyLogin() {
         ApiClient.apiService.trackLogin("Bearer $token").enqueue(object : Callback<TrackLoginResponse> {
             override fun onResponse(call: Call<TrackLoginResponse>, response: Response<TrackLoginResponse>) {}
@@ -1244,226 +728,47 @@ class FeedFragment : Fragment() {
         val index = posts.indexOfFirst { it._id == postId }
         if (index >= 0) {
             posts[index] = posts[index].copy(viewCount = viewsCount)
-        }
-    }
-
-
-    private fun setupSocketListeners() {
-        SocketManager.on("newPost") { data ->
-            try {
-                val json = data as JSONObject
-                    val newPost = Post.fromJson(json)
-                lifecycleScope.launch {
-                    posts.add(0, newPost)
-                    renderPosts()
-                    saveCurrentFeedCache()
-                    recyclerView.scrollToPosition(0)
-                }
-            } catch (e: Exception) {
-                Log.e("FeedFragment", "Error parsing newPost")
+            if (USE_YENKASA_PLAYER_VIEW) {
+                playerFeedAdapter?.submitPosts(posts.toList())
             }
         }
-        SocketManager.on("viewUpdate") { data ->
-            try {
-                val json = data as JSONObject
-                val postId = json.getString("postId")
-                val viewsCount = json.getInt("viewsCount")
-
-                lifecycleScope.launch {
-                    updateSourcePostViewCount(postId, viewsCount)
-                    feedAdapter.updatePostViewCount(postId, viewsCount)
-                }
-            } catch (e: Exception) {
-                Log.e("FeedFragment", "Error parsing viewUpdate: ${e.message}")
-            }
-        }
-
-        SocketManager.on("likeUpdate") { data ->
-            try {
-                val json = data as JSONObject
-                val postId = json.getString("postId")
-                val likeCount = json.getInt("likeCount")
-
-                lifecycleScope.launch {
-                    val index = posts.indexOfFirst { it._id == postId }
-                    if (index >= 0) {
-                        posts[index] = posts[index].copy(likeCount = likeCount)
-                        renderPosts()
-                        saveCurrentFeedCache()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FeedFragment", "Error parsing likeUpdate")
-            }
-        }
-    }
-
-    private fun confirmDeletePost(post: Post) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Delete post")
-            .setMessage("Are you sure you want to delete this post?")
-            .setPositiveButton("Delete") { _, _ ->
-                deletePost(post)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun downloadPost(post: Post) {
-        ApiClient.apiService.getPostMedia(
-            post._id,
-            "Bearer $token"
-        ).enqueue(object : Callback<MediaResponse> {
-
-            override fun onResponse(
-                call: Call<MediaResponse>,
-                response: Response<MediaResponse>
-            ) {
-                if (!response.isSuccessful || response.body() == null) {
-                    Toast.makeText(requireContext(), "Failed to get media", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                val media = response.body()!!.media
-
-                val url = media.firstImageUrl()
-                    ?: media.videoUrl
-                    ?: media.audioUrl
-
-                if (url.isNullOrEmpty()) {
-                    Toast.makeText(requireContext(), "No media found", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                // Open system downloader / browser
-                startActivity(
-                    Intent(Intent.ACTION_VIEW).apply {
-                        data = android.net.Uri.parse(url)
-                    }
-                )
-            }
-
-            override fun onFailure(call: Call<MediaResponse>, t: Throwable) {
-                Toast.makeText(requireContext(), "Download failed", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
-
-    private fun deletePost(post: Post) {
-        ApiClient.apiService.deletePost(
-            post._id,
-            "Bearer $token"
-        ).enqueue(object : Callback<GenericResponse> {
-
-            override fun onResponse(
-                call: Call<GenericResponse>,
-                response: Response<GenericResponse>
-            ) {
-                if (response.isSuccessful) {
-                    posts.removeAll { it._id == post._id }
-                    renderPosts()
-                    saveCurrentFeedCache()
-                    Toast.makeText(requireContext(), "Post deleted", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
-    private fun hidePost(post: Post) {
-        ApiClient.apiService.hidePost(
-            post._id,
-            "Bearer $token"
-        ).enqueue(object : Callback<GenericResponse> {
-
-            override fun onResponse(
-                call: Call<GenericResponse>,
-                response: Response<GenericResponse>
-            ) {
-                posts.removeAll { it._id == post._id }
-                renderPosts()
-                saveCurrentFeedCache()
-                Toast.makeText(requireContext(), "Post hidden", Toast.LENGTH_SHORT).show()
-            }
-
-            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                Toast.makeText(requireContext(), "Failed to hide post", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
-    private fun flagPost(post: Post) {
-        val request = FlagRequest(
-            reason = "inappropriate"
-        )
-
-        ApiClient.apiService.flagPost(
-            post._id,
-            "Bearer $token",
-            request
-        ).enqueue(object : Callback<GenericResponse> {
-
-            override fun onResponse(
-                call: Call<GenericResponse>,
-                response: Response<GenericResponse>
-            ) {
-                if (response.isSuccessful) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Post reported successfully",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Failed to report post",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-
-            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                Toast.makeText(
-                    requireContext(),
-                    "Report failed: ${t.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        })
     }
 
     override fun onResume() {
         super.onResume()
         updateOfflineBanner(!isOnline())
-        currentWalletBalance = TokenManager.getCoins(requireContext())
-        renderFloatingWalletBalance(currentWalletBalance)
+        chromeController.onHostResume(floatingWalletViews)
         WalletBalanceManager.refreshBalance(requireContext())
-        liveSheetController?.onHostResume()
+        if (USE_YENKASA_PLAYER_VIEW) {
+            playerFeedAdapter?.resumeActive(recyclerView)
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        liveSheetController?.onHostPause()
-        feedAdapter.pauseAllVideos()
+        chromeController.onHostPause()
+        if (USE_YENKASA_PLAYER_VIEW) {
+            playerFeedAdapter?.pauseActive(recyclerView)
+        } else {
+            feedAdapter.pauseAllVideos()
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        walletBalanceAnimator?.cancel()
-        resetFloatingWalletPulse()
-        liveSheetController?.detach()
-        liveSheetController = null
-        feedAdapter.pauseAllVideos()
-        SocketManager.off("newPost")
-        SocketManager.off("likeUpdate")
-        connectivityManager?.let { manager ->
-            networkCallback?.let { callback ->
-                runCatching { manager.unregisterNetworkCallback(callback) }
-            }
+        chromeController.detach()
+        if (USE_YENKASA_PLAYER_VIEW) {
+            playerFeedAdapter?.releaseAll(recyclerView)
+            playerFeedAdapter = null
+            chromeController.restoreMainChrome(
+                mainAppBar = requireActivity().findViewById(R.id.mainAppBar),
+                fabYenkasaLive = fabYenkasaLive
+            )
+        } else {
+            feedAdapter.pauseAllVideos()
         }
+        socketController.detach()
+        networkController.tearDown()
     }
 
     override fun onStart() {
@@ -1488,6 +793,27 @@ class FeedFragment : Fragment() {
     }
 
     private fun renderPosts() {
+        if (USE_YENKASA_PLAYER_VIEW) {
+            playerFeedAdapter?.submitPosts(posts.toList())
+            playerFeedAdapter?.updateCommunities(
+                allCommunities,
+                selectedCommunities.mapNotNull { it.id }.toSet()
+            )
+            emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+            if (posts.isNotEmpty()) {
+                recyclerView.post {
+                    val target = layoutManager.findFirstVisibleItemPosition()
+                        .takeIf { it != RecyclerView.NO_POSITION }
+                        ?: 0
+                    playerFeedAdapter?.setActivePosition(
+                        recyclerView,
+                        target.coerceIn(0, (posts.size - 1).coerceAtLeast(0))
+                    )
+                }
+            }
+            return
+        }
+
         feedAdapter.updateItems(buildMixedFeed(posts))
         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
         if (posts.isNotEmpty()) {
@@ -1500,105 +826,71 @@ class FeedFragment : Fragment() {
         return incoming.filter { existingIds.add(it._id) }
     }
 
-    private fun loadCachedFeed() {
-        val raw = TokenManager.getFeedCache(requireContext()) ?: return
-        runCatching {
-            gson.fromJson(raw, CachedFeedPayload::class.java)
-        }.onSuccess { cached ->
-            if (cached != null && cached.posts.isNotEmpty()) {
-                posts.clear()
-                posts.addAll(cached.posts)
-                currentPage = cached.currentPage.coerceAtLeast(1)
-                isLastPage = cached.isLastPage
-                hasShownCachedFeed = true
-                renderPosts()
+    private fun syncCommunitySelectionUi() {
+        communityController.applySelectionToUi(
+            selectedCommunitiesText = selectedCommunitiesText,
+            communityNameView = communityNameView,
+            communityStoryAdapter = if (::communityStoryAdapter.isInitialized) communityStoryAdapter else null,
+            onPlayerCommunitiesUpdated = { communities, selectedIds ->
+                playerFeedAdapter?.updateCommunities(communities, selectedIds)
             }
-        }.onFailure {
-            Log.w("FeedFragment", "Failed to parse cached feed", it)
+        )
+    }
+
+    private fun openCommunitySelectorOrToast() {
+        communityController.openCommunitySelector(
+            onNoCommunities = {
+                Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
+            },
+            onSelectionChanged = { syncCommunitySelectionUi() },
+            onFeedReloadRequested = { reloadFeedFromStart() }
+        )
+    }
+
+    private fun reloadFeedFromStart() {
+        currentPage = 1
+        isLastPage = false
+        loadFeed()
+    }
+
+    private fun loadCachedFeed() {
+        cacheController.loadCachedFeed { cached ->
+            posts.clear()
+            posts.addAll(cached.posts)
+            currentPage = cached.currentPage.coerceAtLeast(1)
+            isLastPage = cached.isLastPage
+            hasShownCachedFeed = true
+            renderPosts()
         }
     }
 
     private fun saveCurrentFeedCache() {
-        runCatching {
-            val payload = CachedFeedPayload(
-                posts = posts.toList(),
-                currentPage = currentPage,
-                isLastPage = isLastPage
-            )
-            TokenManager.saveFeedCache(requireContext(), gson.toJson(payload))
-        }.onFailure {
-            Log.e("FeedFragment", "Failed to save feed cache", it)
-        }
+        cacheController.saveCurrentFeedCache(posts, currentPage, isLastPage)
     }
 
     private fun preloadFeedAround(anchorPosition: Int) {
-        if (!isAdded || posts.isEmpty()) return
-
-        val start = anchorPosition.coerceAtLeast(0)
-        val end = (start + 5).coerceAtMost(posts.lastIndex)
-        for (index in start..end) {
-            val post = posts[index]
-            post.effectiveImageUrls().firstOrNull()?.let { url ->
-                Glide.with(this).load(url).preload()
-            }
-            post.videoUrl?.takeIf { it.isNotBlank() }?.let { url ->
-                Glide.with(this).load(url).preload()
-            }
-            post.userId.profileImage?.takeIf { it.isNotBlank() }?.let { url ->
-                Glide.with(this).load(url).preload()
-            }
-        }
+        cacheController.preloadFeedAround(posts, anchorPosition, this)
     }
 
     private fun updateOfflineBanner(isOffline: Boolean) {
         if (!::offlineBanner.isInitialized) return
-        offlineBanner.visibility = if (isOffline) View.VISIBLE else View.GONE
+        networkController.updateOfflineBanner(offlineBanner, isOffline)
     }
 
     private fun isOnline(): Boolean {
-        val manager = connectivityManager
-            ?: requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = manager.activeNetwork ?: return false
-        val capabilities = manager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return networkController.isOnline()
     }
 
     private fun setupNetworkMonitoring() {
-        connectivityManager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val manager = connectivityManager ?: return
-        updateOfflineBanner(!isOnline())
-
-        networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    updateOfflineBanner(false)
-                    if (posts.isEmpty() || hasShownCachedFeed) {
-                        loadFeed(1)
-                    }
-                }
-            }
-
-            override fun onLost(network: Network) {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    updateOfflineBanner(!isOnline())
-                }
-            }
-        }
-
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        runCatching { manager.registerNetworkCallback(request, networkCallback!!) }
+        networkController.setupNetworkMonitoring(
+            offlineBanner = offlineBanner,
+            shouldReload = { posts.isEmpty() || hasShownCachedFeed },
+            onReload = { loadFeed(1) }
+        )
     }
 
     private fun scheduleBackgroundFeedSync() {
-        val workRequest = PeriodicWorkRequestBuilder<FeedSyncWorker>(15, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(requireContext().applicationContext)
-            .enqueueUniquePeriodicWork(
-                "feed_sync",
-                ExistingPeriodicWorkPolicy.KEEP,
-                workRequest
-            )
+        networkController.scheduleBackgroundFeedSync()
     }
 
 }

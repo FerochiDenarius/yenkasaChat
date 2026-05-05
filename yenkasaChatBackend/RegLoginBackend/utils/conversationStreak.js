@@ -149,7 +149,7 @@ async function updateConversationStreak(userId) {
   if (activeConnections > 0) {
     current = previousDateKey === yesterdayKey ? current + 1 : 1;
     streak.lastActiveDate = storedDateFromKey(targetDateKey);
-  } else if (previousDateKey !== targetDateKey) {
+  } else if (previousDateKey !== targetDateKey && previousDateKey !== yesterdayKey) {
     current = 0;
   }
 

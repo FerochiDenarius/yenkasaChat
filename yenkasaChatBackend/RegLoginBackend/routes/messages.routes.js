@@ -14,6 +14,7 @@ const unreadCountService = require('../services/unreadCount.service');
 const { sendPushNotification } = require('../utils/onesignal');
 const { canMessageUser } = require('../services/privacy.service');
 const { cloudinary } = require('../config/cloudinary');
+const { updateConversationStreak } = require('../utils/conversationStreak');
 
 const chatMediaUpload = multer({
   storage: multer.memoryStorage(),
@@ -263,6 +264,12 @@ router.post('/', auth, async (req, res) => {
 
     await newMessage.save();
     console.log(`[MessagesRoute] ✅ Message saved with ID: ${newMessage._id}`);
+
+    const streakUserIds = Array.from(new Set([senderAppUserId, ...recipientAppUserIds].filter(Boolean)));
+    Promise.allSettled(streakUserIds.map((id) => updateConversationStreak(id)))
+      .catch((streakErr) => {
+        console.warn('[MessagesRoute] ⚠️ Conversation streak update failed:', streakErr.message);
+      });
 
     // --- Push Notification Logic (unchanged) ---
     if (recipientAppUserIds.length > 0) {

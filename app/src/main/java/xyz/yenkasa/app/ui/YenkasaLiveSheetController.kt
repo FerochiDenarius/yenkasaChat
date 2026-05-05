@@ -14,6 +14,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -51,6 +52,10 @@ class YenkasaLiveSheetController(
     private var nextPollDelayMs: Long = 5000L
     private var latestResponse: LiveMetricsResponse? = null
     private var currentUserRanks: Map<String, Int> = emptyMap()
+    private val gson = Gson()
+    private var battleLoading = false
+    private var battleTimeoutRunnable: Runnable? = null
+    private var previousBattleActionText: CharSequence? = null
 
     private var contentScroll: View? = null
     private var loadingView: View? = null
@@ -89,6 +94,7 @@ class YenkasaLiveSheetController(
     fun detach() {
         stopPolling()
         stopPulse()
+        finishBattleRequest(restoreLabel = false)
         activeCall?.cancel()
         duelActionCall?.cancel()
         liveDialog?.dismiss()
@@ -490,38 +496,25 @@ class YenkasaLiveSheetController(
         val context = fragment.context ?: return
         val token = TokenManager.getToken(context).orEmpty()
         if (token.isBlank()) return
+        if (!beginBattleRequest("Starting...")) return
 
-        duelActionView?.isEnabled = false
-        duelActionCall?.cancel()
         duelActionCall = ApiClient.apiService.createLiveDuel(
             "Bearer $token",
             mapOf("metricType" to metricType)
         )
         duelActionCall?.enqueue(object : Callback<LiveDuelEnvelope> {
             override fun onResponse(call: Call<LiveDuelEnvelope>, response: Response<LiveDuelEnvelope>) {
-                duelActionView?.isEnabled = true
-                val body = response.body()
-                if (!response.isSuccessful) {
-                    Toast.makeText(
-                        context,
-                        body?.error ?: "Could not start live duel.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return
-                }
-
-                Toast.makeText(
-                    context,
-                    body?.message ?: "Live duel created.",
-                    Toast.LENGTH_SHORT
-                ).show()
-                fetchMetrics(force = true)
+                handleDuelActionResponse(
+                    response = response,
+                    successMessage = "Live duel created.",
+                    fallbackError = "Could not start live duel."
+                )
             }
 
             override fun onFailure(call: Call<LiveDuelEnvelope>, t: Throwable) {
-                if (call.isCanceled) return
-                duelActionView?.isEnabled = true
-                Toast.makeText(context, "Could not start live duel.", Toast.LENGTH_SHORT).show()
+                if (call.isCanceled && !battleLoading) return
+                finishBattleRequest()
+                Toast.makeText(context, "Could not start live duel. Check your connection.", Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -530,40 +523,97 @@ class YenkasaLiveSheetController(
         val context = fragment.context ?: return
         val token = TokenManager.getToken(context).orEmpty()
         if (token.isBlank()) return
+        if (!beginBattleRequest("Joining...")) return
 
-        duelActionView?.isEnabled = false
-        duelActionCall?.cancel()
         duelActionCall = ApiClient.apiService.joinLiveDuel(
             "Bearer $token",
             mapOf("duelId" to duelId)
         )
         duelActionCall?.enqueue(object : Callback<LiveDuelEnvelope> {
             override fun onResponse(call: Call<LiveDuelEnvelope>, response: Response<LiveDuelEnvelope>) {
-                duelActionView?.isEnabled = true
-                val body = response.body()
-                if (!response.isSuccessful) {
-                    Toast.makeText(
-                        context,
-                        body?.error ?: "Could not join live duel.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return
-                }
-
-                Toast.makeText(
-                    context,
-                    body?.message ?: "Live duel joined.",
-                    Toast.LENGTH_SHORT
-                ).show()
-                fetchMetrics(force = true)
+                handleDuelActionResponse(
+                    response = response,
+                    successMessage = "Live duel joined.",
+                    fallbackError = "Could not join live duel."
+                )
             }
 
             override fun onFailure(call: Call<LiveDuelEnvelope>, t: Throwable) {
-                if (call.isCanceled) return
-                duelActionView?.isEnabled = true
-                Toast.makeText(context, "Could not join live duel.", Toast.LENGTH_SHORT).show()
+                if (call.isCanceled && !battleLoading) return
+                finishBattleRequest()
+                Toast.makeText(context, "Could not join live duel. Check your connection.", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    private fun beginBattleRequest(loadingText: String): Boolean {
+        val context = fragment.context ?: return false
+        if (battleLoading) return false
+        battleLoading = true
+        previousBattleActionText = duelActionView?.text
+        duelActionView?.isEnabled = false
+        duelActionView?.text = loadingText
+        battleTimeoutRunnable?.let { pollHandler.removeCallbacks(it) }
+        battleTimeoutRunnable = Runnable {
+            if (!battleLoading) return@Runnable
+            duelActionCall?.cancel()
+            finishBattleRequest()
+            Toast.makeText(context, "Live battle is taking too long. Try again.", Toast.LENGTH_SHORT).show()
+        }.also { pollHandler.postDelayed(it, BATTLE_ACTION_TIMEOUT_MS) }
+        return true
+    }
+
+    private fun finishBattleRequest(restoreLabel: Boolean = true) {
+        battleLoading = false
+        battleTimeoutRunnable?.let { pollHandler.removeCallbacks(it) }
+        battleTimeoutRunnable = null
+        duelActionView?.isEnabled = true
+        if (restoreLabel) {
+            previousBattleActionText?.let { duelActionView?.text = it }
+        }
+        previousBattleActionText = null
+    }
+
+    private fun handleDuelActionResponse(
+        response: Response<LiveDuelEnvelope>,
+        successMessage: String,
+        fallbackError: String
+    ) {
+        val context = fragment.context
+        if (context == null) {
+            finishBattleRequest()
+            return
+        }
+        val body = readDuelEnvelope(response)
+        if (response.isSuccessful) {
+            finishBattleRequest(restoreLabel = false)
+            body?.duel?.let { bindDuel(it) }
+            Toast.makeText(context, body?.message ?: successMessage, Toast.LENGTH_SHORT).show()
+            fetchMetrics(force = true)
+            return
+        }
+
+        finishBattleRequest()
+        if (response.code() == 409 && body?.duel != null) {
+            bindDuel(body.duel)
+            Toast.makeText(context, body.error ?: "You already have a live battle.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val message = when (response.code()) {
+            404 -> body?.error ?: "No available opponent right now. Try again shortly."
+            409 -> body?.error ?: "That battle is no longer available. Refreshing Live."
+            else -> body?.error ?: fallbackError
+        }
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        if (response.code() == 409) fetchMetrics(force = true)
+    }
+
+    private fun readDuelEnvelope(response: Response<LiveDuelEnvelope>): LiveDuelEnvelope? {
+        response.body()?.let { return it }
+        val raw = response.errorBody()?.string().orEmpty()
+        if (raw.isBlank()) return null
+        return runCatching { gson.fromJson(raw, LiveDuelEnvelope::class.java) }.getOrNull()
     }
 
     private fun formatMetricLabel(metricType: String?): String {
@@ -629,5 +679,9 @@ class YenkasaLiveSheetController(
                 }
             }
             .start()
+    }
+
+    companion object {
+        private const val BATTLE_ACTION_TIMEOUT_MS = 15_000L
     }
 }

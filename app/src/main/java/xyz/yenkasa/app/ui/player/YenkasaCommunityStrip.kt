@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -58,53 +60,74 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
         imageUrl: String?,
         selected: Boolean,
         onClick: () -> Unit
-    ): LinearLayout {
-        val card = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+    ): View {
+        val card = FrameLayout(context).apply {
             background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
-                setColor(Color.parseColor(if (selected) "#262E2A" else "#1A1D1C"))
-                setStroke(dp(1), Color.parseColor(if (selected) "#37E37B" else "#2F3633"))
+                setColor(Color.parseColor("#101112"))
+                setStroke(dp(1), Color.parseColor(if (selected) "#37E37B" else "#40FFFFFF"))
             }
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            layoutParams = LinearLayout.LayoutParams(dp(92), LayoutParams.WRAP_CONTENT).apply {
-                marginEnd = dp(8)
+            layoutParams = LinearLayout.LayoutParams(dp(86), dp(88)).apply {
+                marginEnd = dp(7)
             }
             isClickable = true
             isFocusable = true
             setOnClickListener { onClick() }
+            clipToOutline = true
         }
 
         val image = ImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
-            layoutParams = LinearLayout.LayoutParams(dp(76), dp(76))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
             background = GradientDrawable().apply {
-                cornerRadius = dp(14).toFloat()
+                cornerRadius = dp(16).toFloat()
                 setColor(Color.parseColor("#111111"))
             }
             clipToOutline = true
-            setImageResource(R.drawable.ic_logo_emblem)
+            setImageResource(R.drawable.ic_yenkasa_logo)
         }
         if (!imageUrl.isNullOrBlank()) {
             Glide.with(context)
                 .load(imageUrl)
-                .placeholder(R.drawable.ic_logo_emblem)
+                .placeholder(R.drawable.ic_yenkasa_logo)
+                .error(R.drawable.ic_yenkasa_logo)
                 .into(image)
+        }
+
+        val shade = View(context).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.TRANSPARENT, Color.parseColor("#D9000000"))
+            )
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(42),
+                Gravity.BOTTOM
+            )
         }
 
         val label = TextView(context).apply {
             text = title
-            textSize = 11f
+            textSize = 12f
             setTextColor(Color.WHITE)
             maxLines = 1
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(6)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM
+            ).apply {
+                leftMargin = dp(8)
+                rightMargin = dp(8)
+                bottomMargin = dp(9)
             }
         }
 
         card.addView(image)
+        card.addView(shade)
         card.addView(label)
         return card
     }

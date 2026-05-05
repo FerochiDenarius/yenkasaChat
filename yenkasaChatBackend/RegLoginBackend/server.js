@@ -329,6 +329,7 @@ safeMount('/api/reset-password', './routes/changepwd.routes.js');
 safeMount('/api/verify', './routes/verify');
 safeMount('/api/account', './routes/account.routes');
 safeMount('/api/users', './routes/user.routes');
+safeMount('/api/user', './routes/conversationStreak.routes');
 safeMount('/api/contacts', './routes/contacts.routes');
 safeMount('/api/messages', './routes/messages.routes');
 safeMount('/api/chatrooms', './routes/chatroom.routes');

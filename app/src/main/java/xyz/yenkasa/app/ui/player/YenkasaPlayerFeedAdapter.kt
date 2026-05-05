@@ -26,6 +26,7 @@ class YenkasaPlayerFeedAdapter(
     private val savedPostIds = mutableSetOf<String>()
     private val lastViewTime = mutableMapOf<String, Long>()
     private var activePosition = RecyclerView.NO_POSITION
+    private var muted = true
 
     inner class PlayerViewHolder(val playerView: YenkasaPlayerView) : RecyclerView.ViewHolder(playerView)
 
@@ -50,6 +51,8 @@ class YenkasaPlayerFeedAdapter(
             saved = savedPostIds.contains(post._id),
             position = position,
             actions = actions,
+            initialMuted = muted,
+            onMuteChanged = { muted = it },
             onPlaybackCheckpoint = { seconds ->
                 sendRewardView(post, seconds)
             }
@@ -81,8 +84,23 @@ class YenkasaPlayerFeedAdapter(
         notifyDataSetChanged()
     }
 
+    fun setPostSaved(postId: String, saved: Boolean) {
+        if (saved) {
+            savedPostIds.add(postId)
+        } else {
+            savedPostIds.remove(postId)
+        }
+    }
+
     fun setActivePosition(recyclerView: RecyclerView, position: Int) {
-        if (position !in posts.indices || activePosition == position) return
+        if (position !in posts.indices) return
+        if (activePosition == position) {
+            (recyclerView.findViewHolderForAdapterPosition(position) as? PlayerViewHolder)
+                ?.playerView
+                ?.setActive(true)
+            posts.getOrNull(position)?.let { post -> recordVisibleView(post) }
+            return
+        }
 
         val previous = activePosition
         activePosition = position

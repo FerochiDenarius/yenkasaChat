@@ -9,6 +9,7 @@ interface YenkasaPlayerActions {
     fun onLike(post: Post, position: Int)
     fun onComment(post: Post, position: Int)
     fun onShare(post: Post)
+    fun onSave(post: Post, saved: Boolean)
     fun onReward(post: Post)
     fun onOpenWallet()
     fun onOpenLiveArena()

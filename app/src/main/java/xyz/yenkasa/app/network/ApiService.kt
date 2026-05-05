@@ -87,6 +87,9 @@ interface ApiService {
     @GET("users/{userId}/presence")
     fun getUserPresence(@Path("userId") userId: String): Call<PresenceResponse>
 
+    @GET("user/conversation-streak")
+    fun getConversationStreak(): Call<ConversationStreak>
+
     @PATCH("users/{userId}/player-id")
     fun updatePlayerId(
         @Path("userId") userId: String,

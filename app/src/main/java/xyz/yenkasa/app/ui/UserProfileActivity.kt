@@ -1,5 +1,6 @@
 package xyz.yenkasa.app.ui
 
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -34,6 +35,7 @@ import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
 import xyz.yenkasa.app.model.BlockUserRequest
 import xyz.yenkasa.app.model.ApiResponse
+import xyz.yenkasa.app.model.ConversationStreak
 
 
 
@@ -61,6 +63,9 @@ class UserProfileActivity : AppCompatActivity() {
     private lateinit var btnMessage: Button
     private lateinit var btnBlock: Button
     private lateinit var btnMore: ImageButton
+    private lateinit var conversationStreakLayout: LinearLayout
+    private lateinit var conversationStreakView: TextView
+    private lateinit var conversationStreakSubtitleView: TextView
 
     private lateinit var postAdapter: ProfilePostAdapter
     private val userPostsList = mutableListOf<Post>()
@@ -87,6 +92,7 @@ class UserProfileActivity : AppCompatActivity() {
         }
 
         fetchUserProfile()
+        fetchConversationStreakIfOwnProfile()
     }
 
     private fun bindViews() {
@@ -112,6 +118,9 @@ class UserProfileActivity : AppCompatActivity() {
         btnMessage = findViewById(R.id.btnMessage)
         btnBlock = findViewById(R.id.btnBlock)
         btnMore = findViewById(R.id.btnProfileActionMore)
+        conversationStreakLayout = findViewById(R.id.layoutConversationStreak)
+        conversationStreakView = findViewById(R.id.textConversationStreak)
+        conversationStreakSubtitleView = findViewById(R.id.textConversationStreakSubtitle)
 
         btnFollow.backgroundTintList = null
         btnMessage.backgroundTintList = null
@@ -231,6 +240,50 @@ class UserProfileActivity : AppCompatActivity() {
                     showPostsMessage("Could not load posts.")
                 }
             })
+    }
+
+    private fun fetchConversationStreakIfOwnProfile() {
+        val targetUserId = userId.orEmpty()
+        val currentUserId = TokenManager.getUserId(this).orEmpty()
+        if (targetUserId.isBlank() || targetUserId != currentUserId) {
+            conversationStreakLayout.visibility = View.GONE
+            return
+        }
+
+        ApiClient.apiService.getConversationStreak()
+            .enqueue(object : Callback<ConversationStreak> {
+                override fun onResponse(
+                    call: Call<ConversationStreak>,
+                    response: Response<ConversationStreak>
+                ) {
+                    val streak = response.body()
+                    if (!response.isSuccessful || streak == null) {
+                        conversationStreakLayout.visibility = View.GONE
+                        return
+                    }
+                    bindConversationStreak(streak)
+                }
+
+                override fun onFailure(call: Call<ConversationStreak>, t: Throwable) {
+                    conversationStreakLayout.visibility = View.GONE
+                }
+            })
+    }
+
+    private fun bindConversationStreak(streak: ConversationStreak) {
+        conversationStreakLayout.visibility = View.VISIBLE
+        val prefix = if (streak.current >= 3) "🔥 " else ""
+        val suffix = if (streak.current == 1) "day" else "days"
+        conversationStreakSubtitleView.text = "Longest streak: ${streak.longest} ${if (streak.longest == 1) "day" else "days"} • Private metric"
+
+        ValueAnimator.ofInt(0, streak.current).apply {
+            duration = 450L
+            addUpdateListener { animator ->
+                val value = animator.animatedValue as Int
+                conversationStreakView.text = "${prefix}Conversation Streak: $value $suffix"
+            }
+            start()
+        }
     }
 
     private fun fetchUserPosts(userId: String, token: String) {

@@ -3,7 +3,6 @@ package xyz.yenkasa.app.ui.player
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -23,33 +22,36 @@ class YenkasaWalletPill @JvmOverloads constructor(
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_player_pill)
-        val pad = (12 * resources.displayMetrics.density).toInt()
-        setPadding(pad, (8 * resources.displayMetrics.density).toInt(), pad, (8 * resources.displayMetrics.density).toInt())
+        setPadding(dp(12), dp(8), dp(12), dp(8))
         elevation = 10f
 
-        val icon = ImageView(context).apply {
-            setImageResource(R.drawable.ic_wallet)
-            imageTintList = ContextCompat.getColorStateList(context, R.color.wallet_accent_gold)
-            layoutParams = LayoutParams(dp(18), dp(18))
+        val coin = TextView(context).apply {
+            text = "YK"
+            gravity = Gravity.CENTER
+            setTextColor(ContextCompat.getColor(context, android.R.color.white))
+            textSize = 11f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            background = ContextCompat.getDrawable(context, R.drawable.bg_feed_wallet_coin)
+            layoutParams = LayoutParams(dp(34), dp(34))
         }
-        addView(icon)
+        addView(coin)
 
         val textWrap = LinearLayout(context).apply {
             orientation = VERTICAL
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(8)
+                marginStart = dp(10)
             }
         }
 
         balanceView = TextView(context).apply {
             setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            textSize = 14f
+            textSize = 13f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         }
         subtextView = TextView(context).apply {
             setTextColor(ContextCompat.getColor(context, R.color.wallet_accent_green))
-            textSize = 11f
-            text = "Wallet"
+            textSize = 10f
+            text = "~ $48.12 USD"
         }
         textWrap.addView(balanceView)
         textWrap.addView(subtextView)

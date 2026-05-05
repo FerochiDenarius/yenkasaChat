@@ -13,6 +13,7 @@ const Message = require('../models/message.model');
 const AppVerification = require('../models/appverification.model');
 const LiveDuel = require('../models/liveDuel.model');
 const rewardService = require('../services/reward.service');
+const { getConversationStreak } = require('../utils/conversationStreak');
 
 const router = express.Router();
 
@@ -164,39 +165,61 @@ router.post('/duel/create', auth, async (req, res) => {
       return res.status(409).json({ error: 'You already have an active duel', duel: await formatDuelForUser(existing, currentUserId, new Date()) });
     }
 
-    const opponent = await findMatchedOpponent(currentUserId);
-    if (!opponent) {
+    const opponents = await findMatchedOpponents(currentUserId);
+    if (!opponents.length) {
       return res.status(404).json({ error: 'No suitable duel opponent available right now.' });
     }
 
-    const recentPairDuel = await LiveDuel.findOne({
-      status: { $in: ['pending', 'active', 'completed'] },
-      createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
-      $or: [
-        { userA: currentUserId, userB: opponent._id },
-        { userA: opponent._id, userB: currentUserId },
-      ],
-    }).lean();
+    for (const opponent of opponents) {
+      const opponentId = String(opponent._id);
+      const recentPairDuel = await LiveDuel.findOne({
+        status: { $in: ['pending', 'active', 'completed'] },
+        createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
+        $or: [
+          { userA: currentUserId, userB: opponentId },
+          { userA: opponentId, userB: currentUserId },
+        ],
+      }).lean();
 
-    if (recentPairDuel) {
-      return res.status(409).json({ error: 'Matchmaking cooldown active for this opponent.' });
+      if (recentPairDuel) continue;
+
+      const duel = await LiveDuel.create({
+        duelId: uuidv4(),
+        userA: currentUserId,
+        userB: opponentId,
+        metricType,
+        status: 'pending',
+        userAScore: 0,
+        userBScore: 0,
+      });
+
+      const reserved = await reserveOpenDuelForPair(duel, currentUserId, opponentId);
+      if (!reserved) continue;
+
+      const formatted = await formatDuelForUser(
+        await LiveDuel.findById(duel._id).populate('userA', 'username profileImage role').populate('userB', 'username profileImage role'),
+        currentUserId,
+        new Date()
+      );
+      return res.json({
+        message: 'Live duel created',
+        duel: formatted,
+      });
     }
 
-    const duel = await LiveDuel.create({
-      duelId: uuidv4(),
-      userA: currentUserId,
-      userB: opponent._id,
-      metricType,
-      status: 'pending',
-      userAScore: 0,
-      userBScore: 0,
-    });
+    const active = await findOpenDuelForUser(currentUserId);
+    if (active) {
+      return res.status(409).json({
+        error: 'You already have an active duel',
+        duel: await formatDuelForUser(
+          await LiveDuel.findById(active._id).populate('userA', 'username profileImage role').populate('userB', 'username profileImage role'),
+          currentUserId,
+          new Date()
+        ),
+      });
+    }
 
-    const formatted = await formatDuelForUser(duel, currentUserId, new Date());
-    return res.json({
-      message: 'Live duel created',
-      duel: formatted,
-    });
+    return res.status(409).json({ error: 'Everyone matched is already in a live battle. Try again shortly.' });
   } catch (error) {
     console.error('[LiveRoute] Failed to create duel:', error);
     return res.status(500).json({ error: 'Failed to create duel' });
@@ -219,6 +242,18 @@ router.post('/duel/join', auth, async (req, res) => {
 
     if (String(duel.userB._id) !== currentUserId) {
       return res.status(403).json({ error: 'Only the invited opponent can join this duel' });
+    }
+
+    const existing = await findOpenDuelForUser(currentUserId, duel.duelId);
+    if (existing) {
+      return res.status(409).json({
+        error: 'You are already in another live duel',
+        duel: await formatDuelForUser(
+          await LiveDuel.findById(existing._id).populate('userA', 'username profileImage role').populate('userB', 'username profileImage role'),
+          currentUserId,
+          new Date()
+        ),
+      });
     }
 
     if (duel.status !== 'pending') {
@@ -432,7 +467,7 @@ async function buildActivityFeed(range, currentUserId) {
     return cached.data;
   }
 
-  const [recentComments, recentViews, recentFollows, recentYkc] = await Promise.all([
+  const [recentComments, recentViews, recentFollows, recentYkc, liveDuels] = await Promise.all([
     Comment.find({ isActive: true, createdAt: range })
       .populate('userId', 'username profileImage')
       .sort({ createdAt: -1 })
@@ -459,9 +494,16 @@ async function buildActivityFeed(range, currentUserId) {
       .sort({ createdAt: -1 })
       .limit(4)
       .lean(),
+    LiveDuel.find({ status: { $in: ['pending', 'active'] } })
+      .populate('userA', 'username profileImage')
+      .populate('userB', 'username profileImage')
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean(),
   ]);
 
   const rawEvents = [
+    ...liveDuels.map((duel) => buildDuelActivityEvent(duel, currentUserId)),
     ...recentComments.map((item) => ({
       id: `comment-${item._id}`,
       type: 'comment',
@@ -522,6 +564,30 @@ async function buildActivityFeed(range, currentUserId) {
   });
 
   return result;
+}
+
+function buildDuelActivityEvent(duel, currentUserId) {
+  const userAId = String(duel.userA?._id || duel.userA || '');
+  const userBId = String(duel.userB?._id || duel.userB || '');
+  const userAName = safeDisplayName(duel.userA?.username || 'A challenger', userAId);
+  const userBName = safeDisplayName(duel.userB?.username || 'a rival', userBId);
+  const isCurrentUser = userAId === currentUserId || userBId === currentUserId;
+  const otherName = userAId === currentUserId ? userBName : userAName;
+  const action = duel.status === 'active' ? 'battling live' : 'matched for battle';
+
+  return {
+    id: `duel-${duel.duelId}`,
+    type: 'duel',
+    createdAt: duel.updatedAt || duel.createdAt,
+    userId: isCurrentUser ? currentUserId : userAId,
+    profileImage: isCurrentUser
+      ? (userAId === currentUserId ? duel.userA?.profileImage : duel.userB?.profileImage) || ''
+      : duel.userA?.profileImage || '',
+    text: isCurrentUser
+      ? `⚔️ You are ${action} with ${otherName}`
+      : `⚔️ ${userAName} and ${userBName} are ${action}`,
+    isCurrentUser,
+  };
 }
 
 function buildOvertakeEvents({ windowKey, sections, currentUserId }) {
@@ -656,7 +722,7 @@ async function formatDuelForUser(duel, userId, now) {
   };
 }
 
-async function findMatchedOpponent(userId) {
+async function findMatchedOpponents(userId, limit = 8) {
   const verification = await AppVerification.findOne({ userId }).lean();
   const user = await User.findById(userId).select('role username').lean();
   const score = getActivityScore(verification?.metrics);
@@ -684,15 +750,17 @@ async function findMatchedOpponent(userId) {
       return Math.abs(left.score - score) - Math.abs(right.score - score);
     });
 
+  const opponents = [];
   for (const candidate of scoredCandidates) {
     const candidateId = String(candidate.user._id);
     const hasOpenDuel = await findOpenDuelForUser(candidateId);
     if (hasOpenDuel) continue;
     if (candidateId === userId) continue;
-    return candidate.user;
+    opponents.push(candidate.user);
+    if (opponents.length >= limit) break;
   }
 
-  return null;
+  return opponents;
 }
 
 function getActivityScore(metrics = {}) {
@@ -702,11 +770,44 @@ function getActivityScore(metrics = {}) {
     Number(metrics.totalFollowing || 0);
 }
 
-async function findOpenDuelForUser(userId) {
-  return LiveDuel.findOne({
+async function reserveOpenDuelForPair(duel, userAId, userBId) {
+  const openDuels = await LiveDuel.find({
+    status: { $in: ['pending', 'active'] },
+    $or: [
+      { userA: userAId },
+      { userB: userAId },
+      { userA: userBId },
+      { userB: userBId },
+    ],
+  }).sort({ createdAt: 1, _id: 1 });
+
+  const winner = openDuels[0];
+  const reserved = String(winner?._id || '') === String(duel._id);
+  if (!reserved) {
+    await LiveDuel.updateOne({ _id: duel._id, status: 'pending' }, { $set: { status: 'declined' } });
+    return false;
+  }
+
+  const duplicateIds = openDuels
+    .slice(1)
+    .filter((item) => item.status === 'pending')
+    .map((item) => item._id);
+  if (duplicateIds.length) {
+    await LiveDuel.updateMany({ _id: { $in: duplicateIds } }, { $set: { status: 'declined' } });
+  }
+
+  return true;
+}
+
+async function findOpenDuelForUser(userId, excludeDuelId = null) {
+  const query = {
     status: { $in: ['pending', 'active'] },
     $or: [{ userA: userId }, { userB: userId }],
-  }).lean();
+  };
+  if (excludeDuelId) {
+    query.duelId = { $ne: excludeDuelId };
+  }
+  return LiveDuel.findOne(query).sort({ createdAt: -1 }).lean();
 }
 
 function normalizeMetricType(value) {
@@ -870,58 +971,15 @@ function getActiveLiveEvent(now) {
 }
 
 async function buildConversationStreak(userId) {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const rows = await Message.aggregate([
-    {
-      $match: {
-        senderId: String(userId),
-        timestamp: { $gte: sevenDaysAgo },
-      },
-    },
-    {
-      $group: {
-        _id: {
-          day: {
-            $dateToString: {
-              format: '%Y-%m-%d',
-              date: '$timestamp',
-            },
-          },
-          roomId: '$roomId',
-        },
-      },
-    },
-    {
-      $group: {
-        _id: '$_id.day',
-        activeRooms: { $sum: 1 },
-      },
-    },
-    { $sort: { _id: -1 } },
-  ]);
-
-  const dayKeys = rows.map((row) => row._id);
-  let streak = 0;
-  const cursor = new Date();
-
-  while (dayKeys.includes(formatDay(cursor))) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  const activeConnections = rows[0]?.activeRooms || 0;
+  const streak = await getConversationStreak(userId, true);
   return {
-    days: streak,
-    activeConnections,
+    days: streak.current,
+    activeConnections: streak.activeConnections || 0,
     message:
-      streak > 0 && activeConnections > 0
-        ? `🔥 Conversation Streak: ${streak} day${streak > 1 ? 's' : ''}`
+      streak.current > 0
+        ? `🔥 Conversation Streak: ${streak.current} day${streak.current > 1 ? 's' : ''}`
         : '',
   };
-}
-
-function formatDay(date) {
-  return date.toISOString().slice(0, 10);
 }
 
 function resolveWindow(windowKey) {

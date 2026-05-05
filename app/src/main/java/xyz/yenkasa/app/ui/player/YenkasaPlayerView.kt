@@ -68,6 +68,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private var isActiveItem = false
     private var currentMediaUrl: String? = null
     private var saveSelected = false
+    private var muteChangedListener: (Boolean) -> Unit = {}
     private val firedCheckpoints = mutableSetOf<Int>()
     private val uiHandler = Handler(Looper.getMainLooper())
     private var playbackProgressListener: ((Int) -> Unit)? = null
@@ -117,7 +118,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         textReward = findViewById(R.id.textPlayerRewardCount)
         controls = YenkasaPlayerControls(this)
 
-        logoView.setImageResource(R.drawable.ic_logo_emblem)
+        logoView.setImageResource(R.drawable.ic_yenkasa_logo)
         playerView.useController = false
         controls.setCallbacks(
             onPrevious = { actions?.onNavigateTo(adapterPositionValue - 1) },
@@ -140,6 +141,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         saved: Boolean,
         position: Int,
         actions: YenkasaPlayerActions,
+        initialMuted: Boolean,
+        onMuteChanged: (Boolean) -> Unit,
         onPlaybackCheckpoint: (Int) -> Unit
     ) {
         boundPost = post
@@ -147,6 +150,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         this.actions = actions
         adapterPositionValue = position
         playbackProgressListener = onPlaybackCheckpoint
+        muteChangedListener = onMuteChanged
+        isMuted = initialMuted
         saveSelected = saved
         firedCheckpoints.clear()
 
@@ -192,11 +197,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
             saveSelected = !saveSelected
             textSave.text = formatCount(item.saveCount + if (saveSelected) 1 else 0)
             buttonSave.alpha = if (saveSelected) 1f else 0.82f
+            actions.onSave(post, saveSelected)
         }
         buttonReward.setOnClickListener { actions.onReward(post) }
         buttonSave.alpha = if (saveSelected) 1f else 0.82f
 
         controls.bindMediaType(item.mediaType)
+        controls.setMuted(isMuted)
         renderMedia(item)
         setActive(isActiveItem)
     }
@@ -251,27 +258,41 @@ class YenkasaPlayerView @JvmOverloads constructor(
                 imageView.isVisible = true
                 Glide.with(context)
                     .load(item.mediaUrl ?: item.thumbnailUrl)
-                    .placeholder(R.drawable.ic_logo_emblem)
+                    .placeholder(R.drawable.ic_yenkasa_logo)
+                    .error(R.drawable.ic_yenkasa_logo)
                     .into(imageView)
             }
 
             MediaType.TEXT -> {
                 textView.isVisible = true
                 textView.text = item.textContent.orEmpty()
-                applyTextBackground(item)
+                applyTextPresentation(item)
             }
 
             MediaType.AUDIO -> {
                 audioArtworkView.isVisible = true
                 Glide.with(context)
                     .load(item.thumbnailUrl)
-                    .placeholder(R.drawable.ic_audio_placeholder)
+                    .placeholder(R.drawable.ic_yenkasa_logo)
+                    .error(R.drawable.ic_yenkasa_logo)
                     .into(audioArtworkView)
             }
         }
     }
 
-    private fun applyTextBackground(item: YenkasaPlayerItem) {
+    private fun applyTextPresentation(item: YenkasaPlayerItem) {
+        if (!item.textBackgroundImageUrl.isNullOrBlank()) {
+            imageView.isVisible = true
+            Glide.with(context)
+                .load(item.textBackgroundImageUrl)
+                .placeholder(R.drawable.ic_yenkasa_logo)
+                .error(R.drawable.ic_yenkasa_logo)
+                .into(imageView)
+            textView.setBackgroundColor(Color.TRANSPARENT)
+            textView.setTextColor(Color.WHITE)
+            return
+        }
+
         val hasSelectedColor = !item.textBackgroundColor.isNullOrBlank()
         if (hasSelectedColor) {
             TextPostBackgrounds.apply(textView, item.textBackgroundColor.orEmpty(), centered = true)
@@ -337,6 +358,11 @@ class YenkasaPlayerView @JvmOverloads constructor(
         isMuted = !isMuted
         applyMute()
         controls.setMuted(isMuted)
+        boundItem?.let {
+            if (it.mediaType == MediaType.VIDEO || it.mediaType == MediaType.AUDIO) {
+                muteChangedListener(isMuted)
+            }
+        }
     }
 
     private fun applyMute() {

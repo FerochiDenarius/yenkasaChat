@@ -18,19 +18,19 @@ class YenkasaSponsoredAdButton @JvmOverloads constructor(
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_player_glass)
-        setPadding(dp(12), dp(8), dp(12), dp(8))
+        setPadding(dp(10), dp(7), dp(10), dp(7))
         elevation = 10f
 
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_ads_plus)
             imageTintList = ContextCompat.getColorStateList(context, R.color.feed_action_icon)
-            layoutParams = LayoutParams(dp(16), dp(16))
+            layoutParams = LayoutParams(dp(15), dp(15))
         })
 
         addView(TextView(context).apply {
             text = "Create Sponsored Ad"
             setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            textSize = 12f
+            textSize = 11f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 marginStart = dp(8)

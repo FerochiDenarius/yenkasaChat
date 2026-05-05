@@ -18,6 +18,7 @@ data class Post(
     val videoUrl: String? = null,
     val audioUrl: String? = null,
     val textBackgroundColor: String? = null,
+    val textBackgroundImageUrl: String? = null,
     val mentions: List<String>? = null,
 
     // Engagement
@@ -26,6 +27,7 @@ data class Post(
     val commentCount: Int = 0,
     val comments: List<Comment>? = null,
     val shareCount: Int = 0,
+    val saveCount: Int = 0,
     var viewCount: Int = 0,
 
     // Status
@@ -74,12 +76,14 @@ data class Post(
                 videoUrl = json.optString("videoUrl", null),
                 audioUrl = json.optString("audioUrl", null),
                 textBackgroundColor = json.optString("textBackgroundColor", null),
+                textBackgroundImageUrl = json.optString("textBackgroundImageUrl", null),
                 mentions = json.optJSONArray("mentions")?.let { arr ->
                     List(arr.length()) { i -> arr.optString(i) }
                 },
                 likeCount = json.optInt("likeCount", 0),
                 commentCount = json.optInt("commentCount", 0),
                 shareCount = json.optInt("shareCount", 0),
+                saveCount = json.optInt("saveCount", 0),
                 viewCount = json.optInt("viewCount", 0),
                 coinsEarned = json.optInt("coinsEarned", 0),
                 isActive = json.optBoolean("isActive", true),

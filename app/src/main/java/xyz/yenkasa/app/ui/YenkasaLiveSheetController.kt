@@ -130,6 +130,10 @@ class YenkasaLiveSheetController(
         stopPolling()
     }
 
+    fun show() {
+        openSheet()
+    }
+
     private fun openSheet() {
         val context = fragment.context ?: return
         val view = LayoutInflater.from(context).inflate(R.layout.bottomsheet_yenkasa_live, null, false)

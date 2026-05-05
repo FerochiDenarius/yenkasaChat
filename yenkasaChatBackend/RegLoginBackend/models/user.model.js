@@ -167,6 +167,14 @@ const userSchema = new Schema({
     rewardEnabled: { type: Boolean, default: true }
   },
 
+  timezone: { type: String, default: 'UTC' },
+
+  conversationStreak: {
+    current: { type: Number, default: 0 },
+    longest: { type: Number, default: 0 },
+    lastActiveDate: { type: Date, default: null }
+  },
+
   playerId: { type: String, default: null }
 
 }, { timestamps: true });

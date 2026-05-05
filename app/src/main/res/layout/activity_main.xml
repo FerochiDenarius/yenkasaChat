@@ -135,6 +135,22 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnYenkasaLive"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:layout_marginEnd="22dp"
+        android:layout_marginBottom="102dp"
+        android:contentDescription="Yenkasa Live"
+        android:elevation="8dp"
+        app:backgroundTint="@color/feed_action_background"
+        app:borderWidth="0dp"
+        app:layout_anchor="@id/feedContainer"
+        app:layout_anchorGravity="bottom|end"
+        app:srcCompat="@drawable/ic_live_bolt"
+        app:tint="@color/feed_action_icon"
+        app:useCompatPadding="true" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabCreatePost"
         android:layout_width="56dp"
         android:layout_height="56dp"

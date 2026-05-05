@@ -59,6 +59,7 @@ class FeedFragment : Fragment() {
     private lateinit var offlineBanner: TextView
     private lateinit var communityNameView: TextView
     private lateinit var fabCreatePost: FloatingActionButton
+    private lateinit var fabYenkasaLive: FloatingActionButton
     private lateinit var selectedCommunitiesText: TextView
     private lateinit var communitiesBar: View
     private lateinit var communityStoryRecyclerView: RecyclerView
@@ -94,6 +95,7 @@ class FeedFragment : Fragment() {
     private var walletBalanceAnimator: ValueAnimator? = null
     private var walletReceiverRegistered = false
     private var currentWalletBalance = 0
+    private var liveSheetController: YenkasaLiveSheetController? = null
 
     private var allCommunities: List<Community> = emptyList()
     private val selectedCommunities = mutableSetOf<Community>()
@@ -130,6 +132,7 @@ class FeedFragment : Fragment() {
         initAuth()
         initViews(view)
         setupFloatingWallet()
+        setupYenkasaLive()
         setupRecyclerView()
         setupCommunityStoryRecyclerView()
         setupFeedTabs()
@@ -173,6 +176,7 @@ class FeedFragment : Fragment() {
         offlineBanner = view.findViewById(R.id.textOfflineBanner)
         communityNameView = view.findViewById(R.id.textCommunityNameHeader)
         fabCreatePost = requireActivity().findViewById(R.id.fabCreatePost)
+        fabYenkasaLive = requireActivity().findViewById(R.id.btnYenkasaLive)
         communitiesBar = view.findViewById(R.id.layoutFeedCommunitiesBar)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
         communityStoryRecyclerView = view.findViewById(R.id.recyclerViewFeedCommunities)
@@ -206,6 +210,26 @@ class FeedFragment : Fragment() {
         floatingWalletSparklesView.alpha = 0f
         floatingWalletCard.setOnClickListener {
             startActivity(Intent(requireContext(), CoinWalletActivity::class.java))
+        }
+    }
+
+    private fun setupYenkasaLive() {
+        liveSheetController?.detach()
+        liveSheetController = YenkasaLiveSheetController(this) { action ->
+            when (action) {
+                "comment", "view", "like" -> recyclerView.smoothScrollToPosition(0)
+                "follow" -> {
+                    recyclerView.smoothScrollToPosition(0)
+                    communityStoryRecyclerView.smoothScrollToPosition(0)
+                    Toast.makeText(
+                        requireContext(),
+                        "Explore profiles and communities to follow.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }.also { controller ->
+            controller.attach(fabYenkasaLive)
         }
     }
 
@@ -1417,10 +1441,12 @@ class FeedFragment : Fragment() {
         currentWalletBalance = TokenManager.getCoins(requireContext())
         renderFloatingWalletBalance(currentWalletBalance)
         WalletBalanceManager.refreshBalance(requireContext())
+        liveSheetController?.onHostResume()
     }
 
     override fun onPause() {
         super.onPause()
+        liveSheetController?.onHostPause()
         feedAdapter.pauseAllVideos()
     }
 
@@ -1428,6 +1454,8 @@ class FeedFragment : Fragment() {
         super.onDestroyView()
         walletBalanceAnimator?.cancel()
         resetFloatingWalletPulse()
+        liveSheetController?.detach()
+        liveSheetController = null
         feedAdapter.pauseAllVideos()
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")

@@ -543,6 +543,39 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): Call<FeedResponse>
 
+    @GET("live/metrics")
+    fun getLiveMetrics(
+        @Header("Authorization") token: String,
+        @Query("window") window: String = "5m"
+    ): Call<LiveMetricsResponse>
+
+    @POST("live/duel/create")
+    fun createLiveDuel(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>
+    ): Call<LiveDuelEnvelope>
+
+    @POST("live/duel/join")
+    fun joinLiveDuel(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>
+    ): Call<LiveDuelEnvelope>
+
+    @GET("live/duel/active")
+    fun getActiveLiveDuel(
+        @Header("Authorization") token: String
+    ): Call<LiveDuelEnvelope>
+
+    @POST("live/rewards/process")
+    fun processLiveRewards(
+        @Header("Authorization") token: String
+    ): Call<LiveRewardProcessResponse>
+
+    @GET("live/events")
+    fun getLiveEvents(
+        @Header("Authorization") token: String
+    ): Call<LiveEventResponse>
+
     //=================ViewCOUNT=================//
 
     @POST("views/{postId}/view")

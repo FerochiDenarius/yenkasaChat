@@ -8,6 +8,8 @@ import YenkasaLiveSheet from "../components/feed/YenkasaLiveSheet";
 import FloatingWalletBalance from "../components/feed/FloatingWalletBalance";
 import PostList from "../components/feed/PostList";
 import TopBar from "../components/feed/TopBar";
+import YenkasaWebPlayerFeed from "../components/player/YenkasaWebPlayerFeed";
+import { USE_YENKASA_WEB_PLAYERVIEW_FEED } from "../config/featureFlags";
 import "../styles/feed.css";
 
 export default function Home({ onOpenMenu }) {
@@ -36,6 +38,10 @@ export default function Home({ onOpenMenu }) {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  if (USE_YENKASA_WEB_PLAYERVIEW_FEED) {
+    return <YenkasaWebPlayerFeed onOpenMenu={onOpenMenu} />;
+  }
 
   return (
     <main className="feed-home">

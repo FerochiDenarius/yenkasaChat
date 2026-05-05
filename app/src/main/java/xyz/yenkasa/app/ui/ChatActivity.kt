@@ -67,6 +67,7 @@ import xyz.yenkasa.app.model.PresenceResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.ChatBackgroundManager
+import xyz.yenkasa.app.util.ChatNotificationState
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.webrtc.WebSocketProvider
 import xyz.yenkasa.app.webrtc.SignalingMessageType
@@ -422,6 +423,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onStart() {
         super.onStart()
+        ChatNotificationState.setActiveRoom(roomId)
         webSocketManager.connect(this)
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.startFetchingMessagesRepeatedly()
@@ -430,6 +432,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     override fun onStop() {
+        ChatNotificationState.clearActiveRoom(roomId)
         leaveRealtimeChatRoom()
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.stopFetchingMessages()
@@ -443,6 +446,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     // --- Add this to prevent the crash ---
     override fun onDestroy() {
+        ChatNotificationState.clearActiveRoom(roomId)
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.cleanup()
         }

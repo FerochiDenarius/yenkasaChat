@@ -15,7 +15,6 @@ import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.Participant
 import xyz.yenkasa.app.model.ReceiverResponse
 import xyz.yenkasa.app.network.ApiClient
-import xyz.yenkasa.app.util.NotificationHelper
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -134,15 +133,10 @@ class ChatActivityHelper(
                             // ✅ Detect only truly new messages since lastMessageTimestamp
                             val newMessages = messages.filter { parseTimestamp(it.timestamp) > lastMessageTimestamp }
 
-                            // ✅ Notify only if they’re not sent by the current user
+                            // The open chat screen updates inline; system notifications are reserved
+                            // for messages received outside the active room.
                             if (newMessages.isNotEmpty() && lastMessageTimestamp != 0L) {
-                                newMessages.filter { it.sender?._id != senderId }.forEach { msg ->
-                                    NotificationHelper.showMessageNotification(
-                                        context,
-                                        msg.sender?.username ?: "Someone",
-                                        msg.text ?: msg.imageUrl ?: msg.fileUrl ?: msg.contactInfo ?: "New message"
-                                    )
-                                }
+                                Log.d("ChatActivityHelper", "Received ${newMessages.size} new message(s) while chat is open; notification suppressed.")
                             }
 
                             // ✅ Update last timestamp only if newer exists

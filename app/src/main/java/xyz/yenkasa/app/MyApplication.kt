@@ -22,6 +22,7 @@ import com.google.android.gms.ads.MobileAds
 import org.json.JSONObject
 import xyz.yenkasa.app.ui.CallNotificationHandler
 import xyz.yenkasa.app.util.CallPayloadUtils
+import xyz.yenkasa.app.util.ChatNotificationState
 import xyz.yenkasa.app.util.NotificationNavigation
 
 
@@ -109,6 +110,21 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 return@setNotificationWillShowInForegroundHandler
             }
 
+            val data = notif.additionalData
+            if (data?.optString("type") == "new_chat_message") {
+                val roomId = firstNonBlank(
+                    data.optString("roomId"),
+                    data.optString("chatId"),
+                    data.optString("targetId")
+                )
+                val senderId = data.optString("senderId")
+                val messageId = data.optString("messageId")
+                if (ChatNotificationState.shouldSuppressNotification(this, senderId, roomId, messageId)) {
+                    Log.d(ONE_SIGNAL_TAG, "Chat notification suppressed: sender/current user, active room, or duplicate message.")
+                    return@setNotificationWillShowInForegroundHandler
+                }
+            }
+
             val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
@@ -175,6 +191,10 @@ class MyApplication : Application(), OSSubscriptionObserver {
         Log.d("MyApplication", "MediaManager initialized.")
 
         Log.d("MyApplication", "Application onCreate finished.")
+    }
+
+    private fun firstNonBlank(vararg values: String?): String? {
+        return values.firstOrNull { !it.isNullOrBlank() }
     }
 
 

@@ -3,6 +3,7 @@ package xyz.yenkasa.app.fcm
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import xyz.yenkasa.app.util.ChatNotificationState
 import xyz.yenkasa.app.util.NotificationHelper
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
@@ -19,7 +20,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val senderName = remoteMessage.data["title"] ?: "YenkasaChat"
         val text = remoteMessage.data["text"] ?: ""
         val type = remoteMessage.data["type"] ?: "text"
-        val chatId = remoteMessage.data["chatId"]
+        val chatId = remoteMessage.data["chatId"] ?: remoteMessage.data["roomId"]
+        val senderId = remoteMessage.data["senderId"]
+        val messageId = remoteMessage.data["messageId"]
+
+        if (ChatNotificationState.shouldSuppressNotification(this, senderId, chatId, messageId)) {
+            Log.d("FCM", "Chat notification suppressed: sender/current user, active room, or duplicate message.")
+            return
+        }
 
         val previewMessage = when (type.lowercase()) {
             "image" -> "📷 Photo"

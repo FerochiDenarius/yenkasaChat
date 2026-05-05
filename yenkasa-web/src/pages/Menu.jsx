@@ -1,19 +1,36 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getUserProfile } from "../api/profile";
 import MenuItem from "../components/menu/MenuItem";
 import { handleStaticImageError, staticImage } from "../utils/images";
-import { clearAuth, getStoredUser } from "../utils/storage";
+import { canReviewPosts } from "../utils/roles";
+import { clearAuth, getStoredUser, updateStoredUser } from "../utils/storage";
 import "../styles/menu.css";
 
 export default function Menu() {
   const navigate = useNavigate();
-  const user = useMemo(() => getStoredUser() || {}, []);
+  const storedUser = useMemo(() => getStoredUser() || {}, []);
+  const [user, setUser] = useState(storedUser);
 
-  const canReview = reviewerRoles.has(normalizeRole(user));
+  const canReview = canReviewPosts(user);
 
-  function comingSoon(label) {
-    window.alert(`${label} is not wired in the web app yet.`);
-  }
+  useEffect(() => {
+    let cancelled = false;
+
+    getUserProfile()
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        const updated = updateStoredUser(profile);
+        setUser(updated);
+      })
+      .catch(() => {
+        setUser(getStoredUser() || {});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function logout() {
     clearAuth();
@@ -37,23 +54,23 @@ export default function Menu() {
         </header>
 
         <section className="menu-card">
-          <MenuItem icon="⌕" title="Contacts" subtitle="Manage saved contacts" onClick={() => comingSoon("Contacts")} />
-          <MenuItem icon="◫" title="Chat Rooms" subtitle="View all your chats" onClick={() => comingSoon("Chat Rooms")} />
+          <MenuItem icon="⌕" title="Contacts" subtitle="Manage saved contacts" to="/contacts" />
+          <MenuItem icon="◫" title="Chat Rooms" subtitle="View all your chats" to="/chatrooms" />
           <MenuItem icon="◎" title="Account Info" subtitle="Your account details" to="/profile" />
           <MenuItem icon="▣" title="Wallet" subtitle="Your YKC balance" to="/wallet" />
-          <MenuItem icon="✎" title="Edit Profile" subtitle="Update your profile" to="/profile" />
-          <MenuItem icon="⬡" title="Verify Account" subtitle="Verification options" onClick={() => comingSoon("Verify Account")} />
+          <MenuItem icon="✎" title="Edit Profile" subtitle="Update your profile" to="/edit-profile" />
+          <MenuItem icon="⬡" title="Verify Account" subtitle="Verification options" to="/verify-account" />
           <MenuItem icon="🛡" title="Yenkasa Verification" subtitle="Secure your identity" to="/verification" />
           <MenuItem icon="☰" title="Communities" subtitle="Join or create communities" to="/communities" />
           <MenuItem icon="◌" title="My Ads" subtitle="Track your ad submissions" to="/ads" />
-          <MenuItem icon="◔" title="Notifications" subtitle="See your alerts" onClick={() => comingSoon("Notifications")} />
-          <MenuItem icon="⚙" title="Settings" subtitle="Privacy & preferences" onClick={() => comingSoon("Settings")} />
+          <MenuItem icon="◔" title="Notifications" subtitle="See your alerts" to="/notifications" />
+          <MenuItem icon="⚙" title="Settings" subtitle="Privacy & preferences" to="/settings" />
           {canReview ? (
             <>
               <div className="menu-card__divider" />
-              <MenuItem icon="✓" title="Post Approvals" subtitle="Review pending posts" onClick={() => comingSoon("Post Approvals")} />
-              <MenuItem icon="◍" title="Approve Ads" subtitle="Review pending sponsored ads" onClick={() => comingSoon("Approve Ads")} />
-              <MenuItem icon="◈" title="Approve Communities" subtitle="Review pending communities" onClick={() => comingSoon("Approve Communities")} />
+              <MenuItem icon="✓" title="Post Approvals" subtitle="Review pending posts" to="/post-approvals" />
+              <MenuItem icon="◍" title="Approve Ads" subtitle="Review pending sponsored ads" to="/approve-ads" />
+              <MenuItem icon="◈" title="Approve Communities" subtitle="Review pending communities" to="/approve-communities" />
             </>
           ) : null}
           <div className="menu-card__divider" />
@@ -62,16 +79,4 @@ export default function Menu() {
       </div>
     </main>
   );
-}
-
-const reviewerRoles = new Set([
-  "admin",
-  "moderator",
-  "junior_developer",
-  "senior_developer"
-]);
-
-function normalizeRole(user) {
-  const raw = user?.roleName || user?.role?.role || user?.role || "";
-  return String(raw).trim().toLowerCase();
 }

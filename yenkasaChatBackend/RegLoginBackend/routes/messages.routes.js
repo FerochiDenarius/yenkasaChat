@@ -277,10 +277,13 @@ router.post('/', auth, async (req, res) => {
         await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);
       }
 
-      const recipients = await User.find(
+      const [senderPushUser, recipients] = await Promise.all([
+        User.findById(senderAppUserId).select('username playerId').lean(),
+        User.find(
         { _id: { $in: recipientAppUserIds.map(id => new mongoose.Types.ObjectId(id)) } },
         'username playerId'
-      ).lean();
+        ).lean()
+      ]);
 
       const payloadRecipientPlayerId = firstValidPushId(
         receiverPlayerId,
@@ -289,7 +292,12 @@ router.post('/', auth, async (req, res) => {
         onesignalPlayerId
       );
 
-      const validPlayerIds = Array.from(new Set([
+      const senderPlayerIds = new Set([
+        senderPlayerIdFromPayload,
+        cleanPushId(senderPushUser?.playerId)
+      ].filter(Boolean));
+
+      const candidatePlayerIds = Array.from(new Set([
         ...recipients
           .filter(u => cleanPushId(u.playerId))
           .map(u => cleanPushId(u.playerId)),
@@ -298,8 +306,12 @@ router.post('/', auth, async (req, res) => {
           : [])
       ].filter(Boolean)));
 
+      const validPlayerIds = candidatePlayerIds.filter(id => !senderPlayerIds.has(id));
+      const excludedSenderPlayerIdCount = candidatePlayerIds.length - validPlayerIds.length;
+
       console.log('[MessagesRoute] Push target debug:', {
         roomId,
+        messageId: newMessage._id.toString(),
         senderId: senderAppUserId,
         recipientIds: recipientAppUserIds,
         recipientDbPlayerIds: recipients.map(u => ({
@@ -308,6 +320,9 @@ router.post('/', auth, async (req, res) => {
           playerId: maskPushId(u.playerId)
         })),
         payloadRecipientPlayerId: maskPushId(payloadRecipientPlayerId),
+        candidatePlayerIdCount: candidatePlayerIds.length,
+        chosenPlayerIdCount: validPlayerIds.length,
+        senderTokensExcluded: excludedSenderPlayerIdCount,
         chosenPlayerIds: validPlayerIds.map(maskPushId)
       });
 
@@ -320,7 +335,7 @@ router.post('/', auth, async (req, res) => {
         else if (fileUrl) notificationBody = `${senderUsername} sent a file`;
 
         try {
-          await sendPushNotification({
+          const pushResult = await sendPushNotification({
             targetPlayerIds: validPlayerIds,
             title: notificationTitle,
             body: notificationBody,
@@ -343,17 +358,30 @@ router.post('/', auth, async (req, res) => {
           console.log('[MessagesRoute] ✅ OneSignal chat notification sent:', {
             roomId,
             messageId: newMessage._id.toString(),
+            senderId: senderAppUserId,
+            receiverIds: recipientAppUserIds,
             recipientCount: recipientAppUserIds.length,
-            playerIdCount: validPlayerIds.length
+            playerIdCount: validPlayerIds.length,
+            senderTokensExcluded: excludedSenderPlayerIdCount,
+            oneSignalRecipients: pushResult?.recipients ?? null,
+            oneSignalErrors: pushResult?.errors ? JSON.stringify(pushResult.errors).slice(0, 300) : null
           });
         } catch (err) {
-          console.error('OneSignal chat notification error:', err.message);
+          console.error('OneSignal chat notification error:', {
+            messageId: newMessage._id.toString(),
+            senderId: senderAppUserId,
+            receiverIds: recipientAppUserIds,
+            playerIdCount: validPlayerIds.length,
+            error: err.message
+          });
         }
       } else {
         console.warn('[MessagesRoute] ⚠️ No push target available for message notification:', {
           roomId,
           messageId: newMessage._id.toString(),
           recipientIds: recipientAppUserIds,
+          candidatePlayerIdCount: candidatePlayerIds.length,
+          senderTokensExcluded: excludedSenderPlayerIdCount,
           senderPayloadPlayerId: maskPushId(senderPlayerIdFromPayload)
         });
       }

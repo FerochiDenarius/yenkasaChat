@@ -1,16 +1,21 @@
 .menu-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top, rgba(31, 130, 81, 0.15), transparent 30%),
     linear-gradient(180deg, #03140b 0%, #082012 100%);
   color: #edf5ee;
-  padding: 0 0 32px;
+  padding: 0 0 calc(32px + env(safe-area-inset-bottom));
 }
 
 .menu-page__shell {
   width: min(100%, 500px);
   margin: 0 auto;
   padding: 18px 12px 24px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .menu-header {
@@ -44,6 +49,19 @@
   border-radius: 18px;
   padding: 8px 0;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+  max-height: calc(100dvh - 106px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.menu-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
 }
 
 .menu-item {
@@ -109,6 +127,14 @@
 .menu-item--danger .menu-item__copy strong,
 .menu-item--danger .menu-item__chevron {
   color: #f1c34b;
+}
+
+.menu-item--danger {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(9, 44, 26, 0.98), rgba(5, 30, 18, 1));
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.2);
 }
 
 .menu-item--danger .menu-item__copy span {

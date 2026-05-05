@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getUserProfile } from "../../api/profile";
 import { handleStaticImageError, staticImage } from "../../utils/images";
-import { clearAuth, getStoredUser } from "../../utils/storage";
+import { canReviewPosts } from "../../utils/roles";
+import { clearAuth, getStoredUser, updateStoredUser } from "../../utils/storage";
 import "../../styles/layout.css";
 
 const menuItems = [
@@ -22,18 +24,31 @@ const menuItems = [
   { icon: "⚙", title: "Settings", subtitle: "Privacy and preferences", to: "/settings" },
 ];
 
-const reviewerRoles = new Set([
-  "admin",
-  "moderator",
-  "junior_developer",
-  "senior_developer",
-]);
-
 export default function SideDrawer({ open, onClose }) {
   const navigate = useNavigate();
-  const user = useMemo(() => getStoredUser() || {}, []);
-  const canReview = reviewerRoles.has(normalizeRole(user));
+  const storedUser = useMemo(() => getStoredUser() || {}, []);
+  const [user, setUser] = useState(storedUser);
+  const canReview = canReviewPosts(user);
   const visibleItems = menuItems.filter((item) => !item.reviewOnly || canReview);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    getUserProfile()
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        const updated = updateStoredUser(profile);
+        setUser(updated);
+      })
+      .catch(() => {
+        setUser(getStoredUser() || {});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   function goTo(path) {
     onClose?.();
@@ -91,9 +106,4 @@ export default function SideDrawer({ open, onClose }) {
       </button>
     </aside>
   );
-}
-
-function normalizeRole(user) {
-  const raw = user?.roleName || user?.role?.role || user?.role || "";
-  return String(raw).trim().toLowerCase();
 }

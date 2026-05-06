@@ -236,11 +236,12 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             ).execute()
 
             if (rewardRes.isSuccessful) {
-                val newBalance = rewardRes.body()?.get("newBalance").toIntOrNull()
-                    ?: rewardRes.body()?.get("balance").toIntOrNull()
+                val amount = rewardRes.body()?.get("amount").toDoubleOrNull()
+                val newBalance = rewardRes.body()?.get("newBalance").toDoubleOrNull()
+                    ?: rewardRes.body()?.get("balance").toDoubleOrNull()
 
                 if (newBalance != null) {
-                    WalletBalanceManager.applyKnownBalance(context, newBalance)
+                    WalletBalanceManager.applyKnownBalance(context, newBalance, rewardAmount = amount)
                 } else {
                     WalletBalanceManager.refreshBalance(context)
                 }
@@ -319,5 +320,15 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             .build()
 
         adLoader.loadAd(AdRequest.Builder().build())
+    }
+
+    private fun Any?.toDoubleOrNull(): Double? {
+        return when (this) {
+            is Double -> this
+            is Float -> this.toDouble()
+            is Number -> this.toDouble()
+            is String -> this.toDoubleOrNull()
+            else -> null
+        }
     }
 }

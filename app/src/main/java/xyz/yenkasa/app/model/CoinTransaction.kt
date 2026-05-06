@@ -32,7 +32,7 @@ data class CoinTransaction(
     val fromUserId: String? = null,
     val toUserId: String? = null,
 
-    val amount: Int,
+    val amount: Double,
     val type: String, // e.g. REWARD_POST, REWARD_FOLLOW, TRANSFER, etc.
     val description: String,
 
@@ -58,10 +58,10 @@ data class CoinTransaction(
 // === UI model for RecyclerView ===
 data class TransactionUiModel(
     val transactionId: String,
-    val amount: Int,
+    val amount: Double,
     val from: String,          // fromWalletId
     val to: String,            // toWalletId
-    val newBalance: Int,       // toUserBalanceAfter
+    val newBalance: Double,    // toUserBalanceAfter
     val senderUsername: String?,
     val recipientUsername: String?,
     val description: String = "",

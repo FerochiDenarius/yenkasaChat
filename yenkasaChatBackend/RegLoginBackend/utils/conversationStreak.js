@@ -1,5 +1,6 @@
 const Message = require('../models/message.model');
 const User = require('../models/user.model');
+const rewardService = require('../services/reward.service');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const GRACE_HOURS_AFTER_MIDNIGHT = 3;
@@ -146,9 +147,15 @@ async function updateConversationStreak(userId) {
   const yesterdayKey = addDays(targetDateKey, -1);
 
   let current = streak.current || 0;
+  let rewardTx = null;
   if (activeConnections > 0) {
     current = previousDateKey === yesterdayKey ? current + 1 : 1;
     streak.lastActiveDate = storedDateFromKey(targetDateKey);
+    rewardTx = await rewardService.reward(user._id, 5, {
+      type: 'REWARD_CONVERSATION_STREAK',
+      description: `Earned 5 YKC for keeping a ${current}-day conversation streak`,
+      activityId: `conversation_streak_${user._id}_${targetDateKey}`
+    });
   } else if (previousDateKey !== targetDateKey && previousDateKey !== yesterdayKey) {
     current = 0;
   }
@@ -162,6 +169,8 @@ async function updateConversationStreak(userId) {
     current: streak.current,
     longest: streak.longest,
     activeConnections,
+    rewardAmount: rewardTx?.amount || 0,
+    newBalance: rewardTx?.toUserBalanceAfter ?? null,
   };
 }
 

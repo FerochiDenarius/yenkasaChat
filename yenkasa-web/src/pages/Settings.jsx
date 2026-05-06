@@ -14,7 +14,7 @@ import {
   setPrivacyLevel,
 } from "../api/privacy";
 import { getStoredUser, getToken } from "../utils/storage";
-import { canAccessAdminFeatures } from "../utils/roles";
+import { canModerate } from "../utils/permissions";
 import "../styles/settings.css";
 
 const SOUND_OPTIONS = [
@@ -49,7 +49,7 @@ export default function Settings() {
   });
   const [busyKey, setBusyKey] = useState("");
 
-  const canAccessAdmin = useMemo(() => canAccessAdminFeatures(getStoredUser()), []);
+  const canAccessAdmin = useMemo(() => canModerate(getStoredUser()), []);
 
   useEffect(() => {
     let active = true;

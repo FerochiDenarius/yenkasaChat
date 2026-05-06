@@ -680,10 +680,12 @@ class PostAdapter(
                     response.body()?.let { body ->
                         if (body.success) {
                             applyViewCount(post._id, maxOf(body.viewsCount, body.viewCount))
-                            WalletBalanceManager.refreshAfterReward(
-                                context,
-                                body.rewardAmount ?: body.rewardTransaction?.amount
-                            )
+                            val rewardAmount = body.rewardAmount ?: body.rewardTransaction?.amount
+                            if (body.newBalance != null) {
+                                WalletBalanceManager.applyKnownBalance(context, body.newBalance, rewardAmount = rewardAmount)
+                            } else {
+                                WalletBalanceManager.refreshAfterReward(context, rewardAmount)
+                            }
                         }
                     }
                 }
@@ -760,10 +762,12 @@ class PostAdapter(
                     response.body()?.let { body ->
                         if (body.success) {
                             applyViewCount(postId, maxOf(body.viewsCount, body.viewCount))
-                            WalletBalanceManager.refreshAfterReward(
-                                context,
-                                body.rewardAmount ?: body.rewardTransaction?.amount
-                            )
+                            val rewardAmount = body.rewardAmount ?: body.rewardTransaction?.amount
+                            if (body.newBalance != null) {
+                                WalletBalanceManager.applyKnownBalance(context, body.newBalance, rewardAmount = rewardAmount)
+                            } else {
+                                WalletBalanceManager.refreshAfterReward(context, rewardAmount)
+                            }
                         }
                     }
                 }
@@ -792,10 +796,12 @@ class PostAdapter(
                     response.body()?.let { body ->
                         if (body.success) {
                             applyViewCount(postId, maxOf(body.viewsCount, body.viewCount))
-                            WalletBalanceManager.refreshAfterReward(
-                                context,
-                                body.rewardAmount ?: body.rewardTransaction?.amount
-                            )
+                            val rewardAmount = body.rewardAmount ?: body.rewardTransaction?.amount
+                            if (body.newBalance != null) {
+                                WalletBalanceManager.applyKnownBalance(context, body.newBalance, rewardAmount = rewardAmount)
+                            } else {
+                                WalletBalanceManager.refreshAfterReward(context, rewardAmount)
+                            }
                         }
                     }
                 }

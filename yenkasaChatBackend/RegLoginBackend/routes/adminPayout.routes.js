@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const authorizeRoles = require('../middleware/authorizeRoles');
+const { requirePermission } = require('../middleware/permissions');
 const { isYkcLive } = require('../services/ykcEconomy.service');
 const {
   upsertDailyAdMetrics,
@@ -15,9 +15,8 @@ const {
 } = require('../services/revenueAnalytics.service');
 
 router.use(auth);
-router.use(authorizeRoles('ADMIN', 'SENIOR_DEV', 'MODERATOR'));
 
-router.post('/ad-metrics', async (req, res) => {
+router.post('/ad-metrics', requirePermission('rewardEconomyAccess'), async (req, res) => {
   try {
     const metric = await upsertDailyAdMetrics(req.body);
     return res.json({ success: true, metric });
@@ -30,7 +29,7 @@ router.post('/ad-metrics', async (req, res) => {
   }
 });
 
-router.get('/ad-metrics/summary', async (req, res) => {
+router.get('/ad-metrics/summary', requirePermission('analyticsAccess'), async (req, res) => {
   try {
     const summary = await aggregateMonthlyAdRevenue(req.query.month);
     return res.json({ success: true, summary });
@@ -43,7 +42,7 @@ router.get('/ad-metrics/summary', async (req, res) => {
   }
 });
 
-router.get('/economy/summary', async (req, res) => {
+router.get('/economy/summary', requirePermission('analyticsAccess'), async (req, res) => {
   try {
     const summary = await storeMonthlyEconomySnapshot(req.query.month);
     return res.json({ success: true, summary });
@@ -56,7 +55,7 @@ router.get('/economy/summary', async (req, res) => {
   }
 });
 
-router.get('/economy-summary', async (req, res) => {
+router.get('/economy-summary', requirePermission('analyticsAccess'), async (req, res) => {
   try {
     const summary = await storeMonthlyEconomySnapshot(req.query.month);
     return res.json({ success: true, summary });
@@ -69,7 +68,7 @@ router.get('/economy-summary', async (req, res) => {
   }
 });
 
-router.get('/top-creators', async (req, res) => {
+router.get('/top-creators', requirePermission('analyticsAccess'), async (req, res) => {
   try {
     const result = await getTopCreators({
       month: req.query.month,
@@ -85,7 +84,7 @@ router.get('/top-creators', async (req, res) => {
   }
 });
 
-router.get('/fraud-alerts', async (req, res) => {
+router.get('/fraud-alerts', requirePermission('fraudMonitorAccess'), async (req, res) => {
   try {
     const result = await getFraudAlerts({ limit: req.query.limit });
     return res.json({ success: true, ...result });
@@ -98,7 +97,7 @@ router.get('/fraud-alerts', async (req, res) => {
   }
 });
 
-router.post('/run-payout', async (req, res) => {
+router.post('/run-payout', requirePermission('rewardEconomyAccess'), async (req, res) => {
   try {
     if (!isYkcLive()) {
       return res.status(423).json({ success: false, error: 'YKC payouts are disabled before go-live' });

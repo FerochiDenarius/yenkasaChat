@@ -46,7 +46,7 @@ class TransactionAdapter(
         holder.tvDate.text = formatDate(tx.createdAt)
         holder.tvStatus.text = "Confirmed"
 
-        val displayAmount = if (isOutgoing) "-${tx.amount} YKC" else "+${tx.amount} YKC"
+        val displayAmount = if (isOutgoing) "-${formatYkc(tx.amount)} YKC" else "+${formatYkc(tx.amount)} YKC"
         holder.tvAmount.text = displayAmount
 
         val colorRes = if (isOutgoing) R.color.wallet_negative else R.color.wallet_accent_green
@@ -57,6 +57,14 @@ class TransactionAdapter(
     }
 
     override fun getItemCount(): Int = transactions.size
+
+    private fun formatYkc(amount: Double): String {
+        return if (amount % 1.0 == 0.0) {
+            amount.toInt().toString()
+        } else {
+            String.format(Locale.US, "%.2f", amount).trimEnd('0').trimEnd('.')
+        }
+    }
 
     private fun formatDate(isoDate: String): String {
         return try {

@@ -22,6 +22,7 @@ import xyz.yenkasa.app.model.Comment
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import retrofit2.Call
@@ -151,6 +152,7 @@ class CommentsActivity : AppCompatActivity() {
                                     if (success) {
                                         val commentJson = Gson().toJson(map["comment"])
                                         val newComment = Gson().fromJson(commentJson, Comment::class.java)
+                                        handleRewardPayload(map)
 
                                         editComment.text.clear()
                                         Toast.makeText(this@CommentsActivity, "Reply posted", Toast.LENGTH_SHORT).show()
@@ -491,6 +493,7 @@ class CommentsActivity : AppCompatActivity() {
                             // Extract the nested "comment" object
                             val commentJson = gson.toJson(data["comment"])
                             val comment = gson.fromJson(commentJson, Comment::class.java)
+                            handleRewardPayload(data)
 
                             runOnUiThread {
                                 Toast.makeText(
@@ -611,6 +614,19 @@ class CommentsActivity : AppCompatActivity() {
                         val data = response.body()
                         val serverLikeCount = parseInt(data?.get("likeCount"), updatedLikes.size)
                         val likesArray = parseStringList(data?.get("likes"))
+                        val rewardAmount = parseDouble(data?.get("rewardAmount"), 0.0)
+                        val newBalance = parseNullableDouble(data?.get("newBalance"))
+                        if (isLiked && rewardAmount > 0.0) {
+                            if (newBalance != null) {
+                                WalletBalanceManager.applyKnownBalance(
+                                    this@CommentsActivity,
+                                    newBalance,
+                                    rewardAmount = rewardAmount
+                                )
+                            } else {
+                                WalletBalanceManager.refreshAfterReward(this@CommentsActivity, rewardAmount)
+                            }
+                        }
 
                         // Create another copy with server-corrected values
                         val syncedComment = updatedComment.copy(
@@ -644,11 +660,34 @@ class CommentsActivity : AppCompatActivity() {
         adapter.notifyItemChanged(index)
     }
 
+    private fun handleRewardPayload(data: Map<String, Any>?) {
+        val rewardAmount = parseDouble(data?.get("rewardAmount"), 0.0)
+        if (rewardAmount <= 0.0) return
+        val newBalance = parseNullableDouble(data?.get("newBalance"))
+        if (newBalance != null) {
+            WalletBalanceManager.applyKnownBalance(this, newBalance, rewardAmount = rewardAmount)
+        } else {
+            WalletBalanceManager.refreshAfterReward(this, rewardAmount)
+        }
+    }
+
     private fun parseInt(value: Any?, fallback: Int): Int {
         return when (value) {
             is Number -> value.toInt()
             is String -> value.toIntOrNull() ?: fallback
             else -> fallback
+        }
+    }
+
+    private fun parseDouble(value: Any?, fallback: Double): Double {
+        return parseNullableDouble(value) ?: fallback
+    }
+
+    private fun parseNullableDouble(value: Any?): Double? {
+        return when (value) {
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull()
+            else -> null
         }
     }
 

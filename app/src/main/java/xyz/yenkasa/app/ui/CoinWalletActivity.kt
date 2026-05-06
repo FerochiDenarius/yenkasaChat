@@ -236,7 +236,8 @@ class CoinWalletActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<CoinBalanceResponse>, response: Response<CoinBalanceResponse>) {
                     if (response.isSuccessful && response.body() != null) {
                         val body = response.body()!!
-                        updateBalance(body.balance, body.walletId, animate = body.balance != currentBalance)
+                        val roundedBalance = body.balance.toInt()
+                        updateBalance(roundedBalance, body.walletId, animate = roundedBalance != currentBalance)
                         textWalletAddress.text = body.walletId?.let { shortenWalletId(it) } ?: "Wallet pending"
                     } else {
                         currentBalance = 0
@@ -282,7 +283,7 @@ class CoinWalletActivity : AppCompatActivity() {
                                 amount = it.amount,
                                 from = it.fromWalletId ?: "",
                                 to = it.toWalletId ?: "",
-                                newBalance = 0,
+                                newBalance = 0.0,
                                 senderUsername = it.fromUsername,
                                 recipientUsername = it.toUsername,
                                 description = it.description,
@@ -465,8 +466,16 @@ class CoinWalletActivity : AppCompatActivity() {
         }.format(amount)
     }
 
-    private fun formatWholeCoins(amount: Int): String {
-        return NumberFormat.getIntegerInstance(Locale.getDefault()).format(amount)
+    private fun formatWholeCoins(amount: Number): String {
+        val value = amount.toDouble()
+        return if (value % 1.0 == 0.0) {
+            NumberFormat.getIntegerInstance(Locale.getDefault()).format(value.toLong())
+        } else {
+            NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+                minimumFractionDigits = 0
+                maximumFractionDigits = 2
+            }.format(value)
+        }
     }
 
     private fun shortenWalletId(walletId: String): String {
@@ -510,7 +519,7 @@ class CoinWalletActivity : AppCompatActivity() {
         val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
 
         val title = "Reward Earned!"
-        val body = tx.description ?: "You received ${tx.amount} YKC"
+        val body = tx.description.ifBlank { "You received ${formatWholeCoins(tx.amount)} YKC" }
 
         val builder = NotificationCompat.Builder(
             this,

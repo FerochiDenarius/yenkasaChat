@@ -9,11 +9,14 @@ const authMiddleware = require("../middleware/auth");
 const { sendNotification } = require("../services/notification.service");
 const rewardService = require("../services/reward.service");
 const { sendPushNotification } = require("../utils/onesignal");
+const { canModerate } = require("../middleware/permissions");
 
 const ALLOWED_ROLES = ["admin", "moderator", "senior_developer", "junior_developer"];
 
-function canApprove(roleName) {
-  return ALLOWED_ROLES.includes(roleName);
+function canApprove(userOrRole) {
+  return typeof userOrRole === "string"
+    ? ALLOWED_ROLES.includes(userOrRole)
+    : canModerate(userOrRole) || userOrRole?.roleName === "junior_developer";
 }
 
 // Helper: fetch all approvers
@@ -29,7 +32,7 @@ async function getApprovers() {
 router.get("/pending", authMiddleware, async (req, res) => {
   const user = await User.findById(req.user.id);
 
-  if (!canApprove(user.roleName)) {
+  if (!canApprove(user)) {
     return res.status(403).json({ error: "Not authorized" });
   }
 
@@ -84,7 +87,7 @@ router.get("/pending", authMiddleware, async (req, res) => {
 router.put("/:id/approve", authMiddleware, async (req, res) => {
   try {
     const approver = await User.findById(req.user.id);
-    if (!canApprove(approver.roleName))
+    if (!canApprove(approver))
       return res.status(403).json({ error: "Not authorized" });
 
     const approvalEntry = await PostApproval.findById(req.params.id);
@@ -175,7 +178,7 @@ await rewardService.reward(approver._id, 8, {
 router.put("/:id/reject", authMiddleware, async (req, res) => {
   try {
     const approver = await User.findById(req.user.id);
-    if (!canApprove(approver.roleName))
+    if (!canApprove(approver))
       return res.status(403).json({ error: "Not authorized" });
 
     const approvalEntry = await PostApproval.findById(req.params.id);

@@ -5,16 +5,13 @@ const UserPrivacy = require("../models/userPrivacy.model");
 const SystemViolation = require("../models/systemViolation.model");
 const Notification = require("../models/notifications.model");
 const { SYSTEM_USER_ID } = require("../config/system");
+const { canModerate } = require("../middleware/permissions");
 
 // ────────────────────────────────────────────
 // ADMIN OR SYSTEM CHECK
 // ────────────────────────────────────────────
 function isAdminOrSystem(user) {
-  return (
-    user.roleName === "admin" ||
-    user.roleName === "moderator" ||
-    user.id === SYSTEM_USER_ID
-  );
+  return canModerate(user) || user.id === SYSTEM_USER_ID;
 }
 
 // ────────────────────────────────────────────

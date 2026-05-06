@@ -7,10 +7,10 @@ object UserPermissions {
         "verified",
         "rising_star",
         "legend",
+        "admin",
         "moderator",
         "junior_developer",
-        "senior_developer",
-        "admin"
+        "senior_developer"
     )
 
     private fun normalize(role: String?): String {
@@ -19,6 +19,7 @@ object UserPermissions {
             "user" -> "unverified"
             "developer" -> "senior_developer"
             "senior_dev", "senior-developer" -> "senior_developer"
+            "rising-star" -> "rising_star"
             "moderator", "admin" -> normalized
             else -> normalized
         }
@@ -37,11 +38,29 @@ object UserPermissions {
 
     // 🟢 Can Approve Posts
     fun canApprove(role: String?): Boolean {
+        return canModerate(role)
+    }
+
+    fun canAccessAdminFeatures(role: String?): Boolean {
+        return canAccessAnalytics(role) || canModerate(role) || canManageEconomy(role)
+    }
+
+    fun canAccessAnalytics(role: String?): Boolean {
+        val r = normalize(role)
+        return r in listOf("senior_developer", "junior_developer", "moderator", "admin")
+    }
+
+    fun canModerate(role: String?): Boolean {
         val r = normalize(role)
         return r in listOf("senior_developer", "moderator", "admin")
     }
 
-    fun canAccessAdminFeatures(role: String?): Boolean {
+    fun canManageEconomy(role: String?): Boolean {
+        val r = normalize(role)
+        return r in listOf("senior_developer", "admin")
+    }
+
+    fun canMonitorFraud(role: String?): Boolean {
         val r = normalize(role)
         return r in listOf("senior_developer", "moderator", "admin")
     }

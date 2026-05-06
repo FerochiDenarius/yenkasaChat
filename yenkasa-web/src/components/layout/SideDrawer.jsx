@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserProfile } from "../../api/profile";
 import { handleStaticImageError, staticImage } from "../../utils/images";
-import { canAccessAdminFeatures } from "../../utils/roles";
+import { canAccessAnalytics, canModerate, getPermissions, getUserRank } from "../../utils/permissions";
 import { clearAuth, getStoredUser, updateStoredUser } from "../../utils/storage";
 import "../../styles/layout.css";
 
@@ -17,10 +17,10 @@ const menuItems = [
   { icon: "☰", title: "Communities", subtitle: "Join or create communities", to: "/communities" },
   { icon: "◌", title: "My Ads", subtitle: "Track your sponsored posts", to: "/ads" },
   { icon: "◫", title: "My Communities", subtitle: "Track communities you created", to: "/my-communities" },
-  { icon: "◉", title: "Admin Economy", subtitle: "View YKC earnings and revenue", to: "/admin/economy", reviewOnly: true },
-  { icon: "✓", title: "Post Approvals", subtitle: "Review pending posts", to: "/post-approvals", reviewOnly: true },
-  { icon: "◎", title: "Approve Ads", subtitle: "Review sponsored ads", to: "/approve-ads", reviewOnly: true },
-  { icon: "◈", title: "Approve Communities", subtitle: "Review community requests", to: "/approve-communities", reviewOnly: true },
+  { icon: "◉", title: "Admin Economy", subtitle: "View YKC earnings and revenue", to: "/admin/economy", permission: "analytics" },
+  { icon: "✓", title: "Post Approvals", subtitle: "Review pending posts", to: "/post-approvals", permission: "moderation" },
+  { icon: "◎", title: "Approve Ads", subtitle: "Review sponsored ads", to: "/approve-ads", permission: "moderation" },
+  { icon: "◈", title: "Approve Communities", subtitle: "Review community requests", to: "/approve-communities", permission: "moderation" },
   { icon: "◔", title: "Notifications", subtitle: "See your alerts", to: "/notifications" },
   { icon: "⚙", title: "Settings", subtitle: "Privacy and preferences", to: "/settings" },
 ];
@@ -29,8 +29,21 @@ export default function SideDrawer({ open, onClose }) {
   const navigate = useNavigate();
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const [user, setUser] = useState(storedUser);
-  const canAccessAdmin = canAccessAdminFeatures(user);
-  const visibleItems = menuItems.filter((item) => !item.reviewOnly || canAccessAdmin);
+  const permissions = getPermissions(user);
+  const canSeeAnalytics = canAccessAnalytics(user);
+  const canSeeModeration = canModerate(user);
+  const visibleItems = menuItems.filter((item) => {
+    if (item.permission === "analytics") return canSeeAnalytics;
+    if (item.permission === "moderation") return canSeeModeration;
+    return true;
+  });
+
+  console.debug("[YenkasaRBAC] SideDrawer", {
+    currentRank: getUserRank(user),
+    permissions,
+    analyticsVisibility: canSeeAnalytics,
+    sidebarRenderResult: visibleItems.map((item) => item.title),
+  });
 
   useEffect(() => {
     if (!open) return;

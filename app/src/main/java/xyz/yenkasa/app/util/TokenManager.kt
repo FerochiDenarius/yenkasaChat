@@ -1038,10 +1038,10 @@ object TokenManager {
                 transactions.add(
                     TransactionUiModel(
                         transactionId = obj.optString("transactionId"),
-                        amount = obj.optDouble("amount").toInt(),
+                        amount = obj.optDouble("amount"),
                         from = obj.optString("from"),
                         to = obj.optString("to"),
-                        newBalance = obj.optInt("newBalance"),
+                        newBalance = obj.optDouble("newBalance"),
                         senderUsername = obj.optString("senderUsername"),
                         recipientUsername = obj.optString("recipientUsername"),
                         description = obj.optString("description"),

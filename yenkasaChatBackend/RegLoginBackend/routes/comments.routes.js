@@ -61,7 +61,7 @@ if (!parentCommentId) {
     { $inc: { commentCount: 1 } }
   );
 
-  await rewardService.reward(userId, REWARD_COMMENT, {
+  var commentRewardTx = await rewardService.reward(userId, REWARD_COMMENT, {
     type: "REWARD_COMMENT",
     description: `Earned ${REWARD_COMMENT} YKC for commenting on a post`,
     relatedPostId: post._id,
@@ -157,6 +157,8 @@ return res.status(201).json({
   success: true,
   message: "Comment added",
   comment: populatedComment,
+  rewardAmount: commentRewardTx?.amount || 0,
+  newBalance: commentRewardTx?.toUserBalanceAfter ?? null,
 });
 
 

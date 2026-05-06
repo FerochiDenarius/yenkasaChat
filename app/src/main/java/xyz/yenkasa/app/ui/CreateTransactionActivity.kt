@@ -212,10 +212,10 @@ class CreateTransactionActivity : AppCompatActivity() {
                         val tx = body.transaction
                         val newTransaction = TransactionUiModel(
                             transactionId = tx?.transactionId ?: activityId,
-                            amount = tx?.amount ?: amount,
+                            amount = (tx?.amount ?: amount).toDouble(),
                             from = tx?.fromWalletId ?: TokenManager.getUserId(this@CreateTransactionActivity) ?: "",
                             to = tx?.toWalletId ?: recipientWalletId,
-                            newBalance = tx?.toUserBalanceAfter ?: 0,
+                            newBalance = (tx?.toUserBalanceAfter ?: 0).toDouble(),
                             senderUsername = tx?.fromUsername ?: TokenManager.getUsername(this@CreateTransactionActivity),
                             recipientUsername = tx?.toUsername ?: recipientUsername ?: "",
                             description = "Sent $amount coins to $recipientUsername",

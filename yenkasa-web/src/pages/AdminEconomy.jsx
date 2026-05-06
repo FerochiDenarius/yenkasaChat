@@ -5,13 +5,17 @@ import {
   getAdminFraudAlerts,
   getAdminTopCreators,
 } from "../api/adminEconomy";
-import { canAccessAdminFeatures } from "../utils/roles";
-import { getStoredUser } from "../utils/storage";
+import { getUserProfile } from "../api/profile";
+import { canAccessAnalytics, getPermissions, getUserRank } from "../utils/permissions";
+import { getStoredUser, updateStoredUser } from "../utils/storage";
 import "../styles/admin-economy.css";
 
 export default function AdminEconomy() {
   const navigate = useNavigate();
-  const canAccess = useMemo(() => canAccessAdminFeatures(getStoredUser()), []);
+  const storedUser = useMemo(() => getStoredUser() || {}, []);
+  const [user, setUser] = useState(storedUser);
+  const permissions = useMemo(() => getPermissions(user), [user]);
+  const canAccess = canAccessAnalytics(user);
   const [summary, setSummary] = useState(null);
   const [creators, setCreators] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -19,26 +23,47 @@ export default function AdminEconomy() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+    getUserProfile()
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        setUser(updateStoredUser(profile));
+      })
+      .catch(() => {
+        if (!cancelled) setUser(getStoredUser() || {});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    console.debug("[YenkasaRBAC] AdminEconomy", {
+      currentRank: getUserRank(user),
+      permissions,
+      analyticsVisible: canAccess,
+    });
+
     if (!canAccess) {
       setLoading(false);
       return;
     }
 
     let cancelled = false;
-    Promise.all([
+    Promise.allSettled([
       getAdminEconomySummary(),
       getAdminTopCreators(),
       getAdminFraudAlerts(),
     ])
-      .then(([nextSummary, nextCreators, nextAlerts]) => {
+      .then(([summaryResult, creatorsResult, alertsResult]) => {
         if (cancelled) return;
-        setSummary(nextSummary || {});
+        setSummary(summaryResult.status === "fulfilled" ? summaryResult.value || {} : {});
+        const nextCreators = creatorsResult.status === "fulfilled" ? creatorsResult.value : [];
+        const nextAlerts = alertsResult.status === "fulfilled" ? alertsResult.value : [];
         setCreators(Array.isArray(nextCreators) ? nextCreators : []);
         setAlerts(Array.isArray(nextAlerts) ? nextAlerts : []);
-      })
-      .catch((loadError) => {
-        if (!cancelled) {
-          setError(loadError?.response?.data?.error || "Could not load admin economy data.");
+        if (summaryResult.status === "rejected" && creatorsResult.status === "rejected") {
+          setError("Could not load admin economy data.");
         }
       })
       .finally(() => {
@@ -48,7 +73,7 @@ export default function AdminEconomy() {
     return () => {
       cancelled = true;
     };
-  }, [canAccess]);
+  }, [canAccess, permissions, user]);
 
   if (!canAccess) {
     return (

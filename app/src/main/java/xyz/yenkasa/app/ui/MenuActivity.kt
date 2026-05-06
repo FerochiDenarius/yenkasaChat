@@ -70,11 +70,17 @@ class MenuActivity : AppCompatActivity() {
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
         val walletBalanceChip = findViewById<LinearLayout>(R.id.walletBalanceChip)
         textMenuWalletBalance = findViewById(R.id.textMenuWalletBalance)
-        val canAccessAdmin = UserPermissions.canAccessAdminFeatures(resolveCurrentRole())
+        val currentRole = resolveCurrentRole()
+        val canAccessAnalytics = UserPermissions.canAccessAnalytics(currentRole)
+        val canModerate = UserPermissions.canModerate(currentRole)
+        Log.d(
+            TAG,
+            "RBAC currentRole=$currentRole analyticsVisibility=$canAccessAnalytics moderationVisibility=$canModerate"
+        )
 
-        btnPostApproval.visibility = if (canAccessAdmin) View.VISIBLE else View.GONE
-        btnAdsApproval.visibility = if (canAccessAdmin) View.VISIBLE else View.GONE
-        btnCommunityApproval.visibility = if (canAccessAdmin) View.VISIBLE else View.GONE
+        btnPostApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
+        btnAdsApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
+        btnCommunityApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
 
         textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
         loadWalletBalance()
@@ -219,7 +225,7 @@ class MenuActivity : AppCompatActivity() {
                 ) {
                     val balance = response.body()?.balance
                     if (response.isSuccessful && balance != null) {
-                        TokenManager.saveCoins(this@MenuActivity, balance)
+                        TokenManager.saveCoinsPrecise(this@MenuActivity, balance)
                         textMenuWalletBalance.text = "$balance YKC"
                     } else {
                         textMenuWalletBalance.text = "${TokenManager.getCoins(this@MenuActivity)} YKC"

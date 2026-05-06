@@ -88,10 +88,10 @@ class TransactionReceiptActivity : AppCompatActivity() {
     private fun readTransaction(): TransactionUiModel {
         return TransactionUiModel(
             transactionId = intent.getStringExtra(EXTRA_TRANSACTION_ID).orEmpty(),
-            amount = intent.getIntExtra(EXTRA_AMOUNT, 0),
+            amount = intent.getDoubleExtra(EXTRA_AMOUNT, 0.0),
             from = intent.getStringExtra(EXTRA_FROM).orEmpty(),
             to = intent.getStringExtra(EXTRA_TO).orEmpty(),
-            newBalance = 0,
+            newBalance = 0.0,
             senderUsername = intent.getStringExtra(EXTRA_SENDER),
             recipientUsername = intent.getStringExtra(EXTRA_RECIPIENT),
             description = intent.getStringExtra(EXTRA_DESCRIPTION).orEmpty(),
@@ -109,10 +109,6 @@ class TransactionReceiptActivity : AppCompatActivity() {
 
     private fun shorten(value: String): String {
         return if (value.length <= 16) value else "${value.take(7)}...${value.takeLast(6)}"
-    }
-
-    private fun formatCoins(amount: Int): String {
-        return formatCoins(amount.toDouble())
     }
 
     private fun formatCoins(amount: Double): String {

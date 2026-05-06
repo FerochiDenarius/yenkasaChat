@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getUserProfile } from "../api/profile";
 import MenuItem from "../components/menu/MenuItem";
 import { handleStaticImageError, staticImage } from "../utils/images";
-import { canAccessAdminFeatures } from "../utils/roles";
+import { canAccessAnalytics, canModerate, getPermissions, getUserRank } from "../utils/permissions";
 import { clearAuth, getStoredUser, updateStoredUser } from "../utils/storage";
 import "../styles/menu.css";
 
@@ -12,7 +12,15 @@ export default function Menu() {
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const [user, setUser] = useState(storedUser);
 
-  const canAccessAdmin = canAccessAdminFeatures(user);
+  const permissions = getPermissions(user);
+  const canSeeAnalytics = canAccessAnalytics(user);
+  const canSeeModeration = canModerate(user);
+  console.debug("[YenkasaRBAC] Menu", {
+    currentRank: getUserRank(user),
+    permissions,
+    analyticsVisibility: canSeeAnalytics,
+    sidebarRenderResult: { economy: canSeeAnalytics, moderation: canSeeModeration },
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -65,13 +73,19 @@ export default function Menu() {
           <MenuItem icon="◌" title="My Ads" subtitle="Track your ad submissions" to="/ads" />
           <MenuItem icon="◔" title="Notifications" subtitle="See your alerts" to="/notifications" />
           <MenuItem icon="⚙" title="Settings" subtitle="Privacy & preferences" to="/settings" />
-          {canAccessAdmin ? (
+          {canSeeAnalytics || canSeeModeration ? (
             <>
               <div className="menu-card__divider" />
-              <MenuItem icon="◉" title="Admin Economy" subtitle="View YKC earnings and revenue" to="/admin/economy" />
-              <MenuItem icon="✓" title="Post Approvals" subtitle="Review pending posts" to="/post-approvals" />
-              <MenuItem icon="◍" title="Approve Ads" subtitle="Review pending sponsored ads" to="/approve-ads" />
-              <MenuItem icon="◈" title="Approve Communities" subtitle="Review pending communities" to="/approve-communities" />
+              {canSeeAnalytics ? (
+                <MenuItem icon="◉" title="Admin Economy" subtitle="View YKC earnings and revenue" to="/admin/economy" />
+              ) : null}
+              {canSeeModeration ? (
+                <>
+                  <MenuItem icon="✓" title="Post Approvals" subtitle="Review pending posts" to="/post-approvals" />
+                  <MenuItem icon="◍" title="Approve Ads" subtitle="Review pending sponsored ads" to="/approve-ads" />
+                  <MenuItem icon="◈" title="Approve Communities" subtitle="Review pending communities" to="/approve-communities" />
+                </>
+              ) : null}
             </>
           ) : null}
           <div className="menu-card__divider" />

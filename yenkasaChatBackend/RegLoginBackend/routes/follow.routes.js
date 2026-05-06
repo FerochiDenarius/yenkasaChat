@@ -11,8 +11,8 @@ const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require('../services/notification.service');
 
-const REWARD_FOLLOW = 1;
-const REWARD_FOLLOW_RECEIVED = 1;
+const REWARD_FOLLOW = 10;
+const REWARD_FOLLOW_RECEIVED = 2;
 
 /* ---------------------------------------------------
  * Block check helper
@@ -170,6 +170,9 @@ const rewardReceivedTx = await rewardService.reward(targetId, REWARD_FOLLOW_RECE
       followersCount,
       followingCount,
       reward: rewardTx,
+      coinsRewarded: rewardTx?.amount || 0,
+      newBalance: rewardTx?.toUserBalanceAfter ?? null,
+      receivedReward: rewardReceivedTx,
       activityId,
       timestamp: new Date()
     });

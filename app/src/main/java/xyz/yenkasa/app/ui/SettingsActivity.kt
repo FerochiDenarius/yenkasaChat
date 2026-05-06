@@ -106,7 +106,7 @@ class SettingsActivity : AppCompatActivity() {
 
         val role = resolveCurrentRole()
 
-        if (UserPermissions.canAccessAdminFeatures(role)) {
+        if (UserPermissions.canModerate(role)) {
 
             moderationHeader.visibility = View.VISIBLE
             itemModerationDashboard.visibility = View.VISIBLE

@@ -1534,6 +1534,63 @@
   background: #f7faf8;
 }
 
+.yenkasa-feed-ad {
+  min-height: 180px;
+  border-radius: 18px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(19, 39, 27, 0.08);
+  color: #172118;
+  overflow: hidden;
+}
+
+.yenkasa-feed-ad__shell {
+  min-height: 150px;
+}
+
+.yenkasa-feed-ad__label {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: #728077;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.yenkasa-feed-ad__slot {
+  display: block;
+  width: 100%;
+  min-height: 140px;
+}
+
+.yenkasa-feed-ad--unfilled,
+.yenkasa-feed-ad--failed {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.yenkasa-feed-ad--unfilled .yenkasa-feed-ad__label,
+.yenkasa-feed-ad--unfilled .yenkasa-feed-ad__slot,
+.yenkasa-feed-ad--failed .yenkasa-feed-ad__label,
+.yenkasa-feed-ad--failed .yenkasa-feed-ad__slot {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .yenkasa-feed-ad {
+    background: rgba(9, 20, 14, 0.92);
+    border: 1px solid rgba(48, 218, 109, 0.12);
+    color: #edf8f0;
+  }
+
+  .yenkasa-feed-ad__label {
+    color: #40df80;
+  }
+}
+
 .post-container {
   position: relative;
   border-radius: 16px;

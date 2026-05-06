@@ -1,13 +1,22 @@
 package xyz.yenkasa.app.ui.feed
 
-import android.app.AlertDialog
 import android.content.Context
-import android.content.DialogInterface
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.util.Log
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -179,47 +188,227 @@ class FeedCommunityController(
         if (allCommunities.isEmpty()) return
 
         val selectedIds = selectedIds().toMutableSet()
-        val names = allCommunities
-            .map { it.displayName ?: it.name ?: "Unnamed community" }
-            .toTypedArray()
-        val checkedItems = BooleanArray(allCommunities.size) { i ->
-            allCommunities[i].id in selectedIds
+        val dialog = BottomSheetDialog(context)
+        val listContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(8), dp(16), dp(18))
         }
 
-        val dialog = AlertDialog.Builder(context)
-            .setTitle("Select Communities")
-            .setMultiChoiceItems(names, checkedItems) { _, which, isChecked ->
-                val community = allCommunities[which]
-                val communityId = community.id ?: return@setMultiChoiceItems
-                if (isChecked) selectedIds.add(communityId) else selectedIds.remove(communityId)
+        fun refreshRows() {
+            listContainer.removeAllViews()
+            listContainer.addView(
+                buildSelectorRow(
+                    title = "All Communities",
+                    subtitle = "${allCommunities.size} available",
+                    imageUrl = null,
+                    selected = selectedIds.size == allCommunities.mapNotNull { it.id }.size,
+                    onClick = {
+                        selectedIds.clear()
+                        allCommunities.mapNotNull { it.id }.forEach { selectedIds.add(it) }
+                        refreshRows()
+                    }
+                )
+            )
+            allCommunities.forEach { community ->
+                val communityId = community.id ?: return@forEach
+                val title = community.displayName ?: community.name ?: "Unnamed community"
+                val subtitle = when {
+                    community.memberCount > 0 -> "${formatCompact(community.memberCount)} members"
+                    community.postCount > 0 -> "${formatCompact(community.postCount)} posts"
+                    else -> "Tap to select"
+                }
+                listContainer.addView(
+                    buildSelectorRow(
+                        title = title,
+                        subtitle = subtitle,
+                        imageUrl = community.coverImage ?: community.icon,
+                        selected = selectedIds.contains(communityId),
+                        onClick = {
+                            if (selectedIds.contains(communityId)) {
+                                selectedIds.remove(communityId)
+                            } else {
+                                selectedIds.add(communityId)
+                            }
+                            refreshRows()
+                        }
+                    )
+                )
             }
-            .setPositiveButton("OK") { dialogInterface, _ ->
+        }
+
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                cornerRadii = floatArrayOf(
+                    dp(24).toFloat(), dp(24).toFloat(),
+                    dp(24).toFloat(), dp(24).toFloat(),
+                    0f, 0f,
+                    0f, 0f
+                )
+                setColor(Color.parseColor("#F8FFF9"))
+            }
+            setPadding(0, dp(8), 0, 0)
+        }
+
+        val handle = View(context).apply {
+            background = GradientDrawable().apply {
+                cornerRadius = dp(999).toFloat()
+                setColor(Color.parseColor("#D5E6DA"))
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(46), dp(4)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = dp(12)
+            }
+        }
+
+        val header = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), 0, dp(18), dp(10))
+        }
+        header.addView(TextView(context).apply {
+            text = "Choose communities"
+            textSize = 20f
+            setTextColor(Color.parseColor("#102016"))
+            setTypeface(typeface, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        header.addView(TextView(context).apply {
+            text = "Done"
+            textSize = 14f
+            setTextColor(Color.parseColor("#0B8F43"))
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(999).toFloat()
+                setColor(Color.parseColor("#E4FBEA"))
+            }
+            setOnClickListener {
                 applySelectedCommunityIds(selectedIds)
                 saveSelectedCommunities()
                 onSelectionChanged()
-                dialogInterface.dismiss()
+                dialog.dismiss()
             }
-            .setNeutralButton("Select all", null)
-            .setNegativeButton("Cancel", null)
-            .create()
+        })
 
-        dialog.setOnShowListener {
-            val actionColor = ContextCompat.getColor(context, R.color.yenkasa_emerald)
-            val cancelColor = ContextCompat.getColor(context, R.color.yenkasa_black)
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.setTextColor(actionColor)
-            dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.setTextColor(cancelColor)
-            dialog.getButton(DialogInterface.BUTTON_NEUTRAL)?.setTextColor(actionColor)
-            dialog.getButton(DialogInterface.BUTTON_NEUTRAL)?.setOnClickListener {
-                selectedIds.clear()
-                allCommunities.forEachIndexed { index, community ->
-                    community.id?.let { selectedIds.add(it) }
-                    dialog.listView?.setItemChecked(index, true)
-                }
-            }
-            dialog.listView?.isVerticalScrollBarEnabled = true
+        val scroll = ScrollView(context).apply {
+            isVerticalScrollBarEnabled = false
+            addView(listContainer)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(520)
+            )
         }
 
+        root.addView(handle)
+        root.addView(header)
+        root.addView(scroll)
+        refreshRows()
+        dialog.setContentView(root)
         dialog.show()
+    }
+
+    private fun buildSelectorRow(
+        title: String,
+        subtitle: String,
+        imageUrl: String?,
+        selected: Boolean,
+        onClick: () -> Unit
+    ): View {
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(18).toFloat()
+                setColor(Color.parseColor(if (selected) "#E7FFF0" else "#FFFFFFFF"))
+                setStroke(dp(if (selected) 2 else 1), Color.parseColor(if (selected) "#20C863" else "#E4EFE7"))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(74)
+            ).apply {
+                bottomMargin = dp(10)
+            }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+        }
+
+        row.addView(buildSelectorImage(title, imageUrl, selected))
+        row.addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                leftMargin = dp(12)
+            }
+            addView(TextView(context).apply {
+                text = title
+                textSize = 15f
+                maxLines = 1
+                setTextColor(Color.parseColor(if (selected) "#0A7D39" else "#16241A"))
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            addView(TextView(context).apply {
+                text = subtitle
+                textSize = 12f
+                maxLines = 1
+                setTextColor(Color.parseColor("#718276"))
+            })
+        })
+        row.addView(TextView(context).apply {
+            text = if (selected) "✓" else ""
+            textSize = 13f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor(if (selected) "#20C863" else "#EEF4F0"))
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(24), dp(24))
+        })
+        return row
+    }
+
+    private fun buildSelectorImage(title: String, imageUrl: String?, selected: Boolean): View {
+        val frame = FrameLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(Color.parseColor("#102016"))
+                setStroke(dp(if (selected) 2 else 1), Color.parseColor(if (selected) "#20C863" else "#DCE7DF"))
+            }
+            clipToOutline = true
+        }
+        val image = ImageView(context).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setImageResource(R.drawable.ic_yenkasa_logo)
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+        if (!imageUrl.isNullOrBlank()) {
+            Glide.with(context)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_yenkasa_logo)
+                .error(R.drawable.ic_yenkasa_logo)
+                .into(image)
+        }
+        val label = TextView(context).apply {
+            text = if (imageUrl.isNullOrBlank()) title.take(1).uppercase() else ""
+            textSize = 17f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setTypeface(typeface, Typeface.BOLD)
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+        frame.addView(image)
+        frame.addView(label)
+        return frame
     }
 
     fun sortCommunitiesForStoryRow(): List<Community> {
@@ -372,6 +561,16 @@ class FeedCommunityController(
     private fun saveSelectedCommunities() {
         TokenManager.saveSelectedCommunityIds(context, userIdProvider(), selectedIds())
     }
+
+    private fun formatCompact(value: Int): String {
+        return if (value >= 1000) {
+            "${String.format("%.1f", value / 1000f)}K"
+        } else {
+            value.toString()
+        }
+    }
+
+    private fun dp(value: Int): Int = (value * context.resources.displayMetrics.density).toInt()
 
     private fun getSavedSelectedCommunityIds(): Set<String>? {
         return TokenManager.getSelectedCommunityIds(context, userIdProvider())

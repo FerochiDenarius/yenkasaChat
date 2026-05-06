@@ -33,7 +33,7 @@ async function isBlocked(userA, userB) {
 
 const router = express.Router();
 
-const REWARD_LIKE = 10;
+const REWARD_LIKE = 1;
 const MAX_SUPPLY = 100_000_000;
 
 /* ------------------------------------

@@ -10,6 +10,13 @@ const rewardService = require('../services/reward.service');
 const { sendNotification } = require("../services/notification.service");
 const { toObjectId } = require("../utils/postViewCounts");
 const { sendPushNotification } = require("../utils/onesignal");
+const {
+  REPEATED_VIEW_WINDOW_MS,
+  REWARD_VALUES,
+  getRequestIp,
+  getDeviceId,
+  logYkcActivity
+} = require("../services/ykcEconomy.service");
 
 
 
@@ -71,6 +78,26 @@ router.post('/:postId/view', authMiddleware, async (req, res) => {
 // Single activityId used for View record + Reward entry
 // ---------------------------------------------------------------------
 const activityId = new mongoose.Types.ObjectId().toString();
+const viewerIdStr = viewerId.toString();
+const ownerIdStr = ownerId.toString();
+const safeWatchDuration = Math.max(0, Number(watchDuration) || 0);
+const ipAddress = getRequestIp(req);
+const deviceId = getDeviceId(req);
+const repeatedSince = new Date(Date.now() - REPEATED_VIEW_WINDOW_MS);
+const recentView = await View.findOne({
+  postId: objectIdPost,
+  viewedAt: { $gte: repeatedSince },
+  $or: [
+    { userId: viewerId },
+    ...(deviceId ? [{ deviceId }] : []),
+    ...(ipAddress ? [{ ipAddress }] : [])
+  ]
+}).select('_id').lean();
+
+const qualifiedView = safeWatchDuration >= 5 && !recentView;
+const suspicious = Boolean(recentView);
+const sessionActive = viewer.online !== false;
+const monetizableOpportunity = qualifiedView && sessionActive && !suspicious;
 
 // ---------------------------------------------------------------------
 // CREATE NEW VIEW RECORD (Option A — every view counts)
@@ -82,9 +109,37 @@ const view = await View.create({
   username: viewer.username,
   mediaType,
   viewedAt: new Date(),
-  watchDuration,
-  viewsCount: 1
+  watchDuration: safeWatchDuration,
+  viewsCount: 1,
+  qualifiedView,
+  monetizableOpportunity,
+  ipAddress,
+  deviceId
 });
+
+await logYkcActivity({
+  userId: viewerId,
+  postId: objectIdPost,
+  action: "POST_VIEW",
+  coinsAwarded: 0,
+  timestamp: view.viewedAt,
+  watchDuration: safeWatchDuration,
+  qualifiedView,
+  monetizableOpportunity,
+  suspicious,
+  ipAddress,
+  deviceId,
+  metadata: { mediaType, repeatedView: Boolean(recentView) }
+});
+
+if (qualifiedView || monetizableOpportunity) {
+  await User.findByIdAndUpdate(viewerId, {
+    $inc: {
+      totalQualifiedViews: qualifiedView ? 1 : 0,
+      totalMonetizableOpportunities: monetizableOpportunity ? 1 : 0
+    }
+  });
+}
 
 
 
@@ -110,47 +165,42 @@ const view = await View.create({
     ).lean();
 
     // ---------------------------------------------------------------------
-    // ⭐ REWARD LOGIC
+    // ⭐ YKC REWARD LOGIC
     // ---------------------------------------------------------------------
-let rewardAmount = 0;
-
-switch (mediaType) {
-  case "image":
-    rewardAmount = rewardImage(watchDuration);
-    break;
-  case "video":
-    rewardAmount = rewardVideo(watchDuration);
-    break;
-  case "audio":
-    rewardAmount = rewardAudio(watchDuration);
-    break;
-  default:
-    rewardAmount = 0;
-}
+let rewardAmount = qualifiedView && safeWatchDuration >= 600
+  ? REWARD_VALUES.REWARD_WATCH_TIME_10_MIN
+  : 0;
 
 
     let rewardTx = null;
 
-    // Viewer’s reward
+    // Viewer’s watch-time reward
     if (rewardAmount > 0) {
       rewardTx = await rewardService.reward(viewerId, rewardAmount, {
         type: "REWARD_POST_VIEW",
-        description: `Earned ${rewardAmount} coins for viewing ${mediaType}`,
+        description: `Earned ${rewardAmount} YKC for 10 minutes of watch time`,
         relatedPostId: postId,
         activityId
       });
     }
 
-    // Owner reward (only if viewer != owner)
-    if (viewerId !== ownerId) {
+    // Owner reward every 1000 qualified views (only if viewer != owner)
+    if (qualifiedView && viewerIdStr !== ownerIdStr) {
+      const qualifiedViewsCount = await View.countDocuments({
+        postId: objectIdPost,
+        qualifiedView: true
+      });
+
+      if (qualifiedViewsCount > 0 && qualifiedViewsCount % 1000 === 0) {
 const ownerActivityId = `owner_${activityId}`;
 
-      await rewardService.reward(ownerId, 1, {
+      await rewardService.reward(ownerId, REWARD_VALUES.REWARD_POST_VIEW_1000, {
         type: "REWARD_POST_VIEW_RECEIVED",
-        description: "Earned 1 YKC for receiving a view",
+        description: "Earned 10 YKC for 1000 valid views",
         relatedPostId: postId,
         activityId: ownerActivityId
       });
+      }
     }
 
     // ---------------------------------------------------------------------
@@ -213,6 +263,8 @@ const ownerActivityId = `owner_${activityId}`;
         viewsCount: updatedPost?.viewCount ?? viewsCount,
         viewCount: updatedPost?.viewCount ?? viewsCount,
         rewardAmount,
+        qualifiedView,
+        monetizableOpportunity,
         viewerId: viewerId.toString(),
         timestamp: new Date()
       });
@@ -228,6 +280,8 @@ const ownerActivityId = `owner_${activityId}`;
       viewCount: updatedPost?.viewCount ?? viewsCount,
       view,
       rewardAmount,
+      qualifiedView,
+      monetizableOpportunity,
       rewardTransaction: rewardTx
     });
 

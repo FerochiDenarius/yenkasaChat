@@ -1,0 +1,136 @@
+const CoinTransaction = require('../models/cointransaction.model');
+const ActivityLog = require('../models/activityLog.model');
+
+const GO_LIVE_DATE = new Date('2026-05-05T00:00:00.000Z');
+const MAX_DAILY_YKC = 500;
+const REPEATED_VIEW_WINDOW_MS = 10 * 60 * 1000;
+
+const REWARD_VALUES = {
+  REWARD_POST_VIEW_1000: 10,
+  REWARD_POST_VIEW_RECEIVED: 10,
+  REWARD_WATCH_TIME_10_MIN: 15,
+  REWARD_POST: 20,
+  REWARD_POST_APPROVED: 20,
+  REWARD_COMMENT: 3,
+  REWARD_REPLY: 3,
+  REWARD_POST_LIKE: 1,
+  REWARD_COMMENT_LIKE: 1,
+  REWARD_DAILY_LOGIN: 2,
+  REWARD_ACCOUNT_AGE: 2
+};
+
+function isYkcLive(now = new Date()) {
+  return now >= GO_LIVE_DATE;
+}
+
+function startOfDay(date = new Date()) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function startOfMonth(date = new Date()) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+}
+
+function normalizeRewardAmount(type, requestedAmount, now = new Date()) {
+  if (!isYkcLive(now)) return Number(requestedAmount);
+  return Number(REWARD_VALUES[type] ?? requestedAmount);
+}
+
+function getRequestIp(req) {
+  return (
+    req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ||
+    req.ip ||
+    req.socket?.remoteAddress ||
+    ''
+  );
+}
+
+function getDeviceId(req) {
+  return (
+    req.headers['x-device-id'] ||
+    req.headers['x-yenkasa-device-id'] ||
+    req.body?.deviceId ||
+    req.query?.deviceId ||
+    ''
+  ).toString().trim();
+}
+
+async function sumDailyRewards(userId, now = new Date()) {
+  const [row] = await CoinTransaction.aggregate([
+    {
+      $match: {
+        toUserId: typeof userId === 'string' ? require('mongoose').Types.ObjectId.createFromHexString(userId) : userId,
+        status: 'completed',
+        type: /^REWARD_/,
+        createdAt: { $gte: startOfDay(now) }
+      }
+    },
+    { $group: { _id: null, total: { $sum: '$amount' } } }
+  ]);
+  return Number(row?.total || 0);
+}
+
+async function getRewardGuard({ userId, type, amount, now = new Date() }) {
+  const dailyEarned = await sumDailyRewards(userId, now);
+  if (dailyEarned + Number(amount) > MAX_DAILY_YKC) {
+    return {
+      allowed: false,
+      reason: 'daily_cap',
+      dailyEarned,
+      remainingDailyYkc: Math.max(0, MAX_DAILY_YKC - dailyEarned)
+    };
+  }
+
+  if (type === 'REWARD_COMMENT') {
+    const commentsLastHour = await CoinTransaction.countDocuments({
+      toUserId: userId,
+      type: 'REWARD_COMMENT',
+      status: 'completed',
+      createdAt: { $gte: new Date(now.getTime() - 60 * 60 * 1000) }
+    });
+    if (commentsLastHour >= 50) {
+      return { allowed: false, reason: 'comment_rate_limit', commentsLastHour };
+    }
+  }
+
+  if (type === 'REWARD_POST_LIKE') {
+    const likesToday = await CoinTransaction.countDocuments({
+      toUserId: userId,
+      type: 'REWARD_POST_LIKE',
+      status: 'completed',
+      createdAt: { $gte: startOfDay(now) }
+    });
+    if (likesToday >= 200) {
+      return { allowed: false, reason: 'like_rate_limit', likesToday };
+    }
+  }
+
+  return { allowed: true, dailyEarned };
+}
+
+async function logYkcActivity(payload) {
+  console.log('[YKC Activity]', {
+    userId: payload.userId?.toString(),
+    action: payload.action,
+    coinsAwarded: payload.coinsAwarded || 0,
+    timestamp: payload.timestamp || new Date()
+  });
+  return ActivityLog.create(payload).catch((err) => {
+    console.warn('[YKC Activity] log failed:', err.message);
+  });
+}
+
+module.exports = {
+  GO_LIVE_DATE,
+  MAX_DAILY_YKC,
+  REPEATED_VIEW_WINDOW_MS,
+  REWARD_VALUES,
+  isYkcLive,
+  startOfDay,
+  startOfMonth,
+  normalizeRewardAmount,
+  getRequestIp,
+  getDeviceId,
+  getRewardGuard,
+  logYkcActivity
+};

@@ -41,10 +41,10 @@ cron.schedule(
         // ==========================================================
         await appVer.updateAccountAge(user.createdAt);
 
-        // DAILY ACCOUNT AGE REWARD — Always 10 coins for all roles
-        await reward(user._id, 10, {
+        // Daily YKC reward is capped and normalized by reward.service.
+        await reward(user._id, 2, {
           type: "REWARD_ACCOUNT_AGE",
-          description: "Daily account age reward (+10)",
+          description: "Daily account activity reward (+2)",
         });
 
         // ==========================================================

@@ -129,6 +129,11 @@ const userSchema = new Schema({
   // 💰 WALLET & STATS
   // ===============================
   coinsBalance: { type: Number, default: 0 },
+  ykcBalance: { type: Number, default: 0 },
+  ykcEarnedThisMonth: { type: Number, default: 0 },
+  ykcLastReset: { type: Date, default: null },
+  totalQualifiedViews: { type: Number, default: 0 },
+  totalMonetizableOpportunities: { type: Number, default: 0 },
 
   walletId: {
     type: String,

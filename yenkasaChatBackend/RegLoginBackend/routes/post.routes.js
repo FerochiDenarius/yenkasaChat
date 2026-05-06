@@ -70,7 +70,7 @@ async function isBlocked(userA, userB) {
 /* ------------------------------------
  * 💰 REWARD CONFIGURATION
  * ------------------------------------ */
-const REWARDS = { CREATE_POST: 10, GET_LIKE: 2, GET_COMMENT: 3 };
+const REWARDS = { CREATE_POST: 20, GET_LIKE: 1, GET_COMMENT: 3 };
 
 /* ------------------------------------
  * POSTING ACCESS CONFIGURATION

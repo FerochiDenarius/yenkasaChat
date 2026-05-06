@@ -5,6 +5,13 @@ const CoinSupply = require('../models/coinSupply');
 const { v4: uuidv4 } = require('uuid');
 const { SYSTEM_USER_ID, SYSTEM_USERNAME, SYSTEM_WALLET_ID } = require('../config/system');
 const { sendNotification } = require('./notification.service');
+const {
+  GO_LIVE_DATE,
+  normalizeRewardAmount,
+  startOfMonth,
+  getRewardGuard,
+  logYkcActivity
+} = require('./ykcEconomy.service');
 
 
 const MAX_SUPPLY = 100_000_000;
@@ -12,10 +19,33 @@ const SUPPLY_ID = 'YENKASA_SUPPLY';
 
 async function reward(toUserId, amount, opts = {}) {
   try {
-    console.log('⚙️ [Reward] Begin →', { toUserId, amount, opts });
+    const now = new Date();
+    const type = opts.type || "BONUS";
+    const normalizedAmount = normalizeRewardAmount(type, amount, now);
+    console.log('⚙️ [Reward] Begin →', { toUserId, requestedAmount: amount, amount: normalizedAmount, type });
 
-    if (!toUserId || !amount || Number(amount) <= 0) {
-      console.warn('⚠️ Invalid reward params', { toUserId, amount });
+    if (!toUserId || !normalizedAmount || Number(normalizedAmount) <= 0) {
+      console.warn('⚠️ Invalid reward params', { toUserId, amount: normalizedAmount, type });
+      return null;
+    }
+
+    const guard = await getRewardGuard({ userId: toUserId, type, amount: normalizedAmount, now });
+    if (!guard.allowed) {
+      console.warn('[YKC Reward] blocked', {
+        userId: toUserId?.toString(),
+        action: type,
+        coinsAwarded: 0,
+        reason: guard.reason,
+        timestamp: now
+      });
+      await logYkcActivity({
+        userId: toUserId,
+        action: type,
+        coinsAwarded: 0,
+        timestamp: now,
+        suspicious: true,
+        metadata: { reason: guard.reason, dailyEarned: guard.dailyEarned }
+      });
       return null;
     }
 
@@ -40,7 +70,7 @@ async function reward(toUserId, amount, opts = {}) {
      * --------------------------------------------------- */
     const supply = await CoinSupply.findOneAndUpdate(
       { _id: SUPPLY_ID },
-      { $inc: { totalMinted: amount } },
+      { $inc: { totalMinted: normalizedAmount } },
       { new: true }
     );
 
@@ -52,19 +82,32 @@ async function reward(toUserId, amount, opts = {}) {
     /* ---------------------------------------------------
      * Load user
      * --------------------------------------------------- */
-    const toUser = await User.findById(toUserId).select('username walletId coinsBalance');
+    const toUser = await User.findById(toUserId).select('username walletId coinsBalance ykcBalance ykcEarnedThisMonth ykcLastReset');
     if (!toUser) {
       console.error("❌ Reward aborted → User not found:", toUserId);
       return null;
+    }
+
+    if (now >= GO_LIVE_DATE && (!toUser.ykcLastReset || toUser.ykcLastReset < GO_LIVE_DATE)) {
+      toUser.ykcEarnedThisMonth = 0;
+      toUser.ykcLastReset = GO_LIVE_DATE;
+    }
+
+    const monthStart = startOfMonth(now);
+    if (now >= GO_LIVE_DATE && (!toUser.ykcLastReset || toUser.ykcLastReset < monthStart)) {
+      toUser.ykcEarnedThisMonth = 0;
+      toUser.ykcLastReset = monthStart;
     }
 
     /* ---------------------------------------------------
      * Update balance
      * --------------------------------------------------- */
     const before = Number(toUser.coinsBalance || 0);
-    const after = before + Number(amount);
+    const after = before + Number(normalizedAmount);
 
     toUser.coinsBalance = after;
+    toUser.ykcBalance = after;
+    toUser.ykcEarnedThisMonth = Number(toUser.ykcEarnedThisMonth || 0) + Number(normalizedAmount);
     await toUser.save();
 
     console.log(`💰 Reward applied → User=${toUser.username} | Before=${before} After=${after}`);
@@ -75,9 +118,9 @@ async function reward(toUserId, amount, opts = {}) {
 const tx = await CoinTransaction.create({
   transactionId: uuidv4(),
   activityId,
-  type: opts.type || "BONUS",
-  amount: Number(amount),
-  description: opts.description || `Reward granted (${amount})`,
+  type,
+  amount: Number(normalizedAmount),
+  description: opts.description || `Reward granted (${normalizedAmount})`,
 
   // 🌟 SYSTEM USER sends all rewards now
   fromUserId: SYSTEM_USER_ID,
@@ -98,11 +141,23 @@ const tx = await CoinTransaction.create({
 
 
     console.log(`✅ Reward Transaction Saved → TXID=${tx.transactionId}`);
+    await logYkcActivity({
+      userId: toUserId,
+      action: tx.type,
+      coinsAwarded: Number(normalizedAmount),
+      timestamp: now,
+      postId: opts.relatedPostId || null,
+      metadata: {
+        transactionId: tx.transactionId,
+        activityId,
+        dailyEarnedBefore: guard.dailyEarned || 0
+      }
+    });
 
     try {
       const rewardMessage = opts.description
-        ? `${opts.description}. +${Number(amount)} YKC added to your wallet.`
-        : `You earned +${Number(amount)} YKC.`;
+        ? `${opts.description}. +${Number(normalizedAmount)} YKC added to your wallet.`
+        : `You earned +${Number(normalizedAmount)} YKC.`;
 
       await sendNotification({
         type: "reward",
@@ -118,7 +173,7 @@ const tx = await CoinTransaction.create({
         pushData: {
           transactionId: tx.transactionId,
           rewardType: tx.type,
-          amount: Number(amount)
+          amount: Number(normalizedAmount)
         }
       });
     } catch (notifyErr) {

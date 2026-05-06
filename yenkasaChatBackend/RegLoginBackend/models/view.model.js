@@ -36,6 +36,24 @@ const viewSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    qualifiedView: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    monetizableOpportunity: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    ipAddress: {
+      type: String,
+      default: ''
+    },
+    deviceId: {
+      type: String,
+      default: ''
+    },
 
     mediaType: {
       type: String,

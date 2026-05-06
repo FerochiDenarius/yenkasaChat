@@ -148,12 +148,13 @@
                 <TextView
                     android:id="@+id/textWalletUsdValue"
                     android:layout_width="wrap_content"
-                    android:layout_height="24dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_wallet_pill"
                     android:gravity="center"
                     android:paddingHorizontal="10dp"
-                    android:text="≈ $0.00 USD"
+                    android:paddingVertical="6dp"
+                    android:text="Value depends on platform revenue"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="10sp"
                     android:textStyle="bold" />
@@ -263,7 +264,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="Convert\nYKC + USD"
+                android:text="Convert\nRevenue"
                 android:textColor="@color/wallet_primary_text"
                 android:textSize="11sp"
                 android:textStyle="bold" />

@@ -50,8 +50,10 @@ enum: [
   "REWARD_POST_VIEW_RECEIVED", // owner receives a view
   "REWARD_MILESTONE",          // high engagement reward
 
-  // COMMUNITY
-  "REWARD_CREATE_COMMUNITY",
+	  // COMMUNITY
+	  "REWARD_JOIN_COMMUNITY",
+	  "REWARD_CREATE_COMMUNITY",
+	  "REWARD_COMMUNITY_APPROVED",
 
   // SYSTEM
   "REWARD_VERIFICATION",

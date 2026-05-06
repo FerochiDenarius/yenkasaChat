@@ -11,9 +11,9 @@ const { areUsersBlocked, getBlockedRelationshipUserIds } = require('../services/
 
 
 
-const REWARD_COMMENT = 3;
-const REWARD_REPLY = 3;
-const REWARD_COMMENT_ACTION = 2;
+const REWARD_COMMENT = 1;
+const REWARD_REPLY = 1;
+const REWARD_COMMENT_ACTION = 1;
 const REWARD_COMMENT_LIKE = 1;
 
 

@@ -7,6 +7,7 @@ const monthlyYkcSnapshotSchema = new Schema({
   ykcEarnedThisMonth: { type: Number, default: 0 },
   ykcBalance: { type: Number, default: 0 },
   totalQualifiedViews: { type: Number, default: 0 },
+  totalWatchTime: { type: Number, default: 0 },
   totalMonetizableOpportunities: { type: Number, default: 0 }
 }, { timestamps: true });
 

@@ -36,7 +36,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
     private val logoView: ImageView
     private val topBar: View
-    private val searchBar: View
+    private val searchBar: YenkasaSearchBarView
     private val communitiesPanel: View
     private val engagementRail: View
     private val menuButton: ImageButton
@@ -188,6 +188,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         firedCheckpoints.clear()
 
         walletPill.setBalance(item.walletBalance)
+        searchBar.reset()
+        searchBar.setOnQueryChanged { query -> actions.onSearchQuery(query) }
         communityStrip.submit(
             communities = communities,
             selectedIds = selectedCommunityIds,

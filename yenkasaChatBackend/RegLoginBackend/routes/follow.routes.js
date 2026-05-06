@@ -11,8 +11,8 @@ const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require('../services/notification.service');
 
-const REWARD_FOLLOW = 10;  // follower gets 10 coins
-const REWARD_FOLLOW_RECEIVED = 5; // followed user gets 5 coins
+const REWARD_FOLLOW = 1;
+const REWARD_FOLLOW_RECEIVED = 1;
 
 /* ---------------------------------------------------
  * Block check helper

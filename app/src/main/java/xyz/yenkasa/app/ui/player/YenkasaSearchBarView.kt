@@ -24,6 +24,7 @@ class YenkasaSearchBarView @JvmOverloads constructor(
     private var queryCallback: (String) -> Unit = {}
     private val collapsedWidth = dp(42)
     private val expandedWidth = dp(232)
+    private var isExpanded = false
 
     private val searchInput = EditText(context).apply {
         background = null
@@ -48,16 +49,19 @@ class YenkasaSearchBarView @JvmOverloads constructor(
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_search_bar)
-        layoutParams = LayoutParams(collapsedWidth, dp(38))
         isClickable = true
         isFocusable = true
+        isFocusableInTouchMode = true
         setPadding(dp(10), 0, dp(10), 0)
 
-        addView(ImageView(context).apply {
+        val searchIcon = ImageView(context).apply {
             setImageResource(R.drawable.ic_search)
             setColorFilter(ContextCompat.getColor(context, android.R.color.white))
             layoutParams = LayoutParams(dp(18), dp(18))
-        })
+            isClickable = true
+            setOnClickListener { expandAndFocus() }
+        }
+        addView(searchIcon)
         addView(searchInput)
 
         setOnClickListener { expandAndFocus() }
@@ -82,19 +86,36 @@ class YenkasaSearchBarView @JvmOverloads constructor(
         if (searchInput.text.isNullOrBlank()) collapse()
     }
 
-    private fun expandAndFocus() {
+    fun reset() {
+        handler.removeCallbacks(debounceRunnable)
+        searchInput.setText("")
+        collapse()
+    }
+
+    fun expandAndFocus() {
+        if (isExpanded) {
+            searchInput.requestFocus()
+            showKeyboard()
+            return
+        }
+        isExpanded = true
         animateWidth(expandedWidth)
         searchInput.animate().alpha(1f).setDuration(140L).start()
         searchInput.requestFocus()
+        showKeyboard()
+    }
+
+    private fun collapse() {
+        isExpanded = false
+        searchInput.animate().alpha(0f).setDuration(100L).start()
+        animateWidth(collapsedWidth)
+    }
+
+    private fun showKeyboard() {
         post {
             val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT)
         }
-    }
-
-    private fun collapse() {
-        searchInput.animate().alpha(0f).setDuration(100L).start()
-        animateWidth(collapsedWidth)
     }
 
     private fun animateWidth(targetWidth: Int) {

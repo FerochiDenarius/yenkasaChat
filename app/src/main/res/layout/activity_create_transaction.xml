@@ -401,7 +401,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="≈ $0.00 USD"
+                        android:text="YKC value depends on platform revenue"
                         android:textColor="@color/wallet_secondary_text"
                         android:textSize="12sp"
                         android:textStyle="bold" />

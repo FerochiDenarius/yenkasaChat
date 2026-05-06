@@ -136,6 +136,7 @@ if (qualifiedView || monetizableOpportunity) {
   await User.findByIdAndUpdate(viewerId, {
     $inc: {
       totalQualifiedViews: qualifiedView ? 1 : 0,
+      totalWatchTime: qualifiedView ? safeWatchDuration : 0,
       totalMonetizableOpportunities: monetizableOpportunity ? 1 : 0
     }
   });
@@ -196,7 +197,7 @@ const ownerActivityId = `owner_${activityId}`;
 
       await rewardService.reward(ownerId, REWARD_VALUES.REWARD_POST_VIEW_1000, {
         type: "REWARD_POST_VIEW_RECEIVED",
-        description: "Earned 10 YKC for 1000 valid views",
+        description: `Earned ${REWARD_VALUES.REWARD_POST_VIEW_1000} YKC for 1000 valid views`,
         relatedPostId: postId,
         activityId: ownerActivityId
       });

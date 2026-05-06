@@ -36,7 +36,8 @@ class TransactionReceiptActivity : AppCompatActivity() {
             "Yenkasa Coins have been received successfully."
         }
         findViewById<TextView>(R.id.textReceiptAmount).text = amountText
-        findViewById<TextView>(R.id.textReceiptUsd).text = "≈ ${formatUsd(transaction.amount)} USD"
+        findViewById<TextView>(R.id.textReceiptUsd).text =
+            "YKC value depends on monetizable activity and platform revenue."
 
         findViewById<TextView>(R.id.textReceiptTransactionId).text = shorten(transaction.transactionId)
         findViewById<TextView>(R.id.textReceiptDate).text = formatDate(transaction.createdAt)
@@ -51,11 +52,11 @@ class TransactionReceiptActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.textReceiptTo).text =
             if (isOutgoing) displayParty(transaction.recipientUsername, transaction.to) else "You\n${shorten(transaction.to)}"
         findViewById<TextView>(R.id.textReceiptSummaryAmount).text =
-            "${formatCoins(transaction.amount)} YKC\n≈ ${formatUsd(transaction.amount)} USD"
+            "${formatCoins(transaction.amount)} YKC"
         findViewById<TextView>(R.id.textReceiptFee).text =
-            "${formatCoins(NETWORK_FEE)} YKC\n≈ ${formatUsd(NETWORK_FEE)} USD"
+            "${formatCoins(NETWORK_FEE)} YKC"
         findViewById<TextView>(R.id.textReceiptTotal).text =
-            "${formatCoins(total)} YKC\n≈ ${formatUsd(total)} USD"
+            "${formatCoins(total)} YKC"
 
         findViewById<android.view.View>(R.id.buttonReceiptBack).setOnClickListener { finish() }
         findViewById<android.view.View>(R.id.buttonReceiptShare).setOnClickListener {
@@ -121,14 +122,6 @@ class TransactionReceiptActivity : AppCompatActivity() {
         }.format(amount)
     }
 
-    private fun formatUsd(amount: Int): String {
-        return formatUsd(amount.toDouble())
-    }
-
-    private fun formatUsd(amount: Double): String {
-        return NumberFormat.getCurrencyInstance(Locale.US).format(amount * YKC_USD_ESTIMATE)
-    }
-
     private fun formatDate(value: String): String {
         return try {
             value.toLongOrNull()?.let { millis ->
@@ -163,7 +156,6 @@ class TransactionReceiptActivity : AppCompatActivity() {
 
     companion object {
         private const val NETWORK_FEE = 0.10
-        private const val YKC_USD_ESTIMATE = 0.457
         private const val EXTRA_TRANSACTION_ID = "transaction_id"
         private const val EXTRA_AMOUNT = "amount"
         private const val EXTRA_FROM = "from"

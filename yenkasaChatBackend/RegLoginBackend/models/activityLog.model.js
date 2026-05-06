@@ -18,6 +18,9 @@ const activityLogSchema = new Schema({
 
 activityLogSchema.index({ userId: 1, action: 1, timestamp: -1 });
 activityLogSchema.index({ userId: 1, qualifiedView: 1, timestamp: -1 });
+activityLogSchema.index({ suspicious: 1, timestamp: -1 });
+activityLogSchema.index({ deviceId: 1, timestamp: -1 });
+activityLogSchema.index({ ipAddress: 1, timestamp: -1 });
 
 module.exports =
   mongoose.models.ActivityLog ||

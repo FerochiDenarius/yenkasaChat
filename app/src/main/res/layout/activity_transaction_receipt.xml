@@ -164,7 +164,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="≈ $0.00 USD"
+                                android:text="YKC value depends on platform revenue"
                                 android:textColor="@color/wallet_secondary_text"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
@@ -395,7 +395,7 @@
                         <TextView
                             android:id="@+id/textReceiptSummaryAmount"
                             style="@style/TransactionReceiptValue"
-                            tools:text="10.00 YKC\n≈ $4.57 USD" />
+                            tools:text="10.00 YKC" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -411,7 +411,7 @@
                         <TextView
                             android:id="@+id/textReceiptFee"
                             style="@style/TransactionReceiptValue"
-                            tools:text="0.10 YKC\n≈ $0.05 USD" />
+                            tools:text="0.10 YKC" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -427,7 +427,7 @@
                         <TextView
                             android:id="@+id/textReceiptTotal"
                             style="@style/TransactionReceiptValue"
-                            tools:text="10.10 YKC\n≈ $4.62 USD" />
+                            tools:text="10.10 YKC" />
                     </LinearLayout>
                 </LinearLayout>
 

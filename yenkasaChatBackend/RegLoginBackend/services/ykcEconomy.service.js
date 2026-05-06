@@ -7,17 +7,23 @@ const MAX_DAILY_YKC = 500;
 const REPEATED_VIEW_WINDOW_MS = 10 * 60 * 1000;
 
 const REWARD_VALUES = {
-  REWARD_POST_VIEW_1000: 10,
-  REWARD_POST_VIEW_RECEIVED: 10,
+  REWARD_POST_VIEW_1000: 8,
+  REWARD_POST_VIEW_RECEIVED: 8,
   REWARD_WATCH_TIME_10_MIN: 15,
-  REWARD_POST: 20,
-  REWARD_POST_APPROVED: 20,
-  REWARD_COMMENT: 3,
-  REWARD_REPLY: 3,
+  REWARD_POST: 8,
+  REWARD_POST_APPROVED: 8,
+  REWARD_COMMENT: 1,
+  REWARD_REPLY: 1,
   REWARD_POST_LIKE: 1,
   REWARD_COMMENT_LIKE: 1,
-  REWARD_DAILY_LOGIN: 2,
-  REWARD_ACCOUNT_AGE: 2
+  REWARD_DAILY_LOGIN: 1,
+  REWARD_ACCOUNT_AGE: 1,
+  REWARD_FOLLOW: 1,
+  REWARD_FOLLOW_RECEIVED: 1,
+  REWARD_JOIN_COMMUNITY: 0,
+  REWARD_CREATE_COMMUNITY: 8,
+  REWARD_COMMUNITY_APPROVED: 8,
+  REWARD_POST_REJECTED: 1
 };
 
 function isYkcLive(now = new Date()) {
@@ -101,8 +107,20 @@ async function getRewardGuard({ userId, type, amount, now = new Date() }) {
       status: 'completed',
       createdAt: { $gte: startOfDay(now) }
     });
-    if (likesToday >= 200) {
+    if (likesToday >= 25) {
       return { allowed: false, reason: 'like_rate_limit', likesToday };
+    }
+  }
+
+  if (type === 'REWARD_DAILY_LOGIN') {
+    const loginRewardToday = await CoinTransaction.exists({
+      toUserId: userId,
+      type: 'REWARD_DAILY_LOGIN',
+      status: 'completed',
+      createdAt: { $gte: startOfDay(now) }
+    });
+    if (loginRewardToday) {
+      return { allowed: false, reason: 'daily_login_already_awarded' };
     }
   }
 

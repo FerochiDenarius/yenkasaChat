@@ -130,7 +130,7 @@ export default function Wallet() {
             <span className="wallet-hero__label">Current Balance <b>◎</b></span>
             <strong>{loading ? "..." : formatBalance(balance?.balance || 0)}</strong>
             <em>YENKASA COINS</em>
-            <small>≈ ${estimateUsd(balance?.balance || 0)} USD</small>
+            <small>YKC value depends on monetizable activity and platform revenue.</small>
           </div>
           <div className="wallet-hero__stats">
             <Metric label="Total Earned" value={`${formatNumber(incomingTotal)} YKC ↑`} />
@@ -142,7 +142,7 @@ export default function Wallet() {
         <section className="wallet-actions">
           <ActionTile icon="↗" title="Send" subtitle="Send Coins" onClick={() => setShowTransfer((value) => !value)} />
           <ActionTile icon="↓" title="Receive" subtitle="Receive Coins" onClick={() => navigator.clipboard?.writeText(balance?.walletId || "")} />
-          <ActionTile icon="↔" title="Convert" subtitle="YKC ↔ USD" disabled />
+          <ActionTile icon="↔" title="Convert" subtitle="Revenue-based value" disabled />
           <ActionTile icon="▦" title="Scan" subtitle="Pay / Receive" disabled />
         </section>
 
@@ -292,10 +292,6 @@ function formatBalance(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function estimateUsd(value) {
-  return (Number(value || 0) * 0.00832).toFixed(2);
 }
 
 function shortWallet(walletId = "") {

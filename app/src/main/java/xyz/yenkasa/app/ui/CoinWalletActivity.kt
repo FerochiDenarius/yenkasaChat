@@ -380,7 +380,7 @@ class CoinWalletActivity : AppCompatActivity() {
 
     private fun refreshWalletHero() {
         tvBalance.text = if (isBalanceHidden) "••••" else formatCoinAmount(currentBalance)
-        textWalletUsdValue.text = "~ $0.00 USD"
+        textWalletUsdValue.text = "Value depends on platform revenue"
 
         val walletId = currentWalletId
         val totalEarned = allTransactions

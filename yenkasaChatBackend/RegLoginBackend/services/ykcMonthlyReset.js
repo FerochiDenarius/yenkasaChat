@@ -11,7 +11,7 @@ function previousMonthKey(now = new Date()) {
 async function runMonthlyYkcReset(now = new Date()) {
   const monthKey = previousMonthKey(now);
   const resetDate = startOfMonth(now);
-  const users = await User.find({}).select('_id coinsBalance ykcBalance ykcEarnedThisMonth totalQualifiedViews totalMonetizableOpportunities').lean();
+  const users = await User.find({}).select('_id coinsBalance ykcBalance ykcEarnedThisMonth totalQualifiedViews totalWatchTime totalMonetizableOpportunities').lean();
 
   if (users.length) {
     await MonthlyYkcSnapshot.bulkWrite(users.map((user) => ({
@@ -22,6 +22,7 @@ async function runMonthlyYkcReset(now = new Date()) {
             ykcEarnedThisMonth: Number(user.ykcEarnedThisMonth || 0),
             ykcBalance: Number(user.ykcBalance ?? user.coinsBalance ?? 0),
             totalQualifiedViews: Number(user.totalQualifiedViews || 0),
+            totalWatchTime: Number(user.totalWatchTime || 0),
             totalMonetizableOpportunities: Number(user.totalMonetizableOpportunities || 0)
           }
         },

@@ -121,17 +121,17 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
       });
 
     // ⭐ Reward post owner (their content got approved)
-await rewardService.reward(owner._id, 20, {
+await rewardService.reward(owner._id, 8, {
   type: "REWARD_POST_APPROVED",
-  description: "Your post was approved and you earned 20 YKC!",
+  description: "Your post was approved and you earned 8 YKC!",
   relatedPostId: post._id,
   activityId
 });
 
 // ⭐ Reward the APPROVER (their work)
-await rewardService.reward(approver._id, 20, {
+await rewardService.reward(approver._id, 8, {
   type: "REWARD_POST_APPROVED",
-  description: "You earned 20 YKC for your post approval",
+  description: "You earned 8 YKC for your post approval",
   relatedPostId: post._id,
   activityId
 });
@@ -158,7 +158,7 @@ await rewardService.reward(approver._id, 20, {
     res.json({
       success: true,
       message: "Post approved",
-      reward: 10
+      reward: 8
     });
 
   } catch (err) {
@@ -211,7 +211,7 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
       });
 
      // ⭐ Reward the moderator/admin who performed the rejection
-await rewardService.reward(approver._id, 10, {
+await rewardService.reward(approver._id, 1, {
   type: "REWARD_POST_REJECTED",
   description: `You rejected a post by ${owner.username}`,
   relatedPostId: post._id,

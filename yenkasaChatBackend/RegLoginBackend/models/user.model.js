@@ -140,6 +140,7 @@ const userSchema = new Schema({
   ykcEarnedThisMonth: { type: Number, default: 0 },
   ykcLastReset: { type: Date, default: null },
   totalQualifiedViews: { type: Number, default: 0 },
+  totalWatchTime: { type: Number, default: 0 },
   totalMonetizableOpportunities: { type: Number, default: 0 },
 
   walletId: {

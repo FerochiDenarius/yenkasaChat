@@ -99,7 +99,7 @@ async function getCommunityReviewers() {
 
 
 // Reward configuration
-const COMMUNITY_CREATION_REWARD = 100; // YKC
+const COMMUNITY_CREATION_REWARD = 8; // YKC
 
 // Utility to ensure supply exists
 async function ensureSupply() {
@@ -310,10 +310,10 @@ router.post('/:communityId/join', authMiddleware, async (req, res) => {
       await community.save();
     }
 
-    // ⭐ Reward user 5 YKC for joining
+    // Joining is tracked without inflating YKC supply.
     const activityId = `join_community_${userId}_${communityId}_${Date.now()}`;
 
-    const rewardTx = await rewardService.reward(userId, 5, {
+    const rewardTx = await rewardService.reward(userId, 0, {
       type: "REWARD_JOIN_COMMUNITY",
       description: `Joined community: ${community.displayName}`,
       relatedCommunityId: communityId,
@@ -666,10 +666,10 @@ router.post('/:communityId/approve', authMiddleware, async (req, res) => {
       $addToSet: { joinedCommunities: community._id }
     });
 
-    // ⭐ Reward community creator (10 YKC)
+    // ⭐ Reward community creator after approval
     const activityId = `approve_community_${adminId}_${communityId}_${Date.now()}`;
 
-    const rewardTx = await rewardService.reward(community.createdBy, 10, {
+    const rewardTx = await rewardService.reward(community.createdBy, 8, {
       type: "REWARD_COMMUNITY_APPROVED",
       description: `Your community '${community.displayName}' was approved`,
       relatedCommunityId: communityId,

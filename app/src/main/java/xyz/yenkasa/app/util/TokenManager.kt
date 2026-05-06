@@ -1142,8 +1142,8 @@ object TokenManager {
     fun saveFeedCache(context: Context, json: String) {
         try {
             val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.edit().putString(FEED_CACHE_KEY, json).apply()
-            Log.i(TAG, "📦 Feed cache saved.")
+            val saved = prefs.edit().putString(FEED_CACHE_KEY, json).commit()
+            Log.i(TAG, "📦 Feed cache saved. committed=$saved")
         } catch (e: Exception) {
             Log.e(TAG, "Error saving feed cache", e)
         }

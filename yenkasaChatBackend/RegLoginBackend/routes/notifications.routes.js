@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
 const { areUsersBlocked } = require("../services/privacy.service");
+const { sendNotification } = require("../services/notification.service");
 
 // helper - compute targetUrl from type/activityId (update to match your app routes)
 function computeTarget(notification) {
@@ -148,55 +149,48 @@ router.post("/create", auth, async (req, res) => {
       return res.status(200).json({ success: true, muted: true });
     }
 
-    // ------------------------------------
-    // CREATE NOTIFICATION
-    // ------------------------------------
-    const notif = await Notification.create({
+    const resolvedTargetType = req.body.targetType || targetType;
+    const resolvedTargetId = req.body.targetId || targetId;
+    const resolvedTargetUrl = req.body.targetUrl || computeTarget({
+      type,
+      activityId,
+      targetType: resolvedTargetType,
+      targetId: resolvedTargetId
+    });
+
+    const shouldPush = [
+      "post_like",
+      "post_comment",
+      "comment_like",
+      "comment_reply",
+      "follow",
+      "new_follower"
+    ].includes(String(type || "").toLowerCase());
+
+    const formatted = await sendNotification({
       type,
       senderId,
       receiverId,
       activityId,
+      targetType: resolvedTargetType,
+      targetId: resolvedTargetId,
+      targetUrl: resolvedTargetUrl,
       message,
-      targetType,
-      targetId,
-      targetUrl: null
+      emitSocket: true,
+      push: shouldPush,
+      pushTitle: "Yenkasa",
+      pushBody: message,
+      pushData: {
+        type,
+        activityId,
+        targetType: resolvedTargetType,
+        targetId: resolvedTargetId,
+        targetUrl: resolvedTargetUrl
+      }
     });
 
-    // Populate sender
-    const payload = await Notification.findById(notif._id)
-      .populate("senderId", "username profileImage role roleName");
-
-    // Format for frontend
-    const formatted = {
-      id: payload._id.toString(),
-      type: payload.type,
-      message: payload.message,
-
-      postId: payload.targetType === "post" ? payload.targetId : null,
-      commentId: payload.targetType === "comment" ? payload.targetId : null,
-
-      activityId: payload.activityId,
-      status: payload.status,
-      createdAt: payload.createdAt?.toISOString() ?? null,
-
-      senderId: payload.senderId?._id?.toString() ?? null,
-      sender: payload.senderId
-        ? {
-            userId: payload.senderId._id.toString(),
-            username: payload.senderId.username,
-            avatar: payload.senderId.profileImage,
-            roleName: payload.senderId.roleName || payload.senderId.role?.name || "user"
-          }
-        : null,
-
-      targetType: payload.targetType,
-      targetId: payload.targetId,
-      targetUrl: computeTarget(payload)
-    };
-
-    // SOCKET
-    if (global.io) {
-      global.io.to(payload.receiverId.toString()).emit("notificationCreated", formatted);
+    if (!formatted) {
+      return res.status(200).json({ success: true, skipped: true });
     }
 
     return res.status(201).json(formatted);

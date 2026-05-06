@@ -554,6 +554,7 @@ class FeedFragment : Fragment() {
             if (posts.isEmpty() && !hasShownCachedFeed) {
                 loadCachedFeed()
             }
+            updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             return
         } else {
             updateOfflineBanner(false)
@@ -564,11 +565,14 @@ class FeedFragment : Fragment() {
 
         val names = selectedCommunities.mapNotNull { it.displayName ?: it.name }
         if (names.isEmpty()) {
-            posts.clear()
-            renderPosts()
-            emptyView.visibility = View.VISIBLE
+            if (posts.isEmpty()) {
+                loadCachedFeed()
+            } else {
+                renderPosts()
+            }
             isLoading = false
             showLoading(false, page <= 1)
+            updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             return
         }
 
@@ -607,6 +611,8 @@ class FeedFragment : Fragment() {
                     renderPosts()
                     saveCurrentFeedCache()
                 } else {
+                    if (posts.isEmpty()) loadCachedFeed()
+                    updateEmptyFeedUi(isRefreshing = posts.isEmpty())
                     Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -615,6 +621,8 @@ class FeedFragment : Fragment() {
                 isLoading = false
                 showLoading(false, page <= 1)
                 Log.e("FeedFragment", "Network failure: ${t.message}")
+                if (posts.isEmpty()) loadCachedFeed()
+                updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             }
         })
     }
@@ -662,6 +670,7 @@ class FeedFragment : Fragment() {
     private fun showLoading(show: Boolean, isFirstPage: Boolean) {
         progressBar.visibility = if (show && isFirstPage && posts.isEmpty()) View.VISIBLE else View.GONE
         footerProgressBar.visibility = if (show && !isFirstPage && posts.isNotEmpty()) View.VISIBLE else View.GONE
+        if (isFirstPage) updateEmptyFeedUi(isRefreshing = show && posts.isEmpty())
     }
 
     private fun updateSourcePostViewCount(postId: String, viewsCount: Int) {
@@ -736,7 +745,7 @@ class FeedFragment : Fragment() {
                 allCommunities,
                 selectedCommunities.mapNotNull { it.id }.toSet()
             )
-            emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+            updateEmptyFeedUi(isRefreshing = isLoading && posts.isEmpty())
             if (posts.isNotEmpty()) {
                 recyclerView.post {
                     playerCoordinator?.handleSnapToActiveItem()
@@ -746,7 +755,7 @@ class FeedFragment : Fragment() {
         }
 
         feedAdapter.updateItems(buildMixedFeed(posts))
-        emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+        updateEmptyFeedUi(isRefreshing = isLoading && posts.isEmpty())
         if (posts.isNotEmpty()) {
             preloadFeedAround(layoutManager.findFirstVisibleItemPosition().coerceAtLeast(0))
         }
@@ -801,6 +810,12 @@ class FeedFragment : Fragment() {
 
     private fun preloadFeedAround(anchorPosition: Int) {
         cacheController.preloadFeedAround(posts, anchorPosition, this)
+    }
+
+    private fun updateEmptyFeedUi(isRefreshing: Boolean) {
+        if (!::emptyView.isInitialized) return
+        emptyView.text = if (isRefreshing) "Refreshing feed..." else "No posts yet."
+        emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun updateOfflineBanner(isOffline: Boolean) {

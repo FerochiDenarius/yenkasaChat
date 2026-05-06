@@ -12,23 +12,30 @@ class FeedCacheController(
     private val context: Context,
     private val gson: Gson
 ) {
-    fun loadCachedFeed(onLoaded: (CachedFeedPayload) -> Unit) {
-        val raw = TokenManager.getFeedCache(context) ?: return
+    fun loadCachedFeed(onLoaded: (CachedFeedPayload) -> Unit): Boolean {
+        val raw = TokenManager.getFeedCache(context) ?: return false
+        var loaded = false
         runCatching {
             gson.fromJson(raw, CachedFeedPayload::class.java)
         }.onSuccess { cached ->
             if (cached != null && cached.posts.isNotEmpty()) {
                 onLoaded(cached)
+                loaded = true
             }
         }.onFailure {
             Log.w("FeedCacheController", "Failed to parse cached feed", it)
         }
+        return loaded
     }
 
     fun saveCurrentFeedCache(posts: List<Post>, currentPage: Int, isLastPage: Boolean) {
+        if (posts.isEmpty()) {
+            Log.d("FeedCacheController", "Skipping empty feed cache save.")
+            return
+        }
         runCatching {
             val payload = CachedFeedPayload(
-                posts = posts.toList(),
+                posts = posts.take(MAX_CACHED_POSTS),
                 currentPage = currentPage,
                 isLastPage = isLastPage
             )
@@ -54,5 +61,9 @@ class FeedCacheController(
                 Glide.with(fragment).load(url).preload()
             }
         }
+    }
+
+    private companion object {
+        const val MAX_CACHED_POSTS = 60
     }
 }

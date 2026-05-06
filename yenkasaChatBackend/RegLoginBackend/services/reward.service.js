@@ -255,8 +255,17 @@ const tx = await CoinTransaction.create({
   // POST VIEWS RECEIVED
   // ============================
   case "REWARD_POST_VIEW_RECEIVED":
+  case "REWARD_POST_SINGLE_VIEW_RECEIVED":
     ver.metrics.totalViewsReceived += 1;
     ver.metrics.totalViewsCount += 1; // optional alias
+    break;
+
+  case "REWARD_POST_LIKE_RECEIVED":
+    ver.metrics.totalLikesReceived = (ver.metrics.totalLikesReceived || 0) + 1;
+    break;
+
+  case "REWARD_POST_COMMENT_RECEIVED":
+    ver.metrics.totalCommentsReceived = (ver.metrics.totalCommentsReceived || 0) + 1;
     break;
 
   // viewer views a post – no metric impact

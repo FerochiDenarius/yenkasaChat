@@ -741,6 +741,69 @@
                     android:src="@drawable/ic_chevron_right" />
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/textAdminSectionHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="6dp"
+                android:text="Yenkasa Admin"
+                android:textColor="@color/menu_accent"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/btnAdminEconomy"
+                style="@style/MenuItemStyle"
+                android:minHeight="58dp"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_menu_icon_container">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_admin_panel"
+                        app:tint="@color/menu_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Admin Economy"
+                        android:textColor="@color/menu_primary_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Revenue, reward pool, creators, and fraud alerts"
+                        android:textColor="@color/menu_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/btnNotifications"
                 style="@style/MenuItemStyle"

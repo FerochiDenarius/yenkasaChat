@@ -65,6 +65,8 @@ class MenuActivity : AppCompatActivity() {
         val btnMyCommunities = findViewById<LinearLayout>(R.id.btnMyCommunities)
         val btnAdsApproval = findViewById<LinearLayout>(R.id.btnAdsApproval)
         val btnCommunityApproval = findViewById<LinearLayout>(R.id.btnCommunityApproval)
+        val textAdminSectionHeader = findViewById<TextView>(R.id.textAdminSectionHeader)
+        val btnAdminEconomy = findViewById<LinearLayout>(R.id.btnAdminEconomy)
         val btnLogout = findViewById<LinearLayout>(R.id.btnLogout)
         val btnCommunities = findViewById<LinearLayout>(R.id.btnCommunities)
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
@@ -81,6 +83,12 @@ class MenuActivity : AppCompatActivity() {
         btnPostApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
         btnAdsApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
         btnCommunityApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
+        textAdminSectionHeader.visibility = if (canAccessAnalytics) View.VISIBLE else View.GONE
+        btnAdminEconomy.visibility = if (canAccessAnalytics) View.VISIBLE else View.GONE
+        Log.d(
+            TAG,
+            "Admin menu visibility=$canAccessAnalytics visibleItems=${listOf(btnPostApproval, btnAdsApproval, btnCommunityApproval, btnAdminEconomy).count { it.visibility == View.VISIBLE }}"
+        )
 
         textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
         loadWalletBalance()
@@ -162,6 +170,11 @@ class MenuActivity : AppCompatActivity() {
         btnCommunityApproval.setOnClickListener {
             Log.d(TAG, "CommunityApproval clicked")
             startActivity(Intent(this, CommunityApprovalActivity::class.java))
+        }
+
+        btnAdminEconomy.setOnClickListener {
+            Log.d(TAG, "AdminEconomy clicked; launching AdminEconomyActivity")
+            startActivity(Intent(this, AdminEconomyActivity::class.java))
         }
 
         // ✔ Notifications

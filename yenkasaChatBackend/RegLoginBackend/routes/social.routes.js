@@ -194,6 +194,15 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
           relatedPostId: postId,
           activityId: `post_like_${postId}_${userId}`
         });
+
+        if (postOwnerId !== userId) {
+          await rewardService.reward(postOwnerId, 1, {
+            type: "REWARD_POST_LIKE_RECEIVED",
+            description: "Earned 1 YKC because your post received a like",
+            relatedPostId: postId,
+            activityId: `post_like_received_${postId}_${userId}`
+          });
+        }
       } else {
         console.log(`ℹ️ Post like reward already granted for post=${postId} user=${userId}`);
       }
@@ -202,14 +211,27 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
 
       // 🔔 Notification to owner
       if (!(await isBlocked(userId, postOwnerId))) {
+        const liker = await User.findById(userId).select("username").lean();
+        const likerName = liker?.username || req.user.username || "Someone";
+
         await sendNotification({
           type: "post_like",
           senderId: userId,
           receiverId: postOwnerId,
-            activityId: postId,
-          message: "liked your post",
-           targetType: "post",
-           targetId: postId
+          activityId: postId,
+          message: `${likerName} liked your post`,
+          targetType: "post",
+          targetId: postId,
+          targetUrl: `/post/${postId}`,
+          push: true,
+          pushTitle: "New like on your post",
+          pushBody: `${likerName} liked your post`,
+          pushData: {
+            type: "post_like",
+            postId,
+            targetType: "post",
+            targetId: postId
+          }
         });
       }
     }

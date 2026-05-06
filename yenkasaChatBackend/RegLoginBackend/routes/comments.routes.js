@@ -6,6 +6,7 @@ const User = require('../models/user.model');
 const authMiddleware = require('../middleware/auth');
 const UserPrivacy = require('../models/userPrivacy.model');
 const rewardService = require('../services/reward.service');
+const { sendNotification } = require('../services/notification.service');
 const { areUsersBlocked, getBlockedRelationshipUserIds } = require('../services/privacy.service');
 
 
@@ -68,22 +69,42 @@ if (!parentCommentId) {
     relatedCommentId: comment._id,
     activityId: `comment_${comment._id}_${userId}`,
   });
+
+  if (post.userId._id.toString() !== userId) {
+    await rewardService.reward(post.userId._id, 1, {
+      type: "REWARD_POST_COMMENT_RECEIVED",
+      description: "Earned 1 YKC because your post received a comment",
+      relatedPostId: post._id,
+      relatedCommentId: comment._id,
+      activityId: `post_comment_received_${post._id}_${comment._id}`,
+    });
+  }
 }
 
     if (!parentCommentId && post.userId._id.toString() !== userId) {
-  const { sendNotification } =
-    await import('../services/notification.service.js');
+      const commenterName = commenter?.username || req.user.username || "Someone";
 
-  await sendNotification({
-    type: "post_comment",
-    senderId: userId,
-    receiverId: post.userId._id,
-    activityId: post._id.toString(),
-    message: `${commenter.username} commented on your post`,
-    targetType: "post",
-    targetId: post._id.toString()
-  });
-}
+      await sendNotification({
+        type: "post_comment",
+        senderId: userId,
+        receiverId: post.userId._id,
+        activityId: post._id.toString(),
+        message: `${commenterName} commented on your post`,
+        targetType: "post",
+        targetId: post._id.toString(),
+        targetUrl: `/post/${post._id.toString()}?openComments=true`,
+        push: true,
+        pushTitle: "New comment on your post",
+        pushBody: `${commenterName} commented on your post`,
+        pushData: {
+          type: "post_comment",
+          postId: post._id.toString(),
+          commentId: comment._id.toString(),
+          targetType: "post",
+          targetId: post._id.toString()
+        }
+      });
+    }
 
 
 /* ---------------------------------------------------
@@ -111,11 +132,7 @@ if (parentCommentId) {
   // 3️⃣ Increase reply count
   await Comment.findByIdAndUpdate(parentCommentId, { $inc: { replyCount: 1 } });
 
- const { reward } = await import('../services/reward.service.js');
-const { sendNotification } =
-  await import('../services/notification.service.js');
-
-await reward(parentOwnerId, REWARD_REPLY, {
+await rewardService.reward(parentOwnerId, REWARD_REPLY, {
   fromUserId: userId,
   type: "REWARD_REPLY",
   description: `Earned ${REWARD_REPLY} YKC for receiving a reply`,
@@ -129,10 +146,21 @@ await sendNotification({
   senderId: userId,
   receiverId: parentOwnerId,
   activityId: parentCommentId, // ✅ FIX
-  message: `${commenter.username} replied to your comment`,
+  message: `${commenter?.username || req.user.username || "Someone"} replied to your comment`,
   targetType: "comment",
   targetId: parentCommentId,
-  targetUrl: `/post/${post._id.toString()}?openComments=true`
+  targetUrl: `/post/${post._id.toString()}?openComments=true`,
+  push: true,
+  pushTitle: "New reply to your comment",
+  pushBody: `${commenter?.username || req.user.username || "Someone"} replied to your comment`,
+  pushData: {
+    type: "comment_reply",
+    postId: post._id.toString(),
+    commentId: parentCommentId,
+    replyId: comment._id.toString(),
+    targetType: "comment",
+    targetId: parentCommentId
+  }
 });
 
 }
@@ -252,11 +280,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
       // Reload updated likeCount
       const updated = await Comment.findById(commentId).select("likeCount");
 
-   const { reward } = await import('../services/reward.service.js');
-const { sendNotification } =
-  await import('../services/notification.service.js');
-
-const likerRewardTx = await reward(userId, REWARD_COMMENT_LIKE, {
+const likerRewardTx = await rewardService.reward(userId, REWARD_COMMENT_LIKE, {
   type: "REWARD_COMMENT_LIKE",
   description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
   relatedCommentId: comment._id,
@@ -265,7 +289,7 @@ const likerRewardTx = await reward(userId, REWARD_COMMENT_LIKE, {
 
 
       // Reward comment owner
-  await reward(commentOwnerId, REWARD_COMMENT_LIKE, {
+  await rewardService.reward(commentOwnerId, REWARD_COMMENT_LIKE, {
   fromUserId: userId,
   type: "REWARD_COMMENT_LIKE",
   description: `Earned ${REWARD_COMMENT_LIKE} YKC for receiving a like`,
@@ -278,9 +302,18 @@ await sendNotification({
   senderId: userId,
   receiverId: commentOwnerId,
   activityId: commentId,
-  message: `${liker.username} liked your comment`,
+  message: `${liker?.username || req.user.username || "Someone"} liked your comment`,
   targetType: "comment",
-  targetId: commentId
+  targetId: commentId,
+  push: true,
+  pushTitle: "New like on your comment",
+  pushBody: `${liker?.username || req.user.username || "Someone"} liked your comment`,
+  pushData: {
+    type: "comment_like",
+    commentId,
+    targetType: "comment",
+    targetId: commentId
+  }
 });
 
 

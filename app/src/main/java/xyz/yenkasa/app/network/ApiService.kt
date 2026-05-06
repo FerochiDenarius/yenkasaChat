@@ -900,6 +900,25 @@ interface ApiService {
         @Header("Authorization") token: String
     ): RewardResponse
 
+    @GET("admin/economy-summary")
+    fun getAdminEconomySummary(
+        @Header("Authorization") token: String,
+        @Query("month") month: String? = null
+    ): Call<EconomySummaryResponse>
+
+    @GET("admin/top-creators")
+    fun getAdminTopCreators(
+        @Header("Authorization") token: String,
+        @Query("month") month: String? = null,
+        @Query("limit") limit: Int = 12
+    ): Call<TopCreatorsResponse>
+
+    @GET("admin/fraud-alerts")
+    fun getAdminFraudAlerts(
+        @Header("Authorization") token: String,
+        @Query("limit") limit: Int = 10
+    ): Call<FraudAlertsResponse>
+
 
 
 

@@ -6,7 +6,6 @@ import android.util.Log
 import android.widget.Toast
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
-import xyz.yenkasa.app.util.PostNotificationSender
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
@@ -46,7 +45,6 @@ object FeedUtils {
                             } else {
                                 WalletBalanceManager.refreshAfterReward(context, body.rewardAmount)
                             }
-                            PostNotificationSender.sendPostLike(context, post)
                         }
                     } else {
                         Log.w(

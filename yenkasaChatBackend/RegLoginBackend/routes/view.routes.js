@@ -236,6 +236,13 @@ if (qualifiedView || monetizableOpportunity) {
 
     // Owner reward every 1000 qualified views (only if viewer != owner)
     if (qualifiedView && viewerIdStr !== ownerIdStr) {
+      await rewardService.reward(ownerId, REWARD_VALUES.REWARD_POST_SINGLE_VIEW_RECEIVED, {
+        type: "REWARD_POST_SINGLE_VIEW_RECEIVED",
+        description: `Earned ${REWARD_VALUES.REWARD_POST_SINGLE_VIEW_RECEIVED} YKC because your post received a valid view`,
+        relatedPostId: postId,
+        activityId: `owner_view_received_${postId}_${viewerIdStr}_${view._id}`
+      });
+
       const qualifiedViewsCount = await View.countDocuments({
         postId: objectIdPost,
         qualifiedView: true

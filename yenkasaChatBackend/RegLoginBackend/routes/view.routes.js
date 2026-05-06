@@ -13,6 +13,7 @@ const { sendPushNotification } = require("../utils/onesignal");
 const {
   REPEATED_VIEW_WINDOW_MS,
   REWARD_VALUES,
+  startOfDay,
   getRequestIp,
   getDeviceId,
   logYkcActivity
@@ -27,24 +28,41 @@ const {
 // ======================================================
 
 function rewardImage(seconds) {
-  if (seconds >= 5) return 2;
-  if (seconds >= 3) return 1;
+  if (seconds >= 3) return REWARD_VALUES.REWARD_IMAGE_VIEW;
   return 0;
 }
 
 function rewardVideo(seconds) {
-  if (seconds >= 120) return 20;
-  if (seconds >= 60) return 10;
-  if (seconds >= 30) return 5;
-  if (seconds >= 10) return 2;
+  if (seconds >= 30) return REWARD_VALUES.REWARD_LONG_WATCH;
+  if (seconds >= 5) return REWARD_VALUES.REWARD_SHORT_VIDEO_VIEW;
   return 0;
 }
 
 function rewardAudio(seconds) {
-  if (seconds >= 90) return 10;
-  if (seconds >= 45) return 5;
-  if (seconds >= 20) return 2;
+  if (seconds >= 60) return REWARD_VALUES.REWARD_LONG_WATCH;
+  if (seconds >= 20) return REWARD_VALUES.REWARD_AUDIO_VIEW;
   return 0;
+}
+
+function rewardText(seconds) {
+  return seconds >= 3 ? REWARD_VALUES.REWARD_TEXT_VIEW : 0;
+}
+
+function mediaRewardCandidate(mediaType, seconds) {
+  const type = (mediaType || '').toLowerCase();
+  if (type === 'image') return { amount: rewardImage(seconds), type: 'REWARD_IMAGE_VIEW' };
+  if (type === 'text') return { amount: rewardText(seconds), type: 'REWARD_TEXT_VIEW' };
+  if (type === 'audio') {
+    return seconds >= 60
+      ? { amount: rewardAudio(seconds), type: 'REWARD_LONG_WATCH' }
+      : { amount: rewardAudio(seconds), type: 'REWARD_AUDIO_VIEW' };
+  }
+  if (type === 'video') {
+    return seconds >= 30
+      ? { amount: rewardVideo(seconds), type: 'REWARD_LONG_WATCH' }
+      : { amount: rewardVideo(seconds), type: 'REWARD_SHORT_VIDEO_VIEW' };
+  }
+  return { amount: 0, type: null };
 }
 
 router.post('/:postId/view', authMiddleware, async (req, res) => {
@@ -168,22 +186,53 @@ if (qualifiedView || monetizableOpportunity) {
     // ---------------------------------------------------------------------
     // ⭐ YKC REWARD LOGIC
     // ---------------------------------------------------------------------
-let rewardAmount = qualifiedView && safeWatchDuration >= 600
-  ? REWARD_VALUES.REWARD_WATCH_TIME_10_MIN
-  : 0;
-
-
+    const rewardCandidate = mediaRewardCandidate(mediaType, safeWatchDuration);
+    let rewardAmount = Number(rewardCandidate.amount || 0);
     let rewardTx = null;
+    let rewardBlockedReason = null;
 
-    // Viewer’s watch-time reward
-    if (rewardAmount > 0) {
-      rewardTx = await rewardService.reward(viewerId, rewardAmount, {
-        type: "REWARD_POST_VIEW",
-        description: `Earned ${rewardAmount} YKC for 10 minutes of watch time`,
-        relatedPostId: postId,
-        activityId
+    if (rewardAmount > 0 && rewardCandidate.type) {
+      const alreadyRewardedForCheckpoint = await require('../models/cointransaction.model').exists({
+        toUserId: viewerId,
+        type: rewardCandidate.type,
+        relatedPostId: objectIdPost,
+        status: 'completed',
+        createdAt: { $gte: startOfDay(new Date()) }
       });
+
+      if (alreadyRewardedForCheckpoint) {
+        rewardAmount = 0;
+        rewardBlockedReason = 'already_rewarded_for_post_checkpoint_today';
+      } else if (!sessionActive) {
+        rewardAmount = 0;
+        rewardBlockedReason = 'viewer_not_active';
+      } else {
+        rewardTx = await rewardService.reward(viewerId, rewardAmount, {
+          type: rewardCandidate.type,
+          description: `Earned ${rewardAmount} YKC for ${mediaType || 'feed'} engagement`,
+          relatedPostId: postId,
+          activityId: `${rewardCandidate.type}_${postId}_${viewerIdStr}_${safeWatchDuration}`
+        });
+        if (!rewardTx) {
+          rewardAmount = 0;
+          rewardBlockedReason = 'reward_guard_blocked';
+        }
+      }
     }
+
+    console.log('[YKC View Reward]', {
+      userId: viewerIdStr,
+      postId,
+      mediaType,
+      rewardType: rewardCandidate.type,
+      rewardAmount,
+      previousBalance: rewardTx?.toUserBalanceBefore,
+      newBalance: rewardTx?.toUserBalanceAfter,
+      qualifiedView,
+      watchDuration: safeWatchDuration,
+      monetizableOpportunity,
+      blockedReason: rewardBlockedReason
+    });
 
     // Owner reward every 1000 qualified views (only if viewer != owner)
     if (qualifiedView && viewerIdStr !== ownerIdStr) {
@@ -281,6 +330,8 @@ const ownerActivityId = `owner_${activityId}`;
       viewCount: updatedPost?.viewCount ?? viewsCount,
       view,
       rewardAmount,
+      newBalance: rewardTx?.toUserBalanceAfter ?? null,
+      rewardType: rewardCandidate.type,
       qualifiedView,
       monetizableOpportunity,
       rewardTransaction: rewardTx

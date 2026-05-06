@@ -161,6 +161,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     /* ------------------------------------
      * 🎁 REWARD for LIKE ONLY (not unlike)
      * ------------------------------------ */
+    let rewardTx = null;
     if (!alreadyLiked && likedByUser) {
       await updatePostOwnerLikeMetrics(postOwnerId, updatedPost.likeCount);
 
@@ -186,7 +187,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
           updatedVerification?.metrics?.postsLiked
         );
 
-        await rewardService.reward(userId, REWARD_LIKE, {
+        rewardTx = await rewardService.reward(userId, REWARD_LIKE, {
           fromUserId: postOwnerId,
           type: "REWARD_POST_LIKE",
           description: `Earned ${REWARD_LIKE} YKC for liking a post`,
@@ -217,6 +218,8 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
       message: likedByUser ? "Post liked" : "Post unliked",
       likeCount: updatedPost.likeCount,
       likedByUser,
+      rewardAmount: rewardTx?.amount || 0,
+      newBalance: rewardTx?.toUserBalanceAfter ?? null,
     });
 
   } catch (err) {

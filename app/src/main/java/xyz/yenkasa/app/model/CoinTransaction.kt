@@ -6,7 +6,7 @@ import com.google.gson.annotations.SerializedName
 data class CoinBalanceResponse(
     val success: Boolean,
     val walletId: String?,
-    val balance: Int
+    val balance: Double
 )
 
 data class CoinBalance(

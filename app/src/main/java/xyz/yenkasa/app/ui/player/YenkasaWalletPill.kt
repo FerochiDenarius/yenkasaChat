@@ -62,16 +62,16 @@ class YenkasaWalletPill @JvmOverloads constructor(
     }
 
     fun setBalance(balance: Double) {
-        balanceView.text = "${NumberFormat.getNumberInstance(Locale.getDefault()).format(balance)}"
+        balanceView.text = formatYkc(balance)
     }
 
-    fun showRewardGain(balance: Double, rewardAmount: Int) {
+    fun showRewardGain(balance: Double, rewardAmount: Double) {
         setBalance(balance)
-        if (rewardAmount <= 0) return
+        if (rewardAmount <= 0.0) return
 
         animate().cancel()
         subtextView.animate().cancel()
-        subtextView.text = "+$rewardAmount YKC"
+        subtextView.text = "+${formatYkc(rewardAmount)} YKC"
         scaleX = 1f
         scaleY = 1f
         alpha = 1f
@@ -100,6 +100,14 @@ class YenkasaWalletPill @JvmOverloads constructor(
             .start()
 
         playRewardSound()
+    }
+
+    private fun formatYkc(value: Double): String {
+        val formatter = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+            maximumFractionDigits = if (value % 1.0 == 0.0) 0 else 2
+            minimumFractionDigits = 0
+        }
+        return formatter.format(value)
     }
 
     private fun playRewardSound() {

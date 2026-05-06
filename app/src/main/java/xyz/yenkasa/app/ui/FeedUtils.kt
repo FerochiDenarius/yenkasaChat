@@ -8,6 +8,7 @@ import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.PostNotificationSender
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -36,6 +37,15 @@ object FeedUtils {
 
                         onLikeUpdated(body.likedByUser, body.likeCount)
                         if (body.likedByUser) {
+                            if (body.newBalance != null) {
+                                WalletBalanceManager.applyKnownBalance(
+                                    context,
+                                    body.newBalance,
+                                    rewardAmount = body.rewardAmount
+                                )
+                            } else {
+                                WalletBalanceManager.refreshAfterReward(context, body.rewardAmount)
+                            }
                             PostNotificationSender.sendPostLike(context, post)
                         }
                     } else {

@@ -23,7 +23,7 @@ class FeedChromeController(
 ) {
     private var walletBalanceAnimator: ValueAnimator? = null
     private var liveSheetController: YenkasaLiveSheetController? = null
-    var currentWalletBalance: Int = 0
+    var currentWalletBalance: Double = 0.0
         private set
 
     data class FloatingWalletViews(
@@ -89,7 +89,7 @@ class FeedChromeController(
         sparklesView: View,
         dropViews: List<ImageView>
     ) {
-        currentWalletBalance = TokenManager.getCoins(fragment.requireContext())
+        currentWalletBalance = TokenManager.getCoinsPrecise(fragment.requireContext())
         renderFloatingWalletBalance(balanceView, currentWalletBalance)
         deltaView.visibility = View.GONE
         sparklesView.alpha = 0f
@@ -149,12 +149,12 @@ class FeedChromeController(
         recyclerView.setBackgroundColor(ContextCompat.getColor(fragment.requireContext(), android.R.color.black))
     }
 
-    fun renderFloatingWalletBalance(balanceView: TextView, balance: Int) {
-        balanceView.text = NumberFormat.getIntegerInstance(Locale.getDefault()).format(balance)
+    fun renderFloatingWalletBalance(balanceView: TextView, balance: Double) {
+        balanceView.text = formatYkc(balance)
     }
 
     fun updateFloatingWalletBalance(
-        newBalance: Int,
+        newBalance: Double,
         animate: Boolean,
         walletViews: FloatingWalletViews
     ) {
@@ -174,6 +174,12 @@ class FeedChromeController(
     fun updateFloatingWalletBalance(
         newBalance: Int,
         animate: Boolean,
+        walletViews: FloatingWalletViews
+    ) = updateFloatingWalletBalance(newBalance.toDouble(), animate, walletViews)
+
+    fun updateFloatingWalletBalance(
+        newBalance: Double,
+        animate: Boolean,
         walletCard: View,
         coinContainer: View,
         coinView: ImageView,
@@ -183,7 +189,7 @@ class FeedChromeController(
         dropViews: List<ImageView>
     ) {
         val oldBalance = currentWalletBalance
-        TokenManager.saveCoins(fragment.requireContext(), newBalance)
+        TokenManager.saveCoinsPrecise(fragment.requireContext(), newBalance)
 
         if (!animate || newBalance <= oldBalance) {
             walletBalanceAnimator?.cancel()
@@ -196,10 +202,10 @@ class FeedChromeController(
         }
 
         walletBalanceAnimator?.cancel()
-        ValueAnimator.ofInt(oldBalance, newBalance).apply {
+        ValueAnimator.ofFloat(oldBalance.toFloat(), newBalance.toFloat()).apply {
             duration = 700L
             addUpdateListener { animator ->
-                currentWalletBalance = animator.animatedValue as Int
+                currentWalletBalance = (animator.animatedValue as Float).toDouble()
                 renderFloatingWalletBalance(balanceView, currentWalletBalance)
             }
             start()
@@ -226,7 +232,7 @@ class FeedChromeController(
     }
 
     fun onHostResume(balanceView: TextView) {
-        currentWalletBalance = TokenManager.getCoins(fragment.requireContext())
+        currentWalletBalance = TokenManager.getCoinsPrecise(fragment.requireContext())
         renderFloatingWalletBalance(balanceView, currentWalletBalance)
         liveSheetController?.onHostResume()
     }
@@ -260,7 +266,7 @@ class FeedChromeController(
     }
 
     private fun animateFloatingWalletGain(
-        delta: Int,
+        delta: Double,
         walletCard: View,
         coinContainer: View,
         coinView: ImageView,
@@ -268,7 +274,7 @@ class FeedChromeController(
         sparklesView: View,
         dropViews: List<ImageView>
     ) {
-        if (delta <= 0) return
+        if (delta <= 0.0) return
 
         deltaView.animate().cancel()
         walletCard.animate().cancel()
@@ -277,7 +283,7 @@ class FeedChromeController(
         sparklesView.animate().cancel()
         dropViews.forEach { dropView -> dropView.animate().cancel() }
 
-        deltaView.text = "+${NumberFormat.getIntegerInstance(Locale.getDefault()).format(delta)} YKC"
+        deltaView.text = "+${formatYkc(delta)} YKC"
         deltaView.visibility = View.VISIBLE
         deltaView.alpha = 1f
         deltaView.translationY = 12f
@@ -307,6 +313,14 @@ class FeedChromeController(
                 deltaView.translationY = 12f
                 deltaView.alpha = 1f
             }.start()
+    }
+
+    private fun formatYkc(value: Double): String {
+        val formatter = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+            maximumFractionDigits = if (value % 1.0 == 0.0) 0 else 2
+            minimumFractionDigits = 0
+        }
+        return formatter.format(value)
     }
 
     private fun animateFloatingWalletDrops(dropViews: List<ImageView>) {

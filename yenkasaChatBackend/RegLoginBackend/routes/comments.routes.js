@@ -14,7 +14,7 @@ const { areUsersBlocked, getBlockedRelationshipUserIds } = require('../services/
 const REWARD_COMMENT = 1;
 const REWARD_REPLY = 1;
 const REWARD_COMMENT_ACTION = 1;
-const REWARD_COMMENT_LIKE = 1;
+const REWARD_COMMENT_LIKE = 0.5;
 
 
 /* ---------------------------------------------------
@@ -254,7 +254,7 @@ router.post("/toggle-like", authMiddleware, async (req, res) => {
 const { sendNotification } =
   await import('../services/notification.service.js');
 
-await reward(userId, REWARD_COMMENT_LIKE, {
+const likerRewardTx = await reward(userId, REWARD_COMMENT_LIKE, {
   type: "REWARD_COMMENT_LIKE",
   description: `Earned ${REWARD_COMMENT_LIKE} YKC for liking a comment`,
   relatedCommentId: comment._id,
@@ -286,6 +286,8 @@ await sendNotification({
         success: true,
         likeCount: updated.likeCount,
         liked: true,
+        rewardAmount: likerRewardTx?.amount || 0,
+        newBalance: likerRewardTx?.toUserBalanceAfter ?? null,
       });
     }
 

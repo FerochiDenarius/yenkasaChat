@@ -5,7 +5,9 @@ data class ViewResponse(
     val message: String? = null,
     val viewsCount: Int = 0,
     val viewCount: Int = 0,
-    val rewardAmount: Int? = 0,
+    val rewardAmount: Double? = 0.0,
+    val newBalance: Double? = null,
+    val rewardType: String? = null,
     val rewardTransaction: RewardTransaction? = null,
     val view: ViewData? = null
 )
@@ -26,7 +28,7 @@ data class RewardTransaction(
     val type: String? = null,
     val description: String? = null,
     val relatedPostId: String? = null,
-    val amount: Int? = null,
+    val amount: Double? = null,
     val activityId: String? = null,
     val createdAt: String? = null
 )
@@ -39,6 +41,6 @@ data class ViewRequest(
 
 data class RewardResponse(
     val success: Boolean,
-    val newBalance: Int,
+    val newBalance: Double,
     val message: String?
 )

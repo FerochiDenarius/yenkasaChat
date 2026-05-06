@@ -47,6 +47,11 @@ enum: [
   // VIEWS
   "REWARD_VIEWS",              // ad views
   "REWARD_POST_VIEW",          // user viewing post
+  "REWARD_IMAGE_VIEW",
+  "REWARD_TEXT_VIEW",
+  "REWARD_SHORT_VIDEO_VIEW",
+  "REWARD_AUDIO_VIEW",
+  "REWARD_LONG_WATCH",
   "REWARD_POST_VIEW_RECEIVED", // owner receives a view
   "REWARD_MILESTONE",          // high engagement reward
 

@@ -122,8 +122,8 @@ class FeedFragment : Fragment() {
     private val walletBalanceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
-            val newBalance = intent.getIntExtra(
-                WalletBalanceManager.EXTRA_BALANCE,
+            val newBalance = intent.getDoubleExtra(
+                WalletBalanceManager.EXTRA_BALANCE_DOUBLE,
                 chromeController.currentWalletBalance
             )
             chromeController.updateFloatingWalletBalance(

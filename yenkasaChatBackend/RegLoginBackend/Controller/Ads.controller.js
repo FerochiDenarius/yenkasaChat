@@ -5,6 +5,7 @@ const RewardTx = require('../models/Rewards.Transaction.model');
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
 const Permission = require('../models/permissions.model');
+const rewardService = require('../services/reward.service');
 
 const AD_REVIEWER_ROLES = new Set(["admin", "moderator", "junior_developer", "senior_developer"]);
 const ELEVATED_AD_CREATOR_ROLES = new Set(["admin", "moderator", "junior_developer", "senior_developer"]);
@@ -130,9 +131,10 @@ exports.rewardAdClick = async (req, res) => {
 
     await tx.save();
 
-    // Update user balance
-    await User.findByIdAndUpdate(userId, {
-      $inc: { coins: rewardAmount }
+    const coinTx = await rewardService.reward(userId, rewardAmount, {
+      type: "REWARD_VIEWS",
+      description: `Earned ${rewardAmount} YKC for clicking an ad`,
+      activityId: `ad_click_${adId}_${userId}`
     });
 
     const rewardMessage = `You earned ${rewardAmount} YKC for clicking an ad.`;
@@ -168,6 +170,7 @@ exports.rewardAdClick = async (req, res) => {
       success: true,
       rewarded: true,
       amount: rewardAmount,
+      newBalance: coinTx?.toUserBalanceAfter ?? null,
       message: "Ad click reward processed."
     });
 
@@ -368,8 +371,11 @@ exports.rewardAd = async (req, res) => {
     });
     await tx.save();
 
-    // credit user's wallet/coins (implement your existing wallet update)
-    await User.findByIdAndUpdate(userId, { $inc: { coins: tx.amount } });
+    const coinTx = await rewardService.reward(userId, tx.amount, {
+      type: "REWARD_VIEWS",
+      description: `Earned ${tx.amount} YKC for watching an ad`,
+      activityId: `ad_watch_${adId}_${adViewId}`,
+    });
 
     const rewardMessage = `You earned ${tx.amount} YKC for watching an ad.`;
     await sendNotification({
@@ -402,7 +408,12 @@ exports.rewardAd = async (req, res) => {
       await adView.save();
     }
 
-    return res.json({ success:true, rewarded: true, amount: tx.amount });
+    return res.json({
+      success: true,
+      rewarded: true,
+      amount: tx.amount,
+      newBalance: coinTx?.toUserBalanceAfter ?? null
+    });
   } catch(err){ console.error(err); res.status(500).json({ success:false }); }
   
 };

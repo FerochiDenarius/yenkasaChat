@@ -81,7 +81,9 @@ data class Pagination(
 data class LikeResponse(
     val message: String,
     val likeCount: Int,
-    val likedByUser: Boolean
+    val likedByUser: Boolean,
+    val rewardAmount: Double? = 0.0,
+    val newBalance: Double? = null
 )
 
 data class CommentsResponse(

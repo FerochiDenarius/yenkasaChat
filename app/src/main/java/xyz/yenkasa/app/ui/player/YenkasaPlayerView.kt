@@ -101,15 +101,15 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val walletBalanceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
-            val nextBalance = intent.getIntExtra(
-                WalletBalanceManager.EXTRA_BALANCE,
-                TokenManager.getCoins(this@YenkasaPlayerView.context)
+            val nextBalance = intent.getDoubleExtra(
+                WalletBalanceManager.EXTRA_BALANCE_DOUBLE,
+                TokenManager.getCoinsPrecise(this@YenkasaPlayerView.context)
             )
-            val rewardAmount = intent.getIntExtra(WalletBalanceManager.EXTRA_REWARD_AMOUNT, 0)
-            if (rewardAmount > 0 && isShown) {
-                walletPill.showRewardGain(nextBalance.toDouble(), rewardAmount)
+            val rewardAmount = intent.getDoubleExtra(WalletBalanceManager.EXTRA_REWARD_AMOUNT_DOUBLE, 0.0)
+            if (rewardAmount > 0.0 && isShown) {
+                walletPill.showRewardGain(nextBalance, rewardAmount)
             } else {
-                walletPill.setBalance(nextBalance.toDouble())
+                walletPill.setBalance(nextBalance)
             }
         }
     }

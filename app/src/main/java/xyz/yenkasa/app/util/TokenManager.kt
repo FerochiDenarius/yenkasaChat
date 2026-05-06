@@ -546,13 +546,29 @@ object TokenManager {
 
     // === Coins Balance ===
     private const val COINS_KEY = "coins_balance"
+    private const val COINS_PRECISE_KEY = "coins_balance_precise"
 
     fun saveCoins(context: Context, coins: Int) {
         try {
-            getEncryptedPrefs(context).edit().putInt(COINS_KEY, coins).apply()
+            getEncryptedPrefs(context).edit()
+                .putInt(COINS_KEY, coins)
+                .putFloat(COINS_PRECISE_KEY, coins.toFloat())
+                .apply()
             Log.i(TAG, "Coins balance saved: $coins")
         } catch (e: Exception) {
             Log.e(TAG, "Error saving coins balance", e)
+        }
+    }
+
+    fun saveCoinsPrecise(context: Context, coins: Double) {
+        try {
+            getEncryptedPrefs(context).edit()
+                .putInt(COINS_KEY, coins.toInt())
+                .putFloat(COINS_PRECISE_KEY, coins.toFloat())
+                .apply()
+            Log.i(TAG, "Precise coins balance saved: $coins")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving precise coins balance", e)
         }
     }
 
@@ -562,6 +578,20 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting coins balance", e)
             0
+        }
+    }
+
+    fun getCoinsPrecise(context: Context): Double {
+        return try {
+            val prefs = getEncryptedPrefs(context)
+            if (prefs.contains(COINS_PRECISE_KEY)) {
+                prefs.getFloat(COINS_PRECISE_KEY, 0f).toDouble()
+            } else {
+                prefs.getInt(COINS_KEY, 0).toDouble()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting precise coins balance", e)
+            0.0
         }
     }
 

@@ -142,6 +142,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         selectedCommunityIds: Set<String>,
         saved: Boolean,
         position: Int,
+        sourcePostPosition: Int = position,
         actions: YenkasaPlayerActions,
         initialMuted: Boolean,
         onMuteChanged: (Boolean) -> Unit,
@@ -192,8 +193,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         textSave.text = formatCount(item.saveCount + if (saved) 1 else 0)
         textReward.text = if (item.rewardAmount > 0) "+${item.rewardAmount} YKC" else "Reward"
 
-        buttonLike.setOnClickListener { actions.onLike(post, position) }
-        buttonComment.setOnClickListener { actions.onComment(post, position) }
+        buttonLike.setOnClickListener { actions.onLike(post, sourcePostPosition) }
+        buttonComment.setOnClickListener { actions.onComment(post, sourcePostPosition) }
         buttonShare.setOnClickListener { actions.onShare(post) }
         buttonSave.setOnClickListener {
             saveSelected = !saveSelected

@@ -2,11 +2,17 @@ package xyz.yenkasa.app.ui.player
 
 import android.content.Context
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import xyz.yenkasa.app.R
+import xyz.yenkasa.app.adapter.AdAdapterCallbacks
+import xyz.yenkasa.app.adapter.AdMobAdViewHolder
+import xyz.yenkasa.app.adapter.YenkasaAdViewHolder
+import xyz.yenkasa.app.model.AdModel
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
@@ -17,10 +23,11 @@ import xyz.yenkasa.app.util.WalletBalanceManager
 class YenkasaPlayerFeedAdapter(
     private val context: Context,
     private val actions: YenkasaPlayerActions,
-    private val onViewCountUpdated: (String, Int) -> Unit
-) : RecyclerView.Adapter<YenkasaPlayerFeedAdapter.PlayerViewHolder>() {
+    private val onViewCountUpdated: (String, Int) -> Unit,
+    private val adAdapterCallbacks: AdAdapterCallbacks
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private val posts = mutableListOf<Post>()
+    private val items = mutableListOf<Any>()
     private var communities: List<Community> = emptyList()
     private var selectedCommunityIds: Set<String> = emptySet()
     private val savedPostIds = mutableSetOf<String>()
@@ -28,53 +35,103 @@ class YenkasaPlayerFeedAdapter(
     private var activePosition = RecyclerView.NO_POSITION
     private var muted = true
 
+    private val typePost = 0
+    private val typeYenkasaAd = 1
+    private val typeAdMobAd = 2
+
     inner class PlayerViewHolder(val playerView: YenkasaPlayerView) : RecyclerView.ViewHolder(playerView)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlayerViewHolder {
-        val view = YenkasaPlayerView(parent.context).apply {
-            layoutParams = RecyclerView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+    override fun getItemViewType(position: Int): Int {
+        return when (val item = items[position]) {
+            is Post -> typePost
+            is AdModel -> if (isAdMobItem(item)) typeAdMobAd else typeYenkasaAd
+            else -> error("Unsupported player feed item: ${item::class.java.simpleName}")
         }
-        return PlayerViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: PlayerViewHolder, position: Int) {
-        val post = posts[position]
-        val item = YenkasaPlayerItem.fromPost(post, TokenManager.getCoins(context).toDouble())
-        holder.playerView.bind(
-            post = post,
-            item = item,
-            communities = communities,
-            selectedCommunityIds = selectedCommunityIds,
-            saved = savedPostIds.contains(post._id),
-            position = position,
-            actions = actions,
-            initialMuted = muted,
-            onMuteChanged = { muted = it },
-            onPlaybackCheckpoint = { seconds ->
-                sendRewardView(post, seconds)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return when (viewType) {
+            typePost -> {
+                val view = YenkasaPlayerView(parent.context).apply {
+                    layoutParams = RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+                PlayerViewHolder(view)
             }
-        )
-        holder.playerView.setActive(position == activePosition)
+            typeAdMobAd -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_admob_native, parent, false)
+                    .apply { layoutParams = fullscreenLayoutParams() }
+                AdMobAdViewHolder(view)
+            }
+            typeYenkasaAd -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_ad_post, parent, false)
+                    .apply { layoutParams = fullscreenLayoutParams() }
+                YenkasaAdViewHolder(view)
+            }
+            else -> error("Unknown player feed view type: $viewType")
+        }
     }
 
-    override fun getItemCount(): Int = posts.size
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (val feedItem = items[position]) {
+            is Post -> {
+                val item = YenkasaPlayerItem.fromPost(feedItem, TokenManager.getCoins(context).toDouble())
+                val sourcePostPosition = computePostIndex(position)
+                (holder as PlayerViewHolder).playerView.bind(
+                    post = feedItem,
+                    item = item,
+                    communities = communities,
+                    selectedCommunityIds = selectedCommunityIds,
+                    saved = savedPostIds.contains(feedItem._id),
+                    position = position,
+                    sourcePostPosition = sourcePostPosition,
+                    actions = actions,
+                    initialMuted = muted,
+                    onMuteChanged = { muted = it },
+                    onPlaybackCheckpoint = { seconds ->
+                        sendRewardView(feedItem, seconds)
+                    }
+                )
+                holder.playerView.setActive(position == activePosition)
+            }
+            is AdModel -> {
+                Log.d("YenkasaPlayerAds", "Binding ${feedItem.adType} ad at player index=$position id=${feedItem._id}")
+                when (holder) {
+                    is AdMobAdViewHolder -> adAdapterCallbacks.bindAdMob(holder, feedItem)
+                    is YenkasaAdViewHolder -> adAdapterCallbacks.bindYenkasa(holder, feedItem)
+                    else -> error("Unsupported ad holder ${holder::class.java.simpleName}")
+                }
+            }
+        }
+    }
 
-    override fun onViewDetachedFromWindow(holder: PlayerViewHolder) {
+    override fun getItemCount(): Int = items.size
+
+    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
         super.onViewDetachedFromWindow(holder)
-        holder.playerView.release()
+        (holder as? PlayerViewHolder)?.playerView?.release()
     }
 
-    override fun onViewRecycled(holder: PlayerViewHolder) {
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
-        holder.playerView.release()
+        (holder as? PlayerViewHolder)?.playerView?.release()
     }
 
     fun submitPosts(newPosts: List<Post>) {
-        posts.clear()
-        posts.addAll(newPosts)
+        submitItems(newPosts)
+    }
+
+    fun submitItems(newItems: List<Any>) {
+        Log.d(
+            "YenkasaPlayerAds",
+            "submitItems total=${newItems.size} posts=${newItems.count { it is Post }} ads=${newItems.count { it is AdModel }}"
+        )
+        items.clear()
+        items.addAll(newItems)
         notifyDataSetChanged()
     }
 
@@ -93,12 +150,12 @@ class YenkasaPlayerFeedAdapter(
     }
 
     fun setActivePosition(recyclerView: RecyclerView, position: Int) {
-        if (position !in posts.indices) return
+        if (position !in items.indices) return
         if (activePosition == position) {
             (recyclerView.findViewHolderForAdapterPosition(position) as? PlayerViewHolder)
                 ?.playerView
                 ?.setActive(true)
-            posts.getOrNull(position)?.let { post -> recordVisibleView(post) }
+            (items.getOrNull(position) as? Post)?.let { post -> recordVisibleView(post) }
             return
         }
 
@@ -113,7 +170,7 @@ class YenkasaPlayerFeedAdapter(
             ?.playerView
             ?.setActive(true)
 
-        posts.getOrNull(position)?.let { post ->
+        (items.getOrNull(position) as? Post)?.let { post ->
             recordVisibleView(post)
         }
     }
@@ -182,5 +239,26 @@ class YenkasaPlayerFeedAdapter(
                 Log.e("YenkasaPlayerFeed", "Failed to record view: ${error.message}")
             }
         }
+    }
+
+    private fun fullscreenLayoutParams(): RecyclerView.LayoutParams {
+        return RecyclerView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+    }
+
+    private fun isAdMobItem(ad: AdModel): Boolean {
+        return ad.adType.equals("google", ignoreCase = true) ||
+            ad.sponsorName.equals("AdMob", ignoreCase = true) ||
+            ad._id.startsWith("local-ad")
+    }
+
+    private fun computePostIndex(adapterPosition: Int): Int {
+        var postIndex = 0
+        for (i in 0 until adapterPosition) {
+            if (items[i] is Post) postIndex++
+        }
+        return postIndex
     }
 }

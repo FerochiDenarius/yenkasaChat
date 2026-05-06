@@ -80,14 +80,23 @@
   top: calc(max(10px, env(safe-area-inset-top)) + 48px);
   left: 50%;
   z-index: 60;
-  width: calc(var(--player-width) - 28px);
+  width: min(132px, calc(var(--player-width) - 28px));
   transform: translateX(-50%);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 5px;
   background: rgba(10, 11, 10, 0.5);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(18px);
+  transition:
+    width 180ms ease,
+    padding 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.player-community-strip.is-expanded {
+  width: calc(var(--player-width) - 28px);
 }
 
 .player-community-strip__header {
@@ -113,11 +122,27 @@
   font-size: 10px;
 }
 
+.player-community-strip.is-compact .player-community-strip__header {
+  gap: 6px;
+}
+
+.player-community-strip.is-compact .player-community-strip__header strong {
+  max-width: 58px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-community-strip.is-compact .player-community-strip__header button {
+  font-size: 9px;
+}
+
 .player-community-strip__list {
   display: flex;
   gap: 5px;
   overflow-x: auto;
   scrollbar-width: none;
+  touch-action: pan-x;
 }
 
 .player-community-strip__list::-webkit-scrollbar {
@@ -126,8 +151,9 @@
 
 .player-community-card {
   position: relative;
-  flex: 0 0 44px;
-  height: 46px;
+  display: block;
+  flex: 0 0 42px;
+  height: 44px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
@@ -168,8 +194,8 @@
 }
 
 .player-community-card strong {
-  bottom: 14px;
-  font-size: 8px;
+  bottom: 13px;
+  font-size: 7.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,7 +207,7 @@
   align-items: center;
   gap: 4px;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 7px;
+  font-size: 6.5px;
 }
 
 .player-community-card small i {
@@ -212,9 +238,66 @@
   font-weight: 900;
 }
 
+.player-community-stack {
+  position: relative;
+  display: block;
+  width: 68px;
+  height: 46px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.player-community-stack .player-community-card {
+  width: 46px;
+  height: 46px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
+}
+
+.player-community-preview {
+  position: absolute;
+  top: 5px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, #092817, #0ed263);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  opacity: 0.78;
+}
+
+.player-community-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-community-preview--1 {
+  left: 14px;
+  transform: scale(0.92);
+}
+
+.player-community-preview--2 {
+  left: 26px;
+  transform: scale(0.84);
+  opacity: 0.58;
+}
+
+.player-community-preview--3 {
+  left: 38px;
+  transform: scale(0.76);
+  opacity: 0.44;
+}
+
 .player-tabs {
   position: fixed;
-  top: calc(max(10px, env(safe-area-inset-top)) + 106px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 104px);
   left: 50%;
   z-index: 58;
   width: calc(var(--player-width) - 28px);
@@ -732,18 +815,22 @@
 
 @media (max-width: 420px) {
   .player-community-strip {
-    width: calc(100vw - 20px);
+    width: 132px;
     padding: 5px;
   }
 
+  .player-community-strip.is-expanded {
+    width: calc(100vw - 20px);
+  }
+
   .player-tabs {
-    top: calc(max(10px, env(safe-area-inset-top)) + 106px);
+    top: calc(max(10px, env(safe-area-inset-top)) + 104px);
     width: calc(100vw - 20px);
   }
 
   .player-community-card {
-    flex-basis: 44px;
-    height: 46px;
+    flex-basis: 42px;
+    height: 44px;
   }
 
   .player-actions {

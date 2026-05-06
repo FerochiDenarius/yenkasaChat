@@ -2,24 +2,33 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import AdCard from "../AdCard";
 import EmptyState from "../EmptyState";
-import GoogleFeedAd from "./GoogleFeedAd";
 import PostCard from "./PostCard";
+import YenkasaFeedAd from "./YenkasaFeedAd";
 
-const FEED_AD_INTERVAL = 5;
+const FEED_AD_INTERVAL = 4;
+const PAGE_SIZE = 20;
 
 export default function PostList({ activeTab, activeSort, selectedCommunity }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    setLoadingMore(false);
     setError("");
+    setPage(1);
+    setHasMore(true);
 
-    loadFeed(selectedCommunity?._id || selectedCommunity?.id)
+    loadFeed(selectedCommunity?._id || selectedCommunity?.id, 1)
       .then((feedItems) => {
-        if (mounted) setItems(feedItems);
+        if (!mounted) return;
+        setItems(feedItems);
+        setHasMore(countPosts(feedItems) >= PAGE_SIZE);
       })
       .catch(() => {
         if (mounted) {
@@ -35,6 +44,34 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
       mounted = false;
     };
   }, [selectedCommunity]);
+
+  useEffect(() => {
+    function handleScroll() {
+      if (loading || loadingMore || !hasMore) return;
+      const remaining = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+      if (remaining > window.innerHeight * 2) return;
+      appendNextPage();
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasMore, loading, loadingMore, page, selectedCommunity]);
+
+  async function appendNextPage() {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    console.debug("[YenkasaAdsWeb] normal feed page append", { nextPage });
+    try {
+      const nextItems = await loadFeed(selectedCommunity?._id || selectedCommunity?.id, nextPage);
+      setItems((current) => mergeUniqueFeedItems(current, nextItems));
+      setPage(nextPage);
+      setHasMore(countPosts(nextItems) >= PAGE_SIZE);
+    } catch (loadError) {
+      console.warn("[YenkasaAdsWeb] normal feed page append failed", loadError);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const filteredItems = useMemo(() => {
     const normalized = items.filter(Boolean);
@@ -58,31 +95,33 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
     }
 
     const combined = [];
-    let adIndex = 0;
-    let googleAdIndex = 0;
     filteredPosts.forEach((item, index) => {
       combined.push(item);
       if ((index + 1) % FEED_AD_INTERVAL === 0) {
-        const useSponsoredAd = adsOnly.length && googleAdIndex % 2 === 0;
+        const adNumber = Math.floor((index + 1) / FEED_AD_INTERVAL);
+        const useSponsoredAd = adsOnly.length && adNumber % 2 === 0;
         if (useSponsoredAd) {
-          const adItem = adsOnly[adIndex % adsOnly.length];
+          const adItem = adsOnly[(adNumber - 1) % adsOnly.length];
           combined.push({
             ...adItem,
             key: `${adItem.key || adItem.ad?._id || "ad"}-${index + 1}`
           });
-          adIndex += 1;
         } else {
+          const slotKey = `${activeTab}-${activeSort}-${selectedCommunity?._id || selectedCommunity?.id || "all"}-${index + 1}`;
+          console.debug("[YenkasaAdsWeb] normal feed ad inserted", {
+            organicIndex: index + 1,
+            slotKey,
+          });
           combined.push({
-            key: `google-feed-ad-${index + 1}`,
-            type: "google-ad",
-            slotKey: `${activeTab}-${activeSort}-${selectedCommunity?._id || selectedCommunity?.id || "all"}-${index + 1}`
+            key: `yenkasa-feed-ad-${slotKey}`,
+            type: "yenkasa-feed-ad",
+            slotKey,
           });
         }
-        googleAdIndex += 1;
       }
     });
     return combined;
-  }, [activeSort, activeTab, items]);
+  }, [activeSort, activeTab, items, selectedCommunity]);
 
   function handleUpdate(postId, patch) {
     setItems((prev) =>
@@ -122,8 +161,8 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
       {filteredItems.map((item, index) =>
         item.type === "ad" ? (
           <AdCard key={item.key || `ad-${index}`} ad={item.ad} compact />
-        ) : item.type === "google-ad" ? (
-          <GoogleFeedAd key={item.key || `google-ad-${index}`} slotKey={item.slotKey || item.key} />
+        ) : item.type === "yenkasa-feed-ad" ? (
+          <YenkasaFeedAd key={item.key || `yenkasa-ad-${index}`} slotKey={item.slotKey || item.key} />
         ) : (
           <PostCard
             key={item.key || item.post?._id || `post-${index}`}
@@ -132,15 +171,17 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
           />
         )
       )}
+      {loadingMore ? <div className="feed-status-card">Loading more posts...</div> : null}
     </section>
   );
 }
 
-async function loadFeed(communityId) {
+async function loadFeed(communityId, page = 1) {
+  const params = { page, limit: PAGE_SIZE };
   const feedRequest = communityId
-    ? await api.get(`/posts/community/${communityId}`)
-    : await api.get("/feed");
-  const sponsoredRequest = api.get("/ads/feed").catch(() => null);
+    ? await api.get(`/posts/community/${communityId}`, { params })
+    : await api.get("/feed", { params });
+  const sponsoredRequest = page === 1 ? api.get("/ads/feed").catch(() => null) : Promise.resolve(null);
   const sponsoredResponse = await sponsoredRequest;
   const feedItems = normalizeFeedData(feedRequest.data);
   const feedAdIds = new Set(feedItems.filter((item) => item.type === "ad").map((item) => item.ad?._id));
@@ -149,6 +190,43 @@ async function loadFeed(communityId) {
   );
 
   return [...feedItems, ...sponsoredAds];
+}
+
+function countPosts(feedItems) {
+  return feedItems.filter((item) => item?.type === "post").length;
+}
+
+function mergeUniqueFeedItems(current, incoming) {
+  const seenPostIds = new Set(
+    current
+      .filter((item) => item?.type === "post")
+      .map((item) => item.post?._id)
+      .filter(Boolean)
+  );
+  const seenAdIds = new Set(
+    current
+      .filter((item) => item?.type === "ad")
+      .map((item) => item.ad?._id)
+      .filter(Boolean)
+  );
+
+  const next = incoming.filter((item) => {
+    if (item?.type === "post") {
+      const id = item.post?._id;
+      if (!id || seenPostIds.has(id)) return false;
+      seenPostIds.add(id);
+      return true;
+    }
+    if (item?.type === "ad") {
+      const id = item.ad?._id;
+      if (!id || seenAdIds.has(id)) return false;
+      seenAdIds.add(id);
+      return true;
+    }
+    return false;
+  });
+
+  return [...current, ...next];
 }
 
 function normalizeFeedData(data) {

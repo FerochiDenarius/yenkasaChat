@@ -14,6 +14,7 @@ import {
   setPrivacyLevel,
 } from "../api/privacy";
 import { getStoredUser } from "../utils/storage";
+import { canAccessAdminFeatures } from "../utils/roles";
 import "../styles/settings.css";
 
 const SOUND_OPTIONS = [
@@ -32,13 +33,6 @@ const PRIVACY_OPTIONS = [
   { value: "nobody", label: "No one can message you" },
 ];
 
-const REVIEWER_ROLES = new Set([
-  "moderator",
-  "admin",
-  "junior_developer",
-  "senior_developer",
-]);
-
 export default function Settings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -55,8 +49,7 @@ export default function Settings() {
   });
   const [busyKey, setBusyKey] = useState("");
 
-  const currentRole = useMemo(() => normalizeRole(getStoredUser()), []);
-  const canReview = REVIEWER_ROLES.has(currentRole);
+  const canAccessAdmin = useMemo(() => canAccessAdminFeatures(getStoredUser()), []);
 
   useEffect(() => {
     let active = true;
@@ -270,7 +263,7 @@ export default function Settings() {
               />
             </section>
 
-            {canReview ? (
+            {canAccessAdmin ? (
               <section className="settings-card">
                 <h2>Moderation</h2>
                 <SettingsLinkRow
@@ -399,9 +392,4 @@ function soundLabel(soundId) {
 
 function loadSoundPreference() {
   return window.localStorage.getItem("yenkasa_notification_sound") || "sound_default";
-}
-
-function normalizeRole(user) {
-  const raw = user?.roleName || user?.role?.role || user?.role || "";
-  return String(raw).trim().toLowerCase();
 }

@@ -64,6 +64,7 @@ import java.util.concurrent.TimeUnit
 class FeedFragment : Fragment() {
     companion object {
         const val USE_YENKASA_PLAYER_VIEW = true
+        private const val FEED_AD_INTERVAL = 4
     }
 
     private lateinit var recyclerView: RecyclerView
@@ -482,9 +483,13 @@ class FeedFragment : Fragment() {
             mixed.add(post)
             counter++
 
-            if (counter % 5 == 0) {
-                val adIndex = (counter / 5) - 1
+            if (counter % FEED_AD_INTERVAL == 0) {
+                val adIndex = (counter / FEED_AD_INTERVAL) - 1
                 val ad = sponsoredAds.getOrNull(adIndex % sponsoredAds.size.coerceAtLeast(1))
+                Log.d(
+                    "YenkasaAds",
+                    "insert ad after organicCount=$counter mixedIndex=${mixed.size} source=${ad?.sponsorName ?: "AdMob fallback"}"
+                )
                 mixed.add(
                     ad ?: AdModel(
                         _id = "local-ad-${counter}",
@@ -502,6 +507,7 @@ class FeedFragment : Fragment() {
             }
         }
 
+        Log.d("YenkasaAds", "buildMixedFeed posts=${posts.size} items=${mixed.size} ads=${mixed.count { it is AdModel }}")
         return mixed
     }
 
@@ -516,13 +522,20 @@ class FeedFragment : Fragment() {
                     val ads = response.body()?.ads.orEmpty()
                     sponsoredAds = if (response.isSuccessful) ads else emptyList()
                     if (::feedAdapter.isInitialized && posts.isNotEmpty()) {
-                        feedAdapter.updateItems(buildMixedFeed(posts))
+                        val mixedFeed = buildMixedFeed(posts)
+                        feedAdapter.updateItems(mixedFeed)
+                        if (USE_YENKASA_PLAYER_VIEW) {
+                            playerCoordinator?.submitItems(mixedFeed)
+                        }
                     }
                 }
 
                 override fun onFailure(call: Call<AdsFeedResponse>, t: Throwable) {
                     Log.w("FeedFragment", "Sponsored ads unavailable, using AdMob fallback: ${t.message}")
                     sponsoredAds = emptyList()
+                    if (USE_YENKASA_PLAYER_VIEW && posts.isNotEmpty()) {
+                        playerCoordinator?.submitItems(buildMixedFeed(posts))
+                    }
                 }
             })
     }
@@ -655,9 +668,6 @@ class FeedFragment : Fragment() {
         val index = posts.indexOfFirst { it._id == postId }
         if (index >= 0) {
             posts[index] = posts[index].copy(viewCount = viewsCount)
-            if (USE_YENKASA_PLAYER_VIEW) {
-                playerCoordinator?.submitPosts(posts.toList())
-            }
         }
     }
 
@@ -721,7 +731,7 @@ class FeedFragment : Fragment() {
 
     private fun renderPosts() {
         if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator?.submitPosts(posts.toList())
+            playerCoordinator?.submitItems(buildMixedFeed(posts))
             playerCoordinator?.setCommunities(
                 allCommunities,
                 selectedCommunities.mapNotNull { it.id }.toSet()

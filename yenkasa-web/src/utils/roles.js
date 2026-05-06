@@ -1,9 +1,11 @@
 const reviewerRoles = new Set([
   "admin",
   "moderator",
-  "junior_developer",
   "senior_developer",
+  "senior_dev",
 ]);
+
+const adminFeatureRoles = new Set(["admin", "moderator", "senior_developer", "senior_dev"]);
 
 export function normalizeRoleValue(value) {
   if (!value) return "";
@@ -25,7 +27,12 @@ export function normalizeRoleValue(value) {
   const normalized = String(value).trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (normalized === "developer") return "senior_developer";
   if (normalized === "senior") return "senior_developer";
+  if (normalized === "senior_dev") return "senior_developer";
+  if (normalized === "senior_developer") return "senior_developer";
   if (normalized === "junior") return "junior_developer";
+  if (normalized === "admin") return "admin";
+  if (normalized === "moderator") return "moderator";
+  if (normalized === "user") return "user";
   return normalized;
 }
 
@@ -38,6 +45,10 @@ export function getUserRole(user) {
       user?.permissions?.name ||
       user?.role
   );
+}
+
+export function canAccessAdminFeatures(user) {
+  return adminFeatureRoles.has(getUserRole(user));
 }
 
 export function canReviewPosts(user) {

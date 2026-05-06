@@ -12,7 +12,8 @@ import YenkasaWebWalletPill from "./YenkasaWebWalletPill";
 import "../../styles/player-feed.css";
 
 const tabs = ["Following", "For You", "Trending", "Top", "Latest", "Popular"];
-const AD_INTERVAL = 5;
+const AD_INTERVAL = 4;
+const PAGE_SIZE = 30;
 
 export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
   const feedRef = useRef(null);
@@ -21,21 +22,32 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
   const [posts, setPosts] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [showLive, setShowLive] = useState(false);
+  const pageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const loadingMoreRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    setLoadingMore(false);
     setError("");
+    pageRef.current = 1;
+    hasMoreRef.current = true;
+    loadingMoreRef.current = false;
 
     loadPosts({
       communityId: selectedCommunity?._id || selectedCommunity?.id,
       tab: activeTab,
+      page: 1,
+      limit: PAGE_SIZE,
     })
       .then((nextPosts) => {
         if (!mounted) return;
         setPosts(nextPosts);
+        hasMoreRef.current = nextPosts.length >= PAGE_SIZE;
         setActiveIndex(0);
         feedRef.current?.scrollTo({ top: 0, behavior: "instant" });
       })
@@ -63,7 +75,12 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
     rankedPosts.forEach((post, index) => {
       items.push({ type: "post", key: post?._id || `post-${index}`, post });
       if ((index + 1) % AD_INTERVAL === 0) {
-        items.push({ type: "adsense", key: `adsense-${index + 1}` });
+        const adKey = `adsense-${index + 1}-${post?._id || index}`;
+        console.debug("[YenkasaAdsWeb] inserting AdSense item", {
+          organicIndex: index + 1,
+          adKey,
+        });
+        items.push({ type: "adsense", key: adKey });
       }
     });
     return items;
@@ -88,6 +105,44 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
     root.querySelectorAll("[data-feed-index]").forEach((node) => observer.observe(node));
     return () => observer.disconnect();
   }, [feedItems.length]);
+
+  useEffect(() => {
+    const root = feedRef.current;
+    if (!root) return undefined;
+
+    const handleScroll = () => {
+      if (!hasMoreRef.current || loadingMoreRef.current || loading) return;
+      const remaining = root.scrollHeight - root.scrollTop - root.clientHeight;
+      if (remaining > root.clientHeight * 2.5) return;
+      appendNextPage();
+    };
+
+    root.addEventListener("scroll", handleScroll, { passive: true });
+    return () => root.removeEventListener("scroll", handleScroll);
+  }, [activeTab, selectedCommunity, loading]);
+
+  async function appendNextPage() {
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const nextPage = pageRef.current + 1;
+    console.debug("[YenkasaAdsWeb] feed page append", { nextPage });
+    try {
+      const nextPosts = await loadPosts({
+        communityId: selectedCommunity?._id || selectedCommunity?.id,
+        tab: activeTab,
+        page: nextPage,
+        limit: PAGE_SIZE,
+      });
+      pageRef.current = nextPage;
+      hasMoreRef.current = nextPosts.length >= PAGE_SIZE;
+      setPosts((current) => mergeUniquePosts(current, nextPosts));
+    } catch (loadError) {
+      console.warn("[YenkasaAdsWeb] feed page append failed", loadError);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }
 
   function handleUpdate(postId, patch) {
     setPosts((current) =>
@@ -155,6 +210,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
               </div>
             ))
           : null}
+        {loadingMore ? <PlayerState title="Loading more..." /> : null}
       </section>
 
       <YenkasaLiveSheet
@@ -180,13 +236,26 @@ function PlayerState({ title, subtitle }) {
   );
 }
 
-async function loadPosts({ communityId, tab }) {
+async function loadPosts({ communityId, tab, page = 1, limit = PAGE_SIZE }) {
   const feedType = tabToFeedType(tab);
-  const params = { page: 1, limit: 30, feedType };
+  const params = { page, limit, feedType };
   const response = communityId
     ? await api.get(`/posts/community/${communityId}`, { params })
     : await api.get("/feed", { params });
   return normalizePosts(response.data);
+}
+
+function mergeUniquePosts(current, incoming) {
+  const seen = new Set(current.map((post) => post?._id).filter(Boolean));
+  return [
+    ...current,
+    ...incoming.filter((post) => {
+      const id = post?._id;
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }),
+  ];
 }
 
 function tabToFeedType(tab) {

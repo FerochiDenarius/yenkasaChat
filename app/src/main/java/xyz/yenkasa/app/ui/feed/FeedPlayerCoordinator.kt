@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import xyz.yenkasa.app.adapter.AdBinder
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.CoinWalletActivity
@@ -42,7 +43,8 @@ class FeedPlayerCoordinator(
     private val playerAdapter = YenkasaPlayerFeedAdapter(
         fragment.requireContext(),
         createPlayerActions(),
-        onViewCountUpdated
+        onViewCountUpdated,
+        AdBinder(fragment.requireContext())
     )
 
     fun setup() {
@@ -72,6 +74,10 @@ class FeedPlayerCoordinator(
 
     fun submitPosts(posts: List<Post>) {
         playerAdapter.submitPosts(posts)
+    }
+
+    fun submitItems(items: List<Any>) {
+        playerAdapter.submitItems(items)
     }
 
     fun pauseActive() {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserProfile } from "../../api/profile";
 import { handleStaticImageError, staticImage } from "../../utils/images";
-import { canReviewPosts } from "../../utils/roles";
+import { canAccessAdminFeatures } from "../../utils/roles";
 import { clearAuth, getStoredUser, updateStoredUser } from "../../utils/storage";
 import "../../styles/layout.css";
 
@@ -28,8 +28,8 @@ export default function SideDrawer({ open, onClose }) {
   const navigate = useNavigate();
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const [user, setUser] = useState(storedUser);
-  const canReview = canReviewPosts(user);
-  const visibleItems = menuItems.filter((item) => !item.reviewOnly || canReview);
+  const canAccessAdmin = canAccessAdminFeatures(user);
+  const visibleItems = menuItems.filter((item) => !item.reviewOnly || canAccessAdmin);
 
   useEffect(() => {
     if (!open) return;

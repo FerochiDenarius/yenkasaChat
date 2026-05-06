@@ -70,10 +70,11 @@ class MenuActivity : AppCompatActivity() {
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
         val walletBalanceChip = findViewById<LinearLayout>(R.id.walletBalanceChip)
         textMenuWalletBalance = findViewById(R.id.textMenuWalletBalance)
-        val canReview = UserPermissions.canApprove(resolveCurrentRole())
+        val canAccessAdmin = UserPermissions.canAccessAdminFeatures(resolveCurrentRole())
 
-        btnAdsApproval.visibility = if (canReview) View.VISIBLE else View.GONE
-        btnCommunityApproval.visibility = if (canReview) View.VISIBLE else View.GONE
+        btnPostApproval.visibility = if (canAccessAdmin) View.VISIBLE else View.GONE
+        btnAdsApproval.visibility = if (canAccessAdmin) View.VISIBLE else View.GONE
+        btnCommunityApproval.visibility = if (canAccessAdmin) View.VISIBLE else View.GONE
 
         textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
         loadWalletBalance()

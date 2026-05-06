@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getUserProfile } from "../api/profile";
 import MenuItem from "../components/menu/MenuItem";
 import { handleStaticImageError, staticImage } from "../utils/images";
-import { canReviewPosts } from "../utils/roles";
+import { canAccessAdminFeatures } from "../utils/roles";
 import { clearAuth, getStoredUser, updateStoredUser } from "../utils/storage";
 import "../styles/menu.css";
 
@@ -12,7 +12,7 @@ export default function Menu() {
   const storedUser = useMemo(() => getStoredUser() || {}, []);
   const [user, setUser] = useState(storedUser);
 
-  const canReview = canReviewPosts(user);
+  const canAccessAdmin = canAccessAdminFeatures(user);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +65,7 @@ export default function Menu() {
           <MenuItem icon="◌" title="My Ads" subtitle="Track your ad submissions" to="/ads" />
           <MenuItem icon="◔" title="Notifications" subtitle="See your alerts" to="/notifications" />
           <MenuItem icon="⚙" title="Settings" subtitle="Privacy & preferences" to="/settings" />
-          {canReview ? (
+          {canAccessAdmin ? (
             <>
               <div className="menu-card__divider" />
               <MenuItem icon="✓" title="Post Approvals" subtitle="Review pending posts" to="/post-approvals" />

@@ -112,6 +112,13 @@ const userSchema = new Schema({
     default: null,
   },
 
+  accessRole: {
+    type: String,
+    enum: ['USER', 'MODERATOR', 'SENIOR_DEV', 'ADMIN'],
+    default: 'USER',
+    index: true
+  },
+
   roleName: {
     type: String,
     default: 'unverified'

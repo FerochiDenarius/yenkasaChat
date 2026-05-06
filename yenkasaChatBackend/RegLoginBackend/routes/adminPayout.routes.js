@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const authorizeRoles = require('../middleware/authorizeRoles');
 const { isYkcLive } = require('../services/ykcEconomy.service');
 const {
   upsertDailyAdMetrics,
@@ -8,16 +9,11 @@ const {
   calculateAndStoreYkcPayouts
 } = require('../services/adRevenue.service');
 
-function isAdmin(user) {
-  return ['admin', 'senior_developer'].includes((user?.roleName || '').toString().toLowerCase());
-}
+router.use(auth);
+router.use(authorizeRoles('ADMIN', 'SENIOR_DEV', 'MODERATOR'));
 
-router.post('/ad-metrics', auth, async (req, res) => {
+router.post('/ad-metrics', async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     const metric = await upsertDailyAdMetrics(req.body);
     return res.json({ success: true, metric });
   } catch (err) {
@@ -29,12 +25,8 @@ router.post('/ad-metrics', auth, async (req, res) => {
   }
 });
 
-router.get('/ad-metrics/summary', auth, async (req, res) => {
+router.get('/ad-metrics/summary', async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     const summary = await aggregateMonthlyAdRevenue(req.query.month);
     return res.json({ success: true, summary });
   } catch (err) {
@@ -46,12 +38,8 @@ router.get('/ad-metrics/summary', auth, async (req, res) => {
   }
 });
 
-router.post('/run-payout', auth, async (req, res) => {
+router.post('/run-payout', async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     if (!isYkcLive()) {
       return res.status(423).json({ success: false, error: 'YKC payouts are disabled before go-live' });
     }

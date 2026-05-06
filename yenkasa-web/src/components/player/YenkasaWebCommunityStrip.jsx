@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import { handleDynamicImageError, staticImage } from "../../utils/images";
 
@@ -10,8 +10,9 @@ const fallbackCommunities = [
   { _id: "tv", name: "Yenkasa TV", memberCount: 15600, icon: staticImage("logo.png") },
 ];
 
-export default function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
+function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   const [communities, setCommunities] = useState([]);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -31,54 +32,105 @@ export default function YenkasaWebCommunityStrip({ selectedCommunityId, onSelect
   }, []);
 
   const items = useMemo(() => (communities.length ? communities : fallbackCommunities), [communities]);
+  const communityItems = useMemo(
+    () => [
+      { _id: null, id: null, name: "All", memberCount: 0, isAll: true },
+      ...items.slice(0, 8),
+    ],
+    [items]
+  );
+  const selectedItem =
+    communityItems.find((community) => String(community._id || community.id || "") === String(selectedCommunityId || "")) ||
+    communityItems[0];
+  const previewItems = communityItems
+    .filter((community) => (community._id || community.id || "all") !== (selectedItem?._id || selectedItem?.id || "all"))
+    .slice(0, 3);
+
+  function selectCommunity(community) {
+    setExpanded(false);
+    onSelectCommunity?.(community?.isAll ? null : community);
+  }
 
   return (
-    <section className="player-community-strip" aria-label="Communities">
+    <section
+      className={`player-community-strip${expanded ? " is-expanded" : " is-compact"}`}
+      aria-label="Communities"
+    >
       <div className="player-community-strip__header">
         <strong>Communities</strong>
-        <button type="button" onClick={() => onSelectCommunity?.(null)}>
-          See all <span>›</span>
+        <button type="button" onClick={() => setExpanded((value) => !value)}>
+          {expanded ? "Close" : "See all"} <span>›</span>
         </button>
       </div>
-      <div className="player-community-strip__list">
-        <button
-          type="button"
-          className={`player-community-card player-community-card--all${!selectedCommunityId ? " is-selected" : ""}`}
-          onClick={() => onSelectCommunity?.(null)}
+      {expanded ? (
+        <div className="player-community-strip__list">
+          {communityItems.map((community, index) => {
+            const id = community._id || community.id || `all-${index}`;
+            const selected = community.isAll ? !selectedCommunityId : String(id) === String(selectedCommunityId || "");
+            return (
+              <CommunityCard
+                community={community}
+                key={id}
+                selected={selected}
+                onClick={() => selectCommunity(community)}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          className="player-community-stack"
+          onClick={() => setExpanded(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") setExpanded(true);
+          }}
+          aria-label="Expand communities"
         >
-          <span className="player-community-card__fallback">All</span>
-          <span className="player-community-card__shade" />
-          {!selectedCommunityId ? <span className="player-community-card__check">✓</span> : null}
-          <strong>All</strong>
-          <small><i />Live</small>
-        </button>
-        {items.slice(0, 8).map((community, index) => {
-          const id = community._id || community.id || index;
-          const name = community.displayName || community.name || "Yenkasa";
-          const image = community.coverImage || community.icon || community.image;
-          const selected = String(id) === String(selectedCommunityId || "");
-
-          return (
-            <button
-              type="button"
-              className={`player-community-card${selected ? " is-selected" : ""}`}
-              key={id}
-              onClick={() => onSelectCommunity?.(community)}
-            >
-              {image ? (
-                <img src={image} alt="" loading="lazy" onError={handleDynamicImageError} />
-              ) : (
-                <span className="player-community-card__fallback">{initials(name)}</span>
-              )}
-              <span className="player-community-card__shade" />
-              {selected ? <span className="player-community-card__check">✓</span> : null}
-              <strong>{name}</strong>
-              <small><i />{formatCompact(community.memberCount || community.membersCount || 0)}</small>
-            </button>
-          );
-        })}
-      </div>
+          {previewItems.map((community, index) => (
+            <CommunityPreview community={community} index={index} key={community._id || community.id || `preview-${index}`} />
+          ))}
+          <CommunityCard community={selectedItem} selected onClick={() => setExpanded(true)} />
+        </div>
+      )}
     </section>
+  );
+}
+
+function CommunityCard({ community, selected, onClick }) {
+  const name = community.displayName || community.name || "Yenkasa";
+  const image = community.coverImage || community.icon || community.image;
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      className={`player-community-card${community.isAll ? " player-community-card--all" : ""}${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onClick?.();
+      }}
+    >
+      {image ? (
+        <img src={image} alt="" loading="lazy" onError={handleDynamicImageError} />
+      ) : (
+        <span className="player-community-card__fallback">{community.isAll ? "All" : initials(name)}</span>
+      )}
+      <span className="player-community-card__shade" />
+      {selected ? <span className="player-community-card__check">✓</span> : null}
+      <strong>{name}</strong>
+      <small><i />{community.isAll ? "Live" : formatCompact(community.memberCount || community.membersCount || 0)}</small>
+    </span>
+  );
+}
+
+function CommunityPreview({ community, index }) {
+  const name = community.displayName || community.name || "Y";
+  const image = community.coverImage || community.icon || community.image;
+  return (
+    <span className={`player-community-preview player-community-preview--${index + 1}`} aria-hidden="true">
+      {image ? <img src={image} alt="" loading="lazy" onError={handleDynamicImageError} /> : initials(name)}
+    </span>
   );
 }
 
@@ -90,6 +142,8 @@ function initials(value = "") {
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
 }
+
+export default memo(YenkasaWebCommunityStrip);
 
 function formatCompact(value) {
   const number = Number(value || 0);

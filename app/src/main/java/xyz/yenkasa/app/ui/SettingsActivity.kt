@@ -24,6 +24,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.util.AppUrls
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -105,12 +106,7 @@ class SettingsActivity : AppCompatActivity() {
 
         val role = resolveCurrentRole()
 
-        if (role in listOf(
-                "moderator",
-                "admin",
-                "junior_developer",
-                "senior_developer"
-            )) {
+        if (UserPermissions.canAccessAdminFeatures(role)) {
 
             moderationHeader.visibility = View.VISIBLE
             itemModerationDashboard.visibility = View.VISIBLE
@@ -337,6 +333,7 @@ class SettingsActivity : AppCompatActivity() {
         if (!userJson.isNullOrBlank()) {
             runCatching {
                 val json = JSONObject(userJson)
+                json.optString("accessRole").takeIf { it.isNotBlank() }?.let { return it }
                 json.optString("roleName").takeIf { it.isNotBlank() }?.let { return it }
                 when (val roleValue = json.opt("role")) {
                     is JSONObject -> roleValue.optString("name").takeIf { it.isNotBlank() }?.let { return it }

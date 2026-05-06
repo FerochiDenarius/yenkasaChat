@@ -25,6 +25,8 @@ const normalize = (role = '') => {
 
   // Handle object reference (e.g., populated Permission doc)
   if (typeof role === 'object') {
+    if (role.accessRole) return normalize(role.accessRole);
+    if (role.roleName) return normalize(role.roleName);
     if (role.role) return String(role.role).trim().toLowerCase().replace(/\s+/g, '_');
     if (role.name) return String(role.name).trim().toLowerCase().replace(/\s+/g, '_');
     return 'unverified';
@@ -39,6 +41,8 @@ const normalize = (role = '') => {
   const normalized = String(role).trim().toLowerCase().replace(/\s+/g, '_') || 'unverified';
   if (normalized === 'user') return 'unverified';
   if (normalized === 'developer') return 'senior_developer';
+  if (normalized === 'senior_dev' || normalized === 'senior-developer') return 'senior_developer';
+  if (normalized === 'junior_dev' || normalized === 'junior-developer') return 'junior_developer';
   return normalized;
 };
 

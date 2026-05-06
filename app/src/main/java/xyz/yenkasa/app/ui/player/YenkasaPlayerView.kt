@@ -50,11 +50,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val moreOptionsButton: ImageButton
     private val controls: YenkasaPlayerControls
     private val buttonLike: ImageButton
+    private val buttonViews: ImageButton
     private val buttonComment: ImageButton
     private val buttonShare: ImageButton
     private val buttonSave: ImageButton
     private val buttonReward: ImageButton
     private val textLike: TextView
+    private val textViews: TextView
     private val textComment: TextView
     private val textShare: TextView
     private val textSave: TextView
@@ -69,6 +71,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private var isActiveItem = false
     private var currentMediaUrl: String? = null
     private var saveSelected = false
+    private var likeSelected = false
     private var muteChangedListener: (Boolean) -> Unit = {}
     private val firedCheckpoints = mutableSetOf<Int>()
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -108,11 +111,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
         sourceView = findViewById(R.id.textPlayerSource)
         moreOptionsButton = findViewById(R.id.buttonPlayerMoreOptions)
         buttonLike = findViewById(R.id.buttonPlayerLike)
+        buttonViews = findViewById(R.id.buttonPlayerViews)
         buttonComment = findViewById(R.id.buttonPlayerComment)
         buttonShare = findViewById(R.id.buttonPlayerShare)
         buttonSave = findViewById(R.id.buttonPlayerSave)
         buttonReward = findViewById(R.id.buttonPlayerReward)
         textLike = findViewById(R.id.textPlayerLikeCount)
+        textViews = findViewById(R.id.textPlayerViewCount)
         textComment = findViewById(R.id.textPlayerCommentCount)
         textShare = findViewById(R.id.textPlayerShareCount)
         textSave = findViewById(R.id.textPlayerSaveCount)
@@ -156,6 +161,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         muteChangedListener = onMuteChanged
         isMuted = initialMuted
         saveSelected = saved
+        likeSelected = post.likedByUser
         firedCheckpoints.clear()
 
         walletPill.setBalance(item.walletBalance)
@@ -187,13 +193,20 @@ class YenkasaPlayerView @JvmOverloads constructor(
             .circleCrop()
             .into(avatarView)
 
-        textLike.text = formatCount(item.likeCount)
+        updateCount(textLike, formatCount(item.likeCount))
+        updateCount(textViews, formatCount(item.viewCount))
         textComment.text = formatCount(item.commentCount)
         textShare.text = formatCount(item.shareCount)
         textSave.text = formatCount(item.saveCount + if (saved) 1 else 0)
         textReward.text = if (item.rewardAmount > 0) "+${item.rewardAmount} YKC" else "Reward"
 
-        buttonLike.setOnClickListener { actions.onLike(post, sourcePostPosition) }
+        renderLikeState()
+        buttonLike.setOnClickListener {
+            likeSelected = !likeSelected
+            renderLikeState(animate = true)
+            actions.onLike(post, sourcePostPosition)
+        }
+        buttonViews.setOnClickListener { }
         buttonComment.setOnClickListener { actions.onComment(post, sourcePostPosition) }
         buttonShare.setOnClickListener { actions.onShare(post) }
         buttonSave.setOnClickListener {
@@ -395,5 +408,29 @@ class YenkasaPlayerView @JvmOverloads constructor(
             value <= 0 -> "0"
             else -> value.toString()
         }
+    }
+
+    private fun renderLikeState(animate: Boolean = false) {
+        val accent = ContextCompat.getColor(context, R.color.wallet_accent_green)
+        val inactive = ContextCompat.getColor(context, android.R.color.white)
+        buttonLike.setImageResource(if (likeSelected) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
+        buttonLike.setColorFilter(if (likeSelected) accent else inactive)
+        textLike.setTextColor(if (likeSelected) accent else inactive)
+        if (animate) {
+            buttonLike.animate().cancel()
+            buttonLike.scaleX = 0.86f
+            buttonLike.scaleY = 0.86f
+            buttonLike.animate().scaleX(1f).scaleY(1f).setDuration(140L).start()
+        }
+    }
+
+    private fun updateCount(view: TextView, nextValue: String) {
+        if (view.text?.toString() == nextValue) return
+        view.text = nextValue
+        view.animate().cancel()
+        view.alpha = 0.72f
+        view.scaleX = 0.92f
+        view.scaleY = 0.92f
+        view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(160L).start()
     }
 }

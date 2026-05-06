@@ -345,6 +345,7 @@ safeMount('/api/leaderboard', './routes/leaderboard.routes');
 safeMount('/api/admin', './routes/adminPayout.routes');
 safeMount('/api/comments', './routes/comments.routes');
 safeMount('/api/feed', './routes/feed.routes');
+safeMount('/api/search', './routes/search.routes');
 safeMount('/api/communities', './routes/community.routes');
 safeMount('/api/roles', './routes/roles.routes');
 safeMount('/api/follow', './routes/follow.routes');

@@ -5,6 +5,10 @@ const authMiddleware = require("../middleware/auth");
 const User = require("../models/user.model");
 const { hasMinimumRole } = require("../utils/authority");
 
+function currentRole(user) {
+  return user?.accessRole || user?.roleName || user?.role;
+}
+
 async function moderationPageAuth(req, res, next) {
   const queryToken = req.query.token;
 
@@ -32,7 +36,7 @@ async function moderationPageAuth(req, res, next) {
  * URL: /moderation
  */
 router.get("/moderation", moderationPageAuth, (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "moderator")) {
     return res.status(403).send("Access denied");
@@ -87,9 +91,22 @@ async function loadItems() {
     const div = document.createElement('div');
     div.className = 'card';
 
+    const targetUser = item.targetUserId
+      ? (item.targetUserId.username || item.targetUserId.email || item.targetUserId._id)
+      : '—';
+    const reporter = item.reportedBy
+      ? (item.reportedBy.username || item.reportedBy._id)
+      : (item.email || 'Public request');
+    const postText = item.targetPostId
+      ? (item.targetPostId.text || item.targetPostId.content || item.targetPostId.caption || item.targetPostId._id)
+      : '';
+
     div.innerHTML = \`
       <b>Type:</b> \${item.type}<br/>
+      <b>Target user:</b> \${targetUser}<br/>
+      <b>Reporter / email:</b> \${reporter}<br/>
       <b>Reason:</b> \${item.reason || '—'}<br/>
+      \${postText ? '<b>Post:</b> ' + postText + '<br/>' : ''}
       <b>Reported:</b> \${new Date(item.createdAt).toLocaleString()}<br/><br/>
       <button class="ok" onclick="approve('\${item._id}')">Approve</button>
       <button class="danger" onclick="reject('\${item._id}')">Reject</button>

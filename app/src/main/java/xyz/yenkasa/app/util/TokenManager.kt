@@ -417,6 +417,8 @@ object TokenManager {
             "", "null" -> "unverified"
             "user" -> "unverified"
             "developer" -> "senior_developer"
+            "senior_dev" -> "senior_developer"
+            "junior_dev" -> "junior_developer"
             else -> normalized
         }
     }
@@ -425,6 +427,10 @@ object TokenManager {
         if (userJson.isNullOrBlank()) return null
         return runCatching {
             val json = JSONObject(userJson)
+
+            json.optString("accessRole")
+                .takeIf { it.isNotBlank() && it.lowercase() != "null" }
+                ?.let { return@runCatching normalizeRole(it) }
 
             json.optString("roleName")
                 .takeIf { it.isNotBlank() && it.lowercase() != "null" }

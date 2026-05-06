@@ -67,8 +67,8 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
                 setColor(Color.parseColor(if (selected) "#D91A7D43" else "#B8101112"))
                 setStroke(dp(if (selected) 2 else 1), Color.parseColor(if (selected) "#37E37B" else "#40FFFFFF"))
             }
-            layoutParams = LinearLayout.LayoutParams(dp(46), dp(48)).apply {
-                bottomMargin = dp(5)
+            layoutParams = LinearLayout.LayoutParams(dp(52), dp(64)).apply {
+                bottomMargin = dp(6)
             }
             isClickable = true
             isFocusable = true
@@ -104,14 +104,14 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
             )
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(24),
+                dp(30),
                 Gravity.BOTTOM
             )
         }
 
         val label = TextView(context).apply {
             text = title
-            textSize = 7.5f
+            textSize = 8.5f
             setTextColor(Color.parseColor(if (selected) "#8DFFB8" else "#FFFFFFFF"))
             maxLines = 1
             setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -122,7 +122,7 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
             ).apply {
                 leftMargin = dp(4)
                 rightMargin = dp(4)
-                bottomMargin = dp(5)
+                bottomMargin = dp(6)
             }
         }
 

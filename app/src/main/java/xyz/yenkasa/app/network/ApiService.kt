@@ -797,11 +797,23 @@ interface ApiService {
         @Body request: FlagRequest
     ): Call<GenericResponse>
 
+    @POST("moderation/report/user/{userId}")
+    fun reportUser(
+        @Path("userId") userId: String,
+        @Body request: FlagRequest
+    ): Call<ApiResponse>
+
     @GET("posts/{postId}/download")
     fun getPostMedia(
         @Path("postId") postId: String,
         @Header("Authorization") token: String
     ): Call<MediaResponse>
+
+    @GET("search")
+    fun searchYenkasa(
+        @Header("Authorization") token: String,
+        @Query("q") query: String
+    ): Call<SearchResponse>
 
 //Ads and reward
 

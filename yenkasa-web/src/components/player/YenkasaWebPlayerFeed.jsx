@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/client";
 import BottomNav from "../feed/BottomNav";
-import FloatingButton from "../feed/FloatingButton";
 import YenkasaLiveSheet from "../feed/YenkasaLiveSheet";
 import { handleStaticImageError, staticImage } from "../../utils/images";
 import YenkasaAdSenseSlot from "./YenkasaAdSenseSlot";
@@ -218,8 +217,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
         onClose={() => setShowLive(false)}
         onQuickAction={() => setShowLive(false)}
       />
-      <FloatingButton />
-      <BottomNav />
+      <BottomNav variant="player" />
     </main>
   );
 }

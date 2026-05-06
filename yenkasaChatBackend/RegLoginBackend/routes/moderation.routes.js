@@ -8,12 +8,16 @@ const User = require("../models/user.model");
 
 const { hasMinimumRole } = require("../utils/authority");
 
+function currentRole(user) {
+  return user?.accessRole || user?.roleName || user?.role;
+}
+
 /* --------------------------------------------------
  * GET ALL PENDING MODERATION ITEMS
  * Accessible by moderator+
  * -------------------------------------------------- */
 router.get("/moderation/pending", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "moderator")) {
     return res.status(403).json({ error: "Insufficient privileges" });
@@ -22,8 +26,8 @@ router.get("/moderation/pending", authMiddleware, async (req, res) => {
   const items = await ModerationItem.find({ status: "pending" })
     .sort({ createdAt: -1 })
     .populate("reportedBy", "username roleName")
-    .populate("targetUserId", "username roleName")
-    .populate("targetPostId", "text userId");
+    .populate("targetUserId", "username email roleName")
+    .populate("targetPostId", "text content caption userId mediaType imageUrl videoUrl");
 
   res.json({ success: true, items });
 });
@@ -33,7 +37,7 @@ router.get("/moderation/pending", authMiddleware, async (req, res) => {
  * Admin+
  * -------------------------------------------------- */
 router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Approval requires admin or higher" });
@@ -56,7 +60,7 @@ router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
  * Admin+
  * -------------------------------------------------- */
 router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Rejection requires admin or higher" });
@@ -78,7 +82,7 @@ router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
  * DELETE POST (GLOBAL) — Admin+
  * -------------------------------------------------- */
 router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Only admin or higher can delete posts" });
@@ -102,7 +106,7 @@ router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
  * SUSPEND USER — Junior Dev+
  * -------------------------------------------------- */
 router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "junior_developer")) {
     return res.status(403).json({ error: "Only developers can suspend users" });
@@ -127,7 +131,7 @@ router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res)
  * BLOCK USER (GLOBAL) — Junior Dev+
  * -------------------------------------------------- */
 router.post("/moderation/user/:userId/block", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = currentRole(req.user);
 
   if (!hasMinimumRole(role, "junior_developer")) {
     return res.status(403).json({ error: "Only developers can block users" });
@@ -140,6 +144,49 @@ router.post("/moderation/user/:userId/block", authMiddleware, async (req, res) =
   await user.save();
 
   res.json({ success: true, message: "User globally blocked" });
+});
+
+router.post("/moderation/report/user/:userId", authMiddleware, async (req, res) => {
+  try {
+    const targetUser = await User.findById(req.params.userId).select("_id username");
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (targetUser._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: "You cannot report yourself" });
+    }
+
+    const existing = await ModerationItem.findOne({
+      type: "user_report",
+      targetUserId: targetUser._id,
+      reportedBy: req.user.id,
+      status: "pending"
+    });
+
+    if (existing) {
+      return res.json({
+        success: true,
+        message: "This report is already pending review"
+      });
+    }
+
+    await ModerationItem.create({
+      type: "user_report",
+      targetUserId: targetUser._id,
+      reportedBy: req.user.id,
+      reason: req.body?.reason || "User reported from profile",
+      ipAddress: req.ip
+    });
+
+    return res.json({
+      success: true,
+      message: "Report received. Our moderation team will review it."
+    });
+  } catch (err) {
+    console.error("User report failed:", err);
+    return res.status(500).json({ success: false, message: "Failed to submit report" });
+  }
 });
 
 module.exports = router;

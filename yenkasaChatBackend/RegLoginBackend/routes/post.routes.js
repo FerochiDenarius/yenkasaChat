@@ -841,7 +841,7 @@ router.post("/:postId/flag", authMiddleware, async (req, res) => {
 
     // Create moderation queue item
     await ModerationItem.create({
-      type: "post_flag",
+      type: "post_report",
       targetPostId: postId,
       targetUserId: post.userId,
       reportedBy: req.user.id,

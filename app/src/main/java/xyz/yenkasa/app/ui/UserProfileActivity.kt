@@ -10,8 +10,10 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
@@ -36,6 +38,7 @@ import xyz.yenkasa.app.model.CreateChatRoomResponse
 import xyz.yenkasa.app.model.BlockUserRequest
 import xyz.yenkasa.app.model.ApiResponse
 import xyz.yenkasa.app.model.ConversationStreak
+import xyz.yenkasa.app.model.FlagRequest
 
 
 
@@ -144,10 +147,10 @@ class UserProfileActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btnUserProfileBack).setOnClickListener { finish() }
         findViewById<View>(R.id.btnUserProfileMore).setOnClickListener {
-            Toast.makeText(this, "More options", Toast.LENGTH_SHORT).show()
+            showProfileSafetyMenu(it)
         }
         btnMore.setOnClickListener {
-            Toast.makeText(this, "More options", Toast.LENGTH_SHORT).show()
+            showProfileSafetyMenu(it)
         }
 
         btnFollow.setOnClickListener { toggleFollowUser() }
@@ -494,6 +497,59 @@ class UserProfileActivity : AppCompatActivity() {
                 Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    private fun showProfileSafetyMenu(anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menu.add("Report user")
+            setOnMenuItemClickListener {
+                showReportUserDialog()
+                true
+            }
+            show()
+        }
+    }
+
+    private fun showReportUserDialog() {
+        val reasons = arrayOf(
+            "Harassment or bullying",
+            "Hate or abusive content",
+            "Spam or scam",
+            "Impersonation",
+            "Sexual or unsafe content",
+            "Other"
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle("Report user")
+            .setItems(reasons) { _, which ->
+                reportUser(reasons[which])
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun reportUser(reason: String) {
+        val targetId = userId ?: return
+        ApiClient.apiService.reportUser(targetId, FlagRequest(reason))
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    val message = response.body()?.message ?: if (response.isSuccessful) {
+                        "Report submitted"
+                    } else {
+                        "Failed to submit report"
+                    }
+                    Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(
+                        this@UserProfileActivity,
+                        "Network error: ${t.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
     }
 
     private fun openFollowList(type: String) {

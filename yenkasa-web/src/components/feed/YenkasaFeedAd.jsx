@@ -5,6 +5,7 @@ export const YENKASA_ADSENSE_FEED_SLOT = "7427783664";
 export const YENKASA_ADSENSE_LAYOUT_KEY = "-6t+ed+2i-1n-4w";
 
 const ADSENSE_SCRIPT_ID = "yenkasa-manual-adsense";
+let adsTxtChecked = false;
 
 export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
   const rootRef = useRef(null);
@@ -39,22 +40,32 @@ export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
     let cancelled = false;
 
     console.debug("[YenkasaAdsWeb] ad mounted", { slotKey, variant });
+    validateAdsTxtOnce();
     loadAdsenseScript()
       .then(() => {
         if (cancelled || pushedRef.current) return;
-        try {
-          window.adsbygoogle = window.adsbygoogle || [];
-          window.adsbygoogle.push({});
-          pushedRef.current = true;
-          console.debug("[YenkasaAdsWeb] push executed", {
-            slotKey,
-            client: YENKASA_ADSENSE_CLIENT,
-            slot: YENKASA_ADSENSE_FEED_SLOT,
+        waitForVisibleSlot(insRef.current)
+          .then((visibleInfo) => {
+            if (cancelled || pushedRef.current) return;
+            try {
+              window.adsbygoogle = window.adsbygoogle || [];
+              window.adsbygoogle.push({});
+              pushedRef.current = true;
+              console.debug("[YenkasaAdsWeb] push executed", {
+                slotKey,
+                client: YENKASA_ADSENSE_CLIENT,
+                slot: YENKASA_ADSENSE_FEED_SLOT,
+                visibleInfo,
+              });
+            } catch (error) {
+              if (!cancelled) setStatus("failed");
+              console.warn("[YenkasaAdsWeb] push failed", { slotKey, error });
+            }
+          })
+          .catch((error) => {
+            if (!cancelled) setStatus("failed");
+            console.warn("[YenkasaAdsWeb] slot not visible for push", { slotKey, error });
           });
-        } catch (error) {
-          if (!cancelled) setStatus("failed");
-          console.warn("[YenkasaAdsWeb] push failed", { slotKey, error });
-        }
       })
       .catch((error) => {
         if (!cancelled) setStatus("failed");
@@ -75,6 +86,13 @@ export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
       if (adStatus === "filled" || adStatus === "unfilled") {
         setStatus(adStatus);
         console.debug("[YenkasaAdsWeb] ad status", { slotKey, status: adStatus });
+        if (adStatus === "unfilled") {
+          console.warn("[YenkasaAdsWeb] AdSense returned unfilled. Check site approval, ads.txt, fill rate, and console policy messages.", {
+            slotKey,
+            client: YENKASA_ADSENSE_CLIENT,
+            slot: YENKASA_ADSENSE_FEED_SLOT,
+          });
+        }
       }
     };
 
@@ -101,7 +119,7 @@ export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
           ref={insRef}
           key={slotKey}
           className={`adsbygoogle ${variant === "player" ? "player-ad__slot" : "yenkasa-feed-ad__slot"}`}
-          style={{ display: "block" }}
+          style={{ display: "block", width: "100%", minHeight: variant === "player" ? 280 : 140 }}
           data-ad-format="fluid"
           data-ad-layout-key={YENKASA_ADSENSE_LAYOUT_KEY}
           data-ad-client={YENKASA_ADSENSE_CLIENT}
@@ -117,10 +135,20 @@ function loadAdsenseScript() {
 
   const existing = document.getElementById(ADSENSE_SCRIPT_ID);
   if (existing) {
+    if (existing.dataset.failed === "true") {
+      return Promise.reject(new Error("AdSense script failed to load"));
+    }
+    if (existing.dataset.loaded === "true" || window.adsbygoogle) {
+      existing.dataset.loaded = "true";
+      return Promise.resolve();
+    }
     return existing.dataset.loaded === "true"
       ? Promise.resolve()
       : new Promise((resolve, reject) => {
-          existing.addEventListener("load", resolve, { once: true });
+          existing.addEventListener("load", () => {
+            existing.dataset.loaded = "true";
+            resolve();
+          }, { once: true });
           existing.addEventListener("error", reject, { once: true });
         });
   }
@@ -138,4 +166,53 @@ function loadAdsenseScript() {
     script.onerror = reject;
     document.head.appendChild(script);
   });
+}
+
+function waitForVisibleSlot(node, attempt = 0) {
+  return new Promise((resolve, reject) => {
+    if (!node) {
+      reject(new Error("Missing AdSense slot element"));
+      return;
+    }
+
+    const rect = node.getBoundingClientRect();
+    const style = window.getComputedStyle(node);
+    const visibleInfo = {
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      display: style.display,
+      visibility: style.visibility,
+    };
+    console.debug("[YenkasaAdsWeb] ad container visible", visibleInfo);
+
+    if (rect.width > 0 && style.display !== "none" && style.visibility !== "hidden") {
+      resolve(visibleInfo);
+      return;
+    }
+
+    if (attempt >= 12) {
+      reject(new Error(`AdSense slot has no visible width: ${JSON.stringify(visibleInfo)}`));
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      waitForVisibleSlot(node, attempt + 1).then(resolve).catch(reject);
+    });
+  });
+}
+
+function validateAdsTxtOnce() {
+  if (typeof window === "undefined" || adsTxtChecked) return;
+  adsTxtChecked = true;
+
+  fetch("/ads.txt", { cache: "no-store" })
+    .then((response) => (response.ok ? response.text() : ""))
+    .then((text) => {
+      if (!text.includes("pub-5051666473627498")) {
+        console.warn("[YenkasaAdsWeb] ads.txt is missing publisher pub-5051666473627498. AdSense may show placeholders until this is fixed.");
+      }
+    })
+    .catch((error) => {
+      console.warn("[YenkasaAdsWeb] Could not verify /ads.txt", error);
+    });
 }

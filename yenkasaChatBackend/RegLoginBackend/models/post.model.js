@@ -122,6 +122,7 @@ postSchema.index({ userId: 1, createdAt: -1 });
 postSchema.index({ communityId: 1, createdAt: -1 });
 postSchema.index({ createdAt: -1 });
 postSchema.index({ likeCount: -1 });
+postSchema.index({ text: 'text', tags: 'text', communityName: 'text' });
 
 
 // Methods

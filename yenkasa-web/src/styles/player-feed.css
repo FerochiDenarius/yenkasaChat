@@ -77,17 +77,19 @@
 
 .player-community-strip {
   position: fixed;
-  top: calc(max(10px, env(safe-area-inset-top)) + 48px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+  bottom: auto;
   left: 50%;
-  z-index: 60;
-  width: min(132px, calc(var(--player-width) - 28px));
+  z-index: 55;
+  width: min(95%, calc(var(--player-width) - 20px));
   transform: translateX(-50%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
-  padding: 5px;
+  padding: 4px 6px;
   background: rgba(10, 11, 10, 0.5);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(18px);
+  margin-bottom: 8px;
   transition:
     width 180ms ease,
     padding 180ms ease,
@@ -96,7 +98,13 @@
 }
 
 .player-community-strip.is-expanded {
-  width: calc(var(--player-width) - 28px);
+  width: calc(var(--player-width) - 20px);
+  background: rgba(4, 9, 7, 0.78);
+}
+
+.player-community-strip.is-compact {
+  display: flex;
+  justify-content: center;
 }
 
 .player-community-strip__header {
@@ -104,11 +112,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .player-community-strip__header strong {
-  font-size: 10px;
+  font-size: 10.5px;
 }
 
 .player-community-strip__header button {
@@ -123,23 +131,16 @@
 }
 
 .player-community-strip.is-compact .player-community-strip__header {
-  gap: 6px;
-}
-
-.player-community-strip.is-compact .player-community-strip__header strong {
-  max-width: 58px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.player-community-strip.is-compact .player-community-strip__header button {
-  font-size: 9px;
+  clip: rect(0 0 0 0);
 }
 
 .player-community-strip__list {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
   touch-action: pan-x;
@@ -152,24 +153,28 @@
 .player-community-card {
   position: relative;
   display: block;
-  flex: 0 0 42px;
-  height: 44px;
+  flex: 0 0 118px;
+  height: 48px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  padding: 0;
+  border-radius: 12px;
+  padding: 6px 10px 6px 43px;
   color: #fff;
-  background: #101614;
+  background: rgba(12, 18, 15, 0.86);
   text-align: left;
 }
 
 .player-community-card img,
 .player-community-card__fallback {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 8px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
   object-fit: cover;
+  border-radius: 999px;
+  z-index: 2;
 }
 
 .player-community-card__fallback {
@@ -182,32 +187,36 @@
 .player-community-card__shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.76));
+  background: linear-gradient(90deg, rgba(34, 212, 102, 0.08), transparent 70%);
+  z-index: 1;
 }
 
 .player-community-card strong,
 .player-community-card small {
   position: absolute;
-  left: 5px;
-  right: 5px;
+  left: 43px;
+  right: 10px;
+  z-index: 3;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 .player-community-card strong {
-  bottom: 13px;
-  font-size: 7.5px;
+  top: 8px;
+  bottom: auto;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .player-community-card small {
-  bottom: 3px;
+  top: 27px;
+  bottom: auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 6.5px;
+  font-size: 9px;
 }
 
 .player-community-card small i {
@@ -225,10 +234,10 @@
 
 .player-community-card__check {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 12px;
-  height: 12px;
+  top: 6px;
+  right: 6px;
+  width: 14px;
+  height: 14px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -241,8 +250,8 @@
 .player-community-stack {
   position: relative;
   display: block;
-  width: 68px;
-  height: 46px;
+  width: 150px;
+  height: 48px;
   border: 0;
   padding: 0;
   background: transparent;
@@ -250,16 +259,16 @@
 }
 
 .player-community-stack .player-community-card {
-  width: 46px;
-  height: 46px;
+  width: 128px;
+  height: 48px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
 }
 
 .player-community-preview {
   position: absolute;
   top: 5px;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -279,27 +288,27 @@
 }
 
 .player-community-preview--1 {
-  left: 14px;
+  left: 104px;
   transform: scale(0.92);
 }
 
 .player-community-preview--2 {
-  left: 26px;
+  left: 116px;
   transform: scale(0.84);
   opacity: 0.58;
 }
 
 .player-community-preview--3 {
-  left: 38px;
+  left: 128px;
   transform: scale(0.76);
   opacity: 0.44;
 }
 
 .player-tabs {
   position: fixed;
-  top: calc(max(10px, env(safe-area-inset-top)) + 104px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 124px);
   left: 50%;
-  z-index: 58;
+  z-index: 64;
   width: calc(var(--player-width) - 28px);
   transform: translateX(-50%);
   display: flex;
@@ -759,6 +768,10 @@
 }
 
 .player-feed-page .feed-floating-button {
+  display: none;
+}
+
+.player-feed-page .feed-floating-button {
   left: 50%;
   right: auto;
   bottom: calc(22px + env(safe-area-inset-bottom));
@@ -774,13 +787,51 @@
 .player-feed-page .feed-bottom-nav {
   z-index: 72;
   width: var(--player-width);
+  height: 70px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  grid-template-columns: none;
+  padding: 8px 20px calc(10px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, rgba(4, 12, 8, 0.76), rgba(1, 3, 2, 0.92));
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(18px);
 }
 
 .player-feed-page .feed-bottom-nav__item {
+  flex: 0 0 76px;
+  min-height: 50px;
+  border-radius: 18px;
   color: rgba(255, 255, 255, 0.58);
+}
+
+.player-feed-page .feed-bottom-nav__item--create {
+  position: relative;
+  top: -10px;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  flex: 0 0 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  gap: 0;
+  background: #00c853;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 200, 83, 0.42), 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.player-feed-page .feed-bottom-nav__item--create .feed-bottom-nav__icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.player-feed-page .feed-bottom-nav__item--create span:last-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .player-feed-page .feed-bottom-nav__item--active {
@@ -815,8 +866,8 @@
 
 @media (max-width: 420px) {
   .player-community-strip {
-    width: 132px;
-    padding: 5px;
+    width: calc(100vw - 20px);
+    padding: 4px 6px;
   }
 
   .player-community-strip.is-expanded {
@@ -824,13 +875,13 @@
   }
 
   .player-tabs {
-    top: calc(max(10px, env(safe-area-inset-top)) + 104px);
+    top: calc(max(10px, env(safe-area-inset-top)) + 124px);
     width: calc(100vw - 20px);
   }
 
   .player-community-card {
-    flex-basis: 42px;
-    height: 44px;
+    flex-basis: 112px;
+    height: 48px;
   }
 
   .player-actions {

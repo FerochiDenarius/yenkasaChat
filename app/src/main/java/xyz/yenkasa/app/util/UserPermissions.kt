@@ -7,10 +7,10 @@ object UserPermissions {
         "verified",
         "rising_star",
         "legend",
-        "admin",
         "moderator",
         "junior_developer",
-        "senior_developer"
+        "senior_developer",
+        "admin"
     )
 
     private fun normalize(role: String?): String {
@@ -18,6 +18,8 @@ object UserPermissions {
         return when (normalized) {
             "user" -> "unverified"
             "developer" -> "senior_developer"
+            "senior_dev", "senior-developer" -> "senior_developer"
+            "moderator", "admin" -> normalized
             else -> normalized
         }
     }

@@ -11,10 +11,10 @@ const rankOrder = [
   'verified',
   'rising_star',
   'legend',
-  'admin',
   'moderator',
   'junior_developer',
   'senior_developer',
+  'admin',
 ];
 
 // --------------------------------------------

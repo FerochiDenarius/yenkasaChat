@@ -16,7 +16,8 @@ export function normalizeRoleValue(value) {
 
   if (typeof value === "object") {
     return normalizeRoleValue(
-      value.roleName ||
+      value.accessRole ||
+        value.roleName ||
         value.role ||
         value.name ||
         value.permissions?.name ||
@@ -38,7 +39,9 @@ export function normalizeRoleValue(value) {
 
 export function getUserRole(user) {
   return normalizeRoleValue(
-    user?.roleName ||
+    user?.accessRole ||
+      user?.roleName ||
+      user?.role?.accessRole ||
       user?.role?.role ||
       user?.role?.name ||
       user?.role?.permissions?.name ||

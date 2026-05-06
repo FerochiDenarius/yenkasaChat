@@ -13,7 +13,7 @@ import {
   getWhoBlockedYou,
   setPrivacyLevel,
 } from "../api/privacy";
-import { getStoredUser } from "../utils/storage";
+import { getStoredUser, getToken } from "../utils/storage";
 import { canAccessAdminFeatures } from "../utils/roles";
 import "../styles/settings.css";
 
@@ -153,7 +153,11 @@ export default function Settings() {
   }
 
   function openModeration() {
-    window.open("https://www.yenkasa.xyz/moderation", "_blank", "noopener,noreferrer");
+    const token = getToken();
+    const url = token
+      ? `https://www.yenkasa.xyz/moderation?token=${encodeURIComponent(token)}`
+      : "https://www.yenkasa.xyz/moderation";
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   return (

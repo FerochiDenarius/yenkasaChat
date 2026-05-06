@@ -3,22 +3,61 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const authMiddleware = require("../middleware/auth");
 const User = require("../models/user.model");
-const { hasMinimumRole } = require("../utils/authority");
+const { getRoleRank, hasMinimumRole, normalizeRole } = require("../utils/authority");
 
 function currentRole(user) {
-  return user?.accessRole || user?.roleName || user?.role;
+  const roles = [user?.accessRole, user?.roleName, user?.role]
+    .filter(Boolean)
+    .map((role) => normalizeRole(role));
+  return roles.sort((a, b) => getRoleRank(b) - getRoleRank(a))[0] || "unverified";
+}
+
+function sendTokenBootstrap(res) {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Opening moderation…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { font-family: Arial; background: #0b0f0d; color: #fff; padding: 24px; }
+    .card { max-width: 420px; margin: 12vh auto; background: #121816; border: 1px solid #244d35; border-radius: 12px; padding: 20px; }
+    a { color: #37E37B; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Opening moderation…</h2>
+    <p id="status">Checking your Yenkasa session.</p>
+  </div>
+  <script>
+    const token = window.localStorage.getItem('token');
+    const status = document.getElementById('status');
+    if (token) {
+      window.location.replace('/moderation?token=' + encodeURIComponent(token));
+    } else {
+      status.innerHTML = 'Please sign in on Yenkasa Web first, then reopen Moderation from Settings.';
+    }
+  </script>
+</body>
+</html>
+  `);
 }
 
 async function moderationPageAuth(req, res, next) {
   const queryToken = req.query.token;
 
   if (!queryToken) {
+    if (!req.header("Authorization")) {
+      return sendTokenBootstrap(res);
+    }
     return authMiddleware(req, res, next);
   }
 
   try {
     const decoded = jwt.verify(String(queryToken), process.env.ACCESS_TOKEN_SECRET);
-    const user = await User.findById(decoded.userId).select("-password");
+    const user = await User.findById(decoded.userId).select("-password").populate("role");
 
     if (!user) {
       return res.status(401).send("Access denied");

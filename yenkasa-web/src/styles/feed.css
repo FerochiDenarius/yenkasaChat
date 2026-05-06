@@ -908,7 +908,7 @@
 .feed-live-sheet__scrim {
   position: fixed;
   inset: 0;
-  z-index: 58;
+  z-index: 180;
   background: rgba(8, 18, 12, 0.42);
   backdrop-filter: blur(4px);
 }
@@ -918,7 +918,7 @@
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
-  z-index: 59;
+  z-index: 181;
   width: min(100%, 500px);
   max-height: 88vh;
   overflow-y: auto;

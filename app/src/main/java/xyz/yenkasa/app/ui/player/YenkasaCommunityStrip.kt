@@ -7,9 +7,9 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
@@ -18,19 +18,19 @@ import xyz.yenkasa.app.model.Community
 class YenkasaCommunityStrip @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
-) : HorizontalScrollView(context, attrs) {
+) : ScrollView(context, attrs) {
 
     private val container = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
     }
 
     init {
-        isHorizontalScrollBarEnabled = false
+        isVerticalScrollBarEnabled = false
         overScrollMode = OVER_SCROLL_NEVER
         addView(
             container,
-            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
         )
     }
 
@@ -63,12 +63,12 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
     ): View {
         val card = FrameLayout(context).apply {
             background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
+                cornerRadius = dp(10).toFloat()
                 setColor(Color.parseColor(if (selected) "#D91A7D43" else "#B8101112"))
                 setStroke(dp(if (selected) 2 else 1), Color.parseColor(if (selected) "#37E37B" else "#40FFFFFF"))
             }
-            layoutParams = LinearLayout.LayoutParams(dp(54), dp(56)).apply {
-                marginEnd = dp(6)
+            layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
+                bottomMargin = dp(4)
             }
             isClickable = true
             isFocusable = true
@@ -83,7 +83,7 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
             background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
+                cornerRadius = dp(10).toFloat()
                 setColor(Color.parseColor("#111111"))
             }
             clipToOutline = true
@@ -104,14 +104,14 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
             )
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(28),
+                dp(22),
                 Gravity.BOTTOM
             )
         }
 
         val label = TextView(context).apply {
             text = title
-            textSize = 9f
+            textSize = 7f
             setTextColor(Color.parseColor(if (selected) "#8DFFB8" else "#FFFFFFFF"))
             maxLines = 1
             setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -120,9 +120,9 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM
             ).apply {
-                leftMargin = dp(5)
-                rightMargin = dp(5)
-                bottomMargin = dp(5)
+                leftMargin = dp(4)
+                rightMargin = dp(4)
+                bottomMargin = dp(4)
             }
         }
 
@@ -136,9 +136,9 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
                 setColor(Color.parseColor("#20C863"))
             }
             visibility = if (selected) View.VISIBLE else View.GONE
-            layoutParams = FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.END).apply {
-                topMargin = dp(4)
-                rightMargin = dp(4)
+            layoutParams = FrameLayout.LayoutParams(dp(12), dp(12), Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(3)
+                rightMargin = dp(3)
             }
         }
 

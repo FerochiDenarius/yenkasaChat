@@ -79,10 +79,16 @@ object FeedUtils {
                     })
             }
 
+            val shareUrl = "https://www.yenkasa.xyz/web/post/${post._id}"
+            val shareText = listOfNotNull(
+                post.caption?.takeIf { it.isNotBlank() },
+                shareUrl
+            ).joinToString("\n\n").ifBlank { shareUrl }
+
             val shareIntent = Intent(Intent.ACTION_SEND)
             shareIntent.type = "text/plain"
             shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post on Yenkasa")
-            shareIntent.putExtra(Intent.EXTRA_TEXT, post.caption)
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
             context.startActivity(Intent.createChooser(shareIntent, "Share via"))
         } catch (e: Exception) {
             e.printStackTrace()

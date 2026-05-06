@@ -91,6 +91,12 @@ class FeedPostActionsController(
     }
 
     fun sharePost(post: Post) {
+        val shareUrl = "https://www.yenkasa.xyz/web/post/${post._id}"
+        val shareText = listOfNotNull(
+            post.caption?.takeIf { it.isNotBlank() },
+            shareUrl
+        ).joinToString("\n\n").ifBlank { shareUrl }
+
         tokenProvider()?.takeIf { it.isNotBlank() }?.let { authToken ->
             ApiClient.apiService.recordPostShare(post._id, "Bearer $authToken")
                 .enqueue(object : Callback<GenericResponse> {
@@ -108,7 +114,7 @@ class FeedPostActionsController(
                 Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
-                    putExtra(Intent.EXTRA_TEXT, post.caption ?: "")
+                    putExtra(Intent.EXTRA_TEXT, shareText)
                 },
                 "Share via"
             )

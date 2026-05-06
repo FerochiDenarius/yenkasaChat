@@ -157,6 +157,13 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::chatRoomAdapter.isInitialized && ::currentUserId.isInitialized && currentUserId.isNotBlank()) {
+            loadChatRooms()
+        }
+    }
+
     private fun focusUsernameInput() {
         inputUsername.requestFocus()
         val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager

@@ -15,6 +15,7 @@ function computeTarget(notification) {
         if (targetType === "wallet") return `/wallet/${targetId}`;
         if (targetType === "ad") return `/ads/mine`;
         if (targetType === "community") return `/communities/mine`;
+        if (targetType === "chat") return `/chat/${targetId}`;
     }
 
     if (type === "reward") return "/wallet";
@@ -89,12 +90,22 @@ async function sendNotification({
     push = false,
     pushTitle = null,
     pushBody = null,
-    pushData = null
+    pushData = null,
+    excludePlayerIds = []
 }) {
     try {
         if (!type || !senderId || !receiverId || !message) {
             console.error("Missing fields for sendNotification()");
             return false;
+        }
+
+        if (senderId.toString() === receiverId.toString()) {
+            console.warn("[NotificationService] Skipping self notification", {
+                type,
+                senderId: senderId.toString(),
+                receiverId: receiverId.toString()
+            });
+            return null;
         }
 
         const receiver = await User.findById(receiverId).select("playerId notificationPreferences");
@@ -129,9 +140,16 @@ async function sendNotification({
 
         if (push) {
             try {
-                if (receiver?.playerId) {
+                const excluded = new Set(
+                    (Array.isArray(excludePlayerIds) ? excludePlayerIds : [excludePlayerIds])
+                        .filter(Boolean)
+                        .map(id => String(id).trim())
+                        .filter(Boolean)
+                );
+                const receiverPlayerId = receiver?.playerId ? String(receiver.playerId).trim() : "";
+                if (receiverPlayerId && !excluded.has(receiverPlayerId)) {
                     await sendPushNotification({
-                        playerId: receiver.playerId,
+                        playerId: receiverPlayerId,
                         title: pushTitle || "Yenkasa",
                         body: pushBody || message,
                         data: {
@@ -143,6 +161,20 @@ async function sendNotification({
                             targetUrl: formatted.targetUrl,
                             ...(pushData || {})
                         }
+                    });
+                    console.log("[NotificationService] Push notification sent", {
+                        notificationId: formatted.id,
+                        type,
+                        receiverId: receiverId.toString(),
+                        playerIdSelected: true,
+                        excludedPlayerCount: excluded.size
+                    });
+                } else if (receiverPlayerId && excluded.has(receiverPlayerId)) {
+                    console.warn("[NotificationService] Push target excluded because it matches sender device", {
+                        notificationId: formatted.id,
+                        type,
+                        receiverId: receiverId.toString(),
+                        excludedPlayerCount: excluded.size
                     });
                 } else {
                     console.warn(`No OneSignal playerId found for notification receiver ${receiverId}`);

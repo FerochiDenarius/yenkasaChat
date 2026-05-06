@@ -11,7 +11,7 @@ const User = require('../models/user.model');
 const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const unreadCountService = require('../services/unreadCount.service');
-const { sendPushNotification } = require('../utils/onesignal');
+const { sendNotification } = require('../services/notification.service');
 const { canMessageUser } = require('../services/privacy.service');
 const { cloudinary } = require('../config/cloudinary');
 const { updateConversationStreak } = require('../utils/conversationStreak');
@@ -271,19 +271,14 @@ router.post('/', auth, async (req, res) => {
         console.warn('[MessagesRoute] ⚠️ Conversation streak update failed:', streakErr.message);
       });
 
-    // --- Push Notification Logic (unchanged) ---
+    // --- Shared Notification + Unread Logic ---
     if (recipientAppUserIds.length > 0) {
       for (const recipientId of recipientAppUserIds) {
         await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);
       }
 
-      const [senderPushUser, recipients] = await Promise.all([
+      const senderPushUser = await
         User.findById(senderAppUserId).select('username playerId').lean(),
-        User.find(
-        { _id: { $in: recipientAppUserIds.map(id => new mongoose.Types.ObjectId(id)) } },
-        'username playerId'
-        ).lean()
-      ]);
 
       const payloadRecipientPlayerId = firstValidPushId(
         receiverPlayerId,
@@ -297,92 +292,46 @@ router.post('/', auth, async (req, res) => {
         cleanPushId(senderPushUser?.playerId)
       ].filter(Boolean));
 
-      const candidatePlayerIds = Array.from(new Set([
-        ...recipients
-          .filter(u => cleanPushId(u.playerId))
-          .map(u => cleanPushId(u.playerId)),
-        ...(recipientAppUserIds.length === 1 && payloadRecipientPlayerId
-          ? [payloadRecipientPlayerId]
-          : [])
-      ].filter(Boolean)));
+      let notificationBody = normalizedText || 'Sent you a message';
+      if (imageUrl) notificationBody = `${senderUsername} sent an image`;
+      else if (audioUrl) notificationBody = `${senderUsername} sent an audio message`;
+      else if (videoUrl) notificationBody = `${senderUsername} sent a video`;
+      else if (fileUrl) notificationBody = `${senderUsername} sent a file`;
 
-      const validPlayerIds = candidatePlayerIds.filter(id => !senderPlayerIds.has(id));
-      const excludedSenderPlayerIdCount = candidatePlayerIds.length - validPlayerIds.length;
-
-      console.log('[MessagesRoute] Push target debug:', {
+      console.log('[MessagesRoute] Shared chat notification dispatch:', {
         roomId,
         messageId: newMessage._id.toString(),
         senderId: senderAppUserId,
-        recipientIds: recipientAppUserIds,
-        recipientDbPlayerIds: recipients.map(u => ({
-          userId: u._id.toString(),
-          hasPlayerId: Boolean(cleanPushId(u.playerId)),
-          playerId: maskPushId(u.playerId)
-        })),
-        payloadRecipientPlayerId: maskPushId(payloadRecipientPlayerId),
-        candidatePlayerIdCount: candidatePlayerIds.length,
-        chosenPlayerIdCount: validPlayerIds.length,
-        senderTokensExcluded: excludedSenderPlayerIdCount,
-        chosenPlayerIds: validPlayerIds.map(maskPushId)
+        receiverIds: recipientAppUserIds,
+        receiverCount: recipientAppUserIds.length,
+        senderPlayerIdsExcluded: Array.from(senderPlayerIds).map(maskPushId),
+        payloadRecipientPlayerId: maskPushId(payloadRecipientPlayerId)
       });
 
-      if (validPlayerIds.length > 0) {
-        let notificationTitle = `New message from ${senderUsername}`;
-        let notificationBody = text || 'Sent you a message';
-        if (imageUrl) notificationBody = `${senderUsername} sent an image`;
-        else if (audioUrl) notificationBody = `${senderUsername} sent an audio message`;
-        else if (videoUrl) notificationBody = `${senderUsername} sent a video`;
-        else if (fileUrl) notificationBody = `${senderUsername} sent a file`;
-
-        try {
-          const pushResult = await sendPushNotification({
-            targetPlayerIds: validPlayerIds,
-            title: notificationTitle,
-            body: notificationBody,
-            android_channel_id: isOneSignalDashboardChannelId(ONE_SIGNAL_ANDROID_CHANNEL_ID)
-              ? ONE_SIGNAL_ANDROID_CHANNEL_ID.trim()
-              : undefined,
-            existing_android_channel_id: isOneSignalDashboardChannelId(ONE_SIGNAL_ANDROID_CHANNEL_ID)
-              ? undefined
-              : (ONE_SIGNAL_ANDROID_CHANNEL_ID || ONE_SIGNAL_EXISTING_ANDROID_CHANNEL_ID)?.trim(),
-            data: {
-              roomId: newMessage.roomId.toString(),
-              senderId: senderAppUserId,
-              messageId: newMessage._id.toString(),
-              type: 'new_chat_message',
-              targetType: 'chat',
-              targetId: newMessage.roomId.toString(),
-              chatId: newMessage.roomId.toString(),
-            },
-          });
-          console.log('[MessagesRoute] ✅ OneSignal chat notification sent:', {
-            roomId,
-            messageId: newMessage._id.toString(),
+      for (const recipientId of recipientAppUserIds) {
+        await sendNotification({
+          type: 'new_chat_message',
+          senderId: senderAppUserId,
+          receiverId: recipientId,
+          activityId: newMessage._id.toString(),
+          targetType: 'chat',
+          targetId: newMessage.roomId.toString(),
+          targetUrl: `/chat/${newMessage.roomId.toString()}`,
+          message: notificationBody,
+          emitSocket: true,
+          push: true,
+          pushTitle: `New message from ${senderUsername}`,
+          pushBody: notificationBody,
+          pushData: {
+            roomId: newMessage.roomId.toString(),
+            chatId: newMessage.roomId.toString(),
             senderId: senderAppUserId,
-            receiverIds: recipientAppUserIds,
-            recipientCount: recipientAppUserIds.length,
-            playerIdCount: validPlayerIds.length,
-            senderTokensExcluded: excludedSenderPlayerIdCount,
-            oneSignalRecipients: pushResult?.recipients ?? null,
-            oneSignalErrors: pushResult?.errors ? JSON.stringify(pushResult.errors).slice(0, 300) : null
-          });
-        } catch (err) {
-          console.error('OneSignal chat notification error:', {
             messageId: newMessage._id.toString(),
-            senderId: senderAppUserId,
-            receiverIds: recipientAppUserIds,
-            playerIdCount: validPlayerIds.length,
-            error: err.message
-          });
-        }
-      } else {
-        console.warn('[MessagesRoute] ⚠️ No push target available for message notification:', {
-          roomId,
-          messageId: newMessage._id.toString(),
-          recipientIds: recipientAppUserIds,
-          candidatePlayerIdCount: candidatePlayerIds.length,
-          senderTokensExcluded: excludedSenderPlayerIdCount,
-          senderPayloadPlayerId: maskPushId(senderPlayerIdFromPayload)
+            type: 'new_chat_message',
+            targetType: 'chat',
+            targetId: newMessage.roomId.toString()
+          },
+          excludePlayerIds: Array.from(senderPlayerIds)
         });
       }
     }
@@ -655,9 +604,16 @@ router.post('/:roomId/mark-as-read', auth, async (req, res) => {
 
     await UnreadMessageCount.updateOne(
       { userId, roomId },
-      { $set: { count: 0 } },
+      { $set: { count: 0, lastReadTimestamp: new Date(), updatedAt: new Date() } },
       { upsert: true }
     );
+    if (global.io) {
+      global.io.to(userId.toString()).emit('chatRoomRead', {
+        roomId,
+        unreadCount: 0,
+        readAt: new Date().toISOString()
+      });
+    }
     res.status(200).json({ message: 'Room marked as read' });
   } catch (err) {
     console.error('Error marking as read:', err);

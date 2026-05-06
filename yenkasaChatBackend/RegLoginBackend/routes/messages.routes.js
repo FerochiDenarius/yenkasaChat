@@ -34,16 +34,6 @@ const chatMediaUpload = multer({
   }
 });
 
-// --- OneSignal Config ---
-const ONE_SIGNAL_ANDROID_CHANNEL_ID = process.env.ONESIGNAL_ANDROID_CHANNEL_ID;
-const ONE_SIGNAL_EXISTING_ANDROID_CHANNEL_ID =
-  process.env.ONESIGNAL_EXISTING_ANDROID_CHANNEL_ID ||
-  process.env.ONESIGNAL_ANDROID_EXISTING_CHANNEL_ID ||
-  'yenkasachat_chat_messages_v2';
-const isOneSignalDashboardChannelId = (value) =>
-  typeof value === 'string' &&
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
-
 const cleanPushId = (value) =>
   typeof value === 'string' && value.trim() ? value.trim() : null;
 
@@ -277,8 +267,9 @@ router.post('/', auth, async (req, res) => {
         await unreadCountService.incrementUnreadCount(recipientId, newMessage.roomId);
       }
 
-      const senderPushUser = await
-        User.findById(senderAppUserId).select('username playerId').lean(),
+      const senderPushUser = await User.findById(senderAppUserId)
+        .select('username playerId')
+        .lean();
 
       const payloadRecipientPlayerId = firstValidPushId(
         receiverPlayerId,

@@ -169,6 +169,14 @@ class FeedPlayerCoordinator(
                 callbacks.onMoreOptions(post)
             }
 
+            override fun onSearchQuery(query: String) {
+                Toast.makeText(
+                    fragment.requireContext(),
+                    "Search: $query",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
             override fun onNavigateTo(position: Int) {
                 if (position in 0 until playerAdapter.itemCount) {
                     recyclerView.smoothScrollToPosition(position)

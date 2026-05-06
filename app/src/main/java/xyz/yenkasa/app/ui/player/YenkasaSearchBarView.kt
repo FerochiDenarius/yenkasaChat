@@ -31,7 +31,7 @@ class YenkasaSearchBarView @JvmOverloads constructor(
         setHintTextColor(0x99FFFFFF.toInt())
         setTextColor(ContextCompat.getColor(context, android.R.color.white))
         textSize = 13f
-        singleLine = true
+        setSingleLine(true)
         alpha = 0f
         layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT).apply {
             marginStart = dp(8)

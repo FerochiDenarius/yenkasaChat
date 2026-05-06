@@ -8,7 +8,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
@@ -25,6 +27,7 @@ import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.UserBadgeUtils
+import kotlin.math.abs
 
 class YenkasaPlayerView @JvmOverloads constructor(
     context: Context,
@@ -32,6 +35,10 @@ class YenkasaPlayerView @JvmOverloads constructor(
 ) : androidx.constraintlayout.widget.ConstraintLayout(context, attrs) {
 
     private val logoView: ImageView
+    private val topBar: View
+    private val searchBar: View
+    private val communitiesPanel: View
+    private val engagementRail: View
     private val menuButton: ImageButton
     private val seeAllButton: TextView
     private val communityStrip: YenkasaCommunityStrip
@@ -49,6 +56,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val sourceView: TextView
     private val moreOptionsButton: ImageButton
     private val controls: YenkasaPlayerControls
+    private val controlsView: View
+    private val bottomMetaView: View
     private val buttonLike: ImageButton
     private val buttonViews: ImageButton
     private val buttonComment: ImageButton
@@ -72,6 +81,11 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private var currentMediaUrl: String? = null
     private var saveSelected = false
     private var likeSelected = false
+    private var overlaysVisible = true
+    private var imageIndex = 0
+    private var touchDownX = 0f
+    private var touchDownY = 0f
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private var muteChangedListener: (Boolean) -> Unit = {}
     private val firedCheckpoints = mutableSetOf<Int>()
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -93,6 +107,10 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
     init {
         LayoutInflater.from(context).inflate(R.layout.view_yenkasa_player, this, true)
+        topBar = findViewById(R.id.layoutPlayerTopBar)
+        searchBar = findViewById(R.id.playerSearchBar)
+        communitiesPanel = findViewById(R.id.layoutPlayerCommunitiesPanel)
+        engagementRail = findViewById(R.id.layoutPlayerEngagement)
         logoView = findViewById(R.id.imagePlayerLogo)
         menuButton = findViewById(R.id.buttonPlayerMenu)
         seeAllButton = findViewById(R.id.buttonPlayerSeeAllCommunities)
@@ -122,6 +140,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         textShare = findViewById(R.id.textPlayerShareCount)
         textSave = findViewById(R.id.textPlayerSaveCount)
         textReward = findViewById(R.id.textPlayerRewardCount)
+        bottomMetaView = findViewById(R.id.layoutPlayerBottomMeta)
+        controlsView = findViewById(R.id.layoutPlayerControls)
         controls = YenkasaPlayerControls(this)
 
         logoView.setImageResource(R.drawable.ic_yenkasa_logo)
@@ -138,6 +158,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
                 }
             }
         )
+        imageView.setOnTouchListener { _, event -> handleImageTouch(event) }
     }
 
     fun bind(
@@ -162,6 +183,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         isMuted = initialMuted
         saveSelected = saved
         likeSelected = post.likedByUser
+        overlaysVisible = true
+        imageIndex = 0
         firedCheckpoints.clear()
 
         walletPill.setBalance(item.walletBalance)
@@ -221,6 +244,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         controls.bindMediaType(item.mediaType)
         controls.setMuted(isMuted)
         renderMedia(item)
+        renderOverlayVisibility(animate = false)
         setActive(isActiveItem)
     }
 
@@ -273,11 +297,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
             MediaType.IMAGE -> {
                 imageView.isVisible = true
-                Glide.with(context)
-                    .load(item.mediaUrl ?: item.thumbnailUrl)
-                    .placeholder(R.drawable.ic_yenkasa_logo)
-                    .error(R.drawable.ic_yenkasa_logo)
-                    .into(imageView)
+                loadImageAt(imageIndex)
             }
 
             MediaType.TEXT -> {
@@ -295,6 +315,114 @@ class YenkasaPlayerView @JvmOverloads constructor(
                     .into(audioArtworkView)
             }
         }
+    }
+
+    private fun handleImageTouch(event: MotionEvent): Boolean {
+        val item = boundItem ?: return false
+        if (item.mediaType != MediaType.IMAGE) return false
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                touchDownX = event.x
+                touchDownY = event.y
+                parent?.requestDisallowInterceptTouchEvent(false)
+                return true
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                val dx = event.x - touchDownX
+                val dy = event.y - touchDownY
+                if (abs(dx) > touchSlop && abs(dx) > abs(dy)) {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                } else if (abs(dy) > touchSlop && abs(dy) > abs(dx)) {
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                }
+                return true
+            }
+
+            MotionEvent.ACTION_UP -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                val dx = event.x - touchDownX
+                val dy = event.y - touchDownY
+                when {
+                    abs(dx) > 64f && abs(dx) > abs(dy) -> {
+                        if (dx < 0) showNextImage() else showPreviousImage()
+                    }
+                    abs(dx) < touchSlop && abs(dy) < touchSlop -> {
+                        toggleOverlays()
+                    }
+                }
+                return true
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun showNextImage() {
+        val images = boundItem?.imageUrls.orEmpty()
+        if (images.size <= 1) return
+        imageIndex = (imageIndex + 1).coerceAtMost(images.lastIndex)
+        loadImageAt(imageIndex)
+    }
+
+    private fun showPreviousImage() {
+        val images = boundItem?.imageUrls.orEmpty()
+        if (images.size <= 1) return
+        imageIndex = (imageIndex - 1).coerceAtLeast(0)
+        loadImageAt(imageIndex)
+    }
+
+    private fun loadImageAt(index: Int) {
+        val item = boundItem ?: return
+        val images = item.imageUrls
+        val imageUrl = images.getOrNull(index) ?: item.mediaUrl ?: item.thumbnailUrl
+        Glide.with(context)
+            .load(imageUrl)
+            .placeholder(R.drawable.ic_yenkasa_logo)
+            .error(R.drawable.ic_yenkasa_logo)
+            .into(imageView)
+    }
+
+    private fun toggleOverlays() {
+        overlaysVisible = !overlaysVisible
+        renderOverlayVisibility(animate = true)
+    }
+
+    private fun renderOverlayVisibility(animate: Boolean) {
+        listOf(
+            topBar,
+            searchBar,
+            communitiesPanel,
+            engagementRail,
+            moreOptionsButton,
+            bottomMetaView,
+            controlsView,
+            walletPill,
+            sponsoredAdButton
+        ).forEach { view ->
+            view.animate().cancel()
+            if (animate) {
+                if (overlaysVisible) {
+                    view.isVisible = true
+                    view.alpha = 0f
+                    view.animate().alpha(1f).setDuration(130L).start()
+                } else {
+                    view.animate().alpha(0f).setDuration(110L).withEndAction {
+                        view.isVisible = false
+                    }.start()
+                }
+            } else {
+                view.alpha = if (overlaysVisible) 1f else 0f
+                view.isVisible = overlaysVisible
+            }
+        }
+        liveArenaButton.isVisible = true
+        liveArenaButton.alpha = 1f
     }
 
     private fun applyTextPresentation(item: YenkasaPlayerItem) {

@@ -7,6 +7,7 @@ data class YenkasaPlayerItem(
     val id: String,
     val mediaType: MediaType,
     val mediaUrl: String?,
+    val imageUrls: List<String>,
     val thumbnailUrl: String?,
     val textContent: String?,
     val caption: String?,
@@ -48,6 +49,7 @@ data class YenkasaPlayerItem(
                     MediaType.IMAGE -> imageUrls.firstOrNull()
                     MediaType.TEXT -> null
                 },
+                imageUrls = imageUrls,
                 thumbnailUrl = when {
                     imageUrls.isNotEmpty() -> imageUrls.firstOrNull()
                     !post.videoUrl.isNullOrBlank() -> post.videoUrl

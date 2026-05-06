@@ -15,7 +15,10 @@
   z-index: 1000;
   width: 260px;
   height: 100vh;
-  padding: 18px 14px;
+  height: 100dvh;
+  max-height: 100dvh;
+  box-sizing: border-box;
+  padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 20% 0%, rgba(30, 201, 116, 0.18), transparent 28%),
     linear-gradient(180deg, #06100c 0%, #020605 100%);
@@ -89,7 +92,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
@@ -158,6 +161,8 @@
 
 .side-drawer__item--logout {
   flex: 0 0 auto;
+  margin-top: auto;
+  margin-bottom: 0;
   color: #ffb4b4;
   background: rgba(255, 109, 109, 0.08);
   border-color: rgba(255, 109, 109, 0.16);

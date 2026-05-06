@@ -920,7 +920,7 @@
   transform: translateX(-50%);
   z-index: 181;
   width: min(100%, 500px);
-  max-height: 88vh;
+  max-height: min(92dvh, calc(100dvh - max(10px, env(safe-area-inset-top))));
   overflow-y: auto;
   padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
   border-radius: 24px 24px 0 0;
@@ -942,8 +942,17 @@
 }
 
 .feed-live-sheet__header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   justify-content: space-between;
   gap: 12px;
+  margin: -14px -12px 0;
+  padding: 14px 12px 10px;
+  background:
+    radial-gradient(circle at top right, rgba(42, 145, 89, 0.26), transparent 34%),
+    linear-gradient(180deg, #081712 0%, rgba(8, 23, 18, 0.96) 72%, rgba(8, 23, 18, 0));
+  backdrop-filter: blur(12px);
 }
 
 .feed-live-sheet__header h2 {
@@ -959,6 +968,7 @@
 
 .feed-live-sheet__header-actions {
   gap: 10px;
+  flex: 0 0 auto;
 }
 
 .feed-live-sheet__live-pill {
@@ -984,14 +994,16 @@
 }
 
 .feed-live-sheet__close {
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   border: 0;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #d7ece0;
-  font-size: 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 26px;
   line-height: 1;
+  flex: 0 0 auto;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
 .feed-live-sheet__filters {

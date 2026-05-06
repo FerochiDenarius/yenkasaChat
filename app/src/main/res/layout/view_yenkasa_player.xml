@@ -120,6 +120,15 @@
             android:tint="@android:color/white" />
     </LinearLayout>
 
+    <xyz.yenkasa.app.ui.player.YenkasaSearchBarView
+        android:id="@+id/playerSearchBar"
+        android:layout_width="42dp"
+        android:layout_height="38dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutPlayerTopBar" />
+
     <LinearLayout
         android:id="@+id/layoutPlayerCommunitiesPanel"
         android:layout_width="58dp"

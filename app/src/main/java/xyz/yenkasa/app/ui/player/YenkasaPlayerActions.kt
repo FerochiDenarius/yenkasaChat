@@ -18,4 +18,5 @@ interface YenkasaPlayerActions {
     fun onSeeAllCommunities()
     fun onShowPostOptions(post: Post)
     fun onNavigateTo(position: Int)
+    fun onSearchQuery(query: String)
 }

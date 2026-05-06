@@ -13,10 +13,16 @@ object WalletBalanceManager {
     const val ACTION_BALANCE_UPDATED = "xyz.yenkasa.app.WALLET_BALANCE_UPDATED"
     const val EXTRA_BALANCE = "extra_balance"
     const val EXTRA_WALLET_ID = "extra_wallet_id"
+    const val EXTRA_REWARD_AMOUNT = "extra_reward_amount"
 
     private const val TAG = "WalletBalanceManager"
 
-    fun applyKnownBalance(context: Context, balance: Int, walletId: String? = null) {
+    fun applyKnownBalance(
+        context: Context,
+        balance: Int,
+        walletId: String? = null,
+        rewardAmount: Int? = null
+    ) {
         val appContext = context.applicationContext
         val previousBalance = TokenManager.getCoins(appContext)
         TokenManager.saveCoins(appContext, balance)
@@ -28,6 +34,7 @@ object WalletBalanceManager {
                 .setPackage(appContext.packageName)
                 .putExtra(EXTRA_BALANCE, balance)
                 .putExtra(EXTRA_WALLET_ID, walletId)
+                .putExtra(EXTRA_REWARD_AMOUNT, rewardAmount ?: 0)
         )
     }
 
@@ -63,7 +70,7 @@ object WalletBalanceManager {
 
         val appContext = context.applicationContext
         val optimisticBalance = TokenManager.getCoins(appContext) + amount
-        applyKnownBalance(appContext, optimisticBalance)
+        applyKnownBalance(appContext, optimisticBalance, rewardAmount = amount)
 
         // Reconcile with the server in case another transaction changed the balance.
         refreshBalance(appContext)

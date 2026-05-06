@@ -68,6 +68,7 @@ export default function Menu() {
           {canAccessAdmin ? (
             <>
               <div className="menu-card__divider" />
+              <MenuItem icon="◉" title="Admin Economy" subtitle="View YKC earnings and revenue" to="/admin/economy" />
               <MenuItem icon="✓" title="Post Approvals" subtitle="Review pending posts" to="/post-approvals" />
               <MenuItem icon="◍" title="Approve Ads" subtitle="Review pending sponsored ads" to="/approve-ads" />
               <MenuItem icon="◈" title="Approve Communities" subtitle="Review pending communities" to="/approve-communities" />

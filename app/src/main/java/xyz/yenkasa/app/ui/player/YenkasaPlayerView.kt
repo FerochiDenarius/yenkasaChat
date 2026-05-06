@@ -1,6 +1,9 @@
 package xyz.yenkasa.app.ui.player
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
@@ -15,6 +18,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
 import androidx.core.view.isVisible
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -26,7 +30,9 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.util.TextPostBackgrounds
+import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserBadgeUtils
+import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlin.math.abs
 
 class YenkasaPlayerView @JvmOverloads constructor(
@@ -90,6 +96,23 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val firedCheckpoints = mutableSetOf<Int>()
     private val uiHandler = Handler(Looper.getMainLooper())
     private var playbackProgressListener: ((Int) -> Unit)? = null
+    private var walletReceiverRegistered = false
+
+    private val walletBalanceReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
+            val nextBalance = intent.getIntExtra(
+                WalletBalanceManager.EXTRA_BALANCE,
+                TokenManager.getCoins(this@YenkasaPlayerView.context)
+            )
+            val rewardAmount = intent.getIntExtra(WalletBalanceManager.EXTRA_REWARD_AMOUNT, 0)
+            if (rewardAmount > 0 && isShown) {
+                walletPill.showRewardGain(nextBalance.toDouble(), rewardAmount)
+            } else {
+                walletPill.setBalance(nextBalance.toDouble())
+            }
+        }
+    }
 
     private val progressRunnable = object : Runnable {
         override fun run() {
@@ -159,6 +182,27 @@ class YenkasaPlayerView @JvmOverloads constructor(
             }
         )
         imageView.setOnTouchListener { _, event -> handleImageTouch(event) }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!walletReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                context,
+                walletBalanceReceiver,
+                IntentFilter(WalletBalanceManager.ACTION_BALANCE_UPDATED),
+                RECEIVER_NOT_EXPORTED
+            )
+            walletReceiverRegistered = true
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        if (walletReceiverRegistered) {
+            runCatching { context.unregisterReceiver(walletBalanceReceiver) }
+            walletReceiverRegistered = false
+        }
+        super.onDetachedFromWindow()
     }
 
     fun bind(

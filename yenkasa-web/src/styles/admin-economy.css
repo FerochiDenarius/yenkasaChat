@@ -1,0 +1,147 @@
+.admin-economy-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #03140b 0%, #061d11 100%);
+  color: #f2f7f3;
+  padding: 18px 14px 40px;
+}
+
+.admin-economy-header {
+  width: min(100%, 720px);
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-economy-header button,
+.admin-economy-empty button {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.admin-economy-header button {
+  width: 42px;
+  height: 42px;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.admin-economy-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.admin-economy-header p {
+  margin: 4px 0 0;
+  color: #9eb2a5;
+}
+
+.admin-economy-grid,
+.admin-economy-section,
+.admin-economy-empty,
+.admin-economy-error {
+  width: min(100%, 720px);
+  margin-inline: auto;
+}
+
+.admin-economy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-economy-card,
+.admin-economy-section,
+.admin-economy-empty,
+.admin-economy-error {
+  border: 1px solid rgba(125, 202, 149, 0.14);
+  border-radius: 16px;
+  background: rgba(7, 39, 23, 0.86);
+}
+
+.admin-economy-card {
+  padding: 14px;
+}
+
+.admin-economy-card span,
+.admin-economy-muted {
+  color: #9eb2a5;
+}
+
+.admin-economy-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 20px;
+}
+
+.admin-economy-section,
+.admin-economy-empty,
+.admin-economy-error {
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.admin-economy-section__title,
+.admin-economy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-economy-section__title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.admin-economy-section__title span,
+.admin-economy-row span {
+  color: #9eb2a5;
+  font-size: 13px;
+}
+
+.admin-economy-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-economy-row {
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-economy-row strong {
+  min-width: 0;
+}
+
+.admin-economy-row b {
+  color: #55df7e;
+}
+
+.admin-economy-error {
+  color: #ffd2d2;
+  border-color: rgba(255, 92, 92, 0.3);
+}
+
+.admin-economy-empty {
+  text-align: center;
+}
+
+.admin-economy-empty button {
+  padding: 10px 16px;
+}
+
+@media (max-width: 520px) {
+  .admin-economy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-economy-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

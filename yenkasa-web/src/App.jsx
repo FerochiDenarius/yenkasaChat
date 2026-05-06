@@ -16,6 +16,7 @@ import EditProfile from "./pages/EditProfile";
 import ChatPage from "./pages/ChatPage";
 import Settings from "./pages/Settings";
 import PostApprovals from "./pages/PostApprovals";
+import AdminEconomy from "./pages/AdminEconomy";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
@@ -186,6 +187,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PostApprovals />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/economy"
+          element={
+            <ProtectedRoute>
+              <AdminEconomy />
             </ProtectedRoute>
           }
         />

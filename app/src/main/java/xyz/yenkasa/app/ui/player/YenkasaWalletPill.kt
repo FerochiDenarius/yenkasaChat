@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui.player
 
 import android.content.Context
+import android.media.MediaPlayer
 import android.util.AttributeSet
 import android.view.Gravity
 import android.widget.LinearLayout
@@ -62,6 +63,59 @@ class YenkasaWalletPill @JvmOverloads constructor(
 
     fun setBalance(balance: Double) {
         balanceView.text = "${NumberFormat.getNumberInstance(Locale.getDefault()).format(balance)}"
+    }
+
+    fun showRewardGain(balance: Double, rewardAmount: Int) {
+        setBalance(balance)
+        if (rewardAmount <= 0) return
+
+        animate().cancel()
+        subtextView.animate().cancel()
+        subtextView.text = "+$rewardAmount YKC"
+        scaleX = 1f
+        scaleY = 1f
+        alpha = 1f
+
+        animate()
+            .scaleX(1.08f)
+            .scaleY(1.08f)
+            .setDuration(150L)
+            .withEndAction {
+                animate().scaleX(1f).scaleY(1f).setDuration(180L).start()
+            }
+            .start()
+
+        subtextView.alpha = 1f
+        subtextView.translationY = 0f
+        subtextView.animate()
+            .translationY(-dp(8).toFloat())
+            .alpha(0f)
+            .setStartDelay(650L)
+            .setDuration(650L)
+            .withEndAction {
+                subtextView.translationY = 0f
+                subtextView.alpha = 1f
+                subtextView.text = "Wallet"
+            }
+            .start()
+
+        playRewardSound()
+    }
+
+    private fun playRewardSound() {
+        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("reward_notifications_enabled", true)) return
+        val selectedSound = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+        if (selectedSound == "sound_off") return
+
+        val soundRes = context.resources.getIdentifier(selectedSound, "raw", context.packageName)
+            .takeIf { it != 0 } ?: R.raw.sound_default
+        runCatching {
+            MediaPlayer.create(context.applicationContext, soundRes)?.apply {
+                setOnCompletionListener { player -> player.release() }
+                start()
+            }
+        }
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()

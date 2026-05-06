@@ -90,6 +90,12 @@ export default function CreatePost() {
     user?.avatar ||
     staticImage("default.png");
   const username = user?.username || "Yenkasa";
+  const selectedCommunityImage =
+    selectedCommunity?.image ||
+    selectedCommunity?.icon ||
+    selectedCommunity?.coverImage ||
+    selectedCommunity?.avatar ||
+    "";
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -297,12 +303,17 @@ export default function CreatePost() {
           <h2>Select Community</h2>
           <label className="community-select-card">
             <span className="community-select-card__avatar">
-              {(communityName || "Y").slice(0, 2).toUpperCase()}
+              {selectedCommunityImage ? (
+                <img src={selectedCommunityImage} alt="" onError={handleDynamicImageError} />
+              ) : (
+                (communityName || "Y").slice(0, 2).toUpperCase()
+              )}
             </span>
             <span>
               <strong>{communityName || "Select Community"}</strong>
               <small>{selectedCommunityMeta(communities, communityName)}</small>
             </span>
+            <b aria-hidden="true">⌄</b>
             <select value={selectedCommunityId} onChange={(event) => setSelectedCommunityId(event.target.value)}>
               {communities.map((community) => {
                 const id = String(community._id || community.id || "");

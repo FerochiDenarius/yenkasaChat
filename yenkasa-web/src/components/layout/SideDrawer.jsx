@@ -17,6 +17,7 @@ const menuItems = [
   { icon: "☰", title: "Communities", subtitle: "Join or create communities", to: "/communities" },
   { icon: "◌", title: "My Ads", subtitle: "Track your sponsored posts", to: "/ads" },
   { icon: "◫", title: "My Communities", subtitle: "Track communities you created", to: "/my-communities" },
+  { icon: "◉", title: "Admin Economy", subtitle: "View YKC earnings and revenue", to: "/admin/economy", reviewOnly: true },
   { icon: "✓", title: "Post Approvals", subtitle: "Review pending posts", to: "/post-approvals", reviewOnly: true },
   { icon: "◎", title: "Approve Ads", subtitle: "Review sponsored ads", to: "/approve-ads", reviewOnly: true },
   { icon: "◈", title: "Approve Communities", subtitle: "Review community requests", to: "/approve-communities", reviewOnly: true },

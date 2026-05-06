@@ -24,6 +24,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [showLive, setShowLive] = useState(false);
+  const [hiddenAdKeys, setHiddenAdKeys] = useState(() => new Set());
   const pageRef = useRef(1);
   const hasMoreRef = useRef(true);
   const loadingMoreRef = useRef(false);
@@ -33,6 +34,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
     setLoading(true);
     setLoadingMore(false);
     setError("");
+    setHiddenAdKeys(new Set());
     pageRef.current = 1;
     hasMoreRef.current = true;
     loadingMoreRef.current = false;
@@ -82,8 +84,8 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
         items.push({ type: "adsense", key: adKey });
       }
     });
-    return items;
-  }, [rankedPosts]);
+    return items.filter((item) => item.type !== "adsense" || !hiddenAdKeys.has(item.key));
+  }, [hiddenAdKeys, rankedPosts]);
 
   useEffect(() => {
     const root = feedRef.current;
@@ -151,6 +153,15 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
     );
   }
 
+  function handleAdEmpty(adKey) {
+    setHiddenAdKeys((current) => {
+      if (current.has(adKey)) return current;
+      const next = new Set(current);
+      next.add(adKey);
+      return next;
+    });
+  }
+
   return (
     <main className="player-feed-page">
       <header className="player-topbar">
@@ -198,7 +209,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
           ? feedItems.map((item, index) => (
               <div className="player-snap-item" data-feed-index={index} key={item.key}>
                 {item.type === "adsense" ? (
-                  <YenkasaAdSenseSlot slotKey={item.key} />
+                  <YenkasaAdSenseSlot slotKey={item.key} onEmpty={handleAdEmpty} />
                 ) : (
                   <YenkasaWebPlayerCard
                     post={item.post}

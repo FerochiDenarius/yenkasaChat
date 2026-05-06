@@ -7,7 +7,7 @@ export const YENKASA_ADSENSE_LAYOUT_KEY = "-6t+ed+2i-1n-4w";
 const ADSENSE_SCRIPT_ID = "yenkasa-manual-adsense";
 let adsTxtChecked = false;
 
-export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
+export default function YenkasaFeedAd({ slotKey, variant = "feed", onEmpty }) {
   const rootRef = useRef(null);
   const insRef = useRef(null);
   const pushedRef = useRef(false);
@@ -19,6 +19,12 @@ export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
     setVisible(false);
     setStatus("loading");
   }, [slotKey]);
+
+  useEffect(() => {
+    if (status === "unfilled" || status === "failed") {
+      onEmpty?.(slotKey);
+    }
+  }, [onEmpty, slotKey, status]);
 
   useEffect(() => {
     const node = rootRef.current;
@@ -93,20 +99,52 @@ export default function YenkasaFeedAd({ slotKey, variant = "feed" }) {
             slot: YENKASA_ADSENSE_FEED_SLOT,
           });
         }
+        return;
+      }
+
+      const iframe = node.querySelector("iframe");
+      if (iframe && iframe.getBoundingClientRect().height > 0) {
+        setStatus("filled");
+        console.debug("[YenkasaAdsWeb] ad iframe rendered", { slotKey });
       }
     };
 
     const observer = new MutationObserver(syncStatus);
-    observer.observe(node, { attributes: true, attributeFilter: ["data-ad-status"] });
+    observer.observe(node, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ["data-ad-status", "style"],
+    });
     syncStatus();
 
-    return () => observer.disconnect();
+    const timeout = window.setTimeout(() => {
+      const adStatus = node.getAttribute("data-ad-status");
+      const iframe = node.querySelector("iframe");
+      const iframeHeight = iframe ? Math.round(iframe.getBoundingClientRect().height) : 0;
+      if (!adStatus && iframeHeight <= 0) {
+        setStatus("unfilled");
+        console.warn("[YenkasaAdsWeb] AdSense stayed blank after push; collapsing empty slot", {
+          slotKey,
+          iframeHeight,
+        });
+      }
+    }, 9000);
+
+    return () => {
+      window.clearTimeout(timeout);
+      observer.disconnect();
+    };
   }, [slotKey]);
 
   const className =
     variant === "player"
       ? `player-card player-card--ad player-ad player-ad--${status}`
       : `yenkasa-feed-ad yenkasa-feed-ad--${status}`;
+
+  if (variant !== "player" && (status === "unfilled" || status === "failed")) {
+    return null;
+  }
 
   return (
     <article ref={rootRef} className={className} aria-label="Sponsored ad">

@@ -22,36 +22,38 @@ class YenkasaWalletPill @JvmOverloads constructor(
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_player_pill)
-        setPadding(dp(12), dp(8), dp(12), dp(8))
+        setPadding(dp(7), dp(5), dp(8), dp(5))
         elevation = 10f
 
         val coin = TextView(context).apply {
             text = "YK"
             gravity = Gravity.CENTER
             setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            textSize = 11f
+            textSize = 9f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             background = ContextCompat.getDrawable(context, R.drawable.bg_feed_wallet_coin)
-            layoutParams = LayoutParams(dp(34), dp(34))
+            layoutParams = LayoutParams(dp(26), dp(26))
         }
         addView(coin)
 
         val textWrap = LinearLayout(context).apply {
             orientation = VERTICAL
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(10)
+                marginStart = dp(6)
             }
         }
 
         balanceView = TextView(context).apply {
             setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            textSize = 13f
+            textSize = 10f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
+            maxLines = 1
         }
         subtextView = TextView(context).apply {
             setTextColor(ContextCompat.getColor(context, R.color.wallet_accent_green))
-            textSize = 10f
-            text = "~ $48.12 USD"
+            textSize = 8f
+            text = "Wallet"
+            maxLines = 1
         }
         textWrap.addView(balanceView)
         textWrap.addView(subtextView)
@@ -59,7 +61,7 @@ class YenkasaWalletPill @JvmOverloads constructor(
     }
 
     fun setBalance(balance: Double) {
-        balanceView.text = "${NumberFormat.getNumberInstance(Locale.getDefault()).format(balance)} YKC"
+        balanceView.text = "${NumberFormat.getNumberInstance(Locale.getDefault()).format(balance)}"
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()

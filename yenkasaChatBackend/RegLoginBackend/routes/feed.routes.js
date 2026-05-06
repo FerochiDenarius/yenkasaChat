@@ -39,6 +39,25 @@ function countryQuery(value) {
   return { country: new RegExp(`^${country}$`, "i") };
 }
 
+function normalizeFeedMode(value = "") {
+  const mode = value.toString().trim().toLowerCase().replace(/\s+/g, "-");
+  if (["following", "for-you", "trending", "top", "latest", "popular"].includes(mode)) {
+    return mode;
+  }
+  return "for-you";
+}
+
+function feedSort(mode) {
+  if (mode === "latest" || mode === "following") return { createdAt: -1 };
+  if (mode === "popular" || mode === "top") {
+    return { likeCount: -1, commentCount: -1, shareCount: -1, viewCount: -1, createdAt: -1 };
+  }
+  if (mode === "trending") {
+    return { commentCount: -1, shareCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
+  }
+  return { createdAt: -1 };
+}
+
 // -----------------------------------------------------
 // ✅ FEED WITH ADS MIXED IN
 // -----------------------------------------------------
@@ -47,6 +66,7 @@ router.get("/", auth, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
+    const feedMode = normalizeFeedMode(req.query.feedType || req.query.tab || req.query.sort);
 
     // ===============================
     // 1️⃣ FETCH POSTS (same as before)
@@ -65,10 +85,36 @@ router.get("/", auth, async (req, res) => {
       communityId: { $in: allowedCommunityIds }
     };
 
+    if (feedMode === "following") {
+      const followingIds = (req.user.following || []).map((id) => id.toString());
+      const joinedCommunityIds = [
+        req.user.community,
+        ...(req.user.joinedCommunities || [])
+      ].filter(Boolean).map((id) => id.toString());
+
+      postFilter.$or = [
+        ...(followingIds.length ? [{ userId: { $in: followingIds, $nin: blockedUserIds } }] : []),
+        ...(joinedCommunityIds.length ? [{ communityId: { $in: joinedCommunityIds } }] : [])
+      ];
+
+      if (!postFilter.$or.length) {
+        return res.status(200).json({
+          feed: [],
+          mode: feedMode,
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalPosts: 0,
+            hasMore: false,
+          },
+        });
+      }
+    }
+
     const posts = await Post.find(postFilter)
       .populate("userId", "username profileImage verified roleName")
       .populate("communityId", "name displayName")
-      .sort({ createdAt: -1 })
+      .sort(feedSort(feedMode))
       .skip(skip)
       .limit(limit)
       .lean();
@@ -121,6 +167,7 @@ router.get("/", auth, async (req, res) => {
     // ===============================
     res.status(200).json({
       feed: combined,
+      mode: feedMode,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalPosts / limit),

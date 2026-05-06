@@ -1,5 +1,6 @@
 const CoinTransaction = require('../models/cointransaction.model');
 const ActivityLog = require('../models/activityLog.model');
+const mongoose = require('mongoose');
 
 const GO_LIVE_DATE = new Date('2026-05-05T00:00:00.000Z');
 const MAX_DAILY_YKC = 500;
@@ -59,7 +60,7 @@ async function sumDailyRewards(userId, now = new Date()) {
   const [row] = await CoinTransaction.aggregate([
     {
       $match: {
-        toUserId: typeof userId === 'string' ? require('mongoose').Types.ObjectId.createFromHexString(userId) : userId,
+        toUserId: typeof userId === 'string' ? new mongoose.Types.ObjectId(userId) : userId,
         status: 'completed',
         type: /^REWARD_/,
         createdAt: { $gte: startOfDay(now) }

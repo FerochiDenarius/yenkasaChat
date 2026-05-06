@@ -4,15 +4,17 @@ import api from "../../api/client";
 import PostContainer from "../common/PostContainer";
 import {
   buildAudioUrl,
+  buildCanonicalPostUrl,
   buildMediaUrl,
   buildVideoUrl,
   formatRelativeTime,
+  getPostCommentCount,
 } from "../../utils/format";
 import { handleDynamicImageError, handleStaticImageError, staticImage } from "../../utils/images";
 import { getStoredUser } from "../../utils/storage";
 import { requestWalletRefresh } from "../../utils/walletEvents";
 
-export default function PostCard({ post, onUpdate, detailMode = false }) {
+export default function PostCard({ post, onUpdate, detailMode = false, initialOpenComments = false }) {
   const navigate = useNavigate();
   const cardRef = useRef(null);
   const currentUser = useMemo(() => getStoredUser() || {}, []);
@@ -20,7 +22,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   const [busy, setBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
-  const [commentOpen, setCommentOpen] = useState(false);
+  const [commentOpen, setCommentOpen] = useState(Boolean(initialOpenComments));
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState("");
   const [comments, setComments] = useState([]);
@@ -36,7 +38,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   const communityName =
     post?.communityId?.displayName || post?.communityId?.name || "Yenkasa";
   const content = post?.text || post?.caption || "";
-  const commentCount = Number(post?.commentCount || 0);
+  const commentCount = getPostCommentCount(post);
   const shareCount = Number(post?.shareCount || 0);
   const likeCount = Number(post?.likeCount || 0);
   const viewCount = Number(post?.viewCount || post?.viewsCount || 0);
@@ -125,6 +127,12 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
     };
   }, [post?._id, viewMediaType, onUpdate]);
 
+  useEffect(() => {
+    if (initialOpenComments) {
+      setCommentOpen(true);
+    }
+  }, [initialOpenComments, post?._id]);
+
   function openPost() {
     if (detailMode || !post?._id) return;
     navigate(`/post/${post._id}`);
@@ -168,7 +176,12 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
     const nextOpen = !commentOpen;
     setCommentOpen(nextOpen);
 
-    if (!nextOpen || !post?._id || visibleComments.length || commentsLoading) return;
+    if (!nextOpen) return;
+    await loadCommentsIfNeeded();
+  }
+
+  async function loadCommentsIfNeeded() {
+    if (!post?._id || visibleComments.length || commentsLoading) return;
 
     setCommentsLoading(true);
     setCommentsError("");
@@ -183,6 +196,13 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
       setCommentsLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (commentOpen) {
+      loadCommentsIfNeeded();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commentOpen, post?._id]);
 
   async function handleSubmitComment(event) {
     event.preventDefault();
@@ -282,7 +302,7 @@ export default function PostCard({ post, onUpdate, detailMode = false }) {
   async function handleShare() {
     if (!post?._id || sharing) return;
 
-    const shareUrl = `${window.location.origin}/web/post/${post._id}`;
+    const shareUrl = buildCanonicalPostUrl(post._id);
     const shareText = content || "Check out this post on Yenkasa.";
     const previousShareCount = shareCount;
     const nextShareCount = previousShareCount + 1;

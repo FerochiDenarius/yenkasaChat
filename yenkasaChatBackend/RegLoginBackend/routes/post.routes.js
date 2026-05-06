@@ -29,6 +29,25 @@ function countryQuery(value) {
   return { country: new RegExp(`^${country}$`, "i") };
 }
 
+function normalizePostFeedMode(value = "") {
+  const mode = value.toString().trim().toLowerCase().replace(/\s+/g, "-");
+  if (["following", "for-you", "trending", "top", "latest", "popular"].includes(mode)) {
+    return mode;
+  }
+  return "latest";
+}
+
+function postFeedSort(mode) {
+  if (mode === "latest" || mode === "following" || mode === "for-you") return { createdAt: -1 };
+  if (mode === "popular" || mode === "top") {
+    return { likeCount: -1, commentCount: -1, shareCount: -1, viewCount: -1, createdAt: -1 };
+  }
+  if (mode === "trending") {
+    return { commentCount: -1, shareCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
+  }
+  return { createdAt: -1 };
+}
+
 function normalizeTextBackgroundColor(value) {
   const color = (value || "").toString().trim();
   return /^#[0-9A-Fa-f]{6}$/.test(color) ? color.toUpperCase() : "";
@@ -528,6 +547,7 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
     const viewerId = req.user.id;
 
     const { page = 1, limit = 20 } = req.query;
+    const feedMode = normalizePostFeedMode(req.query.feedType || req.query.tab || req.query.sort);
     const skip = (page - 1) * limit;
 
     // Verify community exists
@@ -552,7 +572,7 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
       status: 'approved',
       userId: { $nin: blockedUserIds } // 🔥 BLOCK ENFORCEMENT HERE
     })
-      .sort({ createdAt: -1 })
+      .sort(postFeedSort(feedMode))
       .skip(skip)
       .limit(parseInt(limit))
       .populate('userId', 'username profileImage verified roleName')

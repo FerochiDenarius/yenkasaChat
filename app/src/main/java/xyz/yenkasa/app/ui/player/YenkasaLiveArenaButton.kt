@@ -24,20 +24,20 @@ class YenkasaLiveArenaButton @JvmOverloads constructor(
         orientation = VERTICAL
         gravity = Gravity.CENTER
         background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_player_live)
-        val pad = dp(8)
+        val pad = dp(6)
         setPadding(pad, pad, pad, pad)
         elevation = 10f
 
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_live_bolt)
             imageTintList = ContextCompat.getColorStateList(context, R.color.wallet_accent_green)
-            layoutParams = LayoutParams(dp(18), dp(18))
+            layoutParams = LayoutParams(dp(15), dp(15))
         })
         addView(TextView(context).apply {
             text = "Arena"
             gravity = Gravity.CENTER
             setTextColor(ContextCompat.getColor(context, R.color.white))
-            textSize = 12f
+            textSize = 9f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
         addView(TextView(context).apply {
@@ -45,10 +45,10 @@ class YenkasaLiveArenaButton @JvmOverloads constructor(
             gravity = Gravity.CENTER
             background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_live_badge)
             setTextColor(ContextCompat.getColor(context, R.color.white))
-            textSize = 8f
+            textSize = 7f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(4)
+                topMargin = dp(3)
             }
         })
     }

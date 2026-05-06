@@ -39,12 +39,12 @@
 .player-tabs,
 .player-community-strip,
 .player-wallet-pill,
-.player-sponsored-button,
 .player-live-arena {
   pointer-events: auto;
 }
 
 .player-brand {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -58,32 +58,33 @@
 }
 
 .player-brand strong {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: 0.02em;
 }
 
 .player-menu-button {
-  width: 52px;
-  height: 52px;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(0, 0, 0, 0.38);
   color: #fff;
-  font-size: 26px;
+  font-size: 22px;
   backdrop-filter: blur(14px);
 }
 
 .player-community-strip {
   position: fixed;
-  top: calc(max(14px, env(safe-area-inset-top)) + 70px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 48px);
   left: 50%;
   z-index: 60;
   width: calc(var(--player-width) - 28px);
   transform: translateX(-50%);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
-  padding: 10px;
+  border-radius: 12px;
+  padding: 5px;
   background: rgba(10, 11, 10, 0.5);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(18px);
@@ -94,11 +95,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 3px;
 }
 
 .player-community-strip__header strong {
-  font-size: 15px;
+  font-size: 10px;
 }
 
 .player-community-strip__header button {
@@ -109,12 +110,12 @@
   background: transparent;
   color: #22d466;
   font-weight: 800;
-  font-size: 13px;
+  font-size: 10px;
 }
 
 .player-community-strip__list {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -125,11 +126,11 @@
 
 .player-community-card {
   position: relative;
-  flex: 0 0 74px;
-  height: 76px;
+  flex: 0 0 44px;
+  height: 46px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 0;
   color: #fff;
   background: #101614;
@@ -161,49 +162,65 @@
 .player-community-card strong,
 .player-community-card small {
   position: absolute;
-  left: 8px;
-  right: 7px;
+  left: 5px;
+  right: 5px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 .player-community-card strong {
-  bottom: 22px;
-  font-size: 12px;
+  bottom: 14px;
+  font-size: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .player-community-card small {
-  bottom: 7px;
+  bottom: 3px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 10px;
+  font-size: 7px;
 }
 
 .player-community-card small i {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
   background: #22d466;
 }
 
 .player-community-card.is-selected {
   border-color: rgba(34, 212, 102, 0.92);
+  background: rgba(19, 111, 58, 0.72);
   box-shadow: 0 0 0 2px rgba(34, 212, 102, 0.2);
+}
+
+.player-community-card__check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #20c863;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
 }
 
 .player-tabs {
   position: fixed;
-  top: calc(max(14px, env(safe-area-inset-top)) + 178px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 106px);
   left: 50%;
   z-index: 58;
   width: calc(var(--player-width) - 28px);
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -216,10 +233,10 @@
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  padding: 7px 11px;
+  padding: 5px 9px;
   background: rgba(0, 0, 0, 0.46);
   color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   backdrop-filter: blur(12px);
 }
@@ -275,15 +292,18 @@
 
 .player-card__media > img,
 .player-card__media > video {
-  object-fit: cover;
+  object-fit: contain;
+  background:
+    radial-gradient(circle at center, rgba(34, 212, 102, 0.08), transparent 34%),
+    #020403;
 }
 
 .player-card__shade {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.52), transparent 26%, transparent 55%, rgba(0, 0, 0, 0.9)),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 50%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.58), transparent 22%, transparent 62%, rgba(0, 0, 0, 0.9)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 50%);
 }
 
 .player-card__text {
@@ -348,14 +368,14 @@
 
 .player-actions {
   position: absolute;
-  left: 10px;
+  left: 8px;
   top: 50%;
   z-index: 22;
-  width: 60px;
+  width: 46px;
   transform: translateY(-48%);
   display: grid;
-  gap: 8px;
-  padding: 10px 6px;
+  gap: 6px;
+  padding: 8px 4px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.36);
@@ -374,23 +394,23 @@
 }
 
 .player-action__icon {
-  width: 39px;
-  height: 39px;
+  width: 30px;
+  height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 19px;
+  font-size: 15px;
   background: rgba(0, 0, 0, 0.18);
 }
 
 .player-action strong {
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1;
 }
 
 .player-action small {
-  font-size: 10px;
+  font-size: 9px;
   color: rgba(255, 255, 255, 0.88);
 }
 
@@ -408,18 +428,18 @@
 .player-caption {
   position: absolute;
   z-index: 24;
-  left: 76px;
+  left: 62px;
   right: 26px;
-  bottom: 190px;
+  bottom: 178px;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
 }
 
 .player-caption__avatar {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 999px;
   padding: 0;
@@ -439,7 +459,7 @@
   padding: 0;
   background: transparent;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
   text-align: left;
 }
@@ -454,7 +474,7 @@
 .player-caption p {
   margin: 6px 0 8px;
   color: rgba(255, 255, 255, 0.95);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.32;
 }
 
@@ -467,7 +487,7 @@
   z-index: 25;
   left: 24px;
   right: 24px;
-  bottom: 88px;
+  bottom: 86px;
   display: grid;
   gap: 12px;
 }
@@ -492,7 +512,7 @@
 
 .player-controls__buttons {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
   gap: 10px;
 }
@@ -501,12 +521,12 @@
   border: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.94);
-  font-size: 21px;
+  font-size: 18px;
 }
 
 .player-controls__buttons .player-controls__play {
-  width: 54px;
-  height: 54px;
+  width: 48px;
+  height: 48px;
   justify-self: center;
   border: 2px solid #22d466;
   border-radius: 999px;
@@ -515,17 +535,18 @@
 }
 
 .player-wallet-pill {
-  position: fixed;
-  top: calc(max(14px, env(safe-area-inset-top)) + 214px);
-  right: max(14px, calc((100vw - var(--player-width)) / 2 + 18px));
-  z-index: 61;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 10px;
 }
 
 .player-wallet-pill .floating-wallet {
   position: static;
-  min-width: 136px;
-  min-height: 46px;
-  padding: 6px 11px 6px 6px;
+  min-width: 116px;
+  min-height: 40px;
+  padding: 5px 9px 5px 5px;
   background: rgba(27, 23, 21, 0.78);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.13);
@@ -533,56 +554,28 @@
 }
 
 .player-wallet-pill .floating-wallet__coin {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
 }
 
 .player-wallet-pill .floating-wallet__body strong {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .player-wallet-pill .floating-wallet__body small {
   color: #39ef80;
 }
 
-.player-sponsored-button,
 .player-live-arena {
   position: fixed;
   right: max(18px, calc((100vw - var(--player-width)) / 2 + 22px));
   z-index: 42;
 }
 
-.player-sponsored-button {
-  bottom: 378px;
-  width: 72px;
-  min-height: 58px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.42);
-  color: #fff;
-  backdrop-filter: blur(14px);
-}
-
-.player-sponsored-button span {
-  display: block;
-  color: #29e76f;
-  font-size: 18px;
-}
-
-.player-sponsored-button strong,
-.player-sponsored-button small {
-  display: block;
-  font-size: 11px;
-}
-
-.player-sponsored-button small {
-  color: rgba(255, 255, 255, 0.72);
-}
-
 .player-live-arena {
-  bottom: 246px;
-  width: 102px;
-  height: 102px;
+  bottom: 226px;
+  width: 82px;
+  height: 82px;
   border: 1px solid rgba(34, 212, 102, 0.9);
   border-radius: 999px;
   background: rgba(8, 57, 30, 0.72);
@@ -605,18 +598,18 @@
 
 .player-live-arena__icon {
   color: #39ef80;
-  font-size: 22px;
+  font-size: 18px;
 }
 
 .player-live-arena strong {
   line-height: 1;
-  font-size: 11px;
+  font-size: 9px;
 }
 
 .player-live-arena small {
   color: rgba(255, 255, 255, 0.86);
   font-weight: 800;
-  font-size: 11px;
+  font-size: 9px;
 }
 
 .player-share-status {
@@ -740,55 +733,45 @@
 @media (max-width: 420px) {
   .player-community-strip {
     width: calc(100vw - 20px);
-    padding: 11px;
+    padding: 5px;
   }
 
   .player-tabs {
-    top: calc(max(14px, env(safe-area-inset-top)) + 170px);
+    top: calc(max(10px, env(safe-area-inset-top)) + 106px);
     width: calc(100vw - 20px);
   }
 
   .player-community-card {
-    flex-basis: 70px;
-    height: 72px;
+    flex-basis: 44px;
+    height: 46px;
   }
 
   .player-actions {
-    left: 8px;
-    width: 56px;
-    padding: 9px 5px;
+    left: 7px;
+    width: 48px;
+    padding: 7px 4px;
   }
 
   .player-action__icon {
-    width: 36px;
-    height: 36px;
-    font-size: 17px;
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
   }
 
   .player-caption {
-    left: 70px;
+    left: 58px;
     right: 18px;
-    bottom: 184px;
+    bottom: 176px;
   }
 
   .player-controls {
     left: 18px;
     right: 18px;
   }
-
-  .player-wallet-pill {
-    top: calc(max(14px, env(safe-area-inset-top)) + 206px);
-  }
-
   .player-live-arena {
-    width: 90px;
-    height: 90px;
-    bottom: 248px;
-  }
-
-  .player-sponsored-button {
-    bottom: 352px;
-    width: 68px;
+    width: 76px;
+    height: 76px;
+    bottom: 226px;
   }
 }
 

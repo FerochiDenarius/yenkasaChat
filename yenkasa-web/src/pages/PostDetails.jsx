@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import BottomNav from "../components/feed/BottomNav";
 import PostCard from "../components/feed/PostCard";
@@ -7,6 +7,7 @@ import "../styles/feed.css";
 
 export default function PostDetails() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { postId } = useParams();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,8 @@ export default function PostDetails() {
     setPost((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
+  const initialOpenComments = new URLSearchParams(location.search).get("openComments") === "true";
+
   return (
     <main className="page page--with-nav">
       <header className="post-details-header">
@@ -67,7 +70,7 @@ export default function PostDetails() {
       {loading ? <div className="feed-status-card">Loading post...</div> : null}
       {error ? <div className="feed-error-card">{error}</div> : null}
       {!loading && !error && post ? (
-        <PostCard post={post} onUpdate={handleUpdate} detailMode />
+        <PostCard post={post} onUpdate={handleUpdate} detailMode initialOpenComments={initialOpenComments} />
       ) : null}
 
       <BottomNav />

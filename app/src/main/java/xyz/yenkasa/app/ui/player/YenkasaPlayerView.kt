@@ -17,6 +17,7 @@ import androidx.core.view.isVisible
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
@@ -35,7 +36,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val seeAllButton: TextView
     private val communityStrip: YenkasaCommunityStrip
     private val walletPill: YenkasaWalletPill
-    private val sponsoredAdButton: YenkasaSponsoredAdButton
+    private val sponsoredAdButton: ImageButton
     private val liveArenaButton: YenkasaLiveArenaButton
     private val playerView: PlayerView
     private val imageView: ImageView
@@ -120,6 +121,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
         logoView.setImageResource(R.drawable.ic_yenkasa_logo)
         playerView.useController = false
+        playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         controls.setCallbacks(
             onPrevious = { actions?.onNavigateTo(adapterPositionValue - 1) },
             onPlayPause = { togglePlayback() },
@@ -249,6 +251,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         when (item.mediaType) {
             MediaType.VIDEO -> {
                 playerView.isVisible = true
+                imageView.isVisible = false
                 item.thumbnailUrl?.let { url ->
                     Glide.with(context).load(url).into(imageView)
                 }

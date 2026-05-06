@@ -60,7 +60,7 @@ data class YenkasaPlayerItem(
                 communityName = post.communityId?.displayName ?: post.communityId?.name,
                 audioTitle = if (!post.audioUrl.isNullOrBlank()) "Original Sound - Yenkasa" else null,
                 likeCount = post.likeCount,
-                commentCount = post.commentCount,
+                commentCount = post.resolvedCommentCount(),
                 shareCount = post.shareCount,
                 saveCount = post.saveCount,
                 rewardAmount = post.coinsEarned,

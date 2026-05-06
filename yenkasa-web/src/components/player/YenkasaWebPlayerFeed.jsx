@@ -8,7 +8,6 @@ import YenkasaAdSenseSlot from "./YenkasaAdSenseSlot";
 import YenkasaWebCommunityStrip from "./YenkasaWebCommunityStrip";
 import YenkasaWebLiveArenaButton from "./YenkasaWebLiveArenaButton";
 import YenkasaWebPlayerCard from "./YenkasaWebPlayerCard";
-import YenkasaWebSponsoredAdButton from "./YenkasaWebSponsoredAdButton";
 import YenkasaWebWalletPill from "./YenkasaWebWalletPill";
 import "../../styles/player-feed.css";
 
@@ -30,7 +29,10 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
     setLoading(true);
     setError("");
 
-    loadPosts(selectedCommunity?._id || selectedCommunity?.id)
+    loadPosts({
+      communityId: selectedCommunity?._id || selectedCommunity?.id,
+      tab: activeTab,
+    })
       .then((nextPosts) => {
         if (!mounted) return;
         setPosts(nextPosts);
@@ -49,7 +51,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
     return () => {
       mounted = false;
     };
-  }, [selectedCommunity]);
+  }, [activeTab, selectedCommunity]);
 
   const rankedPosts = useMemo(
     () => rankPosts(posts, activeTab),
@@ -106,6 +108,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
           />
           <strong>YENKASA</strong>
         </div>
+        <YenkasaWebWalletPill />
         <button type="button" className="player-menu-button" onClick={onOpenMenu} aria-label="Open menu">
           ☰
         </button>
@@ -129,8 +132,6 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
         ))}
       </nav>
 
-      <YenkasaWebWalletPill />
-      <YenkasaWebSponsoredAdButton />
       <YenkasaWebLiveArenaButton onClick={() => setShowLive(true)} />
 
       <section ref={feedRef} className="player-feed-scroll" aria-label="Yenkasa PlayerView Feed">
@@ -179,11 +180,17 @@ function PlayerState({ title, subtitle }) {
   );
 }
 
-async function loadPosts(communityId) {
+async function loadPosts({ communityId, tab }) {
+  const feedType = tabToFeedType(tab);
+  const params = { page: 1, limit: 30, feedType };
   const response = communityId
-    ? await api.get(`/posts/community/${communityId}`)
-    : await api.get("/feed");
+    ? await api.get(`/posts/community/${communityId}`, { params })
+    : await api.get("/feed", { params });
   return normalizePosts(response.data);
+}
+
+function tabToFeedType(tab) {
+  return String(tab || "for-you").trim().toLowerCase().replace(/\s+/g, "-");
 }
 
 function normalizePosts(data) {
@@ -220,7 +227,6 @@ function rankPosts(posts, tab) {
     const followed = items.filter(
       (post) => post?.userId?.isFollowing === true || post?.isFollowing === true || post?.communityId?.isJoined === true
     );
-    // TODO: Replace fallback with a dedicated following feed endpoint when backend supports it.
     return followed.length ? followed : items.sort((a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0));
   }
 
@@ -228,7 +234,6 @@ function rankPosts(posts, tab) {
     return items.sort((a, b) => activityScore(b) - activityScore(a));
   }
 
-  // TODO: Replace with personalized /for-you endpoint when backend supports it.
   return items.sort((a, b) => trendingScore(b) - trendingScore(a));
 }
 

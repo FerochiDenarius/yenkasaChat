@@ -1,4 +1,4 @@
-import { formatNumber } from "../../utils/format";
+import { formatNumber, getPostCommentCount } from "../../utils/format";
 
 export default function YenkasaWebPlayerActions({
   post,
@@ -10,9 +10,10 @@ export default function YenkasaWebPlayerActions({
   onComment,
   onShare,
   onSave,
+  onCreateSponsoredAd,
 }) {
   const likeCount = Number(post?.likeCount || 0);
-  const commentCount = Number(post?.commentCount || 0);
+  const commentCount = getPostCommentCount(post);
   const shareCount = Number(post?.shareCount || 0);
   const reward = Number(post?.rewardYKC || post?.rewardAmount || 2);
 
@@ -35,6 +36,7 @@ export default function YenkasaWebPlayerActions({
         onClick={onShare}
       />
       <ActionButton icon={saved ? "▰" : "▱"} count={post?.saveCount || post?.savedCount || 0} label="Save" active={saved} onClick={onSave} />
+      <ActionButton icon="↗" count="" label="Ad" onClick={onCreateSponsoredAd} />
       <button type="button" className="player-action player-action--reward" onClick={onComment}>
         <span className="player-action__icon">🔥</span>
         <strong>+{formatNumber(reward)} YKC</strong>

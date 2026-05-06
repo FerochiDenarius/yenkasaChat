@@ -63,12 +63,12 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
     ): View {
         val card = FrameLayout(context).apply {
             background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(Color.parseColor("#101112"))
-                setStroke(dp(1), Color.parseColor(if (selected) "#37E37B" else "#40FFFFFF"))
+                cornerRadius = dp(12).toFloat()
+                setColor(Color.parseColor(if (selected) "#D91A7D43" else "#B8101112"))
+                setStroke(dp(if (selected) 2 else 1), Color.parseColor(if (selected) "#37E37B" else "#40FFFFFF"))
             }
-            layoutParams = LinearLayout.LayoutParams(dp(86), dp(88)).apply {
-                marginEnd = dp(7)
+            layoutParams = LinearLayout.LayoutParams(dp(54), dp(56)).apply {
+                marginEnd = dp(6)
             }
             isClickable = true
             isFocusable = true
@@ -83,7 +83,7 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
             background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(12).toFloat()
                 setColor(Color.parseColor("#111111"))
             }
             clipToOutline = true
@@ -104,15 +104,15 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
             )
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(42),
+                dp(28),
                 Gravity.BOTTOM
             )
         }
 
         val label = TextView(context).apply {
             text = title
-            textSize = 12f
-            setTextColor(Color.WHITE)
+            textSize = 9f
+            setTextColor(Color.parseColor(if (selected) "#8DFFB8" else "#FFFFFFFF"))
             maxLines = 1
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = FrameLayout.LayoutParams(
@@ -120,15 +120,32 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM
             ).apply {
-                leftMargin = dp(8)
-                rightMargin = dp(8)
-                bottomMargin = dp(9)
+                leftMargin = dp(5)
+                rightMargin = dp(5)
+                bottomMargin = dp(5)
+            }
+        }
+
+        val activeDot = TextView(context).apply {
+            text = "✓"
+            textSize = 8f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#20C863"))
+            }
+            visibility = if (selected) View.VISIBLE else View.GONE
+            layoutParams = FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(4)
+                rightMargin = dp(4)
             }
         }
 
         card.addView(image)
         card.addView(shade)
         card.addView(label)
+        card.addView(activeDot)
         return card
     }
 

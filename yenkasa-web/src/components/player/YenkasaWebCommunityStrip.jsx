@@ -41,6 +41,17 @@ export default function YenkasaWebCommunityStrip({ selectedCommunityId, onSelect
         </button>
       </div>
       <div className="player-community-strip__list">
+        <button
+          type="button"
+          className={`player-community-card player-community-card--all${!selectedCommunityId ? " is-selected" : ""}`}
+          onClick={() => onSelectCommunity?.(null)}
+        >
+          <span className="player-community-card__fallback">All</span>
+          <span className="player-community-card__shade" />
+          {!selectedCommunityId ? <span className="player-community-card__check">✓</span> : null}
+          <strong>All</strong>
+          <small><i />Live</small>
+        </button>
         {items.slice(0, 8).map((community, index) => {
           const id = community._id || community.id || index;
           const name = community.displayName || community.name || "Yenkasa";
@@ -60,6 +71,7 @@ export default function YenkasaWebCommunityStrip({ selectedCommunityId, onSelect
                 <span className="player-community-card__fallback">{initials(name)}</span>
               )}
               <span className="player-community-card__shade" />
+              {selected ? <span className="player-community-card__check">✓</span> : null}
               <strong>{name}</strong>
               <small><i />{formatCompact(community.memberCount || community.membersCount || 0)}</small>
             </button>

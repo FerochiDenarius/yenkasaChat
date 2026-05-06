@@ -49,6 +49,17 @@ export function formatNumber(value) {
   return new Intl.NumberFormat().format(Number(value || 0));
 }
 
+export function getPostCommentCount(post) {
+  const direct = Number(post?.commentCount ?? post?.commentsCount ?? post?.totalComments ?? NaN);
+  if (Number.isFinite(direct)) return Math.max(0, direct);
+  return Array.isArray(post?.comments) ? post.comments.length : 0;
+}
+
+export function buildCanonicalPostUrl(postId) {
+  const id = String(postId || "").trim();
+  return id ? `https://www.yenkasa.xyz/web/post/${id}` : "https://www.yenkasa.xyz/web";
+}
+
 export function readableRank(rank) {
   if (!rank) return "Unverified";
   return rank

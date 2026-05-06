@@ -24,8 +24,10 @@ data class Post(
     // Engagement
     val likes: List<String> = emptyList(),
     val likeCount: Int = 0,
+    @SerializedName(value = "commentCount", alternate = ["commentsCount", "totalComments"])
     val commentCount: Int = 0,
     val comments: List<Comment>? = null,
+    @SerializedName(value = "shareCount", alternate = ["sharesCount", "totalShares"])
     val shareCount: Int = 0,
     val saveCount: Int = 0,
     var viewCount: Int = 0,
@@ -62,6 +64,14 @@ data class Post(
             .ifEmpty { imageUrl?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }
     }
 
+    fun resolvedCommentCount(): Int {
+        return when {
+            commentCount > 0 -> commentCount
+            !comments.isNullOrEmpty() -> comments.size
+            else -> 0
+        }
+    }
+
     companion object {
         fun fromJson(json: JSONObject): Post {
             val imageUrls = json.optJSONArray("imageUrls")?.let { arr ->
@@ -81,7 +91,10 @@ data class Post(
                     List(arr.length()) { i -> arr.optString(i) }
                 },
                 likeCount = json.optInt("likeCount", 0),
-                commentCount = json.optInt("commentCount", 0),
+                commentCount = json.optInt(
+                    "commentCount",
+                    json.optInt("commentsCount", json.optInt("totalComments", 0))
+                ),
                 shareCount = json.optInt("shareCount", 0),
                 saveCount = json.optInt("saveCount", 0),
                 viewCount = json.optInt("viewCount", 0),

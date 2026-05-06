@@ -164,13 +164,18 @@ exports.getUsernameByWalletId = async (req, res) => {
 exports.getBalance = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId).select('coinsBalance walletId username');
+    const user = await User.findById(userId).select('coinsBalance ykcBalance ykcEarnedThisMonth walletId username');
+    const totalCoins = Number(user.coinsBalance || 0);
 
     res.json({
       success: true,
       username: user.username,
       walletId: user.walletId,
-      balance: user.coinsBalance || 0
+      balance: totalCoins,
+      totalCoins,
+      legacyCoins: totalCoins,
+      ykcBalance: Number(user.ykcBalance ?? totalCoins),
+      ykcEarnedThisMonth: Number(user.ykcEarnedThisMonth || 0)
     });
   } catch (err) {
     console.error('❌ Error fetching balance:', err);

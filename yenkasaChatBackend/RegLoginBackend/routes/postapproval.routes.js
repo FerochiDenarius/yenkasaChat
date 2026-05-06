@@ -121,17 +121,17 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
       });
 
     // ⭐ Reward post owner (their content got approved)
-await rewardService.reward(owner._id, 10, {
+await rewardService.reward(owner._id, 20, {
   type: "REWARD_POST_APPROVED",
-  description: "Your post was approved and you earned 10 YKC!",
+  description: "Your post was approved and you earned 20 YKC!",
   relatedPostId: post._id,
   activityId
 });
 
 // ⭐ Reward the APPROVER (their work)
-await rewardService.reward(approver._id, 10, {
+await rewardService.reward(approver._id, 20, {
   type: "REWARD_POST_APPROVED",
-  description: "You earned 10 YKC for your post approval",
+  description: "You earned 20 YKC for your post approval",
   relatedPostId: post._id,
   activityId
 });

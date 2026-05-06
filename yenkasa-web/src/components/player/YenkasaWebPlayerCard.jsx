@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import {
   buildAudioUrl,
+  buildCanonicalPostUrl,
   buildMediaUrl,
   buildVideoUrl,
   formatRelativeTime,
@@ -129,7 +130,7 @@ export default function YenkasaWebPlayerCard({ post, active, onUpdate }) {
 
   async function handleShare() {
     if (!post?._id || sharing) return;
-    const shareUrl = `${window.location.origin}/web/post/${post._id}`;
+    const shareUrl = buildCanonicalPostUrl(post._id);
     const shareText = content || "Check out this post on Yenkasa.";
     const previousShareCount = Number(post?.shareCount || 0);
 
@@ -198,9 +199,10 @@ export default function YenkasaWebPlayerCard({ post, active, onUpdate }) {
         busy={busy}
         sharing={sharing}
         onLike={handleLike}
-        onComment={() => navigate(`/post/${post._id}`)}
+        onComment={() => navigate(`/post/${post._id}?openComments=true`)}
         onShare={handleShare}
         onSave={handleSave}
+        onCreateSponsoredAd={() => navigate("/ads")}
       />
 
       <section className="player-caption">

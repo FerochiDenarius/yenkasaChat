@@ -340,6 +340,9 @@ safeMount('/api/profile', './routes/profile');
 // ---------------------------------
 safeMount('/api/app-verification', './routes/appverification.routes');
 safeMount('/api/coin-transactions', './routes/cointransaction.routes');
+safeMount('/api/wallet', './routes/wallet.routes');
+safeMount('/api/leaderboard', './routes/leaderboard.routes');
+safeMount('/api/admin', './routes/adminPayout.routes');
 safeMount('/api/comments', './routes/comments.routes');
 safeMount('/api/feed', './routes/feed.routes');
 safeMount('/api/communities', './routes/community.routes');
@@ -789,6 +792,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
   // 🕒 Start the daily verification scheduler
 require('./services/verificationScheduler');
+require('./services/ykcMonthlyReset');
 console.log('🕒 Verification scheduler initialized and running daily checks.');
 
 

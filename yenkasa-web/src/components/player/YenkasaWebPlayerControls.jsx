@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 export default function YenkasaWebPlayerControls({ mediaRef, active, hasMedia, type }) {
   const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const rafRef = useRef(null);
@@ -12,6 +13,7 @@ export default function YenkasaWebPlayerControls({ mediaRef, active, hasMedia, t
 
     function sync() {
       setPlaying(!media.paused);
+      setMuted(Boolean(media.muted));
       setCurrentTime(Number(media.currentTime || 0));
       setDuration(Number(media.duration || 0));
       rafRef.current = window.requestAnimationFrame(sync);
@@ -45,6 +47,13 @@ export default function YenkasaWebPlayerControls({ mediaRef, active, hasMedia, t
     media.currentTime = Math.max(0, Math.min(Number(media.duration || 0), Number(media.currentTime || 0) + seconds));
   }
 
+  function toggleMute() {
+    const media = mediaRef?.current;
+    if (!media) return;
+    media.muted = !media.muted;
+    setMuted(media.muted);
+  }
+
   return (
     <section className="player-controls" aria-label={`${type} controls`}>
       <div className="player-controls__timeline">
@@ -60,13 +69,14 @@ export default function YenkasaWebPlayerControls({ mediaRef, active, hasMedia, t
         <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
       </div>
       <div className="player-controls__buttons">
-        <button type="button" aria-label="Shuffle">⇄</button>
-        <button type="button" onClick={() => skip(-10)} aria-label="Back 10 seconds">◀</button>
+        <button type="button" onClick={() => skip(-10)} aria-label="Back 10 seconds">⏮</button>
         <button type="button" className="player-controls__play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
-          {playing ? "Ⅱ" : "▶"}
+          {playing ? "⏸" : "▶"}
         </button>
-        <button type="button" onClick={() => skip(10)} aria-label="Forward 10 seconds">▶</button>
-        <button type="button" aria-label="Repeat">↻</button>
+        <button type="button" onClick={() => skip(10)} aria-label="Forward 10 seconds">⏭</button>
+        <button type="button" onClick={toggleMute} aria-label={muted ? "Unmute" : "Mute"}>
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
     </section>
   );

@@ -3185,10 +3185,17 @@
 
 @media (min-width: 900px) {
   .player-actions {
-    right: max(24px, calc((100vw - var(--player-width)) / 2 - 84px));
+    right: max(24px, calc((100vw - var(--player-width)) / 2 + 18px));
   }
 
   .player-live-arena {
-    right: max(24px, calc((100vw - var(--player-width)) / 2 - 84px));
+    right: max(24px, calc((100vw - var(--player-width)) / 2 + 18px));
+  }
+}
+
+@media (min-width: 1280px) {
+  .player-actions,
+  .player-live-arena {
+    right: calc((100vw - var(--player-width)) / 2 + 22px);
   }
 }

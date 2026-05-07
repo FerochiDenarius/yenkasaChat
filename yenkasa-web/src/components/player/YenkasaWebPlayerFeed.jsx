@@ -10,7 +10,7 @@ import YenkasaWebPlayerCard from "./YenkasaWebPlayerCard";
 import YenkasaWebWalletPill from "./YenkasaWebWalletPill";
 import "../../styles/player-feed.css";
 
-const tabs = ["Following", "For You", "Trending", "Top", "Latest", "Popular"];
+const tabs = ["For You", "Following", "Trending", "Top", "Latest", "Popular"];
 const AD_INTERVAL = 4;
 const PAGE_SIZE = 30;
 

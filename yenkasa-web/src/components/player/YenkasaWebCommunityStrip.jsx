@@ -12,15 +12,16 @@ const fallbackCommunities = [
 
 function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   const [communities, setCommunities] = useState([]);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [browserOpen, setBrowserOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let mounted = true;
     api
       .get("/communities/public", { params: { country: "Ghana" } })
       .then(({ data }) => {
-        if (!mounted) return;
-        setCommunities(Array.isArray(data) ? data : []);
+        if (mounted) setCommunities(Array.isArray(data) ? data : []);
       })
       .catch(() => {
         if (mounted) setCommunities([]);
@@ -33,10 +34,7 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
 
   const items = useMemo(() => (communities.length ? communities : fallbackCommunities), [communities]);
   const communityItems = useMemo(
-    () => [
-      { _id: null, id: null, name: "All", memberCount: 0, isAll: true },
-      ...items.slice(0, 8),
-    ],
+    () => [{ _id: null, id: null, name: "All", memberCount: 0, isAll: true }, ...items.slice(0, 12)],
     [items]
   );
   const selectedItem =
@@ -45,37 +43,51 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   const previewItems = communityItems
     .filter((community) => (community._id || community.id || "all") !== (selectedItem?._id || selectedItem?.id || "all"))
     .slice(0, 3);
+  const featuredItems = communityItems.slice(0, 5);
+  const filteredItems = useMemo(() => {
+    const cleanQuery = query.trim().toLowerCase();
+    if (!cleanQuery) return communityItems;
+    return communityItems.filter((community) =>
+      String(community.displayName || community.name || "")
+        .toLowerCase()
+        .includes(cleanQuery)
+    );
+  }, [communityItems, query]);
+  const trendingItems = useMemo(
+    () =>
+      [...items]
+        .sort((a, b) => Number(b.memberCount || b.membersCount || 0) - Number(a.memberCount || a.membersCount || 0))
+        .slice(0, 6),
+    [items]
+  );
+  const joinedItems = useMemo(() => items.filter((community) => community.isJoined || community.joined).slice(0, 6), [items]);
 
   function selectCommunity(community) {
-    setExpanded(false);
+    setExpanded(true);
+    setBrowserOpen(false);
     onSelectCommunity?.(community?.isAll ? null : community);
   }
 
   return (
-    <section
-      className={`player-community-strip${expanded ? " is-expanded" : " is-compact"}`}
-      aria-label="Communities"
-    >
+    <section className={`player-community-strip${expanded ? " is-expanded" : " is-compact"}`} aria-label="Communities">
       <div className="player-community-strip__header">
-        <strong>Communities</strong>
+        <strong>Community</strong>
         <button type="button" onClick={() => setExpanded((value) => !value)}>
-          {expanded ? "Close" : "See all"} <span>›</span>
+          {expanded ? "Hide" : "Show"} <span>›</span>
         </button>
       </div>
       {expanded ? (
-        <div className="player-community-strip__list">
-          {communityItems.map((community, index) => {
+        <div className="player-community-strip__list" aria-label="Featured communities">
+          {featuredItems.map((community, index) => {
             const id = community._id || community.id || `all-${index}`;
             const selected = community.isAll ? !selectedCommunityId : String(id) === String(selectedCommunityId || "");
-            return (
-              <CommunityCard
-                community={community}
-                key={id}
-                selected={selected}
-                onClick={() => selectCommunity(community)}
-              />
-            );
+            return <CommunityCard community={community} key={id} selected={selected} onClick={() => selectCommunity(community)} />;
           })}
+          <button type="button" className="player-community-browse-card" onClick={() => setBrowserOpen(true)}>
+            <span>⌕</span>
+            <strong>Browse</strong>
+            <small>Communities</small>
+          </button>
         </div>
       ) : (
         <div
@@ -94,6 +106,23 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
           <CommunityCard community={selectedItem} selected onClick={() => setExpanded(true)} />
         </div>
       )}
+      {!expanded ? (
+        <button type="button" className="player-community-strip__browse" onClick={() => setBrowserOpen(true)}>
+          Browse Communities
+        </button>
+      ) : null}
+      {browserOpen ? (
+        <CommunityBrowser
+          communities={filteredItems}
+          joinedItems={joinedItems}
+          onClose={() => setBrowserOpen(false)}
+          onSelect={selectCommunity}
+          query={query}
+          selectedCommunityId={selectedCommunityId}
+          setQuery={setQuery}
+          trendingItems={trendingItems}
+        />
+      ) : null}
     </section>
   );
 }
@@ -119,8 +148,72 @@ function CommunityCard({ community, selected, onClick }) {
       <span className="player-community-card__shade" />
       {selected ? <span className="player-community-card__check">✓</span> : null}
       <strong>{name}</strong>
-      <small><i />{community.isAll ? "Live" : formatCompact(community.memberCount || community.membersCount || 0)}</small>
+      <small>
+        <i />
+        {community.isAll ? "Live" : formatCompact(community.memberCount || community.membersCount || 0)}
+      </small>
     </span>
+  );
+}
+
+function CommunityBrowser({
+  communities,
+  joinedItems,
+  onClose,
+  onSelect,
+  query,
+  selectedCommunityId,
+  setQuery,
+  trendingItems,
+}) {
+  return (
+    <div className="player-community-browser" role="dialog" aria-modal="true" aria-label="Browse communities">
+      <button type="button" className="player-community-browser__backdrop" onClick={onClose} aria-label="Close communities" />
+      <div className="player-community-browser__sheet">
+        <header className="player-community-browser__header">
+          <div>
+            <strong>Communities</strong>
+            <small>Find your next room</small>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close communities">×</button>
+        </header>
+        <label className="player-community-browser__search">
+          <span>⌕</span>
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search communities" />
+        </label>
+        <div className="player-community-browser__chips" aria-label="Community categories">
+          {["All", "Music", "Sports", "News", "Campus", "Business"].map((category) => (
+            <span key={category}>{category}</span>
+          ))}
+        </div>
+        {joinedItems.length ? (
+          <CommunityBrowserSection title="Joined" communities={joinedItems} selectedCommunityId={selectedCommunityId} onSelect={onSelect} />
+        ) : null}
+        <CommunityBrowserSection title="Trending" communities={trendingItems} selectedCommunityId={selectedCommunityId} onSelect={onSelect} />
+        <CommunityBrowserSection
+          title={query ? "Search Results" : "Suggested"}
+          communities={communities}
+          selectedCommunityId={selectedCommunityId}
+          onSelect={onSelect}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CommunityBrowserSection({ communities, onSelect, selectedCommunityId, title }) {
+  if (!communities.length) return null;
+  return (
+    <section className="player-community-browser__section">
+      <h3>{title}</h3>
+      <div className="player-community-browser__grid">
+        {communities.map((community, index) => {
+          const id = community._id || community.id || `all-${index}`;
+          const selected = community.isAll ? !selectedCommunityId : String(id) === String(selectedCommunityId || "");
+          return <CommunityCard community={community} key={`${title}-${id}`} selected={selected} onClick={() => onSelect(community)} />;
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -143,11 +236,11 @@ function initials(value = "") {
     .join("");
 }
 
-export default memo(YenkasaWebCommunityStrip);
-
 function formatCompact(value) {
   const number = Number(value || 0);
   if (!number) return "Live";
-  if (number >= 1000) return `${(number / 1000).toFixed(number >= 10000 ? 1 : 1)}K`;
+  if (number >= 1000) return `${(number / 1000).toFixed(1)}K`;
   return String(number);
 }
+
+export default memo(YenkasaWebCommunityStrip);

@@ -47,6 +47,12 @@ export default function YenkasaWebPlayerControls({ mediaRef, active, hasMedia, t
     media.currentTime = Math.max(0, Math.min(Number(media.duration || 0), Number(media.currentTime || 0) + seconds));
   }
 
+  function seekTo(edge) {
+    const media = mediaRef?.current;
+    if (!media) return;
+    media.currentTime = edge === "end" ? Math.max(0, Number(media.duration || 0) - 0.1) : 0;
+  }
+
   function toggleMute() {
     const media = mediaRef?.current;
     if (!media) return;
@@ -69,14 +75,13 @@ export default function YenkasaWebPlayerControls({ mediaRef, active, hasMedia, t
         <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
       </div>
       <div className="player-controls__buttons">
-        <button type="button" onClick={() => skip(-10)} aria-label="Back 10 seconds">⏮</button>
+        <button type="button" onClick={() => seekTo("start")} aria-label="Restart media">|◀</button>
+        <button type="button" onClick={() => skip(-10)} aria-label="Back 10 seconds">↶10</button>
         <button type="button" className="player-controls__play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
-          {playing ? "⏸" : "▶"}
+          {playing ? "Ⅱ" : "▶"}
         </button>
-        <button type="button" onClick={() => skip(10)} aria-label="Forward 10 seconds">⏭</button>
-        <button type="button" onClick={toggleMute} aria-label={muted ? "Unmute" : "Mute"}>
-          {muted ? "🔇" : "🔊"}
-        </button>
+        <button type="button" onClick={() => skip(10)} aria-label="Forward 10 seconds">10↷</button>
+        <button type="button" onClick={() => seekTo("end")} aria-label="Skip to end">▶|</button>
       </div>
     </section>
   );

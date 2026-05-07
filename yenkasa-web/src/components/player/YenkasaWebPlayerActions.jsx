@@ -36,9 +36,8 @@ export default function YenkasaWebPlayerActions({
         onClick={onShare}
       />
       <ActionButton icon={saved ? "▰" : "▱"} count={post?.saveCount || post?.savedCount || 0} label="Save" active={saved} onClick={onSave} />
-      <ActionButton icon="↗" count="" label="Ad" onClick={onCreateSponsoredAd} />
-      <button type="button" className="player-action player-action--reward" onClick={onComment}>
-        <span className="player-action__icon">🔥</span>
+      <button type="button" className="player-action player-action--reward" onClick={onCreateSponsoredAd}>
+        <span className="player-action__icon">◎</span>
         <strong>+{formatNumber(reward)} YKC</strong>
         <small>Reward</small>
       </button>

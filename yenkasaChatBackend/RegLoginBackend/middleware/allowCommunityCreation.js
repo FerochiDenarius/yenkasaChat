@@ -1,12 +1,5 @@
 const { getUserPerformanceMetrics } = require('../services/userPerformanceMetrics');
-
-const PRIVILEGED_ROLES = [
-  "admin",
-  "moderator",
-  "developer",
-  "junior_developer",
-  "senior_developer",
-];
+const { canApproveContent } = require('./permissions');
 
 const VERIFIED_REQUIREMENTS = {
   accountAgeDays: 60,
@@ -26,20 +19,8 @@ module.exports = async function allowCommunityCreation(req, res, next) {
   try {
     const user = req.user;
 
-    // Normalize role
-    const roleName = (
-      user.roleName ||
-      user.role?.role ||
-      user.role ||
-      ""
-    )
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "_");
-
     // 1️⃣ Privileged roles skip all checks
-    if (PRIVILEGED_ROLES.includes(roleName)) {
+    if (canApproveContent(user)) {
       return next();
     }
 

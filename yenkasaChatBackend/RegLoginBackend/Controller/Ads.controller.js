@@ -4,25 +4,18 @@ const User = require('../models/user.model');
 const RewardTx = require('../models/Rewards.Transaction.model');
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
-const Permission = require('../models/permissions.model');
 const rewardService = require('../services/reward.service');
+const { canApproveContent, canCreateAd, getPermissions, REVIEWER_RANKS } = require('../middleware/permissions');
 
-const AD_REVIEWER_ROLES = new Set(["admin", "moderator", "junior_developer", "senior_developer"]);
-const ELEVATED_AD_CREATOR_ROLES = new Set(["admin", "moderator", "junior_developer", "senior_developer"]);
+const AD_REVIEWER_ROLES = new Set(REVIEWER_RANKS.map((rank) => rank.toLowerCase()));
+const AD_REVIEWER_ACCESS_ROLES = [...REVIEWER_RANKS];
 
-function normalizeRole(role) {
-  return Permission.normalize(role);
-}
-
-function canReviewAds(roleName) {
-  return AD_REVIEWER_ROLES.has(normalizeRole(roleName));
+function canReviewAds(user) {
+  return canApproveContent(user);
 }
 
 function canCreateAds(user) {
-  const roleName = normalizeRole(
-    user?.roleName || user?.role?.name || user?.role || ""
-  );
-  return user?.verified === true || ELEVATED_AD_CREATOR_ROLES.has(roleName);
+  return canCreateAd(user);
 }
 
 function normalizeAdForClient(ad) {
@@ -49,7 +42,10 @@ function publicAdFilter() {
 
 async function getAdReviewers() {
   return User.find({
-    roleName: { $in: Array.from(AD_REVIEWER_ROLES) }
+    $or: [
+      { roleName: { $in: Array.from(AD_REVIEWER_ROLES) } },
+      { accessRole: { $in: AD_REVIEWER_ACCESS_ROLES } }
+    ]
   }).select("_id username playerId");
 }
 
@@ -189,16 +185,12 @@ const fs = require('fs');
 exports.createAd = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId).select("role roleName verified username").lean();
-    const normalizedRole = String(
-      user?.roleName ||
-      req.user?.roleName ||
-      user?.role?.name ||
-      req.user?.role?.name ||
-      user?.role ||
-      req.user?.role ||
-      ""
-    ).trim().toLowerCase().replace(/\s+/g, "_");
+    const user = await User.findById(userId)
+      .select("role roleName accessRole verified username")
+      .populate("role", "role name accessRole roleName")
+      .lean();
+    const permissions = getPermissions(user || req.user);
+    const normalizedRole = permissions.rank.toLowerCase();
 
     if (!canCreateAds(user)) {
       return res.status(403).json({
@@ -240,7 +232,7 @@ exports.createAd = async (req, res) => {
 
    const finalAdType = (adType || "sponsor").toLowerCase();
 
-const autoApprove = canReviewAds(normalizedRole);
+const autoApprove = canReviewAds(user || req.user);
 
 const adData = {
   title,
@@ -420,8 +412,7 @@ exports.rewardAd = async (req, res) => {
 
 exports.getPendingAds = async (req, res) => {
   try {
-    const reviewer = await User.findById(req.user.id).select("role roleName");
-    if (!canReviewAds(reviewer?.roleName || reviewer?.role)) {
+    if (!canReviewAds(req.user)) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
@@ -439,8 +430,7 @@ exports.getPendingAds = async (req, res) => {
 
 exports.approveAd = async (req, res) => {
   try {
-    const reviewer = await User.findById(req.user.id).select("role roleName");
-    if (!canReviewAds(reviewer?.roleName || reviewer?.role)) {
+    if (!canReviewAds(req.user)) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
@@ -488,8 +478,7 @@ exports.approveAd = async (req, res) => {
 
 exports.rejectAd = async (req, res) => {
   try {
-    const reviewer = await User.findById(req.user.id).select("role roleName");
-    if (!canReviewAds(reviewer?.roleName || reviewer?.role)) {
+    if (!canReviewAds(req.user)) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 

@@ -8,14 +8,13 @@ const User = require("../models/user.model");
 const authMiddleware = require("../middleware/auth");
 const { sendNotification } = require("../services/notification.service");
 const rewardService = require("../services/reward.service");
-const { getPermissions } = require("../middleware/permissions");
+const { getPermissions, canApproveContent, REVIEWER_RANKS } = require("../middleware/permissions");
 
-const ALLOWED_ROLES = ["admin", "moderator", "senior_developer", "junior_developer"];
-const ALLOWED_ACCESS_ROLES = ["ADMIN", "MODERATOR", "SENIOR_DEVELOPER", "JUNIOR_DEVELOPER"];
+const ALLOWED_ROLES = REVIEWER_RANKS.map((rank) => rank.toLowerCase());
+const ALLOWED_ACCESS_ROLES = [...REVIEWER_RANKS];
 
 function canApprove(userOrRole) {
-  const permissions = getPermissions(userOrRole);
-  return permissions.moderationAccess === true || permissions.rank === "JUNIOR_DEVELOPER";
+  return canApproveContent(userOrRole);
 }
 
 // Helper: fetch all approvers

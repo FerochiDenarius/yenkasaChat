@@ -1,10 +1,10 @@
-const Permission = require("../models/permissions.model");
+const { RANK_ORDER, normalizeRank } = require("../middleware/permissions");
 
 /**
  * Normalize role using Permission model
  */
 const normalizeRole = (role) => {
-  return Permission.normalize(role);
+  return normalizeRank(role).toLowerCase();
 };
 
 /**
@@ -12,8 +12,8 @@ const normalizeRole = (role) => {
  * Higher number = higher authority
  */
 const getRoleRank = (role) => {
-  const r = normalizeRole(role);
-  return Permission.rankOrder.indexOf(r);
+  const r = normalizeRank(role);
+  return RANK_ORDER.indexOf(r);
 };
 
 /**
@@ -31,15 +31,17 @@ const hasMinimumRole = (actorRole, requiredRole) => {
  * Used for suspend / revoke / delete user
  */
 const canAffectUser = (actorRole, targetRole) => {
-  return Permission.canAffect(targetRole, actorRole);
+  const actorRank = getRoleRank(actorRole);
+  const targetRank = getRoleRank(targetRole);
+  return actorRank > targetRank;
 };
 
 /**
  * Capability shortcuts (thin wrappers)
  */
-const canApprove = (role) => Permission.canApprove(role);
-const canSuspend = (role) => Permission.canSuspend(role);
-const canAssignRoles = (role) => Permission.canAssignRoles(role);
+const canApprove = (role) => hasMinimumRole(role, "moderator");
+const canSuspend = (role) => hasMinimumRole(role, "junior_developer");
+const canAssignRoles = (role) => hasMinimumRole(role, "moderator");
 
 module.exports = {
   normalizeRole,

@@ -12,6 +12,7 @@ const rewardService = require('../services/reward.service');
 const { getUserCommunities } = require('../helpers/community.helper');
 const allowCommunityCreation = require('../middleware/allowCommunityCreation');
 const { sendNotification } = require('../services/notification.service');
+const { getPermissions, canApproveContent, REVIEWER_RANKS } = require('../middleware/permissions');
 
 function escapeRegex(value) {
   return value.toString().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -37,13 +38,8 @@ function countryScopedQuery(value) {
   return { country: countryRegex(value) };
 }
 
-const COMMUNITY_REVIEWER_ROLES = new Set([
-  'admin',
-  'moderator',
-  'developer',
-  'junior_developer',
-  'senior_developer',
-]);
+const COMMUNITY_REVIEWER_ROLES = new Set(REVIEWER_RANKS.map((rank) => rank.toLowerCase()));
+const COMMUNITY_REVIEWER_ACCESS_ROLES = [...REVIEWER_RANKS];
 
 const COMMUNITY_REVIEWER_ROLE_VARIANTS = [
   'admin',
@@ -61,9 +57,7 @@ const COMMUNITY_REVIEWER_ROLE_VARIANTS = [
 ];
 
 function normalizedRoleName(user) {
-  return Permission.normalize(
-    user?.roleName || user?.role?.role || user?.role?.name || user?.role || ''
-  );
+  return getPermissions(user).rank.toLowerCase();
 }
 
 async function hydrateUserRole(user) {
@@ -80,7 +74,7 @@ async function hydrateUserRole(user) {
 
 async function canReviewCommunity(user) {
   const hydratedUser = await hydrateUserRole(user);
-  return COMMUNITY_REVIEWER_ROLES.has(normalizedRoleName(hydratedUser));
+  return canApproveContent(hydratedUser);
 }
 
 async function getCommunityReviewers() {
@@ -91,6 +85,7 @@ async function getCommunityReviewers() {
   return User.find({
     $or: [
       { roleName: { $in: COMMUNITY_REVIEWER_ROLE_VARIANTS } },
+      { accessRole: { $in: COMMUNITY_REVIEWER_ACCESS_ROLES } },
       { role: { $in: reviewerPermissions.map(permission => permission._id) } }
     ]
   }).select('_id username playerId');
@@ -405,15 +400,7 @@ function normalizeRole(value) {
 }
 
 function canManageCommunity(user, community) {
-  const roleName = Permission.normalize(user.roleName || user.role?.role || user.role);
-  const privilegedRoles = new Set([
-    'admin',
-    'moderator',
-    'junior_developer',
-    'senior_developer',
-  ]);
-
-  if (privilegedRoles.has(roleName)) return true;
+  if (canApproveContent(user)) return true;
   if (community.createdBy?.toString() === user.id?.toString()) return true;
   return Array.isArray(community.moderators) &&
     community.moderators.some((id) => id.toString() === user.id?.toString());
@@ -460,8 +447,7 @@ async function createCommunityHandler(req, res) {
     }
 
     const roleUser = await hydrateUserRole(user);
-    const roleName = normalizedRoleName(roleUser);
-    const autoApprove = COMMUNITY_REVIEWER_ROLES.has(roleName);
+    const autoApprove = canApproveContent(roleUser);
 
     // Create new community
     const community = await Community.create({

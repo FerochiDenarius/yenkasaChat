@@ -8,16 +8,12 @@ const User = require("../models/user.model");
 
 const { hasMinimumRole } = require("../utils/authority");
 
-function currentRole(user) {
-  return user?.accessRole || user?.roleName || user?.role;
-}
-
 /* --------------------------------------------------
  * GET ALL PENDING MODERATION ITEMS
  * Accessible by moderator+
  * -------------------------------------------------- */
 router.get("/moderation/pending", authMiddleware, async (req, res) => {
-  const role = currentRole(req.user);
+  const role = req.user;
 
   if (!hasMinimumRole(role, "moderator")) {
     return res.status(403).json({ error: "Insufficient privileges" });
@@ -37,7 +33,7 @@ router.get("/moderation/pending", authMiddleware, async (req, res) => {
  * Admin+
  * -------------------------------------------------- */
 router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
-  const role = currentRole(req.user);
+  const role = req.user;
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Approval requires admin or higher" });
@@ -60,7 +56,7 @@ router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
  * Admin+
  * -------------------------------------------------- */
 router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
-  const role = currentRole(req.user);
+  const role = req.user;
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Rejection requires admin or higher" });
@@ -82,7 +78,7 @@ router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
  * DELETE POST (GLOBAL) — Admin+
  * -------------------------------------------------- */
 router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
-  const role = currentRole(req.user);
+  const role = req.user;
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Only admin or higher can delete posts" });
@@ -106,7 +102,7 @@ router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
  * SUSPEND USER — Junior Dev+
  * -------------------------------------------------- */
 router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res) => {
-  const role = currentRole(req.user);
+  const role = req.user;
 
   if (!hasMinimumRole(role, "junior_developer")) {
     return res.status(403).json({ error: "Only developers can suspend users" });
@@ -131,7 +127,7 @@ router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res)
  * BLOCK USER (GLOBAL) — Junior Dev+
  * -------------------------------------------------- */
 router.post("/moderation/user/:userId/block", authMiddleware, async (req, res) => {
-  const role = currentRole(req.user);
+  const role = req.user;
 
   if (!hasMinimumRole(role, "junior_developer")) {
     return res.status(403).json({ error: "Only developers can block users" });

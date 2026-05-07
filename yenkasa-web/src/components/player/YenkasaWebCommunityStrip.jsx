@@ -43,7 +43,11 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   const previewItems = communityItems
     .filter((community) => (community._id || community.id || "all") !== (selectedItem?._id || selectedItem?.id || "all"))
     .slice(0, 3);
-  const featuredItems = communityItems.slice(0, 5);
+  const featuredItems = useMemo(() => {
+    const selectedKey = selectedItem?._id || selectedItem?.id || "all";
+    const others = communityItems.filter((community) => (community._id || community.id || "all") !== selectedKey);
+    return [selectedItem, ...others].filter(Boolean).slice(0, 3);
+  }, [communityItems, selectedItem]);
   const filteredItems = useMemo(() => {
     const cleanQuery = query.trim().toLowerCase();
     if (!cleanQuery) return communityItems;

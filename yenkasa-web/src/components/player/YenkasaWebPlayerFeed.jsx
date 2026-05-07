@@ -13,6 +13,7 @@ import "../../styles/player-feed.css";
 const tabs = ["For You", "Following", "Trending", "Top", "Latest", "Popular"];
 const AD_INTERVAL = 4;
 const PAGE_SIZE = 30;
+const SHOW_LIVE_ARENA_BUTTON = false;
 
 export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
   const feedRef = useRef(null);
@@ -197,7 +198,7 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
         ))}
       </nav>
 
-      <YenkasaWebLiveArenaButton onClick={() => setShowLive(true)} />
+      {SHOW_LIVE_ARENA_BUTTON ? <YenkasaWebLiveArenaButton onClick={() => setShowLive(true)} /> : null}
 
       <section ref={feedRef} className="player-feed-scroll" aria-label="Yenkasa PlayerView Feed">
         {loading ? <PlayerState title="Loading feed..." /> : null}

@@ -9,8 +9,8 @@ export default function YenkasaWebLiveArenaButton({ onClick }) {
     >
       <span className="player-live-arena__ring" />
       <span className="player-live-arena__badge">LIVE</span>
-      <span className="player-live-arena__icon">⚡</span>
-      <small>Live Arena</small>
+      <span className="player-live-arena__icon">≋</span>
+      <small>Arena</small>
       <span className="sr-only">Yenkasa Live Arena</span>
     </button>
   );

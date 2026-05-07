@@ -13,7 +13,7 @@ import "../../styles/player-feed.css";
 const tabs = ["For You", "Following", "Trending", "Top", "Latest", "Popular"];
 const AD_INTERVAL = 4;
 const PAGE_SIZE = 30;
-const SHOW_LIVE_ARENA_BUTTON = false;
+const SHOW_LIVE_ARENA_BUTTON = true;
 
 export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
   const feedRef = useRef(null);

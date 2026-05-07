@@ -12,7 +12,7 @@ const fallbackCommunities = [
 
 function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   const [communities, setCommunities] = useState([]);
-  const [expanded, setExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -34,16 +34,13 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
 
   const items = useMemo(() => (communities.length ? communities : fallbackCommunities), [communities]);
   const communityItems = useMemo(
-    () => [{ _id: null, id: null, name: "All", memberCount: 0, isAll: true }, ...items.slice(0, 12)],
+    () => [{ _id: null, id: null, name: "All", memberCount: 0, isAll: true }, ...items],
     [items]
   );
   const selectedItem =
     communityItems.find((community) => String(community._id || community.id || "") === String(selectedCommunityId || "")) ||
     communityItems[0];
-  const previewItems = communityItems
-    .filter((community) => (community._id || community.id || "all") !== (selectedItem?._id || selectedItem?.id || "all"))
-    .slice(0, 3);
-  const featuredItems = useMemo(() => {
+  const compactItems = useMemo(() => {
     const selectedKey = selectedItem?._id || selectedItem?.id || "all";
     const others = communityItems.filter((community) => (community._id || community.id || "all") !== selectedKey);
     return [selectedItem, ...others].filter(Boolean).slice(0, 3);
@@ -67,22 +64,28 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   const joinedItems = useMemo(() => items.filter((community) => community.isJoined || community.joined).slice(0, 6), [items]);
 
   function selectCommunity(community) {
-    setExpanded(true);
     setBrowserOpen(false);
     onSelectCommunity?.(community?.isAll ? null : community);
   }
 
+  function toggleExpanded() {
+    setIsExpanded((value) => !value);
+  }
+
   return (
-    <section className={`player-community-strip${expanded ? " is-expanded" : " is-compact"}`} aria-label="Communities">
-      <div className="player-community-strip__header">
+    <section className={`player-community-strip${isExpanded ? " is-expanded" : " is-compact"}`} aria-label="Communities">
+      <div className="player-community-strip__header" onClick={toggleExpanded} role="button" tabIndex={0} onKeyDown={handleToggleKey(toggleExpanded)}>
         <strong>Community</strong>
-        <button type="button" onClick={() => setExpanded((value) => !value)}>
-          {expanded ? "Hide" : "Show"} <span>›</span>
+        <button type="button" className="player-community-strip__toggle" onClick={(event) => {
+          event.stopPropagation();
+          toggleExpanded();
+        }} aria-expanded={isExpanded}>
+          {isExpanded ? "Hide" : "Show"} <span>›</span>
         </button>
       </div>
-      {expanded ? (
-        <div className="player-community-strip__list" aria-label="Featured communities">
-          {featuredItems.map((community, index) => {
+      {isExpanded ? (
+        <div className="player-community-strip__list" aria-label="Community list">
+          {communityItems.map((community, index) => {
             const id = community._id || community.id || `all-${index}`;
             const selected = community.isAll ? !selectedCommunityId : String(id) === String(selectedCommunityId || "");
             return <CommunityCard community={community} key={id} selected={selected} onClick={() => selectCommunity(community)} />;
@@ -97,20 +100,21 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
         <div
           role="button"
           tabIndex={0}
-          className="player-community-stack"
-          onClick={() => setExpanded(true)}
+          className="player-community-strip__list player-community-strip__list--compact"
+          onClick={toggleExpanded}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") setExpanded(true);
+            if (event.key === "Enter" || event.key === " ") toggleExpanded();
           }}
           aria-label="Expand communities"
         >
-          {previewItems.map((community, index) => (
-            <CommunityPreview community={community} index={index} key={community._id || community.id || `preview-${index}`} />
-          ))}
-          <CommunityCard community={selectedItem} selected onClick={() => setExpanded(true)} />
+          {compactItems.map((community, index) => {
+            const id = community._id || community.id || `compact-${index}`;
+            const selected = community.isAll ? !selectedCommunityId : String(id) === String(selectedCommunityId || "");
+            return <CommunityCard community={community} key={`compact-${id}`} selected={selected} onClick={toggleExpanded} />;
+          })}
         </div>
       )}
-      {!expanded ? (
+      {!isExpanded ? (
         <button type="button" className="player-community-strip__browse" onClick={() => setBrowserOpen(true)}>
           Browse Communities
         </button>
@@ -131,6 +135,15 @@ function YenkasaWebCommunityStrip({ selectedCommunityId, onSelectCommunity }) {
   );
 }
 
+function handleToggleKey(onToggle) {
+  return (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onToggle();
+    }
+  };
+}
+
 function CommunityCard({ community, selected, onClick }) {
   const name = community.displayName || community.name || "Yenkasa";
   const image = community.coverImage || community.icon || community.image;
@@ -139,9 +152,15 @@ function CommunityCard({ community, selected, onClick }) {
       role="button"
       tabIndex={0}
       className={`player-community-card${community.isAll ? " player-community-card--all" : ""}${selected ? " is-selected" : ""}`}
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") onClick?.();
+        if (event.key === "Enter" || event.key === " ") {
+          event.stopPropagation();
+          onClick?.();
+        }
       }}
     >
       {image ? (
@@ -218,16 +237,6 @@ function CommunityBrowserSection({ communities, onSelect, selectedCommunityId, t
         })}
       </div>
     </section>
-  );
-}
-
-function CommunityPreview({ community, index }) {
-  const name = community.displayName || community.name || "Y";
-  const image = community.coverImage || community.icon || community.image;
-  return (
-    <span className={`player-community-preview player-community-preview--${index + 1}`} aria-hidden="true">
-      {image ? <img src={image} alt="" loading="lazy" onError={handleDynamicImageError} /> : initials(name)}
-    </span>
   );
 }
 

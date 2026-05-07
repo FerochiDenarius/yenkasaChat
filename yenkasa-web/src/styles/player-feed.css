@@ -2373,3 +2373,203 @@
     right: -5px;
   }
 }
+
+/* Community selector behavior fix: compact preview + true expanded scroll. */
+.player-community-strip {
+  z-index: 69;
+  pointer-events: auto;
+  touch-action: pan-y;
+  transition: max-height 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.player-community-strip * {
+  pointer-events: auto;
+}
+
+.player-community-strip.is-compact {
+  max-height: 126px;
+}
+
+.player-community-strip.is-expanded {
+  max-height: 178px;
+  background: rgba(8, 13, 12, 0.58);
+  border-color: rgba(39, 229, 111, 0.32);
+}
+
+.player-community-strip__header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.player-community-strip__toggle {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.player-community-strip__toggle span {
+  transition: transform 180ms ease;
+}
+
+.player-community-strip.is-expanded .player-community-strip__toggle span {
+  transform: rotate(270deg);
+}
+
+.player-community-strip.is-compact .player-community-strip__toggle span {
+  transform: rotate(90deg);
+}
+
+.player-community-strip__list {
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.player-community-strip.is-expanded .player-community-strip__list {
+  max-height: 134px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.player-community-strip.is-compact .player-community-strip__list {
+  max-height: 86px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.player-community-strip__list--compact {
+  cursor: pointer;
+}
+
+.player-community-strip.is-compact .player-community-browse-card {
+  display: none;
+}
+
+.player-community-strip.is-expanded .player-community-browse-card {
+  display: grid;
+}
+
+@media (max-width: 420px) {
+  .player-community-strip.is-compact {
+    max-height: 118px;
+  }
+
+  .player-community-strip.is-expanded {
+    max-height: 164px;
+  }
+
+  .player-community-strip.is-expanded .player-community-strip__list {
+    max-height: 121px;
+  }
+
+  .player-community-strip.is-compact .player-community-strip__list {
+    max-height: 79px;
+  }
+}
+
+@media (max-height: 720px) {
+  .player-community-strip.is-compact {
+    max-height: 106px;
+  }
+
+  .player-community-strip.is-expanded {
+    max-height: 142px;
+  }
+
+  .player-community-strip.is-expanded .player-community-strip__list {
+    max-height: 101px;
+  }
+
+  .player-community-strip.is-compact .player-community-strip__list {
+    max-height: 68px;
+  }
+}
+
+/* Player mute/unmute control. */
+.player-controls {
+  position: absolute;
+}
+
+.player-controls__buttons {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.player-controls__mute {
+  display: grid;
+  place-items: center;
+  transition: transform 150ms ease, color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.player-controls__mute svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-origin: center;
+  transition: transform 160ms ease;
+}
+
+.player-controls__mute:active svg {
+  transform: scale(0.9);
+}
+
+.player-controls__mute.is-sound-on {
+  color: #3ef47e;
+  box-shadow: 0 0 18px rgba(39, 229, 111, 0.16);
+}
+
+.player-controls__mute.is-muted {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.player-controls__audio-toast {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  z-index: 3;
+  border: 1px solid rgba(39, 229, 111, 0.3);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(5, 10, 8, 0.72);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  font-size: 11px;
+  font-weight: 850;
+  animation: player-audio-toast-in 160ms ease both;
+  pointer-events: none;
+}
+
+@keyframes player-audio-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  .player-controls__buttons {
+    gap: 7px;
+    padding-inline: 11px;
+  }
+
+  .player-controls__mute svg {
+    width: 19px;
+    height: 19px;
+  }
+}
+
+@media (max-height: 720px) {
+  .player-controls__buttons {
+    gap: 5px;
+    padding-inline: 10px;
+  }
+}

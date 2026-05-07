@@ -34,6 +34,12 @@ data class User(
     @SerializedName("coinsBalance")
     val coinsBalance: Double = 0.0,
 
+    @SerializedName("coinsBalancePrecise")
+    val coinsBalancePrecise: Double? = null,
+
+    @SerializedName("ykcBalance")
+    val ykcBalance: Double? = null,
+
     @SerializedName("community")
     val community: Community? = null,
 
@@ -60,4 +66,6 @@ data class User(
 
     @SerializedName("following")
     val following: List<String>? = emptyList()
-)
+) {
+    fun resolvedCoinsBalance(): Double = coinsBalancePrecise ?: ykcBalance ?: coinsBalance
+}

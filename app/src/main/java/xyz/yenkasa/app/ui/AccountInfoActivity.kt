@@ -267,8 +267,9 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = user.email ?: "Not provided"
         phoneView.text = user.phone ?: "Not provided"
         locationView.text = user.location ?: "No location"
-        TokenManager.saveCoinsPrecise(this, user.coinsBalance)
-        coinsBalanceView.text = formatCoins(user.coinsBalance)
+        val balance = user.resolvedCoinsBalance()
+        TokenManager.saveCoinsPrecise(this, balance)
+        coinsBalanceView.text = formatCoins(balance)
 
         // ✅ Correct property — your Community model uses displayName, not name
         communityView.text = "Communities: Loading..."

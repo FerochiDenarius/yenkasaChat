@@ -171,7 +171,7 @@ class MainActivity : AppCompatActivity() {
                             put("email", user.email ?: "")
                             put("phone", user.phone ?: "")
                             put("community", user.community ?: JSONObject.NULL)
-                            put("coinsBalance", user.coinsBalance ?: 0)
+                            put("coinsBalance", user.resolvedCoinsBalance())
                             put("suspendedUntil", user.suspendedUntil ?: JSONObject.NULL)
 
                             put("role", roleName)

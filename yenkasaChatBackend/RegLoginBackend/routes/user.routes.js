@@ -130,8 +130,18 @@ router.get('/me', authMiddleware, async (req, res) => {
             }
         };
 
+        const preciseCoinsBalance = Number(user.coinsBalance ?? user.ykcBalance ?? 0);
+        const preciseYkcBalance = Number(user.ykcBalance ?? preciseCoinsBalance);
+        const userAgent = req.get("user-agent") || "";
+        const isAndroidClient = /okhttp|android/i.test(userAgent) && !/mozilla/i.test(userAgent);
+
         const profile = {
             ...user,
+            // Keep older Android builds from crashing on decimal balances while
+            // exposing the precise value for current clients.
+            coinsBalance: isAndroidClient ? Math.floor(preciseCoinsBalance) : preciseCoinsBalance,
+            coinsBalancePrecise: preciseCoinsBalance,
+            ykcBalance: preciseYkcBalance,
             roleName: user.roleName || roleDoc.role,
             role: finalRole
         };

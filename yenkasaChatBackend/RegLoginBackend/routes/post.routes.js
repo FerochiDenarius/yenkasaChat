@@ -862,7 +862,7 @@ router.post("/:postId/flag", authMiddleware, async (req, res) => {
 const { hasMinimumRole } = require("../utils/authority");
 
 router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
-  const role = req.user.roleName || req.user.role;
+  const role = req.user;
 
   if (!hasMinimumRole(role, "admin")) {
     return res.status(403).json({ error: "Insufficient privileges" });

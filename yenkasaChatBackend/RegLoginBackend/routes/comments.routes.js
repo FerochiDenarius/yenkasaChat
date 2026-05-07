@@ -18,6 +18,52 @@ const REWARD_COMMENT_ACTION = 1;
 const REWARD_COMMENT_LIKE = 0.5;
 
 
+async function notifyPostOwnerOfComment({ post, comment, commenter, senderId }) {
+  const receiverId = post.userId._id.toString();
+  if (receiverId === senderId.toString()) {
+    console.log("[CommentsRoute] Skipping post_comment notification for self-comment", {
+      postId: post._id.toString(),
+      senderId: senderId.toString(),
+    });
+    return null;
+  }
+
+  const commenterName = commenter?.username || "Someone";
+  const postId = post._id.toString();
+
+  const notification = await sendNotification({
+    type: "post_comment",
+    senderId,
+    receiverId,
+    activityId: postId,
+    message: `${commenterName} commented on your post`,
+    targetType: "post",
+    targetId: postId,
+    targetUrl: `/post/${postId}?openComments=true`,
+    push: true,
+    pushTitle: "New comment on your post",
+    pushBody: `${commenterName} commented on your post`,
+    pushData: {
+      type: "post_comment",
+      postId,
+      commentId: comment._id.toString(),
+      targetType: "post",
+      targetId: postId
+    }
+  });
+
+  console.log("[CommentsRoute] Shared post_comment notification processed", {
+    postId,
+    commentId: comment._id.toString(),
+    senderId: senderId.toString(),
+    receiverId,
+    delivered: Boolean(notification)
+  });
+
+  return notification;
+}
+
+
 /* ---------------------------------------------------
  * BLOCK CHECK helper
  * --------------------------------------------------- */
@@ -81,28 +127,12 @@ if (!parentCommentId) {
   }
 }
 
-    if (!parentCommentId && post.userId._id.toString() !== userId) {
-      const commenterName = commenter?.username || req.user.username || "Someone";
-
-      await sendNotification({
-        type: "post_comment",
+    if (!parentCommentId) {
+      await notifyPostOwnerOfComment({
+        post,
+        comment,
+        commenter: commenter || { username: req.user.username },
         senderId: userId,
-        receiverId: post.userId._id,
-        activityId: post._id.toString(),
-        message: `${commenterName} commented on your post`,
-        targetType: "post",
-        targetId: post._id.toString(),
-        targetUrl: `/post/${post._id.toString()}?openComments=true`,
-        push: true,
-        pushTitle: "New comment on your post",
-        pushBody: `${commenterName} commented on your post`,
-        pushData: {
-          type: "post_comment",
-          postId: post._id.toString(),
-          commentId: comment._id.toString(),
-          targetType: "post",
-          targetId: post._id.toString()
-        }
       });
     }
 

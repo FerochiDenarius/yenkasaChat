@@ -352,8 +352,15 @@ class FeedFragment : Fragment() {
             onMoreOptions = { post -> postActionsController.showPostOptionsBottomSheet(post) },
             onLiveArenaClick = { chromeController.showLiveSheet() },
             onCommunitySelected = { community -> selectPlayerCommunity(community) },
-            onSeeAllCommunities = { openCommunitySelectorOrToast() }
+            onSeeAllCommunities = { openCommunitySelectorOrToast() },
+            onFeedModeSelected = { mode -> selectPlayerFeedMode(mode) }
         )
+    }
+
+    private fun selectPlayerFeedMode(mode: FeedTabsController.FeedMode) {
+        tabsController.selectMode(mode)
+        playerCoordinator?.setFeedMode(mode)
+        reloadFeedFromStart()
     }
 
     private fun selectPlayerCommunity(community: Community?) {
@@ -740,6 +747,7 @@ class FeedFragment : Fragment() {
 
     private fun renderPosts() {
         if (USE_YENKASA_PLAYER_VIEW) {
+            playerCoordinator?.setFeedMode(selectedFeedMode)
             playerCoordinator?.submitItems(buildMixedFeed(posts))
             playerCoordinator?.setCommunities(
                 allCommunities,

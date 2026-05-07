@@ -17,6 +17,7 @@ import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 
@@ -30,6 +31,7 @@ class YenkasaPlayerFeedAdapter(
     private val items = mutableListOf<Any>()
     private var communities: List<Community> = emptyList()
     private var selectedCommunityIds: Set<String> = emptySet()
+    private var selectedFeedMode: FeedTabsController.FeedMode = FeedTabsController.FeedMode.FOR_YOU
     private val savedPostIds = mutableSetOf<String>()
     private val lastViewTime = mutableMapOf<String, Long>()
     private var activePosition = RecyclerView.NO_POSITION
@@ -89,6 +91,7 @@ class YenkasaPlayerFeedAdapter(
                     saved = savedPostIds.contains(feedItem._id),
                     position = position,
                     sourcePostPosition = sourcePostPosition,
+                    selectedFeedMode = selectedFeedMode,
                     actions = actions,
                     initialMuted = muted,
                     onMuteChanged = { muted = it },
@@ -138,6 +141,12 @@ class YenkasaPlayerFeedAdapter(
     fun updateCommunities(allCommunities: List<Community>, selectedIds: Set<String>) {
         communities = allCommunities
         selectedCommunityIds = selectedIds
+        notifyDataSetChanged()
+    }
+
+    fun updateFeedMode(mode: FeedTabsController.FeedMode) {
+        if (selectedFeedMode == mode) return
+        selectedFeedMode = mode
         notifyDataSetChanged()
     }
 

@@ -24,6 +24,11 @@ class FeedTabsController(
     var selectedMode: FeedMode = FeedMode.FOR_YOU
         private set
 
+    fun selectMode(mode: FeedMode) {
+        selectedMode = mode
+        selectedTabId = tabIdFromMode(mode)
+    }
+
     fun bindTabs(tabs: List<TextView>, onModeChanged: (FeedMode) -> Unit) {
         tabs.forEach { tab ->
             tab.setOnClickListener {
@@ -74,8 +79,19 @@ class FeedTabsController(
         return when (tabId) {
             R.id.tabFollowing -> FeedMode.FOLLOWING
             R.id.tabTrending -> FeedMode.TRENDING
+            R.id.tabLatest -> FeedMode.LATEST
             R.id.tabTop -> FeedMode.TOP
             else -> FeedMode.FOR_YOU
+        }
+    }
+
+    private fun tabIdFromMode(mode: FeedMode): Int {
+        return when (mode) {
+            FeedMode.FOLLOWING -> R.id.tabFollowing
+            FeedMode.TRENDING -> R.id.tabTrending
+            FeedMode.LATEST -> R.id.tabLatest
+            FeedMode.TOP -> R.id.tabTop
+            else -> R.id.tabForYou
         }
     }
 

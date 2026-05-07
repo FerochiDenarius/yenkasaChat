@@ -29,6 +29,7 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserBadgeUtils
@@ -43,6 +44,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val logoView: ImageView
     private val topBar: View
     private val searchBar: YenkasaSearchBarView
+    private val feedTabsView: View
     private val communitiesPanel: View
     private val engagementRail: View
     private val menuButton: ImageButton
@@ -76,6 +78,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val textShare: TextView
     private val textSave: TextView
     private val textReward: TextView
+    private val feedModeTabs: List<TextView>
 
     private var boundPost: Post? = null
     private var boundItem: YenkasaPlayerItem? = null
@@ -132,6 +135,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         LayoutInflater.from(context).inflate(R.layout.view_yenkasa_player, this, true)
         topBar = findViewById(R.id.layoutPlayerTopBar)
         searchBar = findViewById(R.id.playerSearchBar)
+        feedTabsView = findViewById(R.id.scrollPlayerFeedTabs)
         communitiesPanel = findViewById(R.id.layoutPlayerCommunitiesPanel)
         engagementRail = findViewById(R.id.layoutPlayerEngagement)
         logoView = findViewById(R.id.imagePlayerLogo)
@@ -163,6 +167,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
         textShare = findViewById(R.id.textPlayerShareCount)
         textSave = findViewById(R.id.textPlayerSaveCount)
         textReward = findViewById(R.id.textPlayerRewardCount)
+        feedModeTabs = listOf(
+            findViewById(R.id.tabForYou),
+            findViewById(R.id.tabFollowing),
+            findViewById(R.id.tabTrending),
+            findViewById(R.id.tabLatest),
+            findViewById(R.id.tabTop)
+        )
         bottomMetaView = findViewById(R.id.layoutPlayerBottomMeta)
         controlsView = findViewById(R.id.layoutPlayerControls)
         controls = YenkasaPlayerControls(this)
@@ -213,6 +224,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         saved: Boolean,
         position: Int,
         sourcePostPosition: Int = position,
+        selectedFeedMode: FeedTabsController.FeedMode,
         actions: YenkasaPlayerActions,
         initialMuted: Boolean,
         onMuteChanged: (Boolean) -> Unit,
@@ -234,6 +246,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         walletPill.setBalance(item.walletBalance)
         searchBar.reset()
         searchBar.setOnQueryChanged { query -> actions.onSearchQuery(query) }
+        bindFeedModeTabs(selectedFeedMode, actions)
         communityStrip.submit(
             communities = communities,
             selectedIds = selectedCommunityIds,
@@ -443,6 +456,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         listOf(
             topBar,
             searchBar,
+            feedTabsView,
             communitiesPanel,
             engagementRail,
             moreOptionsButton,
@@ -469,6 +483,34 @@ class YenkasaPlayerView @JvmOverloads constructor(
         }
         liveArenaButton.isVisible = true
         liveArenaButton.alpha = 1f
+    }
+
+    private fun bindFeedModeTabs(
+        selectedMode: FeedTabsController.FeedMode,
+        actions: YenkasaPlayerActions
+    ) {
+        feedModeTabs.forEach { tab ->
+            val mode = when (tab.id) {
+                R.id.tabFollowing -> FeedTabsController.FeedMode.FOLLOWING
+                R.id.tabTrending -> FeedTabsController.FeedMode.TRENDING
+                R.id.tabLatest -> FeedTabsController.FeedMode.LATEST
+                R.id.tabTop -> FeedTabsController.FeedMode.TOP
+                else -> FeedTabsController.FeedMode.FOR_YOU
+            }
+            val selected = mode == selectedMode
+            tab.setBackgroundResource(
+                if (selected) R.drawable.bg_yenkasa_player_chip_selected
+                else R.drawable.bg_yenkasa_player_chip
+            )
+            tab.setTextColor(Color.WHITE)
+            tab.setTypeface(tab.typeface, if (selected) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+            tab.alpha = if (selected) 1f else 0.78f
+            tab.setOnClickListener {
+                if (mode != selectedMode) {
+                    actions.onFeedModeSelected(mode)
+                }
+            }
+        }
     }
 
     private fun applyTextPresentation(item: YenkasaPlayerItem) {

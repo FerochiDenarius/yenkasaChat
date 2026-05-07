@@ -1,6 +1,7 @@
 // middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model'); // Import User model
+const { getPermissions } = require('./permissions');
 
 // ✅ Use ACCESS_TOKEN_SECRET instead of JWT_SECRET
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
@@ -68,7 +69,12 @@ module.exports = async (req, res, next) => {
     }
 
     req.user = userFromDb;
-    console.log(`Auth Middleware: User authenticated. User ID: ${req.user.id}, Username: ${req.user.username}`);
+    const permissions = getPermissions(req.user);
+    req.user.rank = permissions.rank;
+    req.user.permissions = permissions;
+    console.log(
+      `Auth Middleware: User authenticated. User ID: ${req.user.id}, Username: ${req.user.username}, Rank: ${permissions.rank}`
+    );
 
     next();
   } catch (err) {

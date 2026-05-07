@@ -36,7 +36,8 @@ class FeedPlayerCoordinator(
         val onMoreOptions: (Post) -> Unit,
         val onLiveArenaClick: () -> Unit,
         val onCommunitySelected: (Community?) -> Unit,
-        val onSeeAllCommunities: () -> Unit
+        val onSeeAllCommunities: () -> Unit,
+        val onFeedModeSelected: (FeedTabsController.FeedMode) -> Unit
     )
 
     private val snapHelper = PagerSnapHelper()
@@ -95,6 +96,10 @@ class FeedPlayerCoordinator(
 
     fun setCommunities(communities: List<Community>, selectedIds: Set<String>) {
         playerAdapter.updateCommunities(communities, selectedIds)
+    }
+
+    fun setFeedMode(mode: FeedTabsController.FeedMode) {
+        playerAdapter.updateFeedMode(mode)
     }
 
     fun handleSnapToActiveItem() {
@@ -175,6 +180,10 @@ class FeedPlayerCoordinator(
                     "Search: $query",
                     Toast.LENGTH_SHORT
                 ).show()
+            }
+
+            override fun onFeedModeSelected(mode: FeedTabsController.FeedMode) {
+                callbacks.onFeedModeSelected(mode)
             }
 
             override fun onNavigateTo(position: Int) {

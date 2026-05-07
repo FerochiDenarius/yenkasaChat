@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui.player
 
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.ui.feed.FeedTabsController
 
 interface YenkasaPlayerActions {
     fun onOpenMenu()
@@ -19,4 +20,5 @@ interface YenkasaPlayerActions {
     fun onShowPostOptions(post: Post)
     fun onNavigateTo(position: Int)
     fun onSearchQuery(query: String)
+    fun onFeedModeSelected(mode: FeedTabsController.FeedMode)
 }

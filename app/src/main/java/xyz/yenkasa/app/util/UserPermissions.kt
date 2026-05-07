@@ -38,7 +38,8 @@ object UserPermissions {
 
     // 🟢 Can Approve Posts
     fun canApprove(role: String?): Boolean {
-        return canModerate(role)
+        val r = normalize(role)
+        return r in listOf("senior_developer", "junior_developer", "moderator", "admin")
     }
 
     fun canAccessAdminFeatures(role: String?): Boolean {

@@ -59,7 +59,9 @@ module.exports = async (req, res, next) => {
     }
 
     // ✅ Fetch user from DB
-    const userFromDb = await User.findById(decodedPayload.userId).select('-password');
+    const userFromDb = await User.findById(decodedPayload.userId)
+      .select('-password')
+      .populate('role', 'role name accessRole roleName');
     if (!userFromDb) {
       console.warn(`Auth Middleware: User with ID ${decodedPayload.userId} not found in database.`);
       return res.status(401).json({ success: false, message: 'Access denied. User not found.' });

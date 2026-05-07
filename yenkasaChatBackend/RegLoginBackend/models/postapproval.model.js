@@ -28,7 +28,9 @@ const PostApprovalSchema = new mongoose.Schema({
     type: String,
     enum: ["pending", "approved", "rejected"],
     default: "pending"
-  }
+  },
+
+  notifiedAdmins: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model("PostApproval", PostApprovalSchema);

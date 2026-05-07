@@ -8,21 +8,23 @@ const User = require("../models/user.model");
 const authMiddleware = require("../middleware/auth");
 const { sendNotification } = require("../services/notification.service");
 const rewardService = require("../services/reward.service");
-const { sendPushNotification } = require("../utils/onesignal");
-const { canModerate } = require("../middleware/permissions");
+const { getPermissions } = require("../middleware/permissions");
 
 const ALLOWED_ROLES = ["admin", "moderator", "senior_developer", "junior_developer"];
+const ALLOWED_ACCESS_ROLES = ["ADMIN", "MODERATOR", "SENIOR_DEVELOPER", "JUNIOR_DEVELOPER"];
 
 function canApprove(userOrRole) {
-  return typeof userOrRole === "string"
-    ? ALLOWED_ROLES.includes(userOrRole)
-    : canModerate(userOrRole) || userOrRole?.roleName === "junior_developer";
+  const permissions = getPermissions(userOrRole);
+  return permissions.moderationAccess === true || permissions.rank === "JUNIOR_DEVELOPER";
 }
 
 // Helper: fetch all approvers
 async function getApprovers() {
   return User.find({
-    roleName: { $in: ALLOWED_ROLES }
+    $or: [
+      { roleName: { $in: ALLOWED_ROLES } },
+      { accessRole: { $in: ALLOWED_ACCESS_ROLES } }
+    ]
   }).select("_id username playerId");
 }
 
@@ -30,10 +32,57 @@ async function getApprovers() {
 // GET Pending Posts + Notify Admins/Mods/Developers
 // ================================
 router.get("/pending", authMiddleware, async (req, res) => {
+  try {
   const user = await User.findById(req.user.id);
+  const permissions = getPermissions(user);
+
+  console.log("[PostApproval] pending request", {
+    userId: req.user.id,
+    rank: permissions.rank,
+    canApprove: canApprove(user)
+  });
 
   if (!canApprove(user)) {
     return res.status(403).json({ error: "Not authorized" });
+  }
+
+  const existingApprovalPostIds = await PostApproval.distinct("post");
+  const missingApprovalPosts = await Post.find({
+    status: "pending",
+    _id: { $nin: existingApprovalPostIds }
+  }).select("_id userId text caption textBackgroundColor imageUrl imageUrls videoUrl audioUrl createdAt");
+
+  if (missingApprovalPosts.length > 0) {
+    console.warn("[PostApproval] Backfilling missing approval rows", {
+      count: missingApprovalPosts.length
+    });
+
+    const backfillOps = missingApprovalPosts
+      .filter(post => post.userId)
+      .map(post => ({
+        updateOne: {
+          filter: { post: post._id },
+          update: {
+            $setOnInsert: {
+              post: post._id,
+              user: post.userId,
+              caption: post.text || post.caption || "",
+              textBackgroundColor: post.textBackgroundColor || "",
+              imageUrl: post.imageUrl || "",
+              imageUrls: post.imageUrls || [],
+              videoUrl: post.videoUrl || "",
+              audioUrl: post.audioUrl || "",
+              submittedAt: post.createdAt || new Date(),
+              status: "pending"
+            }
+          },
+          upsert: true
+        }
+      }));
+
+    if (backfillOps.length > 0) {
+      await PostApproval.bulkWrite(backfillOps);
+    }
   }
 
   const pending = await PostApproval.find({ status: "pending" })
@@ -47,8 +96,19 @@ router.get("/pending", authMiddleware, async (req, res) => {
     .populate("user", "username profileImage")
     .sort({ submittedAt: -1 });
 
+  const visiblePending = [];
+
   // Notify approvers only ONCE per post
   for (const item of pending) {
+    if (!item.post) {
+      console.warn("[PostApproval] Skipping orphan approval row with missing post", {
+        approvalId: item._id.toString()
+      });
+      continue;
+    }
+
+    visiblePending.push(item);
+
     if (!item.notifiedAdmins) {
       const approvers = await getApprovers();
 
@@ -59,18 +119,19 @@ router.get("/pending", authMiddleware, async (req, res) => {
           receiverId: moderator._id,
           activityId: `pending_${item._id}`,
           message: "A new post is awaiting approval.",
-           targetType: "post",
-            targetId: item.post._id.toString()
+          targetType: "post",
+          targetId: item.post._id.toString(),
+          push: true,
+          pushTitle: "Pending Post",
+          pushBody: "A new post is waiting for approval.",
+          pushData: {
+            type: "post_pending",
+            approvalId: item._id.toString(),
+            targetType: "post",
+            targetId: item.post._id.toString(),
+            postId: item.post._id.toString()
+          }
         });
-
-        if (moderator.playerId) {
-          await sendPushNotification({
-            playerId: moderator.playerId,
-            title: "Pending Post",
-            body: "A new post is waiting for approval.",
-            data: { approvalId: item._id }
-          });
-        }
       }
 
       item.notifiedAdmins = true;
@@ -78,7 +139,16 @@ router.get("/pending", authMiddleware, async (req, res) => {
     }
   }
 
-  res.json({ pending });
+  console.log("[PostApproval] pending response", {
+    rawCount: pending.length,
+    visibleCount: visiblePending.length
+  });
+
+  res.json({ pending: visiblePending });
+  } catch (err) {
+    console.error("❌ POST APPROVAL PENDING ERROR:", err);
+    res.status(500).json({ error: "Failed to load pending posts" });
+  }
 });
 
 // ================================
@@ -116,11 +186,18 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
         receiverId: owner._id,
         activityId,
         message: "Your post has been approved!",
+        targetType: "post",
+        targetId: post._id.toString(),
+        push: true,
+        pushTitle: "Post Approved 🎉",
+        pushBody: "Your post is now live!",
+        pushData: {
+          type: "post_approved",
           targetType: "post",
           targetId: post._id.toString(),
-            targetType: "post",
-            targetId: post._id.toString()
-
+          activityId: post._id.toString(),
+          postId: post._id.toString()
+        }
       });
 
     // ⭐ Reward post owner (their content got approved)
@@ -139,23 +216,6 @@ await rewardService.reward(approver._id, 8, {
   activityId
 });
 
-
-
-      // 📱 Push notification
-      if (owner.playerId) {
-        await sendPushNotification({
-          playerId: owner.playerId,
-          title: "Post Approved 🎉",
-          body: "Your post is now live!",
-          data: {
-            type: "post_approved",
-            targetType: "post",
-            targetId: post._id.toString(),
-            activityId: post._id.toString(),
-            postId: post._id.toString()
-          }
-        });
-      }
     }
 
     res.json({
@@ -209,8 +269,18 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
         receiverId: owner._id,
         activityId,
         message: "Your post has been rejected.",
+        targetType: "post",
+        targetId: post._id.toString(),
+        push: true,
+        pushTitle: "Post Rejected",
+        pushBody: "Your post was rejected.",
+        pushData: {
+          type: "post_rejected",
           targetType: "post",
-          targetId: post._id.toString()
+          targetId: post._id.toString(),
+          activityId: post._id.toString(),
+          postId: post._id.toString()
+        }
       });
 
      // ⭐ Reward the moderator/admin who performed the rejection
@@ -221,22 +291,6 @@ await rewardService.reward(approver._id, 1, {
   activityId
 });
 
-
-      // 📱 Push notification
-      if (owner.playerId) {
-        await sendPushNotification({
-          playerId: owner.playerId,
-          title: "Post Rejected",
-          body: "Your post was rejected, but you earned 10 coins.",
-          data: {
-            type: "post_rejected",
-            targetType: "post",
-            targetId: post._id.toString(),
-            activityId: post._id.toString(),
-            postId: post._id.toString()
-          }
-        });
-      }
     }
 
     res.json({

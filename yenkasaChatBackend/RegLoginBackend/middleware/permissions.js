@@ -47,6 +47,13 @@ const PERMISSIONS = Object.freeze({
   }
 });
 
+const REVIEWER_RANKS = Object.freeze([
+  RANKS.ADMIN,
+  RANKS.MODERATOR,
+  RANKS.JUNIOR_DEVELOPER,
+  RANKS.SENIOR_DEVELOPER
+]);
+
 function normalizeRank(value) {
   if (!value) return RANKS.UNVERIFIED;
 
@@ -78,15 +85,24 @@ function normalizeRank(value) {
 }
 
 function getUserRank(user) {
-  return normalizeRank(
-    user?.accessRole ||
-      user?.roleName ||
-      user?.role?.accessRole ||
-      user?.role?.roleName ||
-      user?.role?.role ||
-      user?.role?.name ||
-      (typeof user?.role === 'string' ? user.role : '')
-  );
+  const candidates = [
+    user?.accessRole,
+    user?.roleName,
+    user?.role?.accessRole,
+    user?.role?.roleName,
+    user?.role?.role,
+    user?.role?.name,
+    typeof user?.role === 'string' ? user.role : ''
+  ]
+    .map(normalizeRank)
+    .filter(Boolean);
+
+  const knownRanks = candidates.filter((rank) => RANK_ORDER.includes(rank));
+  if (!knownRanks.length) return candidates[0] || RANKS.UNVERIFIED;
+
+  return knownRanks.reduce((highest, rank) => (
+    RANK_ORDER.indexOf(rank) > RANK_ORDER.indexOf(highest) ? rank : highest
+  ), RANKS.UNVERIFIED);
 }
 
 function getPermissions(userOrRank) {
@@ -118,6 +134,14 @@ function canManageEconomy(user) {
   return hasPermission(user, 'rewardEconomyAccess');
 }
 
+function canApproveContent(user) {
+  return REVIEWER_RANKS.includes(getPermissions(user).rank);
+}
+
+function canCreateAd(user) {
+  return user?.verified === true || canApproveContent(user);
+}
+
 function requirePermission(permission) {
   return (req, res, next) => {
     const permissions = getPermissions(req.user);
@@ -145,6 +169,7 @@ module.exports = {
   RANKS,
   RANK_ORDER,
   PERMISSIONS,
+  REVIEWER_RANKS,
   normalizeRank,
   getUserRank,
   getPermissions,
@@ -152,5 +177,7 @@ module.exports = {
   canAccessAnalytics,
   canModerate,
   canManageEconomy,
+  canApproveContent,
+  canCreateAd,
   requirePermission
 };

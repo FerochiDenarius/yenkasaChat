@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -14,12 +15,16 @@ import xyz.yenkasa.app.model.PostApprovalItem
 import xyz.yenkasa.app.model.PostApprovalResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
 class PostApprovalActivity : AppCompatActivity() {
 
+    companion object {
+        private const val TAG = "PostApprovalActivity"
+    }
 
 
     private lateinit var recyclerView: RecyclerView
@@ -38,13 +43,11 @@ class PostApprovalActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         // ✔ Permission Check
-        val role = TokenManager.getUserRole(this).lowercase()
-        val allowed = listOf(
-            "admin", "moderator",
-            "senior_developer", "junior_developer"
-        )
+        val role = TokenManager.getUserRole(this)
+        val canApprove = UserPermissions.canApprove(role)
+        Log.d(TAG, "Post approval permission check role=$role canApprove=$canApprove")
 
-        if (role !in allowed) {
+        if (!canApprove) {
             emptyText.text = "🚫 You are not authorized to approve posts."
             emptyText.visibility = View.VISIBLE
             return
@@ -83,15 +86,16 @@ class PostApprovalActivity : AppCompatActivity() {
 
                     if (response.isSuccessful && response.body() != null) {
                         val pending: List<PostApprovalItem> = response.body()!!.pending
+                        Log.d(TAG, "Loaded pending approvals count=${pending.size}")
 
                         if (pending.isNotEmpty()) {
-                            val posts = pending.map { it.post }
                             adapter.updateItems(pending)
                             recyclerView.visibility = View.VISIBLE
                         } else {
                             showEmpty("No pending posts.")
                         }
                     } else {
+                        Log.w(TAG, "Failed to load pending approvals code=${response.code()} error=${response.errorBody()?.string()}")
                         showEmpty("Failed to load pending posts.")
                     }
                 }

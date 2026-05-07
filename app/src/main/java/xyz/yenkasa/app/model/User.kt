@@ -32,7 +32,7 @@ data class User(
     val profileImage: String? = null,
 
     @SerializedName("coinsBalance")
-    val coinsBalance: Int = 0,
+    val coinsBalance: Double = 0.0,
 
     @SerializedName("community")
     val community: Community? = null,

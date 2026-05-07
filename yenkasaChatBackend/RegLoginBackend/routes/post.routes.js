@@ -1,6 +1,7 @@
 // routes/post.routes.js
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { v2: cloudinary } = require('cloudinary');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
@@ -406,6 +407,27 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
 });
 
 
+/* 👤 MY POSTS - must stay before /:postId so "my" is not treated as an ObjectId */
+router.get('/my', authMiddleware, async (req, res) => {
+  try {
+    const posts = await Post.find({
+      userId: req.user.id,
+      isActive: true,
+      status: 'approved'
+    })
+      .sort({ createdAt: -1 })
+      .populate('userId', 'username profileImage verified roleName')
+      .populate('communityId', 'name displayName')
+      .lean();
+
+    await attachAccurateViewCounts(posts);
+    res.json(attachLikedByUser(posts, req.user.id));
+  } catch (err) {
+    console.error('❌ Failed to fetch my posts:', err);
+    res.status(500).json({ error: 'Failed to fetch posts' });
+  }
+});
+
 /* 👤 USER POSTS (with ONE-WAY block enforcement) */
 router.get('/user/:userId', authMiddleware, async (req, res) => {
   try {
@@ -646,6 +668,10 @@ router.get("/:postId", authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;
     const viewerId = req.user.id;
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(404).json({ error: "Post not found" });
+    }
 
     const post = await Post.findOne({
       _id: postId,

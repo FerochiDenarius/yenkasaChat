@@ -23,7 +23,7 @@ data class ProfileResponse(
     val isFollowing: Boolean = false,
     val isBlocked: Boolean = false,
 
-    val coinsBalance: Int? = null,
+    val coinsBalance: Double? = null,
     val walletId: String? = null,
     val bio: String? = null,
     val website: String? = null,

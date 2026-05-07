@@ -148,7 +148,7 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = TokenManager.getEmail(this) ?: "Not provided"
         phoneView.text = TokenManager.getPhone(this) ?: "Not provided"
         locationView.text = TokenManager.getLocation(this) ?: "No location"
-        coinsBalanceView.text = formatCoins(TokenManager.getCoins(this))
+        coinsBalanceView.text = formatCoins(TokenManager.getCoinsPrecise(this))
         communityView.text = "Community: None"
         dateJoinedView.text = "Joined: Unknown"
 
@@ -267,7 +267,7 @@ class AccountInfoActivity : AppCompatActivity() {
         emailView.text = user.email ?: "Not provided"
         phoneView.text = user.phone ?: "Not provided"
         locationView.text = user.location ?: "No location"
-        TokenManager.saveCoins(this, user.coinsBalance)
+        TokenManager.saveCoinsPrecise(this, user.coinsBalance)
         coinsBalanceView.text = formatCoins(user.coinsBalance)
 
         // ✅ Correct property — your Community model uses displayName, not name
@@ -402,8 +402,12 @@ class AccountInfoActivity : AppCompatActivity() {
         }
     }
 
-    private fun formatCoins(coins: Int): String {
-        return NumberFormat.getIntegerInstance(Locale.getDefault()).format(coins)
+    private fun formatCoins(coins: Double): String {
+        val formatter = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = if (coins % 1.0 == 0.0) 0 else 2
+        }
+        return formatter.format(coins)
     }
 
     private fun openFollowList(type: String) {

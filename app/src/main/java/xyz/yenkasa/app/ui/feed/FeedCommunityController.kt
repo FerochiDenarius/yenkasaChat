@@ -54,17 +54,47 @@ class FeedCommunityController(
                     response: Response<List<Community>>
                 ) {
                     if (!response.isSuccessful || response.body() == null) {
+                        fetchPublicCommunitiesFallback(onSelectionReady, onSelectionChanged)
+                        return
+                    }
+
+                    allCommunities = response.body().orEmpty()
+                    if (allCommunities.isEmpty()) {
+                        fetchPublicCommunitiesFallback(onSelectionReady, onSelectionChanged)
+                        return
+                    }
+                    fetchUserMembership(onSelectionReady, onSelectionChanged)
+                }
+
+                override fun onFailure(call: Call<List<Community>>, t: Throwable) {
+                    Log.w("FeedCommunityController", "Authenticated communities failed: ${t.message}")
+                    fetchPublicCommunitiesFallback(onSelectionReady, onSelectionChanged)
+                }
+            })
+    }
+
+    private fun fetchPublicCommunitiesFallback(
+        onSelectionReady: () -> Unit,
+        onSelectionChanged: () -> Unit
+    ) {
+        ApiClient.apiService.getPublicCommunities()
+            .enqueue(object : Callback<List<Community>> {
+                override fun onResponse(
+                    call: Call<List<Community>>,
+                    response: Response<List<Community>>
+                ) {
+                    allCommunities = response.body().orEmpty()
+                    if (allCommunities.isEmpty()) {
                         fallbackSelection()
                         onSelectionChanged()
                         onSelectionReady()
                         return
                     }
-
-                    allCommunities = response.body().orEmpty()
                     fetchUserMembership(onSelectionReady, onSelectionChanged)
                 }
 
                 override fun onFailure(call: Call<List<Community>>, t: Throwable) {
+                    Log.w("FeedCommunityController", "Public communities fallback failed: ${t.message}")
                     fallbackSelection()
                     onSelectionChanged()
                     onSelectionReady()
@@ -482,6 +512,7 @@ class FeedCommunityController(
                 }
 
                 override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
+                    Log.w("FeedCommunityController", "Primary community failed: ${t.message}")
                     fetchJoinedCommunities(null, onSelectionReady, onSelectionChanged)
                 }
             })
@@ -535,6 +566,7 @@ class FeedCommunityController(
                 }
 
                 override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
+                    Log.w("FeedCommunityController", "Joined communities failed: ${t.message}")
                     fallbackSelection()
                     onSelectionChanged()
                     onSelectionReady()
@@ -543,9 +575,11 @@ class FeedCommunityController(
     }
 
     private fun fallbackSelection() {
-        allCommunities = emptyList()
         selectedCommunities.clear()
         communityStoryPreviews = emptyMap()
+        if (allCommunities.isNotEmpty()) {
+            selectedCommunities.addAll(allCommunities.filter { !it.id.isNullOrBlank() })
+        }
     }
 
     private fun applySelectedCommunityIds(selectedIds: Set<String>) {

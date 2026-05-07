@@ -43,7 +43,7 @@ router.get('/metrics', auth, async (req, res) => {
 
   try {
     const rewardResult = await processMicroRewardsIfNeeded(now);
-    const [commentsRanking, viewsRanking, connectorsRanking, ykcRanking, activityFeed, duel, conversationStreak] = await Promise.all([
+    const [commentsRanking, likesRanking, viewsRanking, connectorsRanking, ykcRanking, activityFeed, duel, conversationStreak] = await Promise.all([
       buildRanking({
         model: Comment,
         match: { isActive: true, createdAt: range },
@@ -51,6 +51,14 @@ router.get('/metrics', auth, async (req, res) => {
         accumulator: { $sum: 1 },
         currentUserId,
         metricLabel: 'comments',
+      }),
+      buildRanking({
+        model: LikeActivity,
+        match: { targetType: 'post', createdAt: range },
+        groupField: '$actorUserId',
+        accumulator: { $sum: 1 },
+        currentUserId,
+        metricLabel: 'post likes',
       }),
       buildRanking({
         model: View,
@@ -94,6 +102,13 @@ router.get('/metrics', auth, async (req, res) => {
         leaders: commentsRanking.leaders,
         currentUser: commentsRanking.currentUser,
       },
+      likes: {
+        title: 'Top Post Likes',
+        metricKey: 'likes',
+        action: 'like',
+        leaders: likesRanking.leaders,
+        currentUser: likesRanking.currentUser,
+      },
       views: {
         title: 'Most Views Given',
         metricKey: 'views',
@@ -134,6 +149,7 @@ router.get('/metrics', auth, async (req, res) => {
     res.json({
       window: normalizedWindow,
       topCommenters: sections.comments,
+      topLikes: sections.likes,
       topViews: sections.views,
       topConnectors: sections.follows,
       topYKC: sections.ykc,
@@ -461,15 +477,20 @@ async function loadLiveTitles(userIds) {
 }
 
 async function buildActivityFeed(range, currentUserId) {
-  const cacheKey = `activity:${new Date(range.$gte).toISOString()}`;
+  const cacheKey = `activity:${currentUserId}:${new Date(range.$gte).toISOString()}`;
   const cached = activityCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < 3000) {
     return cached.data;
   }
 
-  const [recentComments, recentViews, recentFollows, recentYkc, liveDuels] = await Promise.all([
+  const [recentComments, recentLikes, recentViews, recentFollows, recentYkc, liveDuels] = await Promise.all([
     Comment.find({ isActive: true, createdAt: range })
       .populate('userId', 'username profileImage')
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean(),
+    LikeActivity.find({ targetType: 'post', createdAt: range })
+      .populate('actorUserId', 'username profileImage')
       .sort({ createdAt: -1 })
       .limit(4)
       .lean(),
@@ -514,6 +535,17 @@ async function buildActivityFeed(range, currentUserId) {
         String(item.userId?._id || '') === currentUserId
           ? '⚡ You pushed the comment rankings'
           : `🔥 ${safeDisplayName(item.userId?.username || 'Someone', item.userId?._id)} added a comment`,
+    })),
+    ...recentLikes.map((item) => ({
+      id: `like-${item._id}`,
+      type: 'like',
+      createdAt: item.createdAt,
+      userId: String(item.actorUserId?._id || ''),
+      profileImage: item.actorUserId?.profileImage || '',
+      text:
+        String(item.actorUserId?._id || '') === currentUserId
+          ? '💚 You pushed the post likes battle'
+          : `💚 ${safeDisplayName(item.actorUserId?.username || 'Someone', item.actorUserId?._id)} liked a post`,
     })),
     ...recentViews.map((item) => ({
       id: `view-${item._id}`,
@@ -839,7 +871,7 @@ async function getMetricCountForUser(metricKey, userId, startTime, endTime = nul
     case 'views':
       return View.countDocuments({ userId, viewedAt: range });
     case 'likes':
-      return LikeActivity.countDocuments({ actorUserId: userId, createdAt: range });
+      return LikeActivity.countDocuments({ actorUserId: userId, targetType: 'post', createdAt: range });
     default:
       return 0;
   }

@@ -7,6 +7,8 @@ data class LiveMetricsResponse(
     val window: String = "5m",
     @SerializedName("topCommenters")
     val topCommenters: LiveLeaderboardSection = LiveLeaderboardSection(),
+    @SerializedName("topLikes")
+    val topLikes: LiveLeaderboardSection = LiveLeaderboardSection(),
     @SerializedName("topViews")
     val topViews: LiveLeaderboardSection = LiveLeaderboardSection(),
     @SerializedName("topConnectors")

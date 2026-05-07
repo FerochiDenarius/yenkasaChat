@@ -5,7 +5,6 @@ import YenkasaLiveSheet from "../feed/YenkasaLiveSheet";
 import { handleStaticImageError, staticImage } from "../../utils/images";
 import YenkasaAdSenseSlot from "./YenkasaAdSenseSlot";
 import YenkasaWebCommunityStrip from "./YenkasaWebCommunityStrip";
-import YenkasaWebFollowingPanel from "./YenkasaWebFollowingPanel";
 import YenkasaWebLiveArenaButton from "./YenkasaWebLiveArenaButton";
 import YenkasaWebPlayerCard from "./YenkasaWebPlayerCard";
 import YenkasaWebWalletPill from "./YenkasaWebWalletPill";
@@ -184,11 +183,6 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
       <YenkasaWebCommunityStrip
         selectedCommunityId={selectedCommunity?._id || selectedCommunity?.id || null}
         onSelectCommunity={setSelectedCommunity}
-      />
-      <YenkasaWebFollowingPanel
-        activeCategory={activeTab}
-        onSelectCategory={setActiveTab}
-        posts={rankedPosts}
       />
 
       <nav className="player-tabs" aria-label="Feed tabs">

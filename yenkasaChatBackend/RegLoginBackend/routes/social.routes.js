@@ -10,6 +10,7 @@ const rewardService = require('../services/reward.service');
 const UserPrivacy = require("../models/userPrivacy.model");
 const { sendNotification } = require("../services/notification.service");
 const AppVerification = require("../models/appverification.model");
+const LikeActivity = require("../models/likeActivity.model");
 
 
 async function isBlocked(userA, userB) {
@@ -164,6 +165,20 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     let rewardTx = null;
     if (!alreadyLiked && likedByUser) {
       await updatePostOwnerLikeMetrics(postOwnerId, updatedPost.likeCount);
+
+      await LikeActivity.updateOne(
+        { activityId: `post_like_${postId}_${userId}` },
+        {
+          $setOnInsert: {
+            activityId: `post_like_${postId}_${userId}`,
+            actorUserId: userId,
+            targetType: "post",
+            targetId: postId,
+            createdAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
 
       const rewardMarker = await Post.updateOne(
         { _id: postId, rewardedLikeUsers: { $ne: userId } },

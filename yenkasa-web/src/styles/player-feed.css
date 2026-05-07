@@ -3031,3 +3031,164 @@
     right: calc((100vw - var(--player-width)) / 2 - 112px);
   }
 }
+
+/* Clean media-first overlay: remove left panel and slim top community rail. */
+.player-following-panel {
+  display: none;
+}
+
+.player-community-strip.player-community-strip--top,
+.player-community-strip.player-community-strip--top.is-expanded,
+.player-community-strip.player-community-strip--top.is-compact {
+  top: calc(max(14px, env(safe-area-inset-top)) + 58px);
+  width: calc(var(--player-width) - 24px);
+  max-height: 92px;
+  border-radius: 18px;
+  padding: 8px 10px 8px;
+  background: rgba(12, 14, 16, 0.34);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
+}
+
+.player-community-strip--top .player-community-strip__header {
+  margin-bottom: 5px;
+}
+
+.player-community-strip--top .player-community-strip__header strong {
+  font-size: 8.5px;
+  letter-spacing: 0.075em;
+}
+
+.player-community-strip--top .player-community-strip__list,
+.player-community-strip--top.is-expanded .player-community-strip__list,
+.player-community-strip--top.is-compact .player-community-strip__list {
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 1px 1px;
+}
+
+.player-community-strip--top .player-community-card,
+.player-community-browser__grid .player-community-card {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 52px;
+  border-radius: 14px;
+  padding: 5px 4px 4px;
+  background: rgba(12, 13, 15, 0.38);
+}
+
+.player-community-strip--top .player-community-card img,
+.player-community-strip--top .player-community-card__fallback,
+.player-community-browser__grid .player-community-card img,
+.player-community-browser__grid .player-community-card__fallback {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.player-community-strip--top .player-community-card strong,
+.player-community-browser__grid .player-community-card strong {
+  font-size: 7.5px;
+  line-height: 1.05;
+}
+
+.player-community-strip--top .player-community-card small,
+.player-community-browser__grid .player-community-card small {
+  margin-top: 2px;
+  font-size: 6.5px;
+}
+
+.player-community-strip--top .player-community-card small i,
+.player-community-browser__grid .player-community-card small i {
+  width: 4px;
+  height: 4px;
+  margin-right: 2px;
+}
+
+.player-community-strip--top .player-community-card__check {
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+}
+
+.player-community-next {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 52px;
+  font-size: 22px;
+}
+
+.player-live-arena {
+  top: calc(max(14px, env(safe-area-inset-top)) + 156px);
+}
+
+.player-actions {
+  top: 48%;
+}
+
+.player-caption {
+  right: 76px;
+}
+
+@media (max-width: 420px) {
+  .player-community-strip.player-community-strip--top,
+  .player-community-strip.player-community-strip--top.is-expanded,
+  .player-community-strip.player-community-strip--top.is-compact {
+    top: calc(max(14px, env(safe-area-inset-top)) + 54px);
+    width: calc(100vw - 20px);
+    max-height: 86px;
+    padding: 7px 9px;
+  }
+
+  .player-community-strip--top .player-community-strip__list,
+  .player-community-strip--top.is-expanded .player-community-strip__list,
+  .player-community-strip--top.is-compact .player-community-strip__list {
+    gap: 7px;
+    min-height: 50px;
+  }
+
+  .player-community-strip--top .player-community-card {
+    flex-basis: 54px;
+    width: 54px;
+    height: 50px;
+  }
+
+  .player-community-strip--top .player-community-card img,
+  .player-community-strip--top .player-community-card__fallback {
+    width: 23px;
+    height: 23px;
+  }
+
+  .player-live-arena {
+    top: calc(max(14px, env(safe-area-inset-top)) + 146px);
+  }
+}
+
+@media (max-height: 720px) {
+  .player-community-strip.player-community-strip--top,
+  .player-community-strip.player-community-strip--top.is-expanded,
+  .player-community-strip.player-community-strip--top.is-compact {
+    top: calc(max(10px, env(safe-area-inset-top)) + 50px);
+    max-height: 80px;
+  }
+
+  .player-community-strip--top .player-community-card {
+    height: 48px;
+  }
+
+  .player-live-arena {
+    top: calc(max(10px, env(safe-area-inset-top)) + 136px);
+  }
+}
+
+@media (min-width: 900px) {
+  .player-actions {
+    right: max(24px, calc((100vw - var(--player-width)) / 2 - 84px));
+  }
+
+  .player-live-arena {
+    right: max(24px, calc((100vw - var(--player-width)) / 2 - 84px));
+  }
+}

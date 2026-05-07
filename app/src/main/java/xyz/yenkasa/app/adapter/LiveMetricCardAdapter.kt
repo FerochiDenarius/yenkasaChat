@@ -78,7 +78,7 @@ class LiveMetricCardAdapter(
                 "comment" -> "Go Comment"
                 "view" -> "Go View"
                 "follow" -> "Go Follow"
-                "like" -> "Go Earn"
+                "like" -> "Go Like"
                 else -> "Open Feed"
             }
             actionButton.setOnClickListener { onActionClick(section) }

@@ -246,6 +246,7 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
         <div className="feed-live-cards">
           {[
             payload?.topCommenters,
+            payload?.topLikes,
             payload?.topViews,
             payload?.topConnectors,
             payload?.topYKC

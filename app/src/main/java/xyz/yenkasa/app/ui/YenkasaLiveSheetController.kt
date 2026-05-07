@@ -293,7 +293,7 @@ class YenkasaLiveSheetController(
 
     private fun bindLiveMetrics(body: LiveMetricsResponse) {
         val sections = highlightRankChanges(
-            listOf(body.topCommenters, body.topViews, body.topConnectors, body.topYKC)
+            listOf(body.topCommenters, body.topLikes, body.topViews, body.topConnectors, body.topYKC)
         )
         metricAdapter.submitSections(sections)
         bindActiveEvent(body.activeEvent)
@@ -375,14 +375,14 @@ class YenkasaLiveSheetController(
         duelCardView?.isVisible = true
         if (duel == null) {
             duelMatchupView?.text = "You vs a matched rival"
-            duelMetricView?.text = "Comments battle • Prize +12 YKC"
+            duelMetricView?.text = "Post likes battle • Prize +12 YKC"
             duelYouScoreView?.text = "0"
             duelOpponentLabelView?.text = "Rival"
             duelOpponentScoreView?.text = "0"
             duelTimerView?.text = "⏱ 05:00 duel window"
-            duelActionView?.text = "Start Duel"
+            duelActionView?.text = "Start Like Duel"
             duelActionView?.alpha = 1f
-            duelActionView?.setOnClickListener { createDuel("comment") }
+            duelActionView?.setOnClickListener { createDuel("like") }
             return
         }
 
@@ -410,7 +410,7 @@ class YenkasaLiveSheetController(
                 duel.canJoin -> joinDuel(duel.duelId)
                 duel.status == "pending" -> Unit
                 duel.status == "active" -> onQuickAction(metricToQuickAction(duel.metricType))
-                else -> createDuel("comment")
+                else -> createDuel("like")
             }
         }
     }
@@ -439,6 +439,8 @@ class YenkasaLiveSheetController(
             append(body.window)
             append('|')
             append(body.topCommenters.leaders.joinToString { "${it.userId}:${it.count}:${it.rank}" })
+            append('|')
+            append(body.topLikes.leaders.joinToString { "${it.userId}:${it.count}:${it.rank}" })
             append('|')
             append(body.topViews.leaders.joinToString { "${it.userId}:${it.count}:${it.rank}" })
             append('|')

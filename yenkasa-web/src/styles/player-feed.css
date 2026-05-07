@@ -2771,10 +2771,41 @@
   color: rgba(255, 255, 255, 0.62);
 }
 
+.player-following-panel__tabs {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  margin: 0 0 9px;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.player-following-panel__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.player-following-panel__tabs button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.player-following-panel__tabs button.is-active {
+  border-color: rgba(35, 238, 113, 0.62);
+  background: rgba(35, 238, 113, 0.18);
+  color: #35ef7d;
+}
+
 .player-following-panel__list {
   display: grid;
   gap: 7px;
-  max-height: 154px;
+  max-height: 128px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -2850,11 +2881,14 @@
 }
 
 .player-live-arena {
+  z-index: 84;
   top: calc(max(18px, env(safe-area-inset-top)) + 250px);
   right: max(14px, calc((100vw - var(--player-width)) / 2 + 16px));
 }
 
 .player-actions {
+  z-index: 83;
+  left: auto;
   top: 49%;
   right: max(14px, calc((100vw - var(--player-width)) / 2 + 16px));
   transform: translateY(-28%);
@@ -2914,7 +2948,7 @@
   }
 
   .player-following-panel__list {
-    max-height: 142px;
+    max-height: 116px;
   }
 
   .player-actions {
@@ -2951,6 +2985,49 @@
   }
 
   .player-following-panel__list {
-    max-height: 124px;
+    max-height: 96px;
+  }
+}
+
+@media (min-width: 900px) {
+  .player-following-panel {
+    left: max(24px, calc((100vw - var(--player-width)) / 2 - 198px));
+    top: 47%;
+    z-index: 62;
+    width: 178px;
+  }
+
+  .player-actions {
+    left: auto;
+    right: max(24px, calc((100vw - var(--player-width)) / 2 - 84px));
+    z-index: 88;
+  }
+
+  .player-live-arena {
+    right: max(24px, calc((100vw - var(--player-width)) / 2 - 84px));
+    z-index: 89;
+  }
+}
+
+@media (min-width: 1280px) {
+  .player-following-panel {
+    left: calc((100vw - var(--player-width)) / 2 - 220px);
+    width: 188px;
+  }
+
+  .player-actions,
+  .player-live-arena {
+    right: calc((100vw - var(--player-width)) / 2 - 96px);
+  }
+}
+
+@media (min-width: 1600px) {
+  .player-following-panel {
+    left: calc((100vw - var(--player-width)) / 2 - 236px);
+  }
+
+  .player-actions,
+  .player-live-arena {
+    right: calc((100vw - var(--player-width)) / 2 - 112px);
   }
 }

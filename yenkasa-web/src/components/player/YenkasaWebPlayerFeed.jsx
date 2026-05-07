@@ -185,7 +185,11 @@ export default function YenkasaWebPlayerFeed({ onOpenMenu }) {
         selectedCommunityId={selectedCommunity?._id || selectedCommunity?.id || null}
         onSelectCommunity={setSelectedCommunity}
       />
-      <YenkasaWebFollowingPanel posts={rankedPosts} />
+      <YenkasaWebFollowingPanel
+        activeCategory={activeTab}
+        onSelectCategory={setActiveTab}
+        posts={rankedPosts}
+      />
 
       <nav className="player-tabs" aria-label="Feed tabs">
         {tabs.map((tab) => (

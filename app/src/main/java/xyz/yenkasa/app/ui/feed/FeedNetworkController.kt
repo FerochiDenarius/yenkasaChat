@@ -23,6 +23,9 @@ class FeedNetworkController(
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     fun updateOfflineBanner(offlineBanner: TextView, isOffline: Boolean) {
+        if (isOffline) {
+            offlineBanner.text = "Offline Mode • Showing Saved Feed"
+        }
         offlineBanner.visibility = if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
     }
 

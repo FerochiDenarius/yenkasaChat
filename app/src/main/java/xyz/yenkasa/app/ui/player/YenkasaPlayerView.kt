@@ -34,6 +34,7 @@ import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.WalletBalanceManager
+import xyz.yenkasa.app.util.YenkasaMediaCache
 import kotlin.math.abs
 
 class YenkasaPlayerView @JvmOverloads constructor(
@@ -550,7 +551,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
             currentMediaUrl = mediaUrl
             player = ExoPlayer.Builder(context).build().also { exo ->
                 exo.repeatMode = Player.REPEAT_MODE_OFF
-                exo.setMediaItem(MediaItem.fromUri(Uri.parse(mediaUrl)))
+                val mediaItem = MediaItem.fromUri(Uri.parse(mediaUrl))
+                exo.setMediaSource(YenkasaMediaCache.mediaSource(context, mediaItem))
                 exo.prepare()
                 exo.addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {

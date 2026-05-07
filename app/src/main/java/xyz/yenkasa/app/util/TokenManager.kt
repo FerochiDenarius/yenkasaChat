@@ -43,6 +43,8 @@ object TokenManager {
     private const val DASHBOARD_CACHE_KEY = "verification_dashboard_json"
     private const val FEED_CACHE_PREF_NAME = "yenkasa_cache"
     private const val FEED_CACHE_KEY = "feed_cache"
+    private const val FEED_CACHE_KEY_PREFIX = "feed_cache_v2_"
+    private const val FEED_SCROLL_KEY_PREFIX = "feed_scroll_v2_"
     private const val FEED_CACHE_COMMUNITY_NAMES_KEY = "feed_cache_community_names"
     private const val FIRST_LAUNCH_KEY = "first_launch_completed"
     private const val POLICIES_ACCEPTED_KEY = "policies_accepted"
@@ -1149,6 +1151,18 @@ object TokenManager {
         }
     }
 
+    fun saveFeedCache(context: Context, cacheKey: String, json: String, updateLegacy: Boolean = true) {
+        try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            val editor = prefs.edit().putString(FEED_CACHE_KEY_PREFIX + cacheKey, json)
+            if (updateLegacy) editor.putString(FEED_CACHE_KEY, json)
+            val saved = editor.commit()
+            Log.i(TAG, "📦 Feed cache saved. key=$cacheKey committed=$saved")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving keyed feed cache", e)
+        }
+    }
+
     fun getFeedCache(context: Context): String? {
         return try {
             val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
@@ -1156,6 +1170,35 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error reading feed cache", e)
             null
+        }
+    }
+
+    fun getFeedCache(context: Context, cacheKey: String): String? {
+        return try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.getString(FEED_CACHE_KEY_PREFIX + cacheKey, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading keyed feed cache", e)
+            null
+        }
+    }
+
+    fun saveFeedScrollPosition(context: Context, cacheKey: String, position: Int) {
+        try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putInt(FEED_SCROLL_KEY_PREFIX + cacheKey, position.coerceAtLeast(0)).apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving feed scroll position", e)
+        }
+    }
+
+    fun getFeedScrollPosition(context: Context, cacheKey: String): Int {
+        return try {
+            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+            prefs.getInt(FEED_SCROLL_KEY_PREFIX + cacheKey, 0)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading feed scroll position", e)
+            0
         }
     }
 

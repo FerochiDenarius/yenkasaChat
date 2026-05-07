@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +43,10 @@ class YenkasaPlayerFeedAdapter(
     private val typeAdMobAd = 2
 
     inner class PlayerViewHolder(val playerView: YenkasaPlayerView) : RecyclerView.ViewHolder(playerView)
+
+    init {
+        setHasStableIds(true)
+    }
 
     override fun getItemViewType(position: Int): Int {
         return when (val item = items[position]) {
@@ -114,6 +119,10 @@ class YenkasaPlayerFeedAdapter(
 
     override fun getItemCount(): Int = items.size
 
+    override fun getItemId(position: Int): Long {
+        return stableItemKey(items[position]).hashCode().toLong()
+    }
+
     override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
         super.onViewDetachedFromWindow(holder)
         (holder as? PlayerViewHolder)?.playerView?.release()
@@ -133,9 +142,22 @@ class YenkasaPlayerFeedAdapter(
             "YenkasaPlayerAds",
             "submitItems total=${newItems.size} posts=${newItems.count { it is Post }} ads=${newItems.count { it is AdModel }}"
         )
+        val oldItems = items.toList()
+        val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun getOldListSize(): Int = oldItems.size
+            override fun getNewListSize(): Int = newItems.size
+
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return stableItemKey(oldItems[oldItemPosition]) == stableItemKey(newItems[newItemPosition])
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return oldItems[oldItemPosition] == newItems[newItemPosition]
+            }
+        })
         items.clear()
         items.addAll(newItems)
-        notifyDataSetChanged()
+        diff.dispatchUpdatesTo(this)
     }
 
     fun updateCommunities(allCommunities: List<Community>, selectedIds: Set<String>) {
@@ -267,6 +289,14 @@ class YenkasaPlayerFeedAdapter(
         return ad.adType.equals("google", ignoreCase = true) ||
             ad.sponsorName.equals("AdMob", ignoreCase = true) ||
             ad._id.startsWith("local-ad")
+    }
+
+    private fun stableItemKey(item: Any): String {
+        return when (item) {
+            is Post -> "post:${item._id}"
+            is AdModel -> "ad:${item._id}"
+            else -> "unknown:${item.hashCode()}"
+        }
     }
 
     private fun computePostIndex(adapterPosition: Int): Int {

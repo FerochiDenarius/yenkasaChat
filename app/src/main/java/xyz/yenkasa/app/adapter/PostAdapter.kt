@@ -33,6 +33,7 @@ import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
+import xyz.yenkasa.app.util.YenkasaMediaCache
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
@@ -580,7 +581,8 @@ class PostAdapter(
                     player.addListener(videoSizeListener!!)
                     player.stop() // ensure no leftover
                     player.clearMediaItems()
-                    player.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+                    val mediaItem = MediaItem.fromUri(Uri.parse(url))
+                    player.setMediaSource(YenkasaMediaCache.mediaSource(context, mediaItem))
                     player.prepare()
                     currentPlayer = player
                     player.play()

@@ -3,6 +3,7 @@ package xyz.yenkasa.app.adapter
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.AdModel
@@ -25,6 +26,10 @@ class FeedAdapter(
     private val TYPE_ADMOB_AD = 2
 
     private var items: List<Any> = emptyList()
+
+    init {
+        setHasStableIds(true)
+    }
 
     // 🔥 NEW CALLBACKS FOR DELETE / HIDE / DOWNLOAD / FLAG
     var onDelete: ((Post) -> Unit)? = null
@@ -100,6 +105,10 @@ class FeedAdapter(
 
     override fun getItemCount(): Int = items.size
 
+    override fun getItemId(position: Int): Long {
+        return stableItemKey(items[position]).hashCode().toLong()
+    }
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val obj = items[position]) {
 
@@ -142,9 +151,30 @@ class FeedAdapter(
         items.count { it is Post }
 
     fun updateItems(newItems: List<Any>) {
+        val oldItems = items
+        val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun getOldListSize(): Int = oldItems.size
+            override fun getNewListSize(): Int = newItems.size
+
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return stableItemKey(oldItems[oldItemPosition]) == stableItemKey(newItems[newItemPosition])
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return oldItems[oldItemPosition] == newItems[newItemPosition]
+            }
+        })
         items = newItems
         currentPostsForInternal = emptyList()
-        notifyDataSetChanged()
+        diff.dispatchUpdatesTo(this)
+    }
+
+    private fun stableItemKey(item: Any): String {
+        return when (item) {
+            is Post -> "post:${item._id}"
+            is AdModel -> "ad:${item._id}"
+            else -> "unknown:${item.hashCode()}"
+        }
     }
 
     fun updatePostViewCount(postId: String, viewsCount: Int) {

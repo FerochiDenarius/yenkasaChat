@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.google.gson.Gson
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.ui.feed.FeedCacheController
 import xyz.yenkasa.app.util.TokenManager
 
 class FeedSyncWorker(
@@ -33,6 +34,11 @@ class FeedSyncWorker(
             }
 
             val body = response.body()!!
+            val gson = Gson()
+            val cacheController = FeedCacheController(applicationContext, gson)
+            val cacheKey = cacheController.cacheKeyForCommunityNames(
+                communityNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            )
             val payload = CachedFeedPayload(
                 posts = body.posts,
                 currentPage = body.pagination.currentPage,
@@ -41,8 +47,10 @@ class FeedSyncWorker(
 
             TokenManager.saveFeedCache(
                 applicationContext,
-                Gson().toJson(payload)
+                cacheKey,
+                gson.toJson(payload)
             )
+            Log.d("FeedSyncWorker", "Feed sync cache_saved key=$cacheKey posts=${body.posts.size}")
 
             Result.success()
         } catch (e: Exception) {

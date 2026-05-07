@@ -93,8 +93,13 @@ class FeedFragment : Fragment() {
     private var userId: String? = null
     private var currentPage = 1
     private var isLoading = false
+    private var isLoadingMore = false
     private var isLastPage = false
     private var hasShownCachedFeed = false
+    private var feedRequestGeneration = 0
+    private var activeCacheKey = "default"
+    private var lastLoadedPostId: String? = null
+    private val restoredScrollCacheKeys = mutableSetOf<String>()
     private var followingUserIds: Set<String>? = null
     private var sponsoredAds: List<AdModel> = emptyList()
     private var communitiesBarHidden = false
@@ -159,26 +164,24 @@ class FeedFragment : Fragment() {
             onFeedFocusRequested = { recyclerView.smoothScrollToPosition(0) }
         )
         setupRecyclerView()
-        if (!USE_YENKASA_PLAYER_VIEW) {
-            communityStoryAdapter = communityController.setupStoryRecyclerView(
-                recyclerView = communityStoryRecyclerView,
-                onAllCommunitiesClick = {
-                    communityController.handleSelectAllCommunities(
-                        onNoCommunities = { openCommunitySelectorOrToast() },
-                        onSelectionChanged = { syncCommunitySelectionUi() },
-                        onFeedReloadRequested = { reloadFeedFromStart() }
-                    )
-                },
-                onCommunityClick = { community ->
-                    communityController.handleSelectCommunity(
-                        community = community,
-                        onSelectionChanged = { syncCommunitySelectionUi() },
-                        onFeedReloadRequested = { reloadFeedFromStart() }
-                    )
-                }
-            )
-            setupFeedTabs()
-        }
+        communityStoryAdapter = communityController.setupStoryRecyclerView(
+            recyclerView = communityStoryRecyclerView,
+            onAllCommunitiesClick = {
+                communityController.handleSelectAllCommunities(
+                    onNoCommunities = { openCommunitySelectorOrToast() },
+                    onSelectionChanged = { syncCommunitySelectionUi() },
+                    onFeedReloadRequested = { reloadFeedFromStart() }
+                )
+            },
+            onCommunityClick = { community ->
+                communityController.handleSelectCommunity(
+                    community = community,
+                    onSelectionChanged = { syncCommunitySelectionUi() },
+                    onFeedReloadRequested = { reloadFeedFromStart() }
+                )
+            }
+        )
+        setupFeedTabs()
         setupInfiniteScroll()
         loadCachedFeed()
         scheduleBackgroundFeedSync()
@@ -193,7 +196,7 @@ class FeedFragment : Fragment() {
                             if (::communityStoryAdapter.isInitialized) communityStoryAdapter else null
                         )
                     }
-                    loadFeed()
+                    reloadFeedFromStart()
                 },
                 onSelectionChanged = { syncCommunitySelectionUi() }
             )
@@ -296,7 +299,7 @@ class FeedFragment : Fragment() {
                 recyclerView = recyclerView,
                 layoutManager = layoutManager,
                 callbacks = createPlayerCallbacks(),
-                shouldLoadNextPage = { !isLoading && !isLastPage },
+                shouldLoadNextPage = { !isLoading && !isLoadingMore && !isLastPage },
                 onLoadNextPage = { loadFeed(currentPage + 1) },
                 onViewCountUpdated = { postId, viewsCount -> updateSourcePostViewCount(postId, viewsCount) }
             ).also { it.setup() }
@@ -392,7 +395,7 @@ class FeedFragment : Fragment() {
                 val totalItemCount = layoutManager.itemCount
                 preloadFeedAround(lastVisible)
 
-                if (!isLoading && !isLastPage && lastVisible >= totalItemCount - 3) {
+                if (!isLoading && !isLoadingMore && !isLastPage && lastVisible >= totalItemCount - 3) {
                     loadFeed(currentPage + 1)
                 }
             }
@@ -477,7 +480,7 @@ class FeedFragment : Fragment() {
         tabsController.bindTabs(feedTabs) {
             currentPage = 1
             isLastPage = false
-            loadFeed()
+            reloadFeedFromStart()
         }
     }
 
@@ -549,18 +552,27 @@ class FeedFragment : Fragment() {
 
 
     private fun loadFeed(page: Int = 1) {
-        if (isLoading) return
+        if (isLoading) {
+            Log.d("FeedFragment", "feed_request_skipped loading=true page=$page")
+            return
+        }
 
         if (selectedFeedMode == FeedTabsController.FeedMode.FOLLOWING && followingUserIds == null) {
             fetchFollowingUserIds { loadFeed(page) }
             return
         }
 
+        val names = selectedCommunityNames()
+        val cacheKey = cacheController.cacheKeyForCommunityNames(names)
+
         if (!isOnline()) {
             updateOfflineBanner(true)
-            if (posts.isEmpty() && !hasShownCachedFeed) {
-                loadCachedFeed()
+            val loaded = if (page <= 1) {
+                loadCachedFeed(cacheKey, replace = posts.isEmpty(), allowGlobalFallback = posts.isEmpty())
+            } else {
+                false
             }
+            Log.d("FeedFragment", "offline_recovery page=$page cacheKey=$cacheKey loaded=$loaded posts=${posts.size}")
             updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             return
         } else {
@@ -568,16 +580,17 @@ class FeedFragment : Fragment() {
         }
 
         isLoading = true
+        isLoadingMore = page > 1
         showLoading(true, page <= 1)
 
-        val names = selectedCommunities.mapNotNull { it.displayName ?: it.name }
         if (names.isEmpty()) {
             if (posts.isEmpty()) {
-                loadCachedFeed()
+                loadCachedFeed(cacheKey, replace = true, allowGlobalFallback = true)
             } else {
                 renderPosts()
             }
             isLoading = false
+            isLoadingMore = false
             showLoading(false, page <= 1)
             updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             return
@@ -585,6 +598,13 @@ class FeedFragment : Fragment() {
 
         val namesString = names.joinToString(",")
         TokenManager.saveFeedCacheCommunityNames(requireContext(), namesString)
+        val requestGeneration = feedRequestGeneration
+        val requestStartedAt = System.currentTimeMillis()
+        val previousPostsForSameFeed = if (activeCacheKey == cacheKey) posts.toList() else emptyList()
+        Log.d(
+            "FeedFragment",
+            "feed_fetch_start page=$page cacheKey=$cacheKey names=${names.size} previous=${previousPostsForSameFeed.size}"
+        )
 
         ApiClient.apiService.getPostsByCommunities(
             "Bearer $token",
@@ -594,7 +614,12 @@ class FeedFragment : Fragment() {
         ).enqueue(object : Callback<FeedResponse> {
 
             override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
+                if (requestGeneration != feedRequestGeneration) {
+                    Log.d("FeedFragment", "feed_fetch_ignored_stale page=$page cacheKey=$cacheKey")
+                    return
+                }
                 isLoading = false
+                isLoadingMore = false
                 showLoading(false, page <= 1)
 
                 if (response.isSuccessful && response.body() != null) {
@@ -608,27 +633,45 @@ class FeedFragment : Fragment() {
 
                     if (page == 1) {
                         posts.clear()
-                        posts.addAll(filteredPosts)
+                        posts.addAll(mergeRefreshPosts(filteredPosts, previousPostsForSameFeed))
                     } else {
                         posts.addAll(mergeUniquePosts(posts, filteredPosts))
                     }
 
+                    activeCacheKey = cacheKey
                     currentPage = page
                     isLastPage = body.pagination.currentPage >= body.pagination.totalPages || filteredPosts.isEmpty()
+                    lastLoadedPostId = posts.lastOrNull()?._id
+                    Log.d(
+                        "FeedFragment",
+                        "feed_fetch_success page=$page received=${sourcePosts.size} rendered=${posts.size} hasMore=${!isLastPage} lastLoadedPostId=$lastLoadedPostId durationMs=${System.currentTimeMillis() - requestStartedAt}"
+                    )
                     renderPosts()
+                    restoreScrollPositionIfNeeded(cacheKey)
                     saveCurrentFeedCache()
                 } else {
-                    if (posts.isEmpty()) loadCachedFeed()
+                    val loaded = if (posts.isEmpty()) {
+                        loadCachedFeed(cacheKey, replace = true, allowGlobalFallback = true)
+                    } else {
+                        false
+                    }
+                    Log.w("FeedFragment", "feed_fetch_failed code=${response.code()} cacheLoaded=$loaded")
                     updateEmptyFeedUi(isRefreshing = posts.isEmpty())
-                    Toast.makeText(requireContext(), "Failed to load feed.", Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
+                if (requestGeneration != feedRequestGeneration) {
+                    Log.d("FeedFragment", "feed_failure_ignored_stale page=$page cacheKey=$cacheKey")
+                    return
+                }
                 isLoading = false
+                isLoadingMore = false
                 showLoading(false, page <= 1)
-                Log.e("FeedFragment", "Network failure: ${t.message}")
-                if (posts.isEmpty()) loadCachedFeed()
+                Log.e("FeedFragment", "feed_fetch_failure page=$page cacheKey=$cacheKey message=${t.message}")
+                if (posts.isEmpty()) {
+                    loadCachedFeed(cacheKey, replace = true, allowGlobalFallback = true)
+                }
                 updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             }
         })
@@ -699,6 +742,7 @@ class FeedFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
+        saveCurrentScrollPosition()
         chromeController.onHostPause()
         if (USE_YENKASA_PLAYER_VIEW) {
             playerCoordinator?.pauseActive()
@@ -755,6 +799,7 @@ class FeedFragment : Fragment() {
             )
             updateEmptyFeedUi(isRefreshing = isLoading && posts.isEmpty())
             if (posts.isNotEmpty()) {
+                preloadFeedAround(layoutManager.findFirstVisibleItemPosition().coerceAtLeast(0))
                 recyclerView.post {
                     playerCoordinator?.handleSnapToActiveItem()
                 }
@@ -772,6 +817,12 @@ class FeedFragment : Fragment() {
     private fun mergeUniquePosts(existing: List<Post>, incoming: List<Post>): List<Post> {
         val existingIds = existing.map { it._id }.toMutableSet()
         return incoming.filter { existingIds.add(it._id) }
+    }
+
+    private fun mergeRefreshPosts(fresh: List<Post>, cachedOrExisting: List<Post>): List<Post> {
+        if (fresh.isEmpty()) return emptyList()
+        val seen = mutableSetOf<String>()
+        return (fresh + cachedOrExisting).filter { seen.add(it._id) }
     }
 
     private fun syncCommunitySelectionUi() {
@@ -796,34 +847,89 @@ class FeedFragment : Fragment() {
     }
 
     private fun reloadFeedFromStart() {
+        feedRequestGeneration++
+        isLoading = false
+        isLoadingMore = false
         currentPage = 1
         isLastPage = false
+        val cacheKey = cacheController.cacheKeyForCommunityNames(selectedCommunityNames())
+        loadCachedFeed(
+            cacheKey = cacheKey,
+            replace = true,
+            allowGlobalFallback = posts.isEmpty()
+        )
         loadFeed()
     }
 
-    private fun loadCachedFeed() {
-        cacheController.loadCachedFeed { cached ->
-            posts.clear()
-            posts.addAll(cached.posts)
-            currentPage = cached.currentPage.coerceAtLeast(1)
-            isLastPage = cached.isLastPage
-            hasShownCachedFeed = true
-            renderPosts()
+    private fun loadCachedFeed(
+        cacheKey: String = activeCacheKey,
+        replace: Boolean = true,
+        allowGlobalFallback: Boolean = true
+    ): Boolean {
+        return cacheController.loadCachedFeed(cacheKey, allowGlobalFallback) { cached ->
+            if (replace || posts.isEmpty()) {
+                posts.clear()
+                posts.addAll(cached.posts)
+                activeCacheKey = cacheKey
+                currentPage = cached.currentPage.coerceAtLeast(1)
+                isLastPage = cached.isLastPage
+                lastLoadedPostId = posts.lastOrNull()?._id
+                hasShownCachedFeed = true
+                renderPosts()
+                restoreScrollPositionIfNeeded(cacheKey)
+            }
         }
     }
 
     private fun saveCurrentFeedCache() {
-        cacheController.saveCurrentFeedCache(posts, currentPage, isLastPage)
+        cacheController.saveCurrentFeedCache(posts, currentPage, isLastPage, activeCacheKey)
     }
 
     private fun preloadFeedAround(anchorPosition: Int) {
         cacheController.preloadFeedAround(posts, anchorPosition, this)
     }
 
+    private fun saveCurrentScrollPosition() {
+        if (!::layoutManager.isInitialized) return
+        val position = layoutManager.findFirstVisibleItemPosition()
+        if (position == RecyclerView.NO_POSITION) return
+        TokenManager.saveFeedScrollPosition(requireContext(), activeCacheKey, position)
+        Log.d("FeedFragment", "feed_scroll_saved key=$activeCacheKey position=$position")
+    }
+
+    private fun restoreScrollPositionIfNeeded(cacheKey: String) {
+        if (!restoredScrollCacheKeys.add(cacheKey)) return
+        val position = TokenManager.getFeedScrollPosition(requireContext(), cacheKey)
+        if (position <= 0 || posts.isEmpty()) return
+        recyclerView.post {
+            val bounded = position.coerceAtMost((recyclerView.adapter?.itemCount ?: posts.size) - 1)
+            if (bounded > 0) {
+                recyclerView.scrollToPosition(bounded)
+                Log.d("FeedFragment", "feed_scroll_restored key=$cacheKey position=$bounded")
+            }
+        }
+    }
+
     private fun updateEmptyFeedUi(isRefreshing: Boolean) {
         if (!::emptyView.isInitialized) return
-        emptyView.text = if (isRefreshing) "Refreshing feed..." else "No posts yet."
+        updatePlayerEmptyRecoveryChrome(posts.isEmpty())
+        emptyView.text = when {
+            isRefreshing -> "Refreshing feed..."
+            selectedCommunities.isNotEmpty() -> "No posts in this community yet. Choose another community."
+            else -> "No posts yet."
+        }
         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    private fun updatePlayerEmptyRecoveryChrome(show: Boolean) {
+        if (!USE_YENKASA_PLAYER_VIEW || !::communitiesBar.isInitialized) return
+        val visibility = if (show) View.VISIBLE else View.GONE
+        communitiesBar.visibility = visibility
+        feedFilterBar.visibility = visibility
+        floatingWalletViews.walletCard.visibility = visibility
+        fabYenkasaLive.visibility = visibility
+        val mainAppBar: View? = requireActivity().findViewById(R.id.mainAppBar)
+        mainAppBar?.visibility = visibility
     }
 
     private fun updateOfflineBanner(isOffline: Boolean) {
@@ -833,6 +939,10 @@ class FeedFragment : Fragment() {
 
     private fun isOnline(): Boolean {
         return networkController.isOnline()
+    }
+
+    private fun selectedCommunityNames(): List<String> {
+        return selectedCommunities.mapNotNull { it.displayName ?: it.name }
     }
 
     private fun setupNetworkMonitoring() {

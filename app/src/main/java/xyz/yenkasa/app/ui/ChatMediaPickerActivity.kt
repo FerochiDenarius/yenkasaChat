@@ -349,7 +349,7 @@ class ChatMediaPickerActivity : AppCompatActivity() {
         try {
             val photoFile = File.createTempFile("chat_capture_${System.currentTimeMillis()}", ".jpg", cacheDir)
             pendingCameraUri = FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", photoFile)
-            cameraLauncher.launch(pendingCameraUri)
+            pendingCameraUri?.let { cameraLauncher.launch(it) }
         } catch (e: Exception) {
             Log.e("ChatMediaPicker", "Camera launch failed", e)
             Toast.makeText(this, R.string.chat_media_camera_failed, Toast.LENGTH_SHORT).show()

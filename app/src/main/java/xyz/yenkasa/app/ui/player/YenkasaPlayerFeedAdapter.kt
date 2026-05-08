@@ -37,6 +37,7 @@ class YenkasaPlayerFeedAdapter(
     private val lastViewTime = mutableMapOf<String, Long>()
     private var activePosition = RecyclerView.NO_POSITION
     private var muted = true
+    private var viewportHeight = 0
 
     private val typePost = 0
     private val typeYenkasaAd = 1
@@ -60,10 +61,7 @@ class YenkasaPlayerFeedAdapter(
         return when (viewType) {
             typePost -> {
                 val view = YenkasaPlayerView(parent.context).apply {
-                    layoutParams = RecyclerView.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+                    layoutParams = fullscreenLayoutParams()
                 }
                 PlayerViewHolder(view)
             }
@@ -84,6 +82,7 @@ class YenkasaPlayerFeedAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        holder.itemView.layoutParams = fullscreenLayoutParams()
         when (val feedItem = items[position]) {
             is Post -> {
                 val item = YenkasaPlayerItem.fromPost(feedItem, TokenManager.getCoins(context).toDouble())
@@ -135,6 +134,12 @@ class YenkasaPlayerFeedAdapter(
 
     fun submitPosts(newPosts: List<Post>) {
         submitItems(newPosts)
+    }
+
+    fun setViewportHeight(height: Int) {
+        if (height <= 0 || viewportHeight == height) return
+        viewportHeight = height
+        notifyDataSetChanged()
     }
 
     fun submitItems(newItems: List<Any>) {
@@ -281,7 +286,7 @@ class YenkasaPlayerFeedAdapter(
     private fun fullscreenLayoutParams(): RecyclerView.LayoutParams {
         return RecyclerView.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            viewportHeight.takeIf { it > 0 } ?: ViewGroup.LayoutParams.MATCH_PARENT
         )
     }
 

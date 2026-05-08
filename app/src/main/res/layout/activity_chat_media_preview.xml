@@ -57,12 +57,31 @@
             android:contentDescription="@string/chat_media_preview"
             android:scaleType="centerCrop" />
 
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/previewVideoView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_chat_media_preview_surface"
+            android:visibility="gone" />
+
         <ImageView
             android:id="@+id/imagePreviewPlay"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_play_circle"
+            android:tint="@color/white"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/buttonPreviewMute"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_chat_media_toolbar_button"
+            android:padding="9dp"
+            android:src="@drawable/ic_volume_off"
             android:tint="@color/white"
             android:visibility="gone" />
 

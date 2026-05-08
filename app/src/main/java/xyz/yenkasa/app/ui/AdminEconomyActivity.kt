@@ -20,6 +20,7 @@ import xyz.yenkasa.app.model.FraudAlertsResponse
 import xyz.yenkasa.app.model.TopCreator
 import xyz.yenkasa.app.model.TopCreatorsResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 import java.text.NumberFormat
@@ -40,13 +41,13 @@ class AdminEconomyActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_admin_economy)
 
-        window.statusBarColor = ContextCompat.getColor(this, R.color.menu_background)
-        window.navigationBarColor = ContextCompat.getColor(this, R.color.menu_background)
         val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
-        if (!isNightMode) {
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
+        EdgeToEdgeInsets.setLightSystemBars(
+            window = window,
+            lightStatusBars = !isNightMode,
+            lightNavigationBars = !isNightMode
+        )
 
         statusText = findViewById(R.id.textAdminEconomyStatus)
         cardGrid = findViewById(R.id.gridAdminEconomyCards)

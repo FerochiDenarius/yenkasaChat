@@ -11,13 +11,14 @@ android {
     namespace = "xyz.yenkasa.app"
 
     compileSdk = 35
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 42
-        versionName = "0.3.6"
+        versionCode = 43
+        versionName = "0.3.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -61,16 +62,13 @@ android {
 
 
 
-    packagingOptions {
+    packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
-    }
-}
-
-configurations.all {
-    resolutionStrategy {
-        force("com.facebook.soloader:soloader:0.10.5")
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -85,11 +83,12 @@ dependencies {
 
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
+    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.activity:activity-ktx:1.10.1")
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("androidx.fragment:fragment-ktx:1.6.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
@@ -106,7 +105,13 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-    implementation("com.cloudinary:cloudinary-android:2.3.1")
+    implementation("com.cloudinary:cloudinary-android:3.1.2") {
+        exclude(group = "com.facebook.fresco")
+        exclude(group = "com.facebook.soloader")
+    }
+    implementation("com.facebook.fresco:fresco:3.6.0")
+    implementation("com.facebook.fresco:nativeimagefilters:3.6.0")
+    implementation("com.facebook.fresco:nativeimagetranscoder:3.6.0")
 
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
@@ -147,7 +152,8 @@ dependencies {
     implementation("com.jakewharton.threetenabp:threetenabp:1.4.6")
 
     implementation("com.google.android.gms:play-services-ads:23.0.0")
-    implementation("com.facebook.soloader:soloader:0.10.5")
+    implementation("com.facebook.soloader:soloader:0.12.1")
+    implementation("com.facebook.soloader:nativeloader:0.12.1")
 
     implementation("io.socket:socket.io-client:2.1.1") {
         exclude(group = "org.json", module = "json")
@@ -162,7 +168,9 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.android.material:material:1.11.0")
+            force("com.google.android.material:material:1.12.0")
+            force("com.facebook.soloader:soloader:0.12.1")
+            force("com.facebook.soloader:nativeloader:0.12.1")
         }
     }
 

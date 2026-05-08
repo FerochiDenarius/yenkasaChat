@@ -14,7 +14,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.NotificationPreferencesResponse
@@ -23,6 +22,7 @@ import xyz.yenkasa.app.model.UserPrivacyModel
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.util.AppUrls
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 
@@ -70,13 +70,13 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        window.statusBarColor = ContextCompat.getColor(this, R.color.menu_background)
-        window.navigationBarColor = ContextCompat.getColor(this, R.color.menu_background)
         val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
-        if (!isNightMode) {
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
+        EdgeToEdgeInsets.setLightSystemBars(
+            window = window,
+            lightStatusBars = !isNightMode,
+            lightNavigationBars = !isNightMode
+        )
 
         bindViews()
         setClickListeners()

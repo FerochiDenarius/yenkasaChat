@@ -1,13 +1,10 @@
 package xyz.yenkasa.app.adapter
 
 import android.content.Intent
-import android.content.ActivityNotFoundException
 import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,16 +12,10 @@ import android.widget.*
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.ChatMessage
-import xyz.yenkasa.app.ui.ImagePreviewActivity
 import xyz.yenkasa.app.ui.LocationPreviewActivity
+import xyz.yenkasa.app.ui.chatmedia.YenkasaChatMediaView
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,10 +41,6 @@ class MessageAdapter(
     companion object {
         private const val TYPE_SENT = 1
         private const val TYPE_RECEIVED = 2
-        private var currentVideoView: VideoView? = null
-        private var currentVideoOverlay: ImageView? = null
-        private var currentVideoPreview: ImageView? = null
-        private var currentVideoUrl: String? = null
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -99,12 +86,7 @@ class MessageAdapter(
     inner abstract class BaseMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         protected val messageText: TextView = itemView.findViewById(R.id.textMessage)
         protected val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
-        protected val mediaContainer: FrameLayout? = itemView.findViewById(R.id.mediaContainer)
-        protected val messageImage: ImageView = itemView.findViewById(R.id.imageMessage)
-        protected val videoView: VideoView? = itemView.findViewById(R.id.videoMessage)
-        protected val videoPlayOverlay: ImageView? = itemView.findViewById(R.id.imageVideoPlayOverlay)
-        protected val mediaFallbackText: TextView? = itemView.findViewById(R.id.textMediaFallback)
-        private var lastVideoClickTime = 0L
+        protected val chatMediaView: YenkasaChatMediaView = itemView.findViewById(R.id.chatMediaView)
 
         protected val audioContainer: LinearLayout? = itemView.findViewById(R.id.audioContainer)
         protected val btnPlayAudio: ImageButton? = itemView.findViewById(R.id.btnPlayAudio)
@@ -113,9 +95,6 @@ class MessageAdapter(
 
         protected val layoutLocation: LinearLayout? = itemView.findViewById(R.id.layoutLocation)
         protected val textLocation: TextView? = itemView.findViewById(R.id.textLocation)
-
-        protected val layoutFile: LinearLayout? = itemView.findViewById(R.id.layoutFile)
-        protected val textFileName: TextView? = itemView.findViewById(R.id.textFileName)
 
         protected val layoutContact: LinearLayout? = itemView.findViewById(R.id.layoutContact)
         protected val textContactInfo: TextView? = itemView.findViewById(R.id.textContactInfo)
@@ -142,13 +121,11 @@ class MessageAdapter(
         open fun bind(message: ChatMessage, currentUserId: String) {
             val context = itemView.context
             resetContentState()
-            val effectiveImageUrl = message.imageUrl.takeUnless { it.isNullOrBlank() }
-                ?: message.fileUrl.takeIf { it.isLikelyImageUrl() }
-            val effectiveVideoUrl = message.videoUrl.takeUnless { it.isNullOrBlank() }
-                ?: message.fileUrl.takeIf { it.isLikelyVideoUrl() }
-            val effectiveFileUrl = message.fileUrl.takeUnless {
-                it.isNullOrBlank() || it == effectiveImageUrl || it == effectiveVideoUrl
-            }
+            val mediaPayload = YenkasaChatMediaView.inferPayload(
+                imageUrl = message.imageUrl,
+                videoUrl = message.videoUrl,
+                fileUrl = message.fileUrl
+            )
 
             // ---------------- Reply Preview ----------------
             if (message.repliedTo != null && replyLayout != null) {
@@ -204,32 +181,18 @@ class MessageAdapter(
                 View.VISIBLE
             } else View.GONE
 
-            // ---------------- Image ----------------
-            if (!effectiveImageUrl.isNullOrBlank()) {
-                bindImageMedia(effectiveImageUrl, context, message.text.isNullOrBlank())
-            } else {
-                Glide.with(context).clear(messageImage)
-                messageImage.setImageDrawable(null)
-                messageImage.visibility = View.GONE
-            }
+            // ---------------- Image / Video / File ----------------
+            chatMediaView.bind(mediaPayload)
 
             // ---------------- Audio ----------------
             if (!message.audioUrl.isNullOrBlank()) {
                 audioContainer?.visibility = View.VISIBLE
-                messageImage.visibility = View.GONE
-                videoView?.visibility = View.GONE
+                chatMediaView.visibility = View.GONE
                 audioSeekBar?.progress = 0
                 audioDuration?.text = formatTime(0)
                 setupAudioPlayer(message.audioUrl, context)
             } else {
                 audioContainer?.visibility = View.GONE
-            }
-
-            // ---------------- Video ----------------
-            if (!effectiveVideoUrl.isNullOrBlank()) {
-                bindVideoMedia(effectiveVideoUrl, context)
-            } else {
-                videoView?.visibility = View.GONE
             }
 
             // ---------------- Location ----------------
@@ -245,30 +208,6 @@ class MessageAdapter(
             } else {
                 layoutLocation?.visibility = View.GONE
             }
-
-            // ---------------- File ----------------
-            if (!effectiveFileUrl.isNullOrBlank()) {
-                layoutFile?.visibility = View.VISIBLE
-                // ✅ Safely extract file name from URL if backend didn’t send one
-                val fileName = effectiveFileUrl.substringAfterLast('/', "File")
-                textFileName?.text = fileName
-                layoutFile?.setOnClickListener {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse(effectiveFileUrl)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Open file"))
-                    } catch (_: ActivityNotFoundException) {
-                        Toast.makeText(context, "No app found to open this file", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Could not open file", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                layoutFile?.visibility = View.GONE
-            }
-
 
             // ---------------- Contact ----------------
             if (!message.contactInfo.isNullOrBlank()) {
@@ -344,270 +283,14 @@ class MessageAdapter(
             return (dp * ctx.resources.displayMetrics.density).toInt()
         }
 
-        private fun bindImageMedia(imageUrl: String, context: android.content.Context, showFallbackCaption: Boolean) {
-            bindImageMedia(imageUrl, context, showFallbackCaption, allowRetry = true)
-        }
-
-        private fun bindImageMedia(
-            imageUrl: String,
-            context: android.content.Context,
-            showFallbackCaption: Boolean,
-            allowRetry: Boolean
-        ) {
-            Log.d("MessageAdapter", "Binding image media URL: $imageUrl")
-            messageImage.tag = imageUrl
-            mediaContainer?.visibility = View.VISIBLE
-            messageImage.visibility = View.VISIBLE
-            mediaFallbackText?.visibility = View.GONE
-            mediaFallbackText?.setOnClickListener(null)
-            videoPlayOverlay?.visibility = View.GONE
-
-            Glide.with(context)
-                .load(imageUrl)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.drawable.placeholder_image)
-                .error(R.drawable.error_image)
-                .listener(object : RequestListener<android.graphics.drawable.Drawable> {
-                    override fun onLoadFailed(
-                        e: GlideException?,
-                        model: Any?,
-                        target: Target<android.graphics.drawable.Drawable>,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        if (messageImage.tag != imageUrl) {
-                            Log.d("MessageAdapter", "Ignoring stale image failure for recycled view: $imageUrl")
-                            return true
-                        }
-                        val shouldRetry = allowRetry && e.hasSocketClosedCause()
-                        if (shouldRetry) {
-                            Log.w("MessageAdapter", "Retrying image load after transient socket close: $imageUrl")
-                            messageImage.post {
-                                bindImageMedia(imageUrl, context, showFallbackCaption, allowRetry = false)
-                            }
-                            return true
-                        }
-                        Log.e("MessageAdapter", "Image message load failed: $imageUrl", e)
-                        mediaFallbackText?.apply {
-                            text = context.getString(R.string.chat_image_failed_retry)
-                            visibility = View.VISIBLE
-                            setOnClickListener { bindImageMedia(imageUrl, context, showFallbackCaption, allowRetry = true) }
-                        }
-                        if (showFallbackCaption) {
-                            messageText.text = context.getString(R.string.chat_image_unavailable)
-                            messageText.visibility = View.VISIBLE
-                        }
-                        return false
-                    }
-
-                    override fun onResourceReady(
-                        resource: android.graphics.drawable.Drawable,
-                        model: Any,
-                        target: Target<android.graphics.drawable.Drawable>?,
-                        dataSource: DataSource,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        if (messageImage.tag != imageUrl) {
-                            return true
-                        }
-                        Log.d("MessageAdapter", "Image message loaded: $imageUrl")
-                        mediaFallbackText?.visibility = View.GONE
-                        return false
-                    }
-                })
-                .into(messageImage)
-
-            messageImage.setOnClickListener {
-                val intent = Intent(context, ImagePreviewActivity::class.java)
-                intent.putExtra("imageUrl", imageUrl)
-                context.startActivity(intent)
-            }
-        }
-
-        private fun bindVideoMedia(videoUrl: String, context: android.content.Context) {
-            Log.d("MessageAdapter", "Binding video media URL: $videoUrl")
-            messageImage.tag = videoUrl
-            mediaContainer?.visibility = View.VISIBLE
-            messageImage.visibility = View.VISIBLE
-            videoPlayOverlay?.visibility = View.VISIBLE
-            mediaFallbackText?.visibility = View.GONE
-            mediaFallbackText?.setOnClickListener(null)
-            audioContainer?.visibility = View.GONE
-
-            Glide.with(context)
-                .asBitmap()
-                .load(videoUrl)
-                .frame(1_000_000)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.drawable.video_placeholder)
-                .error(R.drawable.video_placeholder)
-                .listener(object : RequestListener<android.graphics.Bitmap> {
-                    override fun onLoadFailed(
-                        e: GlideException?,
-                        model: Any?,
-                        target: Target<android.graphics.Bitmap>,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        if (messageImage.tag != videoUrl) {
-                            Log.d("MessageAdapter", "Ignoring stale video thumbnail failure for recycled view: $videoUrl")
-                            return true
-                        }
-                        Log.e("MessageAdapter", "Video thumbnail load failed: $videoUrl", e)
-                        mediaFallbackText?.apply {
-                            text = context.getString(R.string.chat_video_failed_retry)
-                            visibility = View.VISIBLE
-                            setOnClickListener { bindVideoMedia(videoUrl, context) }
-                        }
-                        return false
-                    }
-
-                    override fun onResourceReady(
-                        resource: android.graphics.Bitmap,
-                        model: Any,
-                        target: Target<android.graphics.Bitmap>?,
-                        dataSource: DataSource,
-                        isFirstResource: Boolean
-                    ): Boolean {
-                        if (messageImage.tag != videoUrl) {
-                            return true
-                        }
-                        Log.d("MessageAdapter", "Video thumbnail loaded: $videoUrl")
-                        mediaFallbackText?.visibility = View.GONE
-                        return false
-                    }
-                })
-                .into(messageImage)
-
-            val playInline = View.OnClickListener {
-                val now = System.currentTimeMillis()
-                if (now - lastVideoClickTime < 300L) return@OnClickListener
-                lastVideoClickTime = now
-
-                val inlineVideoView = videoView ?: return@OnClickListener
-                val sameVideo = currentVideoView === inlineVideoView && currentVideoUrl == videoUrl
-
-                if (!sameVideo) {
-                    pauseCurrentVideo()
-                    currentVideoView = inlineVideoView
-                    currentVideoOverlay = videoPlayOverlay
-                    currentVideoPreview = messageImage
-                    currentVideoUrl = videoUrl
-                    inlineVideoView.setVideoURI(Uri.parse(videoUrl))
-                }
-
-                videoPlayOverlay?.visibility = View.GONE
-                messageImage.visibility = View.GONE
-                inlineVideoView.visibility = View.VISIBLE
-                inlineVideoView.setOnPreparedListener { mp ->
-                    mp.isLooping = false
-                    if (sameVideo && inlineVideoView.isPlaying) {
-                        inlineVideoView.pause()
-                        videoPlayOverlay?.visibility = View.VISIBLE
-                        return@setOnPreparedListener
-                    }
-                    inlineVideoView.start()
-                    videoPlayOverlay?.visibility = View.GONE
-                }
-                inlineVideoView.setOnCompletionListener {
-                    videoPlayOverlay?.visibility = View.VISIBLE
-                    messageImage.visibility = View.VISIBLE
-                    inlineVideoView.visibility = View.GONE
-                    if (currentVideoView === inlineVideoView) {
-                        currentVideoView = null
-                        currentVideoOverlay = null
-                        currentVideoPreview = null
-                        currentVideoUrl = null
-                    }
-                }
-                inlineVideoView.setOnErrorListener { _, _, _ ->
-                    Log.e("MessageAdapter", "Video playback failed: $videoUrl")
-                    mediaFallbackText?.apply {
-                        text = context.getString(R.string.chat_video_failed_retry)
-                        visibility = View.VISIBLE
-                        setOnClickListener { bindVideoMedia(videoUrl, context) }
-                    }
-                    videoPlayOverlay?.visibility = View.VISIBLE
-                    messageImage.visibility = View.VISIBLE
-                    inlineVideoView.visibility = View.GONE
-                    if (currentVideoView === inlineVideoView) {
-                        currentVideoView = null
-                        currentVideoOverlay = null
-                        currentVideoPreview = null
-                        currentVideoUrl = null
-                    }
-                    true
-                }
-            }
-            messageImage.setOnClickListener(playInline)
-            videoPlayOverlay?.setOnClickListener(playInline)
-            videoView?.setOnClickListener {
-                val now = System.currentTimeMillis()
-                if (now - lastVideoClickTime < 300L) return@setOnClickListener
-                lastVideoClickTime = now
-
-                if (videoView.isPlaying) {
-                    videoView.pause()
-                    videoPlayOverlay?.visibility = View.VISIBLE
-                } else {
-                    if (currentVideoView !== videoView) {
-                        pauseCurrentVideo()
-                        currentVideoView = videoView
-                        currentVideoOverlay = videoPlayOverlay
-                        currentVideoPreview = messageImage
-                        currentVideoUrl = videoUrl
-                    }
-                    videoView.start()
-                    videoPlayOverlay?.visibility = View.GONE
-                    messageImage.visibility = View.GONE
-                    videoView.visibility = View.VISIBLE
-                }
-            }
-        }
-
-        private fun String?.isLikelyImageUrl(): Boolean {
-            val normalized = this?.lowercase(Locale.getDefault()).orEmpty()
-            return normalized.endsWith(".jpg") ||
-                normalized.endsWith(".jpeg") ||
-                normalized.endsWith(".png") ||
-                normalized.endsWith(".webp") ||
-                normalized.endsWith(".gif") ||
-                normalized.contains("/image/upload/")
-        }
-
-        private fun String?.isLikelyVideoUrl(): Boolean {
-            val normalized = this?.lowercase(Locale.getDefault()).orEmpty()
-            return normalized.endsWith(".mp4") ||
-                normalized.endsWith(".mov") ||
-                normalized.endsWith(".m4v") ||
-                normalized.endsWith(".webm") ||
-                normalized.contains("/video/upload/")
-        }
-
         private fun resetContentState() {
             releaseMediaPlayer()
-            mediaContainer?.visibility = View.GONE
-            Glide.with(itemView).clear(messageImage)
-            messageImage.tag = null
-            messageImage.setImageDrawable(null)
-            messageImage.setOnClickListener(null)
-            messageImage.visibility = View.GONE
-
-            videoPlayOverlay?.visibility = View.GONE
-            videoPlayOverlay?.setOnClickListener(null)
-            mediaFallbackText?.visibility = View.GONE
-            mediaFallbackText?.setOnClickListener(null)
-            videoView?.setOnClickListener(null)
-            if (currentVideoView === videoView) {
-                pauseCurrentVideo()
-            } else {
-                videoView?.suspend()
-            }
-            videoView?.visibility = View.GONE
+            chatMediaView.release()
+            chatMediaView.visibility = View.GONE
 
             audioContainer?.visibility = View.GONE
             layoutLocation?.setOnClickListener(null)
             layoutLocation?.visibility = View.GONE
-            layoutFile?.setOnClickListener(null)
-            layoutFile?.visibility = View.GONE
             layoutContact?.visibility = View.GONE
         }
 
@@ -643,40 +326,7 @@ class MessageAdapter(
 
         fun recycleMediaState() {
             releaseMediaPlayer()
-            Glide.with(itemView).clear(messageImage)
-            messageImage.tag = null
-            messageImage.setImageDrawable(null)
-            if (currentVideoView === videoView) {
-                pauseCurrentVideo()
-            } else {
-                videoView?.suspend()
-            }
-        }
-
-        private fun GlideException?.hasSocketClosedCause(): Boolean {
-            if (this == null) return false
-            if (rootCauses.any { it is java.net.SocketException && it.message?.contains("Socket is closed", ignoreCase = true) == true }) {
-                return true
-            }
-            return false
-        }
-
-        private fun pauseCurrentVideo() {
-            currentVideoView?.let { activeView ->
-                runCatching {
-                    if (activeView.isPlaying) {
-                        activeView.pause()
-                    }
-                    activeView.suspend()
-                }
-            }
-            currentVideoOverlay?.visibility = View.VISIBLE
-            currentVideoPreview?.visibility = View.VISIBLE
-            currentVideoView?.visibility = View.GONE
-            currentVideoView = null
-            currentVideoOverlay = null
-            currentVideoPreview = null
-            currentVideoUrl = null
+            chatMediaView.release()
         }
     }
 
@@ -710,20 +360,6 @@ class MessageAdapter(
     }
 
     fun pauseAllVideos() {
-        currentVideoView?.let { activeView ->
-            runCatching {
-                if (activeView.isPlaying) {
-                    activeView.pause()
-                }
-                activeView.suspend()
-            }
-        }
-        currentVideoOverlay?.visibility = View.VISIBLE
-        currentVideoPreview?.visibility = View.VISIBLE
-        currentVideoView?.visibility = View.GONE
-        currentVideoView = null
-        currentVideoOverlay = null
-        currentVideoPreview = null
-        currentVideoUrl = null
+        YenkasaChatMediaView.pauseActiveVideo()
     }
 }

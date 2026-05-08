@@ -1,21 +1,21 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.commit
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_main) // ✅ links to your activity_main.xml
 
         applySystemBarSpacing()
@@ -103,46 +104,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applySystemBarSpacing() {
-        window.statusBarColor = ContextCompat.getColor(this, R.color.feed_surface)
-
-        val root = findViewById<View>(R.id.mainRoot)
         val appBar = findViewById<View>(R.id.mainAppBar)
-        val initialLeft = appBar.paddingLeft
-        val initialTop = appBar.paddingTop
-        val initialRight = appBar.paddingRight
-        val initialBottom = appBar.paddingBottom
+        val fabLive = findViewById<View>(R.id.btnYenkasaLive)
+        val fabPost = findViewById<View>(R.id.fabCreatePost)
+        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
 
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-
-            appBar.post {
-                val location = IntArray(2)
-                appBar.getLocationOnScreen(location)
-                val fallbackTop = statusBarHeightFallback()
-                val expectedTop = if (statusBarTop > 0) statusBarTop else fallbackTop
-                val missingTop = maxOf(0, expectedTop - location[1])
-
-                appBar.setPadding(
-                    initialLeft,
-                    initialTop + missingTop,
-                    initialRight,
-                    initialBottom
-                )
-            }
-
-            insets
-        }
-
-        ViewCompat.requestApplyInsets(root)
-    }
-
-    private fun statusBarHeightFallback(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        if (resourceId > 0) {
-            return resources.getDimensionPixelSize(resourceId)
-        }
-
-        return (24 * resources.displayMetrics.density).toInt()
+        EdgeToEdgeInsets.setLightSystemBars(
+            window = window,
+            lightStatusBars = !isNightMode,
+            lightNavigationBars = !isNightMode
+        )
+        EdgeToEdgeInsets.applySystemBarPadding(appBar, top = true)
+        EdgeToEdgeInsets.applySystemBarMargins(fabLive, right = true, bottom = true)
+        EdgeToEdgeInsets.applySystemBarMargins(fabPost, right = true, bottom = true)
     }
 
     // ==================== Load user profile from API ====================

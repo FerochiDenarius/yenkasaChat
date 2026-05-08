@@ -18,7 +18,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
@@ -29,6 +28,7 @@ import xyz.yenkasa.app.model.ChatRoom
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 // Removed: import kotlin.io.path.name // This import was likely added due to the incorrect 'name' access
 import retrofit2.Call
@@ -58,9 +58,11 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat_rooms)
-        window.statusBarColor = ContextCompat.getColor(this, R.color.feed_surface)
-        window.navigationBarColor = ContextCompat.getColor(this, R.color.yenkasa_emerald)
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        EdgeToEdgeInsets.setLightSystemBars(
+            window = window,
+            lightStatusBars = true,
+            lightNavigationBars = false
+        )
 
         recyclerView = findViewById(R.id.recyclerViewChatRooms)
         recyclerView.layoutManager = LinearLayoutManager(this)

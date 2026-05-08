@@ -53,6 +53,7 @@ import xyz.yenkasa.app.ui.feed.FeedPostActionsController
 import xyz.yenkasa.app.ui.feed.FeedSocketController
 import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.ui.feed.FeedTimeUtils
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.work.FeedSyncWorker
 import java.text.SimpleDateFormat
 import java.text.NumberFormat
@@ -283,6 +284,10 @@ class FeedFragment : Fragment() {
             view.findViewById(R.id.tabTrending),
             view.findViewById(R.id.tabTop)
         )
+
+        if (!USE_YENKASA_PLAYER_VIEW) {
+            EdgeToEdgeInsets.applySystemBarMargins(floatingWalletViews.walletCard, left = true, bottom = true)
+        }
 
         communitiesBar.post {
             communitiesBarNaturalHeight = communitiesBar.height

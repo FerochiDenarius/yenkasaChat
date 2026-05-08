@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -143,6 +144,7 @@ class FeedChromeController(
         floatingWalletCard.visibility = View.GONE
         fabYenkasaLive.visibility = View.GONE
         mainAppBar?.visibility = View.GONE
+        ViewCompat.setOnApplyWindowInsetsListener(recyclerView, null)
         recyclerView.setPadding(0, 0, 0, 0)
         recyclerView.clipToPadding = false
         recyclerView.overScrollMode = View.OVER_SCROLL_NEVER

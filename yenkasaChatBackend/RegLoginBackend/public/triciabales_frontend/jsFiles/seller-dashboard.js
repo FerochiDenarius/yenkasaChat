@@ -1,4 +1,38 @@
-let currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+function parseStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("currentUser") || "null");
+  } catch (err) {
+    console.warn("[Yenkasa Store] Invalid stored user payload", err);
+    return null;
+  }
+}
+
+function normalizeRole(role) {
+  return String(role || "").trim().replace(/\s+/g, "_").toUpperCase();
+}
+
+function normalizeStoreUser(payload) {
+  const source = payload?.user || payload;
+  if (!source) return null;
+  const role = normalizeRole(source.role?.role || source.roleName || source.accessRole || source.role);
+  const id = source.id || source._id || source.userId || source.user?.id || source.user?._id || "";
+
+  return {
+    ...source,
+    id,
+    role
+  };
+}
+
+function persistCurrentUser(user) {
+  currentUser = normalizeStoreUser(user);
+  if (currentUser) {
+    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+  }
+  return currentUser;
+}
+
+let currentUser = normalizeStoreUser(parseStoredUser());
 const authToken = localStorage.getItem("authToken") || "";
 const imageInput = document.getElementById("imageFile");
 const videoInput = document.getElementById("videoFile");
@@ -93,10 +127,14 @@ document.getElementById("sellerSubheading").textContent = currentUser.email || "
 
 window.updateCurrentUserFromProfile = function updateCurrentUserFromProfile(user) {
   if (!user) return;
-  currentUser = user;
+  persistCurrentUser(user);
   document.getElementById("sellerHeading").textContent = `${currentUser.name || "Seller"} Dashboard`;
   document.getElementById("sellerSubheading").textContent = currentUser.email || "Manage your store from one place.";
 };
+
+function getCurrentSellerId() {
+  return currentUser?.id || currentUser?._id || currentUser?.userId || "";
+}
 
 function getAuthHeaders() {
   return {

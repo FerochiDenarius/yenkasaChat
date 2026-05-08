@@ -1069,7 +1069,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         try {
             val photoFile = File.createTempFile("camera_photo_${System.currentTimeMillis()}", ".jpg", cacheDir)
             tempCameraUri = FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", photoFile)
-            cameraLauncher.launch(tempCameraUri)
+            tempCameraUri?.let { cameraLauncher.launch(it) }
         } catch (ex: Exception) {
             Log.e("ChatActivity", "Error starting camera capture", ex)
             Toast.makeText(this, "Could not start camera: ${ex.message}", Toast.LENGTH_LONG).show()

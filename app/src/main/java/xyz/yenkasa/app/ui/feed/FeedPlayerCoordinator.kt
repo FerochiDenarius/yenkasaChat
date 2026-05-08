@@ -53,6 +53,12 @@ class FeedPlayerCoordinator(
         recyclerView.adapter = playerAdapter
         recyclerView.itemAnimator = null
         snapHelper.attachToRecyclerView(recyclerView)
+        recyclerView.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
+            playerAdapter.setViewportHeight(view.height)
+        }
+        recyclerView.post {
+            playerAdapter.setViewportHeight(recyclerView.height)
+        }
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && shouldLoadNextPage()) {

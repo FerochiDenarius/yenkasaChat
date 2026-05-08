@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.CoinBalanceResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -41,13 +42,13 @@ class MenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_menu)
-        window.statusBarColor = ContextCompat.getColor(this, R.color.menu_background)
-        window.navigationBarColor = ContextCompat.getColor(this, R.color.menu_background)
         val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
-        if (!isNightMode) {
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
+        EdgeToEdgeInsets.setLightSystemBars(
+            window = window,
+            lightStatusBars = !isNightMode,
+            lightNavigationBars = !isNightMode
+        )
 
         Log.d(TAG, "MenuActivity started")
 

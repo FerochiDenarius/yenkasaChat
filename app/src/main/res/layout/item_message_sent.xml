@@ -57,57 +57,13 @@
                 tools:text="Reply preview text" />
         </LinearLayout>
 
-        <FrameLayout
-            android:id="@+id/mediaContainer"
+        <xyz.yenkasa.app.ui.chatmedia.YenkasaChatMediaView
+            android:id="@+id/chatMediaView"
             android:layout_width="230dp"
             android:layout_height="230dp"
             android:layout_marginBottom="6dp"
-            android:background="@drawable/bg_feed_post_card"
-            android:clipToOutline="true"
             android:visibility="gone"
-            tools:visibility="visible">
-
-            <ImageView
-                android:id="@+id/imageMessage"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:adjustViewBounds="true"
-                android:background="@drawable/bg_feed_media"
-                android:scaleType="fitCenter"
-                android:visibility="gone"
-                tools:src="@drawable/placeholder_image"
-                tools:visibility="visible" />
-
-            <VideoView
-                android:id="@+id/videoMessage"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bg_feed_media"
-                android:visibility="gone" />
-
-            <ImageView
-                android:id="@+id/imageVideoPlayOverlay"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:layout_gravity="center"
-                android:background="@drawable/bg_feed_icon_button"
-                android:padding="12dp"
-                android:src="@drawable/ic_play_circle"
-                android:tint="@color/feed_primary_text"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/textMediaFallback"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:paddingHorizontal="16dp"
-                android:textColor="@color/feed_primary_text"
-                android:textSize="13sp"
-                android:visibility="gone"
-                tools:text="Image failed to load" />
-        </FrameLayout>
+            tools:visibility="visible" />
 
         <LinearLayout
             android:id="@+id/audioContainer"
@@ -141,23 +97,6 @@
                 android:text="00:00"
                 android:textColor="@color/feed_primary_text"
                 android:textSize="11sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/layoutFile"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="4dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/textFileName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/feed_primary_text"
-                android:textSize="14sp"
-                tools:text="file.pdf" />
         </LinearLayout>
 
         <LinearLayout

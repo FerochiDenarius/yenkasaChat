@@ -30,6 +30,7 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.feed.FeedTabsController
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserBadgeUtils
@@ -194,6 +195,18 @@ class YenkasaPlayerView @JvmOverloads constructor(
             }
         )
         imageView.setOnTouchListener { _, event -> handleImageTouch(event) }
+        applyEdgeToEdgeSpacing()
+    }
+
+    private fun applyEdgeToEdgeSpacing() {
+        EdgeToEdgeInsets.applySystemBarMargins(topBar, left = true, top = true, right = true)
+        EdgeToEdgeInsets.applySystemBarMargins(searchBar, left = true)
+        EdgeToEdgeInsets.applySystemBarMargins(feedTabsView, left = true, right = true)
+        EdgeToEdgeInsets.applySystemBarMargins(communitiesPanel, top = true, right = true)
+        EdgeToEdgeInsets.applySystemBarMargins(engagementRail, left = true)
+        EdgeToEdgeInsets.applySystemBarMargins(liveArenaButton, right = true)
+        EdgeToEdgeInsets.applySystemBarMargins(moreOptionsButton, left = true)
+        EdgeToEdgeInsets.applySystemBarMargins(controlsView, left = true, right = true, bottom = true)
     }
 
     override fun onAttachedToWindow() {

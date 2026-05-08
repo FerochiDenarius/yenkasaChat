@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_feed_post_card"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/imageChatMedia"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_feed_media"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/playerChatMedia"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_feed_media"
+        android:visibility="gone"
+        app:resize_mode="fit"
+        app:show_buffering="when_playing"
+        app:surface_type="texture_view"
+        app:use_controller="true" />
+
+    <LinearLayout
+        android:id="@+id/layoutChatFile"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="18dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textChatFileIcon"
+            android:layout_width="58dp"
+            android:layout_height="58dp"
+            android:background="@drawable/bg_yenkasa_player_glass"
+            android:gravity="center"
+            android:text="PDF"
+            android:textColor="@color/wallet_accent_green"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textChatFileName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:ellipsize="middle"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="@color/feed_primary_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textChatFileAction"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_yenkasa_player_chip_selected"
+            android:gravity="center"
+            android:minWidth="104dp"
+            android:paddingHorizontal="14dp"
+            android:text="Preview"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/imageChatMediaPlay"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_feed_icon_button"
+        android:padding="12dp"
+        android:src="@drawable/ic_play_circle"
+        android:tint="@color/feed_primary_text"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/progressChatMedia"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/textChatMediaError"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_chat_media_loading_chip"
+        android:gravity="center"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="10dp"
+        android:textColor="@color/feed_primary_text"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</FrameLayout>

@@ -30,6 +30,13 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 
+app.use((req, res, next) => {
+  if (req.hostname === "yenkasa.xyz") {
+    return res.redirect(301, `https://www.yenkasa.xyz${req.originalUrl}`);
+  }
+  next();
+});
+
 const corsOptions = {
   origin(origin, callback) {
     callback(null, origin || true);

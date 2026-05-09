@@ -30,8 +30,6 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 
-const app = express();
-
 app.set('trust proxy', true);
 
 app.use((req, res, next) => {

@@ -53,7 +53,12 @@ object UserPermissions {
 
     fun canModerate(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "moderator", "admin")
+        return r in listOf(
+            "senior_developer",
+            "junior_developer",
+            "moderator",
+            "admin"
+        )
     }
 
     fun canManageEconomy(role: String?): Boolean {
@@ -81,19 +86,19 @@ object UserPermissions {
     // 🟢 Can Assign Roles
     fun canAssignRoles(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "moderator")
+        return r == "senior_developer"
     }
 
     // 🟢 Can Revoke Permissions
     fun canRevoke(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "moderator")
+        return r == "senior_developer"
     }
 
     // 🟢 Can Suspend Users
     fun canSuspend(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "moderator")
+        return r in listOf("senior_developer", "moderator")
     }
 
     // 🟢 Check Rank Superiority

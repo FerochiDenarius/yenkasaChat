@@ -1,4 +1,6 @@
-require('dotenv').config();
+require('dotenv').config({
+  path: require('path').resolve(__dirname, '../.env')
+});
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -6,8 +8,8 @@ const User = require(path.join(__dirname, '../models/user.model.js'));
 const Permission = require(path.join(__dirname, '../models/permissions.model.js'));
 
 const TEAM_MEMBERS = [
-  'kwesihudson12@gmail.com',
-  'awiniruth003@gmail.com',
+  'oparegyanwap@gmail.com',
+  'wisdomazumah1784@gmail.com',
 ];
 
 async function run() {

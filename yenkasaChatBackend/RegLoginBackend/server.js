@@ -800,6 +800,15 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => {
   console.log('✅ MongoDB connected successfully.');
 
+  // ✅ Seed permissions AFTER DB connection
+  const Permission = require('./models/permissions.model');
+
+Permission.seedDefaults()
+  .then(() => {
+    console.log('✅ Permissions seeded');
+  })
+  .catch(console.error);
+
   // 🕒 Start the daily verification scheduler
 require('./services/verificationScheduler');
 require('./services/ykcMonthlyReset');

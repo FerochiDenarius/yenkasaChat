@@ -12,6 +12,7 @@ import com.cloudinary.android.callback.UploadCallback
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.ApiService
+import xyz.yenkasa.app.util.UploadMediaOptimizer
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -100,7 +101,7 @@ class ChatMessageHandler(
         Log.d("ChatMessageHandler", "Preparing to upload $type file. Original URI: $uri")
 
         // 1. ✅ THIS IS THE FIX: Copy the file to a safe local directory first.
-        val safeUri = copyFileToCacheDir(uri, type)
+        val safeUri = prepareUploadUri(uri, type)
 
         // 2. ✅ Only proceed if the copy was successful.
         if (safeUri == null) {
@@ -158,6 +159,18 @@ class ChatMessageHandler(
         uploadFileToCloudinary(uri, "audio")
     }
 // Add this new private function inside your ChatMessageHandler class
+
+    private fun prepareUploadUri(fileUri: Uri, type: String): Uri? {
+        val optimized = UploadMediaOptimizer.prepareForUpload(
+            context = context,
+            uri = fileUri,
+            type = type,
+            maxImageDimension = 1280,
+            jpegQuality = 82
+        )
+        if (optimized != null) return Uri.fromFile(optimized)
+        return copyFileToCacheDir(fileUri, type)
+    }
 
     private fun copyFileToCacheDir(fileUri: Uri, type: String): Uri? {
         return try {

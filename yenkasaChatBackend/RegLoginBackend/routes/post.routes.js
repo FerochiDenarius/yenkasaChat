@@ -13,6 +13,7 @@ const PostApproval = require("../models/postapproval.model");
 const { sendNotification } = require("../services/notification.service");
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendPushNotification } = require("../utils/onesignal");
+const { logUploadAudit } = require("../utils/cloudinaryMedia");
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -246,9 +247,16 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       const uploadResults = await Promise.all(uploadImageFiles.map((file) =>
         cloudinary.uploader.upload(file.path, {
           folder,
-          resource_type: "image"
+          resource_type: "image",
+          quality: "auto:good",
+          fetch_format: "auto"
         })
       ));
+      uploadResults.forEach((result, index) => logUploadAudit({
+        area: "post_image",
+        file: uploadImageFiles[index],
+        result
+      }));
 
       imageUrls = uploadResults.map((result) => result.secure_url).filter(Boolean);
       imageUrl = imageUrls[0] || "";
@@ -258,8 +266,11 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       const isVideo = !!videoFile;
       const uploadRes = await cloudinary.uploader.upload(file.path, {
         folder,
-        resource_type: isVideo ? "video" : "video"
+        resource_type: isVideo ? "video" : "video",
+        quality: "auto:good",
+        fetch_format: "auto"
       });
+      logUploadAudit({ area: isVideo ? "post_video" : "post_audio", file, result: uploadRes });
 
       if (isVideo) {
         videoUrl = uploadRes.secure_url;

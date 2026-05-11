@@ -11,6 +11,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.util.CloudinaryMedia
 
 class ProfilePostAdapter(
     private val posts: MutableList<Post> = mutableListOf(),
@@ -48,7 +49,7 @@ class ProfilePostAdapter(
 
         val thumbnailUrl = when {
             post.effectiveImageUrls().isNotEmpty() -> post.effectiveImageUrls().first()
-            !post.videoUrl.isNullOrEmpty() -> post.videoUrl
+            !post.videoUrl.isNullOrEmpty() -> post.optimizedVideoPosterUrl()
             else -> null
         }
 
@@ -61,7 +62,7 @@ class ProfilePostAdapter(
 
             if (!post.videoUrl.isNullOrEmpty()) {
                 request
-                    .apply(RequestOptions().frame(1_000_000).diskCacheStrategy(DiskCacheStrategy.ALL))
+                    .apply(RequestOptions().diskCacheStrategy(DiskCacheStrategy.ALL))
                     .into(holder.postImage)
                 holder.typeIcon.visibility = View.VISIBLE
                 holder.typeIcon.setImageResource(R.drawable.ic_play_arrow)

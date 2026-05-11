@@ -24,6 +24,18 @@ function normalizeStoreUser(payload) {
   };
 }
 
+function optimizeCloudinaryImage(url, width = 300) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/image/upload/")) return url;
+  if (/\/image\/upload\/[^/]*(f_auto|q_auto|w_)/.test(url)) return url;
+  return url.replace("/image/upload/", `/image/upload/f_auto,q_auto,w_${width},c_limit/`);
+}
+
+function optimizeCloudinaryVideo(url) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/video/upload/")) return url;
+  if (/\/video\/upload\/[^/]*(f_auto|q_auto)/.test(url)) return url;
+  return url.replace("/video/upload/", "/video/upload/f_auto,q_auto/");
+}
+
 function persistCurrentUser(user) {
   currentUser = normalizeStoreUser(user);
   if (currentUser) {
@@ -548,9 +560,11 @@ function renderProductThumbnail(item) {
   if (item.imageUrl) {
     return `
       <img
-        src="${item.imageUrl}"
+        src="${optimizeCloudinaryImage(item.imageUrl, 300)}"
         alt="${item.name || "Product"}"
         class="manage-thumb"
+        loading="lazy"
+        decoding="async"
       >
     `;
   }
@@ -558,10 +572,11 @@ function renderProductThumbnail(item) {
   if (item.videoUrl) {
     return `
       <video
-        src="${item.videoUrl}"
+        src="${optimizeCloudinaryVideo(item.videoUrl)}"
         class="manage-thumb"
         muted
         playsinline
+        preload="metadata"
       ></video>
     `;
   }
@@ -657,7 +672,7 @@ function renderEditableImages() {
 
   editCurrentImages.innerHTML = editRetainedImageUrls.map((url, index) => `
     <div class="edit-image-item">
-      <img src="${url}" alt="Product picture ${index + 1}">
+      <img src="${optimizeCloudinaryImage(url, 300)}" alt="Product picture ${index + 1}" loading="lazy" decoding="async">
       <button type="button" class="edit-image-remove" data-index="${index}">
         Remove
       </button>

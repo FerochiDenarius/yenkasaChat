@@ -12,6 +12,7 @@ const { profileImageUpload, uploadFiles } = require('../utils/upload');
 // ⬇️ Cloudinary import (required!)
 const cloudinaryConfig = require('../config/cloudinary');
 const cloudinary = cloudinaryConfig.cloudinary;
+const { logUploadAudit } = require('../utils/cloudinaryMedia');
 console.log("CLOUDINARY LOADED?", !!cloudinary);
 
 // --- Logger ---
@@ -62,6 +63,7 @@ router.post('/profile-picture', authMiddleware, profileImageUpload, async (req, 
             quality: "auto:good",
             fetch_format: "auto"
         });
+        logUploadAudit({ area: "profile_image", file: req.file, result });
 
         const user = await User.findByIdAndUpdate(
             userId,

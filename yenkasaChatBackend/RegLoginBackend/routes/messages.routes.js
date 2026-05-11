@@ -15,6 +15,7 @@ const { sendNotification } = require('../services/notification.service');
 const { canMessageUser } = require('../services/privacy.service');
 const { cloudinary } = require('../config/cloudinary');
 const { updateConversationStreak } = require('../utils/conversationStreak');
+const { logUploadAudit } = require('../utils/cloudinaryMedia');
 
 const chatMediaUpload = multer({
   storage: multer.memoryStorage(),
@@ -70,6 +71,8 @@ function uploadChatMediaToCloudinary(file, type) {
         resource_type: resourceType,
         use_filename: true,
         unique_filename: true,
+        quality: type === 'image' || type === 'video' ? 'auto:good' : undefined,
+        fetch_format: type === 'image' || type === 'video' ? 'auto' : undefined,
       },
       (error, result) => {
         if (error) {
@@ -93,6 +96,7 @@ router.post('/upload', auth, chatMediaUpload.single('file'), async (req, res) =>
   try {
     const type = resolveChatUploadType(req.file, req.body?.type);
     const result = await uploadChatMediaToCloudinary(req.file, type);
+    logUploadAudit({ area: `chat_${type}`, file: req.file, result });
     const messageKey = type === 'image'
       ? 'imageUrl'
       : type === 'video'

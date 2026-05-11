@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui.player
 
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.TextPostBackgrounds
 
 data class YenkasaPlayerItem(
@@ -30,9 +31,11 @@ data class YenkasaPlayerItem(
     companion object {
         fun fromPost(post: Post, walletBalance: Double): YenkasaPlayerItem {
             val imageUrls = post.effectiveImageUrls()
+            val optimizedVideoUrl = post.optimizedVideoUrl()
+            val optimizedAudioUrl = post.optimizedAudioUrl()
             val mediaType = when {
-                !post.videoUrl.isNullOrBlank() -> MediaType.VIDEO
-                !post.audioUrl.isNullOrBlank() -> MediaType.AUDIO
+                !optimizedVideoUrl.isNullOrBlank() -> MediaType.VIDEO
+                !optimizedAudioUrl.isNullOrBlank() -> MediaType.AUDIO
                 imageUrls.isNotEmpty() -> MediaType.IMAGE
                 else -> MediaType.TEXT
             }
@@ -44,21 +47,21 @@ data class YenkasaPlayerItem(
                 id = post._id,
                 mediaType = mediaType,
                 mediaUrl = when (mediaType) {
-                    MediaType.VIDEO -> post.videoUrl
-                    MediaType.AUDIO -> post.audioUrl
+                    MediaType.VIDEO -> optimizedVideoUrl
+                    MediaType.AUDIO -> optimizedAudioUrl
                     MediaType.IMAGE -> imageUrls.firstOrNull()
                     MediaType.TEXT -> null
                 },
                 imageUrls = imageUrls,
                 thumbnailUrl = when {
                     imageUrls.isNotEmpty() -> imageUrls.firstOrNull()
-                    !post.videoUrl.isNullOrBlank() -> post.videoUrl
-                    else -> post.textBackgroundImageUrl
+                    !optimizedVideoUrl.isNullOrBlank() -> post.optimizedVideoPosterUrl()
+                    else -> CloudinaryMedia.optimizedImageUrl(post.textBackgroundImageUrl, CloudinaryMedia.WIDTH_FEED)
                 },
                 textContent = post.caption,
                 caption = post.caption,
                 username = post.userId.username,
-                userAvatarUrl = post.userId.profileImage,
+                userAvatarUrl = CloudinaryMedia.optimizedImageUrl(post.userId.profileImage, CloudinaryMedia.WIDTH_AVATAR),
                 isVerified = post.userId.verified,
                 communityName = post.communityId?.displayName ?: post.communityId?.name,
                 audioTitle = if (!post.audioUrl.isNullOrBlank()) "Original Sound - Yenkasa" else null,
@@ -70,7 +73,7 @@ data class YenkasaPlayerItem(
                 rewardAmount = post.coinsEarned,
                 walletBalance = walletBalance,
                 textBackgroundColor = normalizedBackground.ifBlank { null },
-                textBackgroundImageUrl = post.textBackgroundImageUrl,
+                textBackgroundImageUrl = CloudinaryMedia.optimizedImageUrl(post.textBackgroundImageUrl, CloudinaryMedia.WIDTH_FEED),
                 userSelectedBackground = selectedBackground
             )
         }

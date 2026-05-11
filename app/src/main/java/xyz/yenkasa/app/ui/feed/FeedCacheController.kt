@@ -6,6 +6,7 @@ import com.bumptech.glide.Glide
 import com.google.gson.Gson
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.TokenManager
 import java.security.MessageDigest
 import java.util.Locale
@@ -99,11 +100,13 @@ class FeedCacheController(
             post.effectiveImageUrls().firstOrNull()?.let { url ->
                 Glide.with(fragment).load(url).preload()
             }
-            post.videoUrl?.takeIf { it.isNotBlank() }?.let { url ->
+            post.optimizedVideoPosterUrl()?.let { url ->
                 Glide.with(fragment).load(url).preload()
             }
             post.userId.profileImage?.takeIf { it.isNotBlank() }?.let { url ->
-                Glide.with(fragment).load(url).preload()
+                Glide.with(fragment)
+                    .load(CloudinaryMedia.optimizedImageUrl(url, CloudinaryMedia.WIDTH_AVATAR))
+                    .preload()
             }
         }
     }
@@ -133,6 +136,6 @@ class FeedCacheController(
         const val DEFAULT_CACHE_KEY = "default"
         const val MAX_CACHED_POSTS = 100
         const val MAX_COMMUNITY_CACHED_POSTS = 60
-        const val PRELOAD_AHEAD_COUNT = 3
+        const val PRELOAD_AHEAD_COUNT = 1
     }
 }

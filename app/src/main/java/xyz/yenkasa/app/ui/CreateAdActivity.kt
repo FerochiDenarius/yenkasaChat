@@ -13,6 +13,7 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UploadMediaOptimizer
 import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.Dispatchers
@@ -297,9 +298,21 @@ class CreateAdActivity : AppCompatActivity() {
     }
 
     private fun prepareFilePart(fieldName: String, uri: Uri): MultipartBody.Part {
-        val file = File(cacheDir, "upload_${System.currentTimeMillis()}")
-        val input = contentResolver.openInputStream(uri)!!
-        file.outputStream().use { output -> input.copyTo(output) }
+        val mediaType = when (fieldName) {
+            "image", "thumbnail" -> "image"
+            "video" -> "video"
+            else -> "file"
+        }
+        val file = UploadMediaOptimizer.prepareForUpload(
+            context = this,
+            uri = uri,
+            type = mediaType,
+            maxImageDimension = 1600,
+            jpegQuality = 82
+        ) ?: File(cacheDir, "upload_${System.currentTimeMillis()}").also { outputFile ->
+            val input = contentResolver.openInputStream(uri)!!
+            outputFile.outputStream().use { output -> input.copyTo(output) }
+        }
 
         val mime = contentResolver.getType(uri) ?: "image/*"
         val request = file.asRequestBody(mime.toMediaTypeOrNull())

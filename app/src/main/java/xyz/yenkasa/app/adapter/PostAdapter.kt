@@ -30,6 +30,7 @@ import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TextPostBackgrounds
+import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -263,7 +264,8 @@ class PostAdapter(
 
         // Setup video thumbnail and play button; actual video playback handled by adapter when needed
         fun prepareVideoUi(videoUrl: String?, position: Int) {
-            mediaAspectKey = videoUrl
+            val thumbnailUrl = CloudinaryMedia.videoPosterUrl(videoUrl, CloudinaryMedia.WIDTH_PREVIEW) ?: videoUrl
+            mediaAspectKey = thumbnailUrl
             applyMediaAspect(9f / 16f, imageVideoThumbnail, playerView)
             imageVideoThumbnail.visibility = View.VISIBLE
             btnVideoPlay.visibility = View.VISIBLE
@@ -274,7 +276,7 @@ class PostAdapter(
             try {
                 Glide.with(itemRoot.context)
                     .asBitmap()
-                    .load(videoUrl)
+                    .load(thumbnailUrl)
                     .apply(RequestOptions().frame(4_000_000).diskCacheStrategy(DiskCacheStrategy.ALL))
                     .placeholder(R.drawable.video_placeholder)
                     .into(object : CustomTarget<Bitmap>() {
@@ -282,7 +284,7 @@ class PostAdapter(
                             resource: Bitmap,
                             transition: Transition<in Bitmap>?
                         ) {
-                            if (mediaAspectKey == videoUrl) {
+                            if (mediaAspectKey == thumbnailUrl) {
                                 applyMediaAspect(aspectFrom(resource), imageVideoThumbnail, playerView)
                                 imageVideoThumbnail.setImageBitmap(resource)
                             }
@@ -396,7 +398,7 @@ class PostAdapter(
         )
 
         Glide.with(holder.itemRoot.context)
-            .load(post.userId.profileImage)
+            .load(CloudinaryMedia.optimizedImageUrl(post.userId.profileImage, CloudinaryMedia.WIDTH_AVATAR))
             .placeholder(R.drawable.ic_profile_placeholder)
             .circleCrop()
             .into(holder.profileImage)
@@ -447,8 +449,10 @@ class PostAdapter(
         // Media
         val imageUrls = post.effectiveImageUrls()
         val hasImage = imageUrls.isNotEmpty()
-        val hasVideo = !post.videoUrl.isNullOrEmpty()
-        val hasAudio = !post.audioUrl.isNullOrEmpty()
+        val optimizedVideoUrl = post.optimizedVideoUrl()
+        val optimizedAudioUrl = post.optimizedAudioUrl()
+        val hasVideo = !optimizedVideoUrl.isNullOrEmpty()
+        val hasAudio = !optimizedAudioUrl.isNullOrEmpty()
         val hasMedia = hasImage || hasVideo || hasAudio
         val hasTextBackground = !hasMedia &&
             !post.caption.isNullOrBlank() &&
@@ -478,7 +482,7 @@ class PostAdapter(
 
         if (hasVideo) {
             holder.mediaContainer.visibility = View.VISIBLE
-            holder.prepareVideoUi(post.videoUrl, position)
+            holder.prepareVideoUi(optimizedVideoUrl, position)
 
             // If this position is currently playing, attach player view immediately
             if (position == currentPlayingPosition) {
@@ -494,7 +498,7 @@ class PostAdapter(
         if (hasAudio) {
             holder.mediaContainer.visibility = View.VISIBLE
             holder.audioIcon.visibility = View.VISIBLE
-            holder.setupAudio(post.audioUrl!!)
+            holder.setupAudio(optimizedAudioUrl!!)
             recordVisibleView(post._id, 5)
         }
 
@@ -554,7 +558,7 @@ class PostAdapter(
 
     // Called by holder when user asked to play video for a holder
     private fun playVideoAtPosition(position: Int, holder: PostViewHolder) {
-        val url = posts.getOrNull(position)?.videoUrl ?: return
+        val url = posts.getOrNull(position)?.optimizedVideoUrl() ?: return
 
         // prevent rapid double-taps
         if (isPreparing) return
@@ -721,7 +725,7 @@ class PostAdapter(
 
     fun autoPlayIfVideo(position: Int, holder: PostViewHolder) {
         val post = posts.getOrNull(position) ?: return
-        if (post.videoUrl.isNullOrBlank()) return
+        if (post.optimizedVideoUrl().isNullOrBlank()) return
         if (currentPlayingPosition == position && exoPlayer?.isPlaying == true) return
 
         holder.imageVideoThumbnail.visibility = View.GONE

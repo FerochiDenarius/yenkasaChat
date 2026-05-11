@@ -23,6 +23,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.ui.FilePreviewActivity
 import xyz.yenkasa.app.ui.ImagePreviewActivity
+import xyz.yenkasa.app.util.CloudinaryMedia
 import java.util.Locale
 
 class YenkasaChatMediaView @JvmOverloads constructor(
@@ -109,10 +110,11 @@ class YenkasaChatMediaView @JvmOverloads constructor(
     }
 
     private fun bindImage(url: String) {
+        val imageUrl = CloudinaryMedia.optimizedImageUrl(url, CloudinaryMedia.WIDTH_PREVIEW) ?: url
         imageView.isVisible = true
         progress.isVisible = true
         Glide.with(this)
-            .load(url)
+            .load(imageUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.placeholder_image)
             .error(R.drawable.error_image)
@@ -120,26 +122,27 @@ class YenkasaChatMediaView @JvmOverloads constructor(
         progress.isVisible = false
         setOnClickListener {
             context.startActivity(Intent(context, ImagePreviewActivity::class.java).apply {
-                putExtra("imageUrl", url)
+                putExtra("imageUrl", imageUrl)
             })
         }
     }
 
     private fun bindVideo(url: String) {
+        val videoUrl = CloudinaryMedia.optimizedVideoUrl(url) ?: url
+        val posterUrl = CloudinaryMedia.videoPosterUrl(url, CloudinaryMedia.WIDTH_PREVIEW) ?: videoUrl
         imageView.isVisible = true
         playOverlay.isVisible = true
         progress.isVisible = true
         Glide.with(this)
             .asBitmap()
-            .load(url)
-            .frame(1_000_000)
+            .load(posterUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.video_placeholder)
             .error(R.drawable.video_placeholder)
             .into(imageView)
         progress.isVisible = false
 
-        val click = OnClickListener { startOrToggleVideo(url) }
+        val click = OnClickListener { startOrToggleVideo(videoUrl) }
         setOnClickListener(click)
         playOverlay.setOnClickListener(click)
     }

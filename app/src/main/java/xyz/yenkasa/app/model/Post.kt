@@ -2,6 +2,7 @@ package xyz.yenkasa.app.model
 
 import com.google.gson.annotations.SerializedName
 import org.json.JSONObject
+import xyz.yenkasa.app.util.CloudinaryMedia
 
 data class Post(
     @SerializedName("_id")
@@ -62,7 +63,17 @@ data class Post(
         return imageUrls.orEmpty()
             .filter { it.isNotBlank() }
             .ifEmpty { imageUrl?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }
+            .mapNotNull { CloudinaryMedia.optimizedImageUrl(it, CloudinaryMedia.WIDTH_FEED) }
     }
+
+    fun optimizedVideoUrl(): String? =
+        CloudinaryMedia.optimizedVideoUrl(videoUrl?.takeIf { it.isNotBlank() })
+
+    fun optimizedAudioUrl(): String? =
+        audioUrl?.takeIf { it.isNotBlank() }
+
+    fun optimizedVideoPosterUrl(): String? =
+        CloudinaryMedia.videoPosterUrl(videoUrl?.takeIf { it.isNotBlank() }, CloudinaryMedia.WIDTH_PREVIEW)
 
     fun resolvedCommentCount(): Int {
         return when {

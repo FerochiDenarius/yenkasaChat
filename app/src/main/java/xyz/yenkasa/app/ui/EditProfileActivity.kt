@@ -18,6 +18,7 @@ import xyz.yenkasa.app.model.ChangePasswordRequest
 import xyz.yenkasa.app.model.UploadPictureResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UploadMediaOptimizer
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -157,7 +158,13 @@ class EditProfileActivity : AppCompatActivity() {
     private fun uploadImageToServer(uri: Uri) {
         if (token == null) return
 
-        val file = createTempFileFromUri(uri) ?: return
+        val file = UploadMediaOptimizer.prepareForUpload(
+            context = this,
+            uri = uri,
+            type = "image",
+            maxImageDimension = 720,
+            jpegQuality = 82
+        ) ?: createTempFileFromUri(uri) ?: return
         val mimeType = contentResolver.getType(uri) ?: "image/*"
 
         val requestBody = file.asRequestBody(mimeType.toMediaTypeOrNull())

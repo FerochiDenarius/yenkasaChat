@@ -20,6 +20,12 @@ function getInitials(name, email) {
     .join("") || "YS";
 }
 
+function optimizeCloudinaryImage(url, width = 160) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/image/upload/")) return url;
+  if (/\/image\/upload\/[^/]*(f_auto|q_auto|w_)/.test(url)) return url;
+  return url.replace("/image/upload/", `/image/upload/f_auto,q_auto,w_${width},c_limit/`);
+}
+
 function setProfileFeedback(message, type = "info") {
   if (!accountProfileFeedback) return;
   accountProfileFeedback.textContent = message;
@@ -30,7 +36,7 @@ function renderProfileAvatar(user) {
   if (!accountProfilePreview) return;
 
   if (user?.profileImageUrl) {
-    accountProfilePreview.innerHTML = `<img src="${user.profileImageUrl}" alt="${user.name || "Profile picture"}">`;
+    accountProfilePreview.innerHTML = `<img src="${optimizeCloudinaryImage(user.profileImageUrl, 160)}" alt="${user.name || "Profile picture"}" loading="lazy" decoding="async">`;
     return;
   }
 

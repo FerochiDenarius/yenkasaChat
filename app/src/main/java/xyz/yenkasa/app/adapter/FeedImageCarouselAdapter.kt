@@ -7,6 +7,7 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.CloudinaryMedia
 
 class FeedImageCarouselAdapter(
     private val imageUrls: List<String>
@@ -24,7 +25,7 @@ class FeedImageCarouselAdapter(
 
     override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
         Glide.with(holder.itemView.context)
-            .load(imageUrls[position])
+            .load(CloudinaryMedia.optimizedImageUrl(imageUrls[position], CloudinaryMedia.WIDTH_FEED))
             .placeholder(R.drawable.placeholder_image)
             .error(R.drawable.placeholder_image)
             .into(holder.image)

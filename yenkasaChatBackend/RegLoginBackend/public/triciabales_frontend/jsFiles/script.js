@@ -40,6 +40,19 @@ const supportCancelBtn = document.getElementById("supportCancelBtn");
 const supportFeedback = document.getElementById("supportFeedback");
 const supportSubmitBtn = document.getElementById("supportSubmitBtn");
 
+function optimizeCloudinaryImage(url, width = 500) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/image/upload/")) return url;
+  if (/\/image\/upload\/[^/]*(f_auto|q_auto|w_)/.test(url)) return url;
+  const transform = `f_auto,q_auto,w_${width},c_limit`;
+  return url.replace("/image/upload/", `/image/upload/${transform}/`);
+}
+
+function optimizeCloudinaryVideo(url) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/video/upload/")) return url;
+  if (/\/video\/upload\/[^/]*(f_auto|q_auto)/.test(url)) return url;
+  return url.replace("/video/upload/", "/video/upload/f_auto,q_auto/");
+}
+
 const productDisplayLabels = {
   all: "All Products",
   bale: "Bales",
@@ -443,8 +456,8 @@ function createProductCard(item) {
   const categoryLabel = productDisplayLabels[productCategory] || "Product";
   const status = String(item.status || "available").toLowerCase();
   const productImages = getProductImages(item);
-  const firstImage = productImages[0];
-  const visibleGridImages = productImages.slice(1, 4);
+  const firstImage = optimizeCloudinaryImage(productImages[0], 800);
+  const visibleGridImages = productImages.slice(1, 4).map(url => optimizeCloudinaryImage(url, 300));
   const dressSizes = productCategory === "dress" ? getDressSizes(item) : [];
   const sellerName = item.sellerName || "Yenkasa Seller";
 
@@ -461,6 +474,8 @@ function createProductCard(item) {
                 src="${firstImage}"
                 alt="${item.name || "Yenkasa Store product"}"
                 data-gallery-main
+                loading="lazy"
+                decoding="async"
               >
               <span class="product-image-count">${productImages.length} photos</span>
             </div>
@@ -474,7 +489,7 @@ function createProductCard(item) {
                   data-grid-index="${index + 1}"
                   aria-label="Open product photo ${index + 2}"
                 >
-                  <img src="${imageUrl}" alt="">
+                  <img src="${imageUrl}" alt="" loading="lazy" decoding="async">
                 </button>
               `).join("")}
             </div>
@@ -487,6 +502,8 @@ function createProductCard(item) {
               alt="${item.name || "Yenkasa Store product"}"
               class="product-image"
               data-gallery-main
+              loading="lazy"
+              decoding="async"
             >
           </div>
         `}
@@ -516,7 +533,7 @@ function createProductCard(item) {
 
       <div class="price">GHS ${item.price || 0}</div>
 
-      ${item.videoUrl ? `<video controls src="${item.videoUrl}"></video>` : ""}
+      ${item.videoUrl ? `<video controls preload="metadata" playsinline src="${optimizeCloudinaryVideo(item.videoUrl)}"></video>` : ""}
 
       ${dressSizes.length ? `
         <label class="product-size-picker">
@@ -663,7 +680,7 @@ function renderCategorySpotlight(products) {
       button.dataset.categoryFilter = categoryKey;
       button.innerHTML = `
         <div class="category-card-thumb ${imageUrl ? "has-image" : ""}">
-          ${imageUrl ? `<img src="${imageUrl}" alt="${config.title}">` : `<span>${productDisplayLabels[categoryKey]}</span>`}
+          ${imageUrl ? `<img src="${optimizeCloudinaryImage(imageUrl, 300)}" alt="${config.title}" loading="lazy" decoding="async">` : `<span>${productDisplayLabels[categoryKey]}</span>`}
         </div>
         <div class="category-card-copy">
           <strong>${productDisplayLabels[categoryKey]}</strong>

@@ -29,6 +29,7 @@ import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UploadMediaOptimizer
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -513,7 +514,19 @@ class PostActivity : AppCompatActivity() {
 
         for ((fieldName, uriToUpload) in mediaUris) {
             try {
-                val file = getFileFromUri(uriToUpload)
+                val mediaType = when (fieldName) {
+                    "imageUrl" -> "image"
+                    "videoUrl" -> "video"
+                    "audioUrl" -> "audio"
+                    else -> "file"
+                }
+                val file = UploadMediaOptimizer.prepareForUpload(
+                    context = this,
+                    uri = uriToUpload,
+                    type = mediaType,
+                    maxImageDimension = 1600,
+                    jpegQuality = 82
+                ) ?: getFileFromUri(uriToUpload)
                     ?: throw IOException("File could not be read")
                 val mime = contentResolver.getType(uriToUpload) ?: "application/octet-stream"
                 val requestFile = file.asRequestBody(mime.toMediaTypeOrNull())

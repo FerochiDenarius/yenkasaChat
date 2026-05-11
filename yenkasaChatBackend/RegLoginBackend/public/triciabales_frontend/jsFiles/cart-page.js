@@ -6,6 +6,12 @@ function saveCart(cart) {
   localStorage.setItem("cart", JSON.stringify(cart));
 }
 
+function optimizeCloudinaryImage(url, width = 300) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/image/upload/")) return url;
+  if (/\/image\/upload\/[^/]*(f_auto|q_auto|w_)/.test(url)) return url;
+  return url.replace("/image/upload/", `/image/upload/f_auto,q_auto,w_${width},c_limit/`);
+}
+
 function removeFromCart(cartKey) {
   const cart = getCart().filter(item => (item.cartKey || String(item.id)) !== cartKey);
   saveCart(cart);
@@ -45,7 +51,9 @@ function renderCart() {
           <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
 
             <img
-              src="${item.imageUrl}"
+              src="${optimizeCloudinaryImage(item.imageUrl, 300)}"
+              loading="lazy"
+              decoding="async"
               style="width:120px; height:120px; object-fit:cover; border-radius:14px;"
             >
 

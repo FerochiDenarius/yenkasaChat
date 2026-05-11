@@ -23,6 +23,7 @@ const verificationRules = require('./config/verificationRules');
 const seedCommunities = require('./seed/seedCommunities');
 const commentRoutes = require('./routes/comments.routes');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const { cloudinaryMediaResponseOptimizer } = require('./utils/cloudinaryMedia');
 
 
 
@@ -57,6 +58,7 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cloudinaryMediaResponseOptimizer);
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));

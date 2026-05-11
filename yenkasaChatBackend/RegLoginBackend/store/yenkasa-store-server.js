@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const StoreProfile = require('../models/storeProfile.model');
 const cloudinaryConfig = require('../config/cloudinary');
+const { logUploadAudit } = require('../utils/cloudinaryMedia');
 
 const upload = multer();
 const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
@@ -150,6 +151,7 @@ async function saveStoreLogo(file) {
       quality: 'auto:good',
       fetch_format: 'auto'
     });
+    logUploadAudit({ area: 'store_logo', file, result });
 
     return result.secure_url;
   }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -13,6 +14,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.view.TouchDelegate
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
@@ -87,6 +89,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val textShare: TextView
     private val textSave: TextView
     private val textReward: TextView
+    private val textSponsoredAd: TextView
     private val feedModeTabs: List<TextView>
 
     private var boundPost: Post? = null
@@ -186,6 +189,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         textShare = findViewById(R.id.textPlayerShareCount)
         textSave = findViewById(R.id.textPlayerSaveCount)
         textReward = findViewById(R.id.textPlayerRewardCount)
+        textSponsoredAd = findViewById(R.id.textPlayerSponsoredAd)
         feedModeTabs = listOf(
             findViewById(R.id.tabForYou),
             findViewById(R.id.tabFollowing),
@@ -229,10 +233,10 @@ class YenkasaPlayerView @JvmOverloads constructor(
             val safeBars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
-            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
             val side = dp(16)
+            val controlsSide = dp(20)
             val topGap = dp(if (isCompactWidth()) 8 else 12)
-            val bottomGap = dp(24)
+            val controlsBottomGap = dp(36)
 
             topBar.updateMargins(
                 start = safeBars.left + side,
@@ -249,29 +253,54 @@ class YenkasaPlayerView @JvmOverloads constructor(
                 top = dp(if (isCompactWidth()) 12 else 16),
                 end = safeBars.right + side
             )
-            engagementRail.updateMargins(end = safeBars.right + side)
-            moreOptionsButton.updateMargins(end = safeBars.right + side, bottom = dp(8))
+            engagementRail.updateMargins(start = safeBars.left + side, bottom = dp(110))
+            moreOptionsButton.updateMargins(start = safeBars.left + side, bottom = dp(8))
             liveArenaButton.updateMargins(end = safeBars.right + side, bottom = dp(72))
             bottomMetaView.updateMargins(start = safeBars.left + side, end = safeBars.right + side, bottom = dp(56))
             controlsView.updateMargins(
-                start = safeBars.left + side,
-                end = safeBars.right + side,
-                bottom = navigationBars.bottom + bottomGap
+                start = safeBars.left + controlsSide,
+                end = safeBars.right + controlsSide,
+                bottom = safeBars.bottom + controlsBottomGap
             )
+            engagementRail.post { protectEngagementRailFromFeedTabs() }
             insets
         }
         requestApplyInsetsWhenAttached()
     }
 
+    private fun protectEngagementRailFromFeedTabs() {
+        if (engagementRail.top == 0 || feedTabsView.bottom == 0) return
+
+        val minimumTop = feedTabsView.bottom + dp(8)
+        if (engagementRail.top >= minimumTop) return
+
+        val overlap = minimumTop - engagementRail.top
+        engagementRail.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            bottomMargin = (bottomMargin - overlap).coerceAtLeast(dp(8))
+        }
+    }
+
     private fun applyResponsiveSizing() {
         val compact = isCompactWidth()
-        val railWidth = dp(if (compact) 52 else 56)
-        val communityWidth = dp(if (compact) 54 else 58)
-        val communityHeight = dp(if (compact) 204 else 246)
-        val touchTarget = dp(48)
-        val actionPadding = dp(if (compact) 15 else 14)
+        val shortHeight = isShortPlayerHeight()
+        val railWidth = dp(if (compact) 46 else 50)
+        val railHeight = dp(if (shortHeight) 230 else 260)
+        val communityWidth = dp(if (compact) 52 else 58)
+        val communityHeight = dp(if (compact) 188 else 246)
+        val engagementButtonSize = dp(if (compact) 40 else 42)
+        val engagementPadding = dp(if (compact) 10 else 11)
 
         engagementRail.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            width = railWidth
+            height = railHeight
+        }
+        engagementRail.setPadding(
+            engagementRail.paddingLeft,
+            dp(if (compact) 3 else 4),
+            engagementRail.paddingRight,
+            dp(if (compact) 3 else 4)
+        )
+        secondaryActionsView.updateLayoutParams<ConstraintLayout.LayoutParams> {
             width = railWidth
         }
         communitiesPanel.updateLayoutParams<ConstraintLayout.LayoutParams> {
@@ -289,17 +318,15 @@ class YenkasaPlayerView @JvmOverloads constructor(
             buttonSave,
             sponsoredAdButton,
             buttonReward,
-            buttonExpandActions,
-            moreOptionsButton,
-            menuButton
+            buttonExpandActions
         ).forEach { button ->
             button.updateLayoutParams<ViewGroup.LayoutParams> {
-                width = touchTarget
-                height = touchTarget
+                width = engagementButtonSize
+                height = engagementButtonSize
             }
-            button.setPadding(actionPadding, actionPadding, actionPadding, actionPadding)
-            button.minimumWidth = touchTarget
-            button.minimumHeight = touchTarget
+            button.setPadding(engagementPadding, engagementPadding, engagementPadding, engagementPadding)
+            button.minimumWidth = 0
+            button.minimumHeight = 0
         }
 
         logoView.updateLayoutParams<ViewGroup.LayoutParams> {
@@ -310,6 +337,58 @@ class YenkasaPlayerView @JvmOverloads constructor(
         feedModeTabs.forEach { tab ->
             tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 10f else 11f)
             tab.minHeight = dp(28)
+        }
+        listOf(textLike, textViews, textComment, textShare, textSave, textReward, textSponsoredAd).forEach { label ->
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 7f)
+        }
+        applyExpandedTouchTargets(
+            listOf(
+                buttonLike,
+                buttonViews,
+                buttonComment,
+                buttonShare,
+                buttonSave,
+                sponsoredAdButton,
+                buttonReward,
+                buttonExpandActions
+            ),
+            dp(48)
+        )
+
+        if ((compact || shortHeight) && secondaryActionsExpanded) {
+            collapseSecondaryActions(animate = false)
+        }
+    }
+
+    private fun applyExpandedTouchTargets(buttons: List<View>, minTouchSize: Int) {
+        buttons
+            .mapNotNull { button -> (button.parent as? ViewGroup)?.let { parent -> parent to button } }
+            .groupBy({ it.first }, { it.second })
+            .forEach { (parent, children) ->
+                parent.post {
+                    val delegateGroup = MultiTouchDelegate(parent)
+                    children.forEach { child ->
+                        val rect = Rect()
+                        child.getHitRect(rect)
+                        val expandX = ((minTouchSize - rect.width()).coerceAtLeast(0)) / 2
+                        val expandY = ((minTouchSize - rect.height()).coerceAtLeast(0)) / 2
+                        rect.inset(-expandX, -expandY)
+                        delegateGroup.addDelegate(TouchDelegate(rect, child))
+                    }
+                    parent.touchDelegate = delegateGroup
+                }
+            }
+    }
+
+    private class MultiTouchDelegate(parent: View) : TouchDelegate(Rect(), parent) {
+        private val delegates = mutableListOf<TouchDelegate>()
+
+        fun addDelegate(delegate: TouchDelegate) {
+            delegates += delegate
+        }
+
+        override fun onTouchEvent(event: MotionEvent): Boolean {
+            return delegates.any { it.onTouchEvent(event) }
         }
     }
 
@@ -333,6 +412,10 @@ class YenkasaPlayerView @JvmOverloads constructor(
     }
 
     private fun toggleSecondaryActions() {
+        if (isCompactWidth() || isShortPlayerHeight()) {
+            collapseSecondaryActions(animate = true)
+            return
+        }
         secondaryActionsExpanded = !secondaryActionsExpanded
         secondaryActionsView.animate().cancel()
         buttonExpandActions.animate().cancel()
@@ -350,6 +433,26 @@ class YenkasaPlayerView @JvmOverloads constructor(
                 .start()
             buttonExpandActions.animate().rotation(0f).setDuration(180L).start()
             buttonExpandActions.contentDescription = "Show more actions"
+        }
+        scheduleAutoHide()
+    }
+
+    private fun collapseSecondaryActions(animate: Boolean) {
+        secondaryActionsExpanded = false
+        secondaryActionsView.animate().cancel()
+        buttonExpandActions.animate().cancel()
+        buttonExpandActions.contentDescription = "Show more actions"
+        if (animate) {
+            secondaryActionsView.animate()
+                .alpha(0f)
+                .setDuration(160L)
+                .withEndAction { secondaryActionsView.isVisible = false }
+                .start()
+            buttonExpandActions.animate().rotation(0f).setDuration(180L).start()
+        } else {
+            secondaryActionsView.alpha = 0f
+            secondaryActionsView.isVisible = false
+            buttonExpandActions.rotation = 0f
         }
         scheduleAutoHide()
     }
@@ -392,6 +495,10 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
     private fun isCompactWidth(): Boolean {
         return resources.configuration.screenWidthDp in 1..359
+    }
+
+    private fun isShortPlayerHeight(): Boolean {
+        return resources.configuration.screenHeightDp in 1..699
     }
 
     private fun dp(value: Int): Int {

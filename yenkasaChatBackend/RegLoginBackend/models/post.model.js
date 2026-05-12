@@ -122,6 +122,18 @@ postSchema.index({ userId: 1, createdAt: -1 });
 postSchema.index({ communityId: 1, createdAt: -1 });
 postSchema.index({ createdAt: -1 });
 postSchema.index({ likeCount: -1 });
+postSchema.index({ status: 1, isActive: 1, createdAt: -1 });
+postSchema.index({ status: 1, isActive: 1, userId: 1, createdAt: -1 });
+postSchema.index({ status: 1, isActive: 1, communityId: 1, createdAt: -1 });
+postSchema.index({
+  status: 1,
+  isActive: 1,
+  commentCount: -1,
+  shareCount: -1,
+  likeCount: -1,
+  viewCount: -1,
+  createdAt: -1
+});
 postSchema.index({ text: 'text', tags: 'text', communityName: 'text' });
 
 

@@ -107,13 +107,22 @@
             android:textSize="13sp" />
 
         <TextView
+            android:id="@+id/tabLatest"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_feed_tab_unselected"
+            android:gravity="center"
+            android:text="Latest"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="13sp" />
+
+        <TextView
             android:id="@+id/tabTop"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@drawable/bg_feed_tab_unselected"
-            android:drawableEnd="@drawable/ic_dropdown"
-            android:drawablePadding="4dp"
             android:gravity="center"
             android:text="Top"
             android:textColor="@color/feed_secondary_text"

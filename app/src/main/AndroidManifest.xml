@@ -170,6 +170,18 @@
         <activity
             android:name=".ui.ChatRoomsActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.GroupListActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.GroupContactsSelectorActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.GroupSetupActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.GroupChatActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.LocationPreviewActivity" />
         <activity android:name=".ui.FilePreviewActivity" />
         <activity android:name=".ui.AccountInfoActivity" />

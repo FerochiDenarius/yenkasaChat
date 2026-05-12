@@ -22,7 +22,8 @@ import java.util.*
 
 class MessageAdapter(
     private val currentUserId: String,
-    private val receiverName: String
+    private val receiverName: String,
+    private val isGroupChat: Boolean = false
 )
 
 :
@@ -87,6 +88,7 @@ class MessageAdapter(
         protected val messageText: TextView = itemView.findViewById(R.id.textMessage)
         protected val timestampText: TextView = itemView.findViewById(R.id.textTimestamp)
         protected val chatMediaView: YenkasaChatMediaView = itemView.findViewById(R.id.chatMediaView)
+        protected val senderNameText: TextView? = itemView.findViewById(R.id.textSenderName)
 
         protected val audioContainer: LinearLayout? = itemView.findViewById(R.id.audioContainer)
         protected val btnPlayAudio: ImageButton? = itemView.findViewById(R.id.btnPlayAudio)
@@ -121,6 +123,13 @@ class MessageAdapter(
         open fun bind(message: ChatMessage, currentUserId: String) {
             val context = itemView.context
             resetContentState()
+            if (isGroupChat) {
+                senderNameText?.text = resolveSenderName(message, currentUserId, receiverName)
+                senderNameText?.visibility = View.VISIBLE
+            } else {
+                senderNameText?.visibility = View.GONE
+            }
+
             val mediaPayload = YenkasaChatMediaView.inferPayload(
                 imageUrl = message.imageUrl,
                 videoUrl = message.videoUrl,
@@ -297,8 +306,8 @@ class MessageAdapter(
         private fun resolveSenderName(message: ChatMessage, currentUserId: String, receiverName: String): String {
             return when {
                 message.senderId == currentUserId -> "You"
-                !receiverName.isNullOrBlank() -> receiverName
                 message.sender?.username?.isNotBlank() == true -> message.sender!!.username!!
+                receiverName.isNotBlank() -> receiverName
                 else -> ""
             }
         }

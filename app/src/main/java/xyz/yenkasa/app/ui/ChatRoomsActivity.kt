@@ -27,6 +27,7 @@ import xyz.yenkasa.app.model.ChatRoom
 // Assuming CreateChatRoomRequest is now used by your ApiService
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
+import xyz.yenkasa.app.model.GroupsListResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
@@ -49,6 +50,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     private var recentChatRooms: List<ChatRoom> = emptyList()
     private var activeMediaSender: ChatMessageHandler? = null
     private var pendingMediaRecipientName: String? = null
+    private var activeTab: String = "chats"
 
     private val chatRoomImagePickerLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -91,11 +93,17 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         }
 
         chatRoomAdapter = ChatRoomAdapter(currentUserId) { selectedRoom ->
-            val intent = Intent(this@ChatRoomsActivity, ChatActivity::class.java).apply {
+            val target = if (selectedRoom.roomType == "group") GroupChatActivity::class.java else ChatActivity::class.java
+            val intent = Intent(this@ChatRoomsActivity, target).apply {
                 putExtra("roomId", selectedRoom._id) // This assumes your ChatRoom has an _id field
 
-                val chatName = determineChatDisplayNameForActivity(selectedRoom, currentUserId)
+                val chatName = if (selectedRoom.roomType == "group") {
+                    selectedRoom.groupName ?: "Yenkasa Group"
+                } else {
+                    determineChatDisplayNameForActivity(selectedRoom, currentUserId)
+                }
                 putExtra("chatPartnerName", chatName)
+                putExtra("isGroupChat", selectedRoom.roomType == "group")
             }
             startActivity(intent)
         }
@@ -104,7 +112,11 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         loadChatRooms()
 
         btnCreateRoom.setOnClickListener {
-            submitCreateRoomFromInput()
+            if (activeTab == "groups") {
+                startActivity(Intent(this, GroupContactsSelectorActivity::class.java))
+            } else {
+                submitCreateRoomFromInput()
+            }
         }
 
         inputUsername.setOnEditorActionListener { _, actionId, _ ->
@@ -142,27 +154,40 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         }
 
         navChats.setOnClickListener {
-            recyclerView.smoothScrollToPosition(0)
+            activeTab = "chats"
+            inputUsername.hint = "Type a name to start a chat"
+            btnCreateRoom.text = "Add User"
+            updateFoundCard(inputUsername.text?.toString().orEmpty())
             loadChatRooms()
         }
 
         navStatus.setOnClickListener {
-            Toast.makeText(this, "Status will be connected after the chat UI pass", Toast.LENGTH_SHORT).show()
+            activeTab = "groups"
+            inputUsername.hint = "Search groups"
+            btnCreateRoom.text = "Create"
+            updateFoundCard(inputUsername.text?.toString().orEmpty())
+            loadGroups()
         }
 
         navCalls.setOnClickListener {
-            Toast.makeText(this, "Calls list will be connected after the chat UI pass", Toast.LENGTH_SHORT).show()
+            activeTab = "announcements"
+            chatRoomAdapter.submitList(emptyList())
+            foundCardTitle.text = "Announcements"
+            foundCardSubtitle.text = "Announcement channels will appear here."
         }
 
         navSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            activeTab = "status"
+            chatRoomAdapter.submitList(emptyList())
+            foundCardTitle.text = "Status"
+            foundCardSubtitle.text = "Status updates will appear here."
         }
     }
 
     override fun onResume() {
         super.onResume()
         if (::chatRoomAdapter.isInitialized && ::currentUserId.isInitialized && currentUserId.isNotBlank()) {
-            loadChatRooms()
+            if (activeTab == "groups") loadGroups() else if (activeTab == "chats") loadChatRooms()
         }
     }
 
@@ -218,11 +243,21 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     private fun updateFoundCard(rawUsername: String) {
         val username = rawUsername.trim()
         if (username.isBlank()) {
-            foundCardTitle.text = "Start a chat"
-            foundCardSubtitle.text = "Type a username above, then add the user to your chat list."
+            if (activeTab == "groups") {
+                foundCardTitle.text = "Groups"
+                foundCardSubtitle.text = "Create a group from your existing contacts only."
+            } else {
+                foundCardTitle.text = "Start a chat"
+                foundCardSubtitle.text = "Type a username above, then add the user to your chat list."
+            }
         } else {
-            foundCardTitle.text = "Ready to add user"
-            foundCardSubtitle.text = "Tap Add User to start a chat with $username."
+            if (activeTab == "groups") {
+                foundCardTitle.text = "Search groups"
+                foundCardSubtitle.text = "Group search stays inside your existing groups."
+            } else {
+                foundCardTitle.text = "Ready to add user"
+                foundCardSubtitle.text = "Tap Add User to start a chat with $username."
+            }
         }
     }
 
@@ -334,6 +369,29 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                 override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
                     Log.e("ChatRoomsActivity", "Error loading chat rooms: ${t.message}", t)
                     Toast.makeText(this@ChatRoomsActivity, "Error loading chat rooms: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun loadGroups() {
+        ApiClient.apiService.getGroups()
+            .enqueue(object : Callback<GroupsListResponse> {
+                override fun onResponse(
+                    call: Call<GroupsListResponse>,
+                    response: Response<GroupsListResponse>
+                ) {
+                    if (response.isSuccessful) {
+                        val groups = response.body()?.groups.orEmpty()
+                            .sortedWith(compareByDescending<ChatRoom> { it.lastActivityTimeMillis }
+                                .thenByDescending { it.unreadCount })
+                        chatRoomAdapter.submitList(groups)
+                    } else {
+                        Toast.makeText(this@ChatRoomsActivity, "Failed to load groups: ${parseError(response)}", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<GroupsListResponse>, t: Throwable) {
+                    Toast.makeText(this@ChatRoomsActivity, "Error loading groups: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }

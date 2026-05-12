@@ -22,6 +22,19 @@
         android:paddingEnd="10dp"
         android:paddingBottom="7dp">
 
+        <TextView
+            android:id="@+id/textSenderName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginBottom="4dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/yenkasa_emerald"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="You"
+            tools:visibility="visible" />
+
         <LinearLayout
             android:id="@+id/replyLayout"
             android:layout_width="wrap_content"

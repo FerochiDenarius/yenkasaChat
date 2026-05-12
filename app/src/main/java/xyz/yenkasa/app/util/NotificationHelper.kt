@@ -28,8 +28,6 @@ object NotificationHelper {
     private const val CALL_NOTIFICATION_ID = 9999
     private const val PREFS_NAME = "settings"
     private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
-    private const val GROUP_KEY_MESSAGES = "xyz.yenkasa.app.MESSAGES"
-    private const val SUMMARY_ID = 0
 
     private fun hasPostNotificationPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -195,24 +193,12 @@ object NotificationHelper {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
             .setContentIntent(pendingIntent)
-            .setGroup(GROUP_KEY_MESSAGES)
 
         if (soundUri != null) builder.setSound(soundUri)
 
-        val summaryNotification = NotificationCompat.Builder(context, MESSAGE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_message)
-            .setContentTitle("New messages")
-            .setContentText("You have new messages")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setGroup(GROUP_KEY_MESSAGES)
-            .setGroupSummary(true)
-            .setAutoCancel(true)
-            .build()
-
         try {
-            val notificationManager = NotificationManagerCompat.from(context)
-            notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
-            notificationManager.notify(SUMMARY_ID, summaryNotification)
+            NotificationManagerCompat.from(context)
+                .notify(System.currentTimeMillis().toInt(), builder.build())
         } catch (e: SecurityException) {
             Log.w("NotificationHelper", "Unable to post message notification: ${e.message}")
         }

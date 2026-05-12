@@ -261,7 +261,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Status"
+            android:text="Groups"
             android:textColor="@color/white"
             android:textSize="11sp" />
 
@@ -278,7 +278,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Calls"
+            android:text="Announcements"
             android:textColor="@color/white"
             android:textSize="11sp" />
 
@@ -295,7 +295,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Settings"
+            android:text="Status"
             android:textColor="@color/white"
             android:textSize="11sp" />
     </LinearLayout>

@@ -119,6 +119,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var token: String = ""
     private var senderId: String = ""
     private var roomId: String? = null
+    private var isGroupChat: Boolean = false
     private var tempCameraUri: Uri? = null
     private var pendingMediaUri: Uri? = null
     private var pendingMediaType: String? = null
@@ -366,7 +367,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         messageAdapter = MessageAdapter(
             currentUserId = senderId,
-            receiverName = textViewReceiverName.text.toString()
+            receiverName = textViewReceiverName.text.toString(),
+            isGroupChat = isGroupChat
         )
         messageAdapter.setOnMessageLongClickListener(this)
 
@@ -389,7 +391,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
-        setupPresenceListeners()
+        if (!isGroupChat) {
+            setupPresenceListeners()
+        }
         setupRealtimeMessageListeners()
 
         // --- Listen for signaling messages (CALL_REQUEST / ACCEPT / REJECT) ---
@@ -413,10 +417,19 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         setupChatRecyclerView()
         applySavedChatBackground()
         setupListeners()
+        configureGroupHeaderIfNeeded()
         setupKeyboardAwareChatInput()
 
-        // ✅ Now safe: only called after helper initialized
-        chatActivityHelper.initializeHeaderInformation()
+        if (isGroupChat) {
+            showDefaultReceiverHeader(
+                intent.getStringExtra("chatPartnerName")
+                    ?: intent.getStringExtra("contactName")
+                    ?: "Yenkasa Group"
+            )
+        } else {
+            // ✅ Now safe: only called after helper initialized
+            chatActivityHelper.initializeHeaderInformation()
+        }
         chatActivityHelper.startFetchingMessagesRepeatedly()
         requestNeededPermissions()
     }
@@ -500,9 +513,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun setupListeners() {
         findViewById<ImageView>(R.id.imageViewBackButton).setOnClickListener { finish() }
         moreOptionsButton.setOnClickListener { showChatOptionsMenu(it) }
-        imageViewReceiverPicture.setOnClickListener { openReceiverProfile() }
-        textViewReceiverName.setOnClickListener { openReceiverProfile() }
-        textViewOnlineStatus.setOnClickListener { openReceiverProfile() }
+        if (!isGroupChat) {
+            imageViewReceiverPicture.setOnClickListener { openReceiverProfile() }
+            textViewReceiverName.setOnClickListener { openReceiverProfile() }
+            textViewOnlineStatus.setOnClickListener { openReceiverProfile() }
+        }
 
         buttonCancelReply.setOnClickListener { clearReplyingTo() }
 
@@ -1601,8 +1616,16 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (::imageViewReceiverPicture.isInitialized) {
             imageViewReceiverPicture.setImageResource(R.drawable.ic_default_profile)
         }
-        textViewOnlineStatus.text = "" // Or "Status unavailable"
+        textViewOnlineStatus.text = if (isGroupChat) "Group chat" else "" // Or "Status unavailable"
         imageViewStatusIndicator.visibility = View.GONE
+    }
+
+    private fun configureGroupHeaderIfNeeded() {
+        if (!isGroupChat) return
+        callButton.visibility = View.GONE
+        videoCallButton.visibility = View.GONE
+        imageViewStatusIndicator.visibility = View.GONE
+        textViewOnlineStatus.text = "Group chat"
     }
 
     override fun showToast(message: String, length: Int) {
@@ -1956,6 +1979,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         token = TokenManager.getToken(this) ?: ""
         senderId = TokenManager.getUserId(this) ?: ""
         roomId = intent.getStringExtra("roomId")
+        isGroupChat = intent.getBooleanExtra("isGroupChat", false)
 
         if (token.isBlank() || senderId.isBlank()) {
             Toast.makeText(this, "Session is invalid. Please log in again.", Toast.LENGTH_LONG).show()

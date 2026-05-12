@@ -282,6 +282,7 @@ class FeedFragment : Fragment() {
             view.findViewById(R.id.tabForYou),
             view.findViewById(R.id.tabFollowing),
             view.findViewById(R.id.tabTrending),
+            view.findViewById(R.id.tabLatest),
             view.findViewById(R.id.tabTop)
         )
 
@@ -562,13 +563,8 @@ class FeedFragment : Fragment() {
             return
         }
 
-        if (selectedFeedMode == FeedTabsController.FeedMode.FOLLOWING && followingUserIds == null) {
-            fetchFollowingUserIds { loadFeed(page) }
-            return
-        }
-
         val names = selectedCommunityNames()
-        val cacheKey = cacheController.cacheKeyForCommunityNames(names)
+        val cacheKey = feedCacheKeyFor(names)
 
         if (!isOnline()) {
             updateOfflineBanner(true)
@@ -588,32 +584,22 @@ class FeedFragment : Fragment() {
         isLoadingMore = page > 1
         showLoading(true, page <= 1)
 
-        if (names.isEmpty()) {
-            if (posts.isEmpty()) {
-                loadCachedFeed(cacheKey, replace = true, allowGlobalFallback = true)
-            } else {
-                renderPosts()
-            }
-            isLoading = false
-            isLoadingMore = false
-            showLoading(false, page <= 1)
-            updateEmptyFeedUi(isRefreshing = posts.isEmpty())
-            return
-        }
-
         val namesString = names.joinToString(",")
-        TokenManager.saveFeedCacheCommunityNames(requireContext(), namesString)
+        if (namesString.isNotBlank()) {
+            TokenManager.saveFeedCacheCommunityNames(requireContext(), namesString)
+        }
         val requestGeneration = feedRequestGeneration
         val requestStartedAt = System.currentTimeMillis()
         val previousPostsForSameFeed = if (activeCacheKey == cacheKey) posts.toList() else emptyList()
         Log.d(
             "FeedFragment",
-            "feed_fetch_start page=$page cacheKey=$cacheKey names=${names.size} previous=${previousPostsForSameFeed.size}"
+            "feed_fetch_start mode=${selectedFeedMode.backendKey()} page=$page cacheKey=$cacheKey names=${names.size} previous=${previousPostsForSameFeed.size}"
         )
 
-        ApiClient.apiService.getPostsByCommunities(
+        ApiClient.apiService.getFeedByMode(
             "Bearer $token",
-            namesString,
+            selectedFeedMode.backendKey(),
+            namesString.takeIf { it.isNotBlank() },
             page,
             20
         ).enqueue(object : Callback<FeedResponse> {
@@ -634,7 +620,7 @@ class FeedFragment : Fragment() {
                     communityController.updateCommunityStoryRow(
                         if (::communityStoryAdapter.isInitialized) communityStoryAdapter else null
                     )
-                    val filteredPosts = tabsController.applyFeedMode(sourcePosts, followingUserIds)
+                    val filteredPosts = sourcePosts
 
                     if (page == 1) {
                         posts.clear()
@@ -649,7 +635,7 @@ class FeedFragment : Fragment() {
                     lastLoadedPostId = posts.lastOrNull()?._id
                     Log.d(
                         "FeedFragment",
-                        "feed_fetch_success page=$page received=${sourcePosts.size} rendered=${posts.size} hasMore=${!isLastPage} lastLoadedPostId=$lastLoadedPostId durationMs=${System.currentTimeMillis() - requestStartedAt}"
+                        "feed_fetch_success mode=${selectedFeedMode.backendKey()} page=$page received=${sourcePosts.size} rendered=${posts.size} hasMore=${!isLastPage} lastLoadedPostId=$lastLoadedPostId durationMs=${System.currentTimeMillis() - requestStartedAt}"
                     )
                     renderPosts()
                     restoreScrollPositionIfNeeded(cacheKey)
@@ -857,7 +843,7 @@ class FeedFragment : Fragment() {
         isLoadingMore = false
         currentPage = 1
         isLastPage = false
-        val cacheKey = cacheController.cacheKeyForCommunityNames(selectedCommunityNames())
+        val cacheKey = feedCacheKeyFor(selectedCommunityNames())
         loadCachedFeed(
             cacheKey = cacheKey,
             replace = true,
@@ -948,6 +934,22 @@ class FeedFragment : Fragment() {
 
     private fun selectedCommunityNames(): List<String> {
         return selectedCommunities.mapNotNull { it.displayName ?: it.name }
+    }
+
+    private fun feedCacheKeyFor(communityNames: List<String>): String {
+        val communityKey = cacheController.cacheKeyForCommunityNames(communityNames)
+        return "${selectedFeedMode.backendKey()}_$communityKey"
+    }
+
+    private fun FeedTabsController.FeedMode.backendKey(): String {
+        return when (this) {
+            FeedTabsController.FeedMode.FOR_YOU -> "for-you"
+            FeedTabsController.FeedMode.FOLLOWING -> "following"
+            FeedTabsController.FeedMode.TRENDING -> "trending"
+            FeedTabsController.FeedMode.LATEST -> "latest"
+            FeedTabsController.FeedMode.TOP -> "top"
+            FeedTabsController.FeedMode.POPULAR -> "popular"
+        }
     }
 
     private fun setupNetworkMonitoring() {

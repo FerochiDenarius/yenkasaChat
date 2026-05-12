@@ -1,5 +1,4 @@
 const router = require('express').Router(); // ✅ Fix: declare router
-const mongoose = require('mongoose');
 const Contact = require('../models/contact.model');
 const User = require('../models/user.model');
 const ChatRoom = require('../models/chatroom.model');
@@ -59,19 +58,18 @@ router.post('/', authMiddleware, async (req, res) => {
 
 router.delete('/:contactId', authMiddleware, async (req, res) => {
     try {
-        const userId = req.user.id;
-        const { contactId } = req.params;
-
-        const result = await Contact.findOneAndDelete({
-            _id: contactId,
-            userId: userId
+        const existingContact = await Contact.findOne({
+            _id: req.params.contactId,
+            userId: req.user.id
         });
 
-        if (!result) {
+        if (!existingContact) {
             return res.status(404).json({ error: 'Contact not found' });
         }
 
-        res.status(200).json({ message: 'Contact deleted successfully' });
+        res.status(200).json({
+            message: 'Conversation contacts are permanent after first interaction.'
+        });
     } catch (err) {
         console.error("❌ Delete contact error:", err.message);
         res.status(500).json({ error: 'Server error' });

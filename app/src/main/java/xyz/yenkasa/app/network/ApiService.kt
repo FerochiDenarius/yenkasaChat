@@ -162,6 +162,44 @@ interface ApiService {
     @DELETE("contacts/{contactId}")
     fun deleteContact(@Path("contactId") contactId: String): Call<Void>
 
+    // ==================== GROUPS ====================
+
+    @POST("groups/create")
+    fun createGroup(@Body request: GroupCreateRequest): Call<GroupResponse>
+
+    @GET("groups")
+    fun getGroups(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 30
+    ): Call<GroupsListResponse>
+
+    @GET("groups/{groupId}")
+    fun getSingleGroup(@Path("groupId") groupId: String): Call<GroupResponse>
+
+    @POST("groups/{groupId}/add-members")
+    fun addGroupMembers(
+        @Path("groupId") groupId: String,
+        @Body request: GroupMembersRequest
+    ): Call<GroupResponse>
+
+    @POST("groups/{groupId}/remove-member")
+    fun removeGroupMember(
+        @Path("groupId") groupId: String,
+        @Body request: GroupMemberRequest
+    ): Call<GroupResponse>
+
+    @POST("groups/{groupId}/promote-admin")
+    fun promoteGroupAdmin(
+        @Path("groupId") groupId: String,
+        @Body request: GroupMemberRequest
+    ): Call<GroupResponse>
+
+    @POST("groups/{groupId}/leave")
+    fun leaveGroup(@Path("groupId") groupId: String): Call<GroupResponse>
+
+    @DELETE("groups/{groupId}")
+    fun deleteGroup(@Path("groupId") groupId: String): Call<GroupResponse>
+
 
     // ==================== NOTIFICATIONS ====================
 
@@ -542,6 +580,17 @@ interface ApiService {
     @GET("feed")
     fun getFeed(
         @Header("Authorization") token: String,
+        @Query("feedType") feedType: String? = null,
+        @Query("names") communityNames: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Call<FeedResponse>
+
+    @GET("feed/{mode}")
+    fun getFeedByMode(
+        @Header("Authorization") token: String,
+        @Path("mode") mode: String,
+        @Query("names") communityNames: String? = null,
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Call<FeedResponse>

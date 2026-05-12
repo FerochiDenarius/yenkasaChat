@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/feed_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:id="@+id/groupSetupRoot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="Group Setup"
+            android:textColor="@color/yenkasa_emerald"
+            android:textSize="24sp" />
+
+        <EditText
+            android:id="@+id/inputGroupName"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_chat_search"
+            android:hint="Group name"
+            android:inputType="textCapWords"
+            android:maxLength="80"
+            android:paddingHorizontal="16dp"
+            android:textColor="@color/feed_primary_text"
+            android:textColorHint="@color/feed_secondary_text" />
+
+        <EditText
+            android:id="@+id/inputGroupBio"
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_chat_search"
+            android:gravity="top"
+            android:hint="Group bio"
+            android:inputType="textMultiLine"
+            android:maxLength="240"
+            android:padding="16dp"
+            android:textColor="@color/feed_primary_text"
+            android:textColorHint="@color/feed_secondary_text" />
+
+        <EditText
+            android:id="@+id/inputGroupImage"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_chat_search"
+            android:hint="Group image URL"
+            android:inputType="textUri"
+            android:paddingHorizontal="16dp"
+            android:textColor="@color/feed_primary_text"
+            android:textColorHint="@color/feed_secondary_text" />
+
+        <Button
+            android:id="@+id/buttonFinishGroupSetup"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_chat_primary_button"
+            android:text="Finish Setup"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+    </LinearLayout>
+</ScrollView>

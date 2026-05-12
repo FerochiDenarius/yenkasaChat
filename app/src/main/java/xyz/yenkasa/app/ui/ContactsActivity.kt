@@ -1,8 +1,9 @@
 package xyz.yenkasa.app.ui
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +28,7 @@ class ContactsActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var contactAdapter: ContactAdapter
     private val contacts: MutableList<Contact> = mutableListOf()
+    private val allContacts: MutableList<Contact> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,10 +51,13 @@ class ContactsActivity : AppCompatActivity() {
 
         contactAdapter = ContactAdapter(
             contacts,
-            // Assuming Contact has 'id' and 'username' fields as used.
-            // If Contact's 'id' field was renamed (e.g. to '_id' for consistency with Participant),
-            // this would need to change: { contact -> deleteContact(contact._id) }
-            onDeleteClick = { contact -> deleteContact(contact.id) },
+            onDeleteClick = {
+                Toast.makeText(
+                    this,
+                    "Contacts stay saved after the first conversation.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            },
             onChatClick = { contact -> createChatRoom(contact) }
         )
 
@@ -60,13 +65,15 @@ class ContactsActivity : AppCompatActivity() {
         recyclerView.adapter = contactAdapter
 
         btnAddContact.setOnClickListener {
-            val username = editAddContact.text.toString().trim()
-            if (username.isNotEmpty()) {
-                addContact(username)
-            } else {
-                Toast.makeText(this, "Enter username to add contact", Toast.LENGTH_SHORT).show()
-            }
+            startActivity(Intent(this, ChatRoomsActivity::class.java))
         }
+        editAddContact.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun afterTextChanged(s: Editable?) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterExistingContacts(s?.toString().orEmpty())
+            }
+        })
 
         loadContacts()
     }
@@ -79,8 +86,10 @@ class ContactsActivity : AppCompatActivity() {
                     response: Response<List<Contact>>
                 ) {
                     if (response.isSuccessful) {
+                        allContacts.clear()
+                        allContacts.addAll(response.body().orEmpty())
                         contacts.clear()
-                        response.body()?.let { contacts.addAll(it) }
+                        contacts.addAll(allContacts)
                         contactAdapter.notifyDataSetChanged() // Consider DiffUtil for adapter efficiency
                     } else {
                         val errorMsg = parseError(response)
@@ -96,58 +105,14 @@ class ContactsActivity : AppCompatActivity() {
             })
     }
 
-    private fun addContact(username: String) {
-        // Assuming your addContact API endpoint still expects a simple map for username
-        // If it was also changed to a typed request, update this accordingly.
-        val body = mapOf("username" to username)
-
-        ApiClient.apiService.addContact(body)
-            .enqueue(object : Callback<Contact> {
-                override fun onResponse(call: Call<Contact>, response: Response<Contact>) {
-                    if (response.isSuccessful && response.body() != null) {
-                        contacts.add(response.body()!!)
-                        contactAdapter.notifyItemInserted(contacts.size - 1)
-                        editAddContact.text.clear()
-                        Toast.makeText(this@ContactsActivity, "Contact added successfully", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val errorMsg = parseError(response)
-                        Log.e("ContactsActivity", "Add Contact Failed: $errorMsg (Code: ${response.code()})")
-                        Toast.makeText(this@ContactsActivity, "Failed to add contact: $errorMsg", Toast.LENGTH_LONG).show()
-                    }
-                }
-
-                override fun onFailure(call: Call<Contact>, t: Throwable) {
-                    Log.e("ContactsActivity", "Add Contact Error: ${t.message}", t)
-                    Toast.makeText(this@ContactsActivity, "Error adding contact: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
-    }
-
-    private fun deleteContact(contactId: String) {
-        // Assuming contactId is the correct field from your Contact model.
-        ApiClient.apiService.deleteContact(contactId)
-            .enqueue(object : Callback<Void> {
-                override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                    if (response.isSuccessful) {
-                        // Ensure 'id' is the correct identifier field in your Contact model.
-                        val index = contacts.indexOfFirst { it.id == contactId }
-                        if (index != -1) {
-                            contacts.removeAt(index)
-                            contactAdapter.notifyItemRemoved(index)
-                            Toast.makeText(this@ContactsActivity, "Contact deleted", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        val errorMsg = parseError(response)
-                        Log.e("ContactsActivity", "Delete Contact Failed: $errorMsg (Code: ${response.code()})")
-                        Toast.makeText(this@ContactsActivity, "Failed to delete contact: $errorMsg", Toast.LENGTH_LONG).show()
-                    }
-                }
-
-                override fun onFailure(call: Call<Void>, t: Throwable) {
-                    Log.e("ContactsActivity", "Delete Contact Error: ${t.message}", t)
-                    Toast.makeText(this@ContactsActivity, "Error deleting contact: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+    private fun filterExistingContacts(query: String) {
+        val normalized = query.trim().lowercase()
+        contacts.clear()
+        contacts.addAll(
+            if (normalized.isBlank()) allContacts
+            else allContacts.filter { it.username.lowercase().contains(normalized) }
+        )
+        contactAdapter.notifyDataSetChanged()
     }
 
     private fun createChatRoom(contact: Contact) {

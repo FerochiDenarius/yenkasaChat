@@ -4,24 +4,10 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const Post = require("../models/post.model");
 const Community = require("../models/community.model");
-const UserPrivacy = require("../models/userPrivacy.model");
+const Follow = require("../models/follow.model");
 const Ad = require("../models/Ad.model"); // ⭐ ADD THIS
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
-
-/* ---------------------------------------------------
- * Helper: Get ALL users that viewer cannot see
- * --------------------------------------------------- */
-async function getBlockedUserIds(viewerId) {
-  const myPrivacy = await UserPrivacy.findOne({ userId: viewerId }).lean();
-  
-  const iBlocked = myPrivacy?.blockedUsers?.map(id => id.toString()) || [];
-
-  const blockedMeDocs = await UserPrivacy.find({ blockedUsers: viewerId }).lean();
-  const blockedMe = blockedMeDocs.map(doc => doc.userId.toString());
-
-  return [...new Set([...iBlocked, ...blockedMe])];
-}
 
 function attachLikedByUser(posts, viewerId) {
   if (!viewerId) return posts;
@@ -48,9 +34,9 @@ function normalizeFeedMode(value = "") {
 }
 
 function feedSort(mode) {
-  if (mode === "latest" || mode === "following") return { createdAt: -1 };
+  if (mode === "latest" || mode === "following" || mode === "for-you") return { createdAt: -1 };
   if (mode === "popular" || mode === "top") {
-    return { likeCount: -1, commentCount: -1, shareCount: -1, viewCount: -1, createdAt: -1 };
+    return { shareCount: -1, commentCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
   }
   if (mode === "trending") {
     return { commentCount: -1, shareCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
@@ -58,126 +44,181 @@ function feedSort(mode) {
   return { createdAt: -1 };
 }
 
-// -----------------------------------------------------
-// ✅ FEED WITH ADS MIXED IN
-// -----------------------------------------------------
-router.get("/", auth, async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-    const feedMode = normalizeFeedMode(req.query.feedType || req.query.tab || req.query.sort);
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-    // ===============================
-    // 1️⃣ FETCH POSTS (same as before)
-    // ===============================
-    const blockedUserIds = await getBlockedRelationshipUserIds(req.user.id);
-    const allowedCommunityIds = await Community.find({
-      ...countryQuery(req.user.country || "Ghana"),
-      isActive: true,
-      isApproved: true
-    }).distinct("_id");
+function parseCommunityNames(value = "") {
+  return value
+    .toString()
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+}
 
-    const postFilter = {
-      isActive: true,
-      status: "approved",
-      userId: { $nin: blockedUserIds },
-      communityId: { $in: allowedCommunityIds }
-    };
+async function communityIdsForNames(names, country) {
+  if (!names.length) return null;
 
-    if (feedMode === "following") {
-      const followingIds = (req.user.following || []).map((id) => id.toString());
-      const joinedCommunityIds = [
-        req.user.community,
-        ...(req.user.joinedCommunities || [])
-      ].filter(Boolean).map((id) => id.toString());
+  const exactNameQueries = names.map((name) => {
+    const exact = new RegExp(`^${escapeRegex(name)}$`, "i");
+    return { $or: [{ displayName: exact }, { name: exact }] };
+  });
 
-      postFilter.$or = [
-        ...(followingIds.length ? [{ userId: { $in: followingIds, $nin: blockedUserIds } }] : []),
-        ...(joinedCommunityIds.length ? [{ communityId: { $in: joinedCommunityIds } }] : [])
-      ];
+  return Community.find({
+    ...countryQuery(country),
+    isActive: true,
+    isApproved: true,
+    $or: exactNameQueries
+  }).distinct("_id");
+}
 
-      if (!postFilter.$or.length) {
-        return res.status(200).json({
-          feed: [],
-          mode: feedMode,
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalPosts: 0,
-            hasMore: false,
-          },
-        });
-      }
+async function allowedCountryCommunityIds(user) {
+  return Community.find({
+    ...countryQuery(user.country || "Ghana"),
+    isActive: true,
+    isApproved: true
+  }).distinct("_id");
+}
+
+function userJoinedCommunityIds(user) {
+  return [
+    user.community,
+    ...(user.joinedCommunities || [])
+  ].filter(Boolean).map((id) => id.toString());
+}
+
+function intersectObjectIds(primary, secondary) {
+  if (!Array.isArray(secondary)) return primary;
+  const allowed = new Set(secondary.map((id) => id.toString()));
+  return primary.filter((id) => allowed.has(id.toString()));
+}
+
+async function followingIdsForUser(userId) {
+  const docs = await Follow.find({ follower: userId, status: "active" })
+    .select("following")
+    .lean();
+  return docs.map((doc) => doc.following).filter(Boolean);
+}
+
+async function buildPostFilter(req, feedMode) {
+  const blockedUserIds = await getBlockedRelationshipUserIds(req.user.id);
+  const allowedCommunityIds = await allowedCountryCommunityIds(req.user);
+  const selectedCommunityIds = await communityIdsForNames(
+    parseCommunityNames(req.query.names || req.query.communities),
+    req.user.country || "Ghana"
+  );
+
+  const postFilter = {
+    isActive: true,
+    status: "approved",
+    userId: { $nin: blockedUserIds },
+    communityId: { $in: selectedCommunityIds || allowedCommunityIds }
+  };
+
+  if (feedMode === "for-you") {
+    const joinedIds = userJoinedCommunityIds(req.user);
+    const scopedJoinedIds = selectedCommunityIds
+      ? intersectObjectIds(joinedIds, selectedCommunityIds)
+      : joinedIds;
+
+    if (scopedJoinedIds.length) {
+      postFilter.communityId = { $in: scopedJoinedIds };
+    } else if (joinedIds.length) {
+      postFilter.communityId = { $in: [] };
+    } else {
+      postFilter.communityId = { $in: selectedCommunityIds || allowedCommunityIds };
     }
+  }
 
-    const posts = await Post.find(postFilter)
+  if (feedMode === "following") {
+    const followingIds = await followingIdsForUser(req.user.id);
+    postFilter.userId = {
+      $in: followingIds,
+      $nin: blockedUserIds
+    };
+  }
+
+  return postFilter;
+}
+
+async function fetchFeed(req, explicitMode) {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
+  const skip = (page - 1) * limit;
+  const feedMode = normalizeFeedMode(explicitMode || req.query.feedType || req.query.tab || req.query.sort);
+  const postFilter = await buildPostFilter(req, feedMode);
+
+  const [posts, totalPosts] = await Promise.all([
+    Post.find(postFilter)
       .populate("userId", "username profileImage verified roleName")
       .populate("communityId", "name displayName")
       .sort(feedSort(feedMode))
       .skip(skip)
       .limit(limit)
-      .lean();
+      .lean(),
+    Post.countDocuments(postFilter)
+  ]);
 
-    await attachAccurateViewCounts(posts);
-    const postsWithLikedState = attachLikedByUser(posts, req.user.id);
+  await attachAccurateViewCounts(posts);
+  const postsWithLikedState = attachLikedByUser(posts, req.user.id);
 
-    const totalPosts = await Post.countDocuments(postFilter);
+  const ads = await Ad.find({
+    isActive: true,
+    approvalStatus: "approved",
+    adType: { $in: ["sponsor", "internal"] }
+  })
+    .sort({ createdAt: -1 })
+    .limit(Math.ceil(posts.length / 6))
+    .lean();
 
-    // ===============================
-    // 2️⃣ FETCH ADS
-    // ===============================
-    const ads = await Ad.find({
-      isActive: true,
-      approvalStatus: "approved",
-      adType: { $in: ["sponsor", "internal"] }
-    })
-      .sort({ createdAt: -1 })
-      .limit(Math.ceil(posts.length / 6)) // 1 ad per 6 posts
-      .lean();
-
-    // ===============================
-    // 3️⃣ MIX POSTS + ADS
-    // ===============================
-    let combined = [];
-    let adIndex = 0;
-
-    for (let i = 0; i < posts.length; i++) {
-      combined.push(postsWithLikedState[i]);
-
-      // Insert an ad every 6 posts
-      if ((i + 1) % 6 === 0 && ads[adIndex]) {
-        combined.push({
-          __isAd: true,
-          ad: ads[adIndex++],
-        });
-      }
+  const feed = [];
+  let adIndex = 0;
+  postsWithLikedState.forEach((post, index) => {
+    feed.push(post);
+    if ((index + 1) % 6 === 0 && ads[adIndex]) {
+      feed.push({ __isAd: true, ad: ads[adIndex++] });
     }
+  });
 
-    // If more ads, append them
-    while (adIndex < ads.length) {
-      combined.push({
-        __isAd: true,
-        ad: ads[adIndex++],
-      });
-    }
+  while (adIndex < ads.length) {
+    feed.push({ __isAd: true, ad: ads[adIndex++] });
+  }
 
-    // ===============================
-    // 4️⃣ SEND RESPONSE
-    // ===============================
-    res.status(200).json({
-      feed: combined,
-      mode: feedMode,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalPosts / limit),
-        totalPosts,
-        hasMore: skip + posts.length < totalPosts,
-      },
-    });
+  return {
+    success: true,
+    mode: feedMode,
+    posts: postsWithLikedState,
+    feed,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
+      hasMore: skip + posts.length < totalPosts,
+    },
+  };
+}
 
+// -----------------------------------------------------
+// ✅ FEED WITH MODE-SPECIFIC BACKEND LOGIC
+// -----------------------------------------------------
+router.get("/", auth, async (req, res) => {
+  try {
+    res.status(200).json(await fetchFeed(req));
   } catch (err) {
     console.error("❌ Error fetching feed:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch feed" });
+  }
+});
+
+router.get("/:mode", auth, async (req, res) => {
+  try {
+    const feedMode = normalizeFeedMode(req.params.mode);
+    if (feedMode !== req.params.mode) {
+      return res.status(404).json({ error: "Unknown feed mode" });
+    }
+    res.status(200).json(await fetchFeed(req, feedMode));
+  } catch (err) {
+    console.error(`❌ Error fetching ${req.params.mode} feed:`, err);
     res.status(500).json({ error: err.message || "Failed to fetch feed" });
   }
 });

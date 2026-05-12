@@ -144,21 +144,9 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setSound(soundUri)
                 .setContentIntent(contentIntent)
-                .setGroup("xyz.yenkasa.app.MESSAGES")
-
-            val summaryNotification = NotificationCompat.Builder(this, NEW_CHAT_MESSAGES_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_bell)
-                .setContentTitle("New messages")
-                .setContentText("You have new messages")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setGroup("xyz.yenkasa.app.MESSAGES")
-                .setGroupSummary(true)
-                .setAutoCancel(true)
-                .build()
 
             val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(System.currentTimeMillis().toInt(), builder.build())
-            nm.notify(0, summaryNotification)
         }
 
         OneSignal.setNotificationOpenedHandler { result ->

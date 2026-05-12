@@ -7,13 +7,13 @@
 
     <EditText
         android:id="@+id/editAddContact"
-        android:hint="Enter user ID to add"
+        android:hint="Search existing contacts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <Button
         android:id="@+id/btnAddContact"
-        android:text="Add Contact"
+        android:text="Start New Chat"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />

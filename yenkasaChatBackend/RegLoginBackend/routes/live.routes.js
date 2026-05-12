@@ -42,56 +42,64 @@ router.get('/metrics', auth, async (req, res) => {
   const now = new Date();
 
   try {
-    const rewardResult = await processMicroRewardsIfNeeded(now);
+    const rewardResult = await safeLiveMetric(
+      'micro rewards',
+      () => processMicroRewardsIfNeeded(now),
+      { winners: [], rewardAmount: MICRO_REWARD_COMMENT_AMOUNT, processedAt: now.toISOString() }
+    );
     const [commentsRanking, likesRanking, viewsRanking, connectorsRanking, ykcRanking, activityFeed, duel, conversationStreak] = await Promise.all([
-      buildRanking({
-        model: Comment,
-        match: { isActive: true, createdAt: range },
-        groupField: '$userId',
-        accumulator: { $sum: 1 },
-        currentUserId,
-        metricLabel: 'comments',
+      safeLiveMetric('comments ranking', () => buildRanking({
+          model: Comment,
+          match: { isActive: true, createdAt: range },
+          groupField: '$userId',
+          accumulator: { $sum: 1 },
+          currentUserId,
+          metricLabel: 'comments',
+        }), buildEmptyRanking(currentUserId, 'comments')),
+      safeLiveMetric('likes ranking', () => buildRanking({
+          model: LikeActivity,
+          match: { targetType: 'post', createdAt: range },
+          groupField: '$actorUserId',
+          accumulator: { $sum: 1 },
+          currentUserId,
+          metricLabel: 'post likes',
+        }), buildEmptyRanking(currentUserId, 'post likes')),
+      safeLiveMetric('views ranking', () => buildRanking({
+          model: View,
+          match: { viewedAt: range },
+          groupField: '$userId',
+          accumulator: { $sum: 1 },
+          currentUserId,
+          metricLabel: 'views',
+        }), buildEmptyRanking(currentUserId, 'views')),
+      safeLiveMetric('connectors ranking', () => buildRanking({
+          model: Follow,
+          match: { status: 'active', createdAt: range },
+          groupField: '$follower',
+          accumulator: { $sum: 1 },
+          currentUserId,
+          metricLabel: 'follows',
+        }), buildEmptyRanking(currentUserId, 'follows')),
+      safeLiveMetric('ykc ranking', () => buildRanking({
+          model: CoinTransaction,
+          match: {
+            status: 'completed',
+            amount: { $gt: 0 },
+            createdAt: range,
+            $or: [{ type: { $regex: '^REWARD_' } }, { type: 'BONUS' }],
+          },
+          groupField: '$toUserId',
+          accumulator: { $sum: '$amount' },
+          currentUserId,
+          metricLabel: 'YKC',
+        }), buildEmptyRanking(currentUserId, 'YKC')),
+      safeLiveMetric('activity feed', () => buildActivityFeed(range, currentUserId), []),
+      safeLiveMetric('active duel', () => getActiveDuelForUser(currentUserId, now), null),
+      safeLiveMetric('conversation streak', () => buildConversationStreak(currentUserId), {
+        days: 0,
+        activeConnections: 0,
+        message: ''
       }),
-      buildRanking({
-        model: LikeActivity,
-        match: { targetType: 'post', createdAt: range },
-        groupField: '$actorUserId',
-        accumulator: { $sum: 1 },
-        currentUserId,
-        metricLabel: 'post likes',
-      }),
-      buildRanking({
-        model: View,
-        match: { viewedAt: range },
-        groupField: '$userId',
-        accumulator: { $sum: 1 },
-        currentUserId,
-        metricLabel: 'views',
-      }),
-      buildRanking({
-        model: Follow,
-        match: { status: 'active', createdAt: range },
-        groupField: '$follower',
-        accumulator: { $sum: 1 },
-        currentUserId,
-        metricLabel: 'follows',
-      }),
-      buildRanking({
-        model: CoinTransaction,
-        match: {
-          status: 'completed',
-          amount: { $gt: 0 },
-          createdAt: range,
-          $or: [{ type: { $regex: '^REWARD_' } }, { type: 'BONUS' }],
-        },
-        groupField: '$toUserId',
-        accumulator: { $sum: '$amount' },
-        currentUserId,
-        metricLabel: 'YKC',
-      }),
-      buildActivityFeed(range, currentUserId),
-      getActiveDuelForUser(currentUserId, now),
-      buildConversationStreak(currentUserId),
     ]);
 
     const sections = {
@@ -163,7 +171,7 @@ router.get('/metrics', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('[LiveRoute] Failed to build live metrics:', error);
-    res.status(500).json({ error: 'Failed to fetch live metrics' });
+    res.json(buildSafeLiveMetricsResponse({ window: normalizedWindow, currentUserId, now }));
   }
 });
 
@@ -328,6 +336,75 @@ router.get('/events', auth, async (_req, res) => {
   });
 });
 
+async function safeLiveMetric(label, work, fallback) {
+  try {
+    return await work();
+  } catch (error) {
+    console.warn(`[LiveRoute] ${label} unavailable:`, error.message);
+    return fallback;
+  }
+}
+
+function buildEmptyRanking(currentUserId, metricLabel) {
+  return {
+    leaders: [],
+    currentUser: buildFallbackCurrentUser(currentUserId, metricLabel),
+  };
+}
+
+function buildSafeLiveMetricsResponse({ window, currentUserId, now }) {
+  const comments = buildEmptyRanking(currentUserId, 'comments');
+  const likes = buildEmptyRanking(currentUserId, 'post likes');
+  const views = buildEmptyRanking(currentUserId, 'views');
+  const follows = buildEmptyRanking(currentUserId, 'follows');
+  const ykc = buildEmptyRanking(currentUserId, 'YKC');
+
+  return {
+    window,
+    topCommenters: {
+      title: 'Top Commenters',
+      metricKey: 'comments',
+      action: 'comment',
+      ...comments,
+    },
+    topLikes: {
+      title: 'Top Post Likes',
+      metricKey: 'likes',
+      action: 'like',
+      ...likes,
+    },
+    topViews: {
+      title: 'Most Views Given',
+      metricKey: 'views',
+      action: 'view',
+      ...views,
+    },
+    topConnectors: {
+      title: 'Top Connectors',
+      metricKey: 'follows',
+      action: 'follow',
+      ...follows,
+    },
+    topYKC: {
+      title: 'Top YKC Earned',
+      metricKey: 'ykc',
+      action: 'like',
+      ...ykc,
+    },
+    activityFeed: [],
+    events: ['⚡ Live Arena is recovering. Rankings will update shortly.'],
+    duel: null,
+    microReward: buildCurrentMicroReward(now, comments, views),
+    activeEvent: getActiveLiveEvent(now),
+    conversationStreak: {
+      days: 0,
+      activeConnections: 0,
+      message: '',
+    },
+    generatedAt: now.toISOString(),
+  };
+}
+
 async function buildRanking({
   model,
   match,
@@ -348,7 +425,7 @@ async function buildRanking({
   ]);
 
   const rankedRows = rows
-    .filter((row) => row && row._id)
+    .filter((row) => row && row._id && mongoose.Types.ObjectId.isValid(String(row._id)))
     .map((row, index) => ({
       userId: String(row._id),
       count: Number(row.count || 0),
@@ -450,12 +527,13 @@ function buildFallbackCurrentUser(currentUserId, metricLabel) {
 }
 
 async function loadLiveTitles(userIds) {
-  if (!userIds.length) return new Map();
+  const validUserIds = [...new Set(userIds.filter((id) => mongoose.Types.ObjectId.isValid(String(id))))];
+  if (!validUserIds.length) return new Map();
   const wins = await LiveDuel.aggregate([
     {
       $match: {
         status: 'completed',
-        winner: { $in: userIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        winner: { $in: validUserIds.map((id) => new mongoose.Types.ObjectId(id)) },
       },
     },
     {

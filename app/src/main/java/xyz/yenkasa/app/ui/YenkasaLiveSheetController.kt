@@ -4,6 +4,7 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -261,7 +262,11 @@ class YenkasaLiveSheetController(
     private fun fetchMetrics(showLoader: Boolean = false, force: Boolean = false) {
         val context = fragment.context ?: return
         val token = TokenManager.getToken(context).orEmpty()
-        if (token.isBlank()) return
+        if (token.isBlank()) {
+            Log.w("YenkasaLiveSheet", "Live metrics skipped: missing auth token")
+            showError("⚠️ Session expired. Please log in again.")
+            return
+        }
         if (!hostResumed && !force) return
 
         if (showLoader) {
@@ -276,6 +281,10 @@ class YenkasaLiveSheetController(
             override fun onResponse(call: Call<LiveMetricsResponse>, response: Response<LiveMetricsResponse>) {
                 val body = response.body()
                 if (!response.isSuccessful || body == null) {
+                    Log.w(
+                        "YenkasaLiveSheet",
+                        "Live metrics failed: code=${response.code()} window=$selectedWindow error=${response.errorBody()?.string().orEmpty()}"
+                    )
                     showError("⚠️ Live data unavailable. Pull to refresh.")
                     return
                 }
@@ -286,6 +295,7 @@ class YenkasaLiveSheetController(
 
             override fun onFailure(call: Call<LiveMetricsResponse>, t: Throwable) {
                 if (call.isCanceled) return
+                Log.w("YenkasaLiveSheet", "Live metrics network failure: window=$selectedWindow message=${t.message}", t)
                 showError("⚠️ Live data unavailable. Pull to refresh.")
             }
         })

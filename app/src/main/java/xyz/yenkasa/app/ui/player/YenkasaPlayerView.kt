@@ -10,16 +10,22 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -30,7 +36,6 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.feed.FeedTabsController
-import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserBadgeUtils
@@ -74,6 +79,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val buttonShare: ImageButton
     private val buttonSave: ImageButton
     private val buttonReward: ImageButton
+    private val buttonExpandActions: ImageButton
+    private val secondaryActionsView: View
     private val textLike: TextView
     private val textViews: TextView
     private val textComment: TextView
@@ -93,6 +100,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private var saveSelected = false
     private var likeSelected = false
     private var overlaysVisible = true
+    private var secondaryActionsExpanded = false
     private var imageIndex = 0
     private var touchDownX = 0f
     private var touchDownY = 0f
@@ -102,6 +110,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val uiHandler = Handler(Looper.getMainLooper())
     private var playbackProgressListener: ((Int) -> Unit)? = null
     private var walletReceiverRegistered = false
+
+    private val autoHideRunnable = Runnable {
+        if (isActiveItem && overlaysVisible) {
+            overlaysVisible = false
+            renderOverlayVisibility(animate = true)
+        }
+    }
 
     private val walletBalanceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -163,6 +178,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         buttonShare = findViewById(R.id.buttonPlayerShare)
         buttonSave = findViewById(R.id.buttonPlayerSave)
         buttonReward = findViewById(R.id.buttonPlayerReward)
+        buttonExpandActions = findViewById(R.id.buttonPlayerExpandActions)
+        secondaryActionsView = findViewById(R.id.layoutPlayerSecondaryActions)
         textLike = findViewById(R.id.textPlayerLikeCount)
         textViews = findViewById(R.id.textPlayerViewCount)
         textComment = findViewById(R.id.textPlayerCommentCount)
@@ -195,18 +212,204 @@ class YenkasaPlayerView @JvmOverloads constructor(
             }
         )
         imageView.setOnTouchListener { _, event -> handleImageTouch(event) }
+        playerView.setOnClickListener { toggleOverlays() }
+        audioArtworkView.setOnClickListener { toggleOverlays() }
+        textView.setOnClickListener { toggleOverlays() }
+        buttonExpandActions.setOnClickListener { toggleSecondaryActions() }
+        setAccessibilityLabels()
+        applyResponsiveSizing()
         applyEdgeToEdgeSpacing()
     }
 
     private fun applyEdgeToEdgeSpacing() {
-        EdgeToEdgeInsets.applySystemBarMargins(topBar, left = true, top = true, right = true)
-        EdgeToEdgeInsets.applySystemBarMargins(searchBar, left = true)
-        EdgeToEdgeInsets.applySystemBarMargins(feedTabsView, left = true, right = true)
-        EdgeToEdgeInsets.applySystemBarMargins(communitiesPanel, top = true, right = true)
-        EdgeToEdgeInsets.applySystemBarMargins(engagementRail, left = true)
-        EdgeToEdgeInsets.applySystemBarMargins(liveArenaButton, right = true)
-        EdgeToEdgeInsets.applySystemBarMargins(moreOptionsButton, left = true)
-        EdgeToEdgeInsets.applySystemBarMargins(controlsView, left = true, right = true, bottom = true)
+        ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+            val statusAndCutout = insets.getInsets(
+                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            val safeBars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val side = dp(16)
+            val topGap = dp(if (isCompactWidth()) 8 else 12)
+            val bottomGap = dp(24)
+
+            topBar.updateMargins(
+                start = safeBars.left + side,
+                top = statusAndCutout.top + topGap,
+                end = safeBars.right + side
+            )
+            searchBar.updateMargins(start = safeBars.left + side, top = dp(if (isCompactWidth()) 5 else 8))
+            feedTabsView.updateMargins(
+                start = safeBars.left + side,
+                top = dp(6),
+                end = safeBars.right + dp(if (isCompactWidth()) 72 else 82)
+            )
+            communitiesPanel.updateMargins(
+                top = dp(if (isCompactWidth()) 12 else 16),
+                end = safeBars.right + side
+            )
+            engagementRail.updateMargins(end = safeBars.right + side)
+            moreOptionsButton.updateMargins(end = safeBars.right + side, bottom = dp(8))
+            liveArenaButton.updateMargins(end = safeBars.right + side, bottom = dp(72))
+            bottomMetaView.updateMargins(start = safeBars.left + side, end = safeBars.right + side, bottom = dp(56))
+            controlsView.updateMargins(
+                start = safeBars.left + side,
+                end = safeBars.right + side,
+                bottom = navigationBars.bottom + bottomGap
+            )
+            insets
+        }
+        requestApplyInsetsWhenAttached()
+    }
+
+    private fun applyResponsiveSizing() {
+        val compact = isCompactWidth()
+        val railWidth = dp(if (compact) 52 else 56)
+        val communityWidth = dp(if (compact) 54 else 58)
+        val communityHeight = dp(if (compact) 204 else 246)
+        val touchTarget = dp(48)
+        val actionPadding = dp(if (compact) 15 else 14)
+
+        engagementRail.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            width = railWidth
+        }
+        communitiesPanel.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            width = communityWidth
+        }
+        communityStrip.updateLayoutParams<ViewGroup.LayoutParams> {
+            height = communityHeight
+        }
+
+        listOf(
+            buttonLike,
+            buttonViews,
+            buttonComment,
+            buttonShare,
+            buttonSave,
+            sponsoredAdButton,
+            buttonReward,
+            buttonExpandActions,
+            moreOptionsButton,
+            menuButton
+        ).forEach { button ->
+            button.updateLayoutParams<ViewGroup.LayoutParams> {
+                width = touchTarget
+                height = touchTarget
+            }
+            button.setPadding(actionPadding, actionPadding, actionPadding, actionPadding)
+            button.minimumWidth = touchTarget
+            button.minimumHeight = touchTarget
+        }
+
+        logoView.updateLayoutParams<ViewGroup.LayoutParams> {
+            width = dp(if (compact) 28 else 30)
+            height = dp(if (compact) 28 else 30)
+        }
+
+        feedModeTabs.forEach { tab ->
+            tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 10f else 11f)
+            tab.minHeight = dp(28)
+        }
+    }
+
+    private fun setAccessibilityLabels() {
+        menuButton.contentDescription = "Open menu"
+        walletPill.contentDescription = "Open wallet"
+        searchBar.contentDescription = "Search posts"
+        seeAllButton.contentDescription = "Show all communities"
+        buttonLike.contentDescription = "Like post"
+        buttonViews.contentDescription = "View count"
+        buttonComment.contentDescription = "Open comments"
+        buttonShare.contentDescription = "Share post"
+        buttonSave.contentDescription = "Save post"
+        sponsoredAdButton.contentDescription = "Create sponsored ad"
+        buttonReward.contentDescription = "Reward creator"
+        buttonExpandActions.contentDescription = "Show more actions"
+        moreOptionsButton.contentDescription = "More post options"
+        liveArenaButton.contentDescription = "Open live arena"
+        avatarView.contentDescription = "Open creator profile"
+        usernameView.contentDescription = "Open creator profile"
+    }
+
+    private fun toggleSecondaryActions() {
+        secondaryActionsExpanded = !secondaryActionsExpanded
+        secondaryActionsView.animate().cancel()
+        buttonExpandActions.animate().cancel()
+        if (secondaryActionsExpanded) {
+            secondaryActionsView.alpha = 0f
+            secondaryActionsView.isVisible = true
+            secondaryActionsView.animate().alpha(1f).setDuration(180L).start()
+            buttonExpandActions.animate().rotation(180f).setDuration(180L).start()
+            buttonExpandActions.contentDescription = "Hide more actions"
+        } else {
+            secondaryActionsView.animate()
+                .alpha(0f)
+                .setDuration(160L)
+                .withEndAction { secondaryActionsView.isVisible = false }
+                .start()
+            buttonExpandActions.animate().rotation(0f).setDuration(180L).start()
+            buttonExpandActions.contentDescription = "Show more actions"
+        }
+        scheduleAutoHide()
+    }
+
+    private fun scheduleAutoHide() {
+        uiHandler.removeCallbacks(autoHideRunnable)
+        if (isActiveItem && overlaysVisible) {
+            uiHandler.postDelayed(autoHideRunnable, 3_000L)
+        }
+    }
+
+    private fun setOverlayInteractable(view: View, enabled: Boolean) {
+        view.isEnabled = enabled
+        view.importantForAccessibility = if (enabled) {
+            View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        } else {
+            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                setOverlayInteractable(view.getChildAt(index), enabled)
+            }
+        }
+    }
+
+    private fun requestApplyInsetsWhenAttached() {
+        if (isAttachedToWindow) {
+            ViewCompat.requestApplyInsets(this)
+            return
+        }
+        addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                removeOnAttachStateChangeListener(this)
+                ViewCompat.requestApplyInsets(v)
+            }
+
+            override fun onViewDetachedFromWindow(v: View) = Unit
+        })
+    }
+
+    private fun isCompactWidth(): Boolean {
+        return resources.configuration.screenWidthDp in 1..359
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
+    }
+
+    private fun View.updateMargins(
+        start: Int? = null,
+        top: Int? = null,
+        end: Int? = null,
+        bottom: Int? = null
+    ) {
+        updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            start?.let { marginStart = it }
+            top?.let { topMargin = it }
+            end?.let { marginEnd = it }
+            bottom?.let { bottomMargin = it }
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -227,7 +430,28 @@ class YenkasaPlayerView @JvmOverloads constructor(
             runCatching { context.unregisterReceiver(walletBalanceReceiver) }
             walletReceiverRegistered = false
         }
+        uiHandler.removeCallbacks(autoHideRunnable)
+        uiHandler.removeCallbacks(progressRunnable)
         super.onDetachedFromWindow()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration?) {
+        super.onConfigurationChanged(newConfig)
+        applyResponsiveSizing()
+        requestApplyInsetsWhenAttached()
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            if (!overlaysVisible) {
+                overlaysVisible = true
+                renderOverlayVisibility(animate = true)
+                scheduleAutoHide()
+                return true
+            }
+            scheduleAutoHide()
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     fun bind(
@@ -254,8 +478,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
         saveSelected = saved
         likeSelected = post.likedByUser
         overlaysVisible = true
+        secondaryActionsExpanded = false
         imageIndex = 0
         firedCheckpoints.clear()
+        secondaryActionsView.alpha = 0f
+        secondaryActionsView.isVisible = false
+        buttonExpandActions.rotation = 0f
+        buttonExpandActions.contentDescription = "Show more actions"
 
         walletPill.setBalance(item.walletBalance)
         searchBar.reset()
@@ -318,6 +547,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         controls.setMuted(isMuted)
         renderMedia(item)
         renderOverlayVisibility(animate = false)
+        scheduleAutoHide()
         setActive(isActiveItem)
     }
 
@@ -325,11 +555,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
         isActiveItem = active
         val item = boundItem ?: return
         if (active) {
+            scheduleAutoHide()
             when (item.mediaType) {
                 MediaType.VIDEO, MediaType.AUDIO -> prepareAndPlay(item)
                 else -> releasePlayer()
             }
         } else {
+            uiHandler.removeCallbacks(autoHideRunnable)
             pausePlayback()
         }
     }
@@ -350,6 +582,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
     fun release() {
         uiHandler.removeCallbacks(progressRunnable)
+        uiHandler.removeCallbacks(autoHideRunnable)
         releasePlayer()
     }
 
@@ -464,6 +697,11 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private fun toggleOverlays() {
         overlaysVisible = !overlaysVisible
         renderOverlayVisibility(animate = true)
+        if (overlaysVisible) {
+            scheduleAutoHide()
+        } else {
+            uiHandler.removeCallbacks(autoHideRunnable)
+        }
     }
 
     private fun renderOverlayVisibility(animate: Boolean) {
@@ -477,26 +715,21 @@ class YenkasaPlayerView @JvmOverloads constructor(
             bottomMetaView,
             controlsView,
             walletPill,
-            sponsoredAdButton
+            liveArenaButton
         ).forEach { view ->
             view.animate().cancel()
+            setOverlayInteractable(view, overlaysVisible)
+            view.isVisible = true
             if (animate) {
                 if (overlaysVisible) {
-                    view.isVisible = true
-                    view.alpha = 0f
-                    view.animate().alpha(1f).setDuration(130L).start()
+                    view.animate().alpha(1f).setDuration(180L).start()
                 } else {
-                    view.animate().alpha(0f).setDuration(110L).withEndAction {
-                        view.isVisible = false
-                    }.start()
+                    view.animate().alpha(0f).setDuration(180L).start()
                 }
             } else {
                 view.alpha = if (overlaysVisible) 1f else 0f
-                view.isVisible = overlaysVisible
             }
         }
-        liveArenaButton.isVisible = true
-        liveArenaButton.alpha = 1f
     }
 
     private fun bindFeedModeTabs(

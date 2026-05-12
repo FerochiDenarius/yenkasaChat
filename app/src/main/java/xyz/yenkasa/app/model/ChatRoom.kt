@@ -27,7 +27,25 @@ data class ChatRoom(
     val unreadCount: Int = 0,
 
     @SerializedName("createdAt")
-    val createdAt: String? = null
+    val createdAt: String? = null,
+
+    @SerializedName("roomType")
+    val roomType: String = "private",
+
+    @SerializedName("groupName")
+    val groupName: String? = null,
+
+    @SerializedName("groupBio")
+    val groupBio: String? = null,
+
+    @SerializedName("groupImage")
+    val groupImage: String? = null,
+
+    @SerializedName("memberCount")
+    val memberCount: Int = 0,
+
+    @SerializedName("isAnnouncementChannel")
+    val isAnnouncementChannel: Boolean = false
 ) {
 
     // Formatted getter for lastMessageTime

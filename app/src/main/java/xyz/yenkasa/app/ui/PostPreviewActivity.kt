@@ -9,6 +9,7 @@ import xyz.yenkasa.app.R
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 
 class PostPreviewActivity : AppCompatActivity() {
 
@@ -28,6 +29,10 @@ class PostPreviewActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        supportActionBar?.hide()
+        window.statusBarColor = android.graphics.Color.BLACK
+        window.navigationBarColor = android.graphics.Color.BLACK
+        EdgeToEdgeInsets.setLightSystemBars(window, lightStatusBars = false, lightNavigationBars = false)
         setContentView(R.layout.activity_post_preview)
 
         // === Bind views ===
@@ -38,6 +43,7 @@ class PostPreviewActivity : AppCompatActivity() {
         btnPauseAudio = findViewById(R.id.btnPauseAudio)
         seekBar = findViewById(R.id.seekBarAudio)
         txtTimer = findViewById(R.id.txtAudioTimer)
+        EdgeToEdgeInsets.applySystemBarPadding(audioLayout, left = true, right = true, bottom = true)
 
         mediaType = intent.getStringExtra("mediaType")
         mediaUrl = intent.getStringExtra("mediaUrl")

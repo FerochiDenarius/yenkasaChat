@@ -42,6 +42,8 @@ class GenerateRoleIdFragment : Fragment() {
 
     private val generalRoles = listOf(
         "verified_creator" to "Verified Creator ID",
+        "rising_star" to "Rising Star ID",
+        "legend" to "Legend ID",
         "business_account" to "Business Account ID",
         "premium_seller" to "Premium Seller ID",
         "campus_influencer" to "Campus Influencer ID"

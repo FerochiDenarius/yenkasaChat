@@ -9,6 +9,7 @@ const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const authMiddleware = require('../middleware/auth');
 const { areUsersBlocked, canMessageUser } = require('../services/privacy.service');
+const { syncChatParticipantsAsContacts } = require('../services/contact.service');
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -101,6 +102,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
 
     if (existingRoom) {
+      await syncChatParticipantsAsContacts(req.user, otherUser, { lastInteractionAt: new Date() });
       return res.json({
         success: true,
         roomId: existingRoom._id,
@@ -126,6 +128,7 @@ router.post('/', authMiddleware, async (req, res) => {
       if (saveErr?.code === 11000) {
         const existingAfterRace = await ChatRoom.findOne({ participantKey });
         if (existingAfterRace) {
+          await syncChatParticipantsAsContacts(req.user, otherUser, { lastInteractionAt: new Date() });
           return res.json({
             success: true,
             roomId: existingAfterRace._id,
@@ -143,6 +146,8 @@ router.post('/', authMiddleware, async (req, res) => {
       }
       throw saveErr;
     }
+
+    await syncChatParticipantsAsContacts(req.user, otherUser, { lastInteractionAt: new Date() });
 
     res.status(201).json({
       success: true,
@@ -248,7 +253,10 @@ router.get('/', authMiddleware, async (req, res) => {
   console.log(`Fetching enriched chat rooms for user ID: ${userId}`);
 
   try {
-    const chatRoomsFromDB = await ChatRoom.find({ participants: new mongoose.Types.ObjectId(userId) })
+    const chatRoomsFromDB = await ChatRoom.find({
+      participants: new mongoose.Types.ObjectId(userId),
+      roomType: { $ne: 'group' }
+    })
       .populate('participants', 'username profileImage avatar online lastSeen _id')
       .lean();
 

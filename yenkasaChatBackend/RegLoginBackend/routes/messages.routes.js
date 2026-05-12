@@ -13,6 +13,7 @@ const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const unreadCountService = require('../services/unreadCount.service');
 const { sendNotification } = require('../services/notification.service');
 const { canMessageUser } = require('../services/privacy.service');
+const { syncChatParticipantsAsContacts } = require('../services/contact.service');
 const { cloudinary } = require('../config/cloudinary');
 const { updateConversationStreak } = require('../utils/conversationStreak');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
@@ -181,6 +182,7 @@ router.post('/', auth, async (req, res) => {
     const recipientAppUserIds = participantAppUserIds.filter(id => id !== senderAppUserId);
 
     for (const recipientId of recipientAppUserIds) {
+      if (chatRoom.roomType === 'group') break;
       const permission = await canMessageUser(senderAppUserId, recipientId);
       if (!permission.allowed) {
         if (permission.reason === 'requires_approval') {
@@ -258,6 +260,17 @@ router.post('/', auth, async (req, res) => {
 
     await newMessage.save();
     console.log(`[MessagesRoute] ✅ Message saved with ID: ${newMessage._id}`);
+
+    if (chatRoom.roomType !== 'group' && recipientAppUserIds.length === 1) {
+      const recipientUser = await User.findById(recipientAppUserIds[0])
+        .select('_id username profileImage avatar')
+        .lean();
+      if (recipientUser) {
+        await syncChatParticipantsAsContacts(req.user, recipientUser, {
+          lastInteractionAt: newMessage.createdAt || newMessage.timestamp || new Date()
+        });
+      }
+    }
 
     const streakUserIds = Array.from(new Set([senderAppUserId, ...recipientAppUserIds].filter(Boolean)));
     Promise.allSettled(streakUserIds.map((id) => updateConversationStreak(id)))

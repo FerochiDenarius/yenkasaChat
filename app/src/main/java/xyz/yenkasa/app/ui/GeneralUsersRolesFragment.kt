@@ -37,6 +37,7 @@ class GeneralUsersRolesFragment : Fragment() {
     private val publicRoles = arrayOf(
         "verified_creator" to "Verified Creator",
         "rising_star" to "Rising Star",
+        "legend" to "Legend",
         "top_vendor" to "Top Vendor",
         "business_account" to "Business Account",
         "premium_seller" to "Premium Seller",

@@ -51,6 +51,7 @@ class ChatRoomAdapter(
         // --- Determine display user or group ---
         val contactUser = uniqueParticipants?.firstOrNull()
         val displayName = when {
+            chatRoom.roomType == "group" -> chatRoom.groupName ?: "Yenkasa Group"
             uniqueParticipants == null -> "Unknown Chat"
             uniqueParticipants.isEmpty() -> "Chat with yourself"
             uniqueParticipants.size == 1 -> contactUser?.username ?: "Unknown User"
@@ -61,7 +62,7 @@ class ChatRoomAdapter(
         holder.contactName.text = displayName
 
         // --- Profile image (first participant only for group) ---
-        val profileUrl = contactUser?.displayImage
+        val profileUrl = if (chatRoom.roomType == "group") chatRoom.groupImage else contactUser?.displayImage
         Glide.with(context)
             .load(profileUrl)
             .apply(RequestOptions.circleCropTransform())
@@ -70,7 +71,7 @@ class ChatRoomAdapter(
             .into(holder.profileImage)
 
         // --- Online/offline indicator ---
-        if (contactUser != null && uniqueParticipants.size == 1) {
+        if (chatRoom.roomType != "group" && contactUser != null && uniqueParticipants.size == 1) {
             holder.onlineIndicator.visibility = View.VISIBLE
             holder.onlineIndicator.setBackgroundResource(
                 if (contactUser.resolvedOnline) R.drawable.bg_chat_online_dot else R.drawable.bg_chat_offline_dot

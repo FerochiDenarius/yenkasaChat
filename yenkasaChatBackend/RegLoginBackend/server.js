@@ -344,6 +344,7 @@ safeMount('/api/user', './routes/conversationStreak.routes');
 safeMount('/api/contacts', './routes/contacts.routes');
 safeMount('/api/messages', './routes/messages.routes');
 safeMount('/api/chatrooms', './routes/chatroom.routes');
+safeMount('/api/groups', './routes/group.routes');
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/profile', './routes/profile');
 // ---------------------------------

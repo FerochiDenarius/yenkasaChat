@@ -153,6 +153,7 @@ const userSchema = new Schema({
     enum: [
       'verified_creator',
       'rising_star',
+      'legend',
       'top_vendor',
       'business_account',
       'premium_seller',

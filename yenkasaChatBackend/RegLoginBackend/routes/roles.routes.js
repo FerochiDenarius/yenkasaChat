@@ -24,6 +24,7 @@ const STAFF_ROLES = {
 const PUBLIC_ROLES = {
   verified_creator: { label: 'Verified Creator', codePrefix: 'VER', legacyRole: 'verified' },
   rising_star: { label: 'Rising Star', codePrefix: 'RSTAR', legacyRole: 'rising_star' },
+  legend: { label: 'Legend', codePrefix: 'LEG', legacyRole: 'legend' },
   top_vendor: { label: 'Top Vendor', codePrefix: 'VEND' },
   business_account: { label: 'Business Account', codePrefix: 'BIZ' },
   premium_seller: { label: 'Premium Seller', codePrefix: 'PREM' },
@@ -47,6 +48,7 @@ const ROLE_ALIASES = {
   superadmin: 'senior_developer',
   verified: 'verified_creator',
   verified_creator_id: 'verified_creator',
+  legend_id: 'legend',
   business: 'business_account',
   business_id: 'business_account',
   premium: 'premium_seller',
@@ -114,7 +116,7 @@ function canGenerateCode(actor, roleKey) {
   }
 
   if (isPublicRole(roleKey)) {
-    return ['admin', 'junior_developer', 'senior_developer'].includes(actorRole);
+    return ['admin', 'senior_developer'].includes(actorRole);
   }
 
   return false;
@@ -231,7 +233,7 @@ function sendForbidden(res, message = 'Access denied.') {
 router.get('/users', authMiddleware, async (req, res) => {
   try {
     const actor = await User.findById(req.user._id).populate('role', 'role name accessRole roleName');
-    if (!actor || !['admin', 'junior_developer', 'senior_developer'].includes(getEffectiveRole(actor))) {
+    if (!actor || !['admin', 'senior_developer'].includes(getEffectiveRole(actor))) {
       return sendForbidden(res);
     }
 
@@ -343,7 +345,7 @@ router.post('/generate-code', authMiddleware, async (req, res) => {
 router.get('/generated-codes', authMiddleware, async (req, res) => {
   try {
     const actor = await User.findById(req.user._id).populate('role', 'role name accessRole roleName');
-    if (!actor || !['admin', 'junior_developer', 'senior_developer'].includes(getEffectiveRole(actor))) {
+    if (!actor || !['admin', 'senior_developer'].includes(getEffectiveRole(actor))) {
       return sendForbidden(res);
     }
 
@@ -429,7 +431,7 @@ router.post('/grant/:userId', authMiddleware, async (req, res) => {
     if (!isStaffRole(roleKey) && !isPublicRole(roleKey)) return res.status(400).json({ success: false, error: 'Unsupported role.' });
     if (!canActorAffectUser(actor, target)) return sendForbidden(res, 'Cannot affect equal or higher rank user.');
     if (isStaffRole(roleKey) && !canActorGrantStaffRole(actor, roleKey)) return sendForbidden(res, 'Cannot grant equal or higher role.');
-    if (isPublicRole(roleKey) && !['admin', 'junior_developer', 'senior_developer'].includes(getEffectiveRole(actor))) {
+    if (isPublicRole(roleKey) && !['admin', 'senior_developer'].includes(getEffectiveRole(actor))) {
       return sendForbidden(res, 'Not allowed to grant public roles.');
     }
 

@@ -112,10 +112,11 @@
 
         <ImageButton
             android:id="@+id/buttonPlayerMenu"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="10dp"
+            android:contentDescription="Open menu"
+            android:padding="14dp"
             android:src="@drawable/ic_menu"
             android:tint="@android:color/white" />
     </LinearLayout>
@@ -273,23 +274,24 @@
 
     <LinearLayout
         android:id="@+id/layoutPlayerEngagement"
-        android:layout_width="42dp"
+        android:layout_width="56dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
+        android:layout_marginEnd="16dp"
         android:background="@drawable/bg_yenkasa_player_rail"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:paddingTop="5dp"
         android:paddingBottom="5dp"
         app:layout_constraintBottom_toTopOf="@id/layoutPlayerBottomMeta"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
             android:id="@+id/buttonPlayerLike"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
+            android:contentDescription="Like post"
+            android:padding="14dp"
             android:src="@drawable/ic_heart_outline"
             android:tint="@color/wallet_accent_green" />
 
@@ -303,11 +305,12 @@
 
         <ImageButton
             android:id="@+id/buttonPlayerViews"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginTop="4dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
+            android:contentDescription="View count"
+            android:padding="14dp"
             android:src="@drawable/ic_eye"
             android:tint="@android:color/white" />
 
@@ -321,11 +324,12 @@
 
         <ImageButton
             android:id="@+id/buttonPlayerComment"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginTop="4dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
+            android:contentDescription="Open comments"
+            android:padding="14dp"
             android:src="@drawable/ic_comment"
             android:tint="@android:color/white" />
 
@@ -339,11 +343,12 @@
 
         <ImageButton
             android:id="@+id/buttonPlayerShare"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginTop="4dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
+            android:contentDescription="Share post"
+            android:padding="14dp"
             android:src="@drawable/ic_share"
             android:tint="@android:color/white" />
 
@@ -355,75 +360,99 @@
             android:textColor="@android:color/white"
             android:textSize="8sp" />
 
+        <LinearLayout
+            android:id="@+id/layoutPlayerSecondaryActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/buttonPlayerSave"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_yenkasa_player_glass"
+                android:contentDescription="Save post"
+                android:padding="14dp"
+                android:src="@drawable/ic_wallet_nav_rewards"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:id="@+id/textPlayerSaveCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="8sp" />
+
+            <ImageButton
+                android:id="@+id/playerSponsoredAdButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_yenkasa_player_glass"
+                android:contentDescription="Create sponsored ad"
+                android:padding="14dp"
+                android:src="@drawable/ic_ads_plus"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:id="@+id/textPlayerSponsoredAd"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Ad"
+                android:textColor="@android:color/white"
+                android:textSize="8sp" />
+
+            <ImageButton
+                android:id="@+id/buttonPlayerReward"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_yenkasa_player_glass"
+                android:contentDescription="Reward creator"
+                android:padding="14dp"
+                android:src="@drawable/ic_live_bolt"
+                android:tint="@color/wallet_accent_green" />
+
+            <TextView
+                android:id="@+id/textPlayerRewardCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/wallet_accent_green"
+                android:textSize="8sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
         <ImageButton
-            android:id="@+id/buttonPlayerSave"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:id="@+id/buttonPlayerExpandActions"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginTop="4dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
-            android:src="@drawable/ic_wallet_nav_rewards"
+            android:contentDescription="Show more actions"
+            android:padding="14dp"
+            android:src="@drawable/ic_dropdown"
             android:tint="@android:color/white" />
-
-        <TextView
-            android:id="@+id/textPlayerSaveCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textColor="@android:color/white"
-            android:textSize="8sp" />
-
-        <ImageButton
-            android:id="@+id/playerSponsoredAdButton"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
-            android:src="@drawable/ic_ads_plus"
-            android:tint="@android:color/white" />
-
-        <TextView
-            android:id="@+id/textPlayerSponsoredAd"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Ad"
-            android:textColor="@android:color/white"
-            android:textSize="8sp" />
-
-        <ImageButton
-            android:id="@+id/buttonPlayerReward"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/bg_yenkasa_player_glass"
-            android:padding="8dp"
-            android:src="@drawable/ic_live_bolt"
-            android:tint="@color/wallet_accent_green" />
-
-        <TextView
-            android:id="@+id/textPlayerRewardCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textColor="@color/wallet_accent_green"
-            android:textSize="8sp"
-            android:textStyle="bold" />
     </LinearLayout>
 
     <ImageButton
         android:id="@+id/buttonPlayerMoreOptions"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginStart="14dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
         android:layout_marginBottom="6dp"
         android:background="@drawable/bg_yenkasa_player_glass"
-        android:padding="8dp"
+        android:contentDescription="More post options"
+        android:padding="14dp"
         android:src="@drawable/ic_more_vert"
         android:tint="@android:color/white"
         app:layout_constraintBottom_toTopOf="@id/layoutPlayerEngagement"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <xyz.yenkasa.app.ui.player.YenkasaLiveArenaButton
         android:id="@+id/playerLiveArenaButton"
@@ -511,7 +540,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="14dp"
+        android:layout_marginBottom="24dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -562,39 +591,43 @@
 
             <ImageButton
                 android:id="@+id/buttonPlayerPrevious"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:padding="9dp"
+                android:contentDescription="Previous post"
+                android:padding="14dp"
                 android:src="@drawable/ic_skip_previous"
                 android:tint="@android:color/white" />
 
             <ImageButton
                 android:id="@+id/buttonPlayerPlayPause"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
                 android:layout_marginHorizontal="10dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:padding="12dp"
+                android:contentDescription="Play or pause"
+                android:padding="16dp"
                 android:src="@drawable/ic_pause"
                 android:tint="@color/wallet_accent_green" />
 
             <ImageButton
                 android:id="@+id/buttonPlayerNext"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:padding="9dp"
+                android:contentDescription="Next post"
+                android:padding="14dp"
                 android:src="@drawable/ic_skip_next"
                 android:tint="@android:color/white" />
 
             <ImageButton
                 android:id="@+id/buttonPlayerMute"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginStart="10dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:padding="9dp"
+                android:contentDescription="Mute or unmute"
+                android:padding="14dp"
                 android:src="@drawable/ic_volume_up"
                 android:tint="@android:color/white" />
         </LinearLayout>

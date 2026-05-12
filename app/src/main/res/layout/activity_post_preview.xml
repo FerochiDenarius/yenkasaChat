@@ -3,7 +3,7 @@
     android:id="@+id/previewRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#645F33">
+    android:background="@color/black">
 
     <!-- Image Preview -->
     <ImageView
@@ -22,8 +22,7 @@
         android:visibility="gone"
         app:use_controller="true"
         app:show_buffering="when_playing"
-        app:resize_mode="fit"
-        android:layout_marginTop="8dp" />
+        app:resize_mode="fit" />
 
     <!-- Audio Preview Layout -->
     <LinearLayout
@@ -48,6 +47,7 @@
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:background="@android:color/transparent"
+                android:contentDescription="Play audio"
                 android:src="@drawable/ic_play_circle"
                 app:tint="#FFFFFF" />
 
@@ -56,6 +56,7 @@
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:background="@android:color/transparent"
+                android:contentDescription="Pause audio"
                 android:src="@drawable/ic_pause_circle"
                 app:tint="#FFFFFF"
                 android:visibility="gone" />

@@ -1,7 +1,15 @@
 const router = require('express').Router(); // ✅ Fix: declare router
+const mongoose = require('mongoose');
 const Contact = require('../models/contact.model');
 const User = require('../models/user.model');
+const ChatRoom = require('../models/chatroom.model');
+const Message = require('../models/message.model');
 const authMiddleware = require('../middleware/auth'); // Ensure this path is correct
+const { ensureContactExists, syncChatParticipantsAsContacts } = require('../services/contact.service');
+
+function participantKeyFor(userA, userB) {
+    return [userA.toString(), userB.toString()].sort().join(':');
+}
 
 // ✅ Add contact route
 router.post('/', authMiddleware, async (req, res) => {
@@ -22,22 +30,25 @@ router.post('/', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'You cannot add yourself' });
         }
 
-        const exists = await Contact.findOne({
-            userId,
-            contactId: contactUser._id
+        const participantKey = participantKeyFor(userId, contactUser._id);
+        const existingRoom = await ChatRoom.findOne({
+            roomType: { $ne: 'group' },
+            $or: [
+                { participantKey },
+                { participants: { $size: 2, $all: [userId, contactUser._id] } }
+            ]
         });
-        if (exists) {
-            return res.status(400).json({ error: 'Contact already exists' });
+
+        if (!existingRoom) {
+            return res.status(409).json({
+                error: 'Start a chat first. Contacts are created after a conversation exists.'
+            });
         }
 
-        const newContact = new Contact({
-            userId,
-            contactId: contactUser._id.toString(),
-            contactUsername: contactUser.username
+        const [contact] = await syncChatParticipantsAsContacts(req.user, contactUser, {
+            lastInteractionAt: existingRoom.updatedAt || new Date()
         });
-
-        await newContact.save();
-        res.status(201).json(newContact);
+        res.status(201).json(contact);
     } catch (err) {
         console.error("❌ Contact save error:", err.message);
         res.status(500).json({ error: 'Server error' });
@@ -72,15 +83,50 @@ router.get('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.id;
         const contactDocs = await Contact.find({ userId })
-            .populate('contactId', 'username location profileImage');
+            .sort({ lastInteractionAt: -1, updatedAt: -1 })
+            .populate('contactId', 'username location profileImage avatar online lastSeen _id')
+            .lean();
 
-        const contacts = contactDocs.map(contact => ({
+        const validContacts = contactDocs.filter(contact => contact.contactId);
+        const roomKeys = validContacts.map(contact => participantKeyFor(userId, contact.contactId._id));
+        const rooms = await ChatRoom.find({
+            roomType: { $ne: 'group' },
+            participantKey: { $in: roomKeys }
+        })
+            .select('_id participantKey participants updatedAt createdAt')
+            .lean();
+
+        const roomsByKey = new Map(rooms.map(room => [room.participantKey, room]));
+        const roomIds = rooms.map(room => room._id);
+        const latestMessages = await Message.aggregate([
+            { $match: { roomId: { $in: roomIds } } },
+            { $sort: { createdAt: -1 } },
+            { $group: { _id: '$roomId', latest: { $first: '$$ROOT' } } },
+            { $project: { _id: 1, createdAt: '$latest.createdAt', timestamp: '$latest.timestamp' } }
+        ]);
+
+        const latestByRoomId = new Map(latestMessages.map(item => [item._id.toString(), item]));
+
+        const contacts = validContacts.map(contact => {
+            const contactUser = contact.contactId;
+            const key = participantKeyFor(userId, contactUser._id);
+            const room = roomsByKey.get(key);
+            const latestMessage = room ? latestByRoomId.get(room._id.toString()) : null;
+            const lastMessageTime = latestMessage?.createdAt || latestMessage?.timestamp || room?.updatedAt || contact.lastInteractionAt || contact.updatedAt || contact.createdAt;
+            return {
             id: contact._id.toString(),
             userId: contact.userId.toString(),
-            username: contact.contactId.username,
-            location: contact.contactId.location || '',
-            profileImage: contact.contactId.profileImage || ''
-        }));
+            contactId: contactUser._id.toString(),
+            username: contactUser.username || contact.contactUsername,
+            location: contactUser.location || '',
+            profileImage: contactUser.profileImage || contactUser.avatar || contact.profilePicUrl || '',
+            online: Boolean(contactUser.online),
+            isOnline: Boolean(contactUser.online),
+            lastSeen: contactUser.lastSeen || null,
+            lastMessageTime,
+            roomId: room?._id || null
+        };
+        }).sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
 
         res.json(contacts);
     } catch (err) {

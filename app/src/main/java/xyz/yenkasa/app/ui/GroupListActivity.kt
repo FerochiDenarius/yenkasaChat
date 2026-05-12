@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -56,13 +57,18 @@ class GroupListActivity : AppCompatActivity() {
         ApiClient.apiService.getGroups().enqueue(object : Callback<GroupsListResponse> {
             override fun onResponse(call: Call<GroupsListResponse>, response: Response<GroupsListResponse>) {
                 if (!response.isSuccessful) {
+                    val errorBody = response.errorBody()?.string().orEmpty()
+                    Log.e("GroupListActivity", "Could not load groups. Code=${response.code()} body=$errorBody")
                     Toast.makeText(this@GroupListActivity, "Could not load groups", Toast.LENGTH_SHORT).show()
                     return
                 }
-                adapter.submitList(response.body()?.groups.orEmpty())
+                val groups = response.body()?.groups.orEmpty()
+                Log.d("GroupListActivity", "Loaded ${groups.size} groups")
+                adapter.submitList(groups)
             }
 
             override fun onFailure(call: Call<GroupsListResponse>, t: Throwable) {
+                Log.e("GroupListActivity", "Could not load groups: ${t.message}", t)
                 Toast.makeText(this@GroupListActivity, "Could not load groups: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })

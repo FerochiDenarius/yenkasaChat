@@ -384,13 +384,17 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                         val groups = response.body()?.groups.orEmpty()
                             .sortedWith(compareByDescending<ChatRoom> { it.lastActivityTimeMillis }
                                 .thenByDescending { it.unreadCount })
+                        Log.d("ChatRoomsActivity", "Loaded ${groups.size} groups")
                         chatRoomAdapter.submitList(groups)
                     } else {
-                        Toast.makeText(this@ChatRoomsActivity, "Failed to load groups: ${parseError(response)}", Toast.LENGTH_LONG).show()
+                        val errorMsg = parseError(response)
+                        Log.e("ChatRoomsActivity", "Failed to load groups. Code: ${response.code()}, Error: $errorMsg")
+                        Toast.makeText(this@ChatRoomsActivity, "Failed to load groups: $errorMsg", Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<GroupsListResponse>, t: Throwable) {
+                    Log.e("ChatRoomsActivity", "Error loading groups: ${t.message}", t)
                     Toast.makeText(this@ChatRoomsActivity, "Error loading groups: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })

@@ -10,6 +10,7 @@ const Contact = require('../models/contact.model');
 const Message = require('../models/message.model');
 const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
+const User = require('../models/user.model');
 const { cloudinary } = require('../config/cloudinary');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
 
@@ -18,6 +19,29 @@ const uniqueIds = (ids = []) => Array.from(new Set(ids.filter(Boolean).map(id =>
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
+}
+
+function normalizeObjectId(value) {
+  if (!value) return null;
+  if (typeof value === 'object' && value._id) return value._id.toString();
+  return value.toString();
+}
+
+function uniqueValidObjectIds(values = []) {
+  return uniqueIds(values.map(normalizeObjectId)).filter(isValidObjectId);
+}
+
+function formatParticipant(user) {
+  if (!user?._id) return null;
+  return {
+    _id: user._id.toString(),
+    username: user.username || '',
+    profileImage: user.profileImage || '',
+    avatar: user.profileImage || '',
+    online: Boolean(user.online),
+    isOnline: Boolean(user.online),
+    lastSeen: user.lastSeen || null
+  };
 }
 
 const groupImageUpload = multer({
@@ -123,28 +147,48 @@ async function notifyAddedMembers({ group, addedMemberIds, addedBy }) {
 }
 
 async function enrichGroup(group, userId) {
-  const [lastMessage, unreadCountDoc] = await Promise.all([
+  const memberIds = uniqueValidObjectIds(
+    group.groupMembers?.length ? group.groupMembers : group.participants
+  );
+  const participantIds = uniqueValidObjectIds(
+    group.participants?.length ? group.participants : memberIds
+  );
+  const lookupIds = uniqueIds([...memberIds, ...participantIds]);
+
+  const [lastMessage, unreadCountDoc, users] = await Promise.all([
     Message.findOne({ roomId: group._id })
       .sort({ createdAt: -1 })
       .select('text imageUrl audioUrl videoUrl fileUrl createdAt timestamp senderId')
       .populate('senderId', 'username profileImage _id')
       .lean(),
-    UnreadMessageCount.findOne({ userId, roomId: group._id }).select('count').lean()
+    UnreadMessageCount.findOne({ userId, roomId: group._id }).select('count').lean(),
+    lookupIds.length
+      ? User.find({ _id: { $in: lookupIds.map(toObjectId) } })
+        .select('username profileImage online lastSeen _id')
+        .lean()
+      : []
   ]);
 
-  const members = group.groupMembers?.length ? group.groupMembers : group.participants;
+  const usersById = new Map(
+    users
+      .map(formatParticipant)
+      .filter(Boolean)
+      .map(user => [user._id, user])
+  );
+  const participants = participantIds.map(id => usersById.get(id)).filter(Boolean);
+  const members = memberIds.map(id => usersById.get(id)).filter(Boolean);
 
   return {
-    _id: group._id,
+    _id: group._id.toString(),
     roomType: 'group',
     groupName: group.groupName,
     groupBio: group.groupBio,
     groupImage: group.groupImage,
-    groupCreatedBy: group.groupCreatedBy,
-    groupAdmins: group.groupAdmins || [],
-    groupMembers: members || [],
-    participants: group.participants || [],
-    memberCount: members?.length || 0,
+    groupCreatedBy: normalizeObjectId(group.groupCreatedBy),
+    groupAdmins: uniqueValidObjectIds(group.groupAdmins || []),
+    groupMembers: members,
+    participants,
+    memberCount: memberIds.length || members.length || participants.length,
     isAnnouncementChannel: Boolean(group.isAnnouncementChannel),
     lastMessage,
     lastMessageTime: lastMessage?.createdAt || lastMessage?.timestamp || group.updatedAt || group.createdAt,

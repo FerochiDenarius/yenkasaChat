@@ -637,7 +637,8 @@ module.exports = function (app) {
       const response = await axios.get(
         `${API_BASE}/api/users`,
         {
-          headers: forwardHeaders(req)
+          headers: forwardHeaders(req),
+          params: req.query
         }
       );
 
@@ -660,7 +661,8 @@ module.exports = function (app) {
       const response = await axios.get(
         `${API_BASE}/api/users/sellers`,
         {
-          headers: forwardHeaders(req)
+          headers: forwardHeaders(req),
+          params: req.query
         }
       );
 
@@ -676,6 +678,42 @@ module.exports = function (app) {
         err.response?.data || { error: err.message }
       );
     }
+  });
+
+  async function proxyUserDirectory(req, res, backendPath, label) {
+    try {
+      const response = await axios.get(
+        `${API_BASE}${backendPath}`,
+        {
+          headers: forwardHeaders(req),
+          params: req.query
+        }
+      );
+
+      res.json(response.data);
+    } catch (err) {
+      console.error(
+        `${label} ERROR:`,
+        err.response?.status,
+        err.response?.data || err.message
+      );
+
+      res.status(err.response?.status || 500).json(
+        err.response?.data || { error: err.message }
+      );
+    }
+  }
+
+  app.get('/triciabales-api/api/sellers', (req, res) => {
+    proxyUserDirectory(req, res, '/api/sellers', 'SELLERS ALIAS');
+  });
+
+  app.get('/triciabales-api/api/admin/users', (req, res) => {
+    proxyUserDirectory(req, res, '/api/admin/users', 'ADMIN USERS ALIAS');
+  });
+
+  app.get('/triciabales-api/api/admin/sellers', (req, res) => {
+    proxyUserDirectory(req, res, '/api/admin/sellers', 'ADMIN SELLERS ALIAS');
   });
 
   app.put('/triciabales-api/api/users/:id/status', async (req, res) => {

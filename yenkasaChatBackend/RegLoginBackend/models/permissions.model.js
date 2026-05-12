@@ -12,9 +12,9 @@ const rankOrder = [
   'rising_star',
   'legend',
   'moderator',
+  'admin',
   'junior_developer',
   'senior_developer',
-  'admin',
 ];
 
 // --------------------------------------------
@@ -43,6 +43,7 @@ const normalize = (role = '') => {
   if (normalized === 'developer') return 'senior_developer';
   if (normalized === 'senior_dev' || normalized === 'senior-developer') return 'senior_developer';
   if (normalized === 'junior_dev' || normalized === 'junior-developer') return 'junior_developer';
+  if (normalized === 'super_admin' || normalized === 'superadmin') return 'senior_developer';
   return normalized;
 };
 
@@ -104,12 +105,12 @@ permissionSchema.statics.canCreateCommunity = function (role) {
 
 permissionSchema.statics.canAssignRoles = function (role) {
   const r = normalize(role);
-  return ['moderator', 'junior_developer', 'senior_developer'].includes(r);
+  return ['admin', 'senior_developer'].includes(r);
 };
 
 permissionSchema.statics.canRevoke = function (role) {
   const r = normalize(role);
-  return ['moderator', 'junior_developer', 'senior_developer'].includes(r);
+  return ['admin', 'senior_developer'].includes(r);
 };
 
 permissionSchema.statics.canSuspend = function (role) {

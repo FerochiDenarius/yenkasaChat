@@ -1,5 +1,40 @@
-const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-const authToken = localStorage.getItem("authToken") || "";
+function parseStoredJson(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "null");
+  } catch (error) {
+    console.warn(`[Yenkasa Store] Invalid ${key} payload`, error);
+    return null;
+  }
+}
+
+function normalizeRole(role) {
+  const value = typeof role === "object" && role !== null
+    ? role.role || role.name || role.value
+    : role;
+
+  return String(value || "").trim().replace(/[\s-]+/g, "_").toUpperCase();
+}
+
+function normalizeAdminUser(payload) {
+  const source = payload?.user || payload;
+
+  if (!source) {
+    return null;
+  }
+
+  return {
+    ...source,
+    id: source.id || source._id || source.userId || source.user?.id || source.user?._id || "",
+    role: normalizeRole(source.role?.role || source.roleName || source.accessRole || source.role)
+  };
+}
+
+let currentUser = normalizeAdminUser(parseStoredJson("currentUser"));
+const authToken = localStorage.getItem("authToken")
+  || localStorage.getItem("token")
+  || localStorage.getItem("accessToken")
+  || localStorage.getItem("jwt")
+  || "";
 const menuToggle = document.getElementById("menuToggle");
 const dashboardMenu = document.getElementById("dashboardMenu");
 const dashboardMenuCloseBtn = document.getElementById("dashboardMenuCloseBtn");
@@ -102,6 +137,9 @@ function isAuthFailure(status) {
 function handleUnauthorized(responseData) {
   localStorage.removeItem("currentUser");
   localStorage.removeItem("authToken");
+  localStorage.removeItem("token");
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("jwt");
   alert(responseData?.message || responseData?.error || "Your session has expired. Please log in again.");
   window.location.href = "/store/admin-login";
 }
@@ -117,6 +155,103 @@ async function readResponseData(response) {
     return JSON.parse(rawText);
   } catch {
     return { rawText };
+  }
+}
+
+function extractListPayload(payload, keys = []) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const possibleKeys = [
+    ...keys,
+    "users",
+    "sellers",
+    "orders",
+    "products",
+    "refunds",
+    "items",
+    "content",
+    "results",
+    "data"
+  ];
+
+  for (const key of possibleKeys) {
+    if (Array.isArray(payload[key])) {
+      return payload[key];
+    }
+  }
+
+  return [];
+}
+
+function normalizeUserRecord(user) {
+  const normalized = normalizeAdminUser(user);
+
+  if (!normalized) {
+    return null;
+  }
+
+  return {
+    ...normalized,
+    name: normalized.name || normalized.fullName || normalized.username || normalized.email || "User",
+    email: normalized.email || "",
+    phone: normalized.phone || normalized.phoneNumber || "",
+    accountStatus: String(normalized.accountStatus || normalized.status || "ACTIVE").toUpperCase(),
+    sellerApprovalStatus: String(normalized.sellerApprovalStatus || normalized.approvalStatus || "APPROVED").toUpperCase(),
+    emailVerified: Boolean(normalized.emailVerified ?? normalized.verified ?? normalized.isVerified)
+  };
+}
+
+function normalizeUserList(payload) {
+  return extractListPayload(payload, ["users", "data", "content"])
+    .map(normalizeUserRecord)
+    .filter(Boolean);
+}
+
+function normalizeSellerList(payload) {
+  return extractListPayload(payload, ["sellers", "users", "data", "content"])
+    .map(normalizeUserRecord)
+    .filter(user => normalizeRole(user.role) === "SELLER");
+}
+
+function entityId(entity) {
+  return entity?.id || entity?._id || entity?.userId || entity?.sellerId || "";
+}
+
+async function fetchAdminResource(path, label, options = {}) {
+  console.log(`[Yenkasa Store] ${label}...`);
+
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        ...getAuthHeaders(),
+        ...(options.headers || {})
+      }
+    });
+    const data = await readResponseData(response);
+
+    if (isAuthFailure(response.status)) {
+      handleUnauthorized(data);
+      return { ok: false, status: response.status, data, authFailure: true };
+    }
+
+    if (!response.ok) {
+      console.error(`[Yenkasa Store] ${label} failed`, {
+        status: response.status,
+        data
+      });
+    }
+
+    return { ok: response.ok, status: response.status, data };
+  } catch (error) {
+    console.error(`[Yenkasa Store] ${label} request crashed`, error);
+    return { ok: false, status: 0, data: null, error };
   }
 }
 
@@ -314,7 +449,7 @@ function sellerApprovalClass(status) {
 }
 
 function sellerById(sellerId) {
-  return dashboardState.sellers.find(seller => String(seller.id) === String(sellerId));
+  return dashboardState.sellers.find(seller => String(entityId(seller)) === String(sellerId));
 }
 
 function detailRow(label, value) {
@@ -909,10 +1044,10 @@ function renderRefundRequests(refunds) {
 function buildSellerSummaries(sellers, orders) {
   const sellerMap = new Map();
 
-  orders.forEach(order => {
+  (Array.isArray(orders) ? orders : []).forEach(order => {
     if (!order.sellerId) return;
 
-    const sellerKey = Number(order.sellerId);
+    const sellerKey = String(order.sellerId);
     const existing = sellerMap.get(sellerKey) || {
       sellerId: sellerKey,
       sellerName: order.sellerName || "Seller",
@@ -936,7 +1071,9 @@ function buildSellerSummaries(sellers, orders) {
   });
 
   (Array.isArray(sellers) ? sellers : []).forEach(user => {
-    const sellerKey = Number(user.id);
+    const sellerKey = String(entityId(user));
+    if (!sellerKey) return;
+
     const existing = sellerMap.get(sellerKey) || {
       sellerId: sellerKey,
       sellerName: user.name || "Seller",
@@ -1031,6 +1168,7 @@ function openSellerReviewModal(sellerId) {
   }
 
   const approvalStatus = sellerApprovalStatus(seller);
+  const sellerRecordId = entityId(seller);
   const overlay = document.createElement("div");
   overlay.className = "seller-review-overlay";
   overlay.innerHTML = `
@@ -1047,7 +1185,7 @@ function openSellerReviewModal(sellerId) {
       <section class="seller-review-section">
         <h4>Identity</h4>
         <div class="seller-review-grid">
-          ${detailRow("Seller ID", seller.id)}
+          ${detailRow("Seller ID", sellerRecordId)}
           ${detailRow("Phone", seller.phone)}
           ${detailRow("Residential Address", seller.address)}
           ${detailRow("Date of Birth", seller.dateOfBirth)}
@@ -1088,9 +1226,9 @@ function openSellerReviewModal(sellerId) {
       </section>
 
       <div class="seller-review-actions">
-        <button type="button" class="manage-btn status seller-modal-approval-btn" data-id="${escapeHtml(seller.id)}" data-status="APPROVED">Approve Seller</button>
-        <button type="button" class="manage-btn delete seller-modal-approval-btn" data-id="${escapeHtml(seller.id)}" data-status="REJECTED">Reject</button>
-        <button type="button" class="manage-btn hold seller-modal-approval-btn" data-id="${escapeHtml(seller.id)}" data-status="PENDING_REVIEW">Keep Pending</button>
+        <button type="button" class="manage-btn status seller-modal-approval-btn" data-id="${escapeHtml(sellerRecordId)}" data-status="APPROVED">Approve Seller</button>
+        <button type="button" class="manage-btn delete seller-modal-approval-btn" data-id="${escapeHtml(sellerRecordId)}" data-status="REJECTED">Reject</button>
+        <button type="button" class="manage-btn hold seller-modal-approval-btn" data-id="${escapeHtml(sellerRecordId)}" data-status="PENDING_REVIEW">Keep Pending</button>
       </div>
     </aside>
   `;
@@ -1166,7 +1304,8 @@ function renderUsers(users) {
 
   usersList.innerHTML = users.map(user => {
     const status = String(user.accountStatus || "ACTIVE").toUpperCase();
-    const isSelf = Number(user.id) === Number(currentUser.id);
+    const userId = entityId(user);
+    const isSelf = String(userId) === String(entityId(currentUser));
 
     return `
       <div class="super-admin-item">
@@ -1177,7 +1316,7 @@ function renderUsers(users) {
           </div>
           <strong>${escapeHtml(user.role || "-")}</strong>
         </div>
-        <p><strong>User ID:</strong> ${escapeHtml(user.id || "-")}</p>
+        <p><strong>User ID:</strong> ${escapeHtml(userId || "-")}</p>
         <p><strong>Status:</strong> ${escapeHtml(status)}</p>
         <p><strong>Verified:</strong> ${user.emailVerified ? "Yes" : "No"}</p>
         <p><strong>Phone:</strong> ${escapeHtml(user.phone || "-")}</p>
@@ -1186,10 +1325,10 @@ function renderUsers(users) {
         <p><strong>Deleted At:</strong> ${escapeHtml(formatDateTime(user.deletedAt))}</p>
         <div class="super-admin-actions">
           ${user.emailVerified ? "" : `<button class="manage-btn hold resend-verification-btn" data-email="${escapeHtml(user.email || "")}">Resend Verification</button>`}
-          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="ACTIVE">Reactivate</button>
-          <button class="manage-btn status user-status-btn" data-id="${user.id}" data-status="SUSPENDED" ${isSelf ? "disabled" : ""}>Suspend</button>
-          <button class="manage-btn delete user-status-btn" data-id="${user.id}" data-status="BLOCKED" ${isSelf ? "disabled" : ""}>Block</button>
-          <button class="manage-btn delete user-delete-btn" data-id="${user.id}" ${isSelf ? "disabled" : ""}>Delete</button>
+          <button class="manage-btn status user-status-btn" data-id="${escapeHtml(userId)}" data-status="ACTIVE">Reactivate</button>
+          <button class="manage-btn status user-status-btn" data-id="${escapeHtml(userId)}" data-status="SUSPENDED" ${isSelf ? "disabled" : ""}>Suspend</button>
+          <button class="manage-btn delete user-status-btn" data-id="${escapeHtml(userId)}" data-status="BLOCKED" ${isSelf ? "disabled" : ""}>Block</button>
+          <button class="manage-btn delete user-delete-btn" data-id="${escapeHtml(userId)}" ${isSelf ? "disabled" : ""}>Delete</button>
         </div>
       </div>
     `;
@@ -1204,8 +1343,11 @@ function renderSellerProducts(sellers, products) {
   const sellerMap = new Map();
 
   (Array.isArray(sellers) ? sellers : []).forEach(seller => {
-    sellerMap.set(Number(seller.id), {
-      sellerId: Number(seller.id),
+    const sellerId = String(entityId(seller));
+    if (!sellerId) return;
+
+    sellerMap.set(sellerId, {
+      sellerId,
       sellerName: seller.name || "Seller",
       email: seller.email || "-",
       phone: seller.phone || "-",
@@ -1215,7 +1357,7 @@ function renderSellerProducts(sellers, products) {
   });
 
   (Array.isArray(products) ? products : []).forEach(product => {
-    const sellerId = Number(product.sellerId || 0);
+    const sellerId = String(product.sellerId || "");
     if (!sellerId) return;
 
     const existing = sellerMap.get(sellerId) || {
@@ -1653,56 +1795,58 @@ function renderDashboardSummary() {
 
 async function loadDashboard() {
   try {
-    const [ordersResponse, usersResponse, productsResponse, refundsResponse, paymentAuditResponse] = await Promise.all([
-      fetch(`${API_BASE}/api/orders`, { headers: getAuthHeaders() }),
-      fetch(`${API_BASE}/api/users`, { headers: getAuthHeaders() }),
-      fetch(`${API_BASE}/api/triciabales`),
-      fetch(`${API_BASE}/api/refunds`, { headers: getAuthHeaders() }),
-      fetch(`${API_BASE}/api/paystack/audit`, { headers: getAuthHeaders() })
+    const [ordersResult, usersResult, sellersResult, productsResult, refundsResult, paymentAuditResult] = await Promise.all([
+      fetchAdminResource("/api/orders", "Loading orders"),
+      fetchAdminResource("/api/users?includeDeleted=true", "Loading users"),
+      fetchAdminResource("/api/users/sellers?includeDeleted=true", "Loading sellers"),
+      fetchAdminResource("/api/triciabales", "Loading seller products"),
+      fetchAdminResource("/api/refunds", "Loading refund requests"),
+      fetchAdminResource("/api/paystack/audit", "Loading payment audit")
     ]);
 
-    const orders = await readResponseData(ordersResponse);
-    const usersPayload = await readResponseData(usersResponse);
-    const productsPayload = await readResponseData(productsResponse);
-    const refundsPayload = await readResponseData(refundsResponse);
-    const paymentAuditPayload = await readResponseData(paymentAuditResponse);
-
-    if (isAuthFailure(ordersResponse.status)) {
-      handleUnauthorized(orders);
+    if ([ordersResult, usersResult, sellersResult, refundsResult, paymentAuditResult].some(result => result.authFailure)) {
       return;
     }
 
-    if (isAuthFailure(usersResponse.status)) {
-      handleUnauthorized(usersPayload);
-      return;
-    }
-
-    if (!ordersResponse.ok) {
+    if (!ordersResult.ok) {
       throw new Error("Could not load platform orders");
     }
 
-    if (!usersResponse.ok || !Array.isArray(usersPayload)) {
-      throw new Error("Could not load seller accounts");
+    const users = normalizeUserList(usersResult.data);
+    const sellersFromEndpoint = normalizeSellerList(sellersResult.data);
+    const sellersFromUsers = users.filter(user => normalizeRole(user.role) === "SELLER");
+    const sellers = sellersResult.ok && sellersFromEndpoint.length ? sellersFromEndpoint : sellersFromUsers;
+
+    if (!usersResult.ok) {
+      console.error("[Yenkasa Store] Users endpoint did not load", usersResult.data || usersResult.error);
+      renderEmpty(usersList, "Unable to load registered users.");
     }
 
-    if (!productsResponse.ok || !Array.isArray(productsPayload)) {
-      throw new Error("Could not load seller products");
+    if (!sellersResult.ok && !sellers.length) {
+      console.error("[Yenkasa Store] Sellers endpoint did not load", sellersResult.data || sellersResult.error);
+      renderEmpty(sellersList, "Unable to load sellers.");
     }
 
-    if (refundsResponse.ok && Array.isArray(refundsPayload)) {
-      dashboardState.refunds = refundsPayload;
-      renderRefundRequests(refundsPayload);
+    if (!productsResult.ok) {
+      console.error("[Yenkasa Store] Seller products endpoint did not load", productsResult.data || productsResult.error);
+      renderEmpty(sellerProductsList, "Unable to load seller products.");
+    }
+
+    if (refundsResult.ok) {
+      const refunds = extractListPayload(refundsResult.data, ["refunds", "data", "content"]);
+      dashboardState.refunds = refunds;
+      renderRefundRequests(refunds);
     } else {
       dashboardState.refunds = [];
       renderEmpty(refundRequestsList, "Unable to load refund requests.");
     }
 
-    dashboardState.orders = Array.isArray(orders) ? orders : [];
-    dashboardState.users = usersPayload;
-    dashboardState.sellers = usersPayload.filter(user => String(user.role || "").toUpperCase() === "SELLER");
-    dashboardState.products = productsPayload;
-    dashboardState.paymentAudit = paymentAuditResponse.ok && Array.isArray(paymentAuditPayload?.orders)
-      ? paymentAuditPayload.orders
+    dashboardState.orders = extractListPayload(ordersResult.data, ["orders", "data", "content"]);
+    dashboardState.users = users;
+    dashboardState.sellers = sellers;
+    dashboardState.products = extractListPayload(productsResult.data, ["products", "bales", "items", "data", "content"]);
+    dashboardState.paymentAudit = paymentAuditResult.ok && Array.isArray(paymentAuditResult.data?.orders)
+      ? paymentAuditResult.data.orders
       : dashboardState.orders.filter(isPaystackSplitOrder);
 
     dashboardDateFilterBtn.textContent = getWeekRangeLabel();
@@ -1711,9 +1855,15 @@ async function loadDashboard() {
     renderPendingPayoutItems(pendingPayoutsSectionList, dashboardState.orders.filter(isPendingPayoutOrder));
     renderAllOrders(dashboardState.orders);
     renderReleasedPayouts(dashboardState.paymentAudit);
-    renderSellers(dashboardState.sellers, dashboardState.orders);
-    renderUsers(dashboardState.users);
-    renderSellerProducts(dashboardState.sellers, dashboardState.products);
+    if (usersResult.ok) {
+      renderUsers(dashboardState.users);
+    }
+    if (sellersResult.ok || dashboardState.sellers.length) {
+      renderSellers(dashboardState.sellers, dashboardState.orders);
+    }
+    if (productsResult.ok) {
+      renderSellerProducts(dashboardState.sellers, dashboardState.products);
+    }
   } catch (error) {
     console.error(error);
     renderEmpty(pendingPayoutsList, "Unable to load dashboard.");
@@ -1758,22 +1908,30 @@ async function loadRefundRequests() {
 
 async function loadUsers() {
   try {
-    const response = await fetch(`${API_BASE}/api/users?includeDeleted=true`, {
-      headers: getAuthHeaders()
-    });
-    const users = await readResponseData(response);
+    const [usersResult, sellersResult] = await Promise.all([
+      fetchAdminResource("/api/users?includeDeleted=true", "Loading users"),
+      fetchAdminResource("/api/users/sellers?includeDeleted=true", "Loading sellers")
+    ]);
 
-    if (isAuthFailure(response.status)) {
-      handleUnauthorized(users);
+    if (usersResult.authFailure || sellersResult.authFailure) {
       return;
     }
 
-    if (!response.ok || !Array.isArray(users)) {
-      throw new Error(users?.message || users?.error || "Could not load users");
+    if (!usersResult.ok) {
+      throw new Error(usersResult.data?.message || usersResult.data?.error || "Could not load users");
     }
 
+    const users = normalizeUserList(usersResult.data);
+    const sellersFromEndpoint = normalizeSellerList(sellersResult.data);
+    const sellersFromUsers = users.filter(user => normalizeRole(user.role) === "SELLER");
+
     dashboardState.users = users;
-    dashboardState.sellers = users.filter(user => String(user.role || "").toUpperCase() === "SELLER");
+    dashboardState.sellers = sellersResult.ok && sellersFromEndpoint.length ? sellersFromEndpoint : sellersFromUsers;
+
+    if (!sellersResult.ok) {
+      console.error("[Yenkasa Store] Sellers endpoint did not load", sellersResult.data || sellersResult.error);
+    }
+
     renderUsers(users);
     renderSellers(dashboardState.sellers, dashboardState.orders);
     renderSellerProducts(dashboardState.sellers, dashboardState.products);
@@ -1781,6 +1939,7 @@ async function loadUsers() {
   } catch (error) {
     console.error(error);
     renderEmpty(usersList, "Unable to load registered users.");
+    renderEmpty(sellersList, "Unable to load sellers.");
   }
 }
 

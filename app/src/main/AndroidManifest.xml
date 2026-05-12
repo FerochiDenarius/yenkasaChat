@@ -96,6 +96,7 @@
             android:exported="false"
             android:label="Menu" />
         <activity android:name=".ui.AdminEconomyActivity" />
+        <activity android:name=".ui.UserRoleDashboardActivity" />
         <activity android:name=".ui.SettingsActivity" />
         <activity android:name=".ui.WebViewActivity" />
         <activity android:name=".ui.PolicyDisclosureActivity" />

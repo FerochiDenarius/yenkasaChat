@@ -135,6 +135,33 @@ const userSchema = new Schema({
     default: 'unverified'
   },
 
+  staffRole: {
+    type: String,
+    enum: [
+      null,
+      'moderator',
+      'admin',
+      'junior_developer',
+      'senior_developer'
+    ],
+    default: null,
+    index: true
+  },
+
+  publicRoles: [{
+    type: String,
+    enum: [
+      'verified_creator',
+      'rising_star',
+      'top_vendor',
+      'business_account',
+      'premium_seller',
+      'campus_influencer',
+      'brand_ambassador'
+    ],
+    index: true
+  }],
+
   // ===============================
   // 👥 SOCIAL
   // ===============================

@@ -919,6 +919,59 @@ interface ApiService {
         @Query("limit") limit: Int = 10
     ): Call<FraudAlertsResponse>
 
+    @GET("roles/users")
+    fun getRoleUsers(
+        @Header("Authorization") token: String,
+        @Query("scope") scope: String,
+        @Query("search") search: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Call<RoleUsersResponse>
+
+    @POST("roles/generate-code")
+    fun generateRoleCode(
+        @Header("Authorization") token: String,
+        @Body request: GenerateRoleCodeRequest
+    ): Call<GenerateRoleCodeResponse>
+
+    @GET("roles/generated-codes")
+    fun getGeneratedRoleCodes(
+        @Header("Authorization") token: String
+    ): Call<GeneratedRoleCodesResponse>
+
+    @POST("roles/activate-code")
+    fun activateRoleCode(
+        @Header("Authorization") token: String,
+        @Body request: ActivateRoleCodeRequest
+    ): Call<ActivateRoleCodeResponse>
+
+    @POST("roles/grant/{userId}")
+    fun grantUserRole(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
+        @Body request: RoleActionRequest
+    ): Call<RoleActionResponse>
+
+    @POST("roles/remove/{userId}")
+    fun removeUserRole(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
+        @Body request: RoleActionRequest
+    ): Call<RoleActionResponse>
+
+    @POST("roles/suspend/{userId}")
+    fun suspendRoleUser(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
+        @Body request: RoleActionRequest
+    ): Call<RoleActionResponse>
+
+    @POST("roles/unsuspend/{userId}")
+    fun unsuspendRoleUser(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): Call<RoleActionResponse>
+
 
 
 

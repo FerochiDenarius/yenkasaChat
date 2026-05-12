@@ -7,19 +7,19 @@ object UserPermissions {
         "verified",
         "rising_star",
         "legend",
-        "admin",
         "moderator",
+        "admin",
         "junior_developer",
         "senior_developer"
     )
 
     private fun normalize(role: String?): String {
-        val normalized = role?.trim()?.lowercase()?.replace(" ", "_") ?: "unverified"
+        val normalized = role?.trim()?.lowercase()?.replace(Regex("[\\s-]+"), "_") ?: "unverified"
         return when (normalized) {
             "user" -> "unverified"
             "developer" -> "senior_developer"
-            "senior_dev", "senior-developer" -> "senior_developer"
-            "rising-star" -> "rising_star"
+            "senior_dev", "super_admin", "superadmin" -> "senior_developer"
+            "junior_dev" -> "junior_developer"
             "moderator", "admin" -> normalized
             else -> normalized
         }
@@ -86,19 +86,40 @@ object UserPermissions {
     // 🟢 Can Assign Roles
     fun canAssignRoles(role: String?): Boolean {
         val r = normalize(role)
-        return r == "senior_developer"
+        return r in listOf("senior_developer", "admin")
     }
 
     // 🟢 Can Revoke Permissions
     fun canRevoke(role: String?): Boolean {
         val r = normalize(role)
-        return r == "senior_developer"
+        return r in listOf("senior_developer", "admin")
     }
 
     // 🟢 Can Suspend Users
     fun canSuspend(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "moderator")
+        return r in listOf("senior_developer", "junior_developer", "admin", "moderator")
+    }
+
+    fun canGenerateRoleCodes(role: String?): Boolean {
+        val r = normalize(role)
+        return r in listOf("senior_developer", "admin")
+    }
+
+    fun canManageRoles(role: String?): Boolean {
+        return canGenerateRoleCodes(role)
+    }
+
+    fun canGenerateStaffRole(role: String?, targetRole: String?): Boolean {
+        val actor = normalize(role)
+        val target = normalize(targetRole)
+        if (actor == "senior_developer") return target in listOf(
+            "moderator",
+            "admin",
+            "junior_developer",
+            "senior_developer"
+        )
+        return canAffect(target, actor)
     }
 
     // 🟢 Check Rank Superiority

@@ -61,6 +61,15 @@ data class User(
     @SerializedName("roleName")
     val roleName: String? = null,
 
+    @SerializedName("accessRole")
+    val accessRole: String? = null,
+
+    @SerializedName("staffRole")
+    val staffRole: String? = null,
+
+    @SerializedName("publicRoles")
+    val publicRoles: List<String> = emptyList(),
+
     @SerializedName("followers")
     val followers: List<String>? = emptyList(),
 

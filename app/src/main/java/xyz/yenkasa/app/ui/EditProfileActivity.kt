@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.ActivateRoleCodeRequest
+import xyz.yenkasa.app.model.ActivateRoleCodeResponse
 import xyz.yenkasa.app.model.UpdateProfileRequest
 import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.model.ChangePasswordRequest
@@ -37,6 +39,7 @@ import java.time.*
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
+import com.google.gson.Gson
 
 
 
@@ -56,6 +59,7 @@ class EditProfileActivity : AppCompatActivity() {
     private lateinit var textName: TextView
     private lateinit var textPhone: TextView
     private lateinit var rowPassword: View
+    private lateinit var roleUpgradeCodeView: TextInputEditText
 
 
 
@@ -83,6 +87,9 @@ class EditProfileActivity : AppCompatActivity() {
         rowPassword.setOnClickListener {
             showChangePasswordDialog()
         }
+        findViewById<View>(R.id.btnActivateRoleCode).setOnClickListener {
+            activateRoleCode()
+        }
         // Auto-save
         enableAutoSave(usernameView, "username")
         enableAutoSave(emailView, "email")
@@ -109,6 +116,7 @@ class EditProfileActivity : AppCompatActivity() {
         genderView = findViewById(R.id.editGender)
         dobView = findViewById(R.id.editDob)
         rowPassword = findViewById(R.id.rowPassword)
+        roleUpgradeCodeView = findViewById(R.id.editRoleUpgradeCode)
 
 
 
@@ -436,6 +444,62 @@ class EditProfileActivity : AppCompatActivity() {
                 WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
         )
     }
+
+    private fun activateRoleCode() {
+        val currentToken = TokenManager.getToken(this)
+        if (currentToken.isNullOrBlank()) {
+            Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val code = roleUpgradeCodeView.text?.toString()?.trim()?.uppercase().orEmpty()
+        if (code.isBlank()) {
+            roleUpgradeCodeView.error = "Enter role ID"
+            return
+        }
+
+        ApiClient.apiService.activateRoleCode("Bearer $currentToken", ActivateRoleCodeRequest(code))
+            .enqueue(object : Callback<ActivateRoleCodeResponse> {
+                override fun onResponse(
+                    call: Call<ActivateRoleCodeResponse>,
+                    response: Response<ActivateRoleCodeResponse>
+                ) {
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        body.user?.let { user ->
+                            TokenManager.saveUserJson(this@EditProfileActivity, Gson().toJson(user))
+                            TokenManager.savePartialUserDetails(
+                                this@EditProfileActivity,
+                                user.username,
+                                user.email,
+                                user.phone,
+                                user.location,
+                                user.gender,
+                                user.dateOfBirth
+                            )
+                            TokenManager.saveProfilePicUrl(this@EditProfileActivity, user.profileImage)
+                        }
+                        roleUpgradeCodeView.setText("")
+                        AlertDialog.Builder(this@EditProfileActivity)
+                            .setTitle("Role Activated")
+                            .setMessage(body.message ?: "${body.roleLabel ?: "Role"} activated successfully.")
+                            .setPositiveButton("OK", null)
+                            .show()
+                    } else {
+                        Toast.makeText(
+                            this@EditProfileActivity,
+                            body?.error ?: "Role activation failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ActivateRoleCodeResponse>, t: Throwable) {
+                    Toast.makeText(this@EditProfileActivity, "Network error", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
     private fun changePassword(oldPass: String, newPass: String) {
         lifecycleScope.launch {
             try {

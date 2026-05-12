@@ -414,12 +414,12 @@ object TokenManager {
     }
 
     private fun normalizeRole(role: String?): String {
-        val normalized = role?.trim()?.lowercase()?.replace(" ", "_") ?: "unverified"
+        val normalized = role?.trim()?.lowercase()?.replace(Regex("[\\s-]+"), "_") ?: "unverified"
         return when (normalized) {
             "", "null" -> "unverified"
             "user" -> "unverified"
             "developer" -> "senior_developer"
-            "senior_dev" -> "senior_developer"
+            "senior_dev", "super_admin", "superadmin" -> "senior_developer"
             "junior_dev" -> "junior_developer"
             else -> normalized
         }

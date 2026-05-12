@@ -61,6 +61,7 @@ import xyz.yenkasa.app.model.Contact
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
 import xyz.yenkasa.app.model.ApiResponse
+import xyz.yenkasa.app.model.GroupResponse
 import xyz.yenkasa.app.model.MessageRequest
 import xyz.yenkasa.app.model.Participant
 import xyz.yenkasa.app.model.PresenceResponse
@@ -1614,9 +1615,23 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     override fun showDefaultReceiverHeader(defaultName: String?) {
         textViewReceiverName.text = defaultName ?: "Chat"
         if (::imageViewReceiverPicture.isInitialized) {
-            imageViewReceiverPicture.setImageResource(R.drawable.ic_default_profile)
+            val groupImage = intent.getStringExtra("groupImage").orEmpty()
+            if (isGroupChat && groupImage.isNotBlank()) {
+                Glide.with(this)
+                    .load(groupImage)
+                    .placeholder(R.drawable.ic_default_profile)
+                    .error(R.drawable.ic_default_profile)
+                    .into(imageViewReceiverPicture)
+            } else {
+                imageViewReceiverPicture.setImageResource(R.drawable.ic_default_profile)
+            }
         }
-        textViewOnlineStatus.text = if (isGroupChat) "Group chat" else "" // Or "Status unavailable"
+        val memberCount = intent.getIntExtra("groupMemberCount", 0)
+        textViewOnlineStatus.text = if (isGroupChat) {
+            if (memberCount > 0) "$memberCount members" else "Group chat"
+        } else {
+            ""
+        }
         imageViewStatusIndicator.visibility = View.GONE
     }
 
@@ -1626,6 +1641,31 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         videoCallButton.visibility = View.GONE
         imageViewStatusIndicator.visibility = View.GONE
         textViewOnlineStatus.text = "Group chat"
+        refreshGroupHeader()
+    }
+
+    private fun refreshGroupHeader() {
+        val groupId = roomId ?: return
+        ApiClient.apiService.getSingleGroup(groupId).enqueue(object : Callback<GroupResponse> {
+            override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
+                val group = response.body()?.group ?: return
+                if (!response.isSuccessful) return
+                textViewReceiverName.text = group.groupName ?: textViewReceiverName.text
+                textViewOnlineStatus.text = if (group.memberCount > 0) "${group.memberCount} members" else "Group chat"
+                val imageUrl = group.groupImage.orEmpty()
+                if (imageUrl.isNotBlank()) {
+                    Glide.with(this@ChatActivity)
+                        .load(imageUrl)
+                        .placeholder(R.drawable.ic_default_profile)
+                        .error(R.drawable.ic_default_profile)
+                        .into(imageViewReceiverPicture)
+                }
+            }
+
+            override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
+                Log.w("ChatActivity", "Could not refresh group header: ${t.message}")
+            }
+        })
     }
 
     override fun showToast(message: String, length: Int) {

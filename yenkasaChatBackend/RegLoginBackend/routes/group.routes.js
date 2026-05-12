@@ -1,5 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const multer = require('multer');
+const { Readable } = require('stream');
 
 const router = express.Router();
 const auth = require('../middleware/auth');
@@ -8,12 +10,50 @@ const Contact = require('../models/contact.model');
 const Message = require('../models/message.model');
 const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
+const { cloudinary } = require('../config/cloudinary');
+const { logUploadAudit } = require('../utils/cloudinaryMedia');
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 const uniqueIds = (ids = []) => Array.from(new Set(ids.filter(Boolean).map(id => id.toString())));
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
+}
+
+const groupImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    const allowed = Boolean(file?.mimetype?.startsWith('image/'));
+    cb(allowed ? null : new Error('Only image uploads are supported'), allowed);
+  }
+});
+
+function uploadGroupImageToCloudinary(file) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: process.env.CLOUDINARY_GROUP_IMAGE_FOLDER || 'yenkasa/chat/groups',
+        resource_type: 'image',
+        use_filename: true,
+        unique_filename: true,
+        quality: 'auto:good',
+        fetch_format: 'auto',
+        transformation: [
+          { width: 512, height: 512, crop: 'fill', gravity: 'auto' }
+        ]
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result);
+      }
+    );
+
+    Readable.from(file.buffer).pipe(uploadStream);
+  });
 }
 
 async function assertGroupAccess(groupId, userId) {
@@ -113,6 +153,26 @@ async function enrichGroup(group, userId) {
     updatedAt: group.updatedAt
   };
 }
+
+router.post('/upload-image', auth, groupImageUpload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No group image uploaded' });
+  }
+
+  try {
+    const result = await uploadGroupImageToCloudinary(req.file);
+    logUploadAudit({ area: 'group_image', file: req.file, result });
+    res.json({
+      success: true,
+      imageUrl: result.secure_url,
+      url: result.secure_url,
+      publicId: result.public_id
+    });
+  } catch (err) {
+    console.error('[GroupRoutes] image upload failed:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to upload group image' });
+  }
+});
 
 router.post('/create', auth, async (req, res) => {
   try {

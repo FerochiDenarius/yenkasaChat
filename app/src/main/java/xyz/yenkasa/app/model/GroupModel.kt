@@ -28,3 +28,11 @@ data class GroupsListResponse(
     val hasMore: Boolean = false,
     val message: String? = null
 )
+
+data class GroupImageUploadResponse(
+    val success: Boolean,
+    val imageUrl: String? = null,
+    val url: String? = null,
+    val publicId: String? = null,
+    val message: String? = null
+)

@@ -26,7 +26,7 @@ class GroupMembersAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val contact = getItem(position)
-        val stableId = contact.contactId ?: contact.userId
+        val stableId = contact.contactId ?: contact._id ?: contact.userId
         holder.name.text = contact.username
         holder.status.text = if (contact.online || contact.isOnline) "Online" else "Yenkasa contact"
         holder.checkBox.isChecked = selectedIds.contains(stableId)
@@ -38,7 +38,7 @@ class GroupMembersAdapter(
         }
 
         Glide.with(holder.itemView.context)
-            .load(contact.profileImage.orEmpty())
+            .load(contact.profileImage ?: contact.profilePicture.orEmpty())
             .placeholder(R.drawable.ic_profile_placeholder)
             .error(R.drawable.ic_profile_placeholder)
             .circleCrop()
@@ -54,7 +54,7 @@ class GroupMembersAdapter(
 
     class DiffCallback : DiffUtil.ItemCallback<Contact>() {
         override fun areItemsTheSame(oldItem: Contact, newItem: Contact): Boolean {
-            return (oldItem.contactId ?: oldItem.userId) == (newItem.contactId ?: newItem.userId)
+            return (oldItem.contactId ?: oldItem._id ?: oldItem.userId) == (newItem.contactId ?: newItem._id ?: newItem.userId)
         }
 
         override fun areContentsTheSame(oldItem: Contact, newItem: Contact): Boolean = oldItem == newItem

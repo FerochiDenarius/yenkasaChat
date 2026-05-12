@@ -86,8 +86,11 @@ class ContactsActivity : AppCompatActivity() {
                     response: Response<List<Contact>>
                 ) {
                     if (response.isSuccessful) {
+                        val dedupedContacts = response.body().orEmpty()
+                            .filter { it.username.isNotBlank() }
+                            .distinctBy { it.contactId ?: it._id ?: it.userId }
                         allContacts.clear()
-                        allContacts.addAll(response.body().orEmpty())
+                        allContacts.addAll(dedupedContacts)
                         contacts.clear()
                         contacts.addAll(allContacts)
                         contactAdapter.notifyDataSetChanged() // Consider DiffUtil for adapter efficiency

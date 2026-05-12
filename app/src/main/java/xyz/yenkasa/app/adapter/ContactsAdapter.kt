@@ -34,7 +34,7 @@ class ContactAdapter(
         holder.contactName.text = contact.username
 
         Glide.with(holder.itemView.context)
-            .load(contact.profileImage ?: "")
+            .load(contact.profileImage ?: contact.profilePicture ?: "")
             .error(R.drawable.ic_profile_placeholder)
             .placeholder(R.drawable.ic_profile_placeholder)
             .into(holder.profileImage)

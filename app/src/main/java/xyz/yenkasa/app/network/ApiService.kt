@@ -164,6 +164,10 @@ interface ApiService {
 
     // ==================== GROUPS ====================
 
+    @Multipart
+    @POST("groups/upload-image")
+    fun uploadGroupImage(@Part image: MultipartBody.Part): Call<GroupImageUploadResponse>
+
     @POST("groups/create")
     fun createGroup(@Body request: GroupCreateRequest): Call<GroupResponse>
 

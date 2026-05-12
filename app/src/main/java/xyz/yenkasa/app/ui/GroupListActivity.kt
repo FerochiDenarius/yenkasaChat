@@ -32,6 +32,8 @@ class GroupListActivity : AppCompatActivity() {
             startActivity(Intent(this, GroupChatActivity::class.java).apply {
                 putExtra("roomId", group._id)
                 putExtra("chatPartnerName", group.groupName ?: "Yenkasa Group")
+                putExtra("groupImage", group.groupImage.orEmpty())
+                putExtra("groupMemberCount", group.memberCount)
                 putExtra("isGroupChat", true)
             })
         }

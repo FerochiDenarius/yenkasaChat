@@ -37,7 +37,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
         val next = findViewById<Button>(R.id.buttonNextGroupSetup)
 
         adapter = GroupMembersAdapter(selectedIds) { contact ->
-            val id = contact.contactId ?: contact.userId
+            val id = contactMemberId(contact) ?: return@GroupMembersAdapter
             if (selectedIds.contains(id)) selectedIds.remove(id) else selectedIds.add(id)
             updateSelectedCount()
             adapter.notifyDataSetChanged()
@@ -75,7 +75,11 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
                     return
                 }
                 allContacts.clear()
-                allContacts.addAll(response.body().orEmpty())
+                allContacts.addAll(
+                    response.body().orEmpty()
+                        .filter { it.username.isNotBlank() && contactMemberId(it) != null }
+                        .distinctBy { contactMemberId(it) }
+                )
                 adapter.submitList(allContacts.toList())
             }
 
@@ -95,5 +99,10 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
 
     private fun updateSelectedCount() {
         selectedCount.text = if (selectedIds.isEmpty()) "Create Group" else "${selectedIds.size} selected"
+    }
+
+    private fun contactMemberId(contact: Contact): String? {
+        return contact.contactId?.takeIf { it.isNotBlank() }
+            ?: contact._id?.takeIf { it.isNotBlank() }
     }
 }

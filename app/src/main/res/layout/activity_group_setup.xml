@@ -50,17 +50,93 @@
             android:textColor="@color/feed_primary_text"
             android:textColorHint="@color/feed_secondary_text" />
 
-        <EditText
-            android:id="@+id/inputGroupImage"
+        <LinearLayout
+            android:id="@+id/layoutGroupImagePicker"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="12dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:background="@drawable/bg_chat_search"
-            android:hint="Group image URL"
-            android:inputType="textUri"
-            android:paddingHorizontal="16dp"
-            android:textColor="@color/feed_primary_text"
-            android:textColorHint="@color/feed_secondary_text" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <ImageView
+                android:id="@+id/imageGroupPreview"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_profile_image_circle"
+                android:contentDescription="Group image preview"
+                android:padding="10dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_profile_placeholder" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Group image"
+                    android:textColor="@color/feed_primary_text"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/textGroupImageStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Add a photo from your gallery"
+                    android:textColor="@color/feed_secondary_text"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/buttonPickGroupImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_chat_primary_button"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="14dp"
+                        android:text="Add Image"
+                        android:textAllCaps="false"
+                        android:textColor="@color/white"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/buttonRemoveGroupImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_chat_search"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="14dp"
+                        android:text="Remove"
+                        android:textAllCaps="false"
+                        android:textColor="@color/feed_secondary_text"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                    <ProgressBar
+                        android:id="@+id/progressGroupImageUpload"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="10dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
 
         <Button
             android:id="@+id/buttonFinishGroupSetup"

@@ -517,6 +517,8 @@
     <string name="type_message_hint">Rubuta saƙo...</string>
     <string name="record_audio">Yi rikodin sauti</string>
     <string name="send_message">Aika saƙo</string>
+    <string name="send_laugh_reaction">Aika martanin dariya</string>
+    <string name="laugh_reaction_emoji">😂</string>
     <string name="attach_image">Haɗa hoto</string>
     <string name="attach_video">Haɗa bidiyo</string>
     <string name="attach_camera">Haɗa kamera</string>
@@ -533,5 +535,6 @@
     <string name="live_zero_viewers_short">0</string>
     <string name="live_viewers_short">%1$d</string>
     <string name="live_title_with_community">%1$s • %2$s</string>
+    <string name="live_user_left">%1$s ya fita daga live</string>
     <string name="livestream_staff_only_watch_allowed">Ma’aikatan Yenkasa kaɗai za su iya fara live. Har yanzu za ka iya kallon livestreams masu gudana.</string>
 </resources>

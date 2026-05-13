@@ -239,7 +239,7 @@ class LiveStreamActivity : AppCompatActivity() {
         val userId = TokenManager.getUserId(this)
         SocketManager.ensureConnected(userId)
 
-        SocketManager.on("live_comment") { data ->
+        SocketManager.on("livestream_comment") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
             val username = json.optString("username", getString(R.string.viewer_fallback))
@@ -247,26 +247,33 @@ class LiveStreamActivity : AppCompatActivity() {
             runOnUiThread { addComment(getString(R.string.live_comment_format, username, message)) }
         }
 
-        SocketManager.on("live_join") { data ->
+        SocketManager.on("livestream_join") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
             val username = json.optString("username", getString(R.string.viewer_fallback))
             runOnUiThread { addComment(getString(R.string.live_user_joined, username)) }
         }
 
-        SocketManager.on("live_viewer_count") { data ->
+        SocketManager.on("livestream_leave") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            val username = json.optString("username", getString(R.string.viewer_fallback))
+            runOnUiThread { addComment(getString(R.string.live_user_left, username)) }
+        }
+
+        SocketManager.on("livestream_viewer_count") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
             runOnUiThread { updateViewerCount(json.optInt("viewerCount", 0)) }
         }
 
-        SocketManager.on("live_reaction") { data ->
+        SocketManager.on("livestream_reaction") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
-            runOnUiThread { animateReaction(json.optString("reaction", "❤️")) }
+            runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
         }
 
-        SocketManager.on("live_gift") { data ->
+        SocketManager.on("livestream_gift") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
             val username = json.optString("senderUsername", getString(R.string.viewer_fallback))
@@ -278,7 +285,7 @@ class LiveStreamActivity : AppCompatActivity() {
             }
         }
 
-        SocketManager.on("live_ended") { data ->
+        SocketManager.on("livestream_ended") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
             runOnUiThread {
@@ -288,7 +295,7 @@ class LiveStreamActivity : AppCompatActivity() {
         }
 
         SocketManager.emit(
-            "live_join",
+            "livestream_join",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
@@ -350,7 +357,7 @@ class LiveStreamActivity : AppCompatActivity() {
         if (message.isBlank()) return
         commentInput.text?.clear()
         SocketManager.emit(
-            "live_comment",
+            "livestream_comment",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -365,13 +372,13 @@ class LiveStreamActivity : AppCompatActivity() {
         if (now - lastReactionAt < 700L) return
         lastReactionAt = now
         SocketManager.emit(
-            "live_reaction",
+            "livestream_reaction",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
+                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
                 .put("reaction", reaction)
         )
-        animateReaction(reaction)
     }
 
     private fun showGiftSheet() {
@@ -566,15 +573,22 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun leaveLive() {
         if (joinedSocketRoom) {
-            SocketManager.emit("live_leave", JSONObject().put("streamId", streamId))
+            SocketManager.emit(
+                "livestream_leave",
+                JSONObject()
+                    .put("streamId", streamId)
+                    .put("userId", TokenManager.getUserId(this).orEmpty())
+                    .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+            )
             joinedSocketRoom = false
         }
-        SocketManager.off("live_comment")
-        SocketManager.off("live_join")
-        SocketManager.off("live_viewer_count")
-        SocketManager.off("live_ended")
-        SocketManager.off("live_reaction")
-        SocketManager.off("live_gift")
+        SocketManager.off("livestream_comment")
+        SocketManager.off("livestream_join")
+        SocketManager.off("livestream_leave")
+        SocketManager.off("livestream_viewer_count")
+        SocketManager.off("livestream_ended")
+        SocketManager.off("livestream_reaction")
+        SocketManager.off("livestream_gift")
         timerHandler.removeCallbacks(timerRunnable)
 
         rtcEngine?.leaveChannel()

@@ -517,6 +517,8 @@
     <string name="type_message_hint">Écrire un message...</string>
     <string name="record_audio">Enregistrer un audio</string>
     <string name="send_message">Envoyer le message</string>
+    <string name="send_laugh_reaction">Envoyer une réaction de rire</string>
+    <string name="laugh_reaction_emoji">😂</string>
     <string name="attach_image">Joindre une image</string>
     <string name="attach_video">Joindre une vidéo</string>
     <string name="attach_camera">Ouvrir la caméra</string>
@@ -533,5 +535,6 @@
     <string name="live_zero_viewers_short">0</string>
     <string name="live_viewers_short">%1$d</string>
     <string name="live_title_with_community">%1$s • %2$s</string>
+    <string name="live_user_left">%1$s a quitté le direct</string>
     <string name="livestream_staff_only_watch_allowed">Seul le personnel Yenkasa peut lancer un direct. Vous pouvez toujours regarder les directs actifs.</string>
 </resources>

@@ -88,6 +88,8 @@
     <string name="type_message_hint">Type a message...</string>
     <string name="record_audio">Record Audio</string>
     <string name="send_message">Send Message</string>
+    <string name="send_laugh_reaction">Send laugh reaction</string>
+    <string name="laugh_reaction_emoji">😂</string>
     <string name="attach_image">Attach Image</string>
     <string name="attach_video">Attach Video</string>
     <string name="attach_camera">Attach Camera</string>
@@ -623,6 +625,7 @@
     <string name="live_title_format">%1$s • %2$s</string>
     <string name="live_comment_format">%1$s: %2$s</string>
     <string name="live_user_joined">%1$s joined the live</string>
+    <string name="live_user_left">%1$s left the live</string>
     <string name="live_user_sent_gift">%1$s sent %2$s %3$d YKC</string>
     <string name="livestream_ended">Livestream ended.</string>
     <string name="livestream_token_missing">Livestream token is missing.</string>

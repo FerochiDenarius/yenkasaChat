@@ -387,6 +387,20 @@
         android:src="@drawable/ic_image"
         app:tint="@color/white" />
 
+    <TextView
+        android:id="@+id/buttonLaughReaction"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="108dp"
+        android:background="@drawable/bg_chat_laugh_reaction"
+        android:contentDescription="@string/send_laugh_reaction"
+        android:elevation="7dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:text="@string/laugh_reaction_emoji"
+        android:textSize="23sp" />
+
     <LinearLayout
         android:id="@+id/attachmentMenu"
         android:layout_width="wrap_content"

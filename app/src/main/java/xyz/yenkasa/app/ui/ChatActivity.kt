@@ -10,10 +10,14 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.SoundPool
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.ContactsContract
 import android.provider.OpenableColumns
 import android.text.Editable
@@ -92,6 +96,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private lateinit var sendButton: ImageButton
     private lateinit var micButton: ImageButton
     private lateinit var attachButton: ImageButton
+    private lateinit var laughReactionButton: TextView
     private lateinit var attachMenu: LinearLayout
     private lateinit var chatRootLayout: FrameLayout
     private lateinit var moreOptionsButton: ImageView
@@ -136,6 +141,14 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private val webSocketManager = WebSocketProvider.instance
     private var receiverParticipant: Participant? = null
     private val chatMessageGson = Gson()
+    private var isChatVisible: Boolean = false
+    private var soundPool: SoundPool? = null
+    private var inChatMessageSoundId: Int = 0
+    private var laughReactionSoundId: Int = 0
+    private val loadedSoundIds = mutableSetOf<Int>()
+    private var lastInChatMessageSoundAt: Long = 0L
+    private var lastLaughReactionSentAt: Long = 0L
+    private var lastLaughReactionPlayedAt: Long = 0L
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
@@ -358,6 +371,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         setContentView(R.layout.activity_chat)
 
         initViews()
+        initializeChatSoundEffects()
 
         if (!retrieveSessionAndValidate()) {
             return // Exit if session is not valid
@@ -449,12 +463,19 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onResume() {
         super.onResume()
+        isChatVisible = true
         if (isGroupChat && ::textViewReceiverName.isInitialized) {
             refreshGroupHeader()
         }
     }
 
+    override fun onPause() {
+        isChatVisible = false
+        super.onPause()
+    }
+
     override fun onStop() {
+        isChatVisible = false
         ChatNotificationState.clearActiveRoom(roomId)
         leaveRealtimeChatRoom()
         if (::chatActivityHelper.isInitialized) {
@@ -482,6 +503,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         SocketManager.off("messageCreated")
         SocketManager.off("messageEdited")
         SocketManager.off("messageDeleted")
+        SocketManager.off(CHAT_LAUGH_REACTION_EVENT)
+        releaseChatSoundEffects()
         super.onDestroy()
     }
 
@@ -494,6 +517,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         sendButton = findViewById(R.id.btnSend)
         micButton = findViewById(R.id.btnMic)
         attachButton = findViewById(R.id.buttonToggleAttachMenu)
+        laughReactionButton = findViewById(R.id.buttonLaughReaction)
         attachMenu = findViewById(R.id.attachmentMenu)
         callButton = findViewById(R.id.imageViewCall)
         videoCallButton = findViewById(R.id.imageViewVideoCall)
@@ -584,6 +608,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         findViewById<ImageButton>(R.id.buttonStickerShortcut).setOnClickListener {
             attachMenu.visibility = View.GONE
             showStickerTray()
+        }
+
+        laughReactionButton.setOnClickListener {
+            attachMenu.visibility = View.GONE
+            hideKeyboard()
+            sendLaughReaction()
         }
 
         messageInput.addTextChangedListener(object : TextWatcher {
@@ -1321,6 +1351,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val messageInputLayout = findViewById<View>(R.id.messageInputLayout)
         val emojiShortcut = findViewById<View>(R.id.buttonEmojiShortcut)
         val stickerShortcut = findViewById<View>(R.id.buttonStickerShortcut)
+        val laughShortcut = findViewById<View>(R.id.buttonLaughReaction)
         val originalRecyclerStartPadding = recyclerView.paddingStart
         val originalRecyclerEndPadding = recyclerView.paddingEnd
         val originalRecyclerBottomPadding = recyclerView.paddingBottom
@@ -1331,6 +1362,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val attachMenuMargins = attachMenu.marginSnapshot()
         val emojiMargins = emojiShortcut.marginSnapshot()
         val stickerMargins = stickerShortcut.marginSnapshot()
+        val laughMargins = laughShortcut.marginSnapshot()
         val sideComfort = dp(22)
         val headerTopComfort = dp(12)
         val bottomComfort = dp(14)
@@ -1388,12 +1420,16 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 end = maxOf(stickerMargins.end, endSafeSpacing),
                 bottom = stickerMargins.bottom + navigationBars.bottom
             )
+            laughShortcut.updateMargins(
+                bottom = laughMargins.bottom + navigationBars.bottom
+            )
 
             messageInputLayout.translationY = translationY
             replyPreviewLayout.translationY = translationY
             attachMenu.translationY = translationY
             emojiShortcut.translationY = translationY
             stickerShortcut.translationY = translationY
+            laughShortcut.translationY = translationY
             recyclerView.setPaddingRelative(
                 maxOf(originalRecyclerStartPadding, startSafeSpacing),
                 recyclerView.paddingTop,
@@ -1532,6 +1568,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             if (incoming.roomId != roomId) return@on
             runOnUiThread {
                 upsertRealtimeMessage(incoming)
+                if (isIncomingMessageFromOtherUser(incoming)) {
+                    playInChatMessageSound()
+                }
                 if (::chatActivityHelper.isInitialized) {
                     chatActivityHelper.markRoomAsRead()
                 }
@@ -1555,6 +1594,16 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 updateMessages(updatedMessages)
             }
         }
+
+        SocketManager.on(CHAT_LAUGH_REACTION_EVENT) { data ->
+            val json = parseSocketJson(data) ?: return@on
+            if (json.optString("conversationId", json.optString("roomId")) != roomId) return@on
+            if (json.optString("senderId") == senderId) return@on
+            runOnUiThread {
+                playLaughReactionSound()
+                showLaughReactionAnimation()
+            }
+        }
     }
 
     private fun joinRealtimeChatRoom() {
@@ -1570,6 +1619,125 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         SocketManager.emit("leaveChatRoom", activeRoomId)
     }
 
+    private fun sendLaughReaction() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastLaughReactionSentAt < LAUGH_REACTION_COOLDOWN_MS) return
+
+        val activeRoomId = roomId ?: return
+        lastLaughReactionSentAt = now
+        showLaughReactionAnimation()
+
+        val payload = JSONObject()
+            .put("senderId", senderId)
+            .put("receiverId", receiverParticipant?._id.orEmpty())
+            .put("conversationId", activeRoomId)
+            .put("roomId", activeRoomId)
+            .put("timestamp", System.currentTimeMillis())
+
+        SocketManager.emit(CHAT_LAUGH_REACTION_EVENT, payload)
+    }
+
+    private fun initializeChatSoundEffects() {
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        soundPool = SoundPool.Builder()
+            .setMaxStreams(2)
+            .setAudioAttributes(attributes)
+            .build()
+            .also { pool ->
+                pool.setOnLoadCompleteListener { _, sampleId, status ->
+                    if (status == 0) loadedSoundIds.add(sampleId)
+                }
+                inChatMessageSoundId = pool.load(this, R.raw.in_chat_message, 1)
+                laughReactionSoundId = pool.load(this, R.raw.chat_laugh_reaction, 1)
+            }
+    }
+
+    private fun playInChatMessageSound() {
+        if (!isChatVisible || !isInChatSoundsEnabled()) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastInChatMessageSoundAt < IN_CHAT_MESSAGE_SOUND_COOLDOWN_MS) return
+        lastInChatMessageSoundAt = now
+        playChatSound(inChatMessageSoundId, R.raw.in_chat_message)
+    }
+
+    private fun playLaughReactionSound() {
+        if (!isChatVisible || !isReactionSoundsEnabled()) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastLaughReactionPlayedAt < LAUGH_REACTION_COOLDOWN_MS) return
+        lastLaughReactionPlayedAt = now
+        playChatSound(laughReactionSoundId, R.raw.chat_laugh_reaction)
+    }
+
+    private fun playChatSound(soundId: Int, rawFallbackRes: Int) {
+        val pool = soundPool
+        if (pool != null && soundId != 0 && loadedSoundIds.contains(soundId)) {
+            pool.play(soundId, 1f, 1f, 1, 0, 1f)
+            return
+        }
+
+        runCatching {
+            MediaPlayer.create(this, rawFallbackRes)?.apply {
+                setOnCompletionListener { player -> player.release() }
+                setOnErrorListener { player, _, _ ->
+                    player.release()
+                    true
+                }
+                start()
+            }
+        }.onFailure { error ->
+            Log.w("ChatActivity", "Unable to play chat sound: ${error.message}")
+        }
+    }
+
+    private fun releaseChatSoundEffects() {
+        soundPool?.release()
+        soundPool = null
+        loadedSoundIds.clear()
+        inChatMessageSoundId = 0
+        laughReactionSoundId = 0
+    }
+
+    private fun isInChatSoundsEnabled(): Boolean {
+        return getSharedPreferences(CHAT_SOUND_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_IN_CHAT_MESSAGE_SOUNDS_ENABLED, true)
+    }
+
+    private fun isReactionSoundsEnabled(): Boolean {
+        return getSharedPreferences(CHAT_SOUND_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_REACTION_SOUNDS_ENABLED, true)
+    }
+
+    private fun showLaughReactionAnimation() {
+        val rootWidth = chatRootLayout.width.takeIf { it > 0 } ?: return
+        repeat(3) { index ->
+            val bubble = TextView(this).apply {
+                text = getString(R.string.laugh_reaction_emoji)
+                textSize = 28f
+                alpha = 0f
+                gravity = Gravity.CENTER
+            }
+            val size = dp(48)
+            val leftMargin = (rootWidth / 2) - (size / 2) + dp((index - 1) * 28)
+            val bottomMargin = dp(142 + index * 12)
+            val params = FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START).apply {
+                marginStart = leftMargin.coerceAtLeast(dp(12))
+                setMargins(marginStart, 0, 0, bottomMargin)
+            }
+            chatRootLayout.addView(bubble, params)
+            bubble.animate()
+                .alpha(1f)
+                .translationY(-dp(86 + index * 12).toFloat())
+                .setStartDelay((index * 90).toLong())
+                .setDuration(760L)
+                .withEndAction { chatRootLayout.removeView(bubble) }
+                .start()
+        }
+    }
+
     private fun parseSocketJson(data: Any): JSONObject? {
         return when (data) {
             is JSONObject -> data
@@ -1582,6 +1750,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         return runCatching {
             chatMessageGson.fromJson(json.toString(), ChatMessage::class.java)
         }.getOrNull()
+    }
+
+    private fun isIncomingMessageFromOtherUser(message: ChatMessage): Boolean {
+        val messageSenderId = message.senderId ?: message.sender?._id
+        return !messageSenderId.isNullOrBlank() && messageSenderId != senderId
     }
 
     private fun upsertRealtimeMessage(message: ChatMessage) {
@@ -2308,5 +2481,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         private const val STICKER_PREFS = "chat_stickers"
         private const val KEY_SAVED_STICKERS = "saved_sticker_uris"
         private const val MAX_SAVED_STICKERS = 36
+        private const val CHAT_LAUGH_REACTION_EVENT = "chat_laugh_reaction"
+        private const val CHAT_SOUND_PREFS = "chat_sound_settings"
+        private const val KEY_IN_CHAT_MESSAGE_SOUNDS_ENABLED = "in_chat_message_sounds_enabled"
+        private const val KEY_REACTION_SOUNDS_ENABLED = "reaction_sounds_enabled"
+        private const val IN_CHAT_MESSAGE_SOUND_COOLDOWN_MS = 450L
+        private const val LAUGH_REACTION_COOLDOWN_MS = 2500L
     }
 }

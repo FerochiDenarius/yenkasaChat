@@ -137,9 +137,29 @@ console.log("server.js: Core middlewares configured.");
 const onlineUsers = new Map();
 const pendingOfflineTimers = new Map();
 const SOCKET_OFFLINE_GRACE_MS = Number(process.env.SOCKET_OFFLINE_GRACE_MS || 600000);
+const chatLaughReactionCooldowns = new Map();
+const CHAT_LAUGH_REACTION_COOLDOWN_MS = Number(process.env.CHAT_LAUGH_REACTION_COOLDOWN_MS || 2500);
 
 function getLiveRoom(streamId) {
+  return `livestream_${streamId}`;
+}
+
+function getLegacyLiveRoom(streamId) {
   return `live:${streamId}`;
+}
+
+function emitToLiveRoom(streamId, eventName, payload) {
+  io.to(getLiveRoom(streamId)).to(getLegacyLiveRoom(streamId)).emit(eventName, payload);
+}
+
+function joinLiveRooms(socket, streamId) {
+  socket.join(getLiveRoom(streamId));
+  socket.join(getLegacyLiveRoom(streamId));
+}
+
+function leaveLiveRooms(socket, streamId) {
+  socket.leave(getLiveRoom(streamId));
+  socket.leave(getLegacyLiveRoom(streamId));
 }
 
 function getOnlineUserIds() {
@@ -306,6 +326,37 @@ io.on('connection', (socket) => {
     socket.leave(normalizedRoomId);
   });
 
+  socket.on('chat_laugh_reaction', async (payload = {}) => {
+    try {
+      const senderId = socket.data.userId?.toString();
+      const roomId = (payload.conversationId || payload.roomId)?.toString();
+      if (!senderId || !roomId || !mongoose.Types.ObjectId.isValid(roomId)) return;
+
+      const cooldownKey = `${senderId}:${roomId}`;
+      const now = Date.now();
+      const lastSentAt = chatLaughReactionCooldowns.get(cooldownKey) || 0;
+      if (now - lastSentAt < CHAT_LAUGH_REACTION_COOLDOWN_MS) return;
+      chatLaughReactionCooldowns.set(cooldownKey, now);
+
+      const room = await ChatRoom.findOne({
+        _id: roomId,
+        participants: senderId
+      }).select('_id participants').lean();
+
+      if (!room) return;
+
+      socket.to(roomId).emit('chat_laugh_reaction', {
+        senderId,
+        receiverId: payload.receiverId?.toString?.() || '',
+        conversationId: roomId,
+        roomId,
+        timestamp: now
+      });
+    } catch (err) {
+      console.error('❌ chat_laugh_reaction failed:', err.message);
+    }
+  });
+
   const updateLiveViewerCount = async (streamId, delta) => {
     if (!mongoose.Types.ObjectId.isValid(streamId)) return null;
     const stream = await LiveStream.findOneAndUpdate(
@@ -322,70 +373,104 @@ io.on('connection', (socket) => {
       stream.peakViewerCount = stream.viewerCount;
       await stream.save();
     }
-    io.to(getLiveRoom(streamId)).emit('live_viewer_count', {
+    const payload = {
       streamId,
       viewerCount: stream.viewerCount
-    });
+    };
+    emitToLiveRoom(streamId, 'livestream_viewer_count', payload);
+    emitToLiveRoom(streamId, 'live_viewer_count', payload);
     return stream;
   };
 
-  socket.on('live_join', async (payload = {}) => {
+  const handleLiveJoin = async (payload = {}) => {
     try {
       const streamId = payload.streamId?.toString();
       if (!streamId || socket.data.liveStreams.has(streamId)) return;
 
-      const stream = await updateLiveViewerCount(streamId, 1);
-      if (!stream) return;
-
-      socket.join(getLiveRoom(streamId));
+      joinLiveRooms(socket, streamId);
       socket.data.liveStreams.add(streamId);
-      socket.to(getLiveRoom(streamId)).emit('live_join', {
+      const stream = await updateLiveViewerCount(streamId, 1);
+      if (!stream) {
+        leaveLiveRooms(socket, streamId);
+        socket.data.liveStreams.delete(streamId);
+        return;
+      }
+
+      const event = {
         streamId,
         userId: socket.data.userId || payload.userId || '',
         username: payload.username || 'Viewer',
         viewerCount: stream.viewerCount
-      });
+      };
+      emitToLiveRoom(streamId, 'livestream_join', event);
+      emitToLiveRoom(streamId, 'live_join', event);
     } catch (err) {
       console.error('❌ live_join failed:', err.message);
     }
-  });
+  };
 
-  socket.on('live_leave', async (payload = {}) => {
+  socket.on('livestream_join', handleLiveJoin);
+  socket.on('live_join', handleLiveJoin);
+
+  const handleLiveLeave = async (payload = {}) => {
     try {
       const streamId = (payload.streamId || payload)?.toString();
       if (!streamId || !socket.data.liveStreams.has(streamId)) return;
+      const event = {
+        streamId,
+        userId: socket.data.userId || payload.userId || '',
+        username: payload.username || 'Viewer',
+        createdAt: new Date().toISOString()
+      };
+      emitToLiveRoom(streamId, 'livestream_leave', event);
+      emitToLiveRoom(streamId, 'live_leave', event);
       socket.data.liveStreams.delete(streamId);
-      socket.leave(getLiveRoom(streamId));
+      leaveLiveRooms(socket, streamId);
       await updateLiveViewerCount(streamId, -1);
     } catch (err) {
       console.error('❌ live_leave failed:', err.message);
     }
-  });
+  };
 
-  socket.on('live_comment', (payload = {}) => {
+  socket.on('livestream_leave', handleLiveLeave);
+  socket.on('live_leave', handleLiveLeave);
+
+  const handleLiveComment = (payload = {}) => {
     const streamId = payload.streamId?.toString();
     const message = payload.message?.toString?.().trim();
     if (!streamId || !message) return;
-    io.to(getLiveRoom(streamId)).emit('live_comment', {
+    const event = {
       streamId,
       userId: socket.data.userId || payload.userId || '',
       username: payload.username || 'Viewer',
       avatar: payload.avatar || '',
       message: message.slice(0, 240),
       createdAt: new Date().toISOString()
-    });
-  });
+    };
+    emitToLiveRoom(streamId, 'livestream_comment', event);
+    emitToLiveRoom(streamId, 'live_comment', event);
+  };
 
-  socket.on('live_reaction', (payload = {}) => {
+  socket.on('livestream_comment', handleLiveComment);
+  socket.on('live_comment', handleLiveComment);
+
+  const handleLiveReaction = (payload = {}) => {
     const streamId = payload.streamId?.toString();
     if (!streamId) return;
-    io.to(getLiveRoom(streamId)).emit('live_reaction', {
+    const event = {
       streamId,
       userId: socket.data.userId || payload.userId || '',
+      username: payload.username || 'Viewer',
       reaction: payload.reaction || '🔥',
+      type: payload.type || payload.reaction || '🔥',
       createdAt: new Date().toISOString()
-    });
-  });
+    };
+    emitToLiveRoom(streamId, 'livestream_reaction', event);
+    emitToLiveRoom(streamId, 'live_reaction', event);
+  };
+
+  socket.on('livestream_reaction', handleLiveReaction);
+  socket.on('live_reaction', handleLiveReaction);
 
   // ✅ User disconnects
   socket.on('disconnect', async (reason) => {

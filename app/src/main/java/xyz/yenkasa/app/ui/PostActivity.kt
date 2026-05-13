@@ -110,7 +110,7 @@ class PostActivity : AppCompatActivity() {
         videoPreview.setOnErrorListener { _, _, _ ->
             videoPreviewThumbnail.visibility = View.VISIBLE
             videoPreviewPlayHint.visibility = View.VISIBLE
-            Toast.makeText(this, "Unable to preview this video, but it can still be uploaded.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.video_preview_upload_still_allowed, Toast.LENGTH_SHORT).show()
             true
         }
         videoPreviewThumbnail = findViewById(R.id.videoPreviewThumbnail)
@@ -132,10 +132,10 @@ class PostActivity : AppCompatActivity() {
             spinnerCommunity.performClick()
         }
         findViewById<TextView>(R.id.textSeeMoreStyles).setOnClickListener {
-            Toast.makeText(this, "More post styles are coming soon.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.more_post_styles_coming_soon, Toast.LENGTH_SHORT).show()
         }
         findViewById<TextView>(R.id.textPostAuthorName).text =
-            TokenManager.getUsername(this)?.takeIf { it.isNotBlank() } ?: "Yenkasa user"
+            TokenManager.getUsername(this)?.takeIf { it.isNotBlank() } ?: getString(R.string.yenkasa_user)
         Glide.with(this)
             .load(TokenManager.getProfilePicUrl(this))
             .placeholder(R.drawable.ic_profile_placeholder)
@@ -147,7 +147,7 @@ class PostActivity : AppCompatActivity() {
         editTextContent.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                textPostCharacterCount?.text = "${s?.length ?: 0}/500"
+                textPostCharacterCount?.text = getString(R.string.post_character_count_dynamic, s?.length ?: 0)
                 applyTextBackgroundPreview()
             }
             override fun afterTextChanged(s: Editable?) = Unit
@@ -159,7 +159,7 @@ class PostActivity : AppCompatActivity() {
         if (!TokenManager.canPost(this)) {
             Toast.makeText(
                 this,
-                "Your account may be restricted from posting right now.",
+                R.string.account_restricted_from_posting,
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -175,26 +175,26 @@ class PostActivity : AppCompatActivity() {
             openMediaPicker()
         }
         findViewById<View>(R.id.btnAddPollPlaceholder).setOnClickListener {
-            Toast.makeText(this, "Polls are coming soon.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.polls_coming_soon, Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.btnAddEventPlaceholder).setOnClickListener {
-            Toast.makeText(this, "Events are coming soon.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.events_coming_soon, Toast.LENGTH_SHORT).show()
         }
         findViewById<TextView>(R.id.btnDrafts).setOnClickListener {
-            Toast.makeText(this, "Drafts are coming soon.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.drafts_coming_soon, Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btnSchedulePlaceholder).setOnClickListener {
-            Toast.makeText(this, "Scheduling is coming soon.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.scheduling_coming_soon, Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.communityReminderCard).setOnClickListener {
-            Toast.makeText(this, "Community rules are coming soon.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.community_rules_coming_soon, Toast.LENGTH_SHORT).show()
         }
 
         // 🔹 Post Button
         btnPost.setOnClickListener {
             val content = editTextContent.text.toString().trim()
             if (content.isEmpty() && imageUris.isEmpty() && videoUri == null && audioUri == null) {
-                Toast.makeText(this, "Add text or media before posting.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.add_text_or_media_before_posting, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             uploadPost(content)
@@ -206,7 +206,7 @@ class PostActivity : AppCompatActivity() {
         intent.type = "*/*"
         intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*", "audio/*"))
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-        startActivityForResult(Intent.createChooser(intent, "Select Media"), PICK_MEDIA_REQUEST)
+        startActivityForResult(Intent.createChooser(intent, getString(R.string.select_media)), PICK_MEDIA_REQUEST)
     }
 
     // 🔹 Handle selected media
@@ -231,7 +231,7 @@ class PostActivity : AppCompatActivity() {
                     }.take(10)
 
                     if (images.isEmpty()) {
-                        Toast.makeText(this, "Select image files only.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, R.string.select_image_files_only, Toast.LENGTH_SHORT).show()
                         return
                     }
 
@@ -257,7 +257,7 @@ class PostActivity : AppCompatActivity() {
                     Log.d("PostActivity", "🎧 Audio selected: $audioUri")
                 }
                 else -> {
-                    Toast.makeText(this, "Unsupported file type.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.unsupported_file_type, Toast.LENGTH_SHORT).show()
                     return
                 }
             }
@@ -285,7 +285,11 @@ class PostActivity : AppCompatActivity() {
                 resizePreview(imagePreview, readImageAspect(imageUris.first()) ?: (4f / 5f))
                 if (imageUris.size > 1) {
                     imagePreviewCount.visibility = View.VISIBLE
-                    imagePreviewCount.text = "${imageUris.size} images selected"
+                    imagePreviewCount.text = resources.getQuantityString(
+                        R.plurals.images_selected_count,
+                        imageUris.size,
+                        imageUris.size
+                    )
                 }
             }
             videoUri != null -> {
@@ -300,7 +304,7 @@ class PostActivity : AppCompatActivity() {
             }
             audioUri != null -> {
                 audioPreview.visibility = View.VISIBLE
-                audioPreview.text = "🎵 Audio selected: ${audioUri?.lastPathSegment}"
+                audioPreview.text = getString(R.string.audio_selected_with_name, audioUri?.lastPathSegment.orEmpty())
             }
         }
     }
@@ -381,13 +385,17 @@ class PostActivity : AppCompatActivity() {
             val isSelected = color == selectedTextBackgroundColor
             val tile = FrameLayout(this).apply {
                 background = styleTileBackground(color, isSelected, density)
-                contentDescription = if (color.isBlank()) "No text background" else "Text background $color"
+                contentDescription = if (color.isBlank()) {
+                    getString(R.string.no_text_background)
+                } else {
+                    getString(R.string.text_background_color, color)
+                }
                 isClickable = true
                 isFocusable = true
             }
 
             val label = TextView(this).apply {
-                text = "Aa"
+                text = getString(R.string.text_style_aa)
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -489,7 +497,7 @@ class PostActivity : AppCompatActivity() {
     private fun uploadPost(content: String) {
         val token = TokenManager.getToken(this)
         if (token == null) {
-            Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in_again, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -533,7 +541,7 @@ class PostActivity : AppCompatActivity() {
                 mediaParts.add(MultipartBody.Part.createFormData(fieldName, file.name, requestFile))
             } catch (e: Exception) {
                 Log.e("PostActivity", "Error preparing media", e)
-                Toast.makeText(this, "Error preparing file for upload.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.error_preparing_file_upload, Toast.LENGTH_SHORT).show()
                 btnPost.isEnabled = true
                 progressBar.visibility = View.GONE
                 return
@@ -568,9 +576,9 @@ class PostActivity : AppCompatActivity() {
                     val requiresReview = responseBody?.postingAccess?.requiresReview ?: true
                     val toastMessage = responseBody?.message
                         ?: if (requiresReview) {
-                            "Post submitted for approval."
+                            getString(R.string.post_submitted_for_approval)
                         } else {
-                            "Post published successfully."
+                            getString(R.string.post_published_successfully)
                         }
 
                     Toast.makeText(
@@ -590,19 +598,19 @@ class PostActivity : AppCompatActivity() {
 
                     val message = when (response.code()) {
                         429 -> backendMessage.ifBlank {
-                            "You have reached your limit of 5 posts within 48 hours."
+                            getString(R.string.post_limit_reached)
                         }
                         403 -> backendMessage.ifBlank {
-                            "Your account is currently restricted from posting."
+                            getString(R.string.account_currently_restricted_posting)
                         }
                         404 -> backendMessage.ifBlank {
-                            "Selected community was not found."
+                            getString(R.string.selected_community_not_found)
                         }
                         400 -> backendMessage.ifBlank {
-                            "Please complete the post details correctly."
+                            getString(R.string.complete_post_details_correctly)
                         }
                         else -> backendMessage.ifBlank {
-                            "Failed to create post (${response.code()})"
+                            getString(R.string.failed_to_create_post_code, response.code())
                         }
                     }
 
@@ -614,7 +622,11 @@ class PostActivity : AppCompatActivity() {
                 btnPost.isEnabled = true
                 progressBar.visibility = View.GONE
                 Log.e("PostActivity", "Upload failed", t)
-                Toast.makeText(this@PostActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@PostActivity,
+                    getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }
@@ -695,7 +707,7 @@ class PostActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     if (!response.isSuccessful || response.body() == null) {
                         Log.e("COMM_FETCH", "Joined communities fetch failed: ${response.code()}")
-                        Toast.makeText(this@PostActivity, "Failed to load communities", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PostActivity, R.string.failed_to_load_communities, Toast.LENGTH_SHORT).show()
                         return
                     }
 
@@ -713,7 +725,7 @@ class PostActivity : AppCompatActivity() {
                     finalList.addAll(joined)
 
                     if (finalList.isEmpty()) {
-                        Toast.makeText(this@PostActivity, "You have no communities to post in", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@PostActivity, R.string.no_communities_to_post_in, Toast.LENGTH_LONG).show()
                         btnPost.isEnabled = false
                         return
                     }
@@ -723,7 +735,7 @@ class PostActivity : AppCompatActivity() {
                         this@PostActivity,
                         R.layout.item_create_post_spinner,
                         R.id.textCreatePostSpinner,
-                        finalList.map { it.displayName ?: it.name ?: "Unnamed community" }
+                        finalList.map { it.displayName ?: it.name ?: getString(R.string.unnamed_community) }
                     )
                     adapter.setDropDownViewResource(R.layout.item_create_post_spinner_dropdown)
                     spinnerCommunity.adapter = adapter
@@ -746,26 +758,25 @@ class PostActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
                     Log.e("COMM_FETCH", "Joined communities fetch failed: ${t.message}", t)
-                    Toast.makeText(this@PostActivity, "Error fetching communities", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@PostActivity, R.string.error_fetching_communities, Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
     private fun buildCommunityMeta(community: Community): String {
-        val privacy = if (community.isPrivate) "Private" else "Public"
+        val privacy = if (community.isPrivate) getString(R.string.private_privacy) else getString(R.string.public_privacy)
         val memberText = when (community.memberCount) {
-            0 -> "New community"
-            1 -> "1 member"
-            else -> "${community.memberCount} members"
+            0 -> getString(R.string.new_community)
+            else -> resources.getQuantityString(R.plurals.members_count, community.memberCount, community.memberCount)
         }
-        return "$memberText - $privacy"
+        return getString(R.string.community_meta_format, memberText, privacy)
     }
 
     private fun updateSelectedCommunityCard(community: Community) {
-        val name = community.displayName ?: community.name ?: "Unnamed community"
+        val name = community.displayName ?: community.name ?: getString(R.string.unnamed_community)
         selectedCommunityNameText?.text = name
         selectedCommunityCardMeta?.text = buildCommunityMeta(community)
-        privacyChip?.text = if (community.isPrivate) "Private" else "Public"
+        privacyChip?.text = if (community.isPrivate) getString(R.string.private_privacy) else getString(R.string.public_privacy)
 
         val imageUrl = community.icon?.takeIf { it.isNotBlank() }
             ?: community.coverImage?.takeIf { it.isNotBlank() }

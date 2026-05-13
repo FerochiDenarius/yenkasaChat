@@ -89,15 +89,19 @@ object CallNotificationHandler {
 
             val builder = NotificationCompat.Builder(context, CALL_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.sym_action_call)
-                .setContentTitle("Incoming ${if (isVideo) "Video" else "Audio"} Call")
-                .setContentText("Call from $callerName")
+                .setContentTitle(
+                    context.getString(
+                        if (isVideo) R.string.incoming_video_call else R.string.incoming_audio_call
+                    )
+                )
+                .setContentText(context.getString(R.string.call_from_user, callerName))
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setOngoing(true)
                 .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
                 .setAutoCancel(true)
-                .addAction(R.drawable.ic_call, "Accept", acceptPendingIntent)
-                .addAction(R.drawable.ic_call_end, "Reject", rejectPendingIntent)
+                .addAction(R.drawable.ic_call, context.getString(R.string.accept), acceptPendingIntent)
+                .addAction(R.drawable.ic_call_end, context.getString(R.string.reject), rejectPendingIntent)
                 .setFullScreenIntent(acceptPendingIntent, true) // ⚡ show even on lock screen
 
             if (ringtoneUri != null) builder.setSound(ringtoneUri)
@@ -200,10 +204,10 @@ object CallNotificationHandler {
 
             val channel = NotificationChannel(
                 CALL_CHANNEL_ID,
-                "Incoming Calls",
+                context.getString(R.string.incoming_calls),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for incoming video/audio calls"
+                description = context.getString(R.string.incoming_calls_channel_description)
                 enableVibration(true)
                 lightColor = Color.parseColor("#FFD54F")
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC

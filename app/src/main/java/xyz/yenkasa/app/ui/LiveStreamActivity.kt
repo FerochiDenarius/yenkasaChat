@@ -1,0 +1,542 @@
+package xyz.yenkasa.app.ui
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.SurfaceView
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import io.agora.rtc2.ChannelMediaOptions
+import io.agora.rtc2.Constants
+import io.agora.rtc2.IRtcEngineEventHandler
+import io.agora.rtc2.RtcEngine
+import io.agora.rtc2.video.VideoCanvas
+import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.AgoraLiveToken
+import xyz.yenkasa.app.model.LiveGiftRequest
+import xyz.yenkasa.app.model.LiveGiftResponse
+import xyz.yenkasa.app.model.LiveStream
+import xyz.yenkasa.app.model.LiveStreamResponse
+import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.network.SocketManager
+import xyz.yenkasa.app.util.TokenManager
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+
+class LiveStreamActivity : AppCompatActivity() {
+
+    private lateinit var videoContainer: FrameLayout
+    private lateinit var reactionsLayer: FrameLayout
+    private lateinit var titleText: TextView
+    private lateinit var viewerText: TextView
+    private lateinit var timerText: TextView
+    private lateinit var commentsContainer: LinearLayout
+    private lateinit var commentInput: EditText
+    private lateinit var sendButton: Button
+    private lateinit var hostControls: View
+    private lateinit var flipButton: ImageButton
+    private lateinit var muteButton: ImageButton
+    private lateinit var endButton: ImageButton
+    private lateinit var reactionButton: ImageButton
+    private lateinit var giftButton: ImageButton
+
+    private var rtcEngine: RtcEngine? = null
+    private var localView: SurfaceView? = null
+    private var remoteView: SurfaceView? = null
+    private var streamId: String = ""
+    private var channelName: String = ""
+    private var agoraToken: String = ""
+    private var agoraAppId: String = ""
+    private var agoraUid: Int = 0
+    private var isHost: Boolean = false
+    private var muted = false
+    private var joinedSocketRoom = false
+    private var scheduledEndAtMillis: Long = 0L
+    private var lastReactionAt = 0L
+    private val timerHandler = Handler(Looper.getMainLooper())
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            updateTimer()
+            if (scheduledEndAtMillis > 0L) timerHandler.postDelayed(this, 1_000L)
+        }
+    }
+
+    private val rtcHandler = object : IRtcEngineEventHandler() {
+        override fun onUserJoined(uid: Int, elapsed: Int) {
+            runOnUiThread { setupRemoteVideo(uid) }
+        }
+
+        override fun onUserOffline(uid: Int, reason: Int) {
+            runOnUiThread {
+                remoteView?.let { videoContainer.removeView(it) }
+                remoteView = null
+                addComment("Host left the live")
+            }
+        }
+
+        override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
+            runOnUiThread { addComment("You joined the live") }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_live_stream)
+
+        readExtras()
+        bindViews()
+        applyInsets()
+        bindActions()
+        setupSocket()
+        initializeAgora()
+    }
+
+    private fun readExtras() {
+        streamId = intent.getStringExtra(EXTRA_STREAM_ID).orEmpty()
+        channelName = intent.getStringExtra(EXTRA_CHANNEL).orEmpty()
+        agoraToken = intent.getStringExtra(EXTRA_TOKEN).orEmpty()
+        agoraAppId = intent.getStringExtra(EXTRA_APP_ID).orEmpty()
+        agoraUid = intent.getIntExtra(EXTRA_UID, 0)
+        isHost = intent.getBooleanExtra(EXTRA_IS_HOST, false)
+    }
+
+    private fun bindViews() {
+        videoContainer = findViewById(R.id.liveVideoContainer)
+        reactionsLayer = findViewById(R.id.liveReactionsLayer)
+        titleText = findViewById(R.id.textLiveTitle)
+        viewerText = findViewById(R.id.textLiveViewers)
+        timerText = findViewById(R.id.textLiveTimer)
+        commentsContainer = findViewById(R.id.liveCommentsContainer)
+        commentInput = findViewById(R.id.editLiveComment)
+        sendButton = findViewById(R.id.buttonSendLiveComment)
+        hostControls = findViewById(R.id.liveHostControls)
+        flipButton = findViewById(R.id.buttonFlipCamera)
+        muteButton = findViewById(R.id.buttonMuteLive)
+        endButton = findViewById(R.id.buttonEndLive)
+        reactionButton = findViewById(R.id.buttonLiveReaction)
+        giftButton = findViewById(R.id.buttonLiveGift)
+
+        titleText.text = "${intent.getStringExtra(EXTRA_HOST).orEmpty()} • ${intent.getStringExtra(EXTRA_TITLE).orEmpty()}"
+        hostControls.visibility = if (isHost) View.VISIBLE else View.GONE
+        scheduledEndAtMillis = parseIsoMillis(intent.getStringExtra(EXTRA_SCHEDULED_END_AT))
+        timerText.visibility = if (isHost && scheduledEndAtMillis > 0L) View.VISIBLE else View.GONE
+        if (timerText.visibility == View.VISIBLE) {
+            timerHandler.post(timerRunnable)
+        }
+    }
+
+    private fun applyInsets() {
+        val topBar = findViewById<View>(R.id.liveTopBar)
+        val composer = findViewById<View>(R.id.liveCommentComposer)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.liveRoot)) { _, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            topBar.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
+                topMargin = bars.top + dp(14)
+                marginStart = bars.left + dp(16)
+                marginEnd = bars.right + dp(16)
+            }
+            composer.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
+                bottomMargin = bars.bottom + dp(28)
+                marginStart = bars.left + dp(16)
+                marginEnd = bars.right + dp(16)
+            }
+            hostControls.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
+                bottomMargin = bars.bottom + dp(104)
+                marginEnd = bars.right + dp(16)
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(findViewById(R.id.liveRoot))
+    }
+
+    private fun bindActions() {
+        sendButton.setOnClickListener { sendComment() }
+        flipButton.setOnClickListener { rtcEngine?.switchCamera() }
+        muteButton.setOnClickListener {
+            muted = !muted
+            rtcEngine?.muteLocalAudioStream(muted)
+            muteButton.setImageResource(if (muted) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
+        }
+        endButton.setOnClickListener { endLiveAndFinish() }
+        reactionButton.setOnClickListener { sendReaction("❤️") }
+        reactionButton.setOnLongClickListener {
+            sendReaction(listOf("❤️", "🔥", "😂").random())
+            true
+        }
+        giftButton.setOnClickListener { showGiftSheet() }
+    }
+
+    private fun setupSocket() {
+        val userId = TokenManager.getUserId(this)
+        SocketManager.ensureConnected(userId)
+
+        SocketManager.on("live_comment") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            val username = json.optString("username", "Viewer")
+            val message = json.optString("message")
+            runOnUiThread { addComment("$username: $message") }
+        }
+
+        SocketManager.on("live_join") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            val username = json.optString("username", "Viewer")
+            runOnUiThread { addComment("$username joined the live") }
+        }
+
+        SocketManager.on("live_viewer_count") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            runOnUiThread { updateViewerCount(json.optInt("viewerCount", 0)) }
+        }
+
+        SocketManager.on("live_reaction") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            runOnUiThread { animateReaction(json.optString("reaction", "❤️")) }
+        }
+
+        SocketManager.on("live_gift") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            val username = json.optString("senderUsername", "Viewer")
+            val emoji = json.optString("emoji", "❤️")
+            val amount = json.optInt("amount", 0)
+            runOnUiThread {
+                addComment("$username sent $emoji $amount YKC")
+                animateReaction(emoji)
+            }
+        }
+
+        SocketManager.on("live_ended") { data ->
+            val json = data.asJson() ?: return@on
+            if (json.optString("streamId") != streamId) return@on
+            runOnUiThread {
+                Toast.makeText(this, "Livestream ended.", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
+
+        SocketManager.emit(
+            "live_join",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", userId.orEmpty())
+                .put("username", TokenManager.getUsername(this) ?: "Viewer")
+        )
+        joinedSocketRoom = true
+    }
+
+    private fun initializeAgora() {
+        if (agoraAppId.isBlank() || channelName.isBlank() || agoraToken.isBlank()) {
+            Toast.makeText(this, "Livestream token is missing.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        rtcEngine = RtcEngine.create(applicationContext, agoraAppId, rtcHandler).apply {
+            setChannelProfile(Constants.CHANNEL_PROFILE_LIVE_BROADCASTING)
+            setClientRole(if (isHost) Constants.CLIENT_ROLE_BROADCASTER else Constants.CLIENT_ROLE_AUDIENCE)
+            enableVideo()
+            setVideoEncoderConfiguration(
+                io.agora.rtc2.video.VideoEncoderConfiguration(
+                    io.agora.rtc2.video.VideoEncoderConfiguration.VD_1280x720,
+                    io.agora.rtc2.video.VideoEncoderConfiguration.FRAME_RATE.FRAME_RATE_FPS_24,
+                    io.agora.rtc2.video.VideoEncoderConfiguration.STANDARD_BITRATE,
+                    io.agora.rtc2.video.VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_ADAPTIVE
+                )
+            )
+        }
+
+        if (isHost) setupLocalVideo()
+
+        val options = ChannelMediaOptions().apply {
+            channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
+            clientRoleType = if (isHost) Constants.CLIENT_ROLE_BROADCASTER else Constants.CLIENT_ROLE_AUDIENCE
+            publishCameraTrack = isHost
+            publishMicrophoneTrack = isHost
+            autoSubscribeAudio = true
+            autoSubscribeVideo = true
+        }
+        rtcEngine?.joinChannel(agoraToken, channelName, agoraUid, options)
+    }
+
+    private fun setupLocalVideo() {
+        localView = SurfaceView(this)
+        videoContainer.addView(localView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        rtcEngine?.setupLocalVideo(VideoCanvas(localView, VideoCanvas.RENDER_MODE_HIDDEN, agoraUid))
+        rtcEngine?.startPreview()
+    }
+
+    private fun setupRemoteVideo(uid: Int) {
+        if (remoteView != null) return
+        remoteView = SurfaceView(this)
+        videoContainer.addView(remoteView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        rtcEngine?.setupRemoteVideo(VideoCanvas(remoteView, VideoCanvas.RENDER_MODE_HIDDEN, uid))
+    }
+
+    private fun sendComment() {
+        val message = commentInput.text.toString().trim()
+        if (message.isBlank()) return
+        commentInput.text?.clear()
+        SocketManager.emit(
+            "live_comment",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", TokenManager.getUserId(this).orEmpty())
+                .put("username", TokenManager.getUsername(this) ?: "Viewer")
+                .put("avatar", TokenManager.getProfilePicUrl(this).orEmpty())
+                .put("message", message)
+        )
+    }
+
+    private fun sendReaction(reaction: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastReactionAt < 700L) return
+        lastReactionAt = now
+        SocketManager.emit(
+            "live_reaction",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", TokenManager.getUserId(this).orEmpty())
+                .put("reaction", reaction)
+        )
+        animateReaction(reaction)
+    }
+
+    private fun showGiftSheet() {
+        val gifts = listOf(
+            Triple("love", "❤️ Love", 5),
+            Triple("fire", "🔥 Fire", 10),
+            Triple("crown", "👑 Crown", 50),
+            Triple("rocket", "🚀 Rocket", 100)
+        )
+        val dialog = BottomSheetDialog(this)
+        val sheet = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(18))
+            setBackgroundColor(Color.rgb(18, 18, 18))
+        }
+        sheet.addView(TextView(this).apply {
+            text = "Send YKC Gift"
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        sheet.addView(TextView(this).apply {
+            text = "Balance: ${TokenManager.getCoinsPrecise(this@LiveStreamActivity)} YKC"
+            setTextColor(Color.LTGRAY)
+            textSize = 13f
+            setPadding(0, dp(4), 0, dp(10))
+        })
+        gifts.forEach { (key, label, amount) ->
+            sheet.addView(Button(this).apply {
+                text = "$label • $amount YKC"
+                setTextColor(Color.WHITE)
+                setBackgroundColor(Color.rgb(0, 132, 61))
+                setOnClickListener {
+                    dialog.dismiss()
+                    sendGift(key)
+                }
+            })
+        }
+        dialog.setContentView(sheet)
+        dialog.show()
+    }
+
+    private fun sendGift(giftKey: String) {
+        ApiClient.apiService.sendLiveGift(LiveGiftRequest(streamId, giftKey))
+            .enqueue(object : Callback<LiveGiftResponse> {
+                override fun onResponse(call: Call<LiveGiftResponse>, response: Response<LiveGiftResponse>) {
+                    val body = response.body()
+                    if (!response.isSuccessful || body?.success != true) {
+                        Toast.makeText(this@LiveStreamActivity, body?.message ?: "Gift failed.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<LiveGiftResponse>, t: Throwable) {
+                    Toast.makeText(this@LiveStreamActivity, "Network error sending gift.", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun addComment(text: String) {
+        val comment = TextView(this).apply {
+            this.text = text
+            setTextColor(android.graphics.Color.WHITE)
+            textSize = 13f
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+            background = ContextCompat.getDrawable(this@LiveStreamActivity, R.drawable.bg_live_comment)
+        }
+        commentsContainer.addView(comment)
+        while (commentsContainer.childCount > 12) {
+            commentsContainer.removeViewAt(0)
+        }
+    }
+
+    private fun updateViewerCount(count: Int) {
+        viewerText.text = "${count.coerceAtLeast(0)} watching"
+    }
+
+    private fun animateReaction(reaction: String) {
+        val view = TextView(this).apply {
+            text = reaction
+            textSize = 30f
+            alpha = 0f
+        }
+        val startX = (reactionsLayer.width - dp(86)).coerceAtLeast(dp(24)).toFloat()
+        val startY = (reactionsLayer.height - dp(170)).coerceAtLeast(dp(120)).toFloat()
+        reactionsLayer.addView(view, FrameLayout.LayoutParams(dp(54), dp(54)))
+        view.translationX = startX
+        view.translationY = startY
+        view.animate()
+            .alpha(1f)
+            .translationY(startY - dp(180))
+            .translationX(startX - dp((0..38).random()))
+            .setDuration(1300L)
+            .withEndAction { reactionsLayer.removeView(view) }
+            .start()
+    }
+
+    private fun updateTimer() {
+        val remaining = scheduledEndAtMillis - System.currentTimeMillis()
+        if (remaining <= 0L) {
+            timerText.text = "Ending..."
+            timerText.setTextColor(Color.RED)
+            return
+        }
+        val minutes = remaining / 60_000L
+        val seconds = (remaining / 1_000L) % 60L
+        timerText.text = if (minutes > 0) "${minutes}m remaining" else "${seconds}s remaining"
+        timerText.setTextColor(if (remaining <= 120_000L) Color.RED else Color.WHITE)
+    }
+
+    private fun endLiveAndFinish() {
+        if (!isHost) {
+            finish()
+            return
+        }
+        ApiClient.apiService.endLiveStream(streamId).enqueue(object : Callback<LiveStreamResponse> {
+            override fun onResponse(call: Call<LiveStreamResponse>, response: Response<LiveStreamResponse>) {
+                finish()
+            }
+
+            override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
+                Toast.makeText(this@LiveStreamActivity, "Could not end live cleanly.", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        })
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (isHost) rtcEngine?.muteLocalVideoStream(true)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isHost) rtcEngine?.muteLocalVideoStream(false)
+    }
+
+    override fun onDestroy() {
+        leaveLive()
+        super.onDestroy()
+    }
+
+    private fun leaveLive() {
+        if (joinedSocketRoom) {
+            SocketManager.emit("live_leave", JSONObject().put("streamId", streamId))
+            joinedSocketRoom = false
+        }
+        SocketManager.off("live_comment")
+        SocketManager.off("live_join")
+        SocketManager.off("live_viewer_count")
+        SocketManager.off("live_ended")
+        SocketManager.off("live_reaction")
+        SocketManager.off("live_gift")
+        timerHandler.removeCallbacks(timerRunnable)
+
+        rtcEngine?.leaveChannel()
+        rtcEngine?.stopPreview()
+        rtcEngine = null
+        RtcEngine.destroy()
+    }
+
+    override fun onBackPressed() {
+        if (isHost) endLiveAndFinish() else super.onBackPressed()
+    }
+
+    private fun Any.asJson(): JSONObject? {
+        return when (this) {
+            is JSONObject -> this
+            else -> runCatching { JSONObject(toString()) }.getOrNull()
+        }
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun parseIsoMillis(value: String?): Long {
+        if (value.isNullOrBlank()) return 0L
+        return runCatching {
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }.parse(value)?.time ?: 0L
+        }.getOrDefault(0L)
+    }
+
+    companion object {
+        private const val EXTRA_STREAM_ID = "stream_id"
+        private const val EXTRA_TITLE = "title"
+        private const val EXTRA_HOST = "host"
+        private const val EXTRA_CHANNEL = "channel"
+        private const val EXTRA_TOKEN = "token"
+        private const val EXTRA_APP_ID = "app_id"
+        private const val EXTRA_UID = "uid"
+        private const val EXTRA_IS_HOST = "is_host"
+        private const val EXTRA_SCHEDULED_END_AT = "scheduled_end_at"
+
+        fun intentForHost(context: Context, stream: LiveStream, agora: AgoraLiveToken): Intent {
+            return baseIntent(context, stream, agora, true)
+        }
+
+        fun intentForAudience(context: Context, stream: LiveStream, agora: AgoraLiveToken): Intent {
+            return baseIntent(context, stream, agora, false)
+        }
+
+        private fun baseIntent(context: Context, stream: LiveStream, agora: AgoraLiveToken, isHost: Boolean): Intent {
+            return Intent(context, LiveStreamActivity::class.java)
+                .putExtra(EXTRA_STREAM_ID, stream.id)
+                .putExtra(EXTRA_TITLE, stream.title)
+                .putExtra(EXTRA_HOST, stream.hostUsername)
+                .putExtra(EXTRA_CHANNEL, stream.agoraChannel)
+                .putExtra(EXTRA_TOKEN, agora.token)
+                .putExtra(EXTRA_APP_ID, agora.appId)
+                .putExtra(EXTRA_UID, agora.uid)
+                .putExtra(EXTRA_IS_HOST, isHost)
+                .putExtra(EXTRA_SCHEDULED_END_AT, stream.scheduledEndAt)
+        }
+    }
+}

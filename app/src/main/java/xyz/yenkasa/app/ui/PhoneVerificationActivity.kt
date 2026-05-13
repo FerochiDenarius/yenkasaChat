@@ -40,8 +40,8 @@ class PhoneVerificationActivity : AppCompatActivity() {
             if (phone.isNotBlank() && phone.startsWith("+")) {
                 requestUserPhoneVerification(phone)
             } else {
-                phoneInputEditText.error = "Please enter a valid phone number (+233...)"
-                Toast.makeText(this, "Enter phone number in E.164 format (+233...)", Toast.LENGTH_SHORT).show()
+                phoneInputEditText.error = getString(R.string.error_valid_phone_e164)
+                Toast.makeText(this, getString(R.string.enter_phone_e164), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -51,7 +51,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
             val code = codeInputEditText.text.toString().trim()
 
             if (phone.isEmpty() || code.isEmpty()) {
-                Toast.makeText(this, "Enter phone and verification code.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.enter_phone_and_code), Toast.LENGTH_SHORT).show()
             } else {
                 confirmPhoneVerification(phone, code)
             }
@@ -60,7 +60,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
 
     private fun requestUserPhoneVerification(phone: String) {
         requestPhoneCodeButton.isEnabled = false
-        statusResultTextView.text = "Requesting SMS code..."
+        statusResultTextView.text = getString(R.string.requesting_sms_code)
 
         val phonePayload = PhoneRequest(phone = phone)
 
@@ -70,15 +70,16 @@ class PhoneVerificationActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     val body = response.body()
-                    val message = body?.message ?: "Verification code sent. Check your phone."
-                    statusResultTextView.text = "✅ $message"
+                    val message = body?.message ?: getString(R.string.verification_code_sent)
+                    statusResultTextView.text = getString(R.string.status_success, message)
                     Toast.makeText(this@PhoneVerificationActivity, message, Toast.LENGTH_LONG).show()
                 } else {
                     handleErrorResponse(response)
                 }
             } catch (e: Exception) {
-                statusResultTextView.text = "❌ Network error: ${e.message}"
-                Toast.makeText(this@PhoneVerificationActivity, "Network error: ${e.message}", Toast.LENGTH_LONG).show()
+                val message = getString(R.string.network_error_with_message, e.message ?: "")
+                statusResultTextView.text = getString(R.string.status_error, message)
+                Toast.makeText(this@PhoneVerificationActivity, message, Toast.LENGTH_LONG).show()
                 Log.e("PhoneVerification", "Exception in requestUserPhoneVerification: ", e)
             } finally {
                 requestPhoneCodeButton.isEnabled = true
@@ -88,7 +89,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
 
     private fun confirmPhoneVerification(phone: String, code: String) {
         confirmCodeButton.isEnabled = false
-        statusResultTextView.text = "Confirming SMS code..."
+        statusResultTextView.text = getString(R.string.confirming_sms_code)
 
         val payload = ConfirmPhoneRequest(phone = phone, code = code)
 
@@ -97,14 +98,17 @@ class PhoneVerificationActivity : AppCompatActivity() {
                 val response = ApiClient.apiService.confirmPhoneVerification(payload)
                 if (response.isSuccessful) {
                     val body = response.body()
-                    val message = body?.message ?: "Phone verified."
-                    statusResultTextView.text = "✅ $message"
+                    val message = body?.message ?: getString(R.string.phone_verified)
+                    statusResultTextView.text = getString(R.string.status_success, message)
                     Toast.makeText(this@PhoneVerificationActivity, message, Toast.LENGTH_LONG).show()
                 } else {
                     handleErrorResponse(response)
                 }
             } catch (e: Exception) {
-                statusResultTextView.text = "❌ Network error: ${e.message}"
+                statusResultTextView.text = getString(
+                    R.string.status_error,
+                    getString(R.string.network_error_with_message, e.message ?: "")
+                )
                 Log.e("PhoneVerification", "Exception in confirmPhoneVerification: ", e)
             } finally {
                 confirmCodeButton.isEnabled = true
@@ -120,7 +124,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
             null
         }
 
-        var errorMessage = "Server error (code $code)"
+        var errorMessage = getString(R.string.server_error_code, code)
         if (!raw.isNullOrBlank()) {
             try {
                 if (raw.trim().startsWith("{")) {
@@ -134,7 +138,7 @@ class PhoneVerificationActivity : AppCompatActivity() {
             }
         }
 
-        statusResultTextView.text = "❌ $errorMessage"
+        statusResultTextView.text = getString(R.string.status_error, errorMessage)
         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
     }
 }

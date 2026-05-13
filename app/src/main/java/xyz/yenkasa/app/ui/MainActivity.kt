@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainActivity", "👤 UserId: $retrievedUserId")
 
         if (retrievedToken.isNullOrBlank() || retrievedUserId.isNullOrBlank()) {
-            Toast.makeText(this, "Please log in again.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.please_log_in_again), Toast.LENGTH_LONG).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
@@ -244,7 +244,7 @@ class MainActivity : AppCompatActivity() {
                     setupFab()
                     Toast.makeText(
                         this@MainActivity,
-                        "Failed to load user profile",
+                        getString(R.string.failed_to_load_user_profile),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -254,7 +254,7 @@ class MainActivity : AppCompatActivity() {
                 setupFab()
                 Toast.makeText(
                     this@MainActivity,
-                    "Error loading profile: ${t.message}",
+                    getString(R.string.error_loading_profile, t.message ?: ""),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -295,7 +295,7 @@ class MainActivity : AppCompatActivity() {
             btnCreateAd.isEnabled = false
             btnCreateAd.alpha = 0.35f
             btnCreateAd.setOnClickListener {
-                Toast.makeText(this, "Please wait...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.please_wait), Toast.LENGTH_SHORT).show()
             }
             return
         }
@@ -312,7 +312,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Only verified users and approved reviewer roles can create sponsored ads.",
+                    getString(R.string.create_ads_requires_verified),
                     Toast.LENGTH_LONG
                 ).show()
             }

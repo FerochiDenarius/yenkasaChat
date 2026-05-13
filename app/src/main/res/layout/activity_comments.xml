@@ -23,13 +23,13 @@
             android:layout_height="32dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_back_arrow"
-            android:contentDescription="Back" />
+            android:contentDescription="@string/back" />
 
         <TextView
             android:id="@+id/textCommentsTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Comments"
+            android:text="@string/comments_title"
             android:textSize="18sp"
             android:textStyle="bold"
             android:layout_marginStart="8dp"
@@ -72,7 +72,7 @@
             android:layout_height="24dp"
             android:background="@android:color/transparent"
             android:src="@drawable/ic_close"
-            android:contentDescription="Cancel reply" />
+            android:contentDescription="@string/cancel_reply" />
     </LinearLayout>
 
     <View
@@ -94,7 +94,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Write a comment..."
+            android:hint="@string/write_comment_hint"
             android:background="@drawable/bg_input_rounded"
             android:padding="10dp"
             android:textColor="@color/black"

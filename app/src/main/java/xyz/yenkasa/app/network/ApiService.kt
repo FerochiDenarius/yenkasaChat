@@ -210,6 +210,31 @@ interface ApiService {
     @DELETE("groups/{groupId}")
     fun deleteGroup(@Path("groupId") groupId: String): Call<GroupResponse>
 
+    // ==================== YENKASA LIVE STREAMS ====================
+
+    @POST("livestream/create")
+    fun createLiveStream(@Body request: CreateLiveStreamRequest): Call<LiveStreamResponse>
+
+    @GET("livestream/active")
+    fun getActiveLiveStreams(
+        @Query("limit") limit: Int = 30
+    ): Call<LiveStreamsResponse>
+
+    @POST("livestream/join/{streamId}")
+    fun joinLiveStream(
+        @Path("streamId") streamId: String,
+        @Body request: JoinLiveStreamRequest = JoinLiveStreamRequest()
+    ): Call<LiveStreamResponse>
+
+    @POST("livestream/end/{streamId}")
+    fun endLiveStream(@Path("streamId") streamId: String): Call<LiveStreamResponse>
+
+    @POST("livestream/leave/{streamId}")
+    fun leaveLiveStream(@Path("streamId") streamId: String): Call<GenericSuccessResponse>
+
+    @POST("livestream/gift")
+    fun sendLiveGift(@Body request: LiveGiftRequest): Call<LiveGiftResponse>
+
 
     // ==================== NOTIFICATIONS ====================
 

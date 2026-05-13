@@ -121,7 +121,7 @@ class FeedChromeController(
                     communityStoryRecyclerView.smoothScrollToPosition(0)
                     Toast.makeText(
                         fragment.requireContext(),
-                        "Explore profiles and communities to follow.",
+                        R.string.explore_profiles_and_communities_to_follow,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -285,7 +285,7 @@ class FeedChromeController(
         sparklesView.animate().cancel()
         dropViews.forEach { dropView -> dropView.animate().cancel() }
 
-        deltaView.text = "+${formatYkc(delta)} YKC"
+        deltaView.text = fragment.getString(R.string.ykc_reward_gain, formatYkc(delta))
         deltaView.visibility = View.VISIBLE
         deltaView.alpha = 1f
         deltaView.translationY = 12f

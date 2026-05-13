@@ -113,10 +113,10 @@ class FeedPostActionsController(
             Intent.createChooser(
                 Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, "Check out this post")
+                    putExtra(Intent.EXTRA_SUBJECT, fragment.getString(R.string.share_post_subject))
                     putExtra(Intent.EXTRA_TEXT, shareText)
                 },
-                "Share via"
+                fragment.getString(R.string.share_via)
             )
         )
     }
@@ -167,10 +167,10 @@ class FeedPostActionsController(
 
     fun confirmDeletePost(post: Post) {
         AlertDialog.Builder(fragment.requireContext())
-            .setTitle("Delete post")
-            .setMessage("Are you sure you want to delete this post?")
-            .setPositiveButton("Delete") { _, _ -> deletePost(post) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(R.string.delete_post)
+            .setMessage(R.string.delete_post_confirmation)
+            .setPositiveButton(R.string.delete) { _, _ -> deletePost(post) }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -182,14 +182,14 @@ class FeedPostActionsController(
                     response: Response<MediaResponse>
                 ) {
                     if (!response.isSuccessful || response.body() == null) {
-                        Toast.makeText(fragment.requireContext(), "Failed to get media", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(fragment.requireContext(), R.string.failed_to_get_media, Toast.LENGTH_SHORT).show()
                         return
                     }
 
                     val media = response.body()?.media
                     val url = media?.firstImageUrl() ?: media?.videoUrl ?: media?.audioUrl
                     if (url.isNullOrEmpty()) {
-                        Toast.makeText(fragment.requireContext(), "No media found", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(fragment.requireContext(), R.string.no_media_found, Toast.LENGTH_SHORT).show()
                         return
                     }
 
@@ -199,7 +199,7 @@ class FeedPostActionsController(
                 }
 
                 override fun onFailure(call: Call<MediaResponse>, t: Throwable) {
-                    Toast.makeText(fragment.requireContext(), "Download failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(fragment.requireContext(), R.string.download_failed, Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -215,14 +215,14 @@ class FeedPostActionsController(
                         postsProvider().removeAll { it._id == post._id }
                         onPostsChanged()
                         onCacheChanged()
-                        Toast.makeText(fragment.requireContext(), "Post deleted", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(fragment.requireContext(), R.string.post_deleted, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(fragment.requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(fragment.requireContext(), R.string.delete_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                    Toast.makeText(fragment.requireContext(), "Network error", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(fragment.requireContext(), R.string.network_error, Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -237,11 +237,11 @@ class FeedPostActionsController(
                     postsProvider().removeAll { it._id == post._id }
                     onPostsChanged()
                     onCacheChanged()
-                    Toast.makeText(fragment.requireContext(), "Post hidden", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(fragment.requireContext(), R.string.post_hidden, Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                    Toast.makeText(fragment.requireContext(), "Failed to hide post", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(fragment.requireContext(), R.string.failed_to_hide_post, Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -258,7 +258,11 @@ class FeedPostActionsController(
             ) {
                 Toast.makeText(
                     fragment.requireContext(),
-                    if (response.isSuccessful) "Post reported successfully" else "Failed to report post",
+                    if (response.isSuccessful) {
+                        fragment.getString(R.string.post_reported_successfully)
+                    } else {
+                        fragment.getString(R.string.failed_to_report_post)
+                    },
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -266,7 +270,7 @@ class FeedPostActionsController(
             override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
                 Toast.makeText(
                     fragment.requireContext(),
-                    "Report failed: ${t.message}",
+                    fragment.getString(R.string.report_failed_with_message, t.message ?: fragment.getString(R.string.unknown_error)),
                     Toast.LENGTH_SHORT
                 ).show()
             }

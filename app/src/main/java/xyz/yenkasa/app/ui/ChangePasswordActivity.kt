@@ -42,12 +42,12 @@ class ChangePasswordActivity : AppCompatActivity() {
         val confirmPassword = confirmPass.text.toString().trim()
 
         if (oldPassword.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
-            Toast.makeText(this, "All fields are required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.all_fields_required), Toast.LENGTH_SHORT).show()
             return
         }
 
         if (newPassword != confirmPassword) {
-            Toast.makeText(this, "New passwords do not match", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.new_passwords_do_not_match), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -63,14 +63,14 @@ class ChangePasswordActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     Toast.makeText(
                         this@ChangePasswordActivity,
-                        "Password changed successfully",
+                        getString(R.string.password_changed_successfully),
                         Toast.LENGTH_SHORT
                     ).show()
                     finish()
                 } else {
                     Toast.makeText(
                         this@ChangePasswordActivity,
-                        "Incorrect old password",
+                        getString(R.string.incorrect_old_password),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -78,7 +78,7 @@ class ChangePasswordActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(
                     this@ChangePasswordActivity,
-                    "Network error: ${e.message}",
+                    getString(R.string.network_error_with_message, e.message ?: ""),
                     Toast.LENGTH_SHORT
                 ).show()
             }

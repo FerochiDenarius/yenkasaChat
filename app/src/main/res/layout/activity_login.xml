@@ -77,7 +77,7 @@
                 android:id="@+id/imgChatIcon"
                 android:layout_width="108dp"
                 android:layout_height="108dp"
-                android:contentDescription="Yenkasa Logo"
+                android:contentDescription="@string/yenkasa_logo"
                 android:src="@drawable/ic_logo_emblem"
                 android:transitionName="hero_chat_icon"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -99,7 +99,7 @@
                     android:id="@+id/textWelcome"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Welcome "
+                    android:text="@string/auth_welcome"
                     android:textColor="@color/login_primary_text"
                     android:textSize="31sp"
                     android:textStyle="bold" />
@@ -108,7 +108,7 @@
                     android:id="@+id/textBack"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Back"
+                    android:text="@string/auth_back"
                     android:textColor="@color/login_gold"
                     android:textSize="31sp"
                     android:textStyle="bold" />
@@ -117,7 +117,7 @@
                     android:id="@+id/textWave"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text=" 👋"
+                    android:text="@string/auth_wave"
                     android:textSize="28sp" />
             </LinearLayout>
 
@@ -130,7 +130,7 @@
                 android:layout_marginEnd="20dp"
                 android:gravity="center"
                 android:lineSpacingExtra="4dp"
-                android:text="Sign in to continue and see what's happening in your community"
+                android:text="@string/login_subtitle"
                 android:textColor="@color/login_secondary_text"
                 android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -165,7 +165,7 @@
                         android:id="@+id/layoutLoginIdentifier"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Email"
+                        android:hint="@string/email"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxBackgroundMode="outline"
                         app:boxCornerRadiusBottomEnd="16dp"
@@ -199,7 +199,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="18dp"
-                        android:hint="Password"
+                        android:hint="@string/password"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxBackgroundMode="outline"
                         app:boxCornerRadiusBottomEnd="16dp"
@@ -234,7 +234,7 @@
                         android:layout_gravity="end"
                         android:layout_marginTop="14dp"
                         android:padding="4dp"
-                        android:text="Forgot password?"
+                        android:text="@string/forgot_password_question"
                         android:textColor="@color/login_input_hint"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -264,7 +264,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:letterSpacing="0.04"
-                                android:text="LOG IN"
+                                android:text="@string/log_in_caps"
                                 android:textColor="@color/login_deep_green"
                                 android:textSize="19sp"
                                 android:textStyle="bold"
@@ -312,7 +312,7 @@
                             android:id="@+id/textNoAccount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Don’t have an account?"
+                            android:text="@string/no_account_question"
                             android:textColor="@color/login_secondary_text"
                             android:textSize="15sp" />
 
@@ -321,7 +321,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:paddingStart="8dp"
-                            android:text="Sign Up"
+                            android:text="@string/sign_up"
                             android:textColor="@color/login_input_hint"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -356,7 +356,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:lineSpacingExtra="2dp"
-                    android:text="Your data is safe with us. We never share your information."
+                    android:text="@string/login_security_note"
                     android:textColor="@color/login_secondary_text"
                     android:textSize="14sp" />
             </LinearLayout>

@@ -185,12 +185,12 @@ class LoginActivity : AppCompatActivity() {
         val password = editPassword.text.toString()
 
         if (identifier.isEmpty()) {
-            editIdentifier.error = "Identifier cannot be empty"
+            editIdentifier.error = getString(R.string.error_identifier_required)
             shakeCard()
             return
         }
         if (password.isEmpty()) {
-            editPassword.error = "Password cannot be empty"
+            editPassword.error = getString(R.string.error_password_required)
             shakeCard()
             return
         }
@@ -211,7 +211,7 @@ class LoginActivity : AppCompatActivity() {
 
                 if (!response.isSuccessful) {
                     shakeCard()
-                    Toast.makeText(this@LoginActivity, "Login failed", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@LoginActivity, getString(R.string.login_failed), Toast.LENGTH_LONG).show()
                     return
                 }
 
@@ -270,7 +270,7 @@ class LoginActivity : AppCompatActivity() {
 
                 } else {
                     shakeCard()
-                    Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@LoginActivity, getString(R.string.invalid_credentials), Toast.LENGTH_LONG).show()
                 }
             }
 
@@ -278,7 +278,7 @@ class LoginActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 btnLogin.isEnabled = true
                 shakeCard()
-                Toast.makeText(this@LoginActivity, "Network error", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@LoginActivity, getString(R.string.network_error), Toast.LENGTH_LONG).show()
             }
         })
     }

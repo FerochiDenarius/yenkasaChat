@@ -15,6 +15,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const User = require('./models/user.model'); // ✅ Add this
 const ChatRoom = require('./models/chatroom.model');
+const LiveStream = require('./models/LiveStream');
 const StoreProfile = require('./models/storeProfile.model');
 // 🪙 Coins & Verification system
 const CoinSupply = require('./models/coinSupply');
@@ -137,12 +138,17 @@ const onlineUsers = new Map();
 const pendingOfflineTimers = new Map();
 const SOCKET_OFFLINE_GRACE_MS = Number(process.env.SOCKET_OFFLINE_GRACE_MS || 600000);
 
+function getLiveRoom(streamId) {
+  return `live:${streamId}`;
+}
+
 function getOnlineUserIds() {
   return Array.from(onlineUsers.keys());
 }
 
 io.on('connection', (socket) => {
   console.log(`💡 Client connected: ${socket.id}`);
+  socket.data.liveStreams = new Set();
 
   const clearPendingOffline = (userId) => {
     const normalizedUserId = userId?.toString();
@@ -300,10 +306,98 @@ io.on('connection', (socket) => {
     socket.leave(normalizedRoomId);
   });
 
+  const updateLiveViewerCount = async (streamId, delta) => {
+    if (!mongoose.Types.ObjectId.isValid(streamId)) return null;
+    const stream = await LiveStream.findOneAndUpdate(
+      { _id: streamId, isLive: true },
+      { $inc: { viewerCount: delta } },
+      { new: true }
+    );
+    if (!stream) return null;
+    if (stream.viewerCount < 0) {
+      stream.viewerCount = 0;
+      await stream.save();
+    }
+    if (stream.viewerCount > (stream.peakViewerCount || 0)) {
+      stream.peakViewerCount = stream.viewerCount;
+      await stream.save();
+    }
+    io.to(getLiveRoom(streamId)).emit('live_viewer_count', {
+      streamId,
+      viewerCount: stream.viewerCount
+    });
+    return stream;
+  };
+
+  socket.on('live_join', async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId || socket.data.liveStreams.has(streamId)) return;
+
+      const stream = await updateLiveViewerCount(streamId, 1);
+      if (!stream) return;
+
+      socket.join(getLiveRoom(streamId));
+      socket.data.liveStreams.add(streamId);
+      socket.to(getLiveRoom(streamId)).emit('live_join', {
+        streamId,
+        userId: socket.data.userId || payload.userId || '',
+        username: payload.username || 'Viewer',
+        viewerCount: stream.viewerCount
+      });
+    } catch (err) {
+      console.error('❌ live_join failed:', err.message);
+    }
+  });
+
+  socket.on('live_leave', async (payload = {}) => {
+    try {
+      const streamId = (payload.streamId || payload)?.toString();
+      if (!streamId || !socket.data.liveStreams.has(streamId)) return;
+      socket.data.liveStreams.delete(streamId);
+      socket.leave(getLiveRoom(streamId));
+      await updateLiveViewerCount(streamId, -1);
+    } catch (err) {
+      console.error('❌ live_leave failed:', err.message);
+    }
+  });
+
+  socket.on('live_comment', (payload = {}) => {
+    const streamId = payload.streamId?.toString();
+    const message = payload.message?.toString?.().trim();
+    if (!streamId || !message) return;
+    io.to(getLiveRoom(streamId)).emit('live_comment', {
+      streamId,
+      userId: socket.data.userId || payload.userId || '',
+      username: payload.username || 'Viewer',
+      avatar: payload.avatar || '',
+      message: message.slice(0, 240),
+      createdAt: new Date().toISOString()
+    });
+  });
+
+  socket.on('live_reaction', (payload = {}) => {
+    const streamId = payload.streamId?.toString();
+    if (!streamId) return;
+    io.to(getLiveRoom(streamId)).emit('live_reaction', {
+      streamId,
+      userId: socket.data.userId || payload.userId || '',
+      reaction: payload.reaction || '🔥',
+      createdAt: new Date().toISOString()
+    });
+  });
+
   // ✅ User disconnects
   socket.on('disconnect', async (reason) => {
     try {
       console.log(`🔥 Client disconnected: ${socket.id}. reason=${reason}`);
+
+      if (socket.data.liveStreams?.size) {
+        await Promise.allSettled(
+          Array.from(socket.data.liveStreams).map((streamId) => updateLiveViewerCount(streamId, -1))
+        );
+        socket.data.liveStreams.clear();
+      }
 
       if (socket.data.userId) {
         await markUserOffline(socket.data.userId, { reason });
@@ -366,6 +460,7 @@ safeMount('/api/notifications', './routes/notifications.routes');
 safeMount('/api/user-privacy', './routes/userPrivacy.routes');
 safeMount('/api/metrics', './routes/metrics.routes');
 safeMount('/api/live', './routes/live.routes');
+safeMount('/api/livestream', './routes/livestream.routes');
 safeMount('/api/ads', './routes/ads.routes');
 safeMount('/api/email-verification', './routes/emailVerification.routes');
 // 🔐 Account & data deletion

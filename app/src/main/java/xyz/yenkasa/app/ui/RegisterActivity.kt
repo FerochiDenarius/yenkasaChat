@@ -48,7 +48,7 @@ class RegisterActivity : AppCompatActivity() {
 
     private var selectedCommunityId: String? = null
     private var communityList: List<Community> = emptyList()
-    private val registrationCountries = listOf("Ghana", "Nigeria")
+    private val registrationCountryValues = listOf("Ghana", "Nigeria")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -188,25 +188,29 @@ class RegisterActivity : AppCompatActivity() {
 
         return when {
             statusCode == 409 || lower.contains("already exists") || lower.contains("duplicate") -> {
-                val contactLabel = if (radioEmail.isChecked) "email address" else "phone number"
-                "That $contactLabel or username is already in use. Try different details or log in instead."
+                val contactLabel = if (radioEmail.isChecked) {
+                    getString(R.string.email_address_lower)
+                } else {
+                    getString(R.string.phone_number_lower)
+                }
+                getString(R.string.register_error_duplicate_contact, contactLabel)
             }
             lower.contains("community") -> {
-                "The selected community is unavailable or not approved. Choose another community and try again."
+                getString(R.string.register_error_community_unavailable)
             }
             lower.contains("missing required") -> {
-                "Some required details are missing. Check your contact, username, location, password, and community."
+                getString(R.string.register_error_missing_required)
             }
             lower.contains("only in ghana") ||
                 lower.contains("ghana and nigeria") ||
                 lower.contains("invalid country") -> {
-                "Registration is currently available only in Ghana and Nigeria."
+                getString(R.string.register_error_country_unavailable)
             }
             statusCode in 500..599 -> {
-                "We could not register your account due to a server issue. Please try again shortly."
+                getString(R.string.register_error_server)
             }
             message.isNotBlank() -> message
-            else -> "Registration failed. Please review your details and try again."
+            else -> getString(R.string.register_failed_review_details)
         }
     }
 
@@ -216,13 +220,13 @@ class RegisterActivity : AppCompatActivity() {
             error.contains("unable to resolve host") ||
                 error.contains("failed to connect") ||
                 error.contains("network is unreachable") -> {
-                "No internet connection. Check your network and try again."
+                getString(R.string.no_internet_try_again)
             }
             error.contains("timeout") -> {
-                "The registration request timed out. Please try again."
+                getString(R.string.register_request_timed_out)
             }
             else -> {
-                "We could not reach the server. Please try again."
+                getString(R.string.server_unreachable_try_again)
             }
         }
     }
@@ -244,7 +248,7 @@ class RegisterActivity : AppCompatActivity() {
                     if (!response.isSuccessful) {
                         Toast.makeText(
                             this@RegisterActivity,
-                            "Failed to load communities (Server ${response.code()})",
+                            getString(R.string.failed_to_load_communities_server, response.code()),
                             Toast.LENGTH_SHORT
                         ).show()
                         shakeCard()
@@ -260,11 +264,11 @@ class RegisterActivity : AppCompatActivity() {
                         spinnerCommunities.adapter = ArrayAdapter(
                             this@RegisterActivity,
                             android.R.layout.simple_spinner_item,
-                            listOf("No communities available for $country")
+                            listOf(getString(R.string.no_communities_available_for_country, country))
                         )
                         Toast.makeText(
                             this@RegisterActivity,
-                            "No approved communities found for $country",
+                            getString(R.string.no_approved_communities_for_country, country),
                             Toast.LENGTH_SHORT
                         ).show()
                         shakeCard()
@@ -312,7 +316,7 @@ class RegisterActivity : AppCompatActivity() {
                     shakeCard()
                     Toast.makeText(
                         this@RegisterActivity,
-                        "Error loading communities: ${t.message}",
+                        getString(R.string.error_loading_communities, t.message ?: ""),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -332,12 +336,12 @@ class RegisterActivity : AppCompatActivity() {
         if (radioEmail.isChecked) {
             when {
                 email.isEmpty() -> {
-                    editEmail.error = "Email is required"
+                    editEmail.error = getString(R.string.error_email_required)
                     shakeCard()
                     return
                 }
                 !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
-                    editEmail.error = "Enter a valid email address"
+                    editEmail.error = getString(R.string.error_valid_email)
                     shakeCard()
                     return
                 }
@@ -345,12 +349,12 @@ class RegisterActivity : AppCompatActivity() {
         } else {
             when {
                 phone.isEmpty() -> {
-                    editPhone.error = "Phone is required"
+                    editPhone.error = getString(R.string.error_phone_required)
                     shakeCard()
                     return
                 }
                 !isValidPhone(phone) -> {
-                    editPhone.error = "Enter a valid phone number"
+                    editPhone.error = getString(R.string.error_valid_phone)
                     shakeCard()
                     return
                 }
@@ -358,52 +362,52 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         if (username.length < 3) {
-            editUsername.error = "Username must be at least 3 characters"
+            editUsername.error = getString(R.string.error_username_min_length)
             shakeCard()
             return
         }
 
         if (!username.matches(Regex("^[a-zA-Z0-9._]{3,30}$"))) {
-            editUsername.error = "Use 3-30 letters, numbers, dot or underscore"
+            editUsername.error = getString(R.string.error_username_allowed_chars)
             shakeCard()
             return
         }
 
         if (location.length < 2) {
-            editLocation.error = "Location is required"
+            editLocation.error = getString(R.string.error_location_required)
             shakeCard()
             return
         }
 
 
         if (password.length < 6) {
-            editPassword.error = "Password must be at least 6 characters"
+            editPassword.error = getString(R.string.error_password_min_length)
             shakeCard()
             return
         }
 
         if (password != confirmPassword) {
-            editConfirmPassword.error = "Passwords do not match"
+            editConfirmPassword.error = getString(R.string.error_passwords_do_not_match)
             shakeCard()
             return
         }
 
         if (!checkTerms.isChecked) {
-            showFormError("You must agree to the User Agreement before continuing.")
+            showFormError(getString(R.string.error_terms_required))
             shakeCard()
             return
         }
 
         if (selectedCommunityId.isNullOrBlank()) {
-            showFormError("Please select a community.")
+            showFormError(getString(R.string.error_select_community))
             shakeCard()
             return
         }
 
         val selectedCountry = selectedCountry()
 
-        if (registrationCountries.none { it.equals(selectedCountry, ignoreCase = true) }) {
-            showFormError("Registration is currently available only in Ghana and Nigeria.")
+        if (registrationCountryValues.none { it.equals(selectedCountry, ignoreCase = true) }) {
+            showFormError(getString(R.string.register_error_country_unavailable))
             shakeCard()
             return
         }
@@ -436,7 +440,7 @@ class RegisterActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         textRegisterError.visibility = View.GONE
                         textRegisterError.text = ""
-                        Toast.makeText(this@RegisterActivity, "Registered successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@RegisterActivity, getString(R.string.registered_successfully), Toast.LENGTH_SHORT).show()
 
                         val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
                         startActivity(intent)
@@ -447,11 +451,11 @@ class RegisterActivity : AppCompatActivity() {
                         val friendlyMessage = getFriendlyRegistrationError(response.code(), serverMessage)
 
                         if (response.code() == 409) {
-                            editUsername.error = "Username may already be taken"
+                            editUsername.error = getString(R.string.error_username_taken)
                             if (radioEmail.isChecked) {
-                                editEmail.error = "Email may already be registered"
+                                editEmail.error = getString(R.string.error_email_registered)
                             } else {
-                                editPhone.error = "Phone may already be registered"
+                                editPhone.error = getString(R.string.error_phone_registered)
                             }
                         }
 
@@ -473,7 +477,7 @@ class RegisterActivity : AppCompatActivity() {
         val adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_item,
-            registrationCountries
+            localizedRegistrationCountries()
         )
 
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -487,7 +491,7 @@ class RegisterActivity : AppCompatActivity() {
                 id: Long
             ) {
                 editLocation.setText("")
-                fetchCommunities(registrationCountries[position])
+                fetchCommunities(registrationCountryValues[position])
             }
 
             override fun onNothingSelected(parent: AdapterView<*>) {
@@ -497,11 +501,12 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun selectedCountry(): String {
-        return spinnerCountry.selectedItem?.toString()?.trim().orEmpty().ifBlank { "Ghana" }
+        val selectedIndex = spinnerCountry.selectedItemPosition
+        return registrationCountryValues.getOrNull(selectedIndex) ?: "Ghana"
     }
 
     private fun formatCommunityOption(community: Community): String {
-        val name = community.displayName ?: community.name ?: "Unnamed"
+        val name = community.displayName ?: community.name ?: getString(R.string.unnamed)
         val details = listOfNotNull(
             community.town?.takeIf { it.isNotBlank() && !it.equals(name, ignoreCase = true) },
             community.city?.takeIf { it.isNotBlank() && !it.equals(name, ignoreCase = true) },
@@ -510,5 +515,12 @@ class RegisterActivity : AppCompatActivity() {
         ).distinct()
 
         return if (details.isEmpty()) name else "$name - ${details.joinToString(", ")}"
+    }
+
+    private fun localizedRegistrationCountries(): List<String> {
+        return listOf(
+            getString(R.string.country_ghana),
+            getString(R.string.country_nigeria)
+        )
     }
 }

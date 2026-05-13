@@ -71,6 +71,7 @@ enum: [
   "PURCHASE",
   "REFUND",
   "BONUS",
+  "LIVE_GIFT",
   "ADMIN_ADJUSTMENT"
 ],
 

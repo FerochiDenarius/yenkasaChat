@@ -56,7 +56,7 @@ class BlockedCommunitiesActivity : AppCompatActivity() {
                     } else {
                         Toast.makeText(
                             this@BlockedCommunitiesActivity,
-                            "Failed to load",
+                            R.string.failed_to_load,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -69,7 +69,7 @@ class BlockedCommunitiesActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     Toast.makeText(
                         this@BlockedCommunitiesActivity,
-                        "Failed to load",
+                        R.string.failed_to_load,
                         Toast.LENGTH_SHORT
                     ).show()
                 }

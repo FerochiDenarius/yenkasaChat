@@ -103,15 +103,17 @@ class FeedCommunityController(
     }
 
     fun selectedLabelText(): String {
-        val text = selectedCommunities.joinToString(", ") { it.displayName ?: it.name ?: "Unknown" }
-        return if (text.isEmpty()) "No community selected" else text
+        val text = selectedCommunities.joinToString(", ") {
+            it.displayName ?: it.name ?: context.getString(R.string.unknown)
+        }
+        return if (text.isEmpty()) context.getString(R.string.no_community_selected) else text
     }
 
     fun headerTitle(): String {
         return when (selectedCommunities.size) {
-            0 -> "No Community"
-            1 -> selectedCommunities.first().displayName ?: selectedCommunities.first().name ?: "Unnamed"
-            else -> "Multiple Communities"
+            0 -> context.getString(R.string.no_community)
+            1 -> selectedCommunities.first().displayName ?: selectedCommunities.first().name ?: context.getString(R.string.unnamed)
+            else -> context.getString(R.string.multiple_communities)
         }
     }
 
@@ -228,8 +230,12 @@ class FeedCommunityController(
             listContainer.removeAllViews()
             listContainer.addView(
                 buildSelectorRow(
-                    title = "All Communities",
-                    subtitle = "${allCommunities.size} available",
+                    title = context.getString(R.string.all_communities),
+                    subtitle = context.resources.getQuantityString(
+                        R.plurals.communities_available_count,
+                        allCommunities.size,
+                        allCommunities.size
+                    ),
                     imageUrl = null,
                     selected = selectedIds.size == allCommunities.mapNotNull { it.id }.size,
                     onClick = {
@@ -241,11 +247,11 @@ class FeedCommunityController(
             )
             allCommunities.forEach { community ->
                 val communityId = community.id ?: return@forEach
-                val title = community.displayName ?: community.name ?: "Unnamed community"
+                val title = community.displayName ?: community.name ?: context.getString(R.string.unnamed_community)
                 val subtitle = when {
-                    community.memberCount > 0 -> "${formatCompact(community.memberCount)} members"
-                    community.postCount > 0 -> "${formatCompact(community.postCount)} posts"
-                    else -> "Tap to select"
+                    community.memberCount > 0 -> context.getString(R.string.members_compact, formatCompact(community.memberCount))
+                    community.postCount > 0 -> context.getString(R.string.posts_compact, formatCompact(community.postCount))
+                    else -> context.getString(R.string.tap_to_select)
                 }
                 listContainer.addView(
                     buildSelectorRow(
@@ -297,14 +303,14 @@ class FeedCommunityController(
             setPadding(dp(18), 0, dp(18), dp(10))
         }
         header.addView(TextView(context).apply {
-            text = "Choose communities"
+            text = context.getString(R.string.choose_communities)
             textSize = 20f
             setTextColor(Color.parseColor("#102016"))
             setTypeface(typeface, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
         header.addView(TextView(context).apply {
-            text = "Done"
+            text = context.getString(R.string.done)
             textSize = 14f
             setTextColor(Color.parseColor("#0B8F43"))
             setTypeface(typeface, Typeface.BOLD)

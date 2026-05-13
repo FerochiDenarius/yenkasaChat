@@ -6,11 +6,13 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.AdBinder
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.CoinWalletActivity
 import xyz.yenkasa.app.ui.CreateAdActivity
+import xyz.yenkasa.app.ui.StartLiveActivity
 import xyz.yenkasa.app.ui.MenuActivity
 import xyz.yenkasa.app.ui.player.YenkasaPlayerActions
 import xyz.yenkasa.app.ui.player.YenkasaPlayerFeedAdapter
@@ -35,6 +37,7 @@ class FeedPlayerCoordinator(
         val onReward: (Post) -> Unit,
         val onMoreOptions: (Post) -> Unit,
         val onLiveArenaClick: () -> Unit,
+        val onLiveStreamClick: () -> Unit,
         val onCommunitySelected: (Community?) -> Unit,
         val onSeeAllCommunities: () -> Unit,
         val onFeedModeSelected: (FeedTabsController.FeedMode) -> Unit
@@ -155,6 +158,10 @@ class FeedPlayerCoordinator(
                 callbacks.onLiveArenaClick()
             }
 
+            override fun onOpenLiveStream() {
+                callbacks.onLiveStreamClick()
+            }
+
             override fun onCreateSponsoredAd() {
                 val role = TokenManager.getUserRole(fragment.requireContext())
                 if (TokenManager.isVerified(fragment.requireContext()) || UserPermissions.canCreateAd(role)) {
@@ -162,7 +169,7 @@ class FeedPlayerCoordinator(
                 } else {
                     Toast.makeText(
                         fragment.requireContext(),
-                        "Ad creation is available for approved creators.",
+                        R.string.ad_creation_approved_creators_only,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -183,7 +190,7 @@ class FeedPlayerCoordinator(
             override fun onSearchQuery(query: String) {
                 Toast.makeText(
                     fragment.requireContext(),
-                    "Search: $query",
+                    fragment.getString(R.string.search_query, query),
                     Toast.LENGTH_SHORT
                 ).show()
             }

@@ -64,7 +64,7 @@ data class YenkasaPlayerItem(
                 userAvatarUrl = CloudinaryMedia.optimizedImageUrl(post.userId.profileImage, CloudinaryMedia.WIDTH_AVATAR),
                 isVerified = post.userId.verified,
                 communityName = post.communityId?.displayName ?: post.communityId?.name,
-                audioTitle = if (!post.audioUrl.isNullOrBlank()) "Original Sound - Yenkasa" else null,
+                audioTitle = null,
                 likeCount = post.likeCount,
                 viewCount = post.viewCount,
                 commentCount = post.resolvedCommentCount(),

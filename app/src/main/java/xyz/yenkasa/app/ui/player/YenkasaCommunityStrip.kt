@@ -41,9 +41,9 @@ class YenkasaCommunityStrip @JvmOverloads constructor(
         onCommunitySelected: (Community) -> Unit
     ) {
         container.removeAllViews()
-        container.addView(buildCard("All", null, selectedIds.isEmpty(), onAllSelected))
+        container.addView(buildCard(context.getString(R.string.all), null, selectedIds.isEmpty(), onAllSelected))
         communities.forEach { community ->
-            val name = community.displayName ?: community.name ?: "Community"
+            val name = community.displayName ?: community.name ?: context.getString(R.string.community)
             container.addView(
                 buildCard(
                     name,

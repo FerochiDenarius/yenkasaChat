@@ -87,14 +87,14 @@
             android:id="@+id/imagePlayerLogo"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:contentDescription="Yenkasa Logo"
+            android:contentDescription="@string/yenkasa_logo"
             android:src="@drawable/ic_yenkasa_logo" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:text="YENKASA"
+            android:text="@string/yenkasa_brand_caps"
             android:textColor="@android:color/white"
             android:textSize="19sp"
             android:textStyle="bold" />
@@ -115,7 +115,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Open menu"
+            android:contentDescription="@string/open_menu"
             android:padding="14dp"
             android:src="@drawable/ic_menu"
             android:tint="@android:color/white" />
@@ -160,7 +160,7 @@
                 android:gravity="center"
                 android:minWidth="54dp"
                 android:paddingHorizontal="10dp"
-                android:text="For You"
+                android:text="@string/feed_tab_for_you"
                 android:textColor="@android:color/white"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -174,7 +174,7 @@
                 android:gravity="center"
                 android:minWidth="64dp"
                 android:paddingHorizontal="10dp"
-                android:text="Following"
+                android:text="@string/feed_tab_following"
                 android:textColor="@android:color/white"
                 android:textSize="11sp" />
 
@@ -187,7 +187,7 @@
                 android:gravity="center"
                 android:minWidth="62dp"
                 android:paddingHorizontal="10dp"
-                android:text="Trending"
+                android:text="@string/feed_tab_trending"
                 android:textColor="@android:color/white"
                 android:textSize="11sp" />
 
@@ -200,7 +200,7 @@
                 android:gravity="center"
                 android:minWidth="50dp"
                 android:paddingHorizontal="10dp"
-                android:text="Latest"
+                android:text="@string/feed_tab_latest"
                 android:textColor="@android:color/white"
                 android:textSize="11sp" />
 
@@ -212,7 +212,7 @@
                 android:gravity="center"
                 android:minWidth="42dp"
                 android:paddingHorizontal="10dp"
-                android:text="Top"
+                android:text="@string/feed_tab_top"
                 android:textColor="@android:color/white"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -243,7 +243,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Communities"
+                android:text="@string/communities"
                 android:textColor="@android:color/white"
                 android:textSize="0sp"
                 android:textStyle="bold" />
@@ -258,7 +258,7 @@
                 android:gravity="center"
                 android:minHeight="28dp"
                 android:minWidth="42dp"
-                android:text="All"
+                android:text="@string/all"
                 android:textColor="@color/wallet_accent_green"
                 android:textSize="10sp"
                 android:textStyle="bold" />
@@ -291,7 +291,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Like post"
+            android:contentDescription="@string/like_post"
             android:padding="11dp"
             android:src="@drawable/ic_heart_outline"
             android:tint="@color/wallet_accent_green" />
@@ -310,7 +310,7 @@
             android:layout_height="42dp"
             android:layout_marginTop="2dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="View count"
+            android:contentDescription="@string/view_count"
             android:padding="11dp"
             android:src="@drawable/ic_eye"
             android:tint="@android:color/white" />
@@ -329,7 +329,7 @@
             android:layout_height="42dp"
             android:layout_marginTop="2dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Open comments"
+            android:contentDescription="@string/open_comments"
             android:padding="11dp"
             android:src="@drawable/ic_comment"
             android:tint="@android:color/white" />
@@ -348,7 +348,7 @@
             android:layout_height="42dp"
             android:layout_marginTop="2dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Share post"
+            android:contentDescription="@string/share_post"
             android:padding="11dp"
             android:src="@drawable/ic_share"
             android:tint="@android:color/white" />
@@ -367,7 +367,7 @@
             android:layout_height="42dp"
             android:layout_marginTop="2dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Show more actions"
+            android:contentDescription="@string/show_more_actions"
             android:padding="11dp"
             android:src="@drawable/ic_dropdown"
             android:tint="@android:color/white" />
@@ -392,7 +392,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Save post"
+            android:contentDescription="@string/save_post"
             android:padding="11dp"
             android:src="@drawable/ic_wallet_nav_rewards"
             android:tint="@android:color/white" />
@@ -411,7 +411,7 @@
             android:layout_height="42dp"
             android:layout_marginTop="2dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Create sponsored ad"
+            android:contentDescription="@string/create_sponsored_ad"
             android:padding="11dp"
             android:src="@drawable/ic_ads_plus"
             android:tint="@android:color/white" />
@@ -421,7 +421,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Ad"
+            android:text="@string/ad"
             android:textColor="@android:color/white"
             android:textSize="7sp" />
 
@@ -431,7 +431,7 @@
             android:layout_height="42dp"
             android:layout_marginTop="2dp"
             android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="Reward creator"
+            android:contentDescription="@string/reward_creator"
             android:padding="11dp"
             android:src="@drawable/ic_live_bolt"
             android:tint="@color/wallet_accent_green" />
@@ -453,7 +453,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginBottom="6dp"
         android:background="@drawable/bg_yenkasa_player_glass"
-        android:contentDescription="More post options"
+        android:contentDescription="@string/more_post_options"
         android:padding="14dp"
         android:src="@drawable/ic_more_vert"
         android:tint="@android:color/white"
@@ -466,6 +466,15 @@
         android:layout_height="74dp"
         android:layout_marginEnd="10dp"
         android:layout_marginBottom="72dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutPlayerControls"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <xyz.yenkasa.app.ui.player.YenkasaLiveStreamButton
+        android:id="@+id/playerLiveStreamButton"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="154dp"
         app:layout_constraintBottom_toTopOf="@id/layoutPlayerControls"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -572,7 +581,7 @@
                 android:id="@+id/textPlayerCurrentTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="00:00"
+                android:text="@string/time_zero_double"
                 android:textColor="@android:color/white"
                 android:textSize="10sp" />
 
@@ -585,7 +594,7 @@
                 android:id="@+id/textPlayerDuration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="00:00"
+                android:text="@string/time_zero_double"
                 android:textColor="@android:color/white"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -602,7 +611,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:contentDescription="Previous post"
+                android:contentDescription="@string/previous_post"
                 android:padding="14dp"
                 android:src="@drawable/ic_skip_previous"
                 android:tint="@android:color/white" />
@@ -613,7 +622,7 @@
                 android:layout_height="56dp"
                 android:layout_marginHorizontal="10dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:contentDescription="Play or pause"
+                android:contentDescription="@string/play_or_pause"
                 android:padding="16dp"
                 android:src="@drawable/ic_pause"
                 android:tint="@color/wallet_accent_green" />
@@ -623,7 +632,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:contentDescription="Next post"
+                android:contentDescription="@string/next_post"
                 android:padding="14dp"
                 android:src="@drawable/ic_skip_next"
                 android:tint="@android:color/white" />
@@ -634,7 +643,7 @@
                 android:layout_height="48dp"
                 android:layout_marginStart="16dp"
                 android:background="@drawable/bg_yenkasa_player_glass"
-                android:contentDescription="Mute or unmute"
+                android:contentDescription="@string/mute_or_unmute"
                 android:padding="14dp"
                 android:src="@drawable/ic_volume_up"
                 android:tint="@android:color/white" />

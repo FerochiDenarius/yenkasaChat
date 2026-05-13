@@ -48,7 +48,7 @@ class HiddenUsersActivity : AppCompatActivity() {
                 ) {
                     Toast.makeText(
                         this@HiddenUsersActivity,
-                        "Failed to load",
+                        R.string.failed_to_load,
                         Toast.LENGTH_SHORT
                     ).show()
                 }

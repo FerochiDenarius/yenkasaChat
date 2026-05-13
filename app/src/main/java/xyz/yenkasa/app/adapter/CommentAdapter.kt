@@ -58,7 +58,7 @@ class CommentAdapter(
         val currentUserId = TokenManager.getUserId(context)
 
         // Basic info
-        holder.textUsername.text = comment.user?.username ?: "Unknown User"
+        holder.textUsername.text = comment.user?.username ?: context.getString(R.string.unknown_user)
         UserBadgeUtils.applyBadge(
             holder.imageVerifiedBadge,
             comment.user.verified,

@@ -109,7 +109,7 @@ class PrivacySettingsActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<UserPrivacyModel>, t: Throwable) {
-                Toast.makeText(this@PrivacySettingsActivity, "Failed to load settings", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@PrivacySettingsActivity, R.string.failed_to_load_settings, Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -121,7 +121,11 @@ class PrivacySettingsActivity : AppCompatActivity() {
                 btnSave.isEnabled = true
                 Toast.makeText(
                     this@PrivacySettingsActivity,
-                    response.body()?.message ?: if (response.isSuccessful) "Saved" else "Could not save privacy setting",
+                    response.body()?.message ?: if (response.isSuccessful) {
+                        getString(R.string.saved)
+                    } else {
+                        getString(R.string.could_not_save_privacy_setting)
+                    },
                     Toast.LENGTH_SHORT
                 ).show()
                 if (response.isSuccessful) finish()
@@ -129,7 +133,7 @@ class PrivacySettingsActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                 btnSave.isEnabled = true
-                Toast.makeText(this@PrivacySettingsActivity, "Failed to save", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@PrivacySettingsActivity, R.string.failed_to_save, Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -152,7 +156,7 @@ class PrivacySettingsActivity : AppCompatActivity() {
     }
 
     private fun renderMessageRequests() {
-        txtRequestsHeader.text = "Message Requests (${messageRequests.size})"
+        txtRequestsHeader.text = getString(R.string.message_requests_count, messageRequests.size)
         messageRequestsList.removeAllViews()
         messageRequestsList.visibility = if (messageRequests.isEmpty()) View.GONE else View.VISIBLE
         txtRequestsEmpty.visibility = if (messageRequests.isEmpty()) View.VISIBLE else View.GONE
@@ -191,14 +195,14 @@ class PrivacySettingsActivity : AppCompatActivity() {
         }
 
         val name = TextView(this).apply {
-            text = item.sender?.username ?: "Message request"
+            text = item.sender?.username ?: getString(R.string.message_request)
             setTextColor(ContextCompat.getColor(this@PrivacySettingsActivity, R.color.menu_primary_text))
             textSize = 13f
             setTypeface(null, android.graphics.Typeface.BOLD)
             maxLines = 1
         }
         val preview = TextView(this).apply {
-            text = item.message?.takeIf { it.isNotBlank() } ?: "Wants to message you"
+            text = item.message?.takeIf { it.isNotBlank() } ?: getString(R.string.wants_to_message_you)
             setTextColor(ContextCompat.getColor(this@PrivacySettingsActivity, R.color.menu_secondary_text))
             textSize = 12f
             maxLines = 1
@@ -213,10 +217,10 @@ class PrivacySettingsActivity : AppCompatActivity() {
         textColumn.addView(preview)
         textColumn.addView(time)
 
-        val reject = actionButton("Reject", filled = false).apply {
+        val reject = actionButton(getString(R.string.reject), filled = false).apply {
             setOnClickListener { rejectRequest(item) }
         }
-        val allow = actionButton("Allow", filled = true).apply {
+        val allow = actionButton(getString(R.string.allow), filled = true).apply {
             setOnClickListener { allowRequest(item) }
         }
 
@@ -258,13 +262,21 @@ class PrivacySettingsActivity : AppCompatActivity() {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 Toast.makeText(
                     this@PrivacySettingsActivity,
-                    if (response.isSuccessful) "Message request approved" else "Could not approve request",
+                    if (response.isSuccessful) {
+                        getString(R.string.message_request_approved)
+                    } else {
+                        getString(R.string.could_not_approve_request)
+                    },
                     Toast.LENGTH_SHORT
                 ).show()
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Toast.makeText(this@PrivacySettingsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@PrivacySettingsActivity,
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }
@@ -275,11 +287,15 @@ class PrivacySettingsActivity : AppCompatActivity() {
         if (token.isNullOrBlank()) return
         api.markNotificationRead(item.id, "Bearer $token").enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
-                Toast.makeText(this@PrivacySettingsActivity, "Message request rejected", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@PrivacySettingsActivity, R.string.message_request_rejected, Toast.LENGTH_SHORT).show()
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Toast.makeText(this@PrivacySettingsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@PrivacySettingsActivity,
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }
@@ -302,20 +318,20 @@ class PrivacySettingsActivity : AppCompatActivity() {
     }
 
     private fun formatRelativeTime(iso: String?): String {
-        if (iso == null) return "Just now"
+        if (iso == null) return getString(R.string.just_now)
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             parser.timeZone = TimeZone.getTimeZone("UTC")
-            val date = parser.parse(iso) ?: return "Just now"
+            val date = parser.parse(iso) ?: return getString(R.string.just_now)
             val diff = Date().time - date.time
             when {
-                diff < 60000 -> "Just now"
-                diff < 3600000 -> "${diff / 60000}m ago"
-                diff < 86400000 -> "${diff / 3600000}h ago"
-                else -> "${diff / 86400000}d ago"
+                diff < 60000 -> getString(R.string.just_now)
+                diff < 3600000 -> getString(R.string.minutes_ago, diff / 60000)
+                diff < 86400000 -> getString(R.string.hours_ago, diff / 3600000)
+                else -> getString(R.string.days_ago, diff / 86400000)
             }
         } catch (e: Exception) {
-            "Just now"
+            getString(R.string.just_now)
         }
     }
 

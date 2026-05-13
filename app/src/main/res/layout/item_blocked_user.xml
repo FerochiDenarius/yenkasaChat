@@ -27,7 +27,7 @@
             android:id="@+id/imgAvatar"
             android:layout_width="78dp"
             android:layout_height="78dp"
-            android:contentDescription="Profile picture"
+            android:contentDescription="@string/profile_picture"
             android:scaleType="centerCrop"
             android:src="@drawable/ic_user_placeholder"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -118,7 +118,7 @@
                     android:layout_width="30dp"
                     android:layout_height="30dp"
                     android:layout_gravity="center"
-                    android:contentDescription="Unblock user"
+                    android:contentDescription="@string/unblock_user"
                     android:src="@drawable/ic_unblock"
                     app:tint="@color/blocked_red" />
             </FrameLayout>
@@ -128,7 +128,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="7dp"
-                android:text="Unblock"
+                android:text="@string/unblock"
                 android:textColor="@color/blocked_red"
                 android:textSize="15sp" />
         </LinearLayout>

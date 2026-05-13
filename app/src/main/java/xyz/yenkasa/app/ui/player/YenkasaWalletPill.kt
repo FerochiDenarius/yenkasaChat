@@ -53,7 +53,7 @@ class YenkasaWalletPill @JvmOverloads constructor(
         subtextView = TextView(context).apply {
             setTextColor(ContextCompat.getColor(context, R.color.wallet_accent_green))
             textSize = 8f
-            text = "Wallet"
+            text = context.getString(R.string.feed_wallet_label)
             maxLines = 1
         }
         textWrap.addView(balanceView)
@@ -71,7 +71,7 @@ class YenkasaWalletPill @JvmOverloads constructor(
 
         animate().cancel()
         subtextView.animate().cancel()
-        subtextView.text = "+${formatYkc(rewardAmount)} YKC"
+        subtextView.text = context.getString(R.string.ykc_reward_gain, formatYkc(rewardAmount))
         scaleX = 1f
         scaleY = 1f
         alpha = 1f
@@ -95,7 +95,7 @@ class YenkasaWalletPill @JvmOverloads constructor(
             .withEndAction {
                 subtextView.translationY = 0f
                 subtextView.alpha = 1f
-                subtextView.text = "Wallet"
+                subtextView.text = context.getString(R.string.feed_wallet_label)
             }
             .start()
 

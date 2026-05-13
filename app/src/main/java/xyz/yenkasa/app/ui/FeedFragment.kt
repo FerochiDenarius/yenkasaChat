@@ -246,7 +246,7 @@ class FeedFragment : Fragment() {
         userId = TokenManager.getUserId(requireContext())
 
         if (token.isNullOrEmpty() || userId.isNullOrEmpty()) {
-            Toast.makeText(requireContext(), "Please log in again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.please_log_in_again, Toast.LENGTH_SHORT).show()
             startActivity(Intent(requireContext(), LoginActivity::class.java))
             requireActivity().finish()
         }
@@ -360,6 +360,7 @@ class FeedFragment : Fragment() {
             onReward = { startActivity(Intent(requireContext(), CoinWalletActivity::class.java)) },
             onMoreOptions = { post -> postActionsController.showPostOptionsBottomSheet(post) },
             onLiveArenaClick = { chromeController.showLiveSheet() },
+            onLiveStreamClick = { startActivity(Intent(requireContext(), StartLiveActivity::class.java)) },
             onCommunitySelected = { community -> selectPlayerCommunity(community) },
             onSeeAllCommunities = { openCommunitySelectorOrToast() },
             onFeedModeSelected = { mode -> selectPlayerFeedMode(mode) }
@@ -830,7 +831,7 @@ class FeedFragment : Fragment() {
     private fun openCommunitySelectorOrToast() {
         communityController.openCommunitySelector(
             onNoCommunities = {
-                Toast.makeText(requireContext(), "No communities found.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.no_communities_found, Toast.LENGTH_SHORT).show()
             },
             onSelectionChanged = { syncCommunitySelectionUi() },
             onFeedReloadRequested = { reloadFeedFromStart() }
@@ -905,9 +906,9 @@ class FeedFragment : Fragment() {
         if (!::emptyView.isInitialized) return
         updatePlayerEmptyRecoveryChrome(posts.isEmpty())
         emptyView.text = when {
-            isRefreshing -> "Refreshing feed..."
-            selectedCommunities.isNotEmpty() -> "No posts in this community yet. Choose another community."
-            else -> "No posts yet."
+            isRefreshing -> getString(R.string.refreshing_feed)
+            selectedCommunities.isNotEmpty() -> getString(R.string.feed_empty_no_posts_in_community)
+            else -> getString(R.string.feed_empty_no_posts)
         }
         emptyView.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
     }

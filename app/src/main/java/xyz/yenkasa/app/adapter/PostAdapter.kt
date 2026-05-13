@@ -406,14 +406,18 @@ class PostAdapter(
         holder.profileImage.setOnClickListener { onUserClick(post.userId.id) }
         holder.username.setOnClickListener { onUserClick(post.userId.id) }
 
-        holder.communityName.text = post.communityId?.displayName ?: "General"
+        holder.communityName.text = post.communityId?.displayName ?: context.getString(R.string.general)
         holder.timestamp.text = formatTimestamp(post.createdAt)
-        holder.likeCount.text = "${post.likeCount} likes"
-        holder.commentCount.text = "${post.commentCount} comments"
-        holder.viewCount.text = "👁 ${post.viewCount}"
+        holder.likeCount.text = context.resources.getQuantityString(R.plurals.likes_count, post.likeCount, post.likeCount)
+        holder.commentCount.text = context.resources.getQuantityString(R.plurals.comments_count, post.commentCount, post.commentCount)
+        holder.viewCount.text = context.getString(R.string.views_count, post.viewCount)
 
         holder.coinsEarned.visibility = if (post.coinsEarned > 0) {
-            holder.coinsEarned.text = "🪙 ${post.coinsEarned} coins"
+            holder.coinsEarned.text = context.resources.getQuantityString(
+                R.plurals.coins_earned_count,
+                post.coinsEarned,
+                post.coinsEarned
+            )
             View.VISIBLE
         } else View.GONE
 
@@ -832,7 +836,7 @@ class PostAdapter(
         val targetUserId = post.userId.id
 
         if (token.isNullOrBlank()) {
-            Toast.makeText(context, "Please log in first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.please_log_in_first, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -856,13 +860,21 @@ class PostAdapter(
                         followButton.isEnabled = false
                         Toast.makeText(context, body.message, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, "Could not follow ${post.userId.username}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.could_not_follow_user, post.userId.username),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
                     followButton.isEnabled = true
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.network_error_with_message, t.message ?: context.getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }

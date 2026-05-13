@@ -122,7 +122,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                     allNotifications = emptyList()
                     adapter.updateList(emptyList())
                     previousList = emptyList()
-                    showMessageState("Could not load notifications. Pull back and try again.")
+                    showMessageState(getString(R.string.could_not_load_notifications))
                     return
                 }
 
@@ -132,7 +132,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                     allNotifications = emptyList()
                     adapter.updateList(emptyList())
                     previousList = emptyList()
-                    showMessageState("No notifications yet.")
+                    showMessageState(getString(R.string.no_notifications_yet))
                     return
                 }
 
@@ -156,8 +156,12 @@ class UserNotificationsActivity : AppCompatActivity() {
                 allNotifications = emptyList()
                 adapter.updateList(emptyList())
                 previousList = emptyList()
-                showMessageState("Network error. Check your connection and try again.")
-                Toast.makeText(this@UserNotificationsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                showMessageState(getString(R.string.network_error_check_connection))
+                Toast.makeText(
+                    this@UserNotificationsActivity,
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }
@@ -220,7 +224,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         progressNotifications.visibility = View.GONE
         if (items.isEmpty()) {
             rvNotifications.visibility = View.GONE
-            textNotificationsState.text = "You're all caught up 🎉"
+            textNotificationsState.text = getString(R.string.notifications_all_caught_up)
             textNotificationsState.visibility = View.VISIBLE
         } else {
             textNotificationsState.visibility = View.GONE
@@ -291,18 +295,18 @@ class UserNotificationsActivity : AppCompatActivity() {
     }
 
     private fun showMessageRequestDialog(item: NotificationModel) {
-        val requesterName = item.sender?.username ?: "This user"
+        val requesterName = item.sender?.username ?: getString(R.string.this_user)
 
         AlertDialog.Builder(this)
-            .setTitle("Message request")
-            .setMessage("$requesterName wants to message you.")
-            .setPositiveButton("Approve") { _, _ ->
+            .setTitle(R.string.message_request)
+            .setMessage(getString(R.string.message_request_from_user, requesterName))
+            .setPositiveButton(R.string.approve) { _, _ ->
                 approveMessageRequest(item)
             }
-            .setNegativeButton("View profile") { _, _ ->
+            .setNegativeButton(R.string.view_profile) { _, _ ->
                 navigateFromNotification(item)
             }
-            .setNeutralButton("Cancel", null)
+            .setNeutralButton(R.string.cancel, null)
             .show()
     }
 
@@ -316,13 +320,13 @@ class UserNotificationsActivity : AppCompatActivity() {
                         markAsRead(item.id)
                         Toast.makeText(
                             this@UserNotificationsActivity,
-                            "Message request approved",
+                            R.string.message_request_approved,
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
                             this@UserNotificationsActivity,
-                            "Could not approve request",
+                            R.string.could_not_approve_request,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -331,7 +335,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                     Toast.makeText(
                         this@UserNotificationsActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -341,7 +345,7 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private fun navigateFromNotification(item: NotificationModel) {
         if (item.targetType.equals("system", ignoreCase = true)) {
-            Toast.makeText(this, item.message ?: "System notification", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, item.message ?: getString(R.string.system_notification), Toast.LENGTH_SHORT).show()
         }
         startActivity(NotificationNavigation.buildIntent(this, item))
     }

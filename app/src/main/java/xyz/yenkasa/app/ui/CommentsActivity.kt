@@ -155,7 +155,7 @@ class CommentsActivity : AppCompatActivity() {
                                         handleRewardPayload(map)
 
                                         editComment.text.clear()
-                                        Toast.makeText(this@CommentsActivity, "Reply posted", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@CommentsActivity, R.string.reply_posted, Toast.LENGTH_SHORT).show()
                                         loadComments()
                                         resetSendButton()
 
@@ -164,12 +164,16 @@ class CommentsActivity : AppCompatActivity() {
                                         Toast.makeText(this@CommentsActivity, map["message"].toString(), Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
-                                    Toast.makeText(this@CommentsActivity, "Failed to post reply", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@CommentsActivity, R.string.failed_to_post_reply, Toast.LENGTH_SHORT).show()
                                 }
                             }
 
                             override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                                Toast.makeText(this@CommentsActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@CommentsActivity,
+                                    getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         })
                 }
@@ -213,18 +217,22 @@ class CommentsActivity : AppCompatActivity() {
                                             val commentJson = gson.toJson(data["comment"])
                                             val comment = gson.fromJson(commentJson, Comment::class.java)
                                             runOnUiThread {
-                                                Toast.makeText(this@CommentsActivity, "Comment added!", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@CommentsActivity, R.string.comment_added, Toast.LENGTH_SHORT).show()
                                                 loadComments()
                                                 editComment.text.clear()
                                             }
                                         } else {
                                             // ✅ Success HTTP but unexpected JSON
                                             Log.w("PostComment", "Unexpected response structure: $data")
-                                            Toast.makeText(this@CommentsActivity, "Comment added (response unparsed)", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(this@CommentsActivity, R.string.comment_added_response_unparsed, Toast.LENGTH_SHORT).show()
                                             loadComments()
                                         }
                                     } else {
-                                        Toast.makeText(this@CommentsActivity, "Failed to post comment (${response.code()})", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            this@CommentsActivity,
+                                            getString(R.string.failed_to_post_comment_code, response.code()),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
 
 
@@ -234,7 +242,7 @@ class CommentsActivity : AppCompatActivity() {
                                     Log.e("EditComment", "Failed → $code | $error")
                                     Toast.makeText(
                                         this@CommentsActivity,
-                                        "Failed to update comment ($code)",
+                                        getString(R.string.failed_to_update_comment_code, code),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -242,7 +250,11 @@ class CommentsActivity : AppCompatActivity() {
 
                             override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
                                 Log.e("EditComment", "Error → ${t.message}", t)
-                                Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@CommentsActivity,
+                                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         })
                 }
@@ -263,18 +275,22 @@ class CommentsActivity : AppCompatActivity() {
                                 val success = map["success"] as? Boolean ?: false
                                 if (success) {
                                     adapter.deleteComment(comment)
-                                    Toast.makeText(this@CommentsActivity, "Comment deleted", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@CommentsActivity, R.string.comment_deleted, Toast.LENGTH_SHORT).show()
                                     loadComments()
                                 } else {
                                     Toast.makeText(this@CommentsActivity, map["message"].toString(), Toast.LENGTH_SHORT).show()
                                 }
                             } else {
-                                Toast.makeText(this@CommentsActivity, "Failed to delete comment", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@CommentsActivity, R.string.failed_to_delete_comment, Toast.LENGTH_SHORT).show()
                             }
                         }
 
                         override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                            Toast.makeText(this@CommentsActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@CommentsActivity,
+                                getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     })
             }
@@ -291,7 +307,7 @@ class CommentsActivity : AppCompatActivity() {
 
         postId = intent.getStringExtra("POST_ID")
         if (postId.isNullOrEmpty()) {
-            Toast.makeText(this, "Post not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.post_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -304,7 +320,7 @@ class CommentsActivity : AppCompatActivity() {
         buttonSend.setOnClickListener {
             val text = editComment.text.toString().trim()
             if (text.isEmpty()) {
-                Toast.makeText(this, "Enter a comment", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.enter_comment, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             postComment(text)
@@ -436,7 +452,7 @@ class CommentsActivity : AppCompatActivity() {
                     if (!autoRefresh) {
                         Toast.makeText(
                             this@CommentsActivity,
-                            "Failed to load comments (${response.code()})",
+                            getString(R.string.failed_to_load_comments_code, response.code()),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -449,7 +465,7 @@ class CommentsActivity : AppCompatActivity() {
                 if (!autoRefresh) {
                     Toast.makeText(
                         this@CommentsActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -468,7 +484,7 @@ class CommentsActivity : AppCompatActivity() {
     private fun postComment(text: String) {
         val token = TokenManager.getToken(this)
         if (token.isNullOrEmpty()) {
-            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in_first, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -498,7 +514,7 @@ class CommentsActivity : AppCompatActivity() {
                             runOnUiThread {
                                 Toast.makeText(
                                     this@CommentsActivity,
-                                    "Comment added!",
+                                    getString(R.string.comment_added),
                                     Toast.LENGTH_SHORT
                                 ).show()
 
@@ -513,7 +529,7 @@ class CommentsActivity : AppCompatActivity() {
                             runOnUiThread {
                                 Toast.makeText(
                                     this@CommentsActivity,
-                                    "Failed to parse comment response",
+                                    getString(R.string.failed_to_parse_comment_response),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -522,7 +538,7 @@ class CommentsActivity : AppCompatActivity() {
                         runOnUiThread {
                             Toast.makeText(
                                 this@CommentsActivity,
-                                "Failed to post comment",
+                                getString(R.string.failed_to_post_comment),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -533,7 +549,7 @@ class CommentsActivity : AppCompatActivity() {
                     runOnUiThread {
                         Toast.makeText(
                             this@CommentsActivity,
-                            "Error: ${t.message}",
+                            getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -556,14 +572,14 @@ class CommentsActivity : AppCompatActivity() {
     //======Toggle Like on Comment=========//
     private fun toggleCommentLike(comment: Comment, isLiked: Boolean, position: Int) {
         val token = TokenManager.getToken(this) ?: run {
-            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in_first, Toast.LENGTH_SHORT).show()
             return
         }
 
         val userId = currentUserId.takeIf { it.isNotBlank() }
             ?: TokenManager.getUserId(this)
             ?: run {
-                Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.please_log_in_first, Toast.LENGTH_SHORT).show()
                 return
             }
 
@@ -639,7 +655,7 @@ class CommentsActivity : AppCompatActivity() {
                     } else {
                         // Revert in case of failure
                         updateCommentById(originalComment)
-                        Toast.makeText(this@CommentsActivity, "Failed to update like", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@CommentsActivity, R.string.failed_to_update_like, Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -647,7 +663,11 @@ class CommentsActivity : AppCompatActivity() {
                     pendingCommentLikeIds.remove(comment._id)
                     // Revert in case of network failure
                     updateCommentById(originalComment)
-                    Toast.makeText(this@CommentsActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@CommentsActivity,
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -744,7 +764,7 @@ class CommentsActivity : AppCompatActivity() {
         buttonSend.setOnClickListener {
             val text = editComment.text.toString().trim()
             if (text.isEmpty()) {
-                Toast.makeText(this, "Enter a comment", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.enter_comment, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             postComment(text)

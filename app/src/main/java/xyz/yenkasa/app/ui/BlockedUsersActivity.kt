@@ -84,7 +84,7 @@ class BlockedUsersActivity : AppCompatActivity() {
 
                     if (!response.isSuccessful || response.body() == null) {
                         emptyText.visibility = View.VISIBLE
-                        emptyText.text = "Failed to load blocked users"
+                        emptyText.text = getString(R.string.failed_to_load_blocked_users)
                         return
                     }
 
@@ -96,8 +96,8 @@ class BlockedUsersActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<List<BlockedUserModel>>, t: Throwable) {
                     progress.visibility = View.GONE
                     emptyState.visibility = View.VISIBLE
-                    emptyText.text = "Connection error"
-                    emptySubtitle.text = "We could not load your blocked users. Check your connection and try again."
+                    emptyText.text = getString(R.string.connection_error)
+                    emptySubtitle.text = getString(R.string.blocked_users_load_connection_error)
                 }
             })
     }
@@ -120,11 +120,11 @@ class BlockedUsersActivity : AppCompatActivity() {
 
     private fun updateEmptyState(isSearchEmpty: Boolean = false) {
         emptyState.visibility = View.VISIBLE
-        emptyText.text = if (isSearchEmpty) "No matching users" else "You’re in control"
+        emptyText.text = if (isSearchEmpty) getString(R.string.no_matching_users) else getString(R.string.blocked_empty_title)
         emptySubtitle.text = if (isSearchEmpty) {
-            "Try a different username or clear the search to see all blocked users."
+            getString(R.string.blocked_search_empty_summary)
         } else {
-            "Manage your blocked users and keep your experience safe and comfortable."
+            getString(R.string.blocked_empty_summary)
         }
     }
 }

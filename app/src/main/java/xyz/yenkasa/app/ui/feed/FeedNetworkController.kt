@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import xyz.yenkasa.app.R
 import kotlinx.coroutines.launch
 import xyz.yenkasa.app.work.FeedSyncWorker
 import java.util.concurrent.TimeUnit
@@ -24,7 +25,7 @@ class FeedNetworkController(
 
     fun updateOfflineBanner(offlineBanner: TextView, isOffline: Boolean) {
         if (isOffline) {
-            offlineBanner.text = "Offline Mode • Showing Saved Feed"
+            offlineBanner.text = fragment.getString(R.string.offline_mode_saved_feed)
         }
         offlineBanner.visibility = if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
     }

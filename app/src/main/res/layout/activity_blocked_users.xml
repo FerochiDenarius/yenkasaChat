@@ -44,7 +44,7 @@
                     android:layout_width="28dp"
                     android:layout_height="28dp"
                     android:layout_gravity="center"
-                    android:contentDescription="Back"
+                    android:contentDescription="@string/back"
                     android:src="@drawable/ic_arrow_back"
                     app:tint="@color/blocked_icon_muted" />
             </com.google.android.material.card.MaterialCardView>
@@ -70,7 +70,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="Blocked Users"
+                    android:text="@string/blocked_users"
                     android:textColor="@color/blocked_primary_text"
                     android:textSize="32sp"
                     android:textStyle="bold" />
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:lineSpacingExtra="6dp"
-                android:text="These users won’t be able to view your profile or contact you."
+                android:text="@string/blocked_users_summary"
                 android:textColor="@color/blocked_secondary_text"
                 android:textSize="17sp" />
 
@@ -92,7 +92,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
-                android:hint="Search blocked users"
+                android:hint="@string/search_blocked_users"
                 app:boxBackgroundColor="@color/blocked_surface_variant"
                 app:boxCornerRadiusBottomEnd="24dp"
                 app:boxCornerRadiusBottomStart="24dp"
@@ -162,7 +162,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:gravity="center"
-                    android:text="You’re in control"
+                    android:text="@string/blocked_empty_title"
                     android:textColor="@color/blocked_primary_text"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -176,7 +176,7 @@
                     android:layout_marginEnd="22dp"
                     android:gravity="center"
                     android:lineSpacingExtra="4dp"
-                    android:text="Manage your blocked users and keep your experience safe and comfortable."
+                    android:text="@string/blocked_empty_summary"
                     android:textColor="@color/blocked_secondary_text"
                     android:textSize="15sp" />
             </LinearLayout>

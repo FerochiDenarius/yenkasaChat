@@ -76,7 +76,7 @@ class FeedCommunityStoryAdapter(
             communityImage.visibility = View.GONE
             allIcon.visibility = View.VISIBLE
             previewText.visibility = View.GONE
-            name.text = "All Communities"
+            name.text = itemView.context.getString(R.string.all_communities)
             name.setTextColor(ContextCompat.getColor(itemView.context, R.color.feed_primary_text))
             itemView.setOnClickListener { onAllCommunitiesClick() }
         }
@@ -90,7 +90,7 @@ class FeedCommunityStoryAdapter(
             communityImage.visibility = View.VISIBLE
             allIcon.visibility = View.GONE
             previewText.visibility = View.GONE
-            name.text = community.displayName ?: community.name ?: "Community"
+            name.text = community.displayName ?: community.name ?: itemView.context.getString(R.string.community)
             name.setTextColor(ContextCompat.getColor(itemView.context, R.color.feed_primary_text))
 
             val preview = community.id?.let { latestPreviewByCommunityId[it] }

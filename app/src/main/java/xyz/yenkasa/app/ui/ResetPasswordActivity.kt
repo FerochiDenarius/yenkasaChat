@@ -48,7 +48,7 @@ class ResetPasswordActivity : AppCompatActivity() {
                     performApiPasswordReset(newPassword, token)
                 } ?: Toast.makeText(
                     this,
-                    "Reset token is missing. Please use the link from your email.",
+                    getString(R.string.reset_token_missing),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -70,7 +70,7 @@ class ResetPasswordActivity : AppCompatActivity() {
             if (resetToken != null) {
                 Log.i(TAG, "Reset token found: $resetToken")
             } else {
-                Toast.makeText(this, "Invalid password reset link: Token missing.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.invalid_reset_link_token_missing), Toast.LENGTH_LONG).show()
                 finish()
             }
         }
@@ -78,19 +78,19 @@ class ResetPasswordActivity : AppCompatActivity() {
 
     private fun validateInput(password: String, confirm: String): Boolean {
         if (password.isEmpty()) {
-            newPasswordField.error = "Password cannot be empty."
+            newPasswordField.error = getString(R.string.error_password_required)
             return false
         }
         if (password.length < 6) {
-            newPasswordField.error = "Password must be at least 6 characters."
+            newPasswordField.error = getString(R.string.error_password_min_length)
             return false
         }
         if (confirm.isEmpty()) {
-            confirmPasswordField.error = "Please confirm your password."
+            confirmPasswordField.error = getString(R.string.error_confirm_password_required)
             return false
         }
         if (password != confirm) {
-            confirmPasswordField.error = "Passwords do not match."
+            confirmPasswordField.error = getString(R.string.error_passwords_do_not_match)
             return false
         }
         return true
@@ -111,16 +111,16 @@ class ResetPasswordActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     Toast.makeText(
                         this@ResetPasswordActivity,
-                        "Password updated successfully!",
+                        getString(R.string.password_updated_successfully),
                         Toast.LENGTH_LONG
                     ).show()
                     finish()
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    val errorBody = response.errorBody()?.string() ?: getString(R.string.unknown_error)
                     Log.e(TAG, "Password reset failed: $errorBody")
                     Toast.makeText(
                         this@ResetPasswordActivity,
-                        "Failed to reset password: $errorBody",
+                        getString(R.string.failed_to_reset_password, errorBody),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -128,7 +128,7 @@ class ResetPasswordActivity : AppCompatActivity() {
                 Log.e(TAG, "Exception during password reset API call", e)
                 Toast.makeText(
                     this@ResetPasswordActivity,
-                    "An error occurred: ${e.message}",
+                    getString(R.string.error_occurred, e.message ?: ""),
                     Toast.LENGTH_LONG
                 ).show()
             } finally {

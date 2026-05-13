@@ -10,7 +10,7 @@
         android:id="@+id/optionDelete"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Delete Post"
+        android:text="@string/delete_post"
         android:padding="14dp"
         android:textSize="16sp"
         android:textColor="@color/red"
@@ -20,7 +20,7 @@
         android:id="@+id/optionHide"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hide Post"
+        android:text="@string/hide_post"
         android:padding="14dp"
         android:textSize="16sp"
         android:textColor="@color/feed_primary_text" />
@@ -29,7 +29,7 @@
         android:id="@+id/optionDownload"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Download Media"
+        android:text="@string/download_media"
         android:padding="14dp"
         android:textSize="16sp"
         android:textColor="@color/feed_primary_text" />
@@ -38,7 +38,7 @@
         android:id="@+id/optionFlag"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Report / Flag Post"
+        android:text="@string/report_flag_post"
         android:padding="14dp"
         android:textSize="16sp"
         android:textColor="@color/feed_primary_text" />

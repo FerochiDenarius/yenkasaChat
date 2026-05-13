@@ -11,7 +11,7 @@
         android:layout_height="match_parent"
         android:adjustViewBounds="false"
         android:background="@drawable/bg_feed_media"
-        android:contentDescription="Post preview"
+        android:contentDescription="@string/post_preview"
         android:scaleType="centerCrop" />
 
     <TextView

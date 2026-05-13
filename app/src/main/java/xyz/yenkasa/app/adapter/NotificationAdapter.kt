@@ -1,5 +1,6 @@
 package xyz.yenkasa.app.adapter
 
+import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
@@ -48,12 +49,12 @@ class NotificationAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, pos: Int) {
         val item = items[pos]
-        val content = buildNotificationContent(item)
+        val content = buildNotificationContent(holder.itemView.context, item)
 
         holder.title.text = content.title
         holder.title.setTypeface(null, Typeface.BOLD)
         holder.subtitle.text = content.subtitle
-        holder.time.text = formatRelativeTime(item.createdAt)
+        holder.time.text = formatRelativeTime(holder.itemView.context, item.createdAt)
         holder.unreadDot.visibility = if (item.status == "unread") View.VISIBLE else View.INVISIBLE
 
         holder.icon.setImageResource(getNotificationIcon(item.type))
@@ -149,16 +150,16 @@ class NotificationAdapter(
         }
     }
 
-    private fun buildNotificationContent(n: NotificationModel): NotificationContent {
+    private fun buildNotificationContent(context: Context, n: NotificationModel): NotificationContent {
         val rawMessage = n.message?.trim().orEmpty()
-        val fallbackTitle = formatMessage(n)
+        val fallbackTitle = formatMessage(context, n)
         val rewardAmount = extractRewardAmount(rawMessage)
         val isReward = isRewardNotification(n) || rewardAmount != null
 
         if (!isReward) {
             return NotificationContent(
                 title = rawMessage.ifBlank { fallbackTitle },
-                subtitle = subtitleForType(n),
+                subtitle = subtitleForType(context, n),
                 rewardBadge = null
             )
         }
@@ -169,11 +170,11 @@ class NotificationAdapter(
             .filter { it.isNotBlank() }
 
         val title = parts.firstOrNull()
-            ?.replaceFirst("^Earned".toRegex(), "You earned")
+            ?.replaceFirst("^Earned".toRegex(), context.getString(R.string.notification_you_earned_prefix))
             ?: fallbackTitle
         val subtitle = parts.getOrNull(1)
-            ?: rewardAmount?.let { "$it added to your wallet" }
-            ?: "YKC added to your wallet"
+            ?: rewardAmount?.let { context.getString(R.string.reward_added_to_wallet, it) }
+            ?: context.getString(R.string.ykc_added_to_wallet)
 
         return NotificationContent(
             title = title,
@@ -182,44 +183,44 @@ class NotificationAdapter(
         )
     }
 
-    private fun formatMessage(n: NotificationModel): String {
+    private fun formatMessage(context: Context, n: NotificationModel): String {
         return when (n.type.lowercase()) {
-            "like", "post_liked", "post_like" -> "Someone liked your post"
-            "comment", "post_comment" -> "Someone commented on your post"
-            "comment_reply" -> "Someone replied to your comment"
-            "follow", "new_follower" -> "New follower"
-            "post_approved" -> "Your post was approved"
-            "view_milestone" -> "Your post reached a new view milestone"
+            "like", "post_liked", "post_like" -> context.getString(R.string.notification_someone_liked_post)
+            "comment", "post_comment" -> context.getString(R.string.notification_someone_commented_post)
+            "comment_reply" -> context.getString(R.string.notification_someone_replied_comment)
+            "follow", "new_follower" -> context.getString(R.string.notification_new_follower)
+            "post_approved" -> context.getString(R.string.notification_post_approved)
+            "view_milestone" -> context.getString(R.string.notification_view_milestone)
             else -> n.message ?: n.type
         }
     }
 
-    private fun subtitleForType(n: NotificationModel): String {
+    private fun subtitleForType(context: Context, n: NotificationModel): String {
         return when (n.type.lowercase()) {
-            "follow", "new_follower" -> "Tap to view profile"
-            "post_comment", "comment", "comment_reply" -> "Tap to open the conversation"
-            "post_like", "post_liked", "like" -> "Tap to view the post"
-            "ad_approved", "ad_rejected" -> "Tap to view your ads"
-            "community_approved", "community_rejected" -> "Tap to view your communities"
-            else -> "Tap to view activity"
+            "follow", "new_follower" -> context.getString(R.string.tap_to_view_profile)
+            "post_comment", "comment", "comment_reply" -> context.getString(R.string.tap_to_open_conversation)
+            "post_like", "post_liked", "like" -> context.getString(R.string.tap_to_view_post)
+            "ad_approved", "ad_rejected" -> context.getString(R.string.tap_to_view_ads)
+            "community_approved", "community_rejected" -> context.getString(R.string.tap_to_view_communities)
+            else -> context.getString(R.string.tap_to_view_activity)
         }
     }
 
-    private fun formatRelativeTime(iso: String?): String {
-        if (iso == null) return "Just now"
+    private fun formatRelativeTime(context: Context, iso: String?): String {
+        if (iso == null) return context.getString(R.string.just_now)
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             parser.timeZone = TimeZone.getTimeZone("UTC")
-            val date = parser.parse(iso) ?: return "Just now"
+            val date = parser.parse(iso) ?: return context.getString(R.string.just_now)
             val diff = Date().time - date.time
             when {
-                diff < 60000 -> "Just now"
-                diff < 3600000 -> "${diff / 60000}m ago"
-                diff < 86400000 -> "${diff / 3600000}h ago"
-                else -> "${diff / 86400000}d ago"
+                diff < 60000 -> context.getString(R.string.just_now)
+                diff < 3600000 -> context.getString(R.string.minutes_ago, diff / 60000)
+                diff < 86400000 -> context.getString(R.string.hours_ago, diff / 3600000)
+                else -> context.getString(R.string.days_ago, diff / 86400000)
             }
         } catch (e: Exception) {
-            "Just now"
+            context.getString(R.string.just_now)
         }
     }
 

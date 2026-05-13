@@ -10,7 +10,7 @@
 
         <!-- Title -->
         <TextView
-            android:text="Welcome to Yenkasa"
+            android:text="@string/policy_welcome_title"
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/black"
@@ -20,7 +20,7 @@
 
         <!-- Description -->
         <TextView
-            android:text="Before using Yenkasa for the first time, please review our key policies:"
+            android:text="@string/policy_intro"
             android:textSize="15sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -29,7 +29,7 @@
         <!-- Links -->
         <TextView
             android:id="@+id/linkPrivacy"
-            android:text="Privacy Policy"
+            android:text="@string/privacy_policy"
             android:textColor="@color/primary"
             android:textSize="16sp"
             android:layout_width="match_parent"
@@ -39,7 +39,7 @@
 
         <TextView
             android:id="@+id/linkTerms"
-            android:text="User Agreement"
+            android:text="@string/user_agreement"
             android:textColor="@color/primary"
             android:textSize="16sp"
             android:layout_width="match_parent"
@@ -49,7 +49,7 @@
 
         <TextView
             android:id="@+id/linkGuidelines"
-            android:text="Community Guidelines"
+            android:text="@string/community_guidelines"
             android:textColor="@color/primary"
             android:textSize="16sp"
             android:layout_width="match_parent"
@@ -59,7 +59,7 @@
 
         <TextView
             android:id="@+id/linkSafety"
-            android:text="Safety Policy"
+            android:text="@string/safety_policy"
             android:textColor="@color/primary"
             android:textSize="16sp"
             android:layout_width="match_parent"
@@ -69,7 +69,7 @@
 
         <TextView
             android:id="@+id/linkAds"
-            android:text="Ads &amp; Rewarded Ads Disclosure"
+            android:text="@string/ads_rewarded_ads_disclosure"
             android:textColor="@color/primary"
             android:textSize="16sp"
             android:layout_width="match_parent"
@@ -80,7 +80,7 @@
         <!-- Continue Button -->
         <Button
             android:id="@+id/btnAccept"
-            android:text="I Agree and Continue"
+            android:text="@string/i_agree_and_continue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"

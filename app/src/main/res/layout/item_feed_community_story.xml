@@ -24,7 +24,7 @@
             android:id="@+id/imageCommunityStory"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:contentDescription="Community"
+            android:contentDescription="@string/community"
             android:scaleType="centerCrop"
             android:src="@drawable/ic_community_placeholder" />
 
@@ -33,7 +33,7 @@
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:layout_gravity="center"
-            android:contentDescription="All Communities"
+            android:contentDescription="@string/all_communities"
             android:src="@drawable/ic_communities"
             android:visibility="gone"
             app:tint="@color/feed_accent"

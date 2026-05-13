@@ -13,7 +13,7 @@
         android:layout_height="40dp"
         android:layout_alignParentStart="true"
         android:layout_marginEnd="8dp"
-        android:contentDescription="User profile image"
+        android:contentDescription="@string/user_profile_image"
         android:scaleType="centerCrop"
         android:background="@drawable/profile_image_bg"
         android:src="@drawable/ic_user_placeholder" />
@@ -32,7 +32,7 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@drawable/ic_heart_outline"
-            android:contentDescription="Like comment"
+            android:contentDescription="@string/like_comment"
             app:tint="@color/primary_color"
             android:layout_marginEnd="2dp" />
 
@@ -40,7 +40,7 @@
             android:id="@+id/textLikeCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
+            android:text="@string/zero"
             android:textColor="@color/gray"
             android:textSize="12sp" />
     </LinearLayout>
@@ -65,7 +65,7 @@
                 android:id="@+id/textUsername"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Username"
+                android:text="@string/username_placeholder"
                 android:textStyle="bold"
                 android:textColor="@color/black"
                 android:textSize="14sp" />
@@ -85,7 +85,7 @@
             android:id="@+id/textComment"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="This is a comment text."
+            android:text="@string/comment_text_placeholder"
             android:textColor="@color/dark_gray"
             android:textSize="14sp"
             android:layout_marginTop="2dp" />
@@ -100,7 +100,7 @@
                 android:id="@+id/textTimestamp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2h ago"
+                android:text="@string/time_2h_ago_placeholder"
                 android:textColor="@color/gray"
                 android:textSize="12sp" />
 
@@ -108,7 +108,7 @@
                 android:id="@+id/buttonReply"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" • Reply"
+                android:text="@string/reply_action_prefixed"
                 android:textColor="@color/blue"
                 android:textSize="12sp"
                 android:paddingStart="6dp" />
@@ -117,7 +117,7 @@
                 android:id="@+id/buttonEdit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" • Edit"
+                android:text="@string/edit_action_prefixed"
                 android:textColor="@color/blue"
                 android:textSize="12sp"
                 android:paddingStart="6dp"
@@ -127,7 +127,7 @@
                 android:id="@+id/buttonDelete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" • Delete"
+                android:text="@string/delete_action_prefixed"
                 android:textColor="@color/red"
                 android:textSize="12sp"
                 android:paddingStart="6dp"

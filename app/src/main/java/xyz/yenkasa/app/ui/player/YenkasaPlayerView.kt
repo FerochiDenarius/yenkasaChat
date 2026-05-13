@@ -40,6 +40,7 @@ import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.WalletBalanceManager
 import xyz.yenkasa.app.util.YenkasaMediaCache
@@ -62,6 +63,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val walletPill: YenkasaWalletPill
     private val sponsoredAdButton: ImageButton
     private val liveArenaButton: YenkasaLiveArenaButton
+    private val liveStreamButton: YenkasaLiveStreamButton
     private val playerView: PlayerView
     private val imageView: ImageView
     private val audioArtworkView: ImageView
@@ -103,6 +105,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private var saveSelected = false
     private var likeSelected = false
     private var overlaysVisible = true
+    private var liveStreamAllowed = false
     private var secondaryActionsExpanded = false
     private var imageIndex = 0
     private var touchDownX = 0f
@@ -165,6 +168,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         walletPill = findViewById(R.id.playerWalletPill)
         sponsoredAdButton = findViewById(R.id.playerSponsoredAdButton)
         liveArenaButton = findViewById(R.id.playerLiveArenaButton)
+        liveStreamButton = findViewById(R.id.playerLiveStreamButton)
         playerView = findViewById(R.id.playerMediaView)
         imageView = findViewById(R.id.imagePlayerMedia)
         audioArtworkView = findViewById(R.id.imageAudioArtwork)
@@ -256,6 +260,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
             engagementRail.updateMargins(start = safeBars.left + side, bottom = dp(110))
             moreOptionsButton.updateMargins(start = safeBars.left + side, bottom = dp(8))
             liveArenaButton.updateMargins(end = safeBars.right + side, bottom = dp(72))
+            liveStreamButton.updateMargins(end = safeBars.right + side, bottom = dp(154))
             bottomMetaView.updateMargins(start = safeBars.left + side, end = safeBars.right + side, bottom = dp(56))
             controlsView.updateMargins(
                 start = safeBars.left + controlsSide,
@@ -393,22 +398,23 @@ class YenkasaPlayerView @JvmOverloads constructor(
     }
 
     private fun setAccessibilityLabels() {
-        menuButton.contentDescription = "Open menu"
-        walletPill.contentDescription = "Open wallet"
-        searchBar.contentDescription = "Search posts"
-        seeAllButton.contentDescription = "Show all communities"
-        buttonLike.contentDescription = "Like post"
-        buttonViews.contentDescription = "View count"
-        buttonComment.contentDescription = "Open comments"
-        buttonShare.contentDescription = "Share post"
-        buttonSave.contentDescription = "Save post"
-        sponsoredAdButton.contentDescription = "Create sponsored ad"
-        buttonReward.contentDescription = "Reward creator"
-        buttonExpandActions.contentDescription = "Show more actions"
-        moreOptionsButton.contentDescription = "More post options"
-        liveArenaButton.contentDescription = "Open live arena"
-        avatarView.contentDescription = "Open creator profile"
-        usernameView.contentDescription = "Open creator profile"
+        menuButton.contentDescription = context.getString(R.string.open_menu)
+        walletPill.contentDescription = context.getString(R.string.feed_wallet_open)
+        searchBar.contentDescription = context.getString(R.string.search_posts)
+        seeAllButton.contentDescription = context.getString(R.string.show_all_communities)
+        buttonLike.contentDescription = context.getString(R.string.like_post)
+        buttonViews.contentDescription = context.getString(R.string.view_count)
+        buttonComment.contentDescription = context.getString(R.string.open_comments)
+        buttonShare.contentDescription = context.getString(R.string.share_post)
+        buttonSave.contentDescription = context.getString(R.string.save_post)
+        sponsoredAdButton.contentDescription = context.getString(R.string.create_sponsored_ad)
+        buttonReward.contentDescription = context.getString(R.string.reward_creator)
+        buttonExpandActions.contentDescription = context.getString(R.string.show_more_actions)
+        moreOptionsButton.contentDescription = context.getString(R.string.more_post_options)
+        liveArenaButton.contentDescription = context.getString(R.string.open_live_arena)
+        liveStreamButton.contentDescription = context.getString(R.string.start_livestream)
+        avatarView.contentDescription = context.getString(R.string.open_creator_profile)
+        usernameView.contentDescription = context.getString(R.string.open_creator_profile)
     }
 
     private fun toggleSecondaryActions() {
@@ -594,6 +600,8 @@ class YenkasaPlayerView @JvmOverloads constructor(
         buttonExpandActions.contentDescription = "Show more actions"
 
         walletPill.setBalance(item.walletBalance)
+        liveStreamAllowed = UserPermissions.canStartLivestream(TokenManager.getUserRole(context))
+        liveStreamButton.isVisible = liveStreamAllowed
         searchBar.reset()
         searchBar.setOnQueryChanged { query -> actions.onSearchQuery(query) }
         bindFeedModeTabs(selectedFeedMode, actions)
@@ -609,6 +617,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         walletPill.setOnClickListener { actions.onOpenWallet() }
         sponsoredAdButton.setOnClickListener { actions.onCreateSponsoredAd() }
         liveArenaButton.setOnClickListener { actions.onOpenLiveArena() }
+        liveStreamButton.setOnClickListener { actions.onOpenLiveStream() }
         avatarView.setOnClickListener { actions.onOpenProfile(post.userId.id) }
         usernameView.setOnClickListener { actions.onOpenProfile(post.userId.id) }
         moreOptionsButton.setOnClickListener { actions.onShowPostOptions(post) }
@@ -616,7 +625,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         usernameView.text = item.username
         captionView.text = item.caption.orEmpty()
         captionView.isVisible = !item.caption.isNullOrBlank()
-        sourceView.text = item.audioTitle ?: item.communityName ?: "Original Sound - Yenkasa"
+        sourceView.text = item.audioTitle ?: item.communityName ?: context.getString(R.string.original_sound_yenkasa)
 
         UserBadgeUtils.applyBadge(verifiedBadgeView, item.isVerified, post.userId.roleName)
         Glide.with(context)
@@ -630,7 +639,11 @@ class YenkasaPlayerView @JvmOverloads constructor(
         textComment.text = formatCount(item.commentCount)
         textShare.text = formatCount(item.shareCount)
         textSave.text = formatCount(item.saveCount + if (saved) 1 else 0)
-        textReward.text = if (item.rewardAmount > 0) "+${item.rewardAmount} YKC" else "Reward"
+        textReward.text = if (item.rewardAmount > 0) {
+            context.getString(R.string.ykc_reward_gain, item.rewardAmount.toString())
+        } else {
+            context.getString(R.string.reward)
+        }
 
         renderLikeState()
         buttonLike.setOnClickListener {
@@ -822,11 +835,12 @@ class YenkasaPlayerView @JvmOverloads constructor(
             bottomMetaView,
             controlsView,
             walletPill,
-            liveArenaButton
+            liveArenaButton,
+            liveStreamButton
         ).forEach { view ->
             view.animate().cancel()
             setOverlayInteractable(view, overlaysVisible)
-            view.isVisible = true
+            view.isVisible = view != liveStreamButton || liveStreamAllowed
             if (animate) {
                 if (overlaysVisible) {
                     view.animate().alpha(1f).setDuration(180L).start()

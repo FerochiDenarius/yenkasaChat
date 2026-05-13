@@ -142,6 +142,10 @@ object UserPermissions {
         return canGenerateRoleCodes(role)
     }
 
+    fun canStartLivestream(role: String?): Boolean {
+        return normalize(role) == "senior_developer"
+    }
+
     fun canGenerateStaffRole(role: String?, targetRole: String?): Boolean {
         val actor = normalize(role)
         val target = normalize(targetRole)

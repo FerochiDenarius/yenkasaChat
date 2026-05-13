@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#101010"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yenkasa Live Stream"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Start a normal one-host livestream."
+        android:textColor="#B8FFFFFF"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/editLiveTitle"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/bg_live_comment"
+        android:hint="Live title"
+        android:inputType="textCapSentences"
+        android:maxLength="120"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:textColor="@android:color/white"
+        android:textColorHint="#99FFFFFF" />
+
+    <EditText
+        android:id="@+id/editLiveCommunity"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_live_comment"
+        android:hint="Community (optional)"
+        android:inputType="textCapWords"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:textColor="@android:color/white"
+        android:textColorHint="#99FFFFFF" />
+
+    <Button
+        android:id="@+id/buttonStartLive"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="22dp"
+        android:backgroundTint="#EF233C"
+        android:text="Start Live"
+        android:textColor="@android:color/white"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/buttonBrowseLive"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="10dp"
+        android:backgroundTint="#263238"
+        android:text="Browse Live Streams"
+        android:textColor="@android:color/white" />
+
+    <ProgressBar
+        android:id="@+id/progressStartLive"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"
+        android:visibility="gone" />
+</LinearLayout>

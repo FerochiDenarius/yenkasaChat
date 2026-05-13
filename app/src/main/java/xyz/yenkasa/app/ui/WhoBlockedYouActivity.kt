@@ -44,7 +44,7 @@ class WhoBlockedYouActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<List<BlockedUserModel>>, t: Throwable) {
                     Toast.makeText(
                         this@WhoBlockedYouActivity,
-                        "Failed to load",
+                        R.string.failed_to_load,
                         Toast.LENGTH_SHORT
                     ).show()
                 }

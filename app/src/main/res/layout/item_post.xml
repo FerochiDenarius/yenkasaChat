@@ -88,7 +88,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="5dp"
-                    android:text="•"
+                    android:text="@string/bullet_separator"
                     android:textColor="@color/feed_secondary_text"
                     android:textSize="12sp" />
 
@@ -109,7 +109,7 @@
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:layout_marginStart="8dp"
-            android:contentDescription="Follow user"
+            android:contentDescription="@string/follow_user"
             app:backgroundTint="@color/feed_action_background"
             app:borderWidth="0dp"
             app:elevation="0dp"
@@ -124,7 +124,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="4dp"
             android:background="@drawable/bg_feed_icon_button"
-            android:contentDescription="More options"
+            android:contentDescription="@string/more_options"
             android:padding="9dp"
             android:src="@drawable/ic_more_vert"
             app:tint="@color/feed_primary_text" />
@@ -243,7 +243,7 @@
                 <ImageView
                     android:layout_width="62dp"
                     android:layout_height="62dp"
-                    android:contentDescription="Audio Post"
+                    android:contentDescription="@string/audio_post"
                     android:src="@drawable/ic_audio_wave"
                     app:tint="@color/feed_primary_text" />
 
@@ -252,7 +252,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Tap to Play Audio"
+                    android:text="@string/tap_to_play_audio"
                     android:textColor="@color/feed_primary_text"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -284,7 +284,7 @@
                         android:id="@+id/audioCurrentTime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0:00"
+                        android:text="@string/time_zero"
                         android:textColor="@color/feed_secondary_text"
                         android:textSize="12sp" />
 
@@ -297,7 +297,7 @@
                         android:id="@+id/audioTotalTime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0:00"
+                        android:text="@string/time_zero"
                         android:textColor="@color/feed_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -325,7 +325,7 @@
                 android:layout_width="62dp"
                 android:layout_height="62dp"
                 android:background="@android:color/transparent"
-                android:contentDescription="Play video"
+                android:contentDescription="@string/play_video"
                 android:src="@drawable/ic_play_circle"
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -339,7 +339,7 @@
                 android:layout_width="62dp"
                 android:layout_height="62dp"
                 android:background="@android:color/transparent"
-                android:contentDescription="Play or pause video"
+                android:contentDescription="@string/play_or_pause_video"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_play_circle"
                 android:visibility="gone"
@@ -381,7 +381,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/bg_feed_icon_button"
-            android:contentDescription="Like"
+            android:contentDescription="@string/like"
             android:padding="9dp"
             android:src="@drawable/ic_heart_outline"
             app:tint="@color/yenkasa_emerald" />
@@ -401,7 +401,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_feed_icon_button"
-            android:contentDescription="Comment"
+            android:contentDescription="@string/comment"
             android:padding="9dp"
             android:src="@drawable/ic_comment"
             app:tint="@color/feed_secondary_text" />
@@ -421,7 +421,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_feed_icon_button"
-            android:contentDescription="Share"
+            android:contentDescription="@string/share"
             android:padding="9dp"
             android:src="@drawable/ic_share"
             app:tint="@color/feed_secondary_text" />

@@ -95,7 +95,7 @@
                         android:layout_marginTop="22dp"
                         android:fontFamily="sans"
                         android:gravity="center"
-                        android:text="Create your account"
+                        android:text="@string/register_title"
                         android:textColor="@color/login_primary_text"
                         android:textSize="31sp"
                         android:textStyle="bold"
@@ -107,7 +107,7 @@
                         android:layout_marginTop="8dp"
                         android:gravity="center"
                         android:lineSpacingExtra="4dp"
-                        android:text="Join Yenkasa and start your community journey"
+                        android:text="@string/register_subtitle"
                         android:textColor="@color/login_secondary_text"
                         android:textSize="16sp" />
 
@@ -132,7 +132,7 @@
                             android:drawablePadding="10dp"
                             android:drawableTint="@color/selector_register_segment_text"
                             android:gravity="center"
-                            android:text="Email"
+                            android:text="@string/email"
                             android:textColor="@color/selector_register_segment_text"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -148,7 +148,7 @@
                             android:drawablePadding="10dp"
                             android:drawableTint="@color/selector_register_segment_text"
                             android:gravity="center"
-                            android:text="Phone"
+                            android:text="@string/phone"
                             android:textColor="@color/selector_register_segment_text"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -160,7 +160,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
-                        android:hint="Email address"
+                        android:hint="@string/email_address"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
@@ -192,7 +192,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
-                        android:hint="Phone number"
+                        android:hint="@string/phone_number"
                         android:visibility="gone"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxCornerRadiusBottomEnd="16dp"
@@ -225,7 +225,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:hint="Username"
+                        android:hint="@string/username"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
@@ -280,7 +280,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Country"
+                                android:text="@string/country"
                                 android:textColor="@color/login_secondary_text"
                                 android:textSize="13sp" />
 
@@ -329,7 +329,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="State, City or Town Community"
+                                android:text="@string/community_location_label"
                                 android:textColor="@color/login_secondary_text"
                                 android:textSize="13sp" />
 
@@ -349,7 +349,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:hint="Location"
+                        android:hint="@string/location"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
@@ -381,7 +381,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:hint="Password"
+                        android:hint="@string/password"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
@@ -415,7 +415,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:hint="Confirm password"
+                        android:hint="@string/confirm_password"
                         app:boxBackgroundColor="@color/login_input_background"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
@@ -454,14 +454,13 @@
                             android:id="@+id/checkTerms"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:buttonTint="@color/login_gold"
-                            android:text="" />
+                            android:buttonTint="@color/login_gold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
-                            android:text="I agree to the"
+                            android:text="@string/i_agree_to_the"
                             android:textColor="@color/login_secondary_text"
                             android:textSize="15sp" />
 
@@ -473,7 +472,7 @@
                             android:paddingTop="10dp"
                             android:paddingEnd="5dp"
                             android:paddingBottom="10dp"
-                            android:text="User Agreement"
+                            android:text="@string/user_agreement"
                             android:textColor="@color/login_gold"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -514,7 +513,7 @@
                         android:fontFamily="sans"
                         android:paddingStart="22dp"
                         android:paddingEnd="22dp"
-                        android:text="Create account"
+                        android:text="@string/create_account"
                         android:textAllCaps="false"
                         android:textColor="@color/login_deep_green"
                         android:textSize="18sp"
@@ -530,7 +529,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Already have an account?"
+                            android:text="@string/already_have_account"
                             android:textColor="@color/login_secondary_text"
                             android:textSize="15sp" />
 
@@ -542,7 +541,7 @@
                             android:paddingTop="10dp"
                             android:paddingEnd="6dp"
                             android:paddingBottom="10dp"
-                            android:text="Log in"
+                            android:text="@string/log_in"
                             android:textColor="@color/login_gold"
                             android:textSize="15sp"
                             android:textStyle="bold" />

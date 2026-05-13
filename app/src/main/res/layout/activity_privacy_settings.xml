@@ -25,7 +25,7 @@
                 android:layout_width="54dp"
                 android:layout_height="54dp"
                 android:background="@drawable/bg_privacy_header_icon"
-                android:contentDescription="Message privacy"
+                android:contentDescription="@string/message_privacy"
                 android:padding="13dp"
                 android:src="@drawable/ic_privacy"
                 app:tint="@color/menu_accent" />
@@ -40,7 +40,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Message Privacy"
+                    android:text="@string/message_privacy"
                     android:textColor="@color/menu_primary_text"
                     android:textSize="26sp"
                     android:textStyle="bold" />
@@ -49,7 +49,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Control who can send you messages."
+                    android:text="@string/message_privacy_summary"
                     android:textColor="@color/menu_secondary_text"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -83,11 +83,11 @@
 
                     <TextView
                         style="@style/PrivacyOptionTitle"
-                        android:text="Everyone" />
+                        android:text="@string/privacy_option_everyone_title" />
 
                     <TextView
                         style="@style/PrivacyOptionSubtitle"
-                        android:text="Anyone can message you" />
+                        android:text="@string/privacy_option_everyone_summary" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -111,11 +111,11 @@
 
                     <TextView
                         style="@style/PrivacyOptionTitle"
-                        android:text="Community Members" />
+                        android:text="@string/privacy_option_community_title" />
 
                     <TextView
                         style="@style/PrivacyOptionSubtitle"
-                        android:text="People in your communities can message you" />
+                        android:text="@string/privacy_option_community_summary" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -139,11 +139,11 @@
 
                     <TextView
                         style="@style/PrivacyOptionTitle"
-                        android:text="Requires Approval" />
+                        android:text="@string/privacy_option_approval_title" />
 
                     <TextView
                         style="@style/PrivacyOptionSubtitle"
-                        android:text="You approve who can message you" />
+                        android:text="@string/privacy_option_approval_summary" />
                 </LinearLayout>
 
                 <TextView
@@ -154,7 +154,7 @@
                     android:paddingTop="5dp"
                     android:paddingEnd="10dp"
                     android:paddingBottom="5dp"
-                    android:text="Recommended"
+                    android:text="@string/recommended"
                     android:textColor="@color/white"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -180,11 +180,11 @@
 
                     <TextView
                         style="@style/PrivacyOptionTitle"
-                        android:text="Nobody" />
+                        android:text="@string/privacy_option_nobody_title" />
 
                     <TextView
                         style="@style/PrivacyOptionSubtitle"
-                        android:text="No one can message you" />
+                        android:text="@string/privacy_option_nobody_summary" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -207,7 +207,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:text="This won’t affect your existing conversations."
+                    android:text="@string/privacy_existing_conversations_note"
                     android:textColor="@color/menu_secondary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -219,7 +219,7 @@
             android:layout_height="56dp"
             android:layout_marginTop="22dp"
             android:background="@drawable/bg_privacy_save_button"
-            android:text="Save Changes"
+            android:text="@string/save_changes"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
@@ -236,7 +236,7 @@
                 android:id="@+id/txtMessageRequestsHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Message Requests (0)"
+                android:text="@string/message_requests_count_zero"
                 android:textColor="@color/menu_primary_text"
                 android:textSize="19sp"
                 android:textStyle="bold" />
@@ -246,7 +246,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="People who want to message you."
+            android:text="@string/message_requests_summary"
             android:textColor="@color/menu_secondary_text"
             android:textSize="14sp" />
 
@@ -265,7 +265,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:text="No message requests."
+            android:text="@string/no_message_requests"
             android:textColor="@color/menu_secondary_text"
             android:textSize="14sp"
             android:visibility="gone" />
@@ -275,7 +275,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:gravity="center"
-            android:text="Only you can see your message requests."
+            android:text="@string/message_requests_private_note"
             android:textColor="@color/menu_secondary_text"
             android:textSize="12sp" />
     </LinearLayout>

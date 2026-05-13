@@ -14,6 +14,7 @@ interface YenkasaPlayerActions {
     fun onReward(post: Post)
     fun onOpenWallet()
     fun onOpenLiveArena()
+    fun onOpenLiveStream()
     fun onCreateSponsoredAd()
     fun onCommunitySelected(community: Community?)
     fun onSeeAllCommunities()

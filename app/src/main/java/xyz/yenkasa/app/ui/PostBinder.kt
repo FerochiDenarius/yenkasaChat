@@ -81,7 +81,7 @@ object PostBinder {
         }
 
         // 🏘 Community
-        communityName.text = post.communityId?.displayName ?: "General"
+        communityName.text = post.communityId?.displayName ?: context.getString(R.string.general)
 
         // 🕒 Timestamp (SAFE)
         val ts = post.createdAt.toLongOrNull()
@@ -104,9 +104,9 @@ object PostBinder {
         } else {
             View.VISIBLE
         }
-        likeCount.text = "${post.likeCount} likes"
-        commentCount.text = "${post.commentCount} comments"
-        viewCount.text = "👁 ${post.viewCount}"
+        likeCount.text = context.resources.getQuantityString(R.plurals.likes_count, post.likeCount, post.likeCount)
+        commentCount.text = context.resources.getQuantityString(R.plurals.comments_count, post.commentCount, post.commentCount)
+        viewCount.text = context.getString(R.string.views_count, post.viewCount)
         likeButton.setImageResource(if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
         likeButton.imageTintList = ColorStateList.valueOf(
             ContextCompat.getColor(context, R.color.yenkasa_emerald)

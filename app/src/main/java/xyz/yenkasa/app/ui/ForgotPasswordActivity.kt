@@ -39,13 +39,13 @@ class ForgotPasswordActivity : AppCompatActivity() {
             val email = editEmail.text.toString().trim()
 
             if (email.isEmpty()) {
-                editEmail.error = "Email is required"
+                editEmail.error = getString(R.string.error_email_required)
                 editEmail.requestFocus()
                 return@setOnClickListener
             }
             // Basic email validation (optional but recommended)
             if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                editEmail.error = "Enter a valid email address"
+                editEmail.error = getString(R.string.error_valid_email)
                 editEmail.requestFocus()
                 return@setOnClickListener
             }
@@ -71,19 +71,19 @@ class ForgotPasswordActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     // Backend successfully processed the request (e.g., sent the email)
-                    Toast.makeText(this@ForgotPasswordActivity, "If your email is registered, a password reset link has been sent.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ForgotPasswordActivity, getString(R.string.password_reset_link_sent), Toast.LENGTH_LONG).show()
                     // Optionally, navigate back or to a confirmation screen
                     // finish()
                 } else {
                     // Handle API errors (e.g., email not found, server error)
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error occurred"
+                    val errorBody = response.errorBody()?.string() ?: getString(R.string.unknown_error_occurred)
                     Log.e("ForgotPassword", "API Error: ${response.code()} - $errorBody")
-                    Toast.makeText(this@ForgotPasswordActivity, "Error: $errorBody", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ForgotPasswordActivity, getString(R.string.error_with_message, errorBody), Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 // Handle network errors or other exceptions
                 Log.e("ForgotPassword", "Network/Exception: ${e.message}", e)
-                Toast.makeText(this@ForgotPasswordActivity, "Failed to connect: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@ForgotPasswordActivity, getString(R.string.failed_to_connect, e.message ?: ""), Toast.LENGTH_LONG).show()
             } finally {
                 // Hide progress bar and re-enable button/input
                 progressBar.visibility = View.GONE

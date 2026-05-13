@@ -57,11 +57,11 @@ class BlockedUsersAdapter(
         // Username
         holder.txtUsername.text = user.username
 
-        // Role — priority: roleName > role.name > "User"
+        // Role priority: roleName > role.name > localized fallback.
         val finalRole = when {
             !user.roleName.isNullOrBlank() -> user.roleName!!
             !user.role?.name.isNullOrBlank() -> user.role!!.name!!
-            else -> "Unverified"
+            else -> holder.itemView.context.getString(R.string.unverified)
         }
 
         holder.txtRole.text = finalRole
@@ -69,7 +69,9 @@ class BlockedUsersAdapter(
             .replaceFirstChar { it.uppercase() }
 
         // Blocked date
-        holder.txtDate.text = user.dateBlocked?.let { "Blocked on ${formatBlockedDate(it)}" } ?: ""
+        holder.txtDate.text = user.dateBlocked?.let {
+            holder.itemView.context.getString(R.string.blocked_on_date, formatBlockedDate(it))
+        } ?: ""
 
         // UNBLOCK ICON click
         val unblockClick = View.OnClickListener {
@@ -99,14 +101,14 @@ class BlockedUsersAdapter(
 
                     Toast.makeText(
                         holder.itemView.context,
-                        "User unblocked",
+                        R.string.user_unblocked,
                         Toast.LENGTH_SHORT
                     ).show()
 
                 } else {
                     Toast.makeText(
                         holder.itemView.context,
-                        "Failed to unblock",
+                        R.string.failed_to_unblock,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -115,7 +117,10 @@ class BlockedUsersAdapter(
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                 Toast.makeText(
                     holder.itemView.context,
-                    "Network error: ${t.message}",
+                    holder.itemView.context.getString(
+                        R.string.network_error_with_message,
+                        t.message ?: holder.itemView.context.getString(R.string.unknown_error)
+                    ),
                     Toast.LENGTH_SHORT
                 ).show()
             }

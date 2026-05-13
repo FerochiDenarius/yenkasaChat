@@ -15,6 +15,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <View
+        android:id="@+id/liveTopGradient"
+        android:layout_width="0dp"
+        android:layout_height="210dp"
+        android:background="@drawable/bg_yenkasa_player_gradient_top"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/liveBottomGradient"
+        android:layout_width="0dp"
+        android:layout_height="260dp"
+        android:background="@drawable/bg_yenkasa_player_gradient_bottom"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <FrameLayout
         android:id="@+id/liveReactionsLayer"
         android:layout_width="0dp"
@@ -26,180 +44,418 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/liveTopBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="20dp"
-        android:layout_marginEnd="16dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="22dp"
+        android:layout_marginEnd="18dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/textLiveTitle"
+        <ImageButton
+            android:id="@+id/buttonLiveBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_live_glass_icon"
+            android:contentDescription="@string/back"
+            android:elevation="10dp"
+            android:padding="12dp"
+            android:src="@drawable/ic_arrow_back"
+            android:tint="@color/yenkasa_emerald"
+            app:layout_constraintBottom_toBottomOf="@id/liveHostInfoCard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/liveHostInfoCard" />
+
+        <LinearLayout
+            android:id="@+id/liveHostInfoCard"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1"
+            android:layout_height="66dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_live_host_card"
+            android:elevation="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="9dp"
+            app:layout_constraintEnd_toStartOf="@id/liveTopActions"
+            app:layout_constraintStart_toEndOf="@id/buttonLiveBack"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/imageLiveHostAvatar"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_live_avatar_ring"
+                android:contentDescription="@string/profile"
+                android:padding="3dp"
+                android:src="@drawable/ic_default_avatar" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textLiveTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#101114"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginStart="6dp"
+                        android:contentDescription="@string/verified_badge"
+                        android:src="@drawable/ic_verified_check_small" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textLiveHostBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="22dp"
+                        android:background="@drawable/bg_live_host_badge"
+                        android:gravity="center"
+                        android:paddingStart="7dp"
+                        android:paddingEnd="7dp"
+                        android:text="@string/live_host_badge"
+                        android:textColor="@android:color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textLiveSubtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/live_from_yenkasa"
+                        android:textColor="#CC101114"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/liveTopActions"
+            android:layout_width="wrap_content"
+            android:layout_height="66dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/liveHostInfoCard">
+
+            <TextView
+                android:id="@+id/textLiveViewers"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_live_glass_icon"
+                android:drawablePadding="6dp"
+                android:gravity="center"
+                android:minWidth="58dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/live_zero_viewers_short"
+                android:textColor="#101114"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:drawableStartCompat="@drawable/ic_eye"
+                app:drawableTint="#101114" />
+
+            <ImageButton
+                android:id="@+id/buttonLiveMore"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_live_glass_icon"
+                android:contentDescription="@string/more_options"
+                android:elevation="10dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_more_vert"
+                android:tint="#101114" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/liveStatusPill"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="18dp"
+        android:background="@drawable/bg_live_status_pill"
+        android:elevation="9dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/liveTopBar">
+
+        <TextView
+            android:id="@+id/textLiveStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/live_caps"
             android:textColor="@android:color/white"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/textLiveViewers"
+            android:id="@+id/textLiveTimer"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:background="@drawable/bg_live_comment"
+            android:layout_height="match_parent"
+            android:layout_marginStart="14dp"
             android:gravity="center"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:text="@string/live_zero_watching"
             android:textColor="@android:color/white"
-            android:textSize="12sp" />
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/textLiveTimer"
-        android:layout_width="wrap_content"
-        android:layout_height="28dp"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_live_comment"
+    <LinearLayout
+        android:id="@+id/liveAudienceActions"
+        android:layout_width="58dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="14dp"
+        android:layout_marginBottom="8dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="center"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:textColor="@android:color/white"
-        android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@id/liveTopBar"
-        app:layout_constraintTop_toBottomOf="@id/liveTopBar" />
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@id/liveCommentComposer"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            style="@style/LiveActionRailItem">
+
+            <ImageButton
+                android:id="@+id/buttonLiveShare"
+                style="@style/LiveActionRailButton"
+                android:contentDescription="@string/share"
+                android:src="@drawable/ic_share"
+                android:tint="#101114" />
+
+            <TextView
+                style="@style/LiveActionRailLabel"
+                android:text="@string/share" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/LiveActionRailItem">
+
+            <ImageButton
+                android:id="@+id/buttonLiveReaction"
+                style="@style/LiveActionRailButton"
+                android:contentDescription="@string/send_live_reaction"
+                android:src="@drawable/ic_heart_filled"
+                android:tint="#EF233C" />
+
+            <TextView
+                style="@style/LiveActionRailLabel"
+                android:text="@string/like" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/LiveActionRailItem">
+
+            <ImageButton
+                android:id="@+id/buttonLiveComments"
+                style="@style/LiveActionRailButton"
+                android:contentDescription="@string/comments"
+                android:src="@drawable/ic_chat_bubble"
+                android:tint="#101114" />
+
+            <TextView
+                style="@style/LiveActionRailLabel"
+                android:text="@string/comments" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/LiveActionRailItem">
+
+            <ImageButton
+                android:id="@+id/buttonLiveGift"
+                style="@style/LiveActionRailButton"
+                android:contentDescription="@string/send_ykc_gift"
+                android:src="@drawable/ic_wallet"
+                android:tint="@color/wallet_accent_green" />
+
+            <TextView
+                style="@style/LiveActionRailLabel"
+                android:text="@string/live_gift_label" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/LiveActionRailItem">
+
+            <ImageButton
+                android:id="@+id/buttonLiveReport"
+                style="@style/LiveActionRailButton"
+                android:contentDescription="@string/report_flag_post"
+                android:src="@drawable/ic_flag"
+                android:tint="#EF233C" />
+
+            <TextView
+                style="@style/LiveActionRailLabel"
+                android:text="@string/live_report_label" />
+        </LinearLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/liveCommentsContainer"
         android:layout_width="0dp"
-        android:layout_height="180dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="84dp"
-        android:layout_marginBottom="106dp"
+        android:layout_height="230dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="18dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="bottom"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/liveCommentComposer"
+        app:layout_constraintEnd_toStartOf="@id/liveAudienceActions"
         app:layout_constraintStart_toStartOf="parent" />
 
     <LinearLayout
         android:id="@+id/liveHostControls"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="110dp"
-        android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_height="48dp"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="18dp"
+        android:background="@drawable/bg_live_dark_glass_card"
+        android:elevation="10dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="7dp"
+        android:paddingEnd="7dp"
+        app:layout_constraintBottom_toTopOf="@id/liveCommentComposer"
         app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
             android:id="@+id/buttonFlipCamera"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_yenkasa_player_glass"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_live_control_icon"
             android:contentDescription="@string/flip_camera"
-            android:padding="12dp"
+            android:padding="10dp"
             android:src="@drawable/ic_switch_camera"
             android:tint="@android:color/white" />
 
         <ImageButton
             android:id="@+id/buttonMuteLive"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_yenkasa_player_glass"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_live_control_icon"
             android:contentDescription="@string/mute_microphone"
-            android:padding="12dp"
+            android:padding="10dp"
             android:src="@drawable/ic_volume_up"
             android:tint="@android:color/white" />
 
         <ImageButton
             android:id="@+id/buttonEndLive"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_livestream_button"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_live_end_icon"
             android:contentDescription="@string/end_livestream"
-            android:padding="12dp"
+            android:padding="10dp"
             android:src="@drawable/ic_close"
             android:tint="@android:color/white" />
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/liveAudienceActions"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="34dp"
-        android:orientation="vertical"
-        app:layout_constraintBottom_toTopOf="@id/liveCommentComposer"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageButton
-            android:id="@+id/buttonLiveReaction"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="@string/send_live_reaction"
-            android:padding="12dp"
-            android:src="@drawable/ic_heart_filled"
-            android:tint="#EF233C" />
-
-        <ImageButton
-            android:id="@+id/buttonLiveGift"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_yenkasa_player_glass"
-            android:contentDescription="@string/send_ykc_gift"
-            android:padding="12dp"
-            android:src="@drawable/ic_wallet"
-            android:tint="@color/wallet_accent_green" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/liveCommentComposer"
         android:layout_width="0dp"
-        android:layout_height="52dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="34dp"
+        android:layout_height="74dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="30dp"
+        android:background="@drawable/bg_live_composer_shell"
+        android:elevation="12dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <EditText
-            android:id="@+id/editLiveComment"
+        <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="54dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_live_comment"
-            android:hint="@string/live_comment_hint"
-            android:maxLength="240"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:singleLine="true"
-            android:textColor="@android:color/white"
-            android:textColorHint="#99FFFFFF" />
+            android:background="@drawable/bg_live_comment_input">
+
+            <EditText
+                android:id="@+id/editLiveComment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="50dp"
+                android:background="@android:color/transparent"
+                android:hint="@string/live_comment_hint"
+                android:maxLength="240"
+                android:paddingStart="18dp"
+                android:paddingEnd="8dp"
+                android:singleLine="true"
+                android:textColor="@android:color/white"
+                android:textColorHint="#CCFFFFFF"
+                android:textSize="15sp" />
+
+            <ImageButton
+                android:id="@+id/buttonLiveEmoji"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginEnd="5dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/emoji"
+                android:padding="9dp"
+                android:src="@drawable/ic_emoji"
+                android:tint="@android:color/white" />
+        </FrameLayout>
 
         <Button
             android:id="@+id/buttonSendLiveComment"
-            android:layout_width="76dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:backgroundTint="#00843D"
+            android:layout_width="94dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_live_send_button"
+            android:drawableStart="@drawable/ic_send"
+            android:drawablePadding="7dp"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:text="@string/send"
-            android:textColor="@android:color/white" />
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            android:textStyle="bold" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

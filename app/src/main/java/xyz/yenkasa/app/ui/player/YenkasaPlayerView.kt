@@ -601,7 +601,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
         walletPill.setBalance(item.walletBalance)
         liveStreamAllowed = UserPermissions.canStartLivestream(TokenManager.getUserRole(context))
-        liveStreamButton.isVisible = liveStreamAllowed
+        liveStreamButton.isVisible = true
         searchBar.reset()
         searchBar.setOnQueryChanged { query -> actions.onSearchQuery(query) }
         bindFeedModeTabs(selectedFeedMode, actions)

@@ -524,4 +524,13 @@
     <string name="attach_location">Haɗa wuri</string>
     <string name="attach_contact">Haɗa lamba</string>
     <string name="live_service_temporarily_unavailable">Sabis ɗin Live baya aiki na ɗan lokaci. Sake gwadawa bayan ƴan mintuna.</string>
+    <string name="live_host_badge">Mai gabatarwa</string>
+    <string name="live_from_yenkasa">Kai tsaye daga Yenkasa</string>
+    <string name="live_gift_label">Kyauta</string>
+    <string name="live_report_label">Rahoto</string>
+    <string name="live_share_text">Shiga wannan Yenkasa livestream: %1$s</string>
+    <string name="live_report_unavailable">Kayan aikin rahoton Live na zuwa nan ba da jimawa ba.</string>
+    <string name="live_zero_viewers_short">0</string>
+    <string name="live_viewers_short">%1$d</string>
+    <string name="live_title_with_community">%1$s • %2$s</string>
 </resources>

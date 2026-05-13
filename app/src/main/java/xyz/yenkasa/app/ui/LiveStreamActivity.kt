@@ -48,6 +48,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private lateinit var videoContainer: FrameLayout
     private lateinit var reactionsLayer: FrameLayout
     private lateinit var titleText: TextView
+    private lateinit var subtitleText: TextView
     private lateinit var viewerText: TextView
     private lateinit var timerText: TextView
     private lateinit var commentsContainer: LinearLayout
@@ -59,6 +60,9 @@ class LiveStreamActivity : AppCompatActivity() {
     private lateinit var endButton: ImageButton
     private lateinit var reactionButton: ImageButton
     private lateinit var giftButton: ImageButton
+    private lateinit var shareButton: ImageButton
+    private lateinit var commentsButton: ImageButton
+    private lateinit var reportButton: ImageButton
 
     private var rtcEngine: RtcEngine? = null
     private var localView: SurfaceView? = null
@@ -124,6 +128,7 @@ class LiveStreamActivity : AppCompatActivity() {
         videoContainer = findViewById(R.id.liveVideoContainer)
         reactionsLayer = findViewById(R.id.liveReactionsLayer)
         titleText = findViewById(R.id.textLiveTitle)
+        subtitleText = findViewById(R.id.textLiveSubtitle)
         viewerText = findViewById(R.id.textLiveViewers)
         timerText = findViewById(R.id.textLiveTimer)
         commentsContainer = findViewById(R.id.liveCommentsContainer)
@@ -135,12 +140,19 @@ class LiveStreamActivity : AppCompatActivity() {
         endButton = findViewById(R.id.buttonEndLive)
         reactionButton = findViewById(R.id.buttonLiveReaction)
         giftButton = findViewById(R.id.buttonLiveGift)
+        shareButton = findViewById(R.id.buttonLiveShare)
+        commentsButton = findViewById(R.id.buttonLiveComments)
+        reportButton = findViewById(R.id.buttonLiveReport)
 
-        titleText.text = getString(
-            R.string.live_title_format,
-            intent.getStringExtra(EXTRA_HOST).orEmpty(),
-            intent.getStringExtra(EXTRA_TITLE).orEmpty()
-        )
+        val hostName = intent.getStringExtra(EXTRA_HOST).orEmpty()
+        val liveTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        val community = intent.getStringExtra(EXTRA_COMMUNITY).orEmpty()
+        titleText.text = hostName.ifBlank { getString(R.string.viewer_fallback) }
+        subtitleText.text = if (community.isNotBlank()) {
+            getString(R.string.live_title_with_community, liveTitle, community)
+        } else {
+            liveTitle.ifBlank { getString(R.string.live_from_yenkasa) }
+        }
         hostControls.visibility = if (isHost) View.VISIBLE else View.GONE
         scheduledEndAtMillis = parseIsoMillis(intent.getStringExtra(EXTRA_SCHEDULED_END_AT))
         timerText.visibility = if (isHost && scheduledEndAtMillis > 0L) View.VISIBLE else View.GONE
@@ -151,24 +163,34 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun applyInsets() {
         val topBar = findViewById<View>(R.id.liveTopBar)
+        val liveStatusPill = findViewById<View>(R.id.liveStatusPill)
         val composer = findViewById<View>(R.id.liveCommentComposer)
+        val audienceActions = findViewById<View>(R.id.liveAudienceActions)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.liveRoot)) { _, insets ->
-            val bars = insets.getInsets(
+            val safeBars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val bottomInset = maxOf(safeBars.bottom, ime.bottom)
             topBar.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
-                topMargin = bars.top + dp(14)
-                marginStart = bars.left + dp(16)
-                marginEnd = bars.right + dp(16)
+                topMargin = safeBars.top + dp(14)
+                marginStart = safeBars.left + dp(18)
+                marginEnd = safeBars.right + dp(18)
+            }
+            liveStatusPill.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
+                marginEnd = safeBars.right + dp(18)
             }
             composer.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
-                bottomMargin = bars.bottom + dp(28)
-                marginStart = bars.left + dp(16)
-                marginEnd = bars.right + dp(16)
+                bottomMargin = bottomInset + dp(26)
+                marginStart = safeBars.left + dp(18)
+                marginEnd = safeBars.right + dp(18)
             }
             hostControls.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
-                bottomMargin = bars.bottom + dp(104)
-                marginEnd = bars.right + dp(16)
+                bottomMargin = dp(18)
+                marginEnd = safeBars.right + dp(18)
+            }
+            audienceActions.updateLayoutParams<androidx.constraintlayout.widget.ConstraintLayout.LayoutParams> {
+                marginEnd = safeBars.right + dp(18)
             }
             insets
         }
@@ -176,7 +198,20 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun bindActions() {
+        findViewById<View>(R.id.buttonLiveBack).setOnClickListener { onBackPressed() }
+        findViewById<View>(R.id.buttonLiveMore).setOnClickListener {
+            Toast.makeText(this, R.string.more_options, Toast.LENGTH_SHORT).show()
+        }
         sendButton.setOnClickListener { sendComment() }
+        shareButton.setOnClickListener { shareLiveStream() }
+        commentsButton.setOnClickListener {
+            commentInput.requestFocus()
+            val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            inputMethodManager.showSoftInput(commentInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
+        reportButton.setOnClickListener {
+            Toast.makeText(this, R.string.live_report_unavailable, Toast.LENGTH_SHORT).show()
+        }
         flipButton.setOnClickListener { rtcEngine?.switchCamera() }
         muteButton.setOnClickListener {
             muted = !muted
@@ -190,6 +225,14 @@ class LiveStreamActivity : AppCompatActivity() {
             true
         }
         giftButton.setOnClickListener { showGiftSheet() }
+    }
+
+    private fun shareLiveStream() {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, getString(R.string.live_share_text, titleText.text.toString()))
+        }
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_via)))
     }
 
     private fun setupSocket() {
@@ -388,21 +431,68 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun addComment(text: String) {
-        val comment = TextView(this).apply {
-            this.text = text
-            setTextColor(android.graphics.Color.WHITE)
-            textSize = 13f
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            background = ContextCompat.getDrawable(this@LiveStreamActivity, R.drawable.bg_live_comment)
+        val parts = text.split(":", limit = 2)
+        val username = parts.firstOrNull()?.trim().orEmpty()
+        val message = parts.getOrNull(1)?.trim()
+
+        val comment = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(8), dp(12), dp(8))
+            background = ContextCompat.getDrawable(this@LiveStreamActivity, R.drawable.bg_live_comment_card)
+            elevation = dp(2).toFloat()
         }
-        commentsContainer.addView(comment)
-        while (commentsContainer.childCount > 12) {
+        comment.addView(TextView(this).apply {
+            this.text = initialsFor(username)
+            gravity = android.view.Gravity.CENTER
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            background = ContextCompat.getDrawable(this@LiveStreamActivity, R.drawable.bg_live_avatar_comment)
+        }, LinearLayout.LayoutParams(dp(34), dp(34)))
+
+        comment.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(9), 0, 0, 0)
+            addView(TextView(this@LiveStreamActivity).apply {
+                this.text = username.ifBlank { getString(R.string.viewer_fallback) }
+                setTextColor(ContextCompat.getColor(this@LiveStreamActivity, R.color.yenkasa_emerald))
+                textSize = 13f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+            addView(TextView(this@LiveStreamActivity).apply {
+                this.text = message ?: text
+                setTextColor(Color.rgb(56, 56, 56))
+                textSize = 14f
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+        val marginParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            bottomMargin = dp(8)
+        }
+        commentsContainer.addView(comment, marginParams)
+        while (commentsContainer.childCount > 5) {
             commentsContainer.removeViewAt(0)
         }
     }
 
+    private fun initialsFor(value: String): String {
+        return value.split(" ", ".", "_", "-")
+            .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+            .take(2)
+            .joinToString("")
+            .ifBlank { "Y" }
+    }
+
     private fun updateViewerCount(count: Int) {
-        viewerText.text = getString(R.string.live_viewers_count, count.coerceAtLeast(0))
+        viewerText.text = getString(R.string.live_viewers_short, count.coerceAtLeast(0))
     }
 
     private fun animateReaction(reaction: String) {
@@ -519,6 +609,7 @@ class LiveStreamActivity : AppCompatActivity() {
         private const val EXTRA_STREAM_ID = "stream_id"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_HOST = "host"
+        private const val EXTRA_COMMUNITY = "community"
         private const val EXTRA_CHANNEL = "channel"
         private const val EXTRA_TOKEN = "token"
         private const val EXTRA_APP_ID = "app_id"
@@ -539,6 +630,7 @@ class LiveStreamActivity : AppCompatActivity() {
                 .putExtra(EXTRA_STREAM_ID, stream.id)
                 .putExtra(EXTRA_TITLE, stream.title)
                 .putExtra(EXTRA_HOST, stream.hostUsername)
+                .putExtra(EXTRA_COMMUNITY, stream.community)
                 .putExtra(EXTRA_CHANNEL, stream.agoraChannel)
                 .putExtra(EXTRA_TOKEN, agora.token)
                 .putExtra(EXTRA_APP_ID, agora.appId)

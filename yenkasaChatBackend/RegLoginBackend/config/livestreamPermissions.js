@@ -16,9 +16,7 @@ const RANK_DURATION_LIMITS_MINUTES = {
   campus_influencer: 80
 };
 
-const ACTIVE_CREATOR_ROLES = new Set([
-  'senior_developer'
-]);
+const ACTIVE_CREATOR_ROLES = new Set(STAFF_UNLIMITED_ROLES);
 
 function normalizeRole(role) {
   return role?.toString?.().trim().toLowerCase().replace(/[\s-]+/g, '_') || '';
@@ -46,30 +44,19 @@ function canStartLivestream(user) {
   }
 
   const roles = getUserRoleSet(user);
-  const activeRole = Array.from(roles).find(role => ACTIVE_CREATOR_ROLES.has(role));
-  if (!activeRole) {
+  const staffRole = Array.from(roles).find(role => STAFF_UNLIMITED_ROLES.has(role));
+  if (!staffRole) {
     return {
       allowed: false,
-      reason: 'Your account is not eligible to start livestreams.'
+      reason: 'Only Yenkasa staff can start livestreams. You can still watch active livestreams.'
     };
   }
 
-  const unlimitedRole = Array.from(roles).find(role => STAFF_UNLIMITED_ROLES.has(role));
-  if (unlimitedRole) {
-    return {
-      allowed: true,
-      role: unlimitedRole,
-      maxDurationMinutes: null,
-      unlimited: true
-    };
-  }
-
-  const limitedRole = Array.from(roles).find(role => RANK_DURATION_LIMITS_MINUTES[role]);
   return {
     allowed: true,
-    role: limitedRole || activeRole,
-    maxDurationMinutes: limitedRole ? RANK_DURATION_LIMITS_MINUTES[limitedRole] : null,
-    unlimited: !limitedRole
+    role: staffRole,
+    maxDurationMinutes: null,
+    unlimited: true
   };
 }
 

@@ -524,4 +524,13 @@
     <string name="attach_location">Fa location ka ho</string>
     <string name="attach_contact">Fa contact ka ho</string>
     <string name="live_service_temporarily_unavailable">Live service no ntumi nyɛ adwuma seesei. San sɔ hwɛ wɔ minutes kakra mu.</string>
+    <string name="live_host_badge">Host</string>
+    <string name="live_from_yenkasa">Live fi Yenkasa</string>
+    <string name="live_gift_label">Akyɛdeɛ</string>
+    <string name="live_report_label">Report</string>
+    <string name="live_share_text">Bra Yenkasa livestream yi mu: %1$s</string>
+    <string name="live_report_unavailable">Live report tools no reba nnansa yi ara.</string>
+    <string name="live_zero_viewers_short">0</string>
+    <string name="live_viewers_short">%1$d</string>
+    <string name="live_title_with_community">%1$s • %2$s</string>
 </resources>

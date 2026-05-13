@@ -50,6 +50,14 @@ class StartLiveActivity : AppCompatActivity() {
         browseButton = findViewById(R.id.buttonBrowseLive)
         progress = findViewById(R.id.progressStartLive)
 
+        val canStart = UserPermissions.canStartLivestream(TokenManager.getUserRole(this))
+        if (!canStart) {
+            titleInput.visibility = View.GONE
+            communityInput.visibility = View.GONE
+            startButton.visibility = View.GONE
+            Toast.makeText(this, R.string.livestream_staff_only_watch_allowed, Toast.LENGTH_LONG).show()
+        }
+
         startButton.setOnClickListener { validateAndStart() }
         browseButton.setOnClickListener { startActivity(Intent(this, LiveStreamsActivity::class.java)) }
     }
@@ -59,7 +67,7 @@ class StartLiveActivity : AppCompatActivity() {
         val canStart = UserPermissions.canStartLivestream(role)
 
         if (!canStart) {
-            Toast.makeText(this, R.string.livestream_senior_developers_only, Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.livestream_staff_only_watch_allowed, Toast.LENGTH_LONG).show()
             return
         }
 

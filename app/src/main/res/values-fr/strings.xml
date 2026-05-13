@@ -524,4 +524,13 @@
     <string name="attach_location">Joindre une position</string>
     <string name="attach_contact">Joindre un contact</string>
     <string name="live_service_temporarily_unavailable">Le service Live est temporairement indisponible. Réessayez dans quelques minutes.</string>
+    <string name="live_host_badge">Hôte</string>
+    <string name="live_from_yenkasa">En direct sur Yenkasa</string>
+    <string name="live_gift_label">Cadeau</string>
+    <string name="live_report_label">Signaler</string>
+    <string name="live_share_text">Rejoignez ce direct Yenkasa : %1$s</string>
+    <string name="live_report_unavailable">Les outils de signalement Live arrivent bientôt.</string>
+    <string name="live_zero_viewers_short">0</string>
+    <string name="live_viewers_short">%1$d</string>
+    <string name="live_title_with_community">%1$s • %2$s</string>
 </resources>

@@ -26,6 +26,8 @@ import io.agora.rtc2.Constants
 import io.agora.rtc2.IRtcEngineEventHandler
 import io.agora.rtc2.RtcEngine
 import io.agora.rtc2.video.VideoCanvas
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -85,6 +87,15 @@ class LiveStreamActivity : AppCompatActivity() {
         override fun run() {
             emitHostHeartbeat()
             hostHeartbeatHandler.postDelayed(this, 15_000L)
+        }
+    }
+    private val socketReconnectListener = Emitter.Listener {
+        runOnUiThread {
+            if (isHost && hostReadyEmitted) {
+                emitHostReady(force = true)
+            } else if (!isHost && joinedSocketRoom) {
+                emitLiveJoin(force = true)
+            }
         }
     }
     private val timerRunnable = object : Runnable {
@@ -250,6 +261,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun setupSocket() {
         val userId = TokenManager.getUserId(this)
         SocketManager.ensureConnected(userId)
+        SocketManager.instance?.on(Socket.EVENT_CONNECT, socketReconnectListener)
 
         SocketManager.on("livestream_comment") { data ->
             val json = data.asJson() ?: return@on
@@ -308,11 +320,11 @@ class LiveStreamActivity : AppCompatActivity() {
 
     }
 
-    private fun emitLiveJoin() {
-        if (joinedSocketRoom) return
+    private fun emitLiveJoin(force: Boolean = false) {
+        if (joinedSocketRoom && !force) return
         val userId = TokenManager.getUserId(this)
         SocketManager.emit(
-            "livestream_join",
+            "send_livestream_join",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
@@ -321,11 +333,11 @@ class LiveStreamActivity : AppCompatActivity() {
         joinedSocketRoom = true
     }
 
-    private fun emitHostReady() {
-        if (hostReadyEmitted) return
+    private fun emitHostReady(force: Boolean = false) {
+        if (hostReadyEmitted && !force) return
         val userId = TokenManager.getUserId(this)
         SocketManager.emit(
-            "livestream_host_ready",
+            "send_livestream_host_ready",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
@@ -340,7 +352,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun emitHostHeartbeat() {
         if (!isHost || !hostReadyEmitted) return
         SocketManager.emit(
-            "livestream_host_heartbeat",
+            "send_livestream_host_heartbeat",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -401,7 +413,7 @@ class LiveStreamActivity : AppCompatActivity() {
         if (message.isBlank()) return
         commentInput.text?.clear()
         SocketManager.emit(
-            "livestream_comment",
+            "send_livestream_comment",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -416,7 +428,7 @@ class LiveStreamActivity : AppCompatActivity() {
         if (now - lastReactionAt < 700L) return
         lastReactionAt = now
         SocketManager.emit(
-            "livestream_reaction",
+            "send_livestream_reaction",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -620,7 +632,7 @@ class LiveStreamActivity : AppCompatActivity() {
         hostHeartbeatHandler.removeCallbacks(hostHeartbeatRunnable)
         if (joinedSocketRoom) {
             SocketManager.emit(
-                "livestream_leave",
+                "send_livestream_leave",
                 JSONObject()
                     .put("streamId", streamId)
                     .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -638,6 +650,7 @@ class LiveStreamActivity : AppCompatActivity() {
         SocketManager.off("livestream_ended")
         SocketManager.off("livestream_reaction")
         SocketManager.off("livestream_gift")
+        SocketManager.instance?.off(Socket.EVENT_CONNECT, socketReconnectListener)
         timerHandler.removeCallbacks(timerRunnable)
 
         rtcEngine?.leaveChannel()

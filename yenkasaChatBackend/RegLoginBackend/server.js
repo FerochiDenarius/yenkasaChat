@@ -154,6 +154,21 @@ function emitToLiveRoom(streamId, eventName, payload) {
   io.to(getLiveRoom(streamId)).to(getLegacyLiveRoom(streamId)).emit(eventName, payload);
 }
 
+function getLiveRoomMemberCount(streamId) {
+  const room = io.sockets.adapter.rooms.get(getLiveRoom(streamId));
+  return room?.size || 0;
+}
+
+function emitLiveRoomMemberCount(streamId) {
+  const payload = {
+    streamId: streamId?.toString(),
+    viewerCount: getLiveRoomMemberCount(streamId)
+  };
+  emitToLiveRoom(streamId, 'livestream_viewer_count', payload);
+  emitToLiveRoom(streamId, 'live_viewer_count', payload);
+  return payload.viewerCount;
+}
+
 function joinLiveRooms(socket, streamId) {
   socket.join(getLiveRoom(streamId));
   socket.join(getLegacyLiveRoom(streamId));
@@ -438,6 +453,7 @@ io.on('connection', (socket) => {
 
   const updateLiveViewerCount = async (streamId, delta) => {
     if (!mongoose.Types.ObjectId.isValid(streamId)) return null;
+    const roomCount = getLiveRoomMemberCount(streamId);
     const stream = await LiveStream.findOneAndUpdate(
       {
         _id: streamId,
@@ -445,7 +461,7 @@ io.on('connection', (socket) => {
         lifecycleStatus: 'live',
         hostConnected: true
       },
-      { $inc: { viewerCount: delta } },
+      { $set: { viewerCount: roomCount } },
       { new: true }
     );
     if (!stream) return null;
@@ -502,12 +518,14 @@ io.on('connection', (socket) => {
         username: stream.hostUsername,
         createdAt: now.toISOString()
       });
+      emitLiveRoomMemberCount(streamId);
       console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
     } catch (err) {
       console.error('❌ livestream_host_ready failed:', err.message);
     }
   };
 
+  socket.on('send_livestream_host_ready', handleLiveHostReady);
   socket.on('livestream_host_ready', handleLiveHostReady);
   socket.on('live_host_ready', handleLiveHostReady);
 
@@ -531,6 +549,7 @@ io.on('connection', (socket) => {
     }
   };
 
+  socket.on('send_livestream_host_heartbeat', handleLiveHostHeartbeat);
   socket.on('livestream_host_heartbeat', handleLiveHostHeartbeat);
   socket.on('live_host_heartbeat', handleLiveHostHeartbeat);
 
@@ -552,22 +571,26 @@ io.on('connection', (socket) => {
         streamId,
         userId: socket.data.userId || payload.userId || '',
         username: payload.username || 'Viewer',
-        viewerCount: stream.viewerCount
+        viewerCount: getLiveRoomMemberCount(streamId)
       };
       emitToLiveRoom(streamId, 'livestream_join', event);
       emitToLiveRoom(streamId, 'live_join', event);
+      emitLiveRoomMemberCount(streamId);
     } catch (err) {
       console.error('❌ live_join failed:', err.message);
     }
   };
 
+  socket.on('send_livestream_join', handleLiveJoin);
   socket.on('livestream_join', handleLiveJoin);
   socket.on('live_join', handleLiveJoin);
 
   const handleLiveLeave = async (payload = {}) => {
     try {
       const streamId = (payload.streamId || payload)?.toString();
-      if (!streamId || !socket.data.liveStreams.has(streamId)) return;
+      const isAudienceParticipant = socket.data.liveStreams.has(streamId);
+      const isHostParticipant = socket.data.hostLiveStreams.has(streamId);
+      if (!streamId || (!isAudienceParticipant && !isHostParticipant)) return;
       const event = {
         streamId,
         userId: socket.data.userId || payload.userId || '',
@@ -577,13 +600,18 @@ io.on('connection', (socket) => {
       emitToLiveRoom(streamId, 'livestream_leave', event);
       emitToLiveRoom(streamId, 'live_leave', event);
       socket.data.liveStreams.delete(streamId);
+      socket.data.hostLiveStreams.delete(streamId);
       leaveLiveRooms(socket, streamId);
-      await updateLiveViewerCount(streamId, -1);
+      if (isAudienceParticipant) {
+        await updateLiveViewerCount(streamId, -1);
+      }
+      emitLiveRoomMemberCount(streamId);
     } catch (err) {
       console.error('❌ live_leave failed:', err.message);
     }
   };
 
+  socket.on('send_livestream_leave', handleLiveLeave);
   socket.on('livestream_leave', handleLiveLeave);
   socket.on('live_leave', handleLiveLeave);
 
@@ -603,6 +631,7 @@ io.on('connection', (socket) => {
     emitToLiveRoom(streamId, 'live_comment', event);
   };
 
+  socket.on('send_livestream_comment', handleLiveComment);
   socket.on('livestream_comment', handleLiveComment);
   socket.on('live_comment', handleLiveComment);
 
@@ -621,6 +650,7 @@ io.on('connection', (socket) => {
     emitToLiveRoom(streamId, 'live_reaction', event);
   };
 
+  socket.on('send_livestream_reaction', handleLiveReaction);
   socket.on('livestream_reaction', handleLiveReaction);
   socket.on('live_reaction', handleLiveReaction);
 

@@ -503,7 +503,6 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         SocketManager.off("messageCreated")
         SocketManager.off("messageEdited")
         SocketManager.off("messageDeleted")
-        SocketManager.off(CHAT_LAUGH_REACTION_EVENT)
         releaseChatSoundEffects()
         super.onDestroy()
     }
@@ -1569,7 +1568,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             runOnUiThread {
                 upsertRealtimeMessage(incoming)
                 if (isIncomingMessageFromOtherUser(incoming)) {
-                    playInChatMessageSound()
+                    if (incoming.isLaughReaction()) {
+                        playLaughReactionSound()
+                        showLaughReactionAnimation()
+                    } else {
+                        playInChatMessageSound()
+                    }
                 }
                 if (::chatActivityHelper.isInitialized) {
                     chatActivityHelper.markRoomAsRead()
@@ -1595,15 +1599,6 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
         }
 
-        SocketManager.on(CHAT_LAUGH_REACTION_EVENT) { data ->
-            val json = parseSocketJson(data) ?: return@on
-            if (json.optString("conversationId", json.optString("roomId")) != roomId) return@on
-            if (json.optString("senderId") == senderId) return@on
-            runOnUiThread {
-                playLaughReactionSound()
-                showLaughReactionAnimation()
-            }
-        }
     }
 
     private fun joinRealtimeChatRoom() {
@@ -1626,15 +1621,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val activeRoomId = roomId ?: return
         lastLaughReactionSentAt = now
         showLaughReactionAnimation()
-
-        val payload = JSONObject()
-            .put("senderId", senderId)
-            .put("receiverId", receiverParticipant?._id.orEmpty())
-            .put("conversationId", activeRoomId)
-            .put("roomId", activeRoomId)
-            .put("timestamp", System.currentTimeMillis())
-
-        SocketManager.emit(CHAT_LAUGH_REACTION_EVENT, payload)
+        chatMessageHandler.sendMessage(
+            mapOf(
+                "text" to getString(R.string.laugh_reaction_emoji),
+                "messageType" to LAUGH_REACTION_MESSAGE_TYPE
+            )
+        )
     }
 
     private fun initializeChatSoundEffects() {
@@ -1755,6 +1747,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun isIncomingMessageFromOtherUser(message: ChatMessage): Boolean {
         val messageSenderId = message.senderId ?: message.sender?._id
         return !messageSenderId.isNullOrBlank() && messageSenderId != senderId
+    }
+
+    private fun ChatMessage.isLaughReaction(): Boolean {
+        return messageType == LAUGH_REACTION_MESSAGE_TYPE
     }
 
     private fun upsertRealtimeMessage(message: ChatMessage) {
@@ -2481,7 +2477,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         private const val STICKER_PREFS = "chat_stickers"
         private const val KEY_SAVED_STICKERS = "saved_sticker_uris"
         private const val MAX_SAVED_STICKERS = 36
-        private const val CHAT_LAUGH_REACTION_EVENT = "chat_laugh_reaction"
+        private const val LAUGH_REACTION_MESSAGE_TYPE = "laugh_reaction"
         private const val CHAT_SOUND_PREFS = "chat_sound_settings"
         private const val KEY_IN_CHAT_MESSAGE_SOUNDS_ENABLED = "in_chat_message_sounds_enabled"
         private const val KEY_REACTION_SOUNDS_ENABLED = "reaction_sounds_enabled"

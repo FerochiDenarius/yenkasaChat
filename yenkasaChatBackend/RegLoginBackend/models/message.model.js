@@ -23,6 +23,13 @@ const messageSchema = new mongoose.Schema({
 
   text: { type: String, required: false },
 
+  messageType: {
+    type: String,
+    enum: ['message', 'laugh_reaction'],
+    default: 'message',
+    index: true
+  },
+
   repliedTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message',

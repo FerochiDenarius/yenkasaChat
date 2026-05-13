@@ -50,6 +50,7 @@ class ChatMessageHandler(
         val contactInfo = data["contactInfo"] as? String
         messageMap["text"] = contactInfo?.let { "📇 Contact: $it" } ?: text
         messageMap["contactInfo"] = contactInfo
+        messageMap["messageType"] = data["messageType"]
 
         // Handle media (image, audio, video, file)
         messageMap["imageUrl"] = data["imageUrl"]

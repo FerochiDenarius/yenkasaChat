@@ -135,6 +135,7 @@ router.post('/', auth, async (req, res) => {
     fileUrl,
     contactInfo,
     location,
+    messageType,
     repliedTo, // ✅ added
     playerId,
     receiverPlayerId,
@@ -153,7 +154,9 @@ router.post('/', auth, async (req, res) => {
     typeof location.longitude === 'number';
 
   const normalizedText = typeof text === 'string' ? text.trim() : '';
+  const normalizedMessageType = messageType === 'laugh_reaction' ? 'laugh_reaction' : 'message';
   const hasContent =
+    normalizedMessageType === 'laugh_reaction' ||
     normalizedText ||
     imageUrl ||
     audioUrl ||
@@ -245,7 +248,8 @@ router.post('/', auth, async (req, res) => {
       roomId,
       conversationId: roomId,
       senderId: senderAppUserId,
-      text: normalizedText ? normalizedText.substring(0, 2000) : null,
+      text: normalizedText ? normalizedText.substring(0, 2000) : normalizedMessageType === 'laugh_reaction' ? '😂' : null,
+      messageType: normalizedMessageType,
       imageUrl,
       audioUrl,
       videoUrl,

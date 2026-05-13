@@ -136,6 +136,20 @@ class MessageAdapter(
                 fileUrl = message.fileUrl
             )
 
+            if (message.messageType == "laugh_reaction") {
+                messageText.text = message.text ?: "😂"
+                messageText.textSize = 26f
+                messageText.visibility = View.VISIBLE
+                chatMediaView.release()
+                chatMediaView.visibility = View.GONE
+                audioContainer?.visibility = View.GONE
+                layoutLocation?.visibility = View.GONE
+                layoutContact?.visibility = View.GONE
+                timestampText.text = formatTimestamp(message.timestamp)
+                return
+            }
+            messageText.textSize = 15f
+
             // ---------------- Reply Preview ----------------
             if (message.repliedTo != null && replyLayout != null) {
 

@@ -13,6 +13,7 @@ data class ChatMessage(
     val senderIdRaw: Any? = null,
 
     val text: String? = null,
+    val messageType: String? = null,
     val imageUrl: String? = null,
     val audioUrl: String? = null,
     val videoUrl: String? = null,

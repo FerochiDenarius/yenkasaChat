@@ -15,6 +15,17 @@ const LEGACY_ROLE_MAP = Object.freeze({
   developer: "senior_developer",
 });
 
+const STAFF_ROLES = Object.freeze([
+  "moderator",
+  "admin",
+  "junior_developer",
+  "senior_developer",
+]);
+
+function toAccessRole(roleKey) {
+  return String(roleKey || "unverified").toUpperCase();
+}
+
 function normalizeRole(role) {
   if (!role) return "unverified";
 
@@ -215,6 +226,28 @@ function buildRankSummary(metricsInput, userRole) {
 
 async function syncUserRole(user, metricsInput) {
   if (!user) return null;
+
+  const staffRole = normalizeRole(user.staffRole);
+  if (STAFF_ROLES.includes(staffRole)) {
+    const permissionDoc = await Permission.findOne({ role: staffRole });
+    let changed = false;
+
+    if (user.roleName !== staffRole) {
+      user.roleName = staffRole;
+      changed = true;
+    }
+    if (user.accessRole !== toAccessRole(staffRole)) {
+      user.accessRole = toAccessRole(staffRole);
+      changed = true;
+    }
+    if (permissionDoc && user.role?.toString() !== permissionDoc._id.toString()) {
+      user.role = permissionDoc._id;
+      changed = true;
+    }
+
+    if (changed) await user.save();
+    return staffRole;
+  }
 
   const currentRole = normalizeRole(user.roleName || user.role);
   const calculatedRole = calculateUserRank(metricsInput, currentRole);

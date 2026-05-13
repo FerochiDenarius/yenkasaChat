@@ -1,11 +1,21 @@
 import { useEffect, useRef } from "react";
-import useNotificationCount from "../../hooks/useNotificationCount";
+import { getNotifications } from "../../api/notifications";
+import {
+  getNotificationId,
+  resolveNotificationTarget,
+} from "../../utils/notificationRouting";
+import {
+  getNotificationSound,
+  NOTIFICATION_SOUND_CHANGED_EVENT,
+  playNotificationSound,
+} from "../../utils/notificationSound";
 
 export default function NotificationSoundBridge() {
-  const unreadCount = useNotificationCount(10000);
   const audioContextRef = useRef(null);
   const unlockedRef = useRef(false);
-  const previousCountRef = useRef(null);
+  const seenIdsRef = useRef(new Set());
+  const initializedRef = useRef(false);
+  const soundIdRef = useRef(getNotificationSound());
 
   useEffect(() => {
     function unlockAudio() {
@@ -41,111 +51,102 @@ export default function NotificationSoundBridge() {
   }, []);
 
   useEffect(() => {
-    const previous = previousCountRef.current;
-
-    if (previous == null) {
-      previousCountRef.current = unreadCount;
-      return;
+    function handleSoundChanged(event) {
+      soundIdRef.current = event?.detail || getNotificationSound();
     }
 
-    if (unreadCount > previous && unlockedRef.current) {
-      playNotificationChime(audioContextRef.current);
+    window.addEventListener(NOTIFICATION_SOUND_CHANGED_EVENT, handleSoundChanged);
+    window.addEventListener("storage", handleSoundChanged);
+    return () => {
+      window.removeEventListener(NOTIFICATION_SOUND_CHANGED_EVENT, handleSoundChanged);
+      window.removeEventListener("storage", handleSoundChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let pollId;
+
+    async function pollNotifications() {
+      try {
+        const items = await getNotifications();
+        if (!active || !Array.isArray(items)) return;
+
+        const unreadItems = items.filter((item) => item?.status !== "read");
+        const unreadIds = unreadItems
+          .map((item) => getNotificationId(item))
+          .filter(Boolean);
+
+        if (!initializedRef.current) {
+          seenIdsRef.current = new Set(unreadIds);
+          initializedRef.current = true;
+          return;
+        }
+
+        const newUnreadItems = unreadItems.filter((item) => {
+          const id = getNotificationId(item);
+          return id && !seenIdsRef.current.has(id);
+        });
+
+        if (newUnreadItems.length) {
+          newUnreadItems.forEach((item) => {
+            const id = getNotificationId(item);
+            if (id) seenIdsRef.current.add(id);
+          });
+
+          if (unlockedRef.current) {
+            playNotificationSound(audioContextRef.current, soundIdRef.current);
+          }
+
+          newUnreadItems.forEach(showBrowserNotification);
+        }
+
+        seenIdsRef.current = new Set([
+          ...Array.from(seenIdsRef.current),
+          ...unreadIds,
+        ]);
+      } catch {
+        // Notification polling should never interrupt the foreground app.
+      }
     }
 
-    previousCountRef.current = unreadCount;
-  }, [unreadCount]);
+    pollNotifications();
+    pollId = window.setInterval(pollNotifications, 10000);
+
+    return () => {
+      active = false;
+      if (pollId) window.clearInterval(pollId);
+    };
+  }, []);
 
   return null;
 }
 
-function playNotificationChime(context) {
-  const selectedSound = window.localStorage.getItem("yenkasa_notification_sound") || "sound_default";
-  if (selectedSound === "sound_off") return;
+function showBrowserNotification(notification) {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (window.Notification.permission !== "granted") return;
 
-  const AudioContextCtor =
-    window.AudioContext || window.webkitAudioContext || null;
-  const audioContext = context || (AudioContextCtor ? new AudioContextCtor() : null);
-  if (!audioContext) return;
+  const id = getNotificationId(notification);
+  const title = notification?.sender?.username
+    ? `Yenkasa - ${notification.sender.username}`
+    : "Yenkasa";
+  const body = notification?.message || "New activity on your account";
 
   try {
-    const now = audioContext.currentTime;
-    const gain = audioContext.createGain();
-    const oscillatorA = audioContext.createOscillator();
-    const oscillatorB = audioContext.createOscillator();
+    const alert = new window.Notification(title, {
+      body,
+      tag: id || undefined,
+      renotify: Boolean(id),
+      icon: "/logo.png",
+      badge: "/logo.png",
+    });
 
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.11, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
-
-    const profile = resolveSoundProfile(selectedSound);
-
-    oscillatorA.type = profile.primaryType;
-    oscillatorA.frequency.setValueAtTime(profile.primaryFrom, now);
-    oscillatorA.frequency.exponentialRampToValueAtTime(profile.primaryTo, now + 0.14);
-
-    oscillatorB.type = profile.secondaryType;
-    oscillatorB.frequency.setValueAtTime(profile.secondaryFrom, now + 0.02);
-    oscillatorB.frequency.exponentialRampToValueAtTime(profile.secondaryTo, now + 0.2);
-
-    oscillatorA.connect(gain);
-    oscillatorB.connect(gain);
-    gain.connect(audioContext.destination);
-
-    oscillatorA.start(now);
-    oscillatorB.start(now + 0.04);
-    oscillatorA.stop(now + 0.28);
-    oscillatorB.stop(now + 0.42);
+    alert.onclick = () => {
+      window.focus();
+      window.location.assign(resolveNotificationTarget(notification));
+      alert.close();
+    };
   } catch {
-    // Ignore browser audio failures silently.
-  }
-}
-
-function resolveSoundProfile(soundId) {
-  switch (soundId) {
-    case "sound_chime":
-      return {
-        primaryType: "triangle",
-        primaryFrom: 740,
-        primaryTo: 988,
-        secondaryType: "sine",
-        secondaryFrom: 988,
-        secondaryTo: 1318,
-      };
-    case "sound_bell":
-      return {
-        primaryType: "sine",
-        primaryFrom: 1046,
-        primaryTo: 1318,
-        secondaryType: "triangle",
-        secondaryFrom: 784,
-        secondaryTo: 1046,
-      };
-    case "sound_soft":
-      return {
-        primaryType: "sine",
-        primaryFrom: 660,
-        primaryTo: 880,
-        secondaryType: "sine",
-        secondaryFrom: 440,
-        secondaryTo: 660,
-      };
-    case "sound_alert":
-      return {
-        primaryType: "square",
-        primaryFrom: 880,
-        primaryTo: 988,
-        secondaryType: "triangle",
-        secondaryFrom: 698,
-        secondaryTo: 784,
-      };
-    default:
-      return {
-        primaryType: "sine",
-        primaryFrom: 880,
-        primaryTo: 1174,
-        secondaryType: "triangle",
-        secondaryFrom: 660,
-        secondaryTo: 880,
-      };
+    // Some browsers reject notifications in unsupported contexts.
   }
 }

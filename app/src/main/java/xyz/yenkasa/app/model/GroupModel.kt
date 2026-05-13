@@ -15,6 +15,12 @@ data class GroupMemberRequest(
     val memberId: String
 )
 
+data class GroupProfileUpdateRequest(
+    val groupName: String? = null,
+    val groupBio: String? = null,
+    val groupImage: String? = null
+)
+
 data class GroupResponse(
     val success: Boolean,
     val group: ChatRoom? = null,

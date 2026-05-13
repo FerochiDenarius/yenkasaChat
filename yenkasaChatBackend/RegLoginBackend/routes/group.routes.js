@@ -208,7 +208,18 @@ async function enrichGroup(group, userId) {
   };
 }
 
-router.post('/upload-image', auth, groupImageUpload.single('image'), async (req, res) => {
+function handleGroupImageUpload(req, res, next) {
+  groupImageUpload.single('image')(req, res, (err) => {
+    if (!err) return next();
+    const isTooLarge = err.code === 'LIMIT_FILE_SIZE';
+    return res.status(isTooLarge ? 413 : 400).json({
+      success: false,
+      message: isTooLarge ? 'Group image is too large' : (err.message || 'Invalid group image')
+    });
+  });
+}
+
+router.post('/upload-image', auth, handleGroupImageUpload, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No group image uploaded' });
   }
@@ -225,6 +236,45 @@ router.post('/upload-image', auth, groupImageUpload.single('image'), async (req,
   } catch (err) {
     console.error('[GroupRoutes] image upload failed:', err.message);
     res.status(500).json({ success: false, message: 'Failed to upload group image' });
+  }
+});
+
+router.patch('/:groupId/profile', auth, async (req, res) => {
+  try {
+    const userId = req.user.id.toString();
+    const access = await assertGroupAccess(req.params.groupId, userId);
+    if (access.error) return res.status(access.status).json({ success: false, message: access.error });
+    if (!isGroupAdmin(access.group, userId)) {
+      return res.status(403).json({ success: false, message: 'Only group admins can update group profile' });
+    }
+
+    const updates = {};
+    if (Object.prototype.hasOwnProperty.call(req.body, 'groupName') || Object.prototype.hasOwnProperty.call(req.body, 'name')) {
+      const groupName = String(req.body.groupName || req.body.name || '').trim();
+      if (!groupName) return res.status(400).json({ success: false, message: 'Group name is required' });
+      updates.groupName = groupName.substring(0, 80);
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'groupBio') || Object.prototype.hasOwnProperty.call(req.body, 'bio')) {
+      updates.groupBio = String(req.body.groupBio || req.body.bio || '').trim().substring(0, 240);
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'groupImage') || Object.prototype.hasOwnProperty.call(req.body, 'image')) {
+      updates.groupImage = String(req.body.groupImage || req.body.image || '').trim();
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ success: false, message: 'No group profile changes provided' });
+    }
+
+    Object.assign(access.group, updates);
+    await access.group.save();
+
+    res.json({
+      success: true,
+      group: await enrichGroup(access.group, userId)
+    });
+  } catch (err) {
+    console.error('[GroupRoutes] update profile failed:', err);
+    res.status(500).json({ success: false, message: 'Failed to update group profile' });
   }
 });
 

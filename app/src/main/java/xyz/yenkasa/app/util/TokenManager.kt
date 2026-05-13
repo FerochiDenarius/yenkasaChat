@@ -421,14 +421,41 @@ object TokenManager {
             "developer" -> "senior_developer"
             "senior_dev", "super_admin", "superadmin" -> "senior_developer"
             "junior_dev" -> "junior_developer"
+            "verified_creator" -> "verified"
             else -> normalized
         }
+    }
+
+    private fun strongestPublicRole(json: JSONObject): String? {
+        val publicRoles = json.optJSONArray("publicRoles") ?: return null
+        val roles = mutableSetOf<String>()
+        for (index in 0 until publicRoles.length()) {
+            roles.add(normalizeRole(publicRoles.optString(index)))
+        }
+
+        val priority = listOf(
+            "campus_influencer",
+            "premium_seller",
+            "business_account",
+            "brand_ambassador",
+            "top_vendor",
+            "legend",
+            "rising_star",
+            "verified"
+        )
+        return priority.firstOrNull { roles.contains(it) }
     }
 
     private fun extractRoleFromUserJson(userJson: String?): String? {
         if (userJson.isNullOrBlank()) return null
         return runCatching {
             val json = JSONObject(userJson)
+
+            json.optString("staffRole")
+                .takeIf { it.isNotBlank() && it.lowercase() != "null" }
+                ?.let { return@runCatching normalizeRole(it) }
+
+            strongestPublicRole(json)?.let { return@runCatching it }
 
             json.optString("accessRole")
                 .takeIf { it.isNotBlank() && it.lowercase() != "null" }

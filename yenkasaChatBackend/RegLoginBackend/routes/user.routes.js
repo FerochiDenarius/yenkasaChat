@@ -23,6 +23,48 @@ const logger = {
     debug: (m, ...a) => console.debug(`[DEBUG] ${new Date().toISOString()} - ${m}`, ...a)
 };
 
+const STAFF_ROLES = new Set(['moderator', 'admin', 'junior_developer', 'senior_developer']);
+const PUBLIC_ROLE_PRIORITY = [
+    'campus_influencer',
+    'premium_seller',
+    'business_account',
+    'brand_ambassador',
+    'top_vendor',
+    'legend',
+    'rising_star',
+    'verified_creator'
+];
+const PERMISSION_ROLE_FALLBACK = {
+    verified_creator: 'verified',
+    top_vendor: 'verified',
+    business_account: 'legend',
+    premium_seller: 'legend',
+    campus_influencer: 'legend',
+    brand_ambassador: 'legend'
+};
+
+function normalizeRoleKey(role) {
+    return String(role || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, '_');
+}
+
+function getEffectiveRoleName(user) {
+    const staffRole = normalizeRoleKey(user.staffRole);
+    if (STAFF_ROLES.has(staffRole)) return staffRole;
+
+    const publicRoles = new Set((user.publicRoles || []).map(normalizeRoleKey));
+    const publicRole = PUBLIC_ROLE_PRIORITY.find(role => publicRoles.has(role));
+    if (publicRole) return publicRole;
+
+    return normalizeRoleKey(user.roleName || user.accessRole || user.role?.role || user.role) || 'unverified';
+}
+
+function getPermissionLookupRole(roleName) {
+    return PERMISSION_ROLE_FALLBACK[roleName] || roleName || 'unverified';
+}
+
 // ======================================================================
 // GET ALL USERS
 // ======================================================================
@@ -104,17 +146,22 @@ router.get('/me', authMiddleware, async (req, res) => {
 
         let roleDoc = null;
 
-        if (mongoose.isValidObjectId(user.role)) {
+        const effectiveRoleName = getEffectiveRoleName(user);
+        const permissionLookupRole = getPermissionLookupRole(effectiveRoleName);
+
+        const fallback = Permission.normalize(permissionLookupRole || user.role || "user");
+        roleDoc = await Permission.findOne({ role: fallback }).lean();
+
+        if (!roleDoc) {
+            roleDoc = await Permission.findOne({ role: getPermissionLookupRole(effectiveRoleName) }).lean();
+        }
+
+        if (!roleDoc && mongoose.isValidObjectId(user.role)) {
             roleDoc = await Permission.findById(user.role).lean();
         }
 
         if (!roleDoc) {
-            const fallback = Permission.normalize(user.role || "user");
-            roleDoc = await Permission.findOne({ role: fallback }).lean();
-        }
-
-        if (!roleDoc) {
-            roleDoc = await Permission.findOne({ role: "user" }).lean();
+            roleDoc = await Permission.findOne({ role: "unverified" }).lean();
         }
 
         const finalRole = {
@@ -144,7 +191,10 @@ router.get('/me', authMiddleware, async (req, res) => {
             coinsBalance: isAndroidClient ? Math.floor(preciseCoinsBalance) : preciseCoinsBalance,
             coinsBalancePrecise: preciseCoinsBalance,
             ykcBalance: preciseYkcBalance,
-            roleName: user.roleName || roleDoc.role,
+            roleName: effectiveRoleName,
+            accessRole: user.accessRole || effectiveRoleName.toUpperCase(),
+            staffRole: user.staffRole || null,
+            publicRoles: user.publicRoles || [],
             role: finalRole
         };
 

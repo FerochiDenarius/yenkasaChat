@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatSectionNav from "../components/chat/ChatSectionNav";
+import { updateUserProfile } from "../api/profile";
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
 } from "../api/notifications";
+import { SUPPORTED_LANGUAGES, useLocale } from "../i18n/LocaleContext";
 import {
   getBlockedUsers,
   getCommunityVisibility,
@@ -14,33 +16,36 @@ import {
   setPrivacyLevel,
 } from "../api/privacy";
 import { getStoredUser, getToken } from "../utils/storage";
+import {
+  getNotificationSound,
+  NOTIFICATION_SOUND_OPTIONS,
+  playNotificationSound,
+  saveNotificationSound,
+} from "../utils/notificationSound";
 import { canModerate } from "../utils/permissions";
 import "../styles/settings.css";
 
-const SOUND_OPTIONS = [
-  { id: "sound_off", label: "Off" },
-  { id: "sound_default", label: "Default" },
-  { id: "sound_chime", label: "Chime" },
-  { id: "sound_bell", label: "Bell" },
-  { id: "sound_soft", label: "Soft" },
-  { id: "sound_alert", label: "Alert" },
-];
-
 const PRIVACY_OPTIONS = [
-  { value: "everyone", label: "Everyone can message you" },
-  { value: "community_members", label: "Community members can message you" },
-  { value: "requires_approval", label: "Message requests required" },
-  { value: "nobody", label: "No one can message you" },
+  { value: "everyone", labelKey: "everyoneCanMessage" },
+  { value: "community_members", labelKey: "communityMembersCanMessage" },
+  { value: "requires_approval", labelKey: "messageRequestsRequired" },
+  { value: "nobody", labelKey: "noOneCanMessage" },
 ];
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { language, languageLabel, setLanguage, t } = useLocale();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [privacyLevel, setPrivacy] = useState("requires_approval");
   const [inAppEnabled, setInAppEnabled] = useState(true);
   const [rewardEnabled, setRewardEnabled] = useState(true);
-  const [soundId, setSoundId] = useState(loadSoundPreference);
+  const [soundId, setSoundId] = useState(getNotificationSound);
+  const [browserPermission, setBrowserPermission] = useState(() =>
+    typeof window !== "undefined" && "Notification" in window
+      ? window.Notification.permission
+      : "unsupported"
+  );
   const [counts, setCounts] = useState({
     blockedUsers: 0,
     blockedBy: 0,
@@ -50,6 +55,26 @@ export default function Settings() {
   const [busyKey, setBusyKey] = useState("");
 
   const canAccessAdmin = useMemo(() => canModerate(getStoredUser()), []);
+  const privacyOptions = useMemo(
+    () => PRIVACY_OPTIONS.map((option) => ({ ...option, label: t(option.labelKey) })),
+    [t]
+  );
+  const soundOptions = useMemo(
+    () =>
+      NOTIFICATION_SOUND_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.labelKey),
+      })),
+    [t]
+  );
+  const languageOptions = useMemo(
+    () =>
+      SUPPORTED_LANGUAGES.map((option) => ({
+        value: option.code,
+        label: `${option.nativeLabel} ${option.flag}`,
+      })),
+    []
+  );
 
   useEffect(() => {
     let active = true;
@@ -94,7 +119,7 @@ export default function Settings() {
         setError(
           requestError?.response?.data?.message ||
             requestError?.response?.data?.error ||
-            "Failed to load settings."
+            t("settingsLoadFailed", "Failed to load settings.")
         );
       } finally {
         if (active) setLoading(false);
@@ -116,7 +141,7 @@ export default function Settings() {
       setError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
-          "Failed to save privacy setting."
+          t("privacySaveFailed", "Failed to save privacy setting.")
       );
     } finally {
       setBusyKey("");
@@ -136,7 +161,7 @@ export default function Settings() {
       setError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
-          "Failed to update notification settings."
+          t("notificationSettingsSaveFailed", "Failed to update notification settings.")
       );
     } finally {
       setBusyKey("");
@@ -144,8 +169,28 @@ export default function Settings() {
   }
 
   function handleSoundChange(nextSoundId) {
-    setSoundId(nextSoundId);
-    window.localStorage.setItem("yenkasa_notification_sound", nextSoundId);
+    const savedSoundId = saveNotificationSound(nextSoundId);
+    setSoundId(savedSoundId);
+    playNotificationSound(null, savedSoundId);
+  }
+
+  async function handleBrowserNotificationPermission() {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    try {
+      const permission = await window.Notification.requestPermission();
+      setBrowserPermission(permission);
+    } catch {
+      // Browsers can reject permission prompts outside supported contexts.
+    }
+  }
+
+  async function handleLanguageChange(nextLanguage) {
+    setLanguage(nextLanguage);
+    try {
+      await updateUserProfile({ preferredLanguage: nextLanguage });
+    } catch {
+      // Language is intentionally kept locally if backend sync is unavailable.
+    }
   }
 
   function openDeleteAccount() {
@@ -173,31 +218,43 @@ export default function Settings() {
             ←
           </button>
           <div>
-            <h1>Settings</h1>
-            <p>Manage your account and preferences</p>
+            <h1>{t("settings")}</h1>
+            <p>{t("manageAccountPreferences")}</p>
           </div>
         </header>
 
         {error ? <div className="error-banner">{error}</div> : null}
-        {loading ? <div className="settings-loading">Loading settings...</div> : null}
+        {loading ? <div className="settings-loading">{t("loadingSettings")}</div> : null}
 
         {!loading ? (
           <>
             <section className="settings-card">
-              <h2>Privacy</h2>
+              <h2>{t("privacy")}</h2>
               <SettingsSelectRow
                 icon="◉"
-                title="Message Privacy"
-                description={privacyLabel(privacyLevel)}
+                title={t("messagePrivacy")}
+                description={privacyLabel(privacyLevel, t)}
                 value={privacyLevel}
                 disabled={busyKey === "privacy"}
-                options={PRIVACY_OPTIONS}
+                options={privacyOptions}
                 onChange={handlePrivacyChange}
               />
             </section>
 
             <section className="settings-card">
-              <h2>Block Management</h2>
+              <h2>{t("language")}</h2>
+              <SettingsSelectRow
+                icon="Aa"
+                title={t("language")}
+                description={languageLabel || t("languageSummary")}
+                value={language}
+                options={languageOptions}
+                onChange={handleLanguageChange}
+              />
+            </section>
+
+            <section className="settings-card">
+              <h2>{t("blockManagement")}</h2>
               <SettingsLinkRow
                 icon="⊘"
                 title="Who You Blocked"
@@ -215,7 +272,7 @@ export default function Settings() {
             </section>
 
             <section className="settings-card">
-              <h2>Post Visibility</h2>
+              <h2>{t("postVisibility")}</h2>
               <SettingsLinkRow
                 icon="◎"
                 title="Community Visibility"
@@ -240,31 +297,40 @@ export default function Settings() {
             </section>
 
             <section className="settings-card">
-              <h2>Notifications</h2>
+              <h2>{t("notifications")}</h2>
               <SettingsSelectRow
                 icon="♪"
-                title="Notification Sound"
-                description={soundLabel(soundId)}
+                title={t("notificationSound")}
+                description={soundLabel(soundId, t)}
                 value={soundId}
-                options={SOUND_OPTIONS}
+                options={soundOptions}
                 onChange={handleSoundChange}
               />
               <SettingsToggleRow
                 icon="🔔"
-                title="Enable Notifications"
-                description="Manage your notification preferences"
+                title={t("enableNotifications")}
+                description={t("enableNotificationsDescription", "Manage your notification preferences")}
                 checked={inAppEnabled}
                 disabled={busyKey === "inAppEnabled"}
                 onChange={(next) => handleNotificationsChange("inAppEnabled", next)}
               />
               <SettingsToggleRow
                 icon="◈"
-                title="Reward Notifications"
-                description="Mute wallet reward alerts only"
+                title={t("rewardNotifications")}
+                description={t("rewardNotificationsSettingDescription", "Mute wallet reward alerts only")}
                 checked={rewardEnabled}
                 disabled={busyKey === "rewardEnabled" || !inAppEnabled}
                 onChange={(next) => handleNotificationsChange("rewardEnabled", next)}
               />
+              {browserPermission !== "unsupported" ? (
+                <SettingsLinkRow
+                  icon="!"
+                  title={t("browserAlerts", "Browser Alerts")}
+                  description={browserNotificationDescription(t, browserPermission)}
+                  meta={browserNotificationMeta(t, browserPermission)}
+                  onClick={handleBrowserNotificationPermission}
+                />
+              ) : null}
             </section>
 
             {canAccessAdmin ? (
@@ -380,20 +446,32 @@ function SettingsSelectRow({
   );
 }
 
-function privacyLabel(value) {
-  return (
-    PRIVACY_OPTIONS.find((option) => option.value === value)?.label ||
-    "Message requests required"
-  );
+function privacyLabel(value, t) {
+  const option = PRIVACY_OPTIONS.find((item) => item.value === value);
+  return option ? t(option.labelKey) : t("messageRequestsRequired");
 }
 
-function soundLabel(soundId) {
-  return (
-    SOUND_OPTIONS.find((option) => option.id === soundId)?.label ||
-    "Default"
-  );
+function soundLabel(soundId, t) {
+  const option = NOTIFICATION_SOUND_OPTIONS.find((item) => item.id === soundId);
+  return option ? t(option.labelKey) : t("notificationSoundDefault");
 }
 
-function loadSoundPreference() {
-  return window.localStorage.getItem("yenkasa_notification_sound") || "sound_default";
+function browserNotificationMeta(t, permission) {
+  if (permission === "unsupported") return "";
+  if (permission === "granted") return t("allowed", "Allowed");
+  if (permission === "denied") return t("blocked", "Blocked");
+  return t("enable", "Enable");
+}
+
+function browserNotificationDescription(t, permission) {
+  if (permission === "unsupported") {
+    return t("browserAlertsUnsupported", "Browser alerts are not supported here.");
+  }
+  if (permission === "granted") {
+    return t("browserAlertsAllowed", "Every new unread notification can appear on this device.");
+  }
+  if (permission === "denied") {
+    return t("browserAlertsBlocked", "Allow notifications in your browser settings to receive alerts.");
+  }
+  return t("browserAlertsDescription", "Allow this browser to show incoming Yenkasa alerts.");
 }

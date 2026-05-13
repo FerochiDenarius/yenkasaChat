@@ -23,6 +23,36 @@ console.log("routes/auth.js - Token secrets check passed");
 const ACCESS_EXPIRES_IN = '120d';
 const REFRESH_EXPIRES_IN = '120d';
 
+const STAFF_ROLES = new Set(['moderator', 'admin', 'junior_developer', 'senior_developer']);
+const PUBLIC_ROLE_PRIORITY = [
+  'campus_influencer',
+  'premium_seller',
+  'business_account',
+  'brand_ambassador',
+  'top_vendor',
+  'legend',
+  'rising_star',
+  'verified_creator'
+];
+
+function normalizeRoleKey(role) {
+  return String(role || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+}
+
+function getEffectiveRoleName(user) {
+  const staffRole = normalizeRoleKey(user.staffRole);
+  if (STAFF_ROLES.has(staffRole)) return staffRole;
+
+  const publicRoles = new Set((user.publicRoles || []).map(normalizeRoleKey));
+  const publicRole = PUBLIC_ROLE_PRIORITY.find(role => publicRoles.has(role));
+  if (publicRole) return publicRole;
+
+  return normalizeRoleKey(user.roleName || user.accessRole || user.role?.role || user.role) || 'unverified';
+}
+
 router.post('/register', async (req, res) => {
   console.log("🔥 /api/auth/register HIT");
   console.log("📩 Incoming body:", req.body);
@@ -210,7 +240,7 @@ router.post('/login', async (req, res) => {
     const Permission = require('../models/permissions.model');
 
     if (!user.role || typeof user.role === 'string') {
-      const normalized = (user.roleName || user.role?.role || 'unverified')
+      const normalized = getEffectiveRoleName(user)
         .toString()
         .trim()
         .toLowerCase()
@@ -240,6 +270,13 @@ router.post('/login', async (req, res) => {
     user.refreshToken = refreshTokenValue;
     await user.save();
 
+    const effectiveRoleName = getEffectiveRoleName(user);
+    if (STAFF_ROLES.has(effectiveRoleName) && (user.roleName !== effectiveRoleName || user.accessRole !== effectiveRoleName.toUpperCase())) {
+      user.roleName = effectiveRoleName;
+      user.accessRole = effectiveRoleName.toUpperCase();
+      await user.save();
+    }
+
     // ✅ Return clean JSON with role details
    res.json({
   user: {
@@ -253,7 +290,10 @@ router.post('/login', async (req, res) => {
     playerId: user.playerId || null,
     role: user.role || {},               // 👈 send full Permission object
     // optional: send string separately if needed
-    roleName: user.roleName || user.role?.role || 'unverified',
+    roleName: effectiveRoleName,
+    accessRole: user.accessRole || effectiveRoleName.toUpperCase(),
+    staffRole: user.staffRole || null,
+    publicRoles: user.publicRoles || [],
   },
   token: accessTokenValue,
   refreshToken: refreshTokenValue,

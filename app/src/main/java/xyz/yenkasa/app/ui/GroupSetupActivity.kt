@@ -13,9 +13,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -25,6 +22,7 @@ import xyz.yenkasa.app.model.GroupImageUploadResponse
 import xyz.yenkasa.app.model.GroupResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
+import xyz.yenkasa.app.util.GroupImagePartFactory
 
 class GroupSetupActivity : AppCompatActivity() {
     private val memberIds: List<String> by lazy {
@@ -116,32 +114,19 @@ class GroupSetupActivity : AppCompatActivity() {
     }
 
     private fun uploadGroupImage(uri: Uri) {
-        val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
-        val extension = when {
-            mimeType.contains("png", ignoreCase = true) -> "png"
-            mimeType.contains("webp", ignoreCase = true) -> "webp"
-            else -> "jpg"
-        }
-        val bytes = try {
-            contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        val part = try {
+            GroupImagePartFactory.create(this, uri)
         } catch (err: Exception) {
             null
         }
 
-        if (bytes == null || bytes.isEmpty()) {
+        if (part == null) {
             imageStatus.text = "Could not read selected image"
             Toast.makeText(this, "Could not read selected image", Toast.LENGTH_LONG).show()
             return
         }
 
         setUploading(true)
-        val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-        val part = MultipartBody.Part.createFormData(
-            "image",
-            "group_${System.currentTimeMillis()}.$extension",
-            body
-        )
-
         ApiClient.apiService.uploadGroupImage(part).enqueue(object : Callback<GroupImageUploadResponse> {
             override fun onResponse(
                 call: Call<GroupImageUploadResponse>,

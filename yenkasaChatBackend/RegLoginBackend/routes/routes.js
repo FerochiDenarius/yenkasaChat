@@ -7,6 +7,33 @@ const User = require('../models/user.model'); // ✅ Correct
 const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || '1h';
 const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || '7d';
 
+const STAFF_ROLES = new Set(['moderator', 'admin', 'junior_developer', 'senior_developer']);
+const PUBLIC_ROLE_PRIORITY = [
+  'campus_influencer',
+  'premium_seller',
+  'business_account',
+  'brand_ambassador',
+  'top_vendor',
+  'legend',
+  'rising_star',
+  'verified_creator'
+];
+
+function normalizeRoleKey(role) {
+  return String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function getEffectiveRoleName(user) {
+  const staffRole = normalizeRoleKey(user.staffRole);
+  if (STAFF_ROLES.has(staffRole)) return staffRole;
+
+  const publicRoles = new Set((user.publicRoles || []).map(normalizeRoleKey));
+  const publicRole = PUBLIC_ROLE_PRIORITY.find(role => publicRoles.has(role));
+  if (publicRole) return publicRole;
+
+  return normalizeRoleKey(user.roleName || user.accessRole || user.role?.role || user.role) || 'unverified';
+}
+
 // ✅ Helper to sanitize input and trim long strings
 const sanitize = (val) =>
   typeof val === 'string' ? val.trim().substring(0, 255) : val;
@@ -74,7 +101,11 @@ router.post('/register', async (req, res) => {
         phone: user.phone,
         username: user.username,
         location: user.location,
-        verified: user.verified
+        verified: user.verified,
+        roleName: getEffectiveRoleName(user),
+        accessRole: user.accessRole || getEffectiveRoleName(user).toUpperCase(),
+        staffRole: user.staffRole || null,
+        publicRoles: user.publicRoles || []
       },
       token: accessToken,
       refreshToken
@@ -134,7 +165,11 @@ router.post('/login', async (req, res) => {
         phone: user.phone,
         username: user.username,
         location: user.location,
-        verified: user.verified
+        verified: user.verified,
+        roleName: getEffectiveRoleName(user),
+        accessRole: user.accessRole || getEffectiveRoleName(user).toUpperCase(),
+        staffRole: user.staffRole || null,
+        publicRoles: user.publicRoles || []
       },
       token: accessToken,
       refreshToken

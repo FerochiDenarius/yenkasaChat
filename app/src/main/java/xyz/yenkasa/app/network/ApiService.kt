@@ -180,6 +180,12 @@ interface ApiService {
     @GET("groups/{groupId}")
     fun getSingleGroup(@Path("groupId") groupId: String): Call<GroupResponse>
 
+    @PATCH("groups/{groupId}/profile")
+    fun updateGroupProfile(
+        @Path("groupId") groupId: String,
+        @Body request: GroupProfileUpdateRequest
+    ): Call<GroupResponse>
+
     @POST("groups/{groupId}/add-members")
     fun addGroupMembers(
         @Path("groupId") groupId: String,

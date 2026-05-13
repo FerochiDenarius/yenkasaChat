@@ -1,20 +1,22 @@
 import { NavLink } from "react-router-dom";
+import { useLocale } from "../../i18n/LocaleContext";
 
 const defaultItems = [
-  { to: "/", label: "Home", icon: "⌂" },
-  { to: "/ads", label: "Explore", icon: "◎" },
-  { to: "/communities", label: "Communities", icon: "◌" },
-  { to: "/wallet", label: "Wallet", icon: "▣" },
-  { to: "/profile", label: "Profile", icon: "◔" }
+  { to: "/", labelKey: "home", icon: "⌂" },
+  { to: "/ads", labelKey: "explore", icon: "◎" },
+  { to: "/communities", labelKey: "communities", icon: "◌" },
+  { to: "/wallet", labelKey: "wallet", icon: "▣" },
+  { to: "/profile", labelKey: "profile", icon: "◔" }
 ];
 
 const playerItems = [
-  { to: "/ads", label: "Explore", icon: "⌕" },
-  { to: "/create-post", label: "Create", icon: "+", create: true },
-  { to: "/wallet", label: "Wallet", icon: "▣" }
+  { to: "/ads", labelKey: "explore", icon: "⌕" },
+  { to: "/create-post", labelKey: "create", icon: "+", create: true },
+  { to: "/wallet", labelKey: "wallet", icon: "▣" }
 ];
 
 export default function BottomNav({ variant = "default" }) {
+  const { t } = useLocale();
   const items = variant === "player" ? playerItems : defaultItems;
 
   return (
@@ -24,7 +26,7 @@ export default function BottomNav({ variant = "default" }) {
     >
       {items.map((item) => (
         <NavLink
-          key={item.label}
+          key={item.labelKey}
           to={item.to}
           className={({ isActive }) =>
             `feed-bottom-nav__item${item.create ? " feed-bottom-nav__item--create" : ""}${
@@ -33,7 +35,7 @@ export default function BottomNav({ variant = "default" }) {
           }
         >
           <span className="feed-bottom-nav__icon">{item.icon}</span>
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
         </NavLink>
       ))}
     </nav>

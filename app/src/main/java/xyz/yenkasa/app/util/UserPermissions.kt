@@ -7,6 +7,11 @@ object UserPermissions {
         "verified",
         "rising_star",
         "legend",
+        "business_account",
+        "premium_seller",
+        "top_vendor",
+        "brand_ambassador",
+        "campus_influencer",
         "moderator",
         "admin",
         "junior_developer",
@@ -18,6 +23,7 @@ object UserPermissions {
         return when (normalized) {
             "user" -> "unverified"
             "developer" -> "senior_developer"
+            "verified_creator" -> "verified"
             "senior_dev", "super_admin", "superadmin" -> "senior_developer"
             "junior_dev" -> "junior_developer"
             "moderator", "admin" -> normalized
@@ -30,7 +36,8 @@ object UserPermissions {
         val r = normalize(role)
         return when (r) {
             "unverified" -> verified
-            "verified", "rising_star", "legend", "admin", "moderator",
+            "verified", "rising_star", "legend", "business_account", "premium_seller",
+            "top_vendor", "brand_ambassador", "campus_influencer", "admin", "moderator",
             "junior_developer", "senior_developer" -> true
             else -> false
         }
@@ -74,13 +81,38 @@ object UserPermissions {
     // 🟢 Can Create Communities
     fun canCreateCommunity(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("rising_star", "legend", "senior_developer", "junior_developer", "moderator", "admin")
+        return r in listOf(
+            "rising_star",
+            "legend",
+            "business_account",
+            "premium_seller",
+            "top_vendor",
+            "brand_ambassador",
+            "campus_influencer",
+            "senior_developer",
+            "junior_developer",
+            "moderator",
+            "admin"
+        )
     }
 
     // 🟢 Can Create Sponsored Ads
     fun canCreateAd(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("verified", "rising_star", "legend", "admin", "moderator", "junior_developer", "senior_developer")
+        return r in listOf(
+            "verified",
+            "rising_star",
+            "legend",
+            "business_account",
+            "premium_seller",
+            "top_vendor",
+            "brand_ambassador",
+            "campus_influencer",
+            "admin",
+            "moderator",
+            "junior_developer",
+            "senior_developer"
+        )
     }
 
     // 🟢 Can Assign Roles

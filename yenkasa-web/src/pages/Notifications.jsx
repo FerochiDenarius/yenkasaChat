@@ -8,11 +8,17 @@ import {
   markNotificationRead,
   updateNotificationPreferences,
 } from "../api/notifications";
+import { useLocale } from "../i18n/LocaleContext";
 import { handleDynamicImageError, handleStaticImageError, staticImage } from "../utils/images";
+import {
+  getNotificationId,
+  resolveNotificationTarget,
+} from "../utils/notificationRouting";
 import "../styles/notifications.css";
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const { language, t } = useLocale();
   const [notifications, setNotifications] = useState([]);
   const [preferences, setPreferences] = useState({
     inAppEnabled: true,
@@ -50,7 +56,7 @@ export default function Notifications() {
         setError(
           requestError?.response?.data?.message ||
             requestError?.response?.data?.error ||
-            "Failed to load notifications."
+            t("notificationsLoadFailed", "Failed to load notifications.")
         );
       } finally {
         if (active && showLoader) setLoading(false);
@@ -71,20 +77,20 @@ export default function Notifications() {
     let currentLabel = "";
 
     notifications.forEach((notification) => {
-      const label = formatSectionDate(notification?.createdAt);
+      const label = formatSectionDate(notification?.createdAt, language, t);
       if (label !== currentLabel) {
         groups.push({ type: "label", key: `label-${label}`, label });
         currentLabel = label;
       }
       groups.push({
         type: "item",
-        key: notification?.id || notification?._id,
+        key: getNotificationId(notification),
         notification,
       });
     });
 
     return groups;
-  }, [notifications]);
+  }, [notifications, language, t]);
 
   const unreadCount = notifications.filter(
     (notification) => notification?.status !== "read"
@@ -94,10 +100,11 @@ export default function Notifications() {
     if (!notification) return;
 
     if (notification?.status !== "read") {
+      const notificationId = getNotificationId(notification);
       try {
-        await markNotificationRead(notification.id);
+        if (notificationId) await markNotificationRead(notificationId);
         setNotifications((prev) =>
-          prev.filter((item) => item.id !== notification.id)
+          prev.filter((item) => getNotificationId(item) !== notificationId)
         );
       } catch {
         // keep navigation responsive even if mark-read fails
@@ -118,7 +125,7 @@ export default function Notifications() {
       setError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
-          "Failed to mark all notifications as read."
+          t("markNotificationsReadFailed", "Failed to mark all notifications as read.")
       );
     } finally {
       setBusyAll(false);
@@ -137,7 +144,7 @@ export default function Notifications() {
       setError(
         requestError?.response?.data?.message ||
           requestError?.response?.data?.error ||
-          "Failed to update notification preferences."
+          t("notificationSettingsSaveFailed", "Failed to update notification preferences.")
       );
     } finally {
       setSavingPref("");
@@ -156,12 +163,12 @@ export default function Notifications() {
           ←
         </button>
         <div className="notifications-header__copy">
-          <div className="page-header__eyebrow">Yenkasa Alerts</div>
-          <h1>Notifications</h1>
+          <div className="page-header__eyebrow">{t("yenkasaAlerts", "Yenkasa Alerts")}</div>
+          <h1>{t("notifications")}</h1>
           <p>
             {unreadCount
-              ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-              : "All caught up"}
+              ? unreadNotificationLabel(unreadCount, t)
+              : t("allCaughtUp")}
           </p>
         </div>
         <button
@@ -170,21 +177,21 @@ export default function Notifications() {
           onClick={handleMarkAll}
           disabled={!notifications.length || busyAll}
         >
-          {busyAll ? "..." : "Mark all"}
+          {busyAll ? "..." : t("markAll")}
         </button>
       </header>
 
       <section className="notifications-prefs">
         <PreferenceToggle
-          label="In-app notifications"
-          description="Show activity, approval, and account alerts."
+          label={t("inAppNotifications")}
+          description={t("inAppNotificationDescription", "Show activity, approval, and account alerts.")}
           checked={preferences.inAppEnabled}
           disabled={savingPref === "inAppEnabled"}
           onChange={(value) => handleTogglePreference("inAppEnabled", value)}
         />
         <PreferenceToggle
-          label="Reward notifications"
-          description="Wallet and reward alerts from Yenkasa activity."
+          label={t("rewardNotifications")}
+          description={t("rewardNotificationDescription")}
           checked={preferences.rewardEnabled}
           disabled={savingPref === "rewardEnabled" || !preferences.inAppEnabled}
           onChange={(value) => handleTogglePreference("rewardEnabled", value)}
@@ -195,7 +202,7 @@ export default function Notifications() {
 
       <section className="notifications-list">
         {loading ? (
-          <div className="notifications-empty">Loading notifications...</div>
+          <div className="notifications-empty">{t("loadingNotifications")}</div>
         ) : null}
 
         {!loading && !notifications.length ? (
@@ -205,8 +212,8 @@ export default function Notifications() {
               alt="Yenkasa"
               onError={(event) => handleStaticImageError(event, "logo.png")}
             />
-            <strong>No notifications yet</strong>
-            <p>Likes, comments, approvals, and account alerts will appear here.</p>
+            <strong>{t("noNotificationsYet")}</strong>
+            <p>{t("notificationEmptyCopy")}</p>
           </div>
         ) : null}
 
@@ -242,14 +249,14 @@ export default function Notifications() {
                       ? handleDynamicImageError
                       : (event) => handleStaticImageError(event, "logo.png")
                   }
-                  alt={notification?.sender?.username || "Notification"}
+                  alt={notification?.sender?.username || t("notification", "Notification")}
                 />
                 <div className="notification-card__copy">
                   <div className="notification-card__row">
                     <strong>{notification?.sender?.username || "Yenkasa"}</strong>
-                    <span>{formatClock(notification?.createdAt)}</span>
+                    <span>{formatClock(notification?.createdAt, language)}</span>
                   </div>
-                  <p>{notification?.message || "New activity on your account"}</p>
+                  <p>{notification?.message || t("newActivityOnAccount", "New activity on your account")}</p>
                   <small>{formatNotificationMeta(notification)}</small>
                 </div>
                 {notification?.status !== "read" ? (
@@ -285,50 +292,38 @@ function PreferenceToggle({ label, description, checked, disabled, onChange }) {
   );
 }
 
-function resolveNotificationTarget(notification) {
-  const url = notification?.targetUrl;
-  if (url) {
-    if (url.startsWith("/admin/post-approval")) return "/post-approvals";
-    if (url.startsWith("/post/")) return url;
-    if (url.startsWith("/profile/")) return "/profile";
-    return url;
-  }
-
-  if (notification?.postId) return `/post/${notification.postId}`;
-  if (notification?.commentId && notification?.activityId) {
-    return `/post/${notification.activityId}?openComments=true`;
-  }
-  if (notification?.targetType === "profile") return "/profile";
-  return "/notifications";
-}
-
-function formatSectionDate(value) {
-  if (!value) return "Recent";
+function formatSectionDate(value, language, t) {
+  if (!value) return t("recent", "Recent");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Recent";
+  if (Number.isNaN(date.getTime())) return t("recent", "Recent");
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfInput = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diffDays = Math.round((startOfToday - startOfInput) / 86400000);
 
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return date.toLocaleDateString([], {
+  if (diffDays <= 0) return t("today", "Today");
+  if (diffDays === 1) return t("yesterday", "Yesterday");
+  return date.toLocaleDateString(language || undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-function formatClock(value) {
+function formatClock(value, language) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString([], {
+  return date.toLocaleTimeString(language || undefined, {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function unreadNotificationLabel(count, t) {
+  if (count === 1) return t("oneUnreadNotification", "1 unread notification");
+  return `${count} ${t("unreadNotifications", "unread notifications")}`;
 }
 
 function formatNotificationMeta(notification) {

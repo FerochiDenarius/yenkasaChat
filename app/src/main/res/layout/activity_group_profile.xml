@@ -66,6 +66,48 @@
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_default_profile" />
 
+            <LinearLayout
+                android:id="@+id/layoutGroupProfileImageActions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/buttonChangeGroupImage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_chat_primary_button"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="14dp"
+                    android:text="Change Photo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="13sp" />
+
+                <ProgressBar
+                    android:id="@+id/progressGroupProfileImage"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="10dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textGroupProfileImageStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:textColor="@color/feed_secondary_text"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:text="Uploading image..." />
+
             <TextView
                 android:id="@+id/textGroupProfileName"
                 android:layout_width="match_parent"

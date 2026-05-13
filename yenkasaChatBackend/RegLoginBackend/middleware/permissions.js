@@ -75,6 +75,7 @@ function normalizeRank(value) {
   const normalized = String(value).trim().toUpperCase().replace(/[\s-]+/g, '_');
   if (!normalized || normalized === 'NULL') return RANKS.UNVERIFIED;
   if (normalized === 'USER') return RANKS.UNVERIFIED;
+  if (normalized === 'VERIFIED_CREATOR') return RANKS.VERIFIED;
   if (normalized === 'SENIOR' || normalized === 'SENIOR_DEV' || normalized === 'DEVELOPER') {
     return RANKS.SENIOR_DEVELOPER;
   }
@@ -85,14 +86,24 @@ function normalizeRank(value) {
 }
 
 function getUserRank(user) {
+  const staffRank = normalizeRank(user?.staffRole);
+  if (RANK_ORDER.includes(staffRank) && RANK_ORDER.indexOf(staffRank) >= RANK_ORDER.indexOf(RANKS.MODERATOR)) {
+    return staffRank;
+  }
+
+  const publicRanks = (user?.publicRoles || [])
+    .map(normalizeRank)
+    .filter((rank) => RANK_ORDER.includes(rank));
+
   const candidates = [
-    user?.accessRole,
     user?.roleName,
+    user?.accessRole,
     user?.role?.accessRole,
     user?.role?.roleName,
     user?.role?.role,
     user?.role?.name,
-    typeof user?.role === 'string' ? user.role : ''
+    typeof user?.role === 'string' ? user.role : '',
+    ...publicRanks
   ]
     .map(normalizeRank)
     .filter(Boolean);

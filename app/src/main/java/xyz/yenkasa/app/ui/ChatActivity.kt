@@ -447,6 +447,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         joinRealtimeChatRoom()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (isGroupChat && ::textViewReceiverName.isInitialized) {
+            refreshGroupHeader()
+        }
+    }
+
     override fun onStop() {
         ChatNotificationState.clearActiveRoom(roomId)
         leaveRealtimeChatRoom()

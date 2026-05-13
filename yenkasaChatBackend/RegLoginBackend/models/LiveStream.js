@@ -40,7 +40,35 @@ const liveStreamSchema = new mongoose.Schema(
     },
     isLive: {
       type: Boolean,
-      default: true,
+      default: false,
+      index: true
+    },
+    lifecycleStatus: {
+      type: String,
+      enum: ['starting', 'live', 'ended', 'failed'],
+      default: 'starting',
+      index: true
+    },
+    hostConnected: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    hostSocketId: {
+      type: String,
+      default: ''
+    },
+    hostJoinedAt: {
+      type: Date,
+      default: null
+    },
+    hostLastSeenAt: {
+      type: Date,
+      default: null
+    },
+    startupExpiresAt: {
+      type: Date,
+      default: null,
       index: true
     },
     viewerCount: {
@@ -82,7 +110,7 @@ const liveStreamSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-liveStreamSchema.index({ isLive: 1, startedAt: -1 });
+liveStreamSchema.index({ isLive: 1, lifecycleStatus: 1, hostConnected: 1, startedAt: -1 });
 liveStreamSchema.index({ hostId: 1, isLive: 1 });
 
 module.exports = mongoose.model('LiveStream', liveStreamSchema);

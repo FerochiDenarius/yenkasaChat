@@ -10,6 +10,8 @@ const { canStartLivestream } = require('../config/livestreamPermissions');
 const { generateRtcToken } = require('../utils/agoraTokenGenerator');
 
 const liveAutoEndTimers = new Map();
+const liveStartupTimers = new Map();
+const LIVE_STARTUP_GRACE_MS = Number(process.env.LIVESTREAM_STARTUP_GRACE_MS || 90000);
 
 const LIVE_GIFTS = {
   love: { label: 'Love', emoji: '❤️', amount: 5 },
@@ -29,6 +31,11 @@ function serializeStream(stream) {
     community: stream.community || '',
     agoraChannel: stream.agoraChannel,
     isLive: Boolean(stream.isLive),
+    lifecycleStatus: stream.lifecycleStatus || (stream.isLive ? 'live' : 'ended'),
+    hostConnected: Boolean(stream.hostConnected),
+    hostJoinedAt: stream.hostJoinedAt || null,
+    hostLastSeenAt: stream.hostLastSeenAt || null,
+    startupExpiresAt: stream.startupExpiresAt || null,
     viewerCount: stream.viewerCount || 0,
     peakViewerCount: stream.peakViewerCount || 0,
     hostRole: stream.hostRole || '',
@@ -49,6 +56,10 @@ function legacyLiveRoom(streamId) {
 
 function emitToLiveRoom(streamId, eventName, payload) {
   global.io?.to(liveRoom(streamId)).to(legacyLiveRoom(streamId)).emit(eventName, payload);
+}
+
+function emitLiveDirectory(eventName, payload) {
+  global.io?.emit(eventName, payload);
 }
 
 function logLiveEvent(event, stream, extra = {}) {
@@ -82,6 +93,9 @@ function scheduleAutoEnd(stream) {
     const activeStream = await LiveStream.findOne({ _id: streamId, isLive: true });
     if (!activeStream) return;
     activeStream.isLive = false;
+    activeStream.lifecycleStatus = 'ended';
+    activeStream.hostConnected = false;
+    activeStream.hostSocketId = '';
     activeStream.endedAt = new Date();
     activeStream.endReason = 'time_limit';
     activeStream.viewerCount = 0;
@@ -100,11 +114,87 @@ function scheduleAutoEnd(stream) {
     };
     emitToLiveRoom(streamId, 'livestream_ended', endedEvent);
     emitToLiveRoom(streamId, 'live_ended', endedEvent);
-    global.io?.emit('live_removed', { streamId });
+    emitLiveDirectory('livestream_removed', { streamId, reason: 'time_limit' });
+    emitLiveDirectory('live_removed', { streamId, reason: 'time_limit' });
     logLiveEvent('auto_end', activeStream, { reason: 'time_limit' });
   }, delay);
 
   liveAutoEndTimers.set(streamId, timer);
+}
+
+function clearStartupTimer(streamId) {
+  const normalizedStreamId = streamId?.toString();
+  if (!normalizedStreamId) return;
+  if (liveStartupTimers.has(normalizedStreamId)) {
+    clearTimeout(liveStartupTimers.get(normalizedStreamId));
+    liveStartupTimers.delete(normalizedStreamId);
+  }
+}
+
+async function failStartingStream(streamId, reason = 'startup_timeout') {
+  if (!mongoose.Types.ObjectId.isValid(streamId)) return null;
+
+  const stream = await LiveStream.findOneAndUpdate(
+    {
+      _id: streamId,
+      lifecycleStatus: 'starting',
+      hostConnected: false
+    },
+    {
+      $set: {
+        isLive: false,
+        lifecycleStatus: 'failed',
+        endedAt: new Date(),
+        endReason: reason,
+        viewerCount: 0,
+        hostSocketId: '',
+        startupExpiresAt: null
+      }
+    },
+    { new: true }
+  );
+
+  if (!stream) return null;
+  clearStartupTimer(streamId);
+  const removedEvent = { streamId: stream._id.toString(), reason };
+  emitLiveDirectory('livestream_removed', removedEvent);
+  emitLiveDirectory('live_removed', removedEvent);
+  logLiveEvent('startup_failed', stream, { reason });
+  return stream;
+}
+
+function scheduleStartupExpiry(stream) {
+  const streamId = stream._id.toString();
+  clearStartupTimer(streamId);
+  if (!stream.startupExpiresAt) return;
+
+  const delay = new Date(stream.startupExpiresAt).getTime() - Date.now();
+  if (delay <= 0) {
+    failStartingStream(streamId).catch((err) => {
+      console.error('Livestream startup expiry failed:', err.message);
+    });
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    failStartingStream(streamId).catch((err) => {
+      console.error('Livestream startup expiry failed:', err.message);
+    });
+  }, delay);
+  liveStartupTimers.set(streamId, timer);
+}
+
+async function cleanupExpiredStartingStreams() {
+  const now = new Date();
+  const staleStreams = await LiveStream.find({
+    lifecycleStatus: 'starting',
+    hostConnected: false,
+    startupExpiresAt: { $lte: now }
+  }).select('_id').lean();
+
+  await Promise.allSettled(
+    staleStreams.map((stream) => failStartingStream(stream._id.toString()))
+  );
 }
 
 router.post('/create', auth, async (req, res) => {
@@ -131,7 +221,17 @@ router.post('/create', auth, async (req, res) => {
 
     await LiveStream.updateMany(
       { hostId: req.user._id, isLive: true },
-      { $set: { isLive: false, endedAt: new Date(), viewerCount: 0 } }
+      {
+        $set: {
+          isLive: false,
+          lifecycleStatus: 'ended',
+          hostConnected: false,
+          hostSocketId: '',
+          endedAt: new Date(),
+          endReason: 'superseded',
+          viewerCount: 0
+        }
+      }
     );
 
     const stream = await LiveStream.create({
@@ -147,14 +247,16 @@ router.post('/create', auth, async (req, res) => {
       scheduledEndAt: permission.maxDurationMinutes
         ? new Date(Date.now() + permission.maxDurationMinutes * 60 * 1000)
         : null,
-      isLive: true,
+      isLive: false,
+      lifecycleStatus: 'starting',
+      hostConnected: false,
+      startupExpiresAt: new Date(Date.now() + LIVE_STARTUP_GRACE_MS),
       viewerCount: 0
     });
 
-    global.io?.emit('livestream_started', { stream: serializeStream(stream) });
-    global.io?.emit('live_started', { stream: serializeStream(stream) });
+    scheduleStartupExpiry(stream);
     scheduleAutoEnd(stream);
-    logLiveEvent('start', stream, { rankLimitMinutes: permission.maxDurationMinutes });
+    logLiveEvent('create_starting', stream, { rankLimitMinutes: permission.maxDurationMinutes });
 
     return res.status(201).json({
       success: true,
@@ -172,8 +274,13 @@ router.post('/create', auth, async (req, res) => {
 
 router.get('/active', auth, async (req, res) => {
   try {
+    await cleanupExpiredStartingStreams();
     const limit = Math.min(Number(req.query.limit || 30), 50);
-    const streams = await LiveStream.find({ isLive: true })
+    const streams = await LiveStream.find({
+      isLive: true,
+      lifecycleStatus: 'live',
+      hostConnected: true
+    })
       .sort({ viewerCount: -1, startedAt: -1 })
       .limit(limit)
       .lean();
@@ -194,13 +301,19 @@ router.post('/join/:id', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid livestream id.' });
     }
 
-    const stream = await LiveStream.findOne({ _id: req.params.id, isLive: true });
+    let role = 'audience';
+    const requestedBroadcaster = req.body?.role === 'broadcaster';
+    const stream = await LiveStream.findOne({
+      _id: req.params.id,
+      ...(requestedBroadcaster
+        ? { lifecycleStatus: { $in: ['starting', 'live'] } }
+        : { isLive: true, lifecycleStatus: 'live', hostConnected: true })
+    });
     if (!stream) {
       return res.status(404).json({ success: false, message: 'Livestream is no longer active.' });
     }
 
-    let role = 'audience';
-    if (req.body?.role === 'broadcaster' && stream.hostId.toString() === req.user._id.toString()) {
+    if (requestedBroadcaster && stream.hostId.toString() === req.user._id.toString()) {
       const permission = canStartLivestream(req.user);
       if (!permission.allowed) {
         return res.status(403).json({
@@ -209,6 +322,8 @@ router.post('/join/:id', auth, async (req, res) => {
         });
       }
       role = 'broadcaster';
+    } else if (requestedBroadcaster) {
+      return res.status(403).json({ success: false, message: 'Only the host can broadcast this livestream.' });
     }
 
     const agora = generateRtcToken({
@@ -237,7 +352,10 @@ router.post('/end/:id', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid livestream id.' });
     }
 
-    const stream = await LiveStream.findOne({ _id: req.params.id, isLive: true });
+    const stream = await LiveStream.findOne({
+      _id: req.params.id,
+      lifecycleStatus: { $in: ['starting', 'live'] }
+    });
     if (!stream) {
       return res.status(404).json({ success: false, message: 'Livestream is not active.' });
     }
@@ -247,17 +365,23 @@ router.post('/end/:id', auth, async (req, res) => {
     }
 
     stream.isLive = false;
+    stream.lifecycleStatus = 'ended';
+    stream.hostConnected = false;
+    stream.hostSocketId = '';
+    stream.startupExpiresAt = null;
     stream.endedAt = new Date();
     stream.endReason = 'host_ended';
     stream.viewerCount = 0;
     await stream.save();
     clearTimeout(liveAutoEndTimers.get(stream._id.toString()));
     liveAutoEndTimers.delete(stream._id.toString());
+    clearStartupTimer(stream._id);
 
     const endedEvent = { streamId: stream._id.toString(), reason: 'host_ended' };
     emitToLiveRoom(stream._id, 'livestream_ended', endedEvent);
     emitToLiveRoom(stream._id, 'live_ended', endedEvent);
-    global.io?.emit('live_removed', { streamId: stream._id.toString() });
+    emitLiveDirectory('livestream_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
+    emitLiveDirectory('live_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
     logLiveEvent('end', stream, { reason: 'host_ended' });
 
     return res.json({ success: true, stream: serializeStream(stream) });
@@ -273,8 +397,12 @@ router.post('/leave/:id', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid livestream id.' });
     }
 
-    const stream = await LiveStream.findByIdAndUpdate(
-      req.params.id,
+    const stream = await LiveStream.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        isLive: true,
+        lifecycleStatus: 'live'
+      },
       { $inc: { viewerCount: -1 } },
       { new: true }
     );
@@ -310,7 +438,12 @@ router.post('/gift', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid livestream gift request.' });
     }
 
-    const stream = await LiveStream.findOne({ _id: streamId, isLive: true }).session(session);
+    const stream = await LiveStream.findOne({
+      _id: streamId,
+      isLive: true,
+      lifecycleStatus: 'live',
+      hostConnected: true
+    }).session(session);
     if (!stream) {
       return res.status(404).json({ success: false, message: 'Livestream is no longer active.' });
     }

@@ -75,9 +75,18 @@ class LiveStreamActivity : AppCompatActivity() {
     private var isHost: Boolean = false
     private var muted = false
     private var joinedSocketRoom = false
+    private var hostReadyEmitted = false
+    private var endRequestSent = false
     private var scheduledEndAtMillis: Long = 0L
     private var lastReactionAt = 0L
     private val timerHandler = Handler(Looper.getMainLooper())
+    private val hostHeartbeatHandler = Handler(Looper.getMainLooper())
+    private val hostHeartbeatRunnable = object : Runnable {
+        override fun run() {
+            emitHostHeartbeat()
+            hostHeartbeatHandler.postDelayed(this, 15_000L)
+        }
+    }
     private val timerRunnable = object : Runnable {
         override fun run() {
             updateTimer()
@@ -99,7 +108,10 @@ class LiveStreamActivity : AppCompatActivity() {
         }
 
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
-            runOnUiThread { addComment(getString(R.string.you_joined_live)) }
+            runOnUiThread {
+                addComment(getString(R.string.you_joined_live))
+                if (isHost) emitHostReady() else emitLiveJoin()
+            }
         }
     }
 
@@ -294,6 +306,11 @@ class LiveStreamActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    private fun emitLiveJoin() {
+        if (joinedSocketRoom) return
+        val userId = TokenManager.getUserId(this)
         SocketManager.emit(
             "livestream_join",
             JSONObject()
@@ -304,9 +321,36 @@ class LiveStreamActivity : AppCompatActivity() {
         joinedSocketRoom = true
     }
 
+    private fun emitHostReady() {
+        if (hostReadyEmitted) return
+        val userId = TokenManager.getUserId(this)
+        SocketManager.emit(
+            "livestream_host_ready",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", userId.orEmpty())
+                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+        )
+        hostReadyEmitted = true
+        joinedSocketRoom = true
+        hostHeartbeatHandler.removeCallbacks(hostHeartbeatRunnable)
+        hostHeartbeatHandler.post(hostHeartbeatRunnable)
+    }
+
+    private fun emitHostHeartbeat() {
+        if (!isHost || !hostReadyEmitted) return
+        SocketManager.emit(
+            "livestream_host_heartbeat",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", TokenManager.getUserId(this).orEmpty())
+        )
+    }
+
     private fun initializeAgora() {
         if (agoraAppId.isBlank() || channelName.isBlank() || agoraToken.isBlank()) {
             Toast.makeText(this, R.string.livestream_token_missing, Toast.LENGTH_LONG).show()
+            if (isHost) cancelStartingLive()
             finish()
             return
         }
@@ -544,6 +588,7 @@ class LiveStreamActivity : AppCompatActivity() {
             finish()
             return
         }
+        endRequestSent = true
         ApiClient.apiService.endLiveStream(streamId).enqueue(object : Callback<LiveStreamResponse> {
             override fun onResponse(call: Call<LiveStreamResponse>, response: Response<LiveStreamResponse>) {
                 finish()
@@ -572,6 +617,7 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun leaveLive() {
+        hostHeartbeatHandler.removeCallbacks(hostHeartbeatRunnable)
         if (joinedSocketRoom) {
             SocketManager.emit(
                 "livestream_leave",
@@ -581,6 +627,9 @@ class LiveStreamActivity : AppCompatActivity() {
                     .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
             )
             joinedSocketRoom = false
+        }
+        if (isHost && !hostReadyEmitted && !endRequestSent) {
+            cancelStartingLive()
         }
         SocketManager.off("livestream_comment")
         SocketManager.off("livestream_join")
@@ -595,6 +644,15 @@ class LiveStreamActivity : AppCompatActivity() {
         rtcEngine?.stopPreview()
         rtcEngine = null
         RtcEngine.destroy()
+    }
+
+    private fun cancelStartingLive() {
+        if (streamId.isBlank()) return
+        endRequestSent = true
+        ApiClient.apiService.endLiveStream(streamId).enqueue(object : Callback<LiveStreamResponse> {
+            override fun onResponse(call: Call<LiveStreamResponse>, response: Response<LiveStreamResponse>) = Unit
+            override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) = Unit
+        })
     }
 
     override fun onBackPressed() {

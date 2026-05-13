@@ -13,11 +13,16 @@ data class LiveStream(
     val community: String = "",
     val agoraChannel: String = "",
     val isLive: Boolean = false,
+    val lifecycleStatus: String = "",
+    val hostConnected: Boolean = false,
     val viewerCount: Int = 0,
     val peakViewerCount: Int = 0,
     val hostRole: String = "",
     val maxDurationMinutes: Int? = null,
     val scheduledEndAt: String? = null,
+    val hostJoinedAt: String? = null,
+    val hostLastSeenAt: String? = null,
+    val startupExpiresAt: String? = null,
     val startedAt: String? = null,
     val endedAt: String? = null
 )

@@ -139,6 +139,8 @@ const pendingOfflineTimers = new Map();
 const SOCKET_OFFLINE_GRACE_MS = Number(process.env.SOCKET_OFFLINE_GRACE_MS || 600000);
 const chatLaughReactionCooldowns = new Map();
 const CHAT_LAUGH_REACTION_COOLDOWN_MS = Number(process.env.CHAT_LAUGH_REACTION_COOLDOWN_MS || 2500);
+const liveHostDisconnectTimers = new Map();
+const LIVE_HOST_DISCONNECT_GRACE_MS = Number(process.env.LIVESTREAM_HOST_DISCONNECT_GRACE_MS || 45000);
 
 function getLiveRoom(streamId) {
   return `livestream_${streamId}`;
@@ -162,6 +164,77 @@ function leaveLiveRooms(socket, streamId) {
   socket.leave(getLegacyLiveRoom(streamId));
 }
 
+function serializeLiveStream(stream) {
+  return {
+    _id: stream._id.toString(),
+    hostId: stream.hostId?.toString?.() || stream.hostId,
+    hostUsername: stream.hostUsername || '',
+    hostAvatar: stream.hostAvatar || '',
+    title: stream.title || '',
+    thumbnail: stream.thumbnail || '',
+    community: stream.community || '',
+    agoraChannel: stream.agoraChannel || '',
+    isLive: Boolean(stream.isLive),
+    lifecycleStatus: stream.lifecycleStatus || (stream.isLive ? 'live' : 'ended'),
+    hostConnected: Boolean(stream.hostConnected),
+    viewerCount: stream.viewerCount || 0,
+    peakViewerCount: stream.peakViewerCount || 0,
+    hostRole: stream.hostRole || '',
+    maxDurationMinutes: stream.maxDurationMinutes ?? null,
+    scheduledEndAt: stream.scheduledEndAt || null,
+    hostJoinedAt: stream.hostJoinedAt || null,
+    hostLastSeenAt: stream.hostLastSeenAt || null,
+    startupExpiresAt: stream.startupExpiresAt || null,
+    startedAt: stream.startedAt,
+    endedAt: stream.endedAt
+  };
+}
+
+function clearLiveHostDisconnectTimer(streamId) {
+  const normalizedStreamId = streamId?.toString();
+  if (!normalizedStreamId) return;
+  if (liveHostDisconnectTimers.has(normalizedStreamId)) {
+    clearTimeout(liveHostDisconnectTimers.get(normalizedStreamId));
+    liveHostDisconnectTimers.delete(normalizedStreamId);
+  }
+}
+
+async function endLiveStreamForHostDrop(streamId, socketId) {
+  if (!mongoose.Types.ObjectId.isValid(streamId)) return;
+  const stream = await LiveStream.findOneAndUpdate(
+    {
+      _id: streamId,
+      isLive: true,
+      lifecycleStatus: 'live',
+      hostConnected: true,
+      hostSocketId: socketId
+    },
+    {
+      $set: {
+        isLive: false,
+        lifecycleStatus: 'ended',
+        hostConnected: false,
+        hostSocketId: '',
+        endedAt: new Date(),
+        endReason: 'host_disconnected',
+        viewerCount: 0
+      }
+    },
+    { new: true }
+  );
+  if (!stream) return;
+
+  const endedEvent = {
+    streamId,
+    reason: 'host_disconnected'
+  };
+  emitToLiveRoom(streamId, 'livestream_ended', endedEvent);
+  emitToLiveRoom(streamId, 'live_ended', endedEvent);
+  io.emit('livestream_removed', endedEvent);
+  io.emit('live_removed', endedEvent);
+  console.log(`📺 Livestream ${streamId} ended after host socket ${socketId} disconnected.`);
+}
+
 function getOnlineUserIds() {
   return Array.from(onlineUsers.keys());
 }
@@ -169,6 +242,7 @@ function getOnlineUserIds() {
 io.on('connection', (socket) => {
   console.log(`💡 Client connected: ${socket.id}`);
   socket.data.liveStreams = new Set();
+  socket.data.hostLiveStreams = new Set();
 
   const clearPendingOffline = (userId) => {
     const normalizedUserId = userId?.toString();
@@ -344,8 +418,13 @@ io.on('connection', (socket) => {
       }).select('_id participants').lean();
 
       if (!room) return;
+      const recipientUserRooms = (room.participants || [])
+        .map((participantId) => participantId.toString())
+        .filter((participantId) => participantId !== senderId);
 
-      socket.to(roomId).emit('chat_laugh_reaction', {
+      if (recipientUserRooms.length === 0) return;
+
+      socket.to(recipientUserRooms).emit('chat_laugh_reaction', {
         senderId,
         receiverId: payload.receiverId?.toString?.() || '',
         conversationId: roomId,
@@ -360,7 +439,12 @@ io.on('connection', (socket) => {
   const updateLiveViewerCount = async (streamId, delta) => {
     if (!mongoose.Types.ObjectId.isValid(streamId)) return null;
     const stream = await LiveStream.findOneAndUpdate(
-      { _id: streamId, isLive: true },
+      {
+        _id: streamId,
+        isLive: true,
+        lifecycleStatus: 'live',
+        hostConnected: true
+      },
       { $inc: { viewerCount: delta } },
       { new: true }
     );
@@ -381,6 +465,74 @@ io.on('connection', (socket) => {
     emitToLiveRoom(streamId, 'live_viewer_count', payload);
     return stream;
   };
+
+  const handleLiveHostReady = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const userId = (socket.data.userId || payload.userId)?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId) || !userId) return;
+
+      const now = new Date();
+      const stream = await LiveStream.findOne({
+        _id: streamId,
+        hostId: userId,
+        lifecycleStatus: { $in: ['starting', 'live'] }
+      });
+      if (!stream) return;
+
+      stream.isLive = true;
+      stream.lifecycleStatus = 'live';
+      stream.hostConnected = true;
+      stream.hostSocketId = socket.id;
+      stream.hostJoinedAt = stream.hostJoinedAt || now;
+      stream.hostLastSeenAt = now;
+      stream.startupExpiresAt = null;
+      await stream.save();
+
+      clearLiveHostDisconnectTimer(streamId);
+      joinLiveRooms(socket, streamId);
+      socket.data.hostLiveStreams.add(streamId);
+
+      const startedEvent = { stream: serializeLiveStream(stream) };
+      io.emit('livestream_started', startedEvent);
+      io.emit('live_started', startedEvent);
+      emitToLiveRoom(streamId, 'livestream_host_ready', {
+        streamId,
+        userId,
+        username: stream.hostUsername,
+        createdAt: now.toISOString()
+      });
+      console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
+    } catch (err) {
+      console.error('❌ livestream_host_ready failed:', err.message);
+    }
+  };
+
+  socket.on('livestream_host_ready', handleLiveHostReady);
+  socket.on('live_host_ready', handleLiveHostReady);
+
+  const handleLiveHostHeartbeat = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const userId = (socket.data.userId || payload.userId)?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId) || !userId) return;
+
+      await LiveStream.updateOne(
+        {
+          _id: streamId,
+          hostId: userId,
+          lifecycleStatus: 'live',
+          hostSocketId: socket.id
+        },
+        { $set: { hostLastSeenAt: new Date(), hostConnected: true } }
+      );
+    } catch (err) {
+      console.error('❌ livestream_host_heartbeat failed:', err.message);
+    }
+  };
+
+  socket.on('livestream_host_heartbeat', handleLiveHostHeartbeat);
+  socket.on('live_host_heartbeat', handleLiveHostHeartbeat);
 
   const handleLiveJoin = async (payload = {}) => {
     try {
@@ -476,6 +628,20 @@ io.on('connection', (socket) => {
   socket.on('disconnect', async (reason) => {
     try {
       console.log(`🔥 Client disconnected: ${socket.id}. reason=${reason}`);
+
+      if (socket.data.hostLiveStreams?.size) {
+        for (const streamId of Array.from(socket.data.hostLiveStreams)) {
+          clearLiveHostDisconnectTimer(streamId);
+          const timer = setTimeout(() => {
+            liveHostDisconnectTimers.delete(streamId);
+            endLiveStreamForHostDrop(streamId, socket.id).catch((err) => {
+              console.error('❌ Error ending livestream after host disconnect:', err.message);
+            });
+          }, LIVE_HOST_DISCONNECT_GRACE_MS);
+          liveHostDisconnectTimers.set(streamId, timer);
+        }
+        socket.data.hostLiveStreams.clear();
+      }
 
       if (socket.data.liveStreams?.size) {
         await Promise.allSettled(

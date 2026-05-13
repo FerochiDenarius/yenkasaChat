@@ -7,16 +7,17 @@ function computeTarget(notification) {
 
     if (targetUrl) return targetUrl;
 
-    if (targetType && targetId) {
-        if (targetType === "post") return `/post/${targetId}`;
-        if (targetType === "approval") return `/admin/post-approval/${targetId}`;
-        if (targetType === "profile") return `/profile/${targetId}`;
-        if (targetType === "comment") return `/post/${targetId}?openComments=true`;
-        if (targetType === "wallet") return `/wallet/${targetId}`;
-        if (targetType === "ad") return `/ads/mine`;
-        if (targetType === "community") return `/communities/mine`;
-        if (targetType === "chat") return `/chat/${targetId}`;
-    }
+        if (targetType && targetId) {
+            if (targetType === "post") return `/post/${targetId}`;
+            if (targetType === "approval") return `/admin/post-approval/${targetId}`;
+            if (targetType === "profile") return `/profile/${targetId}`;
+            if (targetType === "comment") return null;
+            if (targetType === "wallet") return `/wallet/${targetId}`;
+            if (targetType === "ad") return `/ads/mine`;
+            if (targetType === "community") return `/communities/mine`;
+            if (targetType === "chat") return `/chat/${targetId}`;
+            if (targetType === "group") return `/groups/${targetId}`;
+        }
 
     if (type === "reward") return "/wallet";
     if (type === "post_approved") return `/admin/post-approval/${activityId}`;
@@ -91,6 +92,11 @@ async function sendNotification({
     pushTitle = null,
     pushBody = null,
     pushData = null,
+    pushCollapseId = null,
+    pushAndroidGroup = null,
+    pushAndroidGroupMessage = null,
+    pushTtl = null,
+    pushPriority = null,
     excludePlayerIds = []
 }) {
     try {
@@ -160,7 +166,12 @@ async function sendNotification({
                             targetId,
                             targetUrl: formatted.targetUrl,
                             ...(pushData || {})
-                        }
+                        },
+                        collapse_id: pushCollapseId || `${type}_${formatted.id}`,
+                        android_group: pushAndroidGroup || undefined,
+                        android_group_message: pushAndroidGroupMessage || undefined,
+                        ttl: Number.isInteger(pushTtl) ? pushTtl : undefined,
+                        priority: Number.isInteger(pushPriority) ? pushPriority : undefined
                     });
                     console.log("[NotificationService] Push notification sent", {
                         notificationId: formatted.id,

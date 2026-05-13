@@ -45,7 +45,7 @@
                     android:id="@+id/settingsHeader"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Settings"
+                    android:text="@string/settings"
                     android:textColor="@color/menu_primary_text"
                     android:textSize="28sp"
                     android:textStyle="bold" />
@@ -54,7 +54,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Manage your account and preferences"
+                    android:text="@string/settings_subtitle"
                     android:textColor="@color/menu_secondary_text"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -73,7 +73,75 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:paddingTop="10dp"
-                android:text="Privacy"
+                android:text="@string/language"
+                android:textColor="@color/menu_primary_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/itemLanguage"
+                style="@style/MenuItemStyle"
+                android:minHeight="58dp">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_menu_icon_container">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_register_globe"
+                        app:tint="@color/menu_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/language"
+                        android:textColor="@color/menu_primary_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtLanguageCurrent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/language_english"
+                        android:textColor="@color/menu_secondary_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_menu_card"
+            android:orientation="vertical"
+            android:paddingVertical="6dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="10dp"
+                android:text="@string/privacy"
                 android:textColor="@color/menu_primary_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -106,7 +174,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Message Privacy"
+                        android:text="@string/message_privacy"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -116,7 +184,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Message requests required"
+                        android:text="@string/privacy_requires_approval"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -141,7 +209,7 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:paddingTop="10dp"
-                android:text="Block Management"
+                android:text="@string/block_management"
                 android:textColor="@color/menu_primary_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -174,7 +242,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Who You Blocked"
+                        android:text="@string/who_you_blocked"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -183,7 +251,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="View users you have blocked"
+                        android:text="@string/who_you_blocked_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -222,7 +290,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Who Blocked You"
+                        android:text="@string/who_blocked_you"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -231,7 +299,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="View users who blocked you"
+                        android:text="@string/who_blocked_you_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -256,7 +324,7 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:paddingTop="10dp"
-                android:text="Post Visibility"
+                android:text="@string/post_visibility"
                 android:textColor="@color/menu_primary_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -289,7 +357,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Community Visibility"
+                        android:text="@string/community_visibility"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -298,7 +366,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Manage which communities can see your posts"
+                        android:text="@string/community_visibility_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -337,7 +405,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Blocked Communities"
+                        android:text="@string/blocked_communities"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -346,7 +414,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Communities you hid your posts from"
+                        android:text="@string/blocked_communities_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -385,7 +453,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Users Hidden From Posts"
+                        android:text="@string/users_hidden_from_posts"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -394,7 +462,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="People you prevented from seeing posts"
+                        android:text="@string/users_hidden_from_posts_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -419,7 +487,7 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:paddingTop="10dp"
-                android:text="Notifications"
+                android:text="@string/notifications"
                 android:textColor="@color/menu_primary_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -452,7 +520,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Notification Sound"
+                        android:text="@string/notification_sound"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -462,7 +530,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Default"
+                        android:text="@string/notification_sound_default"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -501,7 +569,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Enable Notifications"
+                        android:text="@string/enable_notifications"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -510,7 +578,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Manage your notification preferences"
+                        android:text="@string/enable_notifications_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -549,7 +617,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Reward Notifications"
+                        android:text="@string/reward_notifications"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -558,7 +626,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Mute wallet reward alerts only"
+                        android:text="@string/reward_notifications_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -576,7 +644,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:paddingHorizontal="4dp"
-            android:text="Moderation"
+            android:text="@string/moderation"
             android:textColor="@color/menu_primary_text"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -619,7 +687,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Moderation Dashboard"
+                        android:text="@string/moderation_dashboard"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -628,7 +696,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Review reports, deletions and flags"
+                        android:text="@string/moderation_dashboard_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -653,7 +721,7 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:paddingTop="10dp"
-                android:text="Account Security"
+                android:text="@string/account_security"
                 android:textColor="@color/menu_primary_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -686,7 +754,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Delete Account &amp; Data"
+                        android:text="@string/delete_account_data"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -695,7 +763,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Password, 2FA and security settings"
+                        android:text="@string/delete_account_data_summary"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>

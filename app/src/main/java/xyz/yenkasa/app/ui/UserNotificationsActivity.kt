@@ -3,7 +3,6 @@ package xyz.yenkasa.app.ui
 import android.Manifest
 import android.content.res.Configuration
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -19,7 +18,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import xyz.yenkasa.app.MyApplication
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.NotificationAdapter
 import xyz.yenkasa.app.model.ApiResponse
@@ -34,6 +32,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.util.NotificationNavigation
+import xyz.yenkasa.app.util.NotificationSoundManager
 
 
 class UserNotificationsActivity : AppCompatActivity() {
@@ -376,13 +375,10 @@ class UserNotificationsActivity : AppCompatActivity() {
         if (isMutedNotification(notification)) return
         if (!canPostLocalNotification()) return
 
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val selectedSound = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+        val channelId = NotificationSoundManager.ensureMessageChannel(this)
+        val soundUri = NotificationSoundManager.getSoundUri(this)
 
-        val rawRes = resources.getIdentifier(selectedSound, "raw", packageName)
-        val soundUri = if (rawRes > 0) Uri.parse("android.resource://$packageName/$rawRes") else null
-
-        val builder = NotificationCompat.Builder(this, MyApplication.NEW_CHAT_MESSAGES_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_bell)
             .setContentTitle(notification.type)
             .setContentText(notification.message ?: "")
@@ -390,7 +386,7 @@ class UserNotificationsActivity : AppCompatActivity() {
             .setAutoCancel(true)
             .setContentIntent(NotificationNavigation.buildPendingIntent(this, notification))
 
-        soundUri?.let { builder.setSound(it) }
+        builder.setSound(soundUri)
 
         NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), builder.build())
     }

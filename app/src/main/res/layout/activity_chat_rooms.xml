@@ -248,22 +248,44 @@
             android:textColor="@color/yenkasa_amber"
             android:textSize="11sp" />
 
-        <TextView
-            android:id="@+id/navChatRoomsStatus"
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:clickable="true"
-            android:drawableTop="@drawable/ic_message"
-            android:drawablePadding="3dp"
-            android:drawableTint="@color/white"
-            android:fontFamily="sans-serif-medium"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            android:gravity="center"
-            android:text="Groups"
-            android:textColor="@color/white"
-            android:textSize="11sp" />
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/navChatRoomsStatus"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clickable="true"
+                android:drawableTop="@drawable/ic_message"
+                android:drawablePadding="3dp"
+                android:drawableTint="@color/white"
+                android:fontFamily="sans-serif-medium"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="Groups"
+                android:textColor="@color/white"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/textGroupUnreadBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="18dp"
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginStart="18dp"
+                android:background="@drawable/bg_group_unread_badge_blue"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:minWidth="18dp"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="3"
+                tools:visibility="visible" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/navChatRoomsCalls"

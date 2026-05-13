@@ -2,18 +2,22 @@ package xyz.yenkasa.app.ui
 
 import android.content.Intent
 import android.content.res.Configuration
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ImageButton
+import android.widget.RadioButton
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import org.json.JSONObject
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.NotificationPreferencesResponse
@@ -23,6 +27,8 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.ApiService
 import xyz.yenkasa.app.util.AppUrls
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
+import xyz.yenkasa.app.util.LocaleManager
+import xyz.yenkasa.app.util.NotificationSoundManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 
@@ -36,8 +42,10 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var itemCommunityVisibility: LinearLayout
     private lateinit var itemBlockedCommunities: LinearLayout
     private lateinit var itemUsersBlockedFromPosts: LinearLayout
+    private lateinit var itemLanguage: LinearLayout
 
     private lateinit var privacySummaryText: TextView
+    private lateinit var txtLanguageCurrent: TextView
 
     private val api: ApiService by lazy { ApiClient.apiService }
     private val TAG = "SettingsActivity"
@@ -60,11 +68,11 @@ class SettingsActivity : AppCompatActivity() {
 
 
     private val soundOptions = listOf(
-        "sound_default" to "Default",
-        "sound_chime" to "Chime",
-        "sound_bell" to "Bell",
-        "sound_soft" to "Soft",
-        "sound_alert" to "Alert"
+        "sound_default" to R.string.notification_sound_default,
+        "sound_chime" to R.string.notification_sound_chime,
+        "sound_bell" to R.string.notification_sound_bell,
+        "sound_soft" to R.string.notification_sound_soft,
+        "sound_alert" to R.string.notification_sound_alert
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,8 +100,10 @@ class SettingsActivity : AppCompatActivity() {
         itemCommunityVisibility = findViewById(R.id.itemCommunityVisibility)
         itemBlockedCommunities = findViewById(R.id.itemBlockedCommunities)
         itemUsersBlockedFromPosts = findViewById(R.id.itemUsersBlockedFromPosts)
+        itemLanguage = findViewById(R.id.itemLanguage)
 
         privacySummaryText = findViewById(R.id.privacySummaryText)
+        txtLanguageCurrent = findViewById(R.id.txtLanguageCurrent)
         itemNotificationSound = findViewById(R.id.itemNotificationSound)
         itemNotificationToggle = findViewById(R.id.itemNotificationToggle)
         itemRewardNotificationToggle = findViewById(R.id.itemRewardNotificationToggle)
@@ -117,8 +127,9 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val savedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
 
-        val savedLabel = soundOptions.firstOrNull { it.first == savedId }?.second ?: "Default"
+        val savedLabel = getString(soundOptions.firstOrNull { it.first == savedId }?.second ?: R.string.notification_sound_default)
         txtSoundCurrent.text = savedLabel
+        updateLanguageSummary()
 
         switchNotifications.isChecked = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
         switchRewardNotifications.isChecked = prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
@@ -160,6 +171,9 @@ class SettingsActivity : AppCompatActivity() {
         itemUsersBlockedFromPosts.setOnClickListener {
             startActivity(Intent(this, HiddenUsersActivity::class.java))
         }
+        itemLanguage.setOnClickListener {
+            showLanguagePicker()
+        }
 
         itemNotificationSound.setOnClickListener {
             showSoundPickerDialog()
@@ -185,7 +199,7 @@ class SettingsActivity : AppCompatActivity() {
         itemModerationDashboard.setOnClickListener {
             val authToken = TokenManager.getToken(this)
             if (authToken.isNullOrBlank()) {
-                Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.please_log_in_again), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -213,10 +227,10 @@ class SettingsActivity : AppCompatActivity() {
                 if (!response.isSuccessful || response.body() == null) return
 
                 when (response.body()!!.privacyLevel) {
-                    "everyone" -> privacySummaryText.text = "Everyone can message you"
-                    "community_members" -> privacySummaryText.text = "Community members can message you"
-                    "requires_approval" -> privacySummaryText.text = "Message requests required"
-                    "nobody" -> privacySummaryText.text = "No one can message you"
+                    "everyone" -> privacySummaryText.text = getString(R.string.privacy_everyone)
+                    "community_members" -> privacySummaryText.text = getString(R.string.privacy_community_members)
+                    "requires_approval" -> privacySummaryText.text = getString(R.string.privacy_requires_approval)
+                    "nobody" -> privacySummaryText.text = getString(R.string.privacy_nobody)
                 }
             }
 
@@ -228,16 +242,12 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showDeleteAccountDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Delete Account & Data")
-            .setMessage(
-                "This will permanently delete your Yenkasa account and associated data.\n\n" +
-                        "This action cannot be undone.\n\n" +
-                        "Some data may be retained if required by law."
-            )
-            .setPositiveButton("Continue") { _, _ ->
+            .setTitle(R.string.delete_account_title)
+            .setMessage(R.string.delete_account_message)
+            .setPositiveButton(R.string.continue_action) { _, _ ->
                 openDeleteAccountPage()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
     private fun openDeleteAccountPage() {
@@ -304,29 +314,74 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showSoundPickerDialog() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-
-        val labels = soundOptions.map { it.second }.toTypedArray()
+        val labels = soundOptions.map { getString(it.second) }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("Select Notification Sound")
+            .setTitle(R.string.select_notification_sound)
             .setItems(labels) { _, which ->
 
                 val selectedId = soundOptions[which].first
-                val selectedLabel = soundOptions[which].second
+                val selectedLabel = getString(soundOptions[which].second)
 
-                // Save selection
-                prefs.edit().putString("notification_sound", selectedId).apply()
+                NotificationSoundManager.saveSelectedSound(this, selectedId)
 
                 // Update UI label
                 txtSoundCurrent.text = selectedLabel
 
                 // Preview sound
-                val resId = resources.getIdentifier(selectedId, "raw", packageName)
-                MediaPlayer.create(this, resId).start()
+                NotificationSoundManager.playPreview(this, selectedId)
             }
             .show()
     }
+
+    private fun updateLanguageSummary() {
+        txtLanguageCurrent.text = LocaleManager.getLanguageLabel(this)
+    }
+
+    private fun showLanguagePicker() {
+        val dialog = BottomSheetDialog(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+        }
+
+        val title = TextView(this).apply {
+            text = getString(R.string.select_language)
+            setTextColor(ContextCompat.getColor(this@SettingsActivity, R.color.menu_primary_text))
+            textSize = 20f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(0, 0, 0, dp(10))
+        }
+        container.addView(title)
+
+        val selectedTag = LocaleManager.getCurrentLanguage(this).tag
+        LocaleManager.supportedLanguages.forEach { language ->
+            val option = RadioButton(this).apply {
+                text = getString(language.labelRes)
+                textSize = 16f
+                isChecked = language.tag == selectedTag
+                gravity = Gravity.CENTER_VERTICAL
+                minHeight = dp(52)
+                setTextColor(ContextCompat.getColor(this@SettingsActivity, R.color.menu_primary_text))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                setOnClickListener {
+                    LocaleManager.setLocale(this@SettingsActivity, language.tag)
+                    updateLanguageSummary()
+                    Toast.makeText(this@SettingsActivity, getString(R.string.language_applied), Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
+            }
+            container.addView(option)
+        }
+
+        dialog.setContentView(container)
+        dialog.show()
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun resolveCurrentRole(): String {
         val userJson = TokenManager.getUser(this)

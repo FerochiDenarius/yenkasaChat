@@ -2,15 +2,20 @@ package xyz.yenkasa.app.ui
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.commit
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.User
@@ -23,6 +28,7 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var token: String
     private var currentUser: User? = null
     private lateinit var fabAddPost: FloatingActionButton
+    private var createFabSafeRightInset: Int = 0
 
     // NEW: toolbar create-ad button
     private lateinit var btnCreateAd: LinearLayout
@@ -117,7 +124,74 @@ class MainActivity : AppCompatActivity() {
         )
         EdgeToEdgeInsets.applySystemBarPadding(appBar, top = true)
         EdgeToEdgeInsets.applySystemBarMargins(fabLive, right = true, bottom = true)
-        EdgeToEdgeInsets.applySystemBarMargins(fabPost, right = true, bottom = true)
+        applyCreatePostFabInsets(fabPost)
+    }
+
+    private fun applyCreatePostFabInsets(fabPost: View) {
+        val initialParams = fabPost.layoutParams as? ViewGroup.MarginLayoutParams
+        val initialRight = initialParams?.rightMargin ?: 0
+        val initialBottom = initialParams?.bottomMargin ?: 0
+
+        ViewCompat.setOnApplyWindowInsetsListener(fabPost) { target, insets ->
+            val safeBars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            createFabSafeRightInset = safeBars.right
+            target.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                rightMargin = initialRight + safeBars.right
+                bottomMargin = initialBottom + safeBars.bottom
+            }
+            target.post { resolveCreatePostFabCollision(target) }
+            insets
+        }
+        fabPost.addOnLayoutChangeListener { target, _, _, _, _, _, _, _, _ ->
+            target.post { resolveCreatePostFabCollision(target) }
+        }
+        ViewCompat.requestApplyInsets(fabPost)
+    }
+
+    private fun resolveCreatePostFabCollision(fabPost: View) {
+        if (!fabPost.isShown || fabPost.width == 0) return
+
+        val parent = fabPost.parent as? View ?: return
+        val parentRect = Rect()
+        val fabRect = Rect()
+        if (!parent.getGlobalVisibleRect(parentRect) || !fabPost.getGlobalVisibleRect(fabRect)) return
+
+        val edgeGap = dp(8)
+        val collisionGap = dp(8)
+        val baseShiftRight = dp(20)
+        val currentShift = fabPost.translationX.roundToInt()
+        val unshiftedRight = fabRect.right - currentShift
+        val maxRightShift = (parentRect.right - createFabSafeRightInset - edgeGap - unshiftedRight)
+            .coerceAtLeast(0)
+        var desiredShift = baseShiftRight.coerceAtMost(maxRightShift)
+
+        val muteButton = parent.rootView.findViewById<View>(R.id.buttonPlayerMute)
+        val muteRect = Rect()
+        if (muteButton?.isShown == true && muteButton.getGlobalVisibleRect(muteRect)) {
+            val shiftedFabRect = Rect(fabRect).apply {
+                offset(desiredShift - currentShift, 0)
+            }
+            if (Rect.intersects(shiftedFabRect, muteRect)) {
+                val extraShift = (muteRect.right + collisionGap - shiftedFabRect.left).coerceAtLeast(0)
+                desiredShift = (desiredShift + extraShift).coerceAtMost(maxRightShift)
+            }
+        }
+
+        if (desiredShift < baseShiftRight && Rect.intersects(fabRect, muteRect) && fabPost is FloatingActionButton) {
+            val compactSize = dp(40)
+            if (fabPost.customSize != compactSize) {
+                fabPost.customSize = compactSize
+                fabPost.post { resolveCreatePostFabCollision(fabPost) }
+            }
+        }
+
+        fabPost.translationX = desiredShift.toFloat()
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).roundToInt()
     }
 
     // ==================== Load user profile from API ====================

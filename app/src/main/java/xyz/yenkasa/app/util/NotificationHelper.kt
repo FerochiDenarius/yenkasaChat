@@ -23,7 +23,6 @@ import xyz.yenkasa.app.ui.MainActivity
 
 object NotificationHelper {
 
-    private const val MESSAGE_CHANNEL_ID = "yenkasachat_messages"
     private const val CALL_CHANNEL_ID = "yenkasachat_calls"
     private const val CALL_NOTIFICATION_ID = 9999
     private const val PREFS_NAME = "settings"
@@ -159,14 +158,8 @@ object NotificationHelper {
             return
         }
 
-        createMessageChannel(context)
-
-        val soundUri = try {
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        } catch (e: SecurityException) {
-            Log.w("NotificationHelper", "Notification sound denied: ${e.message}")
-            null
-        }
+        val channelId = NotificationSoundManager.ensureMessageChannel(context)
+        val soundUri = NotificationSoundManager.getSoundUri(context)
 
         val intent = if (!chatId.isNullOrEmpty()) {
             Intent(context, ChatActivity::class.java).apply {
@@ -184,7 +177,7 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val builder = NotificationCompat.Builder(context, MESSAGE_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_message)
             .setContentTitle("New message from $senderName")
             .setContentText(message.take(120))
@@ -194,7 +187,7 @@ object NotificationHelper {
             .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
             .setContentIntent(pendingIntent)
 
-        if (soundUri != null) builder.setSound(soundUri)
+        builder.setSound(soundUri)
 
         try {
             NotificationManagerCompat.from(context)
@@ -204,38 +197,4 @@ object NotificationHelper {
         }
     }
 
-    private fun createMessageChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val soundUri = try {
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            } catch (e: SecurityException) {
-                null
-            }
-
-            val attributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
-            val channel = NotificationChannel(
-                MESSAGE_CHANNEL_ID,
-                "Chat Messages",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications for chat messages"
-                enableLights(true)
-                lightColor = Color.parseColor("#FFD54F")
-                enableVibration(true)
-                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-                if (soundUri != null) setSound(soundUri, attributes)
-            }
-
-            try {
-                val manager = context.getSystemService(NotificationManager::class.java)
-                manager.createNotificationChannel(channel)
-            } catch (e: SecurityException) {
-                Log.w("NotificationHelper", "Cannot create message channel: ${e.message}")
-            }
-        }
-    }
 }

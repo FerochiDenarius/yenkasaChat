@@ -25,6 +25,9 @@ data class User(
     @SerializedName("dateOfBirth")
     val dateOfBirth: String? = null,
 
+    @SerializedName("preferredLanguage")
+    val preferredLanguage: String? = null,
+
     @SerializedName("verified")
     val verified: Boolean = false,
 

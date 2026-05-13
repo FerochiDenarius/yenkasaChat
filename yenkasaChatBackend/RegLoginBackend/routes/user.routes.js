@@ -346,7 +346,8 @@ router.put('/profile', authMiddleware, async (req, res) => {
       "phoneNumber",
       "location",
       "gender",
-      "dateOfBirth"
+      "dateOfBirth",
+      "preferredLanguage"
     ];
 
     allowedFields.forEach(field => {

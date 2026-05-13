@@ -8,9 +8,9 @@ const auth = require('../middleware/auth');
 const ChatRoom = require('../models/chatroom.model');
 const Contact = require('../models/contact.model');
 const Message = require('../models/message.model');
-const Notification = require('../models/notifications.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const User = require('../models/user.model');
+const { sendNotification } = require('../services/notification.service');
 const { cloudinary } = require('../config/cloudinary');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
 
@@ -117,8 +117,8 @@ async function notifyAddedMembers({ group, addedMemberIds, addedBy }) {
   const recipients = uniqueIds(addedMemberIds).filter(id => id !== addedBy.toString());
   if (!recipients.length) return;
 
-  const notifications = await Notification.insertMany(
-    recipients.map(receiverId => ({
+  await Promise.allSettled(
+    recipients.map(receiverId => sendNotification({
       type: 'group_added',
       senderId: addedBy,
       receiverId,
@@ -127,9 +127,22 @@ async function notifyAddedMembers({ group, addedMemberIds, addedBy }) {
       targetId: group._id.toString(),
       targetUrl: `/groups/${group._id.toString()}`,
       message: `You were added to ${group.groupName}`,
-      createdAt: new Date()
-    })),
-    { ordered: false }
+      emitSocket: true,
+      push: true,
+      pushTitle: 'Added to a group',
+      pushBody: `You were added to ${group.groupName}`,
+      pushData: {
+        type: 'group_added',
+        groupId: group._id.toString(),
+        groupName: group.groupName,
+        groupImage: group.groupImage || '',
+        roomId: group._id.toString(),
+        chatId: group._id.toString(),
+        targetType: 'group',
+        targetId: group._id.toString(),
+        isGroupChat: true
+      }
+    }))
   );
 
   if (global.io) {
@@ -139,9 +152,6 @@ async function notifyAddedMembers({ group, addedMemberIds, addedBy }) {
         groupName: group.groupName,
         addedBy: addedBy.toString()
       });
-    });
-    notifications.forEach(notification => {
-      global.io.to(notification.receiverId.toString()).emit('notificationCreated', notification);
     });
   }
 }

@@ -10,6 +10,7 @@ import xyz.yenkasa.app.model.NotificationModel
 import xyz.yenkasa.app.ui.ChatActivity
 import xyz.yenkasa.app.ui.CoinWalletActivity
 import xyz.yenkasa.app.ui.CommentsActivity
+import xyz.yenkasa.app.ui.GroupChatActivity
 import xyz.yenkasa.app.ui.IncomingCallActivity
 import xyz.yenkasa.app.ui.MainActivity
 import xyz.yenkasa.app.ui.MyAdsActivity
@@ -28,7 +29,9 @@ object NotificationNavigation {
             activityId = notification.activityId,
             postId = notification.postId,
             targetUrl = notification.targetUrl,
-            data = null
+            data = JSONObject().apply {
+                notification.commentId?.let { put("commentId", it) }
+            }
         )
     }
 
@@ -78,18 +81,30 @@ object NotificationNavigation {
         targetUrl: String?,
         data: JSONObject?
     ): Intent {
-        buildIntentFromTargetUrl(context, targetUrl)?.let { return withLaunchFlags(it) }
-
         val normalizedTarget = targetType.orEmpty().lowercase()
         val normalizedType = type.orEmpty().lowercase()
-        val resolvedPostId = firstNotBlank(postId, targetId.takeIf { normalizedTarget == "post" }, activityId)
-        val resolvedCommentId = firstNotBlank(targetId.takeIf { normalizedTarget == "comment" }, activityId)
+        val resolvedPostId = firstNotBlank(
+            postId,
+            data?.optString("postId"),
+            targetId.takeIf { normalizedTarget == "post" },
+            activityId.takeIf { normalizedTarget == "post" || normalizedType in postTargetTypes }
+        )
+        val resolvedCommentId = firstNotBlank(
+            data?.optString("commentId"),
+            targetId.takeIf { normalizedTarget == "comment" },
+            activityId.takeIf { normalizedTarget == "comment" }
+        )
+
+        val hasExplicitPostTarget = resolvedPostId.isNotBlank() &&
+            (normalizedTarget in setOf("post", "comment") || normalizedType in postTargetTypes || "comment" in normalizedType || "like" in normalizedType)
+        if (!hasExplicitPostTarget) {
+            buildIntentFromTargetUrl(context, targetUrl, data)?.let { return withLaunchFlags(it) }
+        }
 
         val intent = when (normalizedTarget) {
             "call" -> buildIncomingCallIntent(context, data)
-            "chat" -> Intent(context, ChatActivity::class.java).apply {
-                putExtra("roomId", firstNotBlank(targetId, data?.optString("roomId"), data?.optString("chatId")))
-            }
+            "chat" -> buildChatIntent(context, firstNotBlank(targetId, data?.optString("roomId"), data?.optString("chatId")), data)
+            "group" -> buildGroupIntent(context, firstNotBlank(targetId, data?.optString("groupId"), data?.optString("roomId")), data)
             "wallet" -> Intent(context, CoinWalletActivity::class.java).apply {
                 putExtra("ACTIVITY_ID", firstNotBlank(activityId, targetId))
             }
@@ -97,7 +112,7 @@ object NotificationNavigation {
                 putExtra("POST_ID", resolvedPostId)
             }
             "comment" -> Intent(context, CommentsActivity::class.java).apply {
-                putExtra("POST_ID", firstNotBlank(postId, data?.optString("postId"), resolvedCommentId))
+                putExtra("POST_ID", resolvedPostId)
                 putExtra("openComments", true)
                 putExtra("COMMENT_ID", resolvedCommentId)
             }
@@ -131,9 +146,8 @@ object NotificationNavigation {
         val resolvedPostId = firstNotBlank(postId, targetId, activityId, data?.optString("postId"))
 
         return when (type) {
-            "new_chat_message" -> Intent(context, ChatActivity::class.java).apply {
-                putExtra("roomId", firstNotBlank(data?.optString("roomId"), data?.optString("chatId"), targetId))
-            }
+            "new_chat_message" -> buildChatIntent(context, firstNotBlank(data?.optString("roomId"), data?.optString("chatId"), targetId), data)
+            "group_added" -> buildGroupIntent(context, firstNotBlank(data?.optString("groupId"), data?.optString("roomId"), targetId, activityId), data)
             "post_like", "post_liked", "like", "post_comment", "post_reply",
             "post_mention", "post_under_review", "post_pending", "post_approved",
             "post_view", "view_milestone" -> Intent(context, CommentsActivity::class.java).apply {
@@ -163,7 +177,24 @@ object NotificationNavigation {
         }
     }
 
-    private fun buildIntentFromTargetUrl(context: Context, targetUrl: String?): Intent? {
+    private val postTargetTypes = setOf(
+        "post_like",
+        "post_liked",
+        "like",
+        "post_comment",
+        "post_reply",
+        "comment",
+        "comment_like",
+        "comment_reply",
+        "post_mention",
+        "post_under_review",
+        "post_pending",
+        "post_approved",
+        "post_view",
+        "view_milestone"
+    )
+
+    private fun buildIntentFromTargetUrl(context: Context, targetUrl: String?, data: JSONObject?): Intent? {
         val raw = targetUrl?.takeIf { it.isNotBlank() } ?: return null
         val uri = Uri.parse(raw)
         val path = uri.path.orEmpty()
@@ -184,8 +215,38 @@ object NotificationNavigation {
             segments.firstOrNull() == "profile" -> Intent(context, UserProfileActivity::class.java).apply {
                 putExtra("USER_ID", segments.getOrNull(1).orEmpty())
             }
+            segments.firstOrNull() == "chat" -> buildChatIntent(context, segments.getOrNull(1).orEmpty(), data)
+            segments.firstOrNull() == "groups" -> buildGroupIntent(context, segments.getOrNull(1).orEmpty(), data)
             else -> null
         }
+    }
+
+    private fun buildChatIntent(context: Context, roomId: String, data: JSONObject?): Intent {
+        return if (isGroupPayload(data)) {
+            buildGroupIntent(context, roomId, data)
+        } else {
+            Intent(context, ChatActivity::class.java).apply {
+                putExtra("roomId", roomId)
+            }
+        }
+    }
+
+    private fun buildGroupIntent(context: Context, groupId: String, data: JSONObject?): Intent {
+        return Intent(context, GroupChatActivity::class.java).apply {
+            putExtra("roomId", firstNotBlank(groupId, data?.optString("groupId"), data?.optString("chatId")))
+            putExtra("chatPartnerName", firstNotBlank(data?.optString("groupName"), "Yenkasa Group"))
+            putExtra("groupImage", data?.optString("groupImage").orEmpty())
+            putExtra("groupMemberCount", data?.optInt("groupMemberCount", 0) ?: 0)
+            putExtra("isGroupChat", true)
+        }
+    }
+
+    private fun isGroupPayload(data: JSONObject?): Boolean {
+        if (data == null) return false
+        return data.optBoolean("isGroupChat", false) ||
+            data.optString("isGroupChat").equals("true", ignoreCase = true) ||
+            data.optString("targetType").equals("group", ignoreCase = true) ||
+            data.optString("type").equals("group_added", ignoreCase = true)
     }
 
     private fun buildIncomingCallIntent(context: Context, data: JSONObject?): Intent {

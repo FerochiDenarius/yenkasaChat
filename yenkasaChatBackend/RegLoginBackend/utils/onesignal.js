@@ -77,7 +77,11 @@ async function sendPushNotification({
     small_icon,
     large_icon,
     web_url,
-    buttons
+    buttons,
+    collapse_id,
+    android_group,
+    android_group_message,
+    android_sound
 }) {
     const config = getOneSignalConfig();
     const authorization = buildAuthorizationHeader(config.apiKey);
@@ -115,11 +119,15 @@ async function sendPushNotification({
         ...(android_channel_id && { android_channel_id }),
         ...(existing_android_channel_id && { existing_android_channel_id }),
         priority: Number.isInteger(priority) ? priority : 10,
-        ttl: Number.isInteger(ttl) ? ttl : 60,
+        ttl: Number.isInteger(ttl) ? ttl : 604800,
         ...(small_icon && { small_icon }),
         ...(large_icon && { large_icon }),
         ...(web_url && { web_url }),
-        ...(buttons && Array.isArray(buttons) && buttons.length > 0 && { buttons })
+        ...(buttons && Array.isArray(buttons) && buttons.length > 0 && { buttons }),
+        ...(collapse_id && { collapse_id }),
+        ...(android_group && { android_group }),
+        ...(android_group_message && { android_group_message }),
+        ...(android_sound && { android_sound })
     };
 
     const headers = {

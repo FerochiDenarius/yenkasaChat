@@ -221,6 +221,12 @@ const userSchema = new Schema({
 
   timezone: { type: String, default: 'UTC' },
 
+  preferredLanguage: {
+    type: String,
+    default: 'en',
+    enum: ['en', 'fr', 'tw', 'ha', 'es', 'ar', 'pt', 'sw']
+  },
+
   conversationStreak: {
     current: { type: Number, default: 0 },
     longest: { type: Number, default: 0 },

@@ -15,7 +15,8 @@ import xyz.yenkasa.app.model.ChatRoom
 
 class ChatRoomAdapter(
     private val currentUserId: String,
-    private val onChatRoomClick: (ChatRoom) -> Unit
+    private val onChatRoomClick: (ChatRoom) -> Unit,
+    private val onChatRoomLongClick: ((ChatRoom) -> Unit)? = null
 ) : ListAdapter<ChatRoom, ChatRoomAdapter.ChatRoomViewHolder>(DiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
@@ -93,6 +94,10 @@ class ChatRoomAdapter(
 
         // --- Click listener ---
         holder.itemView.setOnClickListener { onChatRoomClick(chatRoom) }
+        holder.itemView.setOnLongClickListener {
+            onChatRoomLongClick?.invoke(chatRoom)
+            onChatRoomLongClick != null
+        }
     }
 
     class ChatRoomViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

@@ -57,6 +57,7 @@ import xyz.yenkasa.app.webrtc.VideoCallActivity
 import xyz.yenkasa.app.adapter.MessageAdapter
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.ChatMediaItem
+import xyz.yenkasa.app.model.ChatRoom
 import xyz.yenkasa.app.model.Contact
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
@@ -121,6 +122,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var senderId: String = ""
     private var roomId: String? = null
     private var isGroupChat: Boolean = false
+    private var currentGroupDetails: ChatRoom? = null
     private var tempCameraUri: Uri? = null
     private var pendingMediaUri: Uri? = null
     private var pendingMediaType: String? = null
@@ -514,7 +516,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun setupListeners() {
         findViewById<ImageView>(R.id.imageViewBackButton).setOnClickListener { finish() }
         moreOptionsButton.setOnClickListener { showChatOptionsMenu(it) }
-        if (!isGroupChat) {
+        if (isGroupChat) {
+            imageViewReceiverPicture.setOnClickListener { openGroupProfile() }
+            textViewReceiverName.setOnClickListener { openGroupProfile() }
+            textViewOnlineStatus.setOnClickListener { openGroupProfile() }
+        } else {
             imageViewReceiverPicture.setOnClickListener { openReceiverProfile() }
             textViewReceiverName.setOnClickListener { openReceiverProfile() }
             textViewOnlineStatus.setOnClickListener { openReceiverProfile() }
@@ -1103,9 +1109,16 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun showChatOptionsMenu(anchorView: View) {
         val popup = PopupMenu(this, anchorView)
         popup.menu.add(0, MENU_CHANGE_BACKGROUND, 0, "Change chat background")
-        popup.menu.add(0, MENU_VIEW_CONTACT, 1, "View contact")
-        popup.menu.add(0, MENU_MUTE_NOTIFICATIONS, 2, "Mute notifications")
-        popup.menu.add(0, MENU_CLEAR_CHAT, 3, "Clear chat")
+        popup.menu.add(0, MENU_VIEW_CONTACT, 1, if (isGroupChat) "View group profile" else "View contact")
+        if (isGroupChat) {
+            if (currentGroupDetails?.let { canManageGroup(it) } == true) {
+                popup.menu.add(0, MENU_ADD_GROUP_MEMBERS, 2, "Add members")
+                popup.menu.add(0, MENU_DELETE_GROUP, 3, "Delete group")
+            }
+            popup.menu.add(0, MENU_LEAVE_GROUP, 4, "Leave group")
+        }
+        popup.menu.add(0, MENU_MUTE_NOTIFICATIONS, 5, "Mute notifications")
+        popup.menu.add(0, MENU_CLEAR_CHAT, 6, "Clear chat")
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -1114,7 +1127,19 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                     true
                 }
                 MENU_VIEW_CONTACT -> {
-                    openReceiverProfile()
+                    if (isGroupChat) openGroupProfile() else openReceiverProfile()
+                    true
+                }
+                MENU_ADD_GROUP_MEMBERS -> {
+                    openGroupAddMembers()
+                    true
+                }
+                MENU_LEAVE_GROUP -> {
+                    confirmLeaveGroup()
+                    true
+                }
+                MENU_DELETE_GROUP -> {
+                    confirmDeleteGroup()
                     true
                 }
                 MENU_MUTE_NOTIFICATIONS -> {
@@ -1285,41 +1310,88 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun setupKeyboardAwareChatInput() {
-        val chatContentLayout = findViewById<View>(R.id.chatContentLayout)
+        val receiverHeaderLayout = findViewById<View>(R.id.receiverHeaderLayout)
         val messageInputLayout = findViewById<View>(R.id.messageInputLayout)
         val emojiShortcut = findViewById<View>(R.id.buttonEmojiShortcut)
         val stickerShortcut = findViewById<View>(R.id.buttonStickerShortcut)
-        val originalContentTopPadding = chatContentLayout.paddingTop
+        val originalRecyclerStartPadding = recyclerView.paddingStart
+        val originalRecyclerEndPadding = recyclerView.paddingEnd
         val originalRecyclerBottomPadding = recyclerView.paddingBottom
+        val headerMargins = receiverHeaderLayout.marginSnapshot()
+        val inputMargins = messageInputLayout.marginSnapshot()
+        val replyMargins = replyPreviewLayout.marginSnapshot()
+        val mediaPreviewMargins = mediaPreviewLayout.marginSnapshot()
+        val attachMenuMargins = attachMenu.marginSnapshot()
+        val emojiMargins = emojiShortcut.marginSnapshot()
+        val stickerMargins = stickerShortcut.marginSnapshot()
+        val sideComfort = dp(22)
+        val headerTopComfort = dp(12)
+        val bottomComfort = dp(14)
         var wasKeyboardVisible = false
 
         ViewCompat.setOnApplyWindowInsetsListener(chatRootLayout) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            chatContentLayout.setPadding(
-                chatContentLayout.paddingLeft,
-                originalContentTopPadding + statusBarTop,
-                chatContentLayout.paddingRight,
-                chatContentLayout.paddingBottom
-            )
+            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val cutoutInsets = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val safeLeft = maxOf(navigationBars.left, cutoutInsets.left)
+            val safeRight = maxOf(navigationBars.right, cutoutInsets.right)
+            val safeTop = maxOf(statusBarTop, cutoutInsets.top)
+            val startSafeSpacing = sideComfort + safeLeft
+            val endSafeSpacing = sideComfort + safeRight
+            val bottomSafeSpacing = navigationBars.bottom + bottomComfort
 
             val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
-            val keyboardOffset = if (isKeyboardVisible) {
-                getKeyboardOverlapHeight()
+            val legacyKeyboardOverlap = if (isKeyboardVisible) getKeyboardOverlapHeight() else 0
+            val imeKeyboardOverlap = if (isKeyboardVisible) {
+                (imeInsets.bottom - navigationBars.bottom).coerceAtLeast(0)
             } else {
                 0
             }
+            val keyboardOffset = maxOf(legacyKeyboardOverlap, imeKeyboardOverlap.takeIf { legacyKeyboardOverlap > 0 } ?: 0)
             val translationY = -keyboardOffset.toFloat()
+
+            receiverHeaderLayout.updateMargins(
+                start = maxOf(headerMargins.start, startSafeSpacing),
+                top = headerMargins.top + safeTop + headerTopComfort,
+                end = maxOf(headerMargins.end, endSafeSpacing)
+            )
+            messageInputLayout.updateMargins(
+                start = maxOf(inputMargins.start, startSafeSpacing),
+                end = maxOf(inputMargins.end, endSafeSpacing),
+                bottom = maxOf(inputMargins.bottom, bottomSafeSpacing)
+            )
+            replyPreviewLayout.updateMargins(
+                start = maxOf(replyMargins.start, startSafeSpacing),
+                end = maxOf(replyMargins.end, endSafeSpacing)
+            )
+            mediaPreviewLayout.updateMargins(
+                start = maxOf(mediaPreviewMargins.start, startSafeSpacing),
+                end = maxOf(mediaPreviewMargins.end, endSafeSpacing)
+            )
+            attachMenu.updateMargins(
+                start = maxOf(attachMenuMargins.start, startSafeSpacing),
+                bottom = attachMenuMargins.bottom + navigationBars.bottom
+            )
+            emojiShortcut.updateMargins(
+                start = maxOf(emojiMargins.start, startSafeSpacing),
+                bottom = emojiMargins.bottom + navigationBars.bottom
+            )
+            stickerShortcut.updateMargins(
+                end = maxOf(stickerMargins.end, endSafeSpacing),
+                bottom = stickerMargins.bottom + navigationBars.bottom
+            )
 
             messageInputLayout.translationY = translationY
             replyPreviewLayout.translationY = translationY
             attachMenu.translationY = translationY
             emojiShortcut.translationY = translationY
             stickerShortcut.translationY = translationY
-            recyclerView.setPadding(
-                recyclerView.paddingLeft,
+            recyclerView.setPaddingRelative(
+                maxOf(originalRecyclerStartPadding, startSafeSpacing),
                 recyclerView.paddingTop,
-                recyclerView.paddingRight,
-                originalRecyclerBottomPadding + keyboardOffset
+                maxOf(originalRecyclerEndPadding, endSafeSpacing),
+                originalRecyclerBottomPadding + bottomSafeSpacing + keyboardOffset
             )
 
             if (isKeyboardVisible && !wasKeyboardVisible) {
@@ -1353,6 +1425,60 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val rootBottom = rootLocation[1] + chatRootLayout.height
 
         return (rootBottom - visibleFrame.bottom).coerceAtLeast(0)
+    }
+
+    private data class Margins(
+        val start: Int,
+        val top: Int,
+        val end: Int,
+        val bottom: Int
+    )
+
+    private fun View.marginSnapshot(): Margins {
+        val params = layoutParams as? ViewGroup.MarginLayoutParams
+        return Margins(
+            start = params?.marginStart ?: 0,
+            top = params?.topMargin ?: 0,
+            end = params?.marginEnd ?: 0,
+            bottom = params?.bottomMargin ?: 0
+        )
+    }
+
+    private fun View.updateMargins(
+        start: Int? = null,
+        top: Int? = null,
+        end: Int? = null,
+        bottom: Int? = null
+    ) {
+        val params = layoutParams as? ViewGroup.MarginLayoutParams ?: return
+        var changed = false
+        start?.let {
+            if (params.marginStart != it) {
+                params.marginStart = it
+                changed = true
+            }
+        }
+        top?.let {
+            if (params.topMargin != it) {
+                params.topMargin = it
+                changed = true
+            }
+        }
+        end?.let {
+            if (params.marginEnd != it) {
+                params.marginEnd = it
+                changed = true
+            }
+        }
+        bottom?.let {
+            if (params.bottomMargin != it) {
+                params.bottomMargin = it
+                changed = true
+            }
+        }
+        if (changed) {
+            layoutParams = params
+        }
     }
 
     private fun scrollMessagesToBottomSoon() {
@@ -1644,12 +1770,109 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         refreshGroupHeader()
     }
 
+    private fun openGroupProfile() {
+        val groupId = roomId
+        if (groupId.isNullOrBlank()) {
+            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+        startActivity(Intent(this, GroupProfileActivity::class.java).apply {
+            putExtra("groupId", groupId)
+            putExtra("groupName", textViewReceiverName.text?.toString().orEmpty())
+            putExtra("groupImage", intent.getStringExtra("groupImage").orEmpty())
+            putExtra("groupMemberCount", intent.getIntExtra("groupMemberCount", 0))
+        })
+    }
+
+    private fun openGroupAddMembers() {
+        val group = currentGroupDetails
+        if (group == null) {
+            Toast.makeText(this, "Group details still loading", Toast.LENGTH_SHORT).show()
+            return
+        }
+        startActivity(Intent(this, GroupContactsSelectorActivity::class.java).apply {
+            putExtra("mode", "addMembers")
+            putExtra("groupId", group._id)
+            putStringArrayListExtra(
+                "existingMemberIds",
+                ArrayList(group.participants.orEmpty().map { it._id })
+            )
+        })
+    }
+
+    private fun confirmLeaveGroup() {
+        val groupId = roomId
+        if (groupId.isNullOrBlank()) {
+            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Leave group?")
+            .setMessage("You will stop receiving messages from this group.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Leave") { _, _ ->
+                ApiClient.apiService.leaveGroup(groupId).enqueue(object : Callback<GroupResponse> {
+                    override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
+                        if (!response.isSuccessful || response.body()?.success == false) {
+                            Toast.makeText(this@ChatActivity, response.body()?.message ?: "Could not leave group", Toast.LENGTH_LONG).show()
+                            return
+                        }
+                        Toast.makeText(this@ChatActivity, "You left the group", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+
+                    override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
+                        Toast.makeText(this@ChatActivity, "Could not leave group: ${t.message}", Toast.LENGTH_LONG).show()
+                    }
+                })
+            }
+            .show()
+    }
+
+    private fun confirmDeleteGroup() {
+        val groupId = roomId
+        if (groupId.isNullOrBlank()) {
+            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Delete group?")
+            .setMessage("This deletes the group for all members. This cannot be undone.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Delete") { _, _ ->
+                ApiClient.apiService.deleteGroup(groupId).enqueue(object : Callback<GroupResponse> {
+                    override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
+                        if (!response.isSuccessful || response.body()?.success == false) {
+                            Toast.makeText(this@ChatActivity, response.body()?.message ?: "Could not delete group", Toast.LENGTH_LONG).show()
+                            return
+                        }
+                        Toast.makeText(this@ChatActivity, "Group deleted", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+
+                    override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
+                        Toast.makeText(this@ChatActivity, "Could not delete group: ${t.message}", Toast.LENGTH_LONG).show()
+                    }
+                })
+            }
+            .show()
+    }
+
+    private fun canManageGroup(group: ChatRoom): Boolean {
+        val currentUserId = TokenManager.getUserId(this).orEmpty()
+        return currentUserId.isNotBlank() &&
+            (group.groupCreatedBy == currentUserId || group.groupAdmins.contains(currentUserId))
+    }
+
     private fun refreshGroupHeader() {
         val groupId = roomId ?: return
         ApiClient.apiService.getSingleGroup(groupId).enqueue(object : Callback<GroupResponse> {
             override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
                 val group = response.body()?.group ?: return
                 if (!response.isSuccessful) return
+                currentGroupDetails = group
                 textViewReceiverName.text = group.groupName ?: textViewReceiverName.text
                 textViewOnlineStatus.text = if (group.memberCount > 0) "${group.memberCount} members" else "Group chat"
                 val imageUrl = group.groupImage.orEmpty()
@@ -2072,6 +2295,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         private const val MENU_VIEW_CONTACT = 2
         private const val MENU_MUTE_NOTIFICATIONS = 3
         private const val MENU_CLEAR_CHAT = 4
+        private const val MENU_ADD_GROUP_MEMBERS = 5
+        private const val MENU_LEAVE_GROUP = 6
+        private const val MENU_DELETE_GROUP = 7
         private const val STICKER_PREFS = "chat_stickers"
         private const val KEY_SAVED_STICKERS = "saved_sticker_uris"
         private const val MAX_SAVED_STICKERS = 36

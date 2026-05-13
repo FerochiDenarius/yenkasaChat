@@ -4,6 +4,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
+const Comment = require("../models/comment.model");
 const { areUsersBlocked } = require("../services/privacy.service");
 const { sendNotification } = require("../services/notification.service");
 
@@ -15,7 +16,7 @@ function computeTarget(notification) {
     if (targetType === "post") return `/post/${targetId}`;
     if (targetType === "approval") return `/admin/post-approval/${targetId}`;
     if (targetType === "profile") return `/profile/${targetId}`;
-    if (targetType === "comment") return `/post/${targetId}?openComments=true`;
+    if (targetType === "comment") return notification.targetUrl || null;
   }
   // fallback by type
   if (type === "post_approved") return `/admin/post-approval/${activityId}`;
@@ -151,12 +152,25 @@ router.post("/create", auth, async (req, res) => {
 
     const resolvedTargetType = req.body.targetType || targetType;
     const resolvedTargetId = req.body.targetId || targetId;
-    const resolvedTargetUrl = req.body.targetUrl || computeTarget({
+    let resolvedPostId = req.body.postId || null;
+
+    if (
+      !resolvedPostId &&
+      String(resolvedTargetType || "").toLowerCase() === "comment" &&
+      resolvedTargetId
+    ) {
+      const comment = await Comment.findById(resolvedTargetId).select("postId").lean();
+      resolvedPostId = comment?.postId?.toString() || null;
+    }
+
+    const resolvedTargetUrl = req.body.targetUrl || (resolvedPostId
+      ? `/post/${resolvedPostId}?openComments=true`
+      : computeTarget({
       type,
       activityId,
       targetType: resolvedTargetType,
       targetId: resolvedTargetId
-    });
+    }));
 
     const shouldPush = [
       "post_like",
@@ -183,6 +197,10 @@ router.post("/create", auth, async (req, res) => {
       pushData: {
         type,
         activityId,
+        postId: resolvedPostId,
+        commentId: String(resolvedTargetType || "").toLowerCase() === "comment"
+          ? resolvedTargetId
+          : undefined,
         targetType: resolvedTargetType,
         targetId: resolvedTargetId,
         targetUrl: resolvedTargetUrl
@@ -218,14 +236,39 @@ router.get("/all", auth, async (req, res) => {
       ? notifications
       : notifications.filter(n => !isRewardNotification(n.type, n.targetType));
 
-    const formatted = visibleNotifications.map(n => ({
+    const commentIds = visibleNotifications
+      .filter(n => String(n.targetType || "").toLowerCase() === "comment")
+      .flatMap(n => [n.targetId, n.activityId])
+      .filter(Boolean);
+
+    const comments = commentIds.length
+      ? await Comment.find({ _id: { $in: [...new Set(commentIds)] } })
+          .select("_id postId")
+          .lean()
+      : [];
+
+    const commentPostById = new Map(
+      comments.map(comment => [comment._id.toString(), comment.postId?.toString?.() || null])
+    );
+
+    const formatted = visibleNotifications.map(n => {
+      const commentId = String(n.targetType || "").toLowerCase() === "comment"
+        ? (n.targetId || n.activityId || null)
+        : null;
+      const resolvedPostId = String(n.targetType || "").toLowerCase() === "post"
+        ? n.targetId
+        : commentId
+          ? commentPostById.get(commentId.toString())
+          : null;
+
+      return ({
       id: n._id.toString(),
       type: n.type,
       senderId: n.senderId ? n.senderId._id.toString() : null,
       receiverId: n.receiverId ? n.receiverId.toString() : null,
       message: n.message,
- postId: n.targetType === "post" ? n.targetId : null,
-commentId: n.targetType === "comment" ? n.targetId : null,
+      postId: resolvedPostId || null,
+      commentId,
 activityId: n.activityId,
       status: n.status,
       createdAt: n.createdAt ? n.createdAt.toISOString() : null,
@@ -238,8 +281,11 @@ activityId: n.activityId,
       } : null,
       targetType: n.targetType || null,
       targetId: n.targetId || null,
-      targetUrl: computeTarget(n)
-    }));
+      targetUrl: resolvedPostId
+        ? `/post/${resolvedPostId}${commentId ? "?openComments=true" : ""}`
+        : computeTarget(n)
+      });
+    });
 
     res.json(formatted);
   } catch (err) {

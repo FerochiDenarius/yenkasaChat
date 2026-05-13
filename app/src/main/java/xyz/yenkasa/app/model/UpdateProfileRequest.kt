@@ -7,11 +7,11 @@ data class UpdateProfileRequest(
     val phoneNumber: String? = null,
     val location: String? = null,
     val gender: String? = null,
-    val dateOfBirth: String? = null
+    val dateOfBirth: String? = null,
+    val preferredLanguage: String? = null
 )
 
 data class UpdatePasswordRequest(
     val oldPassword: String,
     val newPassword: String
 )
-

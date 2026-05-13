@@ -27,7 +27,7 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     // These are the field names your Android app's UpdateProfileRequest is likely sending
-    const { username, email, phone, location } = req.body;
+    const { username, email, phone, phoneNumber, location, preferredLanguage } = req.body;
     const userId = req.user._id; // Get user ID from the authenticated user object
 
     if (!userId) {
@@ -54,8 +54,10 @@ const updateProfile = async (req, res) => {
     }
 
     // Changed 'phoneNumber' to 'phone' to match Android's UpdateProfileRequest
-    if (phone !== undefined) updates.phone = phone.trim();
+    if (phone !== undefined) updates.phoneNumber = phone.trim();
+    if (phoneNumber !== undefined) updates.phoneNumber = phoneNumber.trim();
     if (location !== undefined) updates.location = location.trim();
+    if (preferredLanguage !== undefined) updates.preferredLanguage = preferredLanguage.trim();
 
     // If no valid fields were provided for update
     if (Object.keys(updates).length === 0) {

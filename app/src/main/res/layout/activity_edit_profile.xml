@@ -27,7 +27,7 @@
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="@drawable/bg_account_circle_button"
-                android:contentDescription="Back"
+                android:contentDescription="@string/back"
                 android:padding="10dp"
                 android:src="@drawable/ic_arrow_back"
                 app:tint="@color/account_primary_text" />
@@ -42,7 +42,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Edit Profile"
+                    android:text="@string/edit_profile"
                     android:textColor="@color/account_primary_text"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -51,7 +51,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
-                    android:text="Update your personal information"
+                    android:text="@string/edit_profile_subtitle"
                     android:textColor="@color/account_secondary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -83,7 +83,7 @@
                         android:layout_height="98dp"
                         android:layout_gravity="center"
                         android:background="@drawable/bg_account_circle_button"
-                        android:contentDescription="Profile picture"
+                        android:contentDescription="@string/profile_picture"
                         android:padding="3dp"
                         android:scaleType="centerCrop"
                         android:src="@drawable/default_avatar" />
@@ -94,7 +94,7 @@
                         android:layout_height="38dp"
                         android:layout_gravity="bottom|end"
                         android:background="@drawable/bg_account_icon_green"
-                        android:contentDescription="Change profile picture"
+                        android:contentDescription="@string/change_profile_picture"
                         android:padding="9dp"
                         android:src="@drawable/ic_camera"
                         app:tint="@color/account_accent_green" />
@@ -105,7 +105,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="Username"
+                    android:text="@string/username"
                     android:textColor="@color/account_primary_text"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -115,7 +115,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="+233 000 000 000"
+                    android:text="@string/no_phone_number"
                     android:textColor="@color/account_secondary_text"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -156,7 +156,7 @@
                         android:id="@+id/labelUsername"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Username"
+                        android:text="@string/username"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -211,7 +211,7 @@
                         android:id="@+id/labelEmail"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Email"
+                        android:text="@string/email"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -267,7 +267,7 @@
                         android:id="@+id/labelPhone"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Phone"
+                        android:text="@string/phone"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -323,7 +323,7 @@
                         android:id="@+id/labelLocation"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Location"
+                        android:text="@string/location"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -378,7 +378,7 @@
                         android:id="@+id/labelGender"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Gender"
+                        android:text="@string/gender"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -389,7 +389,7 @@
                         android:background="@android:color/transparent"
                         android:clickable="true"
                         android:focusable="false"
-                        android:hint="Select gender"
+                        android:hint="@string/select_gender"
                         android:padding="0dp"
                         android:singleLine="true"
                         android:textColor="@color/account_primary_text"
@@ -438,7 +438,7 @@
                         android:id="@+id/labelDob"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Date of Birth"
+                        android:text="@string/date_of_birth"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -449,7 +449,7 @@
                         android:background="@android:color/transparent"
                         android:clickable="true"
                         android:focusable="false"
-                        android:hint="YYYY-MM-DD"
+                        android:hint="@string/date_hint"
                         android:padding="0dp"
                         android:singleLine="true"
                         android:textColor="@color/account_primary_text"
@@ -498,7 +498,7 @@
                     android:id="@+id/textChangePassword"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Change Password"
+                    android:text="@string/change_password"
                     android:textColor="@color/account_primary_text"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -506,7 +506,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Update your account password"
+                    android:text="@string/change_password_summary"
                     android:textColor="@color/account_secondary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -530,7 +530,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Upgrade Role"
+                android:text="@string/upgrade_role"
                 android:textColor="@color/account_primary_text"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -539,7 +539,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Enter a generated Yenkasa role ID."
+                android:text="@string/upgrade_role_summary"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="12sp" />
 
@@ -549,7 +549,7 @@
                 android:layout_height="48dp"
                 android:layout_marginTop="10dp"
                 android:background="@android:color/transparent"
-                android:hint="YNK-STF-SDEV-X82PQ"
+                android:hint="@string/role_code_hint"
                 android:inputType="textCapCharacters"
                 android:padding="0dp"
                 android:singleLine="true"
@@ -568,7 +568,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
-                android:text="Activate"
+                android:text="@string/activate"
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -583,7 +583,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Save Changes        →"
+            android:text="@string/save_changes_arrow"
             android:textColor="@android:color/white"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -593,7 +593,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="16dp"
-            android:text="Your information is private and secure"
+            android:text="@string/private_secure_info"
             android:textColor="@color/account_secondary_text"
             android:textSize="12sp" />
     </LinearLayout>

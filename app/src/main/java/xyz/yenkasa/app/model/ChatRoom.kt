@@ -41,6 +41,12 @@ data class ChatRoom(
     @SerializedName("groupImage")
     val groupImage: String? = null,
 
+    @SerializedName("groupCreatedBy")
+    val groupCreatedBy: String? = null,
+
+    @SerializedName("groupAdmins")
+    val groupAdmins: List<String> = emptyList(),
+
     @SerializedName("memberCount")
     val memberCount: Int = 0,
 

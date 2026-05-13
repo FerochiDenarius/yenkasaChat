@@ -335,11 +335,13 @@ await sendNotification({
   message: `${liker?.username || req.user.username || "Someone"} liked your comment`,
   targetType: "comment",
   targetId: commentId,
+  targetUrl: `/post/${comment.postId.toString()}?openComments=true`,
   push: true,
   pushTitle: "New like on your comment",
   pushBody: `${liker?.username || req.user.username || "Someone"} liked your comment`,
   pushData: {
     type: "comment_like",
+    postId: comment.postId.toString(),
     commentId,
     targetType: "comment",
     targetId: commentId

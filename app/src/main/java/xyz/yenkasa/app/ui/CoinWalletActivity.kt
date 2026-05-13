@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
@@ -18,15 +17,19 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import xyz.yenkasa.app.MyApplication
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.TransactionAdapter
 import xyz.yenkasa.app.model.TransactionUiModel
 import xyz.yenkasa.app.model.CoinTransactionResponse
 import xyz.yenkasa.app.model.CoinBalanceResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.NotificationSoundManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
@@ -78,6 +81,7 @@ class CoinWalletActivity : AppCompatActivity() {
 
     // Track old transaction list to detect NEW rewards
     private var previousList: List<TransactionUiModel> = emptyList()
+    private val notifiedRewardKeys = mutableSetOf<String>()
 
     private val TAG = "CoinWalletActivity"
 
@@ -298,12 +302,7 @@ class CoinWalletActivity : AppCompatActivity() {
                         previousList.none { oldTx -> oldTx.transactionId == newTx.transactionId }
                     }
 
-                    // Trigger sound notification for each reward
-                    if (newItems.isNotEmpty()) {
-                        newItems.forEach { tx ->
-                            triggerRewardNotification(tx)
-                        }
-                    }
+                    triggerRewardNotifications(newItems)
 
                     val mergedHistory = mergeTransactions(
                         serverTransactions = latest,
@@ -504,36 +503,66 @@ class CoinWalletActivity : AppCompatActivity() {
     }
 
 
-    // 🔥 Play sound + show notification for rewards
-    private fun triggerRewardNotification(tx: TransactionUiModel) {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        if (!prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true) ||
-            !prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
-        ) {
-            return
+    private fun triggerRewardNotifications(transactions: List<TransactionUiModel>) {
+        val rewardTransactions = transactions.filter { it.isRewardTransaction() }
+        if (rewardTransactions.isEmpty()) return
+
+        rewardTransactions.forEach { tx ->
+            val key = tx.rewardNotificationKey()
+            if (notifiedRewardKeys.add(key)) {
+                triggerRewardNotification(tx)
+            }
         }
+    }
 
-        val selectedSound = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
+    // Build reward notifications off the UI thread; only notify() returns to main.
+    private fun triggerRewardNotification(tx: TransactionUiModel) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            if (!prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true) ||
+                !prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
+            ) {
+                return@launch
+            }
 
-        val rawRes = resources.getIdentifier(selectedSound, "raw", packageName)
-        val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
+            val channelId = NotificationSoundManager.ensureMessageChannel(this@CoinWalletActivity)
+            val soundUri = NotificationSoundManager.getSoundUri(this@CoinWalletActivity)
 
-        val title = "Reward Earned!"
-        val body = tx.description.ifBlank { "You received ${formatWholeCoins(tx.amount)} YKC" }
+            val body = tx.description.ifBlank {
+                "You received ${formatWholeCoins(tx.amount)} YKC"
+            }
 
-        val builder = NotificationCompat.Builder(
-            this,
-            MyApplication.NEW_CHAT_MESSAGES_CHANNEL_ID
-        )
-            .setSmallIcon(R.drawable.ic_coin)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setSound(soundUri)
+            val notification = NotificationCompat.Builder(
+                this@CoinWalletActivity,
+                channelId
+            )
+                .setSmallIcon(R.drawable.ic_coin)
+                .setContentTitle("Reward Earned!")
+                .setContentText(body)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setSound(soundUri)
+                .build()
 
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(System.currentTimeMillis().toInt(), builder.build())
+            withContext(Dispatchers.Main) {
+                val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                manager.notify(tx.rewardNotificationKey().hashCode(), notification)
+            }
+        }
+    }
+
+    private fun TransactionUiModel.isRewardTransaction(): Boolean {
+        val normalizedType = type.lowercase(Locale.US)
+        val normalizedDescription = description.lowercase(Locale.US)
+        return normalizedType == "reward" ||
+            normalizedType.startsWith("reward_") ||
+            normalizedDescription.contains("earned")
+    }
+
+    private fun TransactionUiModel.rewardNotificationKey(): String {
+        return transactionId.ifBlank {
+            activityId ?: listOf(type, amount.toString(), createdAt, description).joinToString("|")
+        }
     }
 
 

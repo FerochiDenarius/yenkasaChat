@@ -7,6 +7,7 @@ data class NotificationModel(
     val receiverId: String?,
     val message: String?,
     val postId: String?,
+    val commentId: String? = null,
     val activityId: String?,
     val status: String, // "unread" or "read"
     val createdAt: String?,

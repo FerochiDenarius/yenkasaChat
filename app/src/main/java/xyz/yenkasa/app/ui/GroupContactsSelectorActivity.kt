@@ -16,14 +16,23 @@ import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Contact
+import xyz.yenkasa.app.model.GroupMembersRequest
+import xyz.yenkasa.app.model.GroupResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 
 class GroupContactsSelectorActivity : AppCompatActivity() {
     private lateinit var adapter: GroupMembersAdapter
     private lateinit var selectedCount: TextView
+    private lateinit var nextButton: Button
     private val allContacts = mutableListOf<Contact>()
     private val selectedIds = linkedSetOf<String>()
+    private val isAddMembersMode: Boolean
+        get() = intent.getStringExtra("mode") == "addMembers"
+    private val groupId: String
+        get() = intent.getStringExtra("groupId").orEmpty()
+    private val existingMemberIds: Set<String>
+        get() = intent.getStringArrayListExtra("existingMemberIds").orEmpty().toSet()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +43,8 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
         selectedCount = findViewById(R.id.textSelectedCount)
         val search = findViewById<EditText>(R.id.inputSearchContacts)
         val recycler = findViewById<RecyclerView>(R.id.recyclerGroupContacts)
-        val next = findViewById<Button>(R.id.buttonNextGroupSetup)
+        nextButton = findViewById(R.id.buttonNextGroupSetup)
+        nextButton.text = if (isAddMembersMode) "Add Members" else "Next"
 
         adapter = GroupMembersAdapter(selectedIds) { contact ->
             val id = contactMemberId(contact) ?: return@GroupMembersAdapter
@@ -53,9 +63,13 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
             }
         })
 
-        next.setOnClickListener {
+        nextButton.setOnClickListener {
             if (selectedIds.isEmpty()) {
                 Toast.makeText(this, "Select at least one contact", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (isAddMembersMode) {
+                addSelectedMembers()
                 return@setOnClickListener
             }
             startActivity(Intent(this, GroupSetupActivity::class.java).apply {
@@ -78,6 +92,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
                 allContacts.addAll(
                     response.body().orEmpty()
                         .filter { it.username.isNotBlank() && contactMemberId(it) != null }
+                        .filter { !existingMemberIds.contains(contactMemberId(it)) }
                         .distinctBy { contactMemberId(it) }
                 )
                 adapter.submitList(allContacts.toList())
@@ -98,11 +113,51 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
     }
 
     private fun updateSelectedCount() {
-        selectedCount.text = if (selectedIds.isEmpty()) "Create Group" else "${selectedIds.size} selected"
+        selectedCount.text = when {
+            selectedIds.isNotEmpty() -> "${selectedIds.size} selected"
+            isAddMembersMode -> "Add Members"
+            else -> "Create Group"
+        }
     }
 
     private fun contactMemberId(contact: Contact): String? {
         return contact.contactId?.takeIf { it.isNotBlank() }
             ?: contact._id?.takeIf { it.isNotBlank() }
+    }
+
+    private fun addSelectedMembers() {
+        if (groupId.isBlank()) {
+            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        nextButton.isEnabled = false
+        ApiClient.apiService.addGroupMembers(groupId, GroupMembersRequest(selectedIds.toList()))
+            .enqueue(object : Callback<GroupResponse> {
+                override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
+                    nextButton.isEnabled = true
+                    val body = response.body()
+                    if (!response.isSuccessful || body?.success != true) {
+                        Toast.makeText(
+                            this@GroupContactsSelectorActivity,
+                            body?.message ?: "Could not add members",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return
+                    }
+                    Toast.makeText(this@GroupContactsSelectorActivity, "Members added", Toast.LENGTH_SHORT).show()
+                    setResult(RESULT_OK)
+                    finish()
+                }
+
+                override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
+                    nextButton.isEnabled = true
+                    Toast.makeText(
+                        this@GroupContactsSelectorActivity,
+                        "Could not add members: ${t.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            })
     }
 }

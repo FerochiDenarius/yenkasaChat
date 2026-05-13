@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui
 
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
 import android.view.View
@@ -703,20 +704,31 @@ class AppVerificationActivity : AppCompatActivity() {
     }
 
     private fun bindAvatar() {
-        val profileImageUrl = TokenManager.getProfilePicUrl(this)
-            ?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
-
-        if (profileImageUrl.isNullOrBlank()) {
+        val avatarSource = safeAvatarSource(TokenManager.getProfilePicUrl(this))
+        if (avatarSource == null) {
             imageVerificationAvatar.setImageResource(R.drawable.ic_yenkasa_logo)
             return
         }
 
-        Glide.with(this)
-            .load(profileImageUrl)
-            .placeholder(R.drawable.ic_yenkasa_logo)
-            .error(R.drawable.ic_yenkasa_logo)
-            .circleCrop()
-            .into(imageVerificationAvatar)
+        runCatching {
+            Glide.with(this)
+                .load(avatarSource)
+                .placeholder(R.drawable.ic_yenkasa_logo)
+                .error(R.drawable.ic_yenkasa_logo)
+                .circleCrop()
+                .into(imageVerificationAvatar)
+        }.onFailure {
+            imageVerificationAvatar.setImageResource(R.drawable.ic_yenkasa_logo)
+        }
+    }
+
+    private fun safeAvatarSource(rawUrl: String?): Any? {
+        val value = rawUrl?.trim()?.takeIf { it.isNotBlank() && it != "null" } ?: return null
+        return runCatching {
+            val uri = Uri.parse(value)
+            val scheme = uri.scheme?.lowercase(Locale.US) ?: return null
+            if (scheme in setOf("http", "https", "content", "file")) uri else null
+        }.getOrNull()
     }
 
     private fun buildMemberSinceText(periodLabel: String?, raw: String?): String {

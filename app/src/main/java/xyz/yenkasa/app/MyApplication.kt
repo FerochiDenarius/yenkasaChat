@@ -1,9 +1,9 @@
 package xyz.yenkasa.app
 
 import android.app.Application
-import android.app.NotificationChannel // Added
 import android.app.NotificationManager // Added
 import android.os.Build // Added
+import android.os.StrictMode
 import android.util.Log
 import com.cloudinary.android.MediaManager
 import xyz.yenkasa.app.network.ApiClient
@@ -15,15 +15,15 @@ import com.onesignal.OSSubscriptionStateChanges
 import com.onesignal.OneSignal
 import java.util.HashMap
 import com.jakewharton.threetenabp.AndroidThreeTen
-import android.media.AudioAttributes
-import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
 import org.json.JSONObject
 import xyz.yenkasa.app.ui.CallNotificationHandler
 import xyz.yenkasa.app.util.CallPayloadUtils
 import xyz.yenkasa.app.util.ChatNotificationState
+import xyz.yenkasa.app.util.LocaleManager
 import xyz.yenkasa.app.util.NotificationNavigation
+import xyz.yenkasa.app.util.NotificationSoundManager
 
 
 class MyApplication : Application(), OSSubscriptionObserver {
@@ -31,25 +31,17 @@ class MyApplication : Application(), OSSubscriptionObserver {
     private val ONESIGNAL_APP_ID = "165df9e6-a0ea-4a37-a40a-110af7e28ad2" // Your OneSignal App ID
     private val ONE_SIGNAL_TAG = "OneSignalApp"
 
-    // Define your channel ID as a constant for clarity
     companion object {
-        const val NEW_CHAT_MESSAGES_CHANNEL_ID = "yenkasachat_chat_messages_v2"
         private const val PREFS_NAME = "settings"
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         private const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
-
-        val notificationSounds = mapOf(
-            "sound_default" to R.raw.sound_default,
-            "sound_chime" to R.raw.sound_chime,
-            "sound_bell" to R.raw.sound_bell,
-            "sound_soft" to R.raw.sound_soft,
-            "sound_alert" to R.raw.sound_alert
-        )
     }
 
 
     override fun onCreate() {
         super.onCreate()
+        enableDebugStrictMode()
+        LocaleManager.restoreSavedLocale(this)
         AndroidThreeTen.init(this)
         // Initialize Google Mobile Ads SDK
         MobileAds.initialize(this) { initializationStatus ->
@@ -125,18 +117,15 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 }
             }
 
-            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
-
-            val rawRes = resources.getIdentifier(selectedId, "raw", packageName)
-            val soundUri = Uri.parse("android.resource://$packageName/$rawRes")
+            val channelId = NotificationSoundManager.ensureMessageChannel(this)
+            val soundUri = NotificationSoundManager.getSoundUri(this)
 
             val title = notif.title ?: "Notification"
             val body = notif.body ?: ""
             val contentIntent = NotificationNavigation.buildPendingIntent(this, notif.additionalData)
 
             // 🔔 Build our own custom notification with user-selected sound
-            val builder = NotificationCompat.Builder(this, NEW_CHAT_MESSAGES_CHANNEL_ID)
+            val builder = NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.drawable.ic_bell)
                 .setContentTitle(title)
                 .setContentText(body)
@@ -197,36 +186,30 @@ class MyApplication : Application(), OSSubscriptionObserver {
         return values.firstOrNull { !it.isNullOrBlank() }
     }
 
+    private fun enableDebugStrictMode() {
+        if (!BuildConfig.DEBUG) return
+
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .detectCustomSlowCalls()
+                .penaltyLog()
+                .build()
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectLeakedClosableObjects()
+                .detectActivityLeaks()
+                .penaltyLog()
+                .build()
+        )
+    }
+
 
     private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-
-            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            val selectedId = prefs.getString("notification_sound", "sound_default") ?: "sound_default"
-            val soundRes = notificationSounds[selectedId] ?: R.raw.sound_default
-
-            val soundUri = Uri.parse("android.resource://$packageName/$soundRes")
-
-            val audioAttrs = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
-            val channel = NotificationChannel(
-                NEW_CHAT_MESSAGES_CHANNEL_ID,
-                "Yenkasa Notifications",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications for Yenkasa activities"
-                enableLights(true)
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 200, 150, 200)
-                setSound(soundUri, audioAttrs)   // 🔥 apply user-selected sound
-            }
-
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-        }
+        NotificationSoundManager.ensureMessageChannel(this)
     }
 
     private fun isCallNotification(data: JSONObject?): Boolean {

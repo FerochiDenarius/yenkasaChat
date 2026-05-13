@@ -300,11 +300,16 @@ router.post('/', auth, async (req, res) => {
         cleanPushId(senderPushUser?.playerId)
       ].filter(Boolean));
 
+      const isGroupMessage = chatRoom.roomType === 'group';
+      const groupName = chatRoom.groupName || 'Yenkasa Group';
       let notificationBody = normalizedText || 'Sent you a message';
       if (imageUrl) notificationBody = `${senderUsername} sent an image`;
       else if (audioUrl) notificationBody = `${senderUsername} sent an audio message`;
       else if (videoUrl) notificationBody = `${senderUsername} sent a video`;
       else if (fileUrl) notificationBody = `${senderUsername} sent a file`;
+      if (isGroupMessage && normalizedText) {
+        notificationBody = `${senderUsername}: ${normalizedText}`;
+      }
 
       console.log('[MessagesRoute] Shared chat notification dispatch:', {
         roomId,
@@ -328,8 +333,13 @@ router.post('/', auth, async (req, res) => {
           message: notificationBody,
           emitSocket: true,
           push: true,
-          pushTitle: `New message from ${senderUsername}`,
+          pushTitle: isGroupMessage ? groupName : `New message from ${senderUsername}`,
           pushBody: notificationBody,
+          pushCollapseId: `chat_${newMessage._id.toString()}`,
+          pushAndroidGroup: `chat_${newMessage.roomId.toString()}`,
+          pushAndroidGroupMessage: 'New messages',
+          pushTtl: 604800,
+          pushPriority: 10,
           pushData: {
             roomId: newMessage.roomId.toString(),
             chatId: newMessage.roomId.toString(),
@@ -337,7 +347,13 @@ router.post('/', auth, async (req, res) => {
             messageId: newMessage._id.toString(),
             type: 'new_chat_message',
             targetType: 'chat',
-            targetId: newMessage.roomId.toString()
+            targetId: newMessage.roomId.toString(),
+            isGroupChat: isGroupMessage,
+            groupName: isGroupMessage ? groupName : '',
+            groupImage: isGroupMessage ? (chatRoom.groupImage || '') : '',
+            groupMemberCount: isGroupMessage
+              ? (chatRoom.groupMembers?.length || chatRoom.participants?.length || 0)
+              : 0
           },
           excludePlayerIds: Array.from(senderPlayerIds)
         });

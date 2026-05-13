@@ -60,11 +60,13 @@ class EditProfileActivity : AppCompatActivity() {
     private lateinit var textPhone: TextView
     private lateinit var rowPassword: View
     private lateinit var roleUpgradeCodeView: TextInputEditText
+    private lateinit var btnActivateRoleCode: TextView
 
 
 
 
     private var selectedImageUri: Uri? = null
+    private var roleActivationInFlight = false
     private val token by lazy { TokenManager.getToken(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,7 +89,7 @@ class EditProfileActivity : AppCompatActivity() {
         rowPassword.setOnClickListener {
             showChangePasswordDialog()
         }
-        findViewById<View>(R.id.btnActivateRoleCode).setOnClickListener {
+        btnActivateRoleCode.setOnClickListener {
             activateRoleCode()
         }
         // Auto-save
@@ -117,6 +119,7 @@ class EditProfileActivity : AppCompatActivity() {
         dobView = findViewById(R.id.editDob)
         rowPassword = findViewById(R.id.rowPassword)
         roleUpgradeCodeView = findViewById(R.id.editRoleUpgradeCode)
+        btnActivateRoleCode = findViewById(R.id.btnActivateRoleCode)
 
 
 
@@ -133,8 +136,8 @@ class EditProfileActivity : AppCompatActivity() {
         locationView.setText(TokenManager.getLocation(this))
         genderView.setText(TokenManager.getGender(this))
         dobView.setText(TokenManager.getDob(this))
-        textName.text = TokenManager.getUsername(this) ?: "Username"
-        textPhone.text = TokenManager.getPhone(this) ?: "No phone number"
+        textName.text = TokenManager.getUsername(this) ?: getString(R.string.username)
+        textPhone.text = TokenManager.getPhone(this) ?: getString(R.string.no_phone_number)
 
         Glide.with(this)
             .load(TokenManager.getProfilePicUrl(this))
@@ -195,13 +198,13 @@ class EditProfileActivity : AppCompatActivity() {
                         }
                         Toast.makeText(
                             this@EditProfileActivity,
-                            "Image updated!",
+                            getString(R.string.image_updated),
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
                             this@EditProfileActivity,
-                            "Upload failed",
+                            getString(R.string.upload_failed),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -210,7 +213,7 @@ class EditProfileActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<UploadPictureResponse>, t: Throwable) {
                     Toast.makeText(
                         this@EditProfileActivity,
-                        "Upload error: ${t.message}",
+                        getString(R.string.upload_error, t.message ?: ""),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -285,14 +288,14 @@ class EditProfileActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@EditProfileActivity,
-                        "✔ $field updated",
+                        getString(R.string.field_updated, field),
                         Toast.LENGTH_SHORT
                     ).show()
 
                 } else {
                     Toast.makeText(
                         this@EditProfileActivity,
-                        "Failed to update $field",
+                        getString(R.string.failed_to_update_field, field),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -300,7 +303,7 @@ class EditProfileActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(
                     this@EditProfileActivity,
-                    "Network error",
+                    getString(R.string.network_error),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -327,7 +330,7 @@ class EditProfileActivity : AppCompatActivity() {
                         val phoneValue = user.phone ?: user.phone
                         phoneView.setText(phoneValue)
                         textName.text = user.username
-                        textPhone.text = phoneValue ?: "No phone number"
+                        textPhone.text = phoneValue ?: getString(R.string.no_phone_number)
 
                         locationView.setText(user.location)
                         genderView.setText(user.gender)
@@ -352,7 +355,7 @@ class EditProfileActivity : AppCompatActivity() {
                     } else {
                         Toast.makeText(
                             this@EditProfileActivity,
-                            "Failed to load profile",
+                            getString(R.string.failed_to_load_profile),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -361,7 +364,7 @@ class EditProfileActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<User>, t: Throwable) {
                     Toast.makeText(
                         this@EditProfileActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.upload_error, t.message ?: ""),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -406,12 +409,12 @@ class EditProfileActivity : AppCompatActivity() {
                     if (gender.isNotBlank()) TokenManager.saveGender(this@EditProfileActivity, gender)
                     if (dob.isNotBlank()) TokenManager.saveDob(this@EditProfileActivity, dob)
 
-                    Toast.makeText(this@EditProfileActivity, "Profile updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditProfileActivity, getString(R.string.profile_updated), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@EditProfileActivity, "Failed to update profile", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_update_profile), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@EditProfileActivity, "Network error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@EditProfileActivity, getString(R.string.network_error), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -423,20 +426,20 @@ class EditProfileActivity : AppCompatActivity() {
         val newPass = view.findViewById<TextInputEditText>(R.id.editNewPassword)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Change Password")
+            .setTitle(R.string.change_password)
             .setView(view)
-            .setPositiveButton("Update") { _, _ ->
+            .setPositiveButton(R.string.update) { _, _ ->
                 val old = oldPass.text?.toString() ?: ""
                 val new = newPass.text?.toString() ?: ""
 
                 if (new.length < 6) {
-                    Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.password_too_short), Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
 
                 changePassword(old, new)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
 
         dialog.window?.setSoftInputMode(
@@ -446,17 +449,22 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun activateRoleCode() {
+        if (roleActivationInFlight) return
+
         val currentToken = TokenManager.getToken(this)
         if (currentToken.isNullOrBlank()) {
-            Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.session_expired_login_again), Toast.LENGTH_SHORT).show()
             return
         }
 
         val code = roleUpgradeCodeView.text?.toString()?.trim()?.uppercase().orEmpty()
         if (code.isBlank()) {
-            roleUpgradeCodeView.error = "Enter role ID"
+            roleUpgradeCodeView.error = getString(R.string.enter_role_id)
             return
         }
+
+        val expectedRoleKey = expectedRoleKeyFromCode(code)
+        setRoleActivationLoading(true)
 
         ApiClient.apiService.activateRoleCode("Bearer $currentToken", ActivateRoleCodeRequest(code))
             .enqueue(object : Callback<ActivateRoleCodeResponse> {
@@ -466,38 +474,124 @@ class EditProfileActivity : AppCompatActivity() {
                 ) {
                     val body = response.body()
                     if (response.isSuccessful && body?.success == true) {
-                        body.user?.let { user ->
-                            TokenManager.saveUserJson(this@EditProfileActivity, Gson().toJson(user))
-                            TokenManager.savePartialUserDetails(
-                                this@EditProfileActivity,
-                                user.username,
-                                user.email,
-                                user.phone,
-                                user.location,
-                                user.gender,
-                                user.dateOfBirth
-                            )
-                            TokenManager.saveProfilePicUrl(this@EditProfileActivity, user.profileImage)
-                        }
-                        roleUpgradeCodeView.setText("")
-                        AlertDialog.Builder(this@EditProfileActivity)
-                            .setTitle("Role Activated")
-                            .setMessage(body.message ?: "${body.roleLabel ?: "Role"} activated successfully.")
-                            .setPositiveButton("OK", null)
-                            .show()
+                        handleRoleActivationSuccess(body)
                     } else {
-                        Toast.makeText(
-                            this@EditProfileActivity,
-                            body?.error ?: "Role activation failed",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        verifyActivationState(
+                            token = currentToken,
+                            expectedRoleKey = expectedRoleKey,
+                            fallbackError = body?.error ?: getString(R.string.role_activation_failed)
+                        )
                     }
                 }
 
                 override fun onFailure(call: Call<ActivateRoleCodeResponse>, t: Throwable) {
-                    Toast.makeText(this@EditProfileActivity, "Network error", Toast.LENGTH_SHORT).show()
+                    verifyActivationState(
+                        token = currentToken,
+                        expectedRoleKey = expectedRoleKey,
+                        fallbackError = getString(R.string.network_error)
+                    )
                 }
             })
+    }
+
+    private fun setRoleActivationLoading(isLoading: Boolean) {
+        roleActivationInFlight = isLoading
+        btnActivateRoleCode.isEnabled = !isLoading
+        btnActivateRoleCode.alpha = if (isLoading) 0.65f else 1f
+        btnActivateRoleCode.text = getString(if (isLoading) R.string.activating else R.string.activate)
+    }
+
+    private fun handleRoleActivationSuccess(body: ActivateRoleCodeResponse) {
+        body.user?.let { saveActivatedUser(it) }
+        roleUpgradeCodeView.setText("")
+        setRoleActivationLoading(false)
+        val roleLabel = body.roleLabel ?: body.roleKey ?: getString(R.string.upgrade_role)
+        AlertDialog.Builder(this@EditProfileActivity)
+            .setTitle(R.string.role_activated)
+            .setMessage(body.message ?: getString(R.string.role_activated_message, roleLabel))
+            .setPositiveButton(R.string.ok, null)
+            .show()
+    }
+
+    private fun verifyActivationState(
+        token: String,
+        expectedRoleKey: String?,
+        fallbackError: String
+    ) {
+        if (expectedRoleKey.isNullOrBlank()) {
+            setRoleActivationLoading(false)
+            Toast.makeText(this@EditProfileActivity, fallbackError, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        ApiClient.apiService.getUserProfile("Bearer $token")
+            .enqueue(object : Callback<User> {
+                override fun onResponse(call: Call<User>, response: Response<User>) {
+                    val user = response.body()
+                    if (response.isSuccessful && user != null && userHasRole(user, expectedRoleKey)) {
+                        saveActivatedUser(user)
+                        handleRoleActivationSuccess(
+                            ActivateRoleCodeResponse(
+                                success = true,
+                                roleKey = expectedRoleKey,
+                                roleLabel = expectedRoleKey.replace('_', ' ').replaceFirstChar { it.titlecase() },
+                                user = user
+                            )
+                        )
+                    } else {
+                        setRoleActivationLoading(false)
+                        Toast.makeText(this@EditProfileActivity, fallbackError, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<User>, t: Throwable) {
+                    setRoleActivationLoading(false)
+                    Toast.makeText(this@EditProfileActivity, fallbackError, Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun saveActivatedUser(user: User) {
+        TokenManager.saveUserJson(this@EditProfileActivity, Gson().toJson(user))
+        TokenManager.savePartialUserDetails(
+            this@EditProfileActivity,
+            user.username,
+            user.email,
+            user.phone,
+            user.location,
+            user.gender,
+            user.dateOfBirth
+        )
+        TokenManager.saveProfilePicUrl(this@EditProfileActivity, user.profileImage)
+    }
+
+    private fun expectedRoleKeyFromCode(code: String): String? {
+        val prefix = code.split("-").getOrNull(2)?.uppercase() ?: return null
+        return when (prefix) {
+            "MOD" -> "moderator"
+            "ADM" -> "admin"
+            "JDEV" -> "junior_developer"
+            "SDEV" -> "senior_developer"
+            "VER" -> "verified_creator"
+            "RSTAR" -> "rising_star"
+            "LEG" -> "legend"
+            "VEND" -> "top_vendor"
+            "BIZ" -> "business_account"
+            "PREM" -> "premium_seller"
+            "CAMP" -> "campus_influencer"
+            "BRAND" -> "brand_ambassador"
+            else -> null
+        }
+    }
+
+    private fun userHasRole(user: User, expectedRoleKey: String): Boolean {
+        val normalizedExpected = expectedRoleKey.lowercase()
+        val directRoles = listOfNotNull(user.staffRole, user.roleName, user.accessRole)
+            .map { it.lowercase() }
+        return directRoles.contains(normalizedExpected) ||
+            directRoles.contains(normalizedExpected.uppercase().lowercase()) ||
+            user.publicRoles.any { it.equals(normalizedExpected, ignoreCase = true) } ||
+            (normalizedExpected == "verified_creator" && user.verified)
     }
 
     private fun changePassword(oldPass: String, newPass: String) {
@@ -516,13 +610,13 @@ class EditProfileActivity : AppCompatActivity() {
                 )
 
                 if (res.isSuccessful) {
-                    Toast.makeText(this@EditProfileActivity, "Password updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditProfileActivity, getString(R.string.password_updated), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@EditProfileActivity, "Wrong current password", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditProfileActivity, getString(R.string.wrong_current_password), Toast.LENGTH_SHORT).show()
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(this@EditProfileActivity, "Network error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@EditProfileActivity, getString(R.string.network_error), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -531,7 +625,7 @@ class EditProfileActivity : AppCompatActivity() {
 
         genderView.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("Select Gender")
+                .setTitle(R.string.select_gender)
                 .setItems(genders) { _, which ->
                     val selected = genders[which]
                     genderView.setText(selected)
@@ -545,7 +639,7 @@ class EditProfileActivity : AppCompatActivity() {
         dobView.setOnClickListener {
 
             val picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("Select Date of Birth")
+                .setTitleText(getString(R.string.select_date_of_birth))
                 .build()
 
             picker.addOnPositiveButtonClickListener { selection ->

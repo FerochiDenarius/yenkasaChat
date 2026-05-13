@@ -27,6 +27,7 @@ import xyz.yenkasa.app.model.ChatRoom
 // Assuming CreateChatRoomRequest is now used by your ApiService
 import xyz.yenkasa.app.model.CreateChatRoomRequest
 import xyz.yenkasa.app.model.CreateChatRoomResponse
+import xyz.yenkasa.app.model.GroupResponse
 import xyz.yenkasa.app.model.GroupsListResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
@@ -47,6 +48,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     private lateinit var inputUsername: EditText
     private lateinit var foundCardTitle: TextView
     private lateinit var foundCardSubtitle: TextView
+    private lateinit var groupUnreadBadge: TextView
     private var recentChatRooms: List<ChatRoom> = emptyList()
     private var activeMediaSender: ChatMessageHandler? = null
     private var pendingMediaRecipientName: String? = null
@@ -73,6 +75,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         inputUsername = findViewById(R.id.inputUsername)
         foundCardTitle = findViewById(R.id.textChatRoomsFoundTitle)
         foundCardSubtitle = findViewById(R.id.textChatRoomsFoundSubtitle)
+        groupUnreadBadge = findViewById(R.id.textGroupUnreadBadge)
         val foundCard = findViewById<View>(R.id.chatRoomsFoundCard)
         val btnCamera = findViewById<ImageView>(R.id.btnChatRoomsCamera)
         val btnMore = findViewById<ImageView>(R.id.btnChatRoomsMore)
@@ -92,21 +95,13 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
             return
         }
 
-        chatRoomAdapter = ChatRoomAdapter(currentUserId) { selectedRoom ->
-            val target = if (selectedRoom.roomType == "group") GroupChatActivity::class.java else ChatActivity::class.java
-            val intent = Intent(this@ChatRoomsActivity, target).apply {
-                putExtra("roomId", selectedRoom._id) // This assumes your ChatRoom has an _id field
-
-                val chatName = if (selectedRoom.roomType == "group") {
-                    selectedRoom.groupName ?: "Yenkasa Group"
-                } else {
-                    determineChatDisplayNameForActivity(selectedRoom, currentUserId)
-                }
-                putExtra("chatPartnerName", chatName)
-                putExtra("isGroupChat", selectedRoom.roomType == "group")
+        chatRoomAdapter = ChatRoomAdapter(
+            currentUserId = currentUserId,
+            onChatRoomClick = { selectedRoom -> openChatRoom(selectedRoom) },
+            onChatRoomLongClick = { selectedRoom ->
+                if (selectedRoom.roomType == "group") showGroupLongPressOptions(selectedRoom)
             }
-            startActivity(intent)
-        }
+        )
         recyclerView.adapter = chatRoomAdapter
 
         loadChatRooms()
@@ -182,6 +177,109 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
             foundCardTitle.text = "Status"
             foundCardSubtitle.text = "Status updates will appear here."
         }
+    }
+
+    private fun openChatRoom(selectedRoom: ChatRoom) {
+        val target = if (selectedRoom.roomType == "group") GroupChatActivity::class.java else ChatActivity::class.java
+        val intent = Intent(this@ChatRoomsActivity, target).apply {
+            putExtra("roomId", selectedRoom._id)
+
+            val chatName = if (selectedRoom.roomType == "group") {
+                selectedRoom.groupName ?: "Yenkasa Group"
+            } else {
+                determineChatDisplayNameForActivity(selectedRoom, currentUserId)
+            }
+            putExtra("chatPartnerName", chatName)
+            putExtra("groupImage", selectedRoom.groupImage.orEmpty())
+            putExtra("groupMemberCount", selectedRoom.memberCount)
+            putExtra("isGroupChat", selectedRoom.roomType == "group")
+        }
+        startActivity(intent)
+    }
+
+    private fun showGroupLongPressOptions(group: ChatRoom) {
+        val canManage = canManageGroup(group)
+        val actions = if (canManage) {
+            arrayOf("Open group", "Add members", "Delete group")
+        } else {
+            arrayOf("Open group", "Leave group")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(group.groupName ?: "Yenkasa Group")
+            .setItems(actions) { _, which ->
+                when (actions[which]) {
+                    "Open group" -> openChatRoom(group)
+                    "Add members" -> openGroupAddMembers(group)
+                    "Delete group" -> confirmDeleteGroup(group)
+                    "Leave group" -> confirmLeaveGroup(group)
+                }
+            }
+            .show()
+    }
+
+    private fun openGroupAddMembers(group: ChatRoom) {
+        startActivity(Intent(this, GroupContactsSelectorActivity::class.java).apply {
+            putExtra("mode", "addMembers")
+            putExtra("groupId", group._id)
+            putStringArrayListExtra(
+                "existingMemberIds",
+                ArrayList(group.participants.orEmpty().map { it._id })
+            )
+        })
+    }
+
+    private fun confirmLeaveGroup(group: ChatRoom) {
+        AlertDialog.Builder(this)
+            .setTitle("Leave group?")
+            .setMessage("You will stop receiving messages from ${group.groupName ?: "this group"}.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Leave") { _, _ ->
+                ApiClient.apiService.leaveGroup(group._id).enqueue(object : Callback<GroupResponse> {
+                    override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
+                        if (!response.isSuccessful || response.body()?.success == false) {
+                            Toast.makeText(this@ChatRoomsActivity, response.body()?.message ?: "Could not leave group", Toast.LENGTH_LONG).show()
+                            return
+                        }
+                        Toast.makeText(this@ChatRoomsActivity, "You left the group", Toast.LENGTH_SHORT).show()
+                        loadGroups()
+                    }
+
+                    override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
+                        Toast.makeText(this@ChatRoomsActivity, "Could not leave group: ${t.message}", Toast.LENGTH_LONG).show()
+                    }
+                })
+            }
+            .show()
+    }
+
+    private fun confirmDeleteGroup(group: ChatRoom) {
+        AlertDialog.Builder(this)
+            .setTitle("Delete group?")
+            .setMessage("This deletes ${group.groupName ?: "this group"} for all members. This cannot be undone.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Delete") { _, _ ->
+                ApiClient.apiService.deleteGroup(group._id).enqueue(object : Callback<GroupResponse> {
+                    override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
+                        if (!response.isSuccessful || response.body()?.success == false) {
+                            Toast.makeText(this@ChatRoomsActivity, response.body()?.message ?: "Could not delete group", Toast.LENGTH_LONG).show()
+                            return
+                        }
+                        Toast.makeText(this@ChatRoomsActivity, "Group deleted", Toast.LENGTH_SHORT).show()
+                        loadGroups()
+                    }
+
+                    override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
+                        Toast.makeText(this@ChatRoomsActivity, "Could not delete group: ${t.message}", Toast.LENGTH_LONG).show()
+                    }
+                })
+            }
+            .show()
+    }
+
+    private fun canManageGroup(group: ChatRoom): Boolean {
+        return currentUserId.isNotBlank() &&
+            (group.groupCreatedBy == currentUserId || group.groupAdmins.contains(currentUserId))
     }
 
     override fun onResume() {
@@ -385,6 +483,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                             .sortedWith(compareByDescending<ChatRoom> { it.lastActivityTimeMillis }
                                 .thenByDescending { it.unreadCount })
                         Log.d("ChatRoomsActivity", "Loaded ${groups.size} groups")
+                        updateGroupUnreadBadge(groups)
                         chatRoomAdapter.submitList(groups)
                     } else {
                         val errorMsg = parseError(response)
@@ -398,6 +497,17 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                     Toast.makeText(this@ChatRoomsActivity, "Error loading groups: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    private fun updateGroupUnreadBadge(groups: List<ChatRoom>) {
+        if (!::groupUnreadBadge.isInitialized) return
+        val unreadTotal = groups.sumOf { it.unreadCount }
+        if (unreadTotal > 0) {
+            groupUnreadBadge.visibility = View.VISIBLE
+            groupUnreadBadge.text = if (unreadTotal > 99) "99+" else unreadTotal.toString()
+        } else {
+            groupUnreadBadge.visibility = View.GONE
+        }
     }
 
     private fun parseError(response: Response<*>): String {

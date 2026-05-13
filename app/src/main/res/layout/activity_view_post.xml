@@ -47,7 +47,7 @@
                     android:id="@+id/textUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="username"
+                    android:text="@string/username_placeholder"
                     android:textStyle="bold"
                     android:textSize="16sp"
                     android:layout_marginStart="12dp"
@@ -68,7 +68,7 @@
                 android:id="@+id/textCaption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="This is a caption for a sample post."
+                android:text="@string/sample_post_caption"
                 android:textColor="@color/black"
                 android:textSize="15sp"
                 android:paddingBottom="8dp" />
@@ -120,7 +120,7 @@
                         android:id="@+id/audioLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Audio Post"
+                        android:text="@string/audio_post"
                         android:textColor="@color/gray"
                         android:textSize="14sp"
                         android:layout_marginTop="6dp" />
@@ -176,7 +176,7 @@
                     android:id="@+id/textViews"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="👁️ 0"
+                    android:text="@string/views_zero"
                     android:textSize="14sp"
                     android:textColor="@color/gray"
                     android:padding="4dp" />
@@ -189,7 +189,7 @@
                     android:id="@+id/textLikes"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="❤️ 0"
+                    android:text="@string/likes_zero"
                     android:textSize="14sp"
                     android:textColor="@color/gray"
                     android:padding="4dp" />
@@ -202,7 +202,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:src="@drawable/ic_person_add"
-                android:contentDescription="Follow"
+                android:contentDescription="@string/follow_user"
                 app:backgroundTint="@color/yenkasa_black"
                 app:tint="@color/yenkasa_amber" />
 

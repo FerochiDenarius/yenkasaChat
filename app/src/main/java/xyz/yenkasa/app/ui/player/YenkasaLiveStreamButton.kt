@@ -34,7 +34,7 @@ class YenkasaLiveStreamButton @JvmOverloads constructor(
             layoutParams = LayoutParams(dp(16), dp(16))
         })
         addView(TextView(context).apply {
-            text = "LIVE"
+            text = context.getString(R.string.live_caps)
             gravity = Gravity.CENTER
             setTextColor(ContextCompat.getColor(context, android.R.color.white))
             textSize = 10f

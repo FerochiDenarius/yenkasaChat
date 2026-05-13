@@ -99,7 +99,7 @@ class ViewActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        textUsername.text = post?.userId?.username ?: "Unknown"
+        textUsername.text = post?.userId?.username ?: getString(R.string.unknown_user)
         textCaption.text = post?.caption ?: ""
         fetchTotalViews()
 
@@ -180,7 +180,7 @@ class ViewActivity : AppCompatActivity() {
         val author = post?.userId ?: return
 
         if (rawToken.isNullOrBlank()) {
-            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in_first, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -206,13 +206,21 @@ class ViewActivity : AppCompatActivity() {
                         fabFollow.isEnabled = false
                         Toast.makeText(this@ViewActivity, body.message, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@ViewActivity, "Could not follow ${author.username}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@ViewActivity,
+                            getString(R.string.could_not_follow_user, author.username),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
                 override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
                     fabFollow.isEnabled = true
-                    Toast.makeText(this@ViewActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ViewActivity,
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -275,7 +283,7 @@ class ViewActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.success) {
-                        textViews.text = "👁️ ${body.viewsCount}"
+                        textViews.text = getString(R.string.views_count, body.viewsCount)
                         // Push update also to feed list when user returns
                         post?.viewCount = body.viewsCount
                         WalletBalanceManager.refreshAfterReward(
@@ -378,7 +386,7 @@ class ViewActivity : AppCompatActivity() {
                     val body: ViewResponse? = response.body()
                     withContext(Dispatchers.Main) {
                         if (body != null && body.success) {
-                            textViews.text = "👁️ ${body.viewsCount}"
+                            textViews.text = getString(R.string.views_count, body.viewsCount)
                             Log.d("ViewActivity", "👁️ Total views fetched: ${body.viewsCount}")
                         } else {
                             Log.w("ViewActivity", "⚠️ Fetch views response: ${body?.message}")
@@ -402,7 +410,7 @@ class ViewActivity : AppCompatActivity() {
 
                 if (postId == post?._id) {
                     runOnUiThread {
-                        textViews.text = "👁️ $viewsCount"
+                        textViews.text = getString(R.string.views_count, viewsCount)
                         Log.d("ViewActivity", "👁️ Live view update → $viewsCount views")
                     }
                 }

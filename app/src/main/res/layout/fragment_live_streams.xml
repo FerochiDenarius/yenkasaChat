@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Yenkasa Live Streams"
+        android:text="@string/yenkasa_live_streams"
         android:textColor="@android:color/white"
         android:textSize="22sp"
         android:textStyle="bold" />
@@ -28,11 +28,11 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView style="@style/LiveStreamTabText" android:text="Trending" />
-            <TextView style="@style/LiveStreamTabText" android:text="Following" />
-            <TextView style="@style/LiveStreamTabText" android:text="Nearby" />
-            <TextView style="@style/LiveStreamTabText" android:text="Fashion" />
-            <TextView style="@style/LiveStreamTabText" android:text="Communities" />
+            <TextView style="@style/LiveStreamTabText" android:text="@string/live_tab_trending" />
+            <TextView style="@style/LiveStreamTabText" android:text="@string/live_tab_following" />
+            <TextView style="@style/LiveStreamTabText" android:text="@string/live_tab_nearby" />
+            <TextView style="@style/LiveStreamTabText" android:text="@string/live_tab_fashion" />
+            <TextView style="@style/LiveStreamTabText" android:text="@string/live_tab_communities" />
         </LinearLayout>
     </HorizontalScrollView>
 
@@ -51,7 +51,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="24dp"
-        android:text="No one is live right now."
+        android:text="@string/no_one_live_now"
         android:textColor="#B8FFFFFF"
         android:visibility="gone" />
 </LinearLayout>

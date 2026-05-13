@@ -359,6 +359,14 @@
     <string name="failed_to_parse_comment_response">Impossible d’analyser la réponse du commentaire</string>
     <string name="failed_to_post_comment">Impossible de publier le commentaire</string>
     <string name="failed_to_update_like">Impossible de mettre à jour le j’aime</string>
+    <string name="caption_placeholder">Légende ici</string>
+    <string name="reward_post">Récompenser la publication</string>
+    <string name="unknown_media_type">Type de média inconnu</string>
+    <string name="video_playback_error">Erreur de lecture vidéo (%1$d, %2$d)</string>
+    <string name="audio_load_error">Erreur de chargement audio</string>
+    <string name="sample_post_caption">Ceci est une légende d’exemple.</string>
+    <string name="views_zero">👁️ 0</string>
+    <string name="likes_zero">❤️ 0</string>
     <string name="share">Partager</string>
     <string name="post_image_content_description">Image de publication</string>
     <string name="delete_post">Supprimer la publication</string>
@@ -468,6 +476,10 @@
     <string name="open_live_arena">Ouvrir l’Arène Live</string>
     <string name="start_livestream">Démarrer le direct</string>
     <string name="open_creator_profile">Ouvrir le profil du créateur</string>
+    <string name="arena">Arène</string>
+    <string name="live_caps">LIVE</string>
+    <string name="search_yenkasa">Rechercher sur Yenkasa</string>
+    <string name="hide_more_actions">Masquer plus d’actions</string>
     <plurals name="likes_count">
         <item quantity="one">%d j’aime</item>
         <item quantity="other">%d j’aime</item>
@@ -492,4 +504,24 @@
         <item quantity="one">%d membre</item>
         <item quantity="other">%d membres</item>
     </plurals>
+    <string name="emoji">Emoji</string>
+    <string name="stickers">Autocollants</string>
+    <string name="receiver_profile_picture">Photo de profil du destinataire</string>
+    <string name="online_status_indicator">Indicateur de statut en ligne</string>
+    <string name="video_call">Appel vidéo</string>
+    <string name="call">Appel</string>
+    <string name="selected_media_preview">Aperçu du média sélectionné</string>
+    <string name="tap_send_when_ready">Touchez envoyer quand c’est prêt</string>
+    <string name="remove_selected_media">Retirer le média sélectionné</string>
+    <string name="attach">Joindre</string>
+    <string name="type_message_hint">Écrire un message...</string>
+    <string name="record_audio">Enregistrer un audio</string>
+    <string name="send_message">Envoyer le message</string>
+    <string name="attach_image">Joindre une image</string>
+    <string name="attach_video">Joindre une vidéo</string>
+    <string name="attach_camera">Ouvrir la caméra</string>
+    <string name="attach_file">Joindre un fichier</string>
+    <string name="attach_location">Joindre une position</string>
+    <string name="attach_contact">Joindre un contact</string>
+    <string name="live_service_temporarily_unavailable">Le service Live est temporairement indisponible. Réessayez dans quelques minutes.</string>
 </resources>

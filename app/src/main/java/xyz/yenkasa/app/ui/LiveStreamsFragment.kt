@@ -50,7 +50,7 @@ class LiveStreamsFragment : Fragment() {
 
             override fun onFailure(call: Call<LiveStreamsResponse>, t: Throwable) {
                 emptyText.visibility = View.VISIBLE
-                Toast.makeText(requireContext(), "Could not load live streams.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.could_not_load_live_streams, Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -63,14 +63,14 @@ class LiveStreamsFragment : Fragment() {
                     val joinedStream = body?.stream
                     val agora = body?.agora
                     if (!response.isSuccessful || body?.success != true || joinedStream == null || agora == null) {
-                        Toast.makeText(requireContext(), body?.message ?: "Live stream unavailable.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), body?.message ?: getString(R.string.live_stream_unavailable), Toast.LENGTH_SHORT).show()
                         return
                     }
                     startActivity(LiveStreamActivity.intentForAudience(requireContext(), joinedStream, agora))
                 }
 
                 override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
-                    Toast.makeText(requireContext(), "Network error joining live.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), R.string.network_error_joining_live, Toast.LENGTH_SHORT).show()
                 }
             })
     }

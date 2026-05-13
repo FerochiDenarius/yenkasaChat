@@ -430,7 +430,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
             secondaryActionsView.isVisible = true
             secondaryActionsView.animate().alpha(1f).setDuration(180L).start()
             buttonExpandActions.animate().rotation(180f).setDuration(180L).start()
-            buttonExpandActions.contentDescription = "Hide more actions"
+            buttonExpandActions.contentDescription = context.getString(R.string.hide_more_actions)
         } else {
             secondaryActionsView.animate()
                 .alpha(0f)
@@ -438,7 +438,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
                 .withEndAction { secondaryActionsView.isVisible = false }
                 .start()
             buttonExpandActions.animate().rotation(0f).setDuration(180L).start()
-            buttonExpandActions.contentDescription = "Show more actions"
+            buttonExpandActions.contentDescription = context.getString(R.string.show_more_actions)
         }
         scheduleAutoHide()
     }
@@ -447,7 +447,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         secondaryActionsExpanded = false
         secondaryActionsView.animate().cancel()
         buttonExpandActions.animate().cancel()
-        buttonExpandActions.contentDescription = "Show more actions"
+        buttonExpandActions.contentDescription = context.getString(R.string.show_more_actions)
         if (animate) {
             secondaryActionsView.animate()
                 .alpha(0f)
@@ -597,7 +597,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         secondaryActionsView.alpha = 0f
         secondaryActionsView.isVisible = false
         buttonExpandActions.rotation = 0f
-        buttonExpandActions.contentDescription = "Show more actions"
+        buttonExpandActions.contentDescription = context.getString(R.string.show_more_actions)
 
         walletPill.setBalance(item.walletBalance)
         liveStreamAllowed = UserPermissions.canStartLivestream(TokenManager.getUserRole(context))

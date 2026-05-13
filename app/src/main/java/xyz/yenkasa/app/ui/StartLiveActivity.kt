@@ -36,7 +36,7 @@ class StartLiveActivity : AppCompatActivity() {
         if (result[Manifest.permission.CAMERA] == true && result[Manifest.permission.RECORD_AUDIO] == true) {
             createLiveStream()
         } else {
-            Toast.makeText(this, "Camera and microphone permissions are required to go live.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.camera_mic_permissions_required, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -59,12 +59,12 @@ class StartLiveActivity : AppCompatActivity() {
         val canStart = UserPermissions.canStartLivestream(role)
 
         if (!canStart) {
-            Toast.makeText(this, "Livestreaming is currently available to senior developers only.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.livestream_senior_developers_only, Toast.LENGTH_LONG).show()
             return
         }
 
         if (titleInput.text.toString().trim().isBlank()) {
-            titleInput.error = "Enter a live title"
+            titleInput.error = getString(R.string.enter_live_title)
             return
         }
 
@@ -94,7 +94,11 @@ class StartLiveActivity : AppCompatActivity() {
                 val stream = body?.stream
                 val agora = body?.agora
                 if (!response.isSuccessful || body?.success != true || stream == null || agora == null) {
-                    Toast.makeText(this@StartLiveActivity, body?.message ?: "Could not start live.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@StartLiveActivity,
+                        liveStartErrorMessage(response, body),
+                        Toast.LENGTH_LONG
+                    ).show()
                     return
                 }
 
@@ -104,7 +108,11 @@ class StartLiveActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
                 setLoading(false)
-                Toast.makeText(this@StartLiveActivity, "Network error starting live: ${t.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this@StartLiveActivity,
+                    getString(R.string.network_error_starting_live, t.message.orEmpty()),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         })
     }
@@ -112,5 +120,23 @@ class StartLiveActivity : AppCompatActivity() {
     private fun setLoading(loading: Boolean) {
         progress.visibility = if (loading) View.VISIBLE else View.GONE
         startButton.isEnabled = !loading
+    }
+
+    private fun liveStartErrorMessage(
+        response: Response<LiveStreamResponse>,
+        body: LiveStreamResponse?
+    ): String {
+        body?.message?.takeIf { it.isNotBlank() }?.let { return it }
+
+        val rawError = runCatching { response.errorBody()?.string().orEmpty() }.getOrDefault("")
+        if (response.code() == 503 || response.code() == 504 || rawError.contains("via_upstream", ignoreCase = true)) {
+            return getString(R.string.live_service_temporarily_unavailable)
+        }
+
+        if (rawError.trimStart().startsWith("<")) {
+            return getString(R.string.could_not_start_live)
+        }
+
+        return rawError.takeIf { it.isNotBlank() } ?: getString(R.string.could_not_start_live)
     }
 }

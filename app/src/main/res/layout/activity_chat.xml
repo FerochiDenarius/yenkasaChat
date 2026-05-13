@@ -30,7 +30,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="@drawable/bg_chat_header_icon_button"
-                android:contentDescription="Back"
+                android:contentDescription="@string/back"
                 android:padding="10dp"
                 android:src="@drawable/ic_arrow_back"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -43,7 +43,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginStart="10dp"
-                android:contentDescription="Receiver profile picture"
+                android:contentDescription="@string/receiver_profile_picture"
                 android:src="@drawable/ic_default_profile"
                 app:civ_border_color="@color/yenkasa_emerald"
                 app:civ_border_width="1dp"
@@ -75,7 +75,7 @@
                 android:layout_width="8dp"
                 android:layout_height="8dp"
                 android:layout_marginStart="10dp"
-                android:contentDescription="Online status indicator"
+                android:contentDescription="@string/online_status_indicator"
                 android:src="@drawable/status_indicator_offline"
                 app:layout_constraintBottom_toBottomOf="@id/textViewOnlineStatus"
                 app:layout_constraintStart_toEndOf="@id/imageViewReceiverPicture"
@@ -102,7 +102,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="@drawable/bg_chat_header_icon_button"
-                android:contentDescription="Video call"
+                android:contentDescription="@string/video_call"
                 android:padding="10dp"
                 android:src="@drawable/ic_videocam"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -116,7 +116,7 @@
                 android:layout_height="40dp"
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_chat_header_icon_button"
-                android:contentDescription="Call"
+                android:contentDescription="@string/call"
                 android:padding="10dp"
                 android:src="@drawable/ic_call"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -130,7 +130,7 @@
                 android:layout_height="40dp"
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_chat_header_icon_button"
-                android:contentDescription="More options"
+                android:contentDescription="@string/more_options"
                 android:padding="10dp"
                 android:src="@drawable/ic_more_vert"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -171,7 +171,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Cancel reply"
+                android:contentDescription="@string/cancel_reply"
                 android:src="@drawable/ic_close"
                 app:tint="@color/feed_primary_text" />
 
@@ -224,7 +224,7 @@
                     android:id="@+id/imageMediaPreview"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:contentDescription="Selected media preview"
+                    android:contentDescription="@string/selected_media_preview"
                     android:scaleType="centerCrop"
                     tools:src="@drawable/placeholder_image" />
 
@@ -235,7 +235,7 @@
                     android:layout_gravity="center"
                     android:background="@drawable/bg_chat_floating_sticker"
                     android:gravity="center"
-                    android:text="▶"
+                    android:text="@string/play_symbol"
                     android:textColor="@color/white"
                     android:textSize="15sp"
                     android:visibility="gone"
@@ -265,7 +265,7 @@
                 android:layout_marginStart="12dp"
                 android:layout_marginTop="4dp"
                 android:layout_marginEnd="8dp"
-                android:text="Tap send when ready"
+                android:text="@string/tap_send_when_ready"
                 android:textColor="@color/feed_secondary_text"
                 android:textSize="12sp"
                 app:layout_constraintBottom_toBottomOf="@id/mediaPreviewFrame"
@@ -278,7 +278,7 @@
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="@drawable/bg_chat_header_icon_button"
-                android:contentDescription="Remove selected media"
+                android:contentDescription="@string/remove_selected_media"
                 android:padding="10dp"
                 android:src="@drawable/ic_close"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -309,7 +309,7 @@
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="@drawable/bg_chat_attach_button"
-                android:contentDescription="Attach"
+                android:contentDescription="@string/attach"
                 android:padding="10dp"
                 android:src="@drawable/ic_add"
                 app:tint="@color/yenkasa_emerald" />
@@ -323,7 +323,7 @@
                 android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:gravity="center_vertical|start"
-                android:hint="Type a message..."
+                android:hint="@string/type_message_hint"
                 android:inputType="textMultiLine|textCapSentences"
                 android:maxLines="5"
                 android:minHeight="42dp"
@@ -339,7 +339,7 @@
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="@drawable/bg_chat_floating_sticker"
-                android:contentDescription="Record Audio"
+                android:contentDescription="@string/record_audio"
                 android:padding="10dp"
                 android:src="@drawable/ic_mic"
                 app:tint="@color/white" />
@@ -350,7 +350,7 @@
                 android:layout_height="38dp"
                 android:layout_marginStart="4dp"
                 android:background="@drawable/bg_chat_floating_sticker"
-                android:contentDescription="Send Message"
+                android:contentDescription="@string/send_message"
                 android:padding="10dp"
                 android:src="@drawable/ic_send"
                 android:visibility="gone"
@@ -367,7 +367,7 @@
         android:layout_marginStart="18dp"
         android:layout_marginBottom="108dp"
         android:background="@drawable/bg_chat_floating_emoji"
-        android:contentDescription="Emoji"
+        android:contentDescription="@string/emoji"
         android:elevation="6dp"
         android:padding="10dp"
         android:src="@drawable/ic_emoji"
@@ -381,7 +381,7 @@
         android:layout_marginEnd="18dp"
         android:layout_marginBottom="108dp"
         android:background="@drawable/bg_chat_floating_sticker"
-        android:contentDescription="Stickers"
+        android:contentDescription="@string/stickers"
         android:elevation="6dp"
         android:padding="10dp"
         android:src="@drawable/ic_image"
@@ -406,7 +406,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@android:color/transparent"
-            android:contentDescription="Attach Image"
+            android:contentDescription="@string/attach_image"
             android:src="@drawable/ic_image"
             app:tint="@color/yenkasa_emerald" />
 
@@ -415,7 +415,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@android:color/transparent"
-            android:contentDescription="Attach Video"
+            android:contentDescription="@string/attach_video"
             android:src="@drawable/ic_video"
             app:tint="@color/yenkasa_emerald" />
 
@@ -424,7 +424,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@android:color/transparent"
-            android:contentDescription="Attach Camera"
+            android:contentDescription="@string/attach_camera"
             android:src="@drawable/ic_camera"
             app:tint="@color/yenkasa_emerald" />
 
@@ -433,7 +433,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@android:color/transparent"
-            android:contentDescription="Attach File"
+            android:contentDescription="@string/attach_file"
             android:src="@drawable/ic_attach_file"
             app:tint="@color/yenkasa_emerald" />
 
@@ -442,7 +442,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@android:color/transparent"
-            android:contentDescription="Attach Location"
+            android:contentDescription="@string/attach_location"
             android:src="@drawable/ic_location"
             app:tint="@color/yenkasa_emerald" />
 
@@ -451,7 +451,7 @@
             android:layout_width="42dp"
             android:layout_height="42dp"
             android:background="@android:color/transparent"
-            android:contentDescription="Attach Contact"
+            android:contentDescription="@string/attach_contact"
             android:src="@drawable/ic_contact"
             app:tint="@color/yenkasa_emerald" />
 

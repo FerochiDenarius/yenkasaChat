@@ -110,6 +110,13 @@ router.post('/create', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Live title is required.' });
     }
 
+    const agoraChannel = `yenkasa_live_${req.user._id}_${Date.now()}`;
+    const agora = generateRtcToken({
+      channelName: agoraChannel,
+      userId: req.user._id,
+      role: 'broadcaster'
+    });
+
     await LiveStream.updateMany(
       { hostId: req.user._id, isLive: true },
       { $set: { isLive: false, endedAt: new Date(), viewerCount: 0 } }
@@ -122,7 +129,7 @@ router.post('/create', auth, async (req, res) => {
       title,
       thumbnail: req.body?.thumbnail || req.user.profileImage || '',
       community: req.body?.community || '',
-      agoraChannel: `yenkasa_live_${req.user._id}_${Date.now()}`,
+      agoraChannel,
       hostRole: permission.role || 'senior_developer',
       maxDurationMinutes: permission.maxDurationMinutes,
       scheduledEndAt: permission.maxDurationMinutes
@@ -130,12 +137,6 @@ router.post('/create', auth, async (req, res) => {
         : null,
       isLive: true,
       viewerCount: 0
-    });
-
-    const agora = generateRtcToken({
-      channelName: stream.agoraChannel,
-      userId: req.user._id,
-      role: 'broadcaster'
     });
 
     global.io?.emit('live_started', { stream: serializeStream(stream) });

@@ -11,7 +11,7 @@
         android:id="@+id/textUsername"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Username"
+        android:text="@string/username_placeholder"
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="#000000"
@@ -22,7 +22,7 @@
         android:id="@+id/textCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Caption here"
+        android:text="@string/caption_placeholder"
         android:textSize="14sp"
         android:textColor="#333333"
         android:paddingBottom="16dp"/>
@@ -35,7 +35,7 @@
         android:scaleType="fitCenter"
         android:adjustViewBounds="true"
         android:visibility="gone"
-        android:contentDescription="Post image"/>
+        android:contentDescription="@string/post_image_content_description"/>
 
     <!-- Video -->
     <FrameLayout
@@ -54,7 +54,8 @@
             android:layout_height="48dp"
             android:layout_gravity="center"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_play"/>
+            android:src="@drawable/ic_play"
+            android:contentDescription="@string/play_or_pause_video"/>
 
         <ImageButton
             android:id="@+id/videoMuteBtn"
@@ -63,7 +64,8 @@
             android:layout_gravity="end|bottom"
             android:layout_margin="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_volume_up"/>
+            android:src="@drawable/ic_volume_up"
+            android:contentDescription="@string/mute_or_unmute"/>
     </FrameLayout>
 
     <LinearLayout
@@ -78,7 +80,7 @@
             android:id="@+id/audioTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Audio"
+            android:text="@string/audio"
             android:textSize="16sp"
             android:textColor="#000000"/>
 
@@ -104,7 +106,7 @@
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_play_arrow"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Play audio"/>
+                android:contentDescription="@string/play_audio"/>
 
             <ImageButton
                 android:id="@+id/audioPauseBtn"
@@ -112,21 +114,21 @@
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_pause"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Pause audio"
+                android:contentDescription="@string/pause_audio"
                 android:paddingStart="8dp"/>
 
             <TextView
                 android:id="@+id/audioCurrentTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0:00"
+                android:text="@string/time_zero"
                 android:layout_marginStart="16dp"/>
 
             <TextView
                 android:id="@+id/audioTotalTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0:00"
+                android:text="@string/time_zero"
                 android:layout_marginStart="8dp"/>
         </LinearLayout>
     </LinearLayout>
@@ -145,7 +147,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_heart_outline"
-            android:contentDescription="Like"
+            android:contentDescription="@string/like"
             android:background="?attr/selectableItemBackgroundBorderless"
             app:tint="@color/yenkasa_emerald"/>
 
@@ -153,7 +155,7 @@
             android:id="@+id/textLikeCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
+            android:text="@string/zero"
             android:textColor="#333333"
             android:layout_marginEnd="16dp"/>
 
@@ -162,14 +164,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_comment"
-            android:contentDescription="Comment"
+            android:contentDescription="@string/comment"
             android:background="?attr/selectableItemBackgroundBorderless"/>
 
         <TextView
             android:id="@+id/textCommentCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
+            android:text="@string/zero"
             android:textColor="#333333"
             android:layout_marginEnd="16dp"/>
 
@@ -178,14 +180,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_coin"
-            android:contentDescription="Reward post"
+            android:contentDescription="@string/reward_post"
             android:background="?attr/selectableItemBackgroundBorderless"/>
 
         <TextView
             android:id="@+id/textRewardValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
+            android:text="@string/zero"
             android:textColor="#FFA500"/>
     </LinearLayout>
 

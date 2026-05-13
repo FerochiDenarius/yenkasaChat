@@ -36,9 +36,12 @@ class LiveStreamAdapter(
 
         fun bind(stream: LiveStream) {
             title.text = stream.title
-            host.text = "@${stream.hostUsername}"
-            meta.text = "${stream.viewerCount} watching" +
-                if (stream.community.isNotBlank()) " • ${stream.community}" else ""
+            host.text = itemView.context.getString(R.string.live_host_handle, stream.hostUsername)
+            meta.text = if (stream.community.isNotBlank()) {
+                itemView.context.getString(R.string.live_stream_meta_with_community, stream.viewerCount, stream.community)
+            } else {
+                itemView.context.getString(R.string.live_stream_meta, stream.viewerCount)
+            }
 
             val image = stream.thumbnail.ifBlank { stream.hostAvatar }
             Glide.with(itemView)

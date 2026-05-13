@@ -28,7 +28,7 @@ class YenkasaSearchBarView @JvmOverloads constructor(
 
     private val searchInput = EditText(context).apply {
         background = null
-        hint = "Search Yenkasa"
+        hint = context.getString(R.string.search_yenkasa)
         setHintTextColor(0x99FFFFFF.toInt())
         setTextColor(ContextCompat.getColor(context, android.R.color.white))
         textSize = 13f

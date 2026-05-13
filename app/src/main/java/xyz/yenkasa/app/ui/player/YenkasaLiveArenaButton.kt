@@ -34,14 +34,14 @@ class YenkasaLiveArenaButton @JvmOverloads constructor(
             layoutParams = LayoutParams(dp(15), dp(15))
         })
         addView(TextView(context).apply {
-            text = "Arena"
+            text = context.getString(R.string.arena)
             gravity = Gravity.CENTER
             setTextColor(ContextCompat.getColor(context, R.color.white))
             textSize = 9f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
         addView(TextView(context).apply {
-            text = "LIVE"
+            text = context.getString(R.string.live_caps)
             gravity = Gravity.CENTER
             background = ContextCompat.getDrawable(context, R.drawable.bg_yenkasa_live_badge)
             setTextColor(ContextCompat.getColor(context, R.color.white))

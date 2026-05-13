@@ -28,7 +28,7 @@ class YenkasaSponsoredAdButton @JvmOverloads constructor(
         })
 
         addView(TextView(context).apply {
-            text = "Create Sponsored Ad"
+            text = context.getString(R.string.create_sponsored_ad)
             setTextColor(ContextCompat.getColor(context, android.R.color.white))
             textSize = 11f
             setTypeface(typeface, android.graphics.Typeface.BOLD)

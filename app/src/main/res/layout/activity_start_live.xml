@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Yenkasa Live Stream"
+        android:text="@string/yenkasa_live_stream"
         android:textColor="@android:color/white"
         android:textSize="24sp"
         android:textStyle="bold" />
@@ -19,7 +19,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="Start a normal one-host livestream."
+        android:text="@string/start_one_host_livestream"
         android:textColor="#B8FFFFFF"
         android:textSize="14sp" />
 
@@ -29,7 +29,7 @@
         android:layout_height="54dp"
         android:layout_marginTop="28dp"
         android:background="@drawable/bg_live_comment"
-        android:hint="Live title"
+        android:hint="@string/live_title_hint"
         android:inputType="textCapSentences"
         android:maxLength="120"
         android:paddingStart="16dp"
@@ -43,7 +43,7 @@
         android:layout_height="54dp"
         android:layout_marginTop="12dp"
         android:background="@drawable/bg_live_comment"
-        android:hint="Community (optional)"
+        android:hint="@string/live_community_optional_hint"
         android:inputType="textCapWords"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
@@ -56,7 +56,7 @@
         android:layout_height="54dp"
         android:layout_marginTop="22dp"
         android:backgroundTint="#EF233C"
-        android:text="Start Live"
+        android:text="@string/start_live"
         android:textColor="@android:color/white"
         android:textStyle="bold" />
 
@@ -66,7 +66,7 @@
         android:layout_height="50dp"
         android:layout_marginTop="10dp"
         android:backgroundTint="#263238"
-        android:text="Browse Live Streams"
+        android:text="@string/browse_live_streams"
         android:textColor="@android:color/white" />
 
     <ProgressBar

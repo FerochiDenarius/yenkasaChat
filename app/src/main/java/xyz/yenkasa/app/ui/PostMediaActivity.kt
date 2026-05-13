@@ -76,7 +76,7 @@ class PostMediaActivity : AppCompatActivity() {
         caption = intent.getStringExtra("CAPTION")
 
         // Set UI text
-        textUsername.text = username ?: "Unknown User"
+        textUsername.text = username ?: getString(R.string.unknown_user)
         textCaption.text = caption ?: ""
 
         // Load media
@@ -84,7 +84,7 @@ class PostMediaActivity : AppCompatActivity() {
             "image" -> showImage()
             "video" -> showVideo()
             "audio" -> showAudio()
-            else -> Toast.makeText(this, "Unknown media type", Toast.LENGTH_SHORT).show()
+            else -> Toast.makeText(this, R.string.unknown_media_type, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -146,7 +146,7 @@ class PostMediaActivity : AppCompatActivity() {
         }
 
         videoView.setOnErrorListener { _, what, extra ->
-            Toast.makeText(this, "Error playing video ($what, $extra)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.video_playback_error, what, extra), Toast.LENGTH_SHORT).show()
             true
         }
     }
@@ -162,7 +162,7 @@ class PostMediaActivity : AppCompatActivity() {
             audioPlayer!!.setDataSource(mediaUrl)
             audioPlayer!!.prepareAsync()
         } catch (e: Exception) {
-            Toast.makeText(this, "Audio load error", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.audio_load_error, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -170,7 +170,7 @@ class PostMediaActivity : AppCompatActivity() {
             isAudioPrepared = true
             audioSeekBar.max = mp.duration
             audioTotalTime.text = formatTime(mp.duration)
-            audioTitle.text = "Audio"
+            audioTitle.text = getString(R.string.audio)
 
             audioPlayBtn.visibility = View.VISIBLE
             audioPauseBtn.visibility = View.GONE

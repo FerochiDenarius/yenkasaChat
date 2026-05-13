@@ -90,12 +90,12 @@ class LiveStreamActivity : AppCompatActivity() {
             runOnUiThread {
                 remoteView?.let { videoContainer.removeView(it) }
                 remoteView = null
-                addComment("Host left the live")
+                addComment(getString(R.string.host_left_live))
             }
         }
 
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
-            runOnUiThread { addComment("You joined the live") }
+            runOnUiThread { addComment(getString(R.string.you_joined_live)) }
         }
     }
 
@@ -136,7 +136,11 @@ class LiveStreamActivity : AppCompatActivity() {
         reactionButton = findViewById(R.id.buttonLiveReaction)
         giftButton = findViewById(R.id.buttonLiveGift)
 
-        titleText.text = "${intent.getStringExtra(EXTRA_HOST).orEmpty()} • ${intent.getStringExtra(EXTRA_TITLE).orEmpty()}"
+        titleText.text = getString(
+            R.string.live_title_format,
+            intent.getStringExtra(EXTRA_HOST).orEmpty(),
+            intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        )
         hostControls.visibility = if (isHost) View.VISIBLE else View.GONE
         scheduledEndAtMillis = parseIsoMillis(intent.getStringExtra(EXTRA_SCHEDULED_END_AT))
         timerText.visibility = if (isHost && scheduledEndAtMillis > 0L) View.VISIBLE else View.GONE
@@ -195,16 +199,16 @@ class LiveStreamActivity : AppCompatActivity() {
         SocketManager.on("live_comment") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
-            val username = json.optString("username", "Viewer")
+            val username = json.optString("username", getString(R.string.viewer_fallback))
             val message = json.optString("message")
-            runOnUiThread { addComment("$username: $message") }
+            runOnUiThread { addComment(getString(R.string.live_comment_format, username, message)) }
         }
 
         SocketManager.on("live_join") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
-            val username = json.optString("username", "Viewer")
-            runOnUiThread { addComment("$username joined the live") }
+            val username = json.optString("username", getString(R.string.viewer_fallback))
+            runOnUiThread { addComment(getString(R.string.live_user_joined, username)) }
         }
 
         SocketManager.on("live_viewer_count") { data ->
@@ -222,11 +226,11 @@ class LiveStreamActivity : AppCompatActivity() {
         SocketManager.on("live_gift") { data ->
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
-            val username = json.optString("senderUsername", "Viewer")
+            val username = json.optString("senderUsername", getString(R.string.viewer_fallback))
             val emoji = json.optString("emoji", "❤️")
             val amount = json.optInt("amount", 0)
             runOnUiThread {
-                addComment("$username sent $emoji $amount YKC")
+                addComment(getString(R.string.live_user_sent_gift, username, emoji, amount))
                 animateReaction(emoji)
             }
         }
@@ -235,7 +239,7 @@ class LiveStreamActivity : AppCompatActivity() {
             val json = data.asJson() ?: return@on
             if (json.optString("streamId") != streamId) return@on
             runOnUiThread {
-                Toast.makeText(this, "Livestream ended.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.livestream_ended, Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
@@ -245,14 +249,14 @@ class LiveStreamActivity : AppCompatActivity() {
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: "Viewer")
+                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
         )
         joinedSocketRoom = true
     }
 
     private fun initializeAgora() {
         if (agoraAppId.isBlank() || channelName.isBlank() || agoraToken.isBlank()) {
-            Toast.makeText(this, "Livestream token is missing.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.livestream_token_missing, Toast.LENGTH_LONG).show()
             finish()
             return
         }
@@ -307,7 +311,7 @@ class LiveStreamActivity : AppCompatActivity() {
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: "Viewer")
+                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
                 .put("avatar", TokenManager.getProfilePicUrl(this).orEmpty())
                 .put("message", message)
         )
@@ -329,10 +333,10 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun showGiftSheet() {
         val gifts = listOf(
-            Triple("love", "❤️ Love", 5),
-            Triple("fire", "🔥 Fire", 10),
-            Triple("crown", "👑 Crown", 50),
-            Triple("rocket", "🚀 Rocket", 100)
+            Triple("love", getString(R.string.gift_love), 5),
+            Triple("fire", getString(R.string.gift_fire), 10),
+            Triple("crown", getString(R.string.gift_crown), 50),
+            Triple("rocket", getString(R.string.gift_rocket), 100)
         )
         val dialog = BottomSheetDialog(this)
         val sheet = LinearLayout(this).apply {
@@ -341,20 +345,20 @@ class LiveStreamActivity : AppCompatActivity() {
             setBackgroundColor(Color.rgb(18, 18, 18))
         }
         sheet.addView(TextView(this).apply {
-            text = "Send YKC Gift"
+            text = getString(R.string.send_ykc_gift)
             setTextColor(Color.WHITE)
             textSize = 18f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
         sheet.addView(TextView(this).apply {
-            text = "Balance: ${TokenManager.getCoinsPrecise(this@LiveStreamActivity)} YKC"
+            text = getString(R.string.ykc_balance_format, TokenManager.getCoinsPrecise(this@LiveStreamActivity))
             setTextColor(Color.LTGRAY)
             textSize = 13f
             setPadding(0, dp(4), 0, dp(10))
         })
         gifts.forEach { (key, label, amount) ->
             sheet.addView(Button(this).apply {
-                text = "$label • $amount YKC"
+                text = getString(R.string.gift_option_format, label, amount)
                 setTextColor(Color.WHITE)
                 setBackgroundColor(Color.rgb(0, 132, 61))
                 setOnClickListener {
@@ -373,12 +377,12 @@ class LiveStreamActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<LiveGiftResponse>, response: Response<LiveGiftResponse>) {
                     val body = response.body()
                     if (!response.isSuccessful || body?.success != true) {
-                        Toast.makeText(this@LiveStreamActivity, body?.message ?: "Gift failed.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@LiveStreamActivity, body?.message ?: getString(R.string.gift_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<LiveGiftResponse>, t: Throwable) {
-                    Toast.makeText(this@LiveStreamActivity, "Network error sending gift.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LiveStreamActivity, R.string.network_error_sending_gift, Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -398,7 +402,7 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun updateViewerCount(count: Int) {
-        viewerText.text = "${count.coerceAtLeast(0)} watching"
+        viewerText.text = getString(R.string.live_viewers_count, count.coerceAtLeast(0))
     }
 
     private fun animateReaction(reaction: String) {
@@ -424,13 +428,17 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun updateTimer() {
         val remaining = scheduledEndAtMillis - System.currentTimeMillis()
         if (remaining <= 0L) {
-            timerText.text = "Ending..."
+            timerText.text = getString(R.string.ending_ellipsis)
             timerText.setTextColor(Color.RED)
             return
         }
         val minutes = remaining / 60_000L
         val seconds = (remaining / 1_000L) % 60L
-        timerText.text = if (minutes > 0) "${minutes}m remaining" else "${seconds}s remaining"
+        timerText.text = if (minutes > 0) {
+            getString(R.string.minutes_remaining, minutes)
+        } else {
+            getString(R.string.seconds_remaining, seconds)
+        }
         timerText.setTextColor(if (remaining <= 120_000L) Color.RED else Color.WHITE)
     }
 
@@ -445,7 +453,7 @@ class LiveStreamActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
-                Toast.makeText(this@LiveStreamActivity, "Could not end live cleanly.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@LiveStreamActivity, R.string.could_not_end_live_cleanly, Toast.LENGTH_SHORT).show()
                 finish()
             }
         })

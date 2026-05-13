@@ -359,6 +359,14 @@
     <string name="failed_to_parse_comment_response">An kasa karanta amsar sharhi</string>
     <string name="failed_to_post_comment">An kasa wallafa sharhi</string>
     <string name="failed_to_update_like">An kasa sabunta so</string>
+    <string name="caption_placeholder">Bayanan hoto a nan</string>
+    <string name="reward_post">Ba wallafa lada</string>
+    <string name="unknown_media_type">Nau’in media da ba a sani ba</string>
+    <string name="video_playback_error">Kuskuren kunna bidiyo (%1$d, %2$d)</string>
+    <string name="audio_load_error">Kuskuren loda sauti</string>
+    <string name="sample_post_caption">Wannan misalin bayanin wallafa ne.</string>
+    <string name="views_zero">👁️ 0</string>
+    <string name="likes_zero">❤️ 0</string>
     <string name="share">Raba</string>
     <string name="post_image_content_description">Hoton wallafa</string>
     <string name="delete_post">Goge wallafa</string>
@@ -468,6 +476,10 @@
     <string name="open_live_arena">Buɗe Filin Live Arena</string>
     <string name="start_livestream">Fara livestream</string>
     <string name="open_creator_profile">Buɗe bayanin mahalicci</string>
+    <string name="arena">Filin wasa</string>
+    <string name="live_caps">LIVE</string>
+    <string name="search_yenkasa">Nemo a Yenkasa</string>
+    <string name="hide_more_actions">Ɓoye ƙarin ayyuka</string>
     <plurals name="likes_count">
         <item quantity="one">%d so</item>
         <item quantity="other">%d so</item>
@@ -492,4 +504,24 @@
         <item quantity="one">mamba %d</item>
         <item quantity="other">mambobi %d</item>
     </plurals>
+    <string name="emoji">Emoji</string>
+    <string name="stickers">Stickers</string>
+    <string name="receiver_profile_picture">Hoton bayanin mai karɓa</string>
+    <string name="online_status_indicator">Alamar kasancewa online</string>
+    <string name="video_call">Kiran bidiyo</string>
+    <string name="call">Kira</string>
+    <string name="selected_media_preview">Samfurin media da aka zaɓa</string>
+    <string name="tap_send_when_ready">Taɓa aika idan ya shirya</string>
+    <string name="remove_selected_media">Cire media da aka zaɓa</string>
+    <string name="attach">Haɗa</string>
+    <string name="type_message_hint">Rubuta saƙo...</string>
+    <string name="record_audio">Yi rikodin sauti</string>
+    <string name="send_message">Aika saƙo</string>
+    <string name="attach_image">Haɗa hoto</string>
+    <string name="attach_video">Haɗa bidiyo</string>
+    <string name="attach_camera">Haɗa kamera</string>
+    <string name="attach_file">Haɗa fayil</string>
+    <string name="attach_location">Haɗa wuri</string>
+    <string name="attach_contact">Haɗa lamba</string>
+    <string name="live_service_temporarily_unavailable">Sabis ɗin Live baya aiki na ɗan lokaci. Sake gwadawa bayan ƴan mintuna.</string>
 </resources>

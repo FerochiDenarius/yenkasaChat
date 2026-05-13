@@ -141,6 +141,9 @@ const chatLaughReactionCooldowns = new Map();
 const CHAT_LAUGH_REACTION_COOLDOWN_MS = Number(process.env.CHAT_LAUGH_REACTION_COOLDOWN_MS || 2500);
 const liveHostDisconnectTimers = new Map();
 const LIVE_HOST_DISCONNECT_GRACE_MS = Number(process.env.LIVESTREAM_HOST_DISCONNECT_GRACE_MS || 45000);
+const liveEventDedupe = new Map();
+const LIVE_EVENT_DEDUPE_TTL_MS = Number(process.env.LIVESTREAM_EVENT_DEDUPE_TTL_MS || 30000);
+const liveParticipants = new Map();
 
 function getLiveRoom(streamId) {
   return `livestream_${streamId}`;
@@ -150,13 +153,57 @@ function getLegacyLiveRoom(streamId) {
   return `live:${streamId}`;
 }
 
+function getLiveParticipantSet(streamId) {
+  const normalizedStreamId = streamId?.toString();
+  if (!normalizedStreamId) return new Set();
+  if (!liveParticipants.has(normalizedStreamId)) {
+    liveParticipants.set(normalizedStreamId, new Set());
+  }
+  return liveParticipants.get(normalizedStreamId);
+}
+
+function addLiveParticipant(streamId, userId) {
+  const normalizedUserId = userId?.toString();
+  if (!normalizedUserId) return;
+  getLiveParticipantSet(streamId).add(normalizedUserId);
+}
+
+function removeLiveParticipant(streamId, userId) {
+  const normalizedStreamId = streamId?.toString();
+  const normalizedUserId = userId?.toString();
+  if (!normalizedStreamId || !normalizedUserId || !liveParticipants.has(normalizedStreamId)) return;
+
+  const participants = liveParticipants.get(normalizedStreamId);
+  participants.delete(normalizedUserId);
+  if (participants.size === 0) {
+    liveParticipants.delete(normalizedStreamId);
+  }
+}
+
+function clearLiveParticipants(streamId) {
+  const normalizedStreamId = streamId?.toString();
+  if (!normalizedStreamId) return;
+  liveParticipants.delete(normalizedStreamId);
+}
+global.clearLiveParticipantsForStream = clearLiveParticipants;
+
+function getLiveTargetRooms(streamId) {
+  return [
+    getLiveRoom(streamId),
+    getLegacyLiveRoom(streamId),
+    ...Array.from(getLiveParticipantSet(streamId))
+  ];
+}
+
 function emitToLiveRoom(streamId, eventName, payload) {
-  io.to(getLiveRoom(streamId)).to(getLegacyLiveRoom(streamId)).emit(eventName, payload);
+  io.to(getLiveTargetRooms(streamId)).emit(eventName, payload);
 }
 
 function getLiveRoomMemberCount(streamId) {
   const room = io.sockets.adapter.rooms.get(getLiveRoom(streamId));
-  return room?.size || 0;
+  const roomCount = room?.size || 0;
+  const participantCount = liveParticipants.get(streamId?.toString())?.size || 0;
+  return Math.max(roomCount, participantCount);
 }
 
 function emitLiveRoomMemberCount(streamId) {
@@ -167,6 +214,18 @@ function emitLiveRoomMemberCount(streamId) {
   emitToLiveRoom(streamId, 'livestream_viewer_count', payload);
   emitToLiveRoom(streamId, 'live_viewer_count', payload);
   return payload.viewerCount;
+}
+
+function shouldSkipDuplicateLiveEvent(eventName, payload = {}) {
+  const clientEventId = payload.clientEventId?.toString?.();
+  if (!clientEventId) return false;
+
+  const key = `${eventName}:${clientEventId}`;
+  if (liveEventDedupe.has(key)) return true;
+
+  liveEventDedupe.set(key, Date.now());
+  setTimeout(() => liveEventDedupe.delete(key), LIVE_EVENT_DEDUPE_TTL_MS);
+  return false;
 }
 
 function joinLiveRooms(socket, streamId) {
@@ -247,6 +306,7 @@ async function endLiveStreamForHostDrop(streamId, socketId) {
   emitToLiveRoom(streamId, 'live_ended', endedEvent);
   io.emit('livestream_removed', endedEvent);
   io.emit('live_removed', endedEvent);
+  clearLiveParticipants(streamId);
   console.log(`📺 Livestream ${streamId} ended after host socket ${socketId} disconnected.`);
 }
 
@@ -508,6 +568,7 @@ io.on('connection', (socket) => {
       clearLiveHostDisconnectTimer(streamId);
       joinLiveRooms(socket, streamId);
       socket.data.hostLiveStreams.add(streamId);
+      addLiveParticipant(streamId, userId);
 
       const startedEvent = { stream: serializeLiveStream(stream) };
       io.emit('livestream_started', startedEvent);
@@ -557,13 +618,20 @@ io.on('connection', (socket) => {
     try {
       const streamId = payload.streamId?.toString();
       if (!streamId || socket.data.liveStreams.has(streamId)) return;
+      if (socket.data.hostLiveStreams.has(streamId)) {
+        joinLiveRooms(socket, streamId);
+        emitLiveRoomMemberCount(streamId);
+        return;
+      }
 
       joinLiveRooms(socket, streamId);
       socket.data.liveStreams.add(streamId);
+      addLiveParticipant(streamId, socket.data.userId || payload.userId);
       const stream = await updateLiveViewerCount(streamId, 1);
       if (!stream) {
         leaveLiveRooms(socket, streamId);
         socket.data.liveStreams.delete(streamId);
+        removeLiveParticipant(streamId, socket.data.userId || payload.userId);
         return;
       }
 
@@ -601,6 +669,7 @@ io.on('connection', (socket) => {
       emitToLiveRoom(streamId, 'live_leave', event);
       socket.data.liveStreams.delete(streamId);
       socket.data.hostLiveStreams.delete(streamId);
+      removeLiveParticipant(streamId, socket.data.userId || payload.userId);
       leaveLiveRooms(socket, streamId);
       if (isAudienceParticipant) {
         await updateLiveViewerCount(streamId, -1);
@@ -619,12 +688,14 @@ io.on('connection', (socket) => {
     const streamId = payload.streamId?.toString();
     const message = payload.message?.toString?.().trim();
     if (!streamId || !message) return;
+    if (shouldSkipDuplicateLiveEvent('comment', payload)) return;
     const event = {
       streamId,
       userId: socket.data.userId || payload.userId || '',
       username: payload.username || 'Viewer',
       avatar: payload.avatar || '',
       message: message.slice(0, 240),
+      clientEventId: payload.clientEventId || '',
       createdAt: new Date().toISOString()
     };
     emitToLiveRoom(streamId, 'livestream_comment', event);
@@ -638,12 +709,14 @@ io.on('connection', (socket) => {
   const handleLiveReaction = (payload = {}) => {
     const streamId = payload.streamId?.toString();
     if (!streamId) return;
+    if (shouldSkipDuplicateLiveEvent('reaction', payload)) return;
     const event = {
       streamId,
       userId: socket.data.userId || payload.userId || '',
       username: payload.username || 'Viewer',
       reaction: payload.reaction || '🔥',
       type: payload.type || payload.reaction || '🔥',
+      clientEventId: payload.clientEventId || '',
       createdAt: new Date().toISOString()
     };
     emitToLiveRoom(streamId, 'livestream_reaction', event);
@@ -661,6 +734,7 @@ io.on('connection', (socket) => {
 
       if (socket.data.hostLiveStreams?.size) {
         for (const streamId of Array.from(socket.data.hostLiveStreams)) {
+          removeLiveParticipant(streamId, socket.data.userId);
           clearLiveHostDisconnectTimer(streamId);
           const timer = setTimeout(() => {
             liveHostDisconnectTimers.delete(streamId);
@@ -675,7 +749,10 @@ io.on('connection', (socket) => {
 
       if (socket.data.liveStreams?.size) {
         await Promise.allSettled(
-          Array.from(socket.data.liveStreams).map((streamId) => updateLiveViewerCount(streamId, -1))
+          Array.from(socket.data.liveStreams).map((streamId) => {
+            removeLiveParticipant(streamId, socket.data.userId);
+            return updateLiveViewerCount(streamId, -1);
+          })
         );
         socket.data.liveStreams.clear();
       }

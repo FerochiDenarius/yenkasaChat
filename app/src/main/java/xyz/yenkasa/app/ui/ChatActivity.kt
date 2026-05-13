@@ -1623,7 +1623,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         showLaughReactionAnimation()
         chatMessageHandler.sendMessage(
             mapOf(
-                "text" to getString(R.string.laugh_reaction_emoji),
+                "text" to LAUGH_REACTION_TEXT_MARKER,
                 "messageType" to LAUGH_REACTION_MESSAGE_TYPE
             )
         )
@@ -1750,7 +1750,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun ChatMessage.isLaughReaction(): Boolean {
-        return messageType == LAUGH_REACTION_MESSAGE_TYPE
+        return messageType == LAUGH_REACTION_MESSAGE_TYPE || text == LAUGH_REACTION_TEXT_MARKER
     }
 
     private fun upsertRealtimeMessage(message: ChatMessage) {
@@ -2478,6 +2478,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         private const val KEY_SAVED_STICKERS = "saved_sticker_uris"
         private const val MAX_SAVED_STICKERS = 36
         private const val LAUGH_REACTION_MESSAGE_TYPE = "laugh_reaction"
+        private const val LAUGH_REACTION_TEXT_MARKER = "__YK_LAUGH_REACTION__"
         private const val CHAT_SOUND_PREFS = "chat_sound_settings"
         private const val KEY_IN_CHAT_MESSAGE_SOUNDS_ENABLED = "in_chat_message_sounds_enabled"
         private const val KEY_REACTION_SOUNDS_ENABLED = "reaction_sounds_enabled"

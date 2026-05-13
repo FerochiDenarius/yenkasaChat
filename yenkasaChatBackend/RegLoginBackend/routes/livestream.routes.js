@@ -116,6 +116,7 @@ function scheduleAutoEnd(stream) {
     emitToLiveRoom(streamId, 'live_ended', endedEvent);
     emitLiveDirectory('livestream_removed', { streamId, reason: 'time_limit' });
     emitLiveDirectory('live_removed', { streamId, reason: 'time_limit' });
+    global.clearLiveParticipantsForStream?.(streamId);
     logLiveEvent('auto_end', activeStream, { reason: 'time_limit' });
   }, delay);
 
@@ -159,6 +160,7 @@ async function failStartingStream(streamId, reason = 'startup_timeout') {
   const removedEvent = { streamId: stream._id.toString(), reason };
   emitLiveDirectory('livestream_removed', removedEvent);
   emitLiveDirectory('live_removed', removedEvent);
+  global.clearLiveParticipantsForStream?.(stream._id.toString());
   logLiveEvent('startup_failed', stream, { reason });
   return stream;
 }
@@ -382,6 +384,7 @@ router.post('/end/:id', auth, async (req, res) => {
     emitToLiveRoom(stream._id, 'live_ended', endedEvent);
     emitLiveDirectory('livestream_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
     emitLiveDirectory('live_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
+    global.clearLiveParticipantsForStream?.(stream._id.toString());
     logLiveEvent('end', stream, { reason: 'host_ended' });
 
     return res.json({ success: true, stream: serializeStream(stream) });

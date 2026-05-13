@@ -136,8 +136,8 @@ class MessageAdapter(
                 fileUrl = message.fileUrl
             )
 
-            if (message.messageType == "laugh_reaction") {
-                messageText.text = message.text ?: "😂"
+            if (message.isLaughReaction()) {
+                messageText.text = "😂"
                 messageText.textSize = 26f
                 messageText.visibility = View.VISIBLE
                 chatMediaView.release()
@@ -324,6 +324,10 @@ class MessageAdapter(
                 receiverName.isNotBlank() -> receiverName
                 else -> ""
             }
+        }
+
+        private fun ChatMessage.isLaughReaction(): Boolean {
+            return messageType == "laugh_reaction" || text == "__YK_LAUGH_REACTION__"
         }
 
         protected fun formatTime(milliseconds: Int): String {

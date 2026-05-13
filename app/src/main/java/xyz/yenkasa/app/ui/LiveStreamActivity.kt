@@ -44,6 +44,7 @@ import xyz.yenkasa.app.util.TokenManager
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 
 class LiveStreamActivity : AppCompatActivity() {
 
@@ -323,14 +324,21 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun emitLiveJoin(force: Boolean = false) {
         if (joinedSocketRoom && !force) return
         val userId = TokenManager.getUserId(this)
-        SocketManager.emit(
-            "send_livestream_join",
-            JSONObject()
-                .put("streamId", streamId)
-                .put("userId", userId.orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
-        )
+        val payload = JSONObject()
+            .put("streamId", streamId)
+            .put("userId", userId.orEmpty())
+            .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+            .put("clientEventId", liveClientEventId("join"))
+        emitLiveSocketEvent("send_livestream_join", "livestream_join", payload)
         joinedSocketRoom = true
+    }
+
+    private fun emitLiveSocketEvent(sendEvent: String, legacyEvent: String, payload: JSONObject) {
+        SocketManager.emit(sendEvent, payload)
+        SocketManager.emit(
+            legacyEvent,
+            JSONObject(payload.toString())
+        )
     }
 
     private fun emitHostReady(force: Boolean = false) {
@@ -342,6 +350,14 @@ class LiveStreamActivity : AppCompatActivity() {
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
                 .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+        )
+        SocketManager.emit(
+            "livestream_join",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", userId.orEmpty())
+                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+                .put("clientEventId", liveClientEventId("host_join"))
         )
         hostReadyEmitted = true
         joinedSocketRoom = true
@@ -412,29 +428,27 @@ class LiveStreamActivity : AppCompatActivity() {
         val message = commentInput.text.toString().trim()
         if (message.isBlank()) return
         commentInput.text?.clear()
-        SocketManager.emit(
-            "send_livestream_comment",
-            JSONObject()
-                .put("streamId", streamId)
-                .put("userId", TokenManager.getUserId(this).orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
-                .put("avatar", TokenManager.getProfilePicUrl(this).orEmpty())
-                .put("message", message)
-        )
+        val payload = JSONObject()
+            .put("streamId", streamId)
+            .put("userId", TokenManager.getUserId(this).orEmpty())
+            .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+            .put("avatar", TokenManager.getProfilePicUrl(this).orEmpty())
+            .put("message", message)
+            .put("clientEventId", liveClientEventId("comment"))
+        emitLiveSocketEvent("send_livestream_comment", "livestream_comment", payload)
     }
 
     private fun sendReaction(reaction: String) {
         val now = System.currentTimeMillis()
         if (now - lastReactionAt < 700L) return
         lastReactionAt = now
-        SocketManager.emit(
-            "send_livestream_reaction",
-            JSONObject()
-                .put("streamId", streamId)
-                .put("userId", TokenManager.getUserId(this).orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
-                .put("reaction", reaction)
-        )
+        val payload = JSONObject()
+            .put("streamId", streamId)
+            .put("userId", TokenManager.getUserId(this).orEmpty())
+            .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+            .put("reaction", reaction)
+            .put("clientEventId", liveClientEventId("reaction"))
+        emitLiveSocketEvent("send_livestream_reaction", "livestream_reaction", payload)
     }
 
     private fun showGiftSheet() {
@@ -631,13 +645,12 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun leaveLive() {
         hostHeartbeatHandler.removeCallbacks(hostHeartbeatRunnable)
         if (joinedSocketRoom) {
-            SocketManager.emit(
-                "send_livestream_leave",
-                JSONObject()
-                    .put("streamId", streamId)
-                    .put("userId", TokenManager.getUserId(this).orEmpty())
-                    .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
-            )
+            val payload = JSONObject()
+                .put("streamId", streamId)
+                .put("userId", TokenManager.getUserId(this).orEmpty())
+                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+                .put("clientEventId", liveClientEventId("leave"))
+            emitLiveSocketEvent("send_livestream_leave", "livestream_leave", payload)
             joinedSocketRoom = false
         }
         if (isHost && !hostReadyEmitted && !endRequestSent) {
@@ -688,6 +701,10 @@ class LiveStreamActivity : AppCompatActivity() {
                 timeZone = TimeZone.getTimeZone("UTC")
             }.parse(value)?.time ?: 0L
         }.getOrDefault(0L)
+    }
+
+    private fun liveClientEventId(type: String): String {
+        return "$streamId:$type:${UUID.randomUUID()}"
     }
 
     companion object {

@@ -20,6 +20,8 @@ import xyz.yenkasa.app.model.LiveStream
 import xyz.yenkasa.app.model.LiveStreamResponse
 import xyz.yenkasa.app.model.LiveStreamsResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UserPermissions
 
 class LiveStreamsFragment : Fragment() {
 
@@ -33,6 +35,12 @@ class LiveStreamsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         adapter = LiveStreamAdapter { joinStream(it) }
         emptyText = view.findViewById(R.id.textLiveEmpty)
+        val startLiveButton = view.findViewById<View>(R.id.buttonStartLiveFromDiscovery)
+        val canStartLive = UserPermissions.canStartLivestream(TokenManager.getUserRole(requireContext()))
+        startLiveButton.visibility = if (canStartLive) View.VISIBLE else View.GONE
+        startLiveButton.setOnClickListener {
+            startActivity(Intent(requireContext(), StartLiveActivity::class.java))
+        }
         view.findViewById<RecyclerView>(R.id.recyclerLiveStreams).apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@LiveStreamsFragment.adapter

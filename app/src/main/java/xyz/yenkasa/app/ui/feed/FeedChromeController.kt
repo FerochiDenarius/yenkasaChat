@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.ui.CoinWalletActivity
+import xyz.yenkasa.app.ui.LiveStreamsActivity
 import xyz.yenkasa.app.ui.PostActivity
 import xyz.yenkasa.app.ui.YenkasaLiveSheetController
 import xyz.yenkasa.app.util.TokenManager
@@ -126,8 +127,9 @@ class FeedChromeController(
                     ).show()
                 }
             }
-        }.also { controller ->
-            controller.attach(fab)
+        }
+        fab.setOnClickListener {
+            fragment.startActivity(Intent(fragment.requireContext(), LiveStreamsActivity::class.java))
         }
     }
 

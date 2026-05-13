@@ -40,7 +40,6 @@ import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
-import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.WalletBalanceManager
 import xyz.yenkasa.app.util.YenkasaMediaCache
@@ -105,7 +104,6 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private var saveSelected = false
     private var likeSelected = false
     private var overlaysVisible = true
-    private var liveStreamAllowed = false
     private var secondaryActionsExpanded = false
     private var imageIndex = 0
     private var touchDownX = 0f
@@ -412,7 +410,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         buttonExpandActions.contentDescription = context.getString(R.string.show_more_actions)
         moreOptionsButton.contentDescription = context.getString(R.string.more_post_options)
         liveArenaButton.contentDescription = context.getString(R.string.open_live_arena)
-        liveStreamButton.contentDescription = context.getString(R.string.start_livestream)
+        liveStreamButton.contentDescription = context.getString(R.string.browse_live_streams)
         avatarView.contentDescription = context.getString(R.string.open_creator_profile)
         usernameView.contentDescription = context.getString(R.string.open_creator_profile)
     }
@@ -600,7 +598,6 @@ class YenkasaPlayerView @JvmOverloads constructor(
         buttonExpandActions.contentDescription = context.getString(R.string.show_more_actions)
 
         walletPill.setBalance(item.walletBalance)
-        liveStreamAllowed = UserPermissions.canStartLivestream(TokenManager.getUserRole(context))
         liveStreamButton.isVisible = true
         searchBar.reset()
         searchBar.setOnQueryChanged { query -> actions.onSearchQuery(query) }
@@ -840,7 +837,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         ).forEach { view ->
             view.animate().cancel()
             setOverlayInteractable(view, overlaysVisible)
-            view.isVisible = view != liveStreamButton || liveStreamAllowed
+            view.isVisible = true
             if (animate) {
                 if (overlaysVisible) {
                     view.animate().alpha(1f).setDuration(180L).start()

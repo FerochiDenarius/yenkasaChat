@@ -360,7 +360,7 @@ class FeedFragment : Fragment() {
             onReward = { startActivity(Intent(requireContext(), CoinWalletActivity::class.java)) },
             onMoreOptions = { post -> postActionsController.showPostOptionsBottomSheet(post) },
             onLiveArenaClick = { chromeController.showLiveSheet() },
-            onLiveStreamClick = { startActivity(Intent(requireContext(), StartLiveActivity::class.java)) },
+            onLiveStreamClick = { startActivity(Intent(requireContext(), LiveStreamsActivity::class.java)) },
             onCommunitySelected = { community -> selectPlayerCommunity(community) },
             onSeeAllCommunities = { openCommunitySelectorOrToast() },
             onFeedModeSelected = { mode -> selectPlayerFeedMode(mode) }

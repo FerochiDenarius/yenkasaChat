@@ -140,7 +140,7 @@
         android:layout_height="54dp"
         android:layout_marginEnd="22dp"
         android:layout_marginBottom="102dp"
-        android:contentDescription="Yenkasa Live"
+        android:contentDescription="@string/browse_live_streams"
         android:elevation="8dp"
         app:backgroundTint="@color/feed_action_background"
         app:borderWidth="0dp"

@@ -608,7 +608,8 @@
     <string name="live_comment_hint">Comment</string>
     <string name="send">Send</string>
     <string name="camera_mic_permissions_required">Camera and microphone permissions are required to go live.</string>
-    <string name="livestream_senior_developers_only">Livestreaming is currently available to senior developers only.</string>
+    <string name="livestream_senior_developers_only">Only Yenkasa staff can go live.</string>
+    <string name="livestream_staff_only_watch_allowed">Only Yenkasa staff can go live. You can still watch active livestreams.</string>
     <string name="enter_live_title">Enter a live title</string>
     <string name="could_not_start_live">Could not start live.</string>
     <string name="network_error_starting_live">Network error starting live: %1$s</string>

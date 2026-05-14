@@ -160,7 +160,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private data class ChatThemePreset(
         val key: String,
-        val label: String,
+        val labelRes: Int,
         val colors: IntArray?,
         val orientation: GradientDrawable.Orientation = GradientDrawable.Orientation.TL_BR,
         val solidColor: Int? = null,
@@ -170,78 +170,78 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private val chatThemePresets = listOf(
         ChatThemePreset(
             "default",
-            "Yenkasa default",
+            R.string.chat_theme_yenkasa_default,
             null
         ),
         ChatThemePreset(
             "africa_skyline_dark",
-            "Africa skyline dark",
+            R.string.chat_theme_africa_skyline_dark,
             null,
             drawableRes = R.drawable.chat_theme_africa_skyline_dark
         ),
         ChatThemePreset(
             "softotech_light",
-            "Soft-O-Tech light",
+            R.string.chat_theme_softotech_light,
             null,
             drawableRes = R.drawable.chat_theme_softotech_light
         ),
         ChatThemePreset(
             "yenkasa_cream",
-            "Yenkasa cream",
+            R.string.chat_theme_yenkasa_cream,
             null,
             drawableRes = R.drawable.chat_theme_yenkasa_cream
         ),
         ChatThemePreset(
             "africa_network_blue",
-            "Africa network blue",
+            R.string.chat_theme_africa_network_blue,
             null,
             drawableRes = R.drawable.chat_theme_africa_network_blue
         ),
         ChatThemePreset(
             "ykc_gold_dark",
-            "YKC gold dark",
+            R.string.chat_theme_ykc_gold_dark,
             null,
             drawableRes = R.drawable.chat_theme_ykc_gold_dark
         ),
         ChatThemePreset(
             "savanna_green",
-            "Savanna green",
+            R.string.chat_theme_savanna_green,
             null,
             drawableRes = R.drawable.chat_theme_savanna_green
         ),
         ChatThemePreset(
             "whatsapp_light",
-            "WhatsApp light",
+            R.string.chat_theme_whatsapp_light,
             intArrayOf(Color.parseColor("#EFE7DC"), Color.parseColor("#DDEEDB")),
             GradientDrawable.Orientation.TL_BR
         ),
         ChatThemePreset(
             "whatsapp_dark",
-            "WhatsApp dark",
+            R.string.chat_theme_whatsapp_dark,
             intArrayOf(Color.parseColor("#0B141A"), Color.parseColor("#1F2C34")),
             GradientDrawable.Orientation.TL_BR
         ),
         ChatThemePreset(
             "cool_mint",
-            "Cool mint",
+            R.string.chat_theme_cool_mint,
             intArrayOf(Color.parseColor("#D9F7E8"), Color.parseColor("#EAF8FF")),
             GradientDrawable.Orientation.TOP_BOTTOM
         ),
         ChatThemePreset(
             "ocean",
-            "Ocean",
+            R.string.chat_theme_ocean,
             intArrayOf(Color.parseColor("#D8F3F5"), Color.parseColor("#BFD7EA")),
             GradientDrawable.Orientation.TL_BR
         ),
         ChatThemePreset(
             "sunset",
-            "Sunset",
+            R.string.chat_theme_sunset,
             intArrayOf(Color.parseColor("#FDE2D2"), Color.parseColor("#F7D6E0")),
             GradientDrawable.Orientation.TL_BR
         ),
         ChatThemePreset(
             "graphite",
-            "Graphite",
+            R.string.chat_theme_graphite,
             intArrayOf(Color.parseColor("#202124"), Color.parseColor("#3C4043")),
             GradientDrawable.Orientation.TOP_BOTTOM
         )
@@ -274,11 +274,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         ChatBackgroundManager.saveBackgroundUri(this, uri)
         if (applyCustomChatBackground(uri)) {
-            Toast.makeText(this, "Chat background updated.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.chat_background_updated, Toast.LENGTH_SHORT).show()
         } else {
             ChatBackgroundManager.clearBackground(this)
             applyChatBackground("default")
-            Toast.makeText(this, "Could not use that image.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.chat_background_image_unusable, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -292,7 +292,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         saveStickerUri(uri)
-        Toast.makeText(this, "Sticker saved. Tap it to send.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.sticker_saved_tap_send, Toast.LENGTH_SHORT).show()
         showStickerTray()
     }
 
@@ -300,7 +300,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (success) {
             val imageUri = tempCameraUri
             if (imageUri == null) {
-                Toast.makeText(this, "Camera image was not saved. Try again.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, R.string.camera_image_not_saved_try_again, Toast.LENGTH_LONG).show()
             } else {
                 Log.d("ChatActivity", "Camera capture ready: $imageUri")
                 launchChatMediaPreview(
@@ -316,7 +316,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 )
             }
         } else {
-            Toast.makeText(this, "Photo cancelled.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.photo_cancelled, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -403,7 +403,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             messageActionHandler = MessageActionHandler(this, senderId, chatActivityHelper)
         } ?: run {
             Log.e("ChatActivity", "❌ roomId is null — cannot start chat properly.")
-            Toast.makeText(this, "Error loading chat", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.error_loading_chat, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -653,7 +653,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 val intent = Intent(this, AudioRecActivity::class.java)
                 audioRecLauncher.launch(intent)
             } else {
-                Toast.makeText(this, "Audio recording permission needed.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.audio_recording_permission_needed, Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -735,8 +735,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         isUploadingPendingMedia = false
 
         mediaPreviewLayout.visibility = View.VISIBLE
-        textMediaPreviewTitle.text = if (type == "video") "Video ready" else "Photo ready"
-        textMediaPreviewSubtitle.text = "Tap send when ready"
+        textMediaPreviewTitle.text = getString(if (type == "video") R.string.chat_media_video_ready else R.string.chat_media_photo_ready)
+        textMediaPreviewSubtitle.text = getString(R.string.chat_media_tap_send_when_ready)
         textMediaPreviewPlay.visibility = if (type == "video") View.VISIBLE else View.GONE
         Glide.with(imageMediaPreview)
             .load(uri)
@@ -766,7 +766,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (isUploadingPendingMedia) return
 
         isUploadingPendingMedia = true
-        textMediaPreviewSubtitle.text = "Uploading..."
+        textMediaPreviewSubtitle.text = getString(R.string.uploading)
         updateComposerActionButtons()
 
         val extraData = mutableMapOf<String, Any?>()
@@ -1028,14 +1028,14 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun confirmDeleteSticker(uri: Uri, onDeleted: () -> Unit) {
         AlertDialog.Builder(this)
-            .setTitle("Delete sticker?")
-            .setMessage("Remove this sticker from your saved stickers on this device.")
-            .setPositiveButton("Delete") { dialog, _ ->
+            .setTitle(R.string.delete_sticker_title)
+            .setMessage(R.string.delete_sticker_message)
+            .setPositiveButton(R.string.delete) { dialog, _ ->
                 removeStickerUri(uri)
                 dialog.dismiss()
                 onDeleted()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -1130,7 +1130,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             tempCameraUri?.let { cameraLauncher.launch(it) }
         } catch (ex: Exception) {
             Log.e("ChatActivity", "Error starting camera capture", ex)
-            Toast.makeText(this, "Could not start camera: ${ex.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.could_not_start_camera_with_error, ex.message.orEmpty()), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1144,17 +1144,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     private fun showChatOptionsMenu(anchorView: View) {
         val popup = PopupMenu(this, anchorView)
-        popup.menu.add(0, MENU_CHANGE_BACKGROUND, 0, "Change chat background")
-        popup.menu.add(0, MENU_VIEW_CONTACT, 1, if (isGroupChat) "View group profile" else "View contact")
+        popup.menu.add(0, MENU_CHANGE_BACKGROUND, 0, getString(R.string.change_chat_background))
+        popup.menu.add(0, MENU_VIEW_CONTACT, 1, getString(if (isGroupChat) R.string.view_group_profile else R.string.view_contact))
         if (isGroupChat) {
             if (currentGroupDetails?.let { canManageGroup(it) } == true) {
-                popup.menu.add(0, MENU_ADD_GROUP_MEMBERS, 2, "Add members")
-                popup.menu.add(0, MENU_DELETE_GROUP, 3, "Delete group")
+                popup.menu.add(0, MENU_ADD_GROUP_MEMBERS, 2, getString(R.string.add_members))
+                popup.menu.add(0, MENU_DELETE_GROUP, 3, getString(R.string.delete_group))
             }
-            popup.menu.add(0, MENU_LEAVE_GROUP, 4, "Leave group")
+            popup.menu.add(0, MENU_LEAVE_GROUP, 4, getString(R.string.leave_group))
         }
-        popup.menu.add(0, MENU_MUTE_NOTIFICATIONS, 5, "Mute notifications")
-        popup.menu.add(0, MENU_CLEAR_CHAT, 6, "Clear chat")
+        popup.menu.add(0, MENU_MUTE_NOTIFICATIONS, 5, getString(R.string.mute_notifications))
+        popup.menu.add(0, MENU_CLEAR_CHAT, 6, getString(R.string.clear_chat))
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -1179,11 +1179,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                     true
                 }
                 MENU_MUTE_NOTIFICATIONS -> {
-                    Toast.makeText(this, "Mute notifications will be added next.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.mute_notifications_coming, Toast.LENGTH_SHORT).show()
                     true
                 }
                 MENU_CLEAR_CHAT -> {
-                    Toast.makeText(this, "Clear chat will be added next.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.clear_chat_coming, Toast.LENGTH_SHORT).show()
                     true
                 }
                 else -> false
@@ -1195,7 +1195,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun openReceiverProfile() {
         val receiverId = receiverParticipant?._id
         if (receiverId.isNullOrBlank()) {
-            Toast.makeText(this, "User profile unavailable.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.user_profile_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -1207,8 +1207,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun showChatBackgroundPicker() {
-        val customImageLabel = "Choose picture from device"
-        val labels = listOf(customImageLabel) + chatThemePresets.map { it.label }
+        val customImageLabel = getString(R.string.choose_picture_from_device)
+        val labels = listOf(customImageLabel) + chatThemePresets.map { getString(it.labelRes) }
         val currentPreset = ChatBackgroundManager.getPreset(this) ?: "default"
         val checkedIndex = if (ChatBackgroundManager.getBackgroundUri(this) != null) {
             0
@@ -1219,7 +1219,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Change chat background")
+            .setTitle(R.string.change_chat_background)
             .setSingleChoiceItems(labels.toTypedArray(), checkedIndex) { dialog, which ->
                 if (which == 0) {
                     dialog.dismiss()
@@ -1236,7 +1236,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 applyChatBackground(selectedPreset.key)
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -1300,17 +1300,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         val currentUserId = TokenManager.getUserId(this)
 
         if (receiverId.isNullOrBlank() || currentUserId.isNullOrBlank()) {
-            Toast.makeText(this, "Missing user IDs.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.missing_user_ids, Toast.LENGTH_SHORT).show()
             return
         }
 
         if (isVideo && !checkAndRequestPermission(Manifest.permission.CAMERA)) {
-            Toast.makeText(this, "Camera permission required.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.camera_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
 
         if (!checkAndRequestPermission(Manifest.permission.RECORD_AUDIO)) {
-            Toast.makeText(this, "Microphone permission required.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.microphone_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -1868,9 +1868,9 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         replyingToMessage = message
         replyPreviewLayout.visibility = View.VISIBLE
 
-        val senderName = if (message.sender?._id == senderId) "You" else textViewReceiverName.text.toString()
-        textViewRepliedToName.text = "Replying to $senderName"
-        textViewRepliedToMessage.text = message.text ?: "Media message"
+        val senderName = if (message.sender?._id == senderId) getString(R.string.you) else textViewReceiverName.text.toString()
+        textViewRepliedToName.text = getString(R.string.replying_to, senderName)
+        textViewRepliedToMessage.text = message.text ?: getString(R.string.media_message)
 
         messageInput.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -1889,7 +1889,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         updateReceiverHeader(participant)
         onReceiverParticipantStatusUpdate(
             participant.resolvedOnline,
-            if (participant.resolvedOnline) "Online" else "Offline"
+            getString(if (participant.resolvedOnline) R.string.online else R.string.offline)
         )
         refreshReceiverPresence()
         SocketManager.requestOnlineUsers()
@@ -1915,7 +1915,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     override fun showDefaultReceiverHeader(defaultName: String?) {
-        textViewReceiverName.text = defaultName ?: "Chat"
+        textViewReceiverName.text = defaultName ?: getString(R.string.chat)
         if (::imageViewReceiverPicture.isInitialized) {
             val groupImage = intent.getStringExtra("groupImage").orEmpty()
             if (isGroupChat && groupImage.isNotBlank()) {
@@ -1930,7 +1930,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
         val memberCount = intent.getIntExtra("groupMemberCount", 0)
         textViewOnlineStatus.text = if (isGroupChat) {
-            if (memberCount > 0) "$memberCount members" else "Group chat"
+            if (memberCount > 0) resources.getQuantityString(R.plurals.members_count, memberCount, memberCount) else getString(R.string.group_chat)
         } else {
             ""
         }
@@ -1942,14 +1942,14 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         callButton.visibility = View.GONE
         videoCallButton.visibility = View.GONE
         imageViewStatusIndicator.visibility = View.GONE
-        textViewOnlineStatus.text = "Group chat"
+        textViewOnlineStatus.text = getString(R.string.group_chat)
         refreshGroupHeader()
     }
 
     private fun openGroupProfile() {
         val groupId = roomId
         if (groupId.isNullOrBlank()) {
-            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.group_details_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
         startActivity(Intent(this, GroupProfileActivity::class.java).apply {
@@ -1963,7 +1963,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun openGroupAddMembers() {
         val group = currentGroupDetails
         if (group == null) {
-            Toast.makeText(this, "Group details still loading", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.group_details_still_loading, Toast.LENGTH_SHORT).show()
             return
         }
         startActivity(Intent(this, GroupContactsSelectorActivity::class.java).apply {
@@ -1979,27 +1979,27 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun confirmLeaveGroup() {
         val groupId = roomId
         if (groupId.isNullOrBlank()) {
-            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.group_details_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Leave group?")
-            .setMessage("You will stop receiving messages from this group.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Leave") { _, _ ->
+            .setTitle(R.string.leave_group_title)
+            .setMessage(getString(R.string.leave_group_message, getString(R.string.this_group)))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.leave) { _, _ ->
                 ApiClient.apiService.leaveGroup(groupId).enqueue(object : Callback<GroupResponse> {
                     override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
                         if (!response.isSuccessful || response.body()?.success == false) {
-                            Toast.makeText(this@ChatActivity, response.body()?.message ?: "Could not leave group", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@ChatActivity, response.body()?.message ?: getString(R.string.could_not_leave_group), Toast.LENGTH_LONG).show()
                             return
                         }
-                        Toast.makeText(this@ChatActivity, "You left the group", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ChatActivity, R.string.you_left_group, Toast.LENGTH_SHORT).show()
                         finish()
                     }
 
                     override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
-                        Toast.makeText(this@ChatActivity, "Could not leave group: ${t.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ChatActivity, getString(R.string.could_not_leave_group_with_error, t.message.orEmpty()), Toast.LENGTH_LONG).show()
                     }
                 })
             }
@@ -2009,27 +2009,27 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun confirmDeleteGroup() {
         val groupId = roomId
         if (groupId.isNullOrBlank()) {
-            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.group_details_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Delete group?")
-            .setMessage("This deletes the group for all members. This cannot be undone.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Delete") { _, _ ->
+            .setTitle(R.string.delete_group_title)
+            .setMessage(getString(R.string.delete_group_message, getString(R.string.this_group)))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete) { _, _ ->
                 ApiClient.apiService.deleteGroup(groupId).enqueue(object : Callback<GroupResponse> {
                     override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
                         if (!response.isSuccessful || response.body()?.success == false) {
-                            Toast.makeText(this@ChatActivity, response.body()?.message ?: "Could not delete group", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@ChatActivity, response.body()?.message ?: getString(R.string.could_not_delete_group), Toast.LENGTH_LONG).show()
                             return
                         }
-                        Toast.makeText(this@ChatActivity, "Group deleted", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ChatActivity, R.string.group_deleted, Toast.LENGTH_SHORT).show()
                         finish()
                     }
 
                     override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
-                        Toast.makeText(this@ChatActivity, "Could not delete group: ${t.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ChatActivity, getString(R.string.could_not_delete_group_with_error, t.message.orEmpty()), Toast.LENGTH_LONG).show()
                     }
                 })
             }
@@ -2110,15 +2110,15 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun requestDeleteConfirmation(messageToDelete: ChatMessage) {
         AlertDialog.Builder(this)
-            .setTitle("Delete Message")
-            .setMessage("Are you sure you want to delete this message?\n\"${messageToDelete.text ?: "Media Message"}\"")
-            .setPositiveButton("Delete") { dialog, _ ->
+            .setTitle(R.string.delete_message_title)
+            .setMessage(getString(R.string.delete_message_confirmation, messageToDelete.text ?: getString(R.string.media_message)))
+            .setPositiveButton(R.string.delete) { dialog, _ ->
                 lifecycleScope.launch {
                     chatActivityHelper.confirmDeleteMessageOnServer(messageToDelete)
                 }
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
+            .setNegativeButton(R.string.cancel) { dialog, _ ->
                 dialog.dismiss()
             }
             .setCancelable(true)
@@ -2127,13 +2127,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun requestEditMessage(messageToEdit: ChatMessage, positionInAdapter: Int) {
         if (messageToEdit.sender?._id != senderId && messageToEdit.senderId != senderId) {
-            Toast.makeText(this, "You can only edit your own messages.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.edit_own_messages_only, Toast.LENGTH_SHORT).show()
             return
         }
 
         val currentText = messageToEdit.text.orEmpty()
         if (currentText.isBlank()) {
-            Toast.makeText(this, "Only text messages can be edited.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.only_text_messages_can_be_edited, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -2148,10 +2148,10 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Edit message")
+            .setTitle(R.string.edit_message_title)
             .setView(editText)
-            .setPositiveButton("Save", null)
-            .setNegativeButton("Cancel", null)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
             .create()
 
         dialog.setOnShowListener {
@@ -2159,7 +2159,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 val nextText = editText.text.toString().trim()
                 when {
                     nextText.isBlank() -> {
-                        Toast.makeText(this, "Message cannot be empty.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, R.string.message_cannot_be_empty, Toast.LENGTH_SHORT).show()
                     }
                     nextText == currentText -> dialog.dismiss()
                     else -> {
@@ -2183,17 +2183,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun requestForwardMessage(message: ChatMessage) {
         if (!hasForwardableContent(message)) {
-            Toast.makeText(this, "This message cannot be forwarded.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.message_cannot_be_forwarded, Toast.LENGTH_SHORT).show()
             return
         }
 
-        Toast.makeText(this, "Loading contacts...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.loading_contacts, Toast.LENGTH_SHORT).show()
         ApiClient.apiService.getContacts().enqueue(object : Callback<List<Contact>> {
             override fun onResponse(call: Call<List<Contact>>, response: Response<List<Contact>>) {
                 if (!response.isSuccessful) {
                     Toast.makeText(
                         this@ChatActivity,
-                        "Could not load contacts: ${parseError(response)}",
+                        getString(R.string.could_not_load_contacts_with_error, parseError(response)),
                         Toast.LENGTH_LONG
                     ).show()
                     return
@@ -2201,7 +2201,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
                 val contacts = response.body().orEmpty()
                 if (contacts.isEmpty()) {
-                    Toast.makeText(this@ChatActivity, "No contacts to forward to.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ChatActivity, R.string.no_contacts_to_forward_to, Toast.LENGTH_SHORT).show()
                     return
                 }
 
@@ -2209,7 +2209,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
 
             override fun onFailure(call: Call<List<Contact>>, t: Throwable) {
-                Toast.makeText(this@ChatActivity, "Could not load contacts: ${t.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@ChatActivity, getString(R.string.could_not_load_contacts_with_error, t.message.orEmpty()), Toast.LENGTH_LONG).show()
             }
         })
     }
@@ -2220,17 +2220,17 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("Forward to")
+            .setTitle(R.string.forward_to)
             .setItems(labels) { dialog, which ->
                 dialog.dismiss()
                 forwardMessageToContact(message, contacts[which])
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
     private fun forwardMessageToContact(message: ChatMessage, contact: Contact) {
-        Toast.makeText(this, "Forwarding to ${contact.username}...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.forwarding_to, contact.username), Toast.LENGTH_SHORT).show()
         ApiClient.apiService.createChatRoom(CreateChatRoomRequest(username = contact.username))
             .enqueue(object : Callback<CreateChatRoomResponse> {
                 override fun onResponse(
@@ -2241,7 +2241,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                     if (!response.isSuccessful || targetRoomId.isNullOrBlank()) {
                         Toast.makeText(
                             this@ChatActivity,
-                            "Could not open chat: ${response.body()?.message ?: parseError(response)}",
+                            getString(R.string.could_not_open_chat_with_error, response.body()?.message ?: parseError(response)),
                             Toast.LENGTH_LONG
                         ).show()
                         return
@@ -2251,7 +2251,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
                 }
 
                 override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
-                    Toast.makeText(this@ChatActivity, "Could not open chat: ${t.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ChatActivity, getString(R.string.could_not_open_chat_with_error, t.message.orEmpty()), Toast.LENGTH_LONG).show()
                 }
             })
     }
@@ -2259,25 +2259,25 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun sendForwardedMessage(message: ChatMessage, targetRoomId: String, targetName: String) {
         val payload = buildForwardPayload(message, targetRoomId).toMutableMap()
         if (payload.isEmpty()) {
-            Toast.makeText(this, "This message cannot be forwarded.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.message_cannot_be_forwarded, Toast.LENGTH_SHORT).show()
             return
         }
 
         ApiClient.apiService.sendMessage(payload).enqueue(object : Callback<ChatMessage> {
             override fun onResponse(call: Call<ChatMessage>, response: Response<ChatMessage>) {
                 if (response.isSuccessful) {
-                    Toast.makeText(this@ChatActivity, "Forwarded to $targetName", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ChatActivity, getString(R.string.forwarded_to, targetName), Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(
                         this@ChatActivity,
-                        "Forward failed: ${parseError(response)}",
+                        getString(R.string.forward_failed_with_error, parseError(response)),
                         Toast.LENGTH_LONG
                     ).show()
                 }
             }
 
             override fun onFailure(call: Call<ChatMessage>, t: Throwable) {
-                Toast.makeText(this@ChatActivity, "Forward failed: ${t.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@ChatActivity, getString(R.string.forward_failed_with_error, t.message.orEmpty()), Toast.LENGTH_LONG).show()
             }
         })
     }
@@ -2400,12 +2400,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
     override fun onUploadStarted(type: String) {
         val label = when (type) {
-            "image" -> "photo"
-            "audio" -> "audio"
-            "video" -> "video"
-            else -> "file"
+            "image" -> getString(R.string.upload_type_photo)
+            "audio" -> getString(R.string.upload_type_audio)
+            "video" -> getString(R.string.upload_type_video)
+            else -> getString(R.string.upload_type_file)
         }
-        Toast.makeText(this, "Uploading $label...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.uploading_type, label), Toast.LENGTH_SHORT).show()
     }
 
     override fun onMessageLongClicked(message: ChatMessage, itemView: View, position: Int): Boolean {
@@ -2421,13 +2421,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         isGroupChat = intent.getBooleanExtra("isGroupChat", false)
 
         if (token.isBlank() || senderId.isBlank()) {
-            Toast.makeText(this, "Session is invalid. Please log in again.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.session_expired_login_again, Toast.LENGTH_LONG).show()
             finish() // Redirect to login or close
             return false
         }
 
         if (roomId.isNullOrBlank()) {
-            Toast.makeText(this, "Error: Chat room ID is missing.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.chat_room_id_missing, Toast.LENGTH_LONG).show()
             finish()
             return false
         }

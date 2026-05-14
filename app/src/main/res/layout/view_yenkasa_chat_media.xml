@@ -40,7 +40,7 @@
             android:layout_height="58dp"
             android:background="@drawable/bg_yenkasa_player_glass"
             android:gravity="center"
-            android:text="PDF"
+            android:text="@string/file_type_pdf"
             android:textColor="@color/wallet_accent_green"
             android:textSize="15sp"
             android:textStyle="bold" />

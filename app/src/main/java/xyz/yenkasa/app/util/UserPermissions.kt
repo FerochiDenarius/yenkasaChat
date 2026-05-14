@@ -13,6 +13,9 @@ object UserPermissions {
         "brand_ambassador",
         "campus_influencer",
         "moderator",
+        "staff",
+        "support",
+        "analyst",
         "admin",
         "junior_developer",
         "senior_developer"
@@ -26,7 +29,7 @@ object UserPermissions {
             "verified_creator" -> "verified"
             "senior_dev", "super_admin", "superadmin" -> "senior_developer"
             "junior_dev" -> "junior_developer"
-            "moderator", "admin" -> normalized
+            "moderator", "admin", "staff", "support", "analyst" -> normalized
             else -> normalized
         }
     }
@@ -144,7 +147,7 @@ object UserPermissions {
 
     fun canStartLivestream(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "admin", "moderator")
+        return r in listOf("senior_developer", "junior_developer", "admin", "moderator", "staff", "support", "analyst")
     }
 
     fun canGenerateStaffRole(role: String?, targetRole: String?): Boolean {

@@ -90,7 +90,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         currentUserId = TokenManager.getUserId(this) ?: ""
 
         if (retrievedToken.isNullOrEmpty() || currentUserId.isEmpty()) {
-            Toast.makeText(this, R.string.user_not_logged_in_login_again, Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.session_expired_login_again, Toast.LENGTH_LONG).show()
             finish()
             return
         }

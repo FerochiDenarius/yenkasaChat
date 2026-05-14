@@ -881,6 +881,16 @@ object TokenManager {
     fun saveUserJson(context: Context, userJson: String) {
         try {
             getEncryptedPrefs(context).edit().putString("user", userJson).apply()
+            runCatching {
+                val json = JSONObject(userJson)
+                json.optString("username").takeIf { it.isNotBlank() }?.let { saveUsername(context, it) }
+                json.optString("profileImage").takeIf { it.isNotBlank() }?.let { saveProfilePicUrl(context, it) }
+                if (json.has("coinsBalance")) {
+                    saveCoinsPrecise(context, json.optDouble("coinsBalance", getCoinsPrecise(context)))
+                }
+            }.onFailure {
+                Log.w(TAG, "Saved user JSON but could not sync cached identity fields: ${it.message}")
+            }
             extractRoleFromUserJson(userJson)?.let { syncRoleFlags(context, it) }
             Log.i(TAG, "🧩 Full user JSON saved successfully (${userJson.length} chars)")
         } catch (e: Exception) {

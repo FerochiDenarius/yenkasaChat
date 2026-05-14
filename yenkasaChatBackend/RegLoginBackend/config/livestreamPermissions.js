@@ -2,7 +2,10 @@ const STAFF_UNLIMITED_ROLES = new Set([
   'senior_developer',
   'admin',
   'moderator',
-  'junior_developer'
+  'junior_developer',
+  'staff',
+  'support',
+  'analyst'
 ]);
 
 const RANK_DURATION_LIMITS_MINUTES = {
@@ -23,10 +26,14 @@ function normalizeRole(role) {
 }
 
 function getUserRoleSet(user) {
+  const roleObject = user?.role && typeof user.role === 'object' ? user.role : null;
   return new Set([
     normalizeRole(user?.staffRole),
     normalizeRole(user?.roleName),
     normalizeRole(user?.accessRole),
+    normalizeRole(roleObject?.roleName),
+    normalizeRole(roleObject?.name),
+    normalizeRole(roleObject?.accessRole),
     ...(Array.isArray(user?.publicRoles) ? user.publicRoles.map(normalizeRole) : [])
   ].filter(Boolean));
 }

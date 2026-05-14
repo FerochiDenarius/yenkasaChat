@@ -38,6 +38,7 @@ import xyz.yenkasa.app.model.LiveGiftRequest
 import xyz.yenkasa.app.model.LiveGiftResponse
 import xyz.yenkasa.app.model.LiveStream
 import xyz.yenkasa.app.model.LiveStreamResponse
+import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.TokenManager
@@ -81,7 +82,10 @@ class LiveStreamActivity : AppCompatActivity() {
     private var hostReadyEmitted = false
     private var endRequestSent = false
     private var scheduledEndAtMillis: Long = 0L
+    private var liveIdentityUsername: String = ""
+    private var liveIdentityAvatar: String = ""
     private var lastReactionAt = 0L
+    private val recentLiveEventKeys = linkedMapOf<String, Long>()
     private val timerHandler = Handler(Looper.getMainLooper())
     private val hostHeartbeatHandler = Handler(Looper.getMainLooper())
     private val hostHeartbeatRunnable = object : Runnable {
@@ -121,7 +125,6 @@ class LiveStreamActivity : AppCompatActivity() {
 
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
             runOnUiThread {
-                addComment(getString(R.string.you_joined_live))
                 if (isHost) emitHostReady() else emitLiveJoin()
             }
         }
@@ -135,6 +138,7 @@ class LiveStreamActivity : AppCompatActivity() {
         bindViews()
         applyInsets()
         bindActions()
+        refreshLiveIdentity()
         setupSocket()
         initializeAgora()
     }
@@ -264,39 +268,53 @@ class LiveStreamActivity : AppCompatActivity() {
         SocketManager.ensureConnected(userId)
         SocketManager.instance?.on(Socket.EVENT_CONNECT, socketReconnectListener)
 
-        SocketManager.on("livestream_comment") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val commentListener: (Any) -> Unit = commentListener@{ data ->
+            val json = data.asJson() ?: return@commentListener
+            if (json.optString("streamId") != streamId) return@commentListener
+            if (shouldSkipIncomingLiveEvent("comment", json)) return@commentListener
             val username = json.optString("username", getString(R.string.viewer_fallback))
             val message = json.optString("message")
             runOnUiThread { addComment(getString(R.string.live_comment_format, username, message)) }
         }
+        SocketManager.on("livestream_comment", commentListener)
+        SocketManager.on("live_comment", commentListener)
 
-        SocketManager.on("livestream_join") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val joinListener: (Any) -> Unit = joinListener@{ data ->
+            val json = data.asJson() ?: return@joinListener
+            if (json.optString("streamId") != streamId) return@joinListener
+            if (shouldSkipIncomingLiveEvent("join", json)) return@joinListener
             val username = json.optString("username", getString(R.string.viewer_fallback))
             runOnUiThread { addComment(getString(R.string.live_user_joined, username)) }
         }
+        SocketManager.on("livestream_join", joinListener)
+        SocketManager.on("live_join", joinListener)
 
-        SocketManager.on("livestream_leave") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val leaveListener: (Any) -> Unit = leaveListener@{ data ->
+            val json = data.asJson() ?: return@leaveListener
+            if (json.optString("streamId") != streamId) return@leaveListener
+            if (shouldSkipIncomingLiveEvent("leave", json)) return@leaveListener
             val username = json.optString("username", getString(R.string.viewer_fallback))
             runOnUiThread { addComment(getString(R.string.live_user_left, username)) }
         }
+        SocketManager.on("livestream_leave", leaveListener)
+        SocketManager.on("live_leave", leaveListener)
 
-        SocketManager.on("livestream_viewer_count") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val viewerCountListener: (Any) -> Unit = viewerCountListener@{ data ->
+            val json = data.asJson() ?: return@viewerCountListener
+            if (json.optString("streamId") != streamId) return@viewerCountListener
             runOnUiThread { updateViewerCount(json.optInt("viewerCount", 0)) }
         }
+        SocketManager.on("livestream_viewer_count", viewerCountListener)
+        SocketManager.on("live_viewer_count", viewerCountListener)
 
-        SocketManager.on("livestream_reaction") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val reactionListener: (Any) -> Unit = reactionListener@{ data ->
+            val json = data.asJson() ?: return@reactionListener
+            if (json.optString("streamId") != streamId) return@reactionListener
+            if (shouldSkipIncomingLiveEvent("reaction", json)) return@reactionListener
             runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
         }
+        SocketManager.on("livestream_reaction", reactionListener)
+        SocketManager.on("live_reaction", reactionListener)
 
         SocketManager.on("livestream_gift") { data ->
             val json = data.asJson() ?: return@on
@@ -310,16 +328,96 @@ class LiveStreamActivity : AppCompatActivity() {
             }
         }
 
-        SocketManager.on("livestream_ended") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val endedListener: (Any) -> Unit = endedListener@{ data ->
+            val json = data.asJson() ?: return@endedListener
+            if (json.optString("streamId") != streamId) return@endedListener
+            if (shouldSkipIncomingLiveEvent("ended", json)) return@endedListener
             runOnUiThread {
                 Toast.makeText(this, R.string.livestream_ended, Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
+        SocketManager.on("livestream_ended", endedListener)
+        SocketManager.on("live_ended", endedListener)
 
     }
+
+    private fun shouldSkipIncomingLiveEvent(type: String, json: JSONObject): Boolean {
+        val now = System.currentTimeMillis()
+        val iterator = recentLiveEventKeys.entries.iterator()
+        while (iterator.hasNext()) {
+            if (now - iterator.next().value > 5_000L) iterator.remove()
+        }
+
+        val clientEventId = json.optString("clientEventId").takeIf { it.isNotBlank() }
+        val key = clientEventId?.let { "$type:$it" } ?: listOf(
+            type,
+            json.optString("streamId"),
+            json.optString("userId"),
+            json.optString("username"),
+            json.optString("message"),
+            json.optString("reaction", json.optString("type")),
+            json.optString("viewerCount"),
+            json.optString("reason")
+        ).joinToString("|")
+
+        if (recentLiveEventKeys.containsKey(key)) return true
+        recentLiveEventKeys[key] = now
+        return false
+    }
+
+    private fun refreshLiveIdentity() {
+        liveIdentityUsername = resolveCachedLiveUsername()
+        liveIdentityAvatar = resolveCachedLiveAvatar()
+
+        ApiClient.apiService.getUserProfile().enqueue(object : Callback<User> {
+            override fun onResponse(call: Call<User>, response: Response<User>) {
+                val user = response.body()
+                if (!response.isSuccessful || user == null) return
+                user.username?.takeIf { it.isNotBlank() }?.let {
+                    liveIdentityUsername = it
+                    TokenManager.saveUsername(this@LiveStreamActivity, it)
+                }
+                user.profileImage?.takeIf { it.isNotBlank() }?.let {
+                    liveIdentityAvatar = it
+                    TokenManager.saveProfilePicUrl(this@LiveStreamActivity, it)
+                }
+                TokenManager.saveCoinsPrecise(this@LiveStreamActivity, user.resolvedCoinsBalance())
+            }
+
+            override fun onFailure(call: Call<User>, t: Throwable) = Unit
+        })
+    }
+
+    private fun resolveCachedLiveUsername(): String {
+        TokenManager.getUsername(this)?.takeIf { it.isNotBlank() }?.let { return it }
+        runCatching {
+            JSONObject(TokenManager.getUser(this).orEmpty())
+                .optString("username")
+                .takeIf { it.isNotBlank() }
+        }.getOrNull()?.let { return it }
+        return TokenManager.getUserId(this)?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.yenkasa_user)
+    }
+
+    private fun resolveCachedLiveAvatar(): String {
+        TokenManager.getProfilePicUrl(this)?.takeIf { it.isNotBlank() }?.let { return it }
+        return runCatching {
+            JSONObject(TokenManager.getUser(this).orEmpty())
+                .optString("profileImage")
+                .takeIf { it.isNotBlank() }
+        }.getOrNull().orEmpty()
+    }
+
+    private fun liveEventUsername(): String =
+        TokenManager.getUsername(this)?.takeIf { it.isNotBlank() }
+            ?: liveIdentityUsername.takeIf { it.isNotBlank() }
+            ?: resolveCachedLiveUsername()
+
+    private fun liveEventAvatar(): String =
+        TokenManager.getProfilePicUrl(this)?.takeIf { it.isNotBlank() }
+            ?: liveIdentityAvatar.takeIf { it.isNotBlank() }
+            ?: resolveCachedLiveAvatar()
 
     private fun emitLiveJoin(force: Boolean = false) {
         if (joinedSocketRoom && !force) return
@@ -327,9 +425,10 @@ class LiveStreamActivity : AppCompatActivity() {
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", userId.orEmpty())
-            .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+            .put("username", liveEventUsername())
+            .put("avatar", liveEventAvatar())
             .put("clientEventId", liveClientEventId("join"))
-        emitLiveSocketEvent("send_livestream_join", "livestream_join", payload)
+        emitLiveSocketEvent("send_livestream_join", "live_join", payload)
         joinedSocketRoom = true
     }
 
@@ -345,18 +444,20 @@ class LiveStreamActivity : AppCompatActivity() {
         if (hostReadyEmitted && !force) return
         val userId = TokenManager.getUserId(this)
         SocketManager.emit(
-            "send_livestream_host_ready",
+            "live_host_ready",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+                .put("username", liveEventUsername())
+                .put("avatar", liveEventAvatar())
         )
         SocketManager.emit(
-            "livestream_join",
+            "live_join",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", userId.orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+                .put("username", liveEventUsername())
+                .put("avatar", liveEventAvatar())
                 .put("clientEventId", liveClientEventId("host_join"))
         )
         hostReadyEmitted = true
@@ -368,7 +469,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun emitHostHeartbeat() {
         if (!isHost || !hostReadyEmitted) return
         SocketManager.emit(
-            "send_livestream_host_heartbeat",
+            "live_host_heartbeat",
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -431,11 +532,11 @@ class LiveStreamActivity : AppCompatActivity() {
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", TokenManager.getUserId(this).orEmpty())
-            .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
-            .put("avatar", TokenManager.getProfilePicUrl(this).orEmpty())
+            .put("username", liveEventUsername())
+            .put("avatar", liveEventAvatar())
             .put("message", message)
             .put("clientEventId", liveClientEventId("comment"))
-        emitLiveSocketEvent("send_livestream_comment", "livestream_comment", payload)
+        emitLiveSocketEvent("send_livestream_comment", "live_comment", payload)
     }
 
     private fun sendReaction(reaction: String) {
@@ -445,10 +546,11 @@ class LiveStreamActivity : AppCompatActivity() {
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", TokenManager.getUserId(this).orEmpty())
-            .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+            .put("username", liveEventUsername())
+            .put("avatar", liveEventAvatar())
             .put("reaction", reaction)
             .put("clientEventId", liveClientEventId("reaction"))
-        emitLiveSocketEvent("send_livestream_reaction", "livestream_reaction", payload)
+        emitLiveSocketEvent("send_livestream_reaction", "live_reaction", payload)
     }
 
     private fun showGiftSheet() {
@@ -651,20 +753,27 @@ class LiveStreamActivity : AppCompatActivity() {
             val payload = JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
-                .put("username", TokenManager.getUsername(this) ?: getString(R.string.viewer_fallback))
+                .put("username", liveEventUsername())
+                .put("avatar", liveEventAvatar())
                 .put("clientEventId", liveClientEventId("leave"))
-            emitLiveSocketEvent("send_livestream_leave", "livestream_leave", payload)
+            emitLiveSocketEvent("send_livestream_leave", "live_leave", payload)
             joinedSocketRoom = false
         }
         if (isHost && !hostReadyEmitted && !endRequestSent) {
             cancelStartingLive()
         }
         SocketManager.off("livestream_comment")
+        SocketManager.off("live_comment")
         SocketManager.off("livestream_join")
+        SocketManager.off("live_join")
         SocketManager.off("livestream_leave")
+        SocketManager.off("live_leave")
         SocketManager.off("livestream_viewer_count")
+        SocketManager.off("live_viewer_count")
         SocketManager.off("livestream_ended")
+        SocketManager.off("live_ended")
         SocketManager.off("livestream_reaction")
+        SocketManager.off("live_reaction")
         SocketManager.off("livestream_gift")
         SocketManager.instance?.off(Socket.EVENT_CONNECT, socketReconnectListener)
         timerHandler.removeCallbacks(timerRunnable)

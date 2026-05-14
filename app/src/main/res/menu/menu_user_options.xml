@@ -2,11 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_create_chat"
-        android:title="Create Chat Room" />
+        android:title="@string/chat_action_create_room" />
     <item
         android:id="@+id/action_add_contact"
-        android:title="Add to Contacts" />
+        android:title="@string/chat_action_add_to_contacts" />
     <item
         android:id="@+id/action_continue_chat"
-        android:title="Continue Existing Chat" />
+        android:title="@string/chat_action_continue_existing" />
 </menu>

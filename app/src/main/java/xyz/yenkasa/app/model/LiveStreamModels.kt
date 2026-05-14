@@ -66,5 +66,7 @@ data class LiveGiftRequest(
 data class LiveGiftResponse(
     val success: Boolean = false,
     val message: String? = null,
-    val balance: Double = 0.0
+    val balance: Double = 0.0,
+    val ykcBalance: Double? = null,
+    val coinsBalance: Double? = null
 )

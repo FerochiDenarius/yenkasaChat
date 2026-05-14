@@ -90,7 +90,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         currentUserId = TokenManager.getUserId(this) ?: ""
 
         if (retrievedToken.isNullOrEmpty() || currentUserId.isEmpty()) {
-            Toast.makeText(this, "User not logged in. Please log in again.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.user_not_logged_in_login_again, Toast.LENGTH_LONG).show()
             finish()
             return
         }
@@ -145,21 +145,21 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         }
 
         btnMore.setOnClickListener {
-            Toast.makeText(this, "Chat room options will be added after the UI pass", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.chat_room_options_coming, Toast.LENGTH_SHORT).show()
         }
 
         navChats.setOnClickListener {
             activeTab = "chats"
-            inputUsername.hint = "Type a name to start a chat"
-            btnCreateRoom.text = "Add User"
+            inputUsername.hint = getString(R.string.chat_type_name_start)
+            btnCreateRoom.text = getString(R.string.add_user)
             updateFoundCard(inputUsername.text?.toString().orEmpty())
             loadChatRooms()
         }
 
         navStatus.setOnClickListener {
             activeTab = "groups"
-            inputUsername.hint = "Search groups"
-            btnCreateRoom.text = "Create"
+            inputUsername.hint = getString(R.string.search_groups)
+            btnCreateRoom.text = getString(R.string.create)
             updateFoundCard(inputUsername.text?.toString().orEmpty())
             loadGroups()
         }
@@ -167,15 +167,15 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         navCalls.setOnClickListener {
             activeTab = "announcements"
             chatRoomAdapter.submitList(emptyList())
-            foundCardTitle.text = "Announcements"
-            foundCardSubtitle.text = "Announcement channels will appear here."
+            foundCardTitle.text = getString(R.string.announcements)
+            foundCardSubtitle.text = getString(R.string.announcement_channels_empty)
         }
 
         navSettings.setOnClickListener {
             activeTab = "status"
             chatRoomAdapter.submitList(emptyList())
-            foundCardTitle.text = "Status"
-            foundCardSubtitle.text = "Status updates will appear here."
+            foundCardTitle.text = getString(R.string.status)
+            foundCardSubtitle.text = getString(R.string.status_updates_empty)
         }
     }
 
@@ -185,7 +185,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
             putExtra("roomId", selectedRoom._id)
 
             val chatName = if (selectedRoom.roomType == "group") {
-                selectedRoom.groupName ?: "Yenkasa Group"
+                selectedRoom.groupName ?: getString(R.string.group_default_name)
             } else {
                 determineChatDisplayNameForActivity(selectedRoom, currentUserId)
             }
@@ -200,19 +200,27 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     private fun showGroupLongPressOptions(group: ChatRoom) {
         val canManage = canManageGroup(group)
         val actions = if (canManage) {
-            arrayOf("Open group", "Add members", "Delete group")
+            listOf(
+                R.string.open_group,
+                R.string.group_add_members,
+                R.string.delete_group
+            )
         } else {
-            arrayOf("Open group", "Leave group")
+            listOf(
+                R.string.open_group,
+                R.string.leave_group
+            )
         }
+        val labels = actions.map { getString(it) }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle(group.groupName ?: "Yenkasa Group")
-            .setItems(actions) { _, which ->
+            .setTitle(group.groupName ?: getString(R.string.group_default_name))
+            .setItems(labels) { _, which ->
                 when (actions[which]) {
-                    "Open group" -> openChatRoom(group)
-                    "Add members" -> openGroupAddMembers(group)
-                    "Delete group" -> confirmDeleteGroup(group)
-                    "Leave group" -> confirmLeaveGroup(group)
+                    R.string.open_group -> openChatRoom(group)
+                    R.string.group_add_members -> openGroupAddMembers(group)
+                    R.string.delete_group -> confirmDeleteGroup(group)
+                    R.string.leave_group -> confirmLeaveGroup(group)
                 }
             }
             .show()
@@ -231,22 +239,26 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
 
     private fun confirmLeaveGroup(group: ChatRoom) {
         AlertDialog.Builder(this)
-            .setTitle("Leave group?")
-            .setMessage("You will stop receiving messages from ${group.groupName ?: "this group"}.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Leave") { _, _ ->
+            .setTitle(R.string.leave_group_title)
+            .setMessage(getString(R.string.leave_group_message, group.groupName ?: getString(R.string.this_group)))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.leave) { _, _ ->
                 ApiClient.apiService.leaveGroup(group._id).enqueue(object : Callback<GroupResponse> {
                     override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
                         if (!response.isSuccessful || response.body()?.success == false) {
-                            Toast.makeText(this@ChatRoomsActivity, response.body()?.message ?: "Could not leave group", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@ChatRoomsActivity, response.body()?.message ?: getString(R.string.could_not_leave_group), Toast.LENGTH_LONG).show()
                             return
                         }
-                        Toast.makeText(this@ChatRoomsActivity, "You left the group", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ChatRoomsActivity, R.string.you_left_group, Toast.LENGTH_SHORT).show()
                         loadGroups()
                     }
 
                     override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
-                        Toast.makeText(this@ChatRoomsActivity, "Could not leave group: ${t.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@ChatRoomsActivity,
+                            getString(R.string.could_not_leave_group_with_error, t.message ?: getString(R.string.unknown_error)),
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 })
             }
@@ -255,22 +267,26 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
 
     private fun confirmDeleteGroup(group: ChatRoom) {
         AlertDialog.Builder(this)
-            .setTitle("Delete group?")
-            .setMessage("This deletes ${group.groupName ?: "this group"} for all members. This cannot be undone.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Delete") { _, _ ->
+            .setTitle(R.string.delete_group_title)
+            .setMessage(getString(R.string.delete_group_message, group.groupName ?: getString(R.string.this_group)))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete) { _, _ ->
                 ApiClient.apiService.deleteGroup(group._id).enqueue(object : Callback<GroupResponse> {
                     override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
                         if (!response.isSuccessful || response.body()?.success == false) {
-                            Toast.makeText(this@ChatRoomsActivity, response.body()?.message ?: "Could not delete group", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@ChatRoomsActivity, response.body()?.message ?: getString(R.string.could_not_delete_group), Toast.LENGTH_LONG).show()
                             return
                         }
-                        Toast.makeText(this@ChatRoomsActivity, "Group deleted", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ChatRoomsActivity, R.string.group_deleted, Toast.LENGTH_SHORT).show()
                         loadGroups()
                     }
 
                     override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
-                        Toast.makeText(this@ChatRoomsActivity, "Could not delete group: ${t.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@ChatRoomsActivity,
+                            getString(R.string.could_not_delete_group_with_error, t.message ?: getString(R.string.unknown_error)),
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 })
             }
@@ -297,7 +313,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
 
     private fun openImagePickerForChatRoom() {
         if (recentChatRooms.isEmpty()) {
-            Toast.makeText(this, "Start a chat first, then send images from here.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.start_chat_first_send_images, Toast.LENGTH_SHORT).show()
             focusUsernameInput()
             return
         }
@@ -308,7 +324,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     private fun showChatRecipientPicker(imageUri: Uri) {
         val rooms = recentChatRooms
         if (rooms.isEmpty()) {
-            Toast.makeText(this, "No chat users available.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.no_chat_users_available, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -317,12 +333,12 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("Send image to")
+            .setTitle(R.string.send_image_to)
             .setItems(labels) { dialog, which ->
                 dialog.dismiss()
                 sendImageToChatRoom(imageUri, rooms[which], labels[which])
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -342,19 +358,19 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         val username = rawUsername.trim()
         if (username.isBlank()) {
             if (activeTab == "groups") {
-                foundCardTitle.text = "Groups"
-                foundCardSubtitle.text = "Create a group from your existing contacts only."
+                foundCardTitle.text = getString(R.string.groups)
+                foundCardSubtitle.text = getString(R.string.create_group_existing_contacts)
             } else {
-                foundCardTitle.text = "Start a chat"
-                foundCardSubtitle.text = "Type a username above, then add the user to your chat list."
+                foundCardTitle.text = getString(R.string.start_chat)
+                foundCardSubtitle.text = getString(R.string.start_chat_instruction)
             }
         } else {
             if (activeTab == "groups") {
-                foundCardTitle.text = "Search groups"
-                foundCardSubtitle.text = "Group search stays inside your existing groups."
+                foundCardTitle.text = getString(R.string.search_groups)
+                foundCardSubtitle.text = getString(R.string.group_search_existing_only)
             } else {
-                foundCardTitle.text = "Ready to add user"
-                foundCardSubtitle.text = "Tap Add User to start a chat with $username."
+                foundCardTitle.text = getString(R.string.ready_to_add_user)
+                foundCardSubtitle.text = getString(R.string.tap_add_user_to_start_chat, username)
             }
         }
     }
@@ -362,7 +378,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
     private fun submitCreateRoomFromInput() {
         val recipientUsername = inputUsername.text.toString().trim()
         if (recipientUsername.isEmpty()) {
-            Toast.makeText(this, "Please enter a username to create a chat with", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.enter_username_create_chat, Toast.LENGTH_SHORT).show()
         } else {
             createChatRoom(recipientUsername)
         }
@@ -378,13 +394,13 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
         val otherParticipants = chatRoom.participants?.filter { it._id != currentUserId }
 
         return when {
-            otherParticipants == null -> "Chat" // Participants list was null
-            otherParticipants.isEmpty() -> "Chat with Yourself" // Or some other default
-            otherParticipants.size == 1 -> otherParticipants.first().username ?: "Chat" // 1-on-1
+            otherParticipants == null -> getString(R.string.chat) // Participants list was null
+            otherParticipants.isEmpty() -> getString(R.string.chat_with_yourself) // Or some other default
+            otherParticipants.size == 1 -> otherParticipants.first().username ?: getString(R.string.chat) // 1-on-1
             else -> {
                 // For group chats (more than one other participant)
                 // We construct the name from participant usernames as chatRoom.name does not exist.
-                otherParticipants.take(2).joinToString(", ") { it.username ?: "User" } +
+                otherParticipants.take(2).joinToString(", ") { it.username ?: getString(R.string.user) } +
                         if (otherParticipants.size > 2) "..." else ""
             }
         }
@@ -407,7 +423,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                     val responseBody = response.body()
                     if (response.isSuccessful && responseBody != null && responseBody.success) {
                         Log.d("ChatRoomsActivity", "Room created successfully! Room ID: ${responseBody.roomId}")
-                        Toast.makeText(this@ChatRoomsActivity, "Chat room created!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ChatRoomsActivity, R.string.chat_room_created, Toast.LENGTH_SHORT).show()
                         inputUsername.setText("")
                         loadChatRooms() // Refresh the list
                     } else if (response.code() == 202 && responseBody?.message != null) {
@@ -418,13 +434,17 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                         val successFlag = responseBody?.success
                         val actualMessage = responseBody?.message ?: errorMsg
                         Log.e("ChatRoomsActivity", "Failed to create room: $actualMessage (Code: ${response.code()}, Success: $successFlag)")
-                        Toast.makeText(this@ChatRoomsActivity, "Failed to create room: $actualMessage", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ChatRoomsActivity, getString(R.string.chat_failed_create_room, actualMessage), Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
                     Log.e("ChatRoomsActivity", "Error creating room: ${t.message}", t)
-                    Toast.makeText(this@ChatRoomsActivity, "Error creating room: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ChatRoomsActivity,
+                        getString(R.string.chat_error_creating_room, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -460,13 +480,17 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ChatRoomsActivity", "Failed to load rooms. Code: ${response.code()}, Error: $errorMsg")
-                        Toast.makeText(this@ChatRoomsActivity, "Failed to load rooms: $errorMsg", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ChatRoomsActivity, getString(R.string.failed_to_load_rooms_with_error, errorMsg), Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
                     Log.e("ChatRoomsActivity", "Error loading chat rooms: ${t.message}", t)
-                    Toast.makeText(this@ChatRoomsActivity, "Error loading chat rooms: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ChatRoomsActivity,
+                        getString(R.string.error_loading_chat_rooms_with_message, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -488,13 +512,17 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ChatRoomsActivity", "Failed to load groups. Code: ${response.code()}, Error: $errorMsg")
-                        Toast.makeText(this@ChatRoomsActivity, "Failed to load groups: $errorMsg", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ChatRoomsActivity, getString(R.string.failed_to_load_groups_with_error, errorMsg), Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<GroupsListResponse>, t: Throwable) {
                     Log.e("ChatRoomsActivity", "Error loading groups: ${t.message}", t)
-                    Toast.makeText(this@ChatRoomsActivity, "Error loading groups: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ChatRoomsActivity,
+                        getString(R.string.error_loading_groups_with_message, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -518,19 +546,19 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                         errorJson.split("\"message\":\"")[1].split("\"")[0]
                     } catch (e: Exception) { errorJson }
                 } else { errorJson }
-            } ?: "Error: ${response.code()} ${response.message()} (No specific error body)"
+            } ?: getString(R.string.chat_error_code_no_body, response.code(), response.message())
         } catch (e: IOException) {
-            "Error reading error response: ${e.message}"
+            getString(R.string.chat_error_reading_response, e.message ?: getString(R.string.unknown_error))
         }
     }
 
     override fun onUploadStarted(type: String) {
-        Toast.makeText(this, "Sending image...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.sending_image, Toast.LENGTH_SHORT).show()
     }
 
     override fun onMessageSent(message: ChatMessage) {
-        val recipientName = pendingMediaRecipientName ?: "chat"
-        Toast.makeText(this, "Image sent to $recipientName", Toast.LENGTH_SHORT).show()
+        val recipientName = pendingMediaRecipientName ?: getString(R.string.chat)
+        Toast.makeText(this, getString(R.string.image_sent_to, recipientName), Toast.LENGTH_SHORT).show()
         pendingMediaRecipientName = null
         activeMediaSender = null
         loadChatRooms()

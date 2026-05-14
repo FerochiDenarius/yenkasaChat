@@ -198,6 +198,7 @@ function getLiveTargetRooms(streamId) {
 function emitToLiveRoom(streamId, eventName, payload) {
   io.to(getLiveTargetRooms(streamId)).emit(eventName, payload);
 }
+global.emitToLiveRoomForStream = emitToLiveRoom;
 
 function getLiveRoomMemberCount(streamId) {
   const room = io.sockets.adapter.rooms.get(getLiveRoom(streamId));
@@ -448,6 +449,27 @@ io.on('connection', (socket) => {
     socket.emit('getOnlineUsers', getOnlineUserIds());
   });
 
+  const resolveLiveActor = async (payload = {}) => {
+    const userId = (socket.data.userId || payload?.userId)?.toString();
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return {
+        userId: userId || '',
+        username: payload?.username?.toString?.().trim() || 'Viewer',
+        avatar: payload?.avatar?.toString?.().trim() || ''
+      };
+    }
+
+    const user = await User.findById(userId)
+      .select('username profileImage avatar')
+      .lean();
+
+    return {
+      userId,
+      username: user?.username || payload?.username?.toString?.().trim() || 'Viewer',
+      avatar: user?.profileImage || user?.avatar || payload?.avatar?.toString?.().trim() || ''
+    };
+  };
+
   socket.on('joinChatRoom', async (payload) => {
     try {
       const normalizedRoomId = (payload?.roomId || payload)?.toString();
@@ -624,21 +646,23 @@ io.on('connection', (socket) => {
         return;
       }
 
+      const actor = await resolveLiveActor(payload);
       joinLiveRooms(socket, streamId);
       socket.data.liveStreams.add(streamId);
-      addLiveParticipant(streamId, socket.data.userId || payload.userId);
+      addLiveParticipant(streamId, actor.userId);
       const stream = await updateLiveViewerCount(streamId, 1);
       if (!stream) {
         leaveLiveRooms(socket, streamId);
         socket.data.liveStreams.delete(streamId);
-        removeLiveParticipant(streamId, socket.data.userId || payload.userId);
+        removeLiveParticipant(streamId, actor.userId);
         return;
       }
 
       const event = {
         streamId,
-        userId: socket.data.userId || payload.userId || '',
-        username: payload.username || 'Viewer',
+        userId: actor.userId,
+        username: actor.username,
+        avatar: actor.avatar,
         viewerCount: getLiveRoomMemberCount(streamId)
       };
       emitToLiveRoom(streamId, 'livestream_join', event);
@@ -659,17 +683,19 @@ io.on('connection', (socket) => {
       const isAudienceParticipant = socket.data.liveStreams.has(streamId);
       const isHostParticipant = socket.data.hostLiveStreams.has(streamId);
       if (!streamId || (!isAudienceParticipant && !isHostParticipant)) return;
+      const actor = await resolveLiveActor(payload);
       const event = {
         streamId,
-        userId: socket.data.userId || payload.userId || '',
-        username: payload.username || 'Viewer',
+        userId: actor.userId,
+        username: actor.username,
+        avatar: actor.avatar,
         createdAt: new Date().toISOString()
       };
       emitToLiveRoom(streamId, 'livestream_leave', event);
       emitToLiveRoom(streamId, 'live_leave', event);
       socket.data.liveStreams.delete(streamId);
       socket.data.hostLiveStreams.delete(streamId);
-      removeLiveParticipant(streamId, socket.data.userId || payload.userId);
+      removeLiveParticipant(streamId, actor.userId);
       leaveLiveRooms(socket, streamId);
       if (isAudienceParticipant) {
         await updateLiveViewerCount(streamId, -1);
@@ -684,43 +710,53 @@ io.on('connection', (socket) => {
   socket.on('livestream_leave', handleLiveLeave);
   socket.on('live_leave', handleLiveLeave);
 
-  const handleLiveComment = (payload = {}) => {
-    const streamId = payload.streamId?.toString();
-    const message = payload.message?.toString?.().trim();
-    if (!streamId || !message) return;
-    if (shouldSkipDuplicateLiveEvent('comment', payload)) return;
-    const event = {
-      streamId,
-      userId: socket.data.userId || payload.userId || '',
-      username: payload.username || 'Viewer',
-      avatar: payload.avatar || '',
-      message: message.slice(0, 240),
-      clientEventId: payload.clientEventId || '',
-      createdAt: new Date().toISOString()
-    };
-    emitToLiveRoom(streamId, 'livestream_comment', event);
-    emitToLiveRoom(streamId, 'live_comment', event);
+  const handleLiveComment = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const message = payload.message?.toString?.().trim();
+      if (!streamId || !message) return;
+      if (shouldSkipDuplicateLiveEvent('comment', payload)) return;
+      const actor = await resolveLiveActor(payload);
+      const event = {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        avatar: actor.avatar,
+        message: message.slice(0, 240),
+        clientEventId: payload.clientEventId || '',
+        createdAt: new Date().toISOString()
+      };
+      emitToLiveRoom(streamId, 'livestream_comment', event);
+      emitToLiveRoom(streamId, 'live_comment', event);
+    } catch (err) {
+      console.error('❌ live_comment failed:', err.message);
+    }
   };
 
   socket.on('send_livestream_comment', handleLiveComment);
   socket.on('livestream_comment', handleLiveComment);
   socket.on('live_comment', handleLiveComment);
 
-  const handleLiveReaction = (payload = {}) => {
-    const streamId = payload.streamId?.toString();
-    if (!streamId) return;
-    if (shouldSkipDuplicateLiveEvent('reaction', payload)) return;
-    const event = {
-      streamId,
-      userId: socket.data.userId || payload.userId || '',
-      username: payload.username || 'Viewer',
-      reaction: payload.reaction || '🔥',
-      type: payload.type || payload.reaction || '🔥',
-      clientEventId: payload.clientEventId || '',
-      createdAt: new Date().toISOString()
-    };
-    emitToLiveRoom(streamId, 'livestream_reaction', event);
-    emitToLiveRoom(streamId, 'live_reaction', event);
+  const handleLiveReaction = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId) return;
+      if (shouldSkipDuplicateLiveEvent('reaction', payload)) return;
+      const actor = await resolveLiveActor(payload);
+      const event = {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        reaction: payload.reaction || '🔥',
+        type: payload.type || payload.reaction || '🔥',
+        clientEventId: payload.clientEventId || '',
+        createdAt: new Date().toISOString()
+      };
+      emitToLiveRoom(streamId, 'livestream_reaction', event);
+      emitToLiveRoom(streamId, 'live_reaction', event);
+    } catch (err) {
+      console.error('❌ live_reaction failed:', err.message);
+    }
   };
 
   socket.on('send_livestream_reaction', handleLiveReaction);

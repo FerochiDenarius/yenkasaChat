@@ -44,7 +44,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
         val search = findViewById<EditText>(R.id.inputSearchContacts)
         val recycler = findViewById<RecyclerView>(R.id.recyclerGroupContacts)
         nextButton = findViewById(R.id.buttonNextGroupSetup)
-        nextButton.text = if (isAddMembersMode) "Add Members" else "Next"
+        nextButton.text = getString(if (isAddMembersMode) R.string.group_add_members else R.string.next)
 
         adapter = GroupMembersAdapter(selectedIds) { contact ->
             val id = contactMemberId(contact) ?: return@GroupMembersAdapter
@@ -65,7 +65,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
 
         nextButton.setOnClickListener {
             if (selectedIds.isEmpty()) {
-                Toast.makeText(this, "Select at least one contact", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.group_select_at_least_one_contact), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (isAddMembersMode) {
@@ -85,7 +85,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
         ApiClient.apiService.getContacts().enqueue(object : Callback<List<Contact>> {
             override fun onResponse(call: Call<List<Contact>>, response: Response<List<Contact>>) {
                 if (!response.isSuccessful) {
-                    Toast.makeText(this@GroupContactsSelectorActivity, "Could not load contacts", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@GroupContactsSelectorActivity, getString(R.string.group_could_not_load_contacts), Toast.LENGTH_LONG).show()
                     return
                 }
                 allContacts.clear()
@@ -99,7 +99,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<List<Contact>>, t: Throwable) {
-                Toast.makeText(this@GroupContactsSelectorActivity, "Could not load contacts: ${t.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@GroupContactsSelectorActivity, getString(R.string.group_could_not_load_contacts_with_error, t.message), Toast.LENGTH_LONG).show()
             }
         })
     }
@@ -114,9 +114,9 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
 
     private fun updateSelectedCount() {
         selectedCount.text = when {
-            selectedIds.isNotEmpty() -> "${selectedIds.size} selected"
-            isAddMembersMode -> "Add Members"
-            else -> "Create Group"
+            selectedIds.isNotEmpty() -> getString(R.string.group_selected_count, selectedIds.size)
+            isAddMembersMode -> getString(R.string.group_add_members)
+            else -> getString(R.string.group_create)
         }
     }
 
@@ -127,7 +127,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
 
     private fun addSelectedMembers() {
         if (groupId.isBlank()) {
-            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.group_details_unavailable), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -140,12 +140,12 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
                     if (!response.isSuccessful || body?.success != true) {
                         Toast.makeText(
                             this@GroupContactsSelectorActivity,
-                            body?.message ?: "Could not add members",
+                            body?.message ?: getString(R.string.group_could_not_add_members),
                             Toast.LENGTH_LONG
                         ).show()
                         return
                     }
-                    Toast.makeText(this@GroupContactsSelectorActivity, "Members added", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@GroupContactsSelectorActivity, getString(R.string.group_members_added), Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
                     finish()
                 }
@@ -154,7 +154,7 @@ class GroupContactsSelectorActivity : AppCompatActivity() {
                     nextButton.isEnabled = true
                     Toast.makeText(
                         this@GroupContactsSelectorActivity,
-                        "Could not add members: ${t.message}",
+                        getString(R.string.group_could_not_add_members_with_error, t.message),
                         Toast.LENGTH_LONG
                     ).show()
                 }

@@ -512,12 +512,12 @@ class FeedFragment : Fragment() {
                         _id = "local-ad-${counter}",
                         sponsorName = "AdMob",
                         adType = "google",
-                        title = "Sponsored Ad",
+                        title = getString(R.string.sponsored_ad),
                         imageUrl = null,
                         videoUrl = null,
                         thumbnailUrl = null,
                         ctaUrl = null,
-                        ctaText = "Learn More",
+                        ctaText = getString(R.string.learn_more),
                         rewardYKC = 0
                     )
                 )

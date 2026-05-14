@@ -3,45 +3,45 @@
 
     <item
         android:id="@+id/action_reply_message"
-        android:title="Reply" />
+        android:title="@string/chat_action_reply" />
 
     <item
         android:id="@+id/action_copy_text"
-        android:title="Copy Text" />
+        android:title="@string/chat_action_copy_text" />
 
     <item
         android:id="@+id/action_edit_message"
-        android:title="Edit" />
+        android:title="@string/chat_action_edit" />
 
     <item
         android:id="@+id/action_forward_message"
-        android:title="Forward" />
+        android:title="@string/chat_action_forward" />
 
     <item
         android:id="@+id/action_pin_message"
-        android:title="Pin" />
+        android:title="@string/chat_action_pin" />
 
     <item
         android:id="@+id/action_react_tick"
-        android:title="React: Tick" /> <!-- Made title more descriptive without icon -->
+        android:title="@string/chat_action_react_tick" /> <!-- Made title more descriptive without icon -->
 
     <item
         android:id="@+id/action_react_cross"
-        android:title="React: Cross" /> <!-- Made title more descriptive without icon -->
+        android:title="@string/chat_action_react_cross" /> <!-- Made title more descriptive without icon -->
 
     <item
         android:id="@+id/action_react_with_image"
-        android:title="React with Image/Sticker" />
+        android:title="@string/chat_action_react_image" />
 
     <item
         android:id="@+id/action_mark_message"
-        android:title="Mark Read/Unread" /> <!-- Title might still be dynamic -->
+        android:title="@string/chat_action_mark_read_unread" /> <!-- Title might still be dynamic -->
 
     <item
         android:id="@+id/action_delete_message"
-        android:title="Delete" />
+        android:title="@string/delete" />
 
     <item
         android:id="@+id/action_message_info"
-        android:title="Info" />
+        android:title="@string/chat_action_info" />
 </menu>

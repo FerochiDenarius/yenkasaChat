@@ -49,7 +49,7 @@ class CommunityVisibilityActivity : AppCompatActivity() {
         token = TokenManager.getToken(this)
 
         if (token.isNullOrEmpty()) {
-            Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in_again, Toast.LENGTH_SHORT).show()
             finish()
         }
     }
@@ -95,7 +95,7 @@ class CommunityVisibilityActivity : AppCompatActivity() {
                     } else {
                         Toast.makeText(
                             this@CommunityVisibilityActivity,
-                            "Failed to load visibility settings",
+                            R.string.failed_to_load_visibility_settings,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -105,7 +105,7 @@ class CommunityVisibilityActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     Toast.makeText(
                         this@CommunityVisibilityActivity,
-                        "Network error",
+                        R.string.network_error,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -135,13 +135,13 @@ class CommunityVisibilityActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         Toast.makeText(
                             this@CommunityVisibilityActivity,
-                            "Visibility updated successfully",
+                            R.string.visibility_updated_successfully,
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
                             this@CommunityVisibilityActivity,
-                            "Failed to save changes",
+                            R.string.failed_to_save_changes,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -153,7 +153,7 @@ class CommunityVisibilityActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@CommunityVisibilityActivity,
-                        "Network error",
+                        R.string.network_error,
                         Toast.LENGTH_SHORT
                     ).show()
                 }

@@ -32,15 +32,15 @@ class ChatRoomAdapter(
         // --- Last message preview ---
         val message = chatRoom.lastMessage
         val previewText = when {
-            message == null -> "No messages yet"
-            !message.imageUrl.isNullOrBlank() -> "📷 Photo"
-            !message.audioUrl.isNullOrBlank() -> "🎤 Audio"
-            !message.videoUrl.isNullOrBlank() -> "🎬 Video"
-            !message.fileUrl.isNullOrBlank() -> "📄 File"
-            message.location != null -> "📍 Location"
-            !message.contactInfo.isNullOrBlank() -> "👤 Contact"
+            message == null -> context.getString(R.string.no_messages_yet)
+            !message.imageUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_photo)
+            !message.audioUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_audio)
+            !message.videoUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_video)
+            !message.fileUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_file)
+            message.location != null -> context.getString(R.string.chat_preview_location)
+            !message.contactInfo.isNullOrBlank() -> context.getString(R.string.chat_preview_contact)
             !message.text.isNullOrBlank() -> message.text
-            else -> "Unsupported message type"
+            else -> context.getString(R.string.unsupported_message_type)
         }
         holder.lastMessage.text = previewText
 
@@ -52,11 +52,11 @@ class ChatRoomAdapter(
         // --- Determine display user or group ---
         val contactUser = uniqueParticipants?.firstOrNull()
         val displayName = when {
-            chatRoom.roomType == "group" -> chatRoom.groupName ?: "Yenkasa Group"
-            uniqueParticipants == null -> "Unknown Chat"
-            uniqueParticipants.isEmpty() -> "Chat with yourself"
-            uniqueParticipants.size == 1 -> contactUser?.username ?: "Unknown User"
-            else -> uniqueParticipants.take(2).joinToString(", ") { it.username ?: "User" } +
+            chatRoom.roomType == "group" -> chatRoom.groupName ?: context.getString(R.string.group_default_name)
+            uniqueParticipants == null -> context.getString(R.string.unknown_chat)
+            uniqueParticipants.isEmpty() -> context.getString(R.string.chat_with_yourself)
+            uniqueParticipants.size == 1 -> contactUser?.username ?: context.getString(R.string.unknown_user)
+            else -> uniqueParticipants.take(2).joinToString(", ") { it.username ?: context.getString(R.string.user) } +
                     if (uniqueParticipants.size > 2) "..." else ""
         }
 

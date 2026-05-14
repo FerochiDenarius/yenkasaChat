@@ -7,19 +7,19 @@
 
     <EditText
         android:id="@+id/editAddContact"
-        android:hint="Search existing contacts"
+        android:hint="@string/chat_search_existing_contacts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <Button
         android:id="@+id/btnAddContact"
-        android:text="Start New Chat"
+        android:text="@string/chat_start_new_chat"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />
 
     <TextView
-        android:text="Your Contacts"
+        android:text="@string/chat_your_contacts"
         android:textStyle="bold"
         android:textSize="16sp"
         android:layout_marginTop="12dp"

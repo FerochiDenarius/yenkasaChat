@@ -27,7 +27,7 @@
             <ImageView
                 android:layout_width="38dp"
                 android:layout_height="38dp"
-                android:contentDescription="Yenkasa"
+                android:contentDescription="@string/yenkasa_brand"
                 android:src="@drawable/ic_logo_emblem" />
 
             <LinearLayout
@@ -43,7 +43,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:includeFontPadding="false"
-                    android:text="Yenkasa"
+                    android:text="@string/yenkasa_brand"
                     android:textColor="@color/yenkasa_emerald"
                     android:textSize="24sp" />
 
@@ -52,7 +52,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:includeFontPadding="false"
-                    android:text="Made for Africa"
+                    android:text="@string/made_for_africa"
                     android:textColor="@color/feed_secondary_text"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -63,7 +63,7 @@
                 android:layout_height="38dp"
                 android:background="@drawable/bg_feed_icon_button"
                 android:clickable="true"
-                android:contentDescription="Camera"
+                android:contentDescription="@string/camera"
                 android:focusable="true"
                 android:padding="8dp"
                 android:src="@drawable/ic_camera"
@@ -76,7 +76,7 @@
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_feed_icon_button"
                 android:clickable="true"
-                android:contentDescription="More options"
+                android:contentDescription="@string/more_options"
                 android:focusable="true"
                 android:padding="8dp"
                 android:src="@drawable/ic_more_vert"
@@ -104,7 +104,7 @@
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:contentDescription="Search"
+                    android:contentDescription="@string/search"
                     android:src="@drawable/ic_search"
                     app:tint="@color/yenkasa_emerald" />
 
@@ -115,7 +115,7 @@
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
-                    android:hint="Type a name to start a chat"
+                    android:hint="@string/chat_type_name_start"
                     android:imeOptions="actionDone"
                     android:inputType="textPersonName"
                     android:maxLines="1"
@@ -132,7 +132,7 @@
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_feed_icon_button"
                 android:clickable="true"
-                android:contentDescription="Add user"
+                android:contentDescription="@string/add_user"
                 android:focusable="true"
                 android:padding="9dp"
                 android:src="@drawable/ic_person_add"
@@ -156,7 +156,7 @@
                 android:layout_width="58dp"
                 android:layout_height="58dp"
                 android:background="@drawable/bg_chat_found_icon"
-                android:contentDescription="User"
+                android:contentDescription="@string/user"
                 android:padding="12dp"
                 android:src="@drawable/ic_person_add"
                 app:tint="@color/yenkasa_emerald" />
@@ -173,7 +173,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Start a chat"
+                    android:text="@string/start_chat"
                     android:textColor="@color/feed_primary_text"
                     android:textSize="15sp" />
 
@@ -182,7 +182,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
-                    android:text="Type a username above, then add the user to your chat list."
+                    android:text="@string/start_chat_instruction"
                     android:textColor="@color/feed_secondary_text"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -199,7 +199,7 @@
                 android:gravity="center"
                 android:paddingHorizontal="10dp"
                 android:stateListAnimator="@null"
-                android:text="Add User"
+                android:text="@string/add_user"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="13sp" />
@@ -244,7 +244,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Chats"
+            android:text="@string/chats"
             android:textColor="@color/yenkasa_amber"
             android:textSize="11sp" />
 
@@ -265,7 +265,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="Groups"
+                android:text="@string/groups"
                 android:textColor="@color/white"
                 android:textSize="11sp" />
 
@@ -300,7 +300,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Announcements"
+            android:text="@string/announcements"
             android:textColor="@color/white"
             android:textSize="11sp" />
 
@@ -317,7 +317,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Status"
+            android:text="@string/status"
             android:textColor="@color/white"
             android:textSize="11sp" />
     </LinearLayout>

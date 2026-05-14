@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
-            android:text="Group Setup"
+            android:text="@string/group_setup"
             android:textColor="@color/yenkasa_emerald"
             android:textSize="24sp" />
 
@@ -29,7 +29,7 @@
             android:layout_height="52dp"
             android:layout_marginTop="22dp"
             android:background="@drawable/bg_chat_search"
-            android:hint="Group name"
+            android:hint="@string/group_name_hint"
             android:inputType="textCapWords"
             android:maxLength="80"
             android:paddingHorizontal="16dp"
@@ -43,7 +43,7 @@
             android:layout_marginTop="12dp"
             android:background="@drawable/bg_chat_search"
             android:gravity="top"
-            android:hint="Group bio"
+            android:hint="@string/group_bio_hint"
             android:inputType="textMultiLine"
             android:maxLength="240"
             android:padding="16dp"
@@ -65,7 +65,7 @@
                 android:layout_width="72dp"
                 android:layout_height="72dp"
                 android:background="@drawable/bg_profile_image_circle"
-                android:contentDescription="Group image preview"
+                android:contentDescription="@string/group_image_preview"
                 android:padding="10dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_profile_placeholder" />
@@ -81,7 +81,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Group image"
+                    android:text="@string/group_image"
                     android:textColor="@color/feed_primary_text"
                     android:textSize="15sp" />
 
@@ -90,7 +90,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Add a photo from your gallery"
+                    android:text="@string/group_add_photo_from_gallery"
                     android:textColor="@color/feed_secondary_text"
                     android:textSize="13sp" />
 
@@ -108,7 +108,7 @@
                         android:background="@drawable/bg_chat_primary_button"
                         android:minWidth="0dp"
                         android:paddingHorizontal="14dp"
-                        android:text="Add Image"
+                        android:text="@string/group_add_image"
                         android:textAllCaps="false"
                         android:textColor="@color/white"
                         android:textSize="13sp" />
@@ -121,7 +121,7 @@
                         android:background="@drawable/bg_chat_search"
                         android:minWidth="0dp"
                         android:paddingHorizontal="14dp"
-                        android:text="Remove"
+                        android:text="@string/group_remove_image"
                         android:textAllCaps="false"
                         android:textColor="@color/feed_secondary_text"
                         android:textSize="13sp"
@@ -144,7 +144,7 @@
             android:layout_height="52dp"
             android:layout_marginTop="22dp"
             android:background="@drawable/bg_chat_primary_button"
-            android:text="Finish Setup"
+            android:text="@string/group_finish_setup"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp" />

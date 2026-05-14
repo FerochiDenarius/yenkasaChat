@@ -96,9 +96,13 @@ class GroupProfileActivity : AppCompatActivity() {
         val initialImage = intent.getStringExtra("groupImage").orEmpty()
         val initialMemberCount = intent.getIntExtra("groupMemberCount", 0)
 
-        groupName.text = initialName.ifBlank { "Yenkasa Group" }
-        memberCount.text = if (initialMemberCount > 0) "$initialMemberCount members" else "Group chat"
-        groupBio.text = "Loading group details..."
+        groupName.text = initialName.ifBlank { getString(R.string.group_default_name) }
+        memberCount.text = if (initialMemberCount > 0) {
+            resources.getQuantityString(R.plurals.members_count, initialMemberCount, initialMemberCount)
+        } else {
+            getString(R.string.group_chat)
+        }
+        groupBio.text = getString(R.string.group_loading_details)
 
         Glide.with(this)
             .load(initialImage)
@@ -110,7 +114,7 @@ class GroupProfileActivity : AppCompatActivity() {
 
     private fun loadGroupProfile() {
         if (groupId.isBlank()) {
-            Toast.makeText(this, "Group details unavailable", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.group_details_unavailable), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -119,7 +123,7 @@ class GroupProfileActivity : AppCompatActivity() {
             override fun onResponse(call: Call<GroupResponse>, response: Response<GroupResponse>) {
                 val group = response.body()?.group
                 if (!response.isSuccessful || group == null) {
-                    Toast.makeText(this@GroupProfileActivity, "Could not load group profile", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@GroupProfileActivity, getString(R.string.group_could_not_load_profile), Toast.LENGTH_SHORT).show()
                     return
                 }
                 bindGroup(group)
@@ -127,16 +131,20 @@ class GroupProfileActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
                 Log.e("GroupProfileActivity", "Could not load group profile: ${t.message}", t)
-                Toast.makeText(this@GroupProfileActivity, "Could not load group profile: ${t.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@GroupProfileActivity, getString(R.string.group_could_not_load_profile_with_error, t.message), Toast.LENGTH_SHORT).show()
             }
         })
     }
 
     private fun bindGroup(group: ChatRoom) {
         currentGroup = group
-        groupName.text = group.groupName ?: "Yenkasa Group"
-        groupBio.text = group.groupBio?.takeIf { it.isNotBlank() } ?: "No group bio yet"
-        memberCount.text = if (group.memberCount > 0) "${group.memberCount} members" else "Group chat"
+        groupName.text = group.groupName ?: getString(R.string.group_default_name)
+        groupBio.text = group.groupBio?.takeIf { it.isNotBlank() } ?: getString(R.string.group_no_bio_yet)
+        memberCount.text = if (group.memberCount > 0) {
+            resources.getQuantityString(R.plurals.members_count, group.memberCount, group.memberCount)
+        } else {
+            getString(R.string.group_chat)
+        }
         membersAdapter.submitList(group.participants.orEmpty())
 
         Glide.with(this)
@@ -151,7 +159,9 @@ class GroupProfileActivity : AppCompatActivity() {
         addMembersButton.visibility = if (canAddMembers) View.VISIBLE else View.GONE
         imageActionsLayout.visibility = if (canAddMembers) View.VISIBLE else View.GONE
         groupImage.isClickable = true
-        groupImage.contentDescription = if (canAddMembers) "Change group image" else "Group image"
+        groupImage.contentDescription = getString(
+            if (canAddMembers) R.string.group_change_image_content_description else R.string.group_image
+        )
         if (!isUpdatingImage) {
             imageStatus.visibility = View.GONE
         }
@@ -163,14 +173,14 @@ class GroupProfileActivity : AppCompatActivity() {
             return
         }
         if (isUpdatingImage) {
-            Toast.makeText(this, "Wait for the group image update to finish", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.group_wait_image_update), Toast.LENGTH_SHORT).show()
             return
         }
         pickGroupImage.launch("image/*")
     }
 
     private fun openImageHint() {
-        Toast.makeText(this, "Only group admins can change the group image", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.group_admins_change_image_only), Toast.LENGTH_SHORT).show()
     }
 
     private fun showLocalImagePreview(uri: Uri) {
@@ -180,7 +190,7 @@ class GroupProfileActivity : AppCompatActivity() {
             .error(R.drawable.ic_default_profile)
             .circleCrop()
             .into(groupImage)
-        imageStatus.text = "Uploading image..."
+        imageStatus.text = getString(R.string.group_uploading_image)
         imageStatus.visibility = View.VISIBLE
     }
 
@@ -199,8 +209,8 @@ class GroupProfileActivity : AppCompatActivity() {
         }
 
         if (part == null) {
-            imageStatus.text = "Could not read selected image"
-            Toast.makeText(this, "Could not read selected image", Toast.LENGTH_LONG).show()
+            imageStatus.text = getString(R.string.group_could_not_read_selected_image)
+            Toast.makeText(this, getString(R.string.group_could_not_read_selected_image), Toast.LENGTH_LONG).show()
             return
         }
 
@@ -214,8 +224,8 @@ class GroupProfileActivity : AppCompatActivity() {
                 val imageUrl = body?.imageUrl ?: body?.url
                 if (!response.isSuccessful || body?.success != true || imageUrl.isNullOrBlank()) {
                     setImageUpdating(false)
-                    imageStatus.text = body?.message ?: "Image upload failed"
-                    Toast.makeText(this@GroupProfileActivity, body?.message ?: "Image upload failed", Toast.LENGTH_LONG).show()
+                    imageStatus.text = body?.message ?: getString(R.string.group_image_upload_failed)
+                    Toast.makeText(this@GroupProfileActivity, body?.message ?: getString(R.string.group_image_upload_failed), Toast.LENGTH_LONG).show()
                     return
                 }
                 saveGroupImage(imageUrl)
@@ -223,14 +233,14 @@ class GroupProfileActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<GroupImageUploadResponse>, t: Throwable) {
                 setImageUpdating(false)
-                imageStatus.text = "Image upload failed"
-                Toast.makeText(this@GroupProfileActivity, "Image upload failed: ${t.message}", Toast.LENGTH_LONG).show()
+                imageStatus.text = getString(R.string.group_image_upload_failed)
+                Toast.makeText(this@GroupProfileActivity, getString(R.string.group_image_upload_failed_with_error, t.message), Toast.LENGTH_LONG).show()
             }
         })
     }
 
     private fun saveGroupImage(imageUrl: String) {
-        imageStatus.text = "Saving group image..."
+        imageStatus.text = getString(R.string.group_saving_image)
         ApiClient.apiService.updateGroupProfile(
             groupId,
             GroupProfileUpdateRequest(groupImage = imageUrl)
@@ -240,8 +250,8 @@ class GroupProfileActivity : AppCompatActivity() {
                 val body = response.body()
                 val group = body?.group
                 if (!response.isSuccessful || body?.success != true || group == null) {
-                    imageStatus.text = body?.message ?: "Could not save group image"
-                    Toast.makeText(this@GroupProfileActivity, body?.message ?: "Could not save group image", Toast.LENGTH_LONG).show()
+                    imageStatus.text = body?.message ?: getString(R.string.group_could_not_save_image)
+                    Toast.makeText(this@GroupProfileActivity, body?.message ?: getString(R.string.group_could_not_save_image), Toast.LENGTH_LONG).show()
                     return
                 }
 
@@ -252,15 +262,15 @@ class GroupProfileActivity : AppCompatActivity() {
                     putExtra("groupImage", group.groupImage.orEmpty())
                     putExtra("groupMemberCount", group.memberCount)
                 })
-                imageStatus.text = "Group image updated"
-                Toast.makeText(this@GroupProfileActivity, "Group image updated", Toast.LENGTH_SHORT).show()
+                imageStatus.text = getString(R.string.group_image_updated)
+                Toast.makeText(this@GroupProfileActivity, getString(R.string.group_image_updated), Toast.LENGTH_SHORT).show()
                 bindGroup(group)
             }
 
             override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
                 setImageUpdating(false)
-                imageStatus.text = "Could not save group image"
-                Toast.makeText(this@GroupProfileActivity, "Could not save group image: ${t.message}", Toast.LENGTH_LONG).show()
+                imageStatus.text = getString(R.string.group_could_not_save_image)
+                Toast.makeText(this@GroupProfileActivity, getString(R.string.group_could_not_save_image_with_error, t.message), Toast.LENGTH_LONG).show()
             }
         })
     }
@@ -268,7 +278,7 @@ class GroupProfileActivity : AppCompatActivity() {
     private fun openAddMembers() {
         val group = currentGroup
         if (group == null) {
-            Toast.makeText(this, "Group details still loading", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.group_details_still_loading), Toast.LENGTH_SHORT).show()
             return
         }
         startActivity(Intent(this, GroupContactsSelectorActivity::class.java).apply {

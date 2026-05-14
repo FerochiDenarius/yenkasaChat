@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
         // ✅ Setup toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = "Yenkasa"
+        supportActionBar?.title = getString(R.string.yenkasa_brand)
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
         toolbar.navigationIcon = null
 

@@ -8,7 +8,7 @@
 
     <TextView
         android:id="@+id/screenTitle"
-        android:text="Community Visibility"
+        android:text="@string/community_visibility"
         android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="@color/yenkasa_black"

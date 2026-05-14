@@ -898,10 +898,10 @@ class PostAdapter(
         val diffSeconds = diffMillis / 1000
 
         return when {
-            diffSeconds < 60 -> "now"
-            diffSeconds < 3600 -> "${diffSeconds / 60}m"
-            diffSeconds < 86400 -> "${diffSeconds / 3600}h"
-            diffSeconds < 604800 -> "${diffSeconds / 86400}d"
+            diffSeconds < 60 -> context.getString(R.string.time_now_short)
+            diffSeconds < 3600 -> context.getString(R.string.time_minutes_short, diffSeconds / 60)
+            diffSeconds < 86400 -> context.getString(R.string.time_hours_short, diffSeconds / 3600)
+            diffSeconds < 604800 -> context.getString(R.string.time_days_short, diffSeconds / 86400)
             else -> SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(timestamp))
         }
     }

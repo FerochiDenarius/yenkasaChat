@@ -30,7 +30,7 @@
 
             <TextView
                 android:id="@+id/txtCommunityName"
-                android:text="Community Name"
+                android:text="@string/community_name"
                 android:textSize="15sp"
                 android:textColor="@color/yenkasa_black"
                 android:textStyle="bold"
@@ -39,7 +39,7 @@
 
             <TextView
                 android:id="@+id/txtVisibilityStatus"
-                android:text="Can see your posts"
+                android:text="@string/can_see_your_posts"
                 android:textSize="11sp"
                 android:textColor="@color/muted_text"
                 android:layout_width="wrap_content"
@@ -59,7 +59,7 @@
         android:layout_marginTop="8dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Block users in this community" />
+        android:text="@string/block_users_in_this_community" />
 
     <!-- THIRD ROW: EXCEPT FOLLOWERS CHECKBOX -->
     <CheckBox
@@ -68,6 +68,6 @@
         android:layout_marginTop="2dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Except followers in this community"
+        android:text="@string/except_followers_in_this_community"
         android:enabled="false"/>
 </LinearLayout>

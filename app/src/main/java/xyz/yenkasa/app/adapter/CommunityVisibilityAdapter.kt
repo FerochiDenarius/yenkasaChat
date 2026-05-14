@@ -111,18 +111,19 @@ class CommunityVisibilityAdapter(
     // 🔵 Update the small text under community name
     // ---------------------------------------------------
     private fun updateStatusText(holder: ViewHolder, item: CommunityVisibilityModel) {
+        val context = holder.itemView.context
 
         holder.status.text = when {
             !item.blockUsers ->
-                "Can see your posts"
+                context.getString(R.string.can_see_your_posts)
 
             item.blockUsers && !item.exceptFollowers ->
-                "Blocked — nobody in this community can see your posts"
+                context.getString(R.string.blocked_community_posts_none)
 
             item.blockUsers && item.exceptFollowers ->
-                "Only your followers in this community can see your posts"
+                context.getString(R.string.blocked_community_posts_followers)
 
-            else -> "Can see your posts"
+            else -> context.getString(R.string.can_see_your_posts)
         }
     }
 
@@ -153,7 +154,7 @@ class CommunityVisibilityAdapter(
                     call: Call<xyz.yenkasa.app.model.ApiResponse>,
                     response: Response<xyz.yenkasa.app.model.ApiResponse>
                 ) {
-                    holder.status.text = "Can see your posts"
+                    holder.status.text = holder.itemView.context.getString(R.string.can_see_your_posts)
                 }
 
                 override fun onFailure(

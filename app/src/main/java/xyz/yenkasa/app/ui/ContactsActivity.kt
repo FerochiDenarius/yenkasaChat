@@ -42,7 +42,7 @@ class ContactsActivity : AppCompatActivity() {
         val userId = TokenManager.getUserId(this)
 
         if (token.isNullOrEmpty() || userId.isNullOrEmpty()) {
-            Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.session_expired_login_again), Toast.LENGTH_LONG).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
@@ -54,7 +54,7 @@ class ContactsActivity : AppCompatActivity() {
             onDeleteClick = {
                 Toast.makeText(
                     this,
-                    "Contacts stay saved after the first conversation.",
+                    getString(R.string.chat_contacts_saved_after_first_conversation),
                     Toast.LENGTH_SHORT
                 ).show()
             },
@@ -97,13 +97,13 @@ class ContactsActivity : AppCompatActivity() {
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ContactsActivity", "Load Contacts Failed: $errorMsg (Code: ${response.code()})")
-                        Toast.makeText(this@ContactsActivity, "Failed to load contacts: $errorMsg", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ContactsActivity, getString(R.string.chat_failed_load_contacts, errorMsg), Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<List<Contact>>, t: Throwable) {
                     Log.e("ContactsActivity", "Load Contacts Error: ${t.message}", t)
-                    Toast.makeText(this@ContactsActivity, "Error loading contacts: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ContactsActivity, getString(R.string.chat_error_loading_contacts, t.message), Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -147,13 +147,13 @@ class ContactsActivity : AppCompatActivity() {
                         val successFlag = responseBody?.success
                         val actualMessage = responseBody?.message ?: errorMsg // Try to get message from response body
                         Log.e("ContactsActivity", "Create ChatRoom Failed: $actualMessage (Code: ${response.code()}, Success Flag: $successFlag)")
-                        Toast.makeText(this@ContactsActivity, "Failed to create chat room: $actualMessage", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@ContactsActivity, getString(R.string.chat_failed_create_room, actualMessage), Toast.LENGTH_LONG).show()
                     }
                 }
 
                 override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
                     Log.e("ContactsActivity", "Create ChatRoom Error: ${t.message}", t)
-                    Toast.makeText(this@ContactsActivity, "Error creating chat room: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ContactsActivity, getString(R.string.chat_error_creating_room, t.message), Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -166,9 +166,9 @@ class ContactsActivity : AppCompatActivity() {
                         errorJson.split("\"message\":\"")[1].split("\"")[0]
                     } catch (e: Exception) { errorJson }
                 } else { errorJson }
-            } ?: "Error: ${response.code()} ${response.message()} (No specific error body)"
+            } ?: getString(R.string.chat_error_code_no_body, response.code(), response.message())
         } catch (e: IOException) {
-            "Error reading error response: ${e.message}"
+            getString(R.string.chat_error_reading_response, e.message)
         }
     }
 }

@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_add_contact"
-        android:title="Add Contact"
+        android:title="@string/chat_action_add_contact"
         android:icon="@android:drawable/ic_menu_add"
         android:showAsAction="ifRoom" />
 </menu>

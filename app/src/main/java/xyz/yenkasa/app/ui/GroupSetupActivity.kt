@@ -65,7 +65,7 @@ class GroupSetupActivity : AppCompatActivity() {
 
         removeImageButton.setOnClickListener {
             uploadedGroupImageUrl = ""
-            imageStatus.text = "Add a photo from your gallery"
+            imageStatus.text = getString(R.string.group_add_photo_from_gallery)
             removeImageButton.visibility = View.GONE
             Glide.with(this)
                 .load(R.drawable.ic_profile_placeholder)
@@ -76,11 +76,11 @@ class GroupSetupActivity : AppCompatActivity() {
         finishButton.setOnClickListener {
             val name = nameInput.text.toString().trim()
             if (name.isBlank()) {
-                Toast.makeText(this, "Enter a group name", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.group_enter_name), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (isUploadingGroupImage) {
-                Toast.makeText(this, "Wait for the group image to finish uploading", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.group_wait_image_upload), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             createGroup(
@@ -101,7 +101,7 @@ class GroupSetupActivity : AppCompatActivity() {
             .error(R.drawable.ic_profile_placeholder)
             .circleCrop()
             .into(imagePreview)
-        imageStatus.text = "Uploading image..."
+        imageStatus.text = getString(R.string.group_uploading_image)
         removeImageButton.visibility = View.GONE
     }
 
@@ -121,8 +121,8 @@ class GroupSetupActivity : AppCompatActivity() {
         }
 
         if (part == null) {
-            imageStatus.text = "Could not read selected image"
-            Toast.makeText(this, "Could not read selected image", Toast.LENGTH_LONG).show()
+            imageStatus.text = getString(R.string.group_could_not_read_selected_image)
+            Toast.makeText(this, getString(R.string.group_could_not_read_selected_image), Toast.LENGTH_LONG).show()
             return
         }
 
@@ -136,21 +136,21 @@ class GroupSetupActivity : AppCompatActivity() {
                 val bodyResponse = response.body()
                 val imageUrl = bodyResponse?.imageUrl ?: bodyResponse?.url
                 if (!response.isSuccessful || bodyResponse?.success != true || imageUrl.isNullOrBlank()) {
-                    imageStatus.text = bodyResponse?.message ?: "Image upload failed"
-                    Toast.makeText(this@GroupSetupActivity, bodyResponse?.message ?: "Image upload failed", Toast.LENGTH_LONG).show()
+                    imageStatus.text = bodyResponse?.message ?: getString(R.string.group_image_upload_failed)
+                    Toast.makeText(this@GroupSetupActivity, bodyResponse?.message ?: getString(R.string.group_image_upload_failed), Toast.LENGTH_LONG).show()
                     return
                 }
 
                 uploadedGroupImageUrl = imageUrl
-                imageStatus.text = "Group image added"
-                pickImageButton.text = "Change Image"
+                imageStatus.text = getString(R.string.group_image_added)
+                pickImageButton.text = getString(R.string.group_change_image)
                 removeImageButton.visibility = View.VISIBLE
             }
 
             override fun onFailure(call: Call<GroupImageUploadResponse>, t: Throwable) {
                 setUploading(false)
-                imageStatus.text = "Image upload failed"
-                Toast.makeText(this@GroupSetupActivity, "Image upload failed: ${t.message}", Toast.LENGTH_LONG).show()
+                imageStatus.text = getString(R.string.group_image_upload_failed)
+                Toast.makeText(this@GroupSetupActivity, getString(R.string.group_image_upload_failed_with_error, t.message), Toast.LENGTH_LONG).show()
             }
         })
     }
@@ -163,7 +163,7 @@ class GroupSetupActivity : AppCompatActivity() {
                 val body = response.body()
                 val group = body?.group
                 if (!response.isSuccessful || body?.success != true || group == null) {
-                    Toast.makeText(this@GroupSetupActivity, body?.message ?: "Could not create group", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@GroupSetupActivity, body?.message ?: getString(R.string.group_could_not_create), Toast.LENGTH_LONG).show()
                     return
                 }
 
@@ -179,7 +179,7 @@ class GroupSetupActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<GroupResponse>, t: Throwable) {
                 finishButton.isEnabled = true
-                Toast.makeText(this@GroupSetupActivity, "Could not create group: ${t.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@GroupSetupActivity, getString(R.string.group_could_not_create_with_error, t.message), Toast.LENGTH_LONG).show()
             }
         })
     }

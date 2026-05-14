@@ -173,7 +173,7 @@
                 android:minWidth="70dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="None"
+                android:text="@string/filter_none"
                 android:textColor="@color/chat_picker_text" />
 
             <TextView
@@ -185,7 +185,7 @@
                 android:minWidth="70dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="Vivid"
+                android:text="@string/filter_vivid"
                 android:textColor="@color/chat_picker_text" />
 
             <TextView
@@ -197,7 +197,7 @@
                 android:minWidth="70dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="Cool"
+                android:text="@string/filter_cool"
                 android:textColor="@color/chat_picker_text" />
 
             <TextView
@@ -209,7 +209,7 @@
                 android:minWidth="70dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="Warm"
+                android:text="@string/filter_warm"
                 android:textColor="@color/chat_picker_text" />
 
             <TextView
@@ -220,7 +220,7 @@
                 android:minWidth="70dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:text="B&amp;W"
+                android:text="@string/filter_black_white"
                 android:textColor="@color/chat_picker_text" />
         </LinearLayout>
     </HorizontalScrollView>

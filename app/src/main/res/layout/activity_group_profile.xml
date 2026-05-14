@@ -24,7 +24,7 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/bg_chat_header_icon_button"
-            android:contentDescription="Back"
+            android:contentDescription="@string/back"
             android:padding="11dp"
             android:src="@drawable/ic_arrow_back"
             app:tint="@color/yenkasa_emerald" />
@@ -35,7 +35,7 @@
             android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:fontFamily="sans-serif-medium"
-            android:text="Group Profile"
+            android:text="@string/group_profile"
             android:textColor="@color/feed_primary_text"
             android:textSize="21sp" />
     </LinearLayout>
@@ -61,7 +61,7 @@
                 android:layout_height="112dp"
                 android:layout_gravity="center_horizontal"
                 android:background="@drawable/bg_profile_image_circle"
-                android:contentDescription="Group image"
+                android:contentDescription="@string/group_image"
                 android:padding="2dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_default_profile" />
@@ -83,7 +83,7 @@
                     android:background="@drawable/bg_chat_primary_button"
                     android:minWidth="0dp"
                     android:paddingHorizontal="14dp"
-                    android:text="Change Photo"
+                    android:text="@string/group_change_photo"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="13sp" />
@@ -151,7 +151,7 @@
                 android:background="@drawable/bg_chat_primary_button"
                 android:drawableStart="@drawable/ic_person_add"
                 android:drawablePadding="8dp"
-                android:text="Add Members"
+                android:text="@string/group_add_members"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="16sp" />
@@ -161,7 +161,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Members"
+                android:text="@string/group_members"
                 android:textColor="@color/feed_primary_text"
                 android:textSize="17sp" />
 

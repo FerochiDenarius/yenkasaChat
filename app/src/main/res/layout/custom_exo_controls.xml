@@ -15,6 +15,6 @@
         android:layout_margin="16dp"
         android:background="@android:color/transparent"
         android:src="@drawable/ic_volume_up"
-        android:contentDescription="Mute or unmute"
+        android:contentDescription="@string/mute_or_unmute"
         app:tint="@android:color/white" />
 </FrameLayout>

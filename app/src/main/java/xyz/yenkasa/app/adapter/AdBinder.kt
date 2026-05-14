@@ -44,7 +44,8 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         holder.adWatchRewardButton.setOnClickListener(null)
 
         holder.adSponsorLabel.text =
-            ad.sponsorName?.takeIf { it.isNotBlank() } ?: "Sponsored • Earn ${ad.rewardYKC} YKC"
+            ad.sponsorName?.takeIf { it.isNotBlank() }
+                ?: context.getString(R.string.sponsored_earn_ykc, ad.rewardYKC)
 
         if (!ad.title.isNullOrEmpty()) {
             holder.adTitle.visibility = View.VISIBLE
@@ -140,7 +141,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
         if (!ad.ctaUrl.isNullOrEmpty()) {
             holder.adCTAButton.visibility = View.VISIBLE
-            holder.adCTAButton.text = ad.ctaText ?: "Learn More"
+            holder.adCTAButton.text = ad.ctaText ?: context.getString(R.string.learn_more)
 
             holder.adCTAButton.setOnClickListener {
                 rewardClick(ad)
@@ -150,11 +151,11 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
         if (!ad.videoUrl.isNullOrEmpty()) {
             holder.adWatchRewardButton.visibility = View.VISIBLE
-            holder.adWatchRewardButton.text = "Watch & Earn ${ad.rewardYKC} YKC"
+            holder.adWatchRewardButton.text = context.getString(R.string.watch_earn_ykc, ad.rewardYKC)
             holder.adWatchRewardButton.setOnClickListener {
-                holder.adWatchRewardButton.text = "Watching…"
+                holder.adWatchRewardButton.text = context.getString(R.string.watching)
                 showRewardedAd(ad) {
-                    holder.adWatchRewardButton.text = "Reward Earned!"
+                    holder.adWatchRewardButton.text = context.getString(R.string.reward_earned)
                 }
             }
         }

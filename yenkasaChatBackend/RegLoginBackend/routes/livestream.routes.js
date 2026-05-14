@@ -20,6 +20,12 @@ const LIVE_GIFTS = {
   rocket: { label: 'Rocket', emoji: '🚀', amount: 100 }
 };
 
+function resolveYkcBalance(user) {
+  const ykcBalance = Number(user?.ykcBalance || 0);
+  const coinsBalance = Number(user?.coinsBalance || 0);
+  return Math.max(ykcBalance, coinsBalance);
+}
+
 function serializeStream(stream) {
   return {
     _id: stream._id.toString(),
@@ -55,6 +61,10 @@ function legacyLiveRoom(streamId) {
 }
 
 function emitToLiveRoom(streamId, eventName, payload) {
+  if (typeof global.emitToLiveRoomForStream === 'function') {
+    global.emitToLiveRoomForStream(streamId, eventName, payload);
+    return;
+  }
   global.io?.to(liveRoom(streamId)).to(legacyLiveRoom(streamId)).emit(eventName, payload);
 }
 
@@ -463,13 +473,13 @@ router.post('/gift', auth, async (req, res) => {
       host = await User.findById(stream.hostId).session(session);
       if (!sender || !host) throw new Error('Gift participants not found.');
 
-      const senderBefore = Number(sender.ykcBalance ?? sender.coinsBalance ?? 0);
+      const senderBefore = resolveYkcBalance(sender);
       if (senderBefore < gift.amount) {
         const error = new Error('Insufficient YKC balance.');
         error.status = 400;
         throw error;
       }
-      const hostBefore = Number(host.ykcBalance ?? host.coinsBalance ?? 0);
+      const hostBefore = resolveYkcBalance(host);
       const senderAfter = senderBefore - gift.amount;
       const hostAfter = hostBefore + gift.amount;
 
@@ -526,7 +536,9 @@ router.post('/gift', auth, async (req, res) => {
     return res.json({
       success: true,
       gift: event,
-      balance: Number(sender?.ykcBalance ?? sender?.coinsBalance ?? 0)
+      balance: resolveYkcBalance(sender),
+      ykcBalance: resolveYkcBalance(sender),
+      coinsBalance: resolveYkcBalance(sender)
     });
   } catch (err) {
     console.error('Livestream gift failed:', err);

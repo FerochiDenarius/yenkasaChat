@@ -175,7 +175,7 @@ class YenkasaChatMediaView @JvmOverloads constructor(
 
                     override fun onPlayerError(error: PlaybackException) {
                         Log.e("YenkasaChatMedia", "Video playback failed: $url", error)
-                        errorText.text = "Video failed. Tap to retry."
+                        errorText.text = context.getString(R.string.video_failed_tap_retry)
                         errorText.isVisible = true
                         restoreVideoThumb()
                     }
@@ -191,7 +191,7 @@ class YenkasaChatMediaView @JvmOverloads constructor(
 
     private fun bindFile(url: String, payload: MediaPayload) {
         val name = payload.fileName?.takeIf { it.isNotBlank() }
-            ?: url.substringAfterLast('/').substringBefore('?').ifBlank { "Document" }
+            ?: url.substringAfterLast('/').substringBefore('?').ifBlank { context.getString(R.string.document) }
         fileLayout.isVisible = true
         fileNameView.text = name
         fileIcon.text = when (payload.kind) {

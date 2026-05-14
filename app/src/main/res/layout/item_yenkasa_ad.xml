@@ -88,7 +88,7 @@
                 android:background="@color/yenkasa_black"
                 android:gravity="center"
                 android:padding="20dp"
-                android:text="Ad media unavailable"
+                android:text="@string/ad_media_unavailable"
                 android:textColor="@color/yenkasaWhite"
                 android:textStyle="bold"
                 android:visibility="gone"
@@ -132,7 +132,7 @@
         android:layout_marginTop="6dp"
         android:backgroundTint="@color/yenkasa_amber"
         android:padding="10dp"
-        android:text="Watch &amp; Earn 5 YKC"
+        android:text="@string/watch_earn_default_ykc"
         android:textColor="@color/white"
         android:textStyle="bold"
         android:visibility="gone" />

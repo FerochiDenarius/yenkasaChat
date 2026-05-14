@@ -15,7 +15,7 @@
         android:layout_height="40dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_menu_delete"
-        android:contentDescription="Delete Audio" />
+        android:contentDescription="@string/delete_audio" />
 
     <ImageButton
         android:id="@+id/btnPlayPauseAudio"
@@ -23,7 +23,7 @@
         android:layout_height="40dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_media_play"
-        android:contentDescription="Play Audio" />
+        android:contentDescription="@string/play_audio" />
 
     <TextView
         android:id="@+id/audioDurationText"
@@ -41,7 +41,7 @@
         android:layout_height="40dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_menu_send"
-        android:contentDescription="Send Audio" />
+        android:contentDescription="@string/send_audio" />
 
     <ImageButton
         android:id="@+id/btnClosePreview"
@@ -49,5 +49,5 @@
         android:layout_height="40dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_menu_close_clear_cancel"
-        android:contentDescription="Close Preview" />
+        android:contentDescription="@string/close_preview" />
 </LinearLayout>

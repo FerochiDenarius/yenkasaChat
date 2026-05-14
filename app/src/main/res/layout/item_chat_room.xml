@@ -30,7 +30,7 @@
                 android:layout_width="54dp"
                 android:layout_height="54dp"
                 android:background="@drawable/bg_chat_avatar_shell"
-                android:contentDescription="Profile picture"
+                android:contentDescription="@string/profile_picture"
                 android:padding="1dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_profile_placeholder" />

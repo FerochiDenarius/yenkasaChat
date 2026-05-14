@@ -158,7 +158,7 @@ class MessageAdapter(
 
                 val senderName =
                     when {
-                        replied.senderId == currentUserId -> "You"
+                        replied.senderId == currentUserId -> context.getString(R.string.you)
                         replied.sender?.username?.isNotBlank() == true -> replied.sender!!.username!!
                         receiverName.isNotBlank() -> receiverName
                         else -> ""
@@ -169,13 +169,13 @@ class MessageAdapter(
 
                 val replyText = when {
                     !replied.text.isNullOrBlank() -> replied.text!!
-                    !replied.imageUrl.isNullOrBlank() -> "📷 Photo"
-                    !replied.videoUrl.isNullOrBlank() -> "🎥 Video"
-                    !replied.audioUrl.isNullOrBlank() -> "🎵 Audio"
-                    !replied.fileUrl.isNullOrBlank() -> "📄 File"
-                    replied.location != null -> "📍 Location"
-                    !replied.contactInfo.isNullOrBlank() -> "👤 Contact"
-                    else -> "(message)"
+                    !replied.imageUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_photo)
+                    !replied.videoUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_video)
+                    !replied.audioUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_audio)
+                    !replied.fileUrl.isNullOrBlank() -> context.getString(R.string.chat_preview_file)
+                    replied.location != null -> context.getString(R.string.chat_preview_location)
+                    !replied.contactInfo.isNullOrBlank() -> context.getString(R.string.chat_preview_contact)
+                    else -> context.getString(R.string.message_placeholder)
                 }
 
                 repliedToMessage?.apply {
@@ -221,7 +221,7 @@ class MessageAdapter(
             // ---------------- Location ----------------
             if (message.location != null && layoutLocation != null) {
                 layoutLocation.visibility = View.VISIBLE
-                textLocation?.text = "View location"
+                textLocation?.text = context.getString(R.string.view_location)
                 layoutLocation.setOnClickListener {
                     val intent = Intent(context, LocationPreviewActivity::class.java)
                     intent.putExtra("latitude", message.location.latitude)
@@ -269,12 +269,12 @@ class MessageAdapter(
                             setOnCompletionListener { releaseMediaPlayer() }
                             setOnErrorListener { _, _, _ ->
                                 releaseMediaPlayer()
-                                Toast.makeText(context, "Error playing audio", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.error_playing_audio, Toast.LENGTH_SHORT).show()
                                 true
                             }
                         } catch (e: Exception) {
                             releaseMediaPlayer()
-                            Toast.makeText(context, "Cannot play audio", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, R.string.cannot_play_audio, Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else if (mediaPlayer?.isPlaying == true) {

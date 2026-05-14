@@ -498,7 +498,10 @@ class LiveStreamActivity : AppCompatActivity() {
                     val body = response.body()
                     if (!response.isSuccessful || body?.success != true) {
                         Toast.makeText(this@LiveStreamActivity, body?.message ?: getString(R.string.gift_failed), Toast.LENGTH_SHORT).show()
+                        return
                     }
+                    val updatedBalance = body.ykcBalance ?: body.coinsBalance ?: body.balance
+                    TokenManager.saveCoinsPrecise(this@LiveStreamActivity, updatedBalance)
                 }
 
                 override fun onFailure(call: Call<LiveGiftResponse>, t: Throwable) {

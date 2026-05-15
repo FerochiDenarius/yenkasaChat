@@ -42,6 +42,8 @@
     <string name="enable_notifications_summary">Gérez vos préférences de notification</string>
     <string name="reward_notifications">Notifications de récompense</string>
     <string name="reward_notifications_summary">Couper uniquement les alertes de récompense du portefeuille</string>
+    <string name="community_post_notifications">Notifications de publications communautaires</string>
+    <string name="community_post_notifications_summary">Me prévenir quand mes communautés ont de nouvelles publications</string>
     <string name="moderation">Modération</string>
     <string name="moderation_dashboard">Tableau de modération</string>
     <string name="moderation_dashboard_summary">Examiner les signalements, suppressions et alertes</string>
@@ -282,6 +284,8 @@
     <string name="notification_new_follower">Nouvel abonné</string>
     <string name="notification_post_approved">Votre publication a été approuvée</string>
     <string name="notification_view_milestone">Votre publication a atteint un nouveau palier de vues</string>
+    <string name="notification_community_post">Nouvelle publication dans votre communauté</string>
+    <string name="play_pause">Lire ou mettre en pause</string>
     <string name="tap_to_view_profile">Touchez pour voir le profil</string>
     <string name="tap_to_open_conversation">Touchez pour ouvrir la conversation</string>
     <string name="tap_to_view_post">Touchez pour voir la publication</string>

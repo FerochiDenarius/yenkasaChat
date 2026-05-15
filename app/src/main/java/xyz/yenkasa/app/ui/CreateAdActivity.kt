@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UploadMediaOptimizer
 import xyz.yenkasa.app.util.UserPermissions
@@ -31,7 +32,7 @@ class CreateAdActivity : AppCompatActivity() {
 
     private lateinit var inputAdTitle: EditText
     private lateinit var previewAdImage: ImageView
-    private lateinit var previewAdVideo: VideoView
+    private lateinit var previewAdVideo: YenkasaVideoPlayerView
     private lateinit var previewAdThumb: ImageView
     private lateinit var imageAdVideoPlaceholder: ImageView
 
@@ -67,13 +68,18 @@ class CreateAdActivity : AppCompatActivity() {
     ) { uri ->
         if (uri != null) {
             videoUri = uri
-            previewAdVideo.visibility = VideoView.VISIBLE
+            previewAdVideo.visibility = ImageView.VISIBLE
             imageAdVideoPlaceholder.visibility = ImageView.VISIBLE
             imageAdVideoPlaceholder.clearColorFilter()
             Glide.with(this).load(uri).into(imageAdVideoPlaceholder)
-            previewAdVideo.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            previewAdVideo.setVideoURI(uri)
-            previewAdVideo.start()
+            previewAdVideo.visibility = ImageView.VISIBLE
+            previewAdVideo.bindVideo(
+                mediaUrl = uri.toString(),
+                thumbnailUrl = uri.toString(),
+                autoplay = true,
+                muted = true,
+                loop = true
+            )
         }
     }
 
@@ -127,16 +133,8 @@ class CreateAdActivity : AppCompatActivity() {
         inputCtaUrl = findViewById(R.id.inputCtaUrl)
         inputReward = findViewById(R.id.inputReward)
 
-        previewAdVideo.setOnPreparedListener {
+        previewAdVideo.setReadyListener {
             imageAdVideoPlaceholder.visibility = ImageView.GONE
-            previewAdVideo.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            it.isLooping = true
-            previewAdVideo.start()
-        }
-        previewAdVideo.setOnErrorListener { _, _, _ ->
-            imageAdVideoPlaceholder.visibility = ImageView.VISIBLE
-            showToast("Unable to preview this video, but it can still be submitted.")
-            true
         }
     }
 
@@ -345,5 +343,15 @@ class CreateAdActivity : AppCompatActivity() {
                 json.optString("error").ifBlank { errorText }
             }
         }.getOrDefault(errorText)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (::previewAdVideo.isInitialized) previewAdVideo.pause()
+    }
+
+    override fun onDestroy() {
+        if (::previewAdVideo.isInitialized) previewAdVideo.release()
+        super.onDestroy()
     }
 }

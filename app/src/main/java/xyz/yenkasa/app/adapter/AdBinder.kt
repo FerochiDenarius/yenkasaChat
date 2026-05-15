@@ -7,8 +7,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -26,7 +24,6 @@ import xyz.yenkasa.app.util.WalletBalanceManager
 
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
-    private var exoPlayer: ExoPlayer? = null
     private val trackedImpressions = mutableSetOf<String>()
 
     override fun bindYenkasa(holder: YenkasaAdViewHolder, ad: AdModel) {
@@ -38,7 +35,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         holder.adCTAButton.visibility = View.GONE
         holder.adWatchRewardButton.visibility = View.GONE
         holder.adMediaFallback.visibility = View.GONE
-        holder.adPlayerView.player = null
+        holder.adPlayerView.release()
         holder.adPlayButton.setOnClickListener(null)
         holder.adCTAButton.setOnClickListener(null)
         holder.adWatchRewardButton.setOnClickListener(null)
@@ -195,19 +192,16 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
     }
 
     private fun playVideo(holder: YenkasaAdViewHolder, ad: AdModel) {
-        if (exoPlayer == null) {
-            exoPlayer = ExoPlayer.Builder(context).build()
-        }
-
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayButton.visibility = View.GONE
         holder.adPlayerView.visibility = View.VISIBLE
         holder.adMediaFallback.visibility = View.GONE
-        holder.adPlayerView.player = exoPlayer
-
-        exoPlayer?.setMediaItem(MediaItem.fromUri(ad.videoUrl!!))
-        exoPlayer?.prepare()
-        exoPlayer?.play()
+        holder.adPlayerView.bindVideo(
+            mediaUrl = ad.videoUrl,
+            thumbnailUrl = ad.thumbnailUrl ?: ad.imageUrl,
+            autoplay = true,
+            muted = false
+        )
 
         CoroutineScope(Dispatchers.IO).launch {
             delay(10000)

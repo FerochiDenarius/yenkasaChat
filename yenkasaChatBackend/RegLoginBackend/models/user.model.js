@@ -216,7 +216,8 @@ const userSchema = new Schema({
 
   notificationPreferences: {
     inAppEnabled: { type: Boolean, default: true },
-    rewardEnabled: { type: Boolean, default: true }
+    rewardEnabled: { type: Boolean, default: true },
+    communityPostEnabled: { type: Boolean, default: true }
   },
 
   timezone: { type: String, default: 'UTC' },

@@ -42,6 +42,8 @@
     <string name="enable_notifications_summary">Hwɛ wo amanneɛbɔ nhyehyɛe</string>
     <string name="reward_notifications">Akyɛde amanneɛbɔ</string>
     <string name="reward_notifications_summary">Mua wallet akyɛde amanneɛbɔ nko ara</string>
+    <string name="community_post_notifications">Kuw post amanneɛbɔ</string>
+    <string name="community_post_notifications_summary">Bɔ me amanneɛ sɛ kuw a mewom no nya post foforɔ</string>
     <string name="moderation">Nhwehwɛmu</string>
     <string name="moderation_dashboard">Nhwehwɛmu dashboard</string>
     <string name="moderation_dashboard_summary">Hwɛ reports, deletions ne flags</string>
@@ -282,6 +284,8 @@
     <string name="notification_new_follower">Follower foforo</string>
     <string name="notification_post_approved">Wɔapene wo post so</string>
     <string name="notification_view_milestone">Wo post adu view milestone foforo</string>
+    <string name="notification_community_post">Post foforɔ aba wo kuw mu</string>
+    <string name="play_pause">Bɔ anaa gyina</string>
     <string name="tap_to_view_profile">Mia na hwɛ profile</string>
     <string name="tap_to_open_conversation">Mia na bue nkɔmmɔ no</string>
     <string name="tap_to_view_post">Mia na hwɛ post no</string>

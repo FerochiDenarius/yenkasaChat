@@ -11,9 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.media3.common.MediaItem
-import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import androidx.media3.common.Player
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -22,7 +20,6 @@ import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.transition.Transition
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.FollowResponse
@@ -34,7 +31,7 @@ import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
-import xyz.yenkasa.app.util.YenkasaMediaCache
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
@@ -61,21 +58,14 @@ class PostAdapter(
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     companion object {
-        var currentPlayer: ExoPlayer? = null
+        var currentPlayer: YenkasaVideoPlayerView? = null
     }
 
-    // Single ExoPlayer for all video playback
-    private var exoPlayer: ExoPlayer? = null
     private var currentPlayingPosition: Int = -1
-    private var currentPlayerView: PlayerView? = null
-    private var videoSizeListener: Player.Listener? = null
 
     private val lastViewTime = mutableMapOf<String, Long>()
     private var videoTimer: Timer? = null
     private var videoSeconds = 0
-
-    // Prevent double-prep/tap races
-    private var isPreparing = false
 
     // Optional external callbacks
     private var onDeleteClickListener: ((Post) -> Unit)? = null
@@ -118,12 +108,11 @@ class PostAdapter(
         private var imagePageCallback: ViewPager2.OnPageChangeCallback? = null
 
         // VIDEO
-        val playerView: PlayerView? = itemRoot.findViewById(R.id.playerView)
+        val playerView: YenkasaVideoPlayerView? = itemRoot.findViewById(R.id.playerView)
         val imageVideoThumbnail: ImageView = itemRoot.findViewById(R.id.imageVideoThumbnail)
         val btnVideoPlay: ImageButton = itemRoot.findViewById(R.id.btnVideoPlay)
         val btnPlayPause: ImageButton? = itemRoot.findViewById(R.id.btnPlayPause)
         private var mediaAspectKey: String? = null
-        private var lastVideoClickTime = 0L
 
         // AUDIO
         val audioIcon: LinearLayout = itemRoot.findViewById(R.id.audioIcon)
@@ -204,19 +193,10 @@ class PostAdapter(
             }
         }
 
-        // Release video player reference from this ViewHolder.
-        // IMPORTANT: we only detach the PlayerView if it's not the active view.
         fun safeDetachPlayerView() {
             try {
-                if (playerView?.player === exoPlayer) {
-                    // If this holder is not the active playing position, detach.
-                    if (adapterPosition != currentPlayingPosition) {
-                        playerView?.player = null
-                    } // else: keep the player attached (user asked playback to continue)
-                } else {
-                    // Not attached to global player, safe to null
-                    playerView?.player = null
-                }
+                if (adapterPosition != currentPlayingPosition) playerView?.release()
+                else playerView?.pause()
             } catch (_: Exception) {}
         }
 
@@ -262,70 +242,26 @@ class PostAdapter(
             }
         }
 
-        // Setup video thumbnail and play button; actual video playback handled by adapter when needed
-        fun prepareVideoUi(videoUrl: String?, position: Int) {
+        fun prepareVideoUi(post: Post, position: Int) {
+            val videoUrl = post.optimizedVideoUrl()
             val thumbnailUrl = CloudinaryMedia.videoPosterUrl(videoUrl, CloudinaryMedia.WIDTH_PREVIEW) ?: videoUrl
             mediaAspectKey = thumbnailUrl
-            applyMediaAspect(9f / 16f, imageVideoThumbnail, playerView)
-            imageVideoThumbnail.visibility = View.VISIBLE
-            btnVideoPlay.visibility = View.VISIBLE
-            playerView?.visibility = View.GONE
+            applyMediaAspect(9f / 16f, playerView)
+            imageVideoThumbnail.visibility = View.GONE
+            btnVideoPlay.visibility = View.GONE
+            playerView?.visibility = View.VISIBLE
             btnPlayPause?.visibility = View.GONE
 
-            // load thumbnail (frame extraction)
-            try {
-                Glide.with(itemRoot.context)
-                    .asBitmap()
-                    .load(thumbnailUrl)
-                    .apply(RequestOptions().frame(4_000_000).diskCacheStrategy(DiskCacheStrategy.ALL))
-                    .placeholder(R.drawable.video_placeholder)
-                    .into(object : CustomTarget<Bitmap>() {
-                        override fun onResourceReady(
-                            resource: Bitmap,
-                            transition: Transition<in Bitmap>?
-                        ) {
-                            if (mediaAspectKey == thumbnailUrl) {
-                                applyMediaAspect(aspectFrom(resource), imageVideoThumbnail, playerView)
-                                imageVideoThumbnail.setImageBitmap(resource)
-                            }
-                        }
-
-                        override fun onLoadCleared(placeholder: android.graphics.drawable.Drawable?) {
-                            imageVideoThumbnail.setImageDrawable(placeholder)
-                        }
-                    })
-            } catch (_: Exception) {}
-
-            btnVideoPlay.setOnClickListener {
-                val now = System.currentTimeMillis()
-                if (now - lastVideoClickTime < 300L) return@setOnClickListener
-                lastVideoClickTime = now
-                if (isPreparing) return@setOnClickListener
-
-                // Hide thumbnail UI, show player
-                imageVideoThumbnail.visibility = View.GONE
-                btnVideoPlay.visibility = View.GONE
-                playerView?.visibility = View.VISIBLE
-
-                playVideoRequested(position)
+            playerView?.bindVideo(
+                mediaUrl = videoUrl,
+                thumbnailUrl = thumbnailUrl,
+                autoplay = false,
+                muted = true
+            )
+            playerView?.setCheckpointListener { seconds ->
+                sendVideoReward(post, seconds)
+                if (seconds == 10) recordVisibleView(post._id, 10)
             }
-
-            btnPlayPause?.setOnClickListener {
-                val now = System.currentTimeMillis()
-                if (now - lastVideoClickTime < 300L) return@setOnClickListener
-                lastVideoClickTime = now
-                toggleRequested(position)
-            }
-        }
-
-        fun applyVideoSize(videoSize: VideoSize) {
-            if (videoSize.width <= 0 || videoSize.height <= 0) return
-            val rawAspect = if (videoSize.unappliedRotationDegrees == 90 || videoSize.unappliedRotationDegrees == 270) {
-                videoSize.height.toFloat() / videoSize.width.toFloat()
-            } else {
-                videoSize.width.toFloat() / videoSize.height.toFloat()
-            }
-            applyMediaAspect(rawAspect, imageVideoThumbnail, playerView)
         }
 
         private fun loadAspectFromImage(url: String, targetView: View) {
@@ -366,14 +302,6 @@ class PostAdapter(
             }
         }
 
-        // Methods that call adapter functions (adapter controls single exoPlayer)
-        private fun playVideoRequested(position: Int) {
-            this@PostAdapter.playVideoAtPosition(position, this)
-        }
-
-        private fun toggleRequested(position: Int) {
-            this@PostAdapter.toggleVideoAtPosition(position)
-        }
     }
 
     // ----------------------
@@ -486,17 +414,7 @@ class PostAdapter(
 
         if (hasVideo) {
             holder.mediaContainer.visibility = View.VISIBLE
-            holder.prepareVideoUi(optimizedVideoUrl, position)
-
-            // If this position is currently playing, attach player view immediately
-            if (position == currentPlayingPosition) {
-                // ensure playerView is attached to the global player
-                holder.playerView?.post {
-                    attachPlayerToView(holder.playerView)
-                    holder.playerView?.visibility = View.VISIBLE
-                    holder.btnPlayPause?.visibility = View.GONE
-                }
-            }
+            holder.prepareVideoUi(post, position)
         }
 
         if (hasAudio) {
@@ -540,89 +458,25 @@ class PostAdapter(
     }
 
 
-    private fun ensurePlayer() {
-        if (exoPlayer == null) {
-            exoPlayer = ExoPlayer.Builder(context).build().also { player ->
-                player.addListener(object : Player.Listener {
-                    override fun onPlaybackStateChanged(state: Int) {
-                        try {
-                            if (state == Player.STATE_ENDED) {
-                                videoTimer?.cancel()
-                                // optionally reset UI / thumbnail show if needed
-                            }
-                        } catch (_: Exception) {}
-                    }
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        updateCurrentPlayerControls(isPlaying)
-                    }
-                })
-            }
-        }
-    }
-
-    // Called by holder when user asked to play video for a holder
     private fun playVideoAtPosition(position: Int, holder: PostViewHolder) {
-        val url = posts.getOrNull(position)?.optimizedVideoUrl() ?: return
-
-        // prevent rapid double-taps
-        if (isPreparing) return
-        isPreparing = true
-
-        ensurePlayer()
-
         if (currentPlayingPosition != -1 && currentPlayingPosition != position) {
             currentPlayer?.pause()
-            detachPlayer()
         }
 
-        holder.playerView?.post {
-            try {
-                attachPlayerToView(holder.playerView)
-
-                exoPlayer?.let { player ->
-                    videoSizeListener?.let { player.removeListener(it) }
-                    videoSizeListener = object : Player.Listener {
-                        override fun onVideoSizeChanged(videoSize: VideoSize) {
-                            holder.applyVideoSize(videoSize)
-                        }
-                    }
-                    player.addListener(videoSizeListener!!)
-                    player.stop() // ensure no leftover
-                    player.clearMediaItems()
-                    val mediaItem = MediaItem.fromUri(Uri.parse(url))
-                    player.setMediaSource(YenkasaMediaCache.mediaSource(context, mediaItem))
-                    player.prepare()
-                    currentPlayer = player
-                    player.play()
-                }
-
-                currentPlayingPosition = position
-                updateCurrentPlayerControls(true)
-                startVideoTimer(posts[position])
-                recordVisibleView(posts[position]._id, 10)
-            } catch (e: Exception) {
-                Log.e("PostAdapter", "playVideoAtPosition error: ${e.message}")
-            } finally {
-                isPreparing = false
-            }
-        } ?: run {
-            isPreparing = false
+        currentPlayingPosition = position
+        currentPlayer = holder.playerView
+        holder.playerView?.play()
+        posts.getOrNull(position)?.let {
+            startVideoTimer(it)
+            recordVisibleView(it._id, 10)
         }
     }
 
     private fun toggleVideoAtPosition(position: Int) {
         if (position != currentPlayingPosition) return
-        val player = exoPlayer ?: return
-
-        if (player.isPlaying) {
-            player.pause()
-            videoTimer?.cancel()
-        } else {
-            currentPlayer?.pause()
-            currentPlayer = player
-            player.play()
-            posts.getOrNull(position)?.let { startVideoTimer(it) }
-        }
+        currentPlayer?.togglePlayback()
+        if (currentPlayer?.isPlaying() == true) posts.getOrNull(position)?.let { startVideoTimer(it) }
+        else videoTimer?.cancel()
     }
 
     private fun throttleTap(view: View, delayMillis: Long = 350L) {
@@ -632,37 +486,15 @@ class PostAdapter(
 
     private fun stopPlaybackInternal() {
         try {
-            exoPlayer?.pause()
-            exoPlayer?.stop()
-            exoPlayer?.clearMediaItems()
+            currentPlayer?.stopAndShowPoster()
         } catch (_: Exception) {}
         videoTimer?.cancel()
         currentPlayingPosition = -1
         currentPlayer = null
-        detachPlayer()
     }
 
     private fun stopPlayback() {
         stopPlaybackInternal()
-    }
-
-    // Attach/detach helpers
-    private fun attachPlayerToView(v: PlayerView?) {
-        // detach current playerView reference (but don't stop player)
-        try {
-            if (currentPlayerView !== v) {
-                currentPlayerView?.player = null
-                v?.player = exoPlayer
-                currentPlayerView = v
-            }
-        } catch (_: Exception) {}
-    }
-
-    private fun detachPlayer() {
-        try {
-            currentPlayerView?.player = null
-            currentPlayerView = null
-        } catch (_: Exception) {}
     }
 
     // Video reward timer (unchanged)
@@ -712,16 +544,14 @@ class PostAdapter(
 
     fun pauseAllVideos() {
         try {
-            exoPlayer?.pause()
+            currentPlayer?.pause()
         } catch (_: Exception) {}
         videoTimer?.cancel()
-        updateCurrentPlayerControls(false)
     }
 
     fun releaseResources() {
         try {
-            exoPlayer?.release()
-            exoPlayer = null
+            currentPlayer?.release()
         } catch (_: Exception) {}
         videoTimer?.cancel()
         currentPlayer = null
@@ -730,23 +560,12 @@ class PostAdapter(
     fun autoPlayIfVideo(position: Int, holder: PostViewHolder) {
         val post = posts.getOrNull(position) ?: return
         if (post.optimizedVideoUrl().isNullOrBlank()) return
-        if (currentPlayingPosition == position && exoPlayer?.isPlaying == true) return
+        if (currentPlayingPosition == position && currentPlayer?.isPlaying() == true) return
 
         holder.imageVideoThumbnail.visibility = View.GONE
         holder.btnVideoPlay.visibility = View.GONE
         holder.playerView?.visibility = View.VISIBLE
         playVideoAtPosition(position, holder)
-    }
-
-    private fun updateCurrentPlayerControls(isPlaying: Boolean) {
-        val playerView = currentPlayerView ?: return
-        val playPauseButton = playerView.rootView.findViewById<ImageButton?>(R.id.btnPlayPause)
-        val playButton = playerView.rootView.findViewById<ImageButton?>(R.id.btnVideoPlay)
-        playPauseButton?.visibility = if (isPlaying) View.GONE else View.VISIBLE
-        playPauseButton?.setImageResource(
-            if (isPlaying) R.drawable.ic_pause_circle else R.drawable.ic_play_circle
-        )
-        playButton?.visibility = View.GONE
     }
 
     // View tracking used previously

@@ -75,12 +75,11 @@
                 android:background="@android:color/black" />
 
             <!-- VIDEO PLAYER -->
-            <androidx.media3.ui.PlayerView
+            <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
                 android:id="@+id/adPlayerView"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:visibility="gone"
-                app:use_controller="false"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

@@ -258,31 +258,11 @@
                     android:background="@drawable/bg_create_post_tool"
                     android:visibility="gone">
 
-                    <VideoView
+                    <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
                         android:id="@+id/videoPreview"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:background="@android:color/transparent" />
-
-                    <ImageView
-                        android:id="@+id/videoPreviewThumbnail"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="@drawable/bg_create_post_tool"
-                        android:contentDescription="@string/video_preview"
-                        android:scaleType="fitCenter" />
-
-                    <TextView
-                        android:id="@+id/videoPreviewPlayHint"
-                        android:layout_width="46dp"
-                        android:layout_height="46dp"
-                        android:layout_gravity="center"
-                        android:background="@drawable/bg_account_circle_button"
-                        android:gravity="center"
-                        android:text="@string/play_symbol"
-                        android:textColor="@color/post_create_accent"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
                 </FrameLayout>
 
                 <TextView

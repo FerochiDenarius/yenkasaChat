@@ -39,33 +39,15 @@
 
     <!-- Video -->
     <FrameLayout
+        android:id="@+id/videoContainer"
         android:layout_width="match_parent"
         android:layout_height="200dp"
         android:visibility="gone">
 
-        <VideoView
+        <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
             android:id="@+id/videoView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
-
-        <ImageButton
-            android:id="@+id/videoPlayPauseBtn"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_play"
-            android:contentDescription="@string/play_or_pause_video"/>
-
-        <ImageButton
-            android:id="@+id/videoMuteBtn"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="end|bottom"
-            android:layout_margin="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_volume_up"
-            android:contentDescription="@string/mute_or_unmute"/>
     </FrameLayout>
 
     <LinearLayout

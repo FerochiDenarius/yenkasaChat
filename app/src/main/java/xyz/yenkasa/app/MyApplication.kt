@@ -35,6 +35,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
         private const val PREFS_NAME = "settings"
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         private const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+        private const val KEY_COMMUNITY_POST_NOTIFICATIONS_ENABLED = "community_post_notifications_enabled"
     }
 
 
@@ -226,7 +227,10 @@ class MyApplication : Application(), OSSubscriptionObserver {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val notificationsEnabled = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
         val rewardNotificationsEnabled = prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
-        return !notificationsEnabled || (isRewardNotification(data) && !rewardNotificationsEnabled)
+        val communityPostNotificationsEnabled = prefs.getBoolean(KEY_COMMUNITY_POST_NOTIFICATIONS_ENABLED, true)
+        return !notificationsEnabled ||
+            (isRewardNotification(data) && !rewardNotificationsEnabled) ||
+            (isCommunityPostNotification(data) && !communityPostNotificationsEnabled)
     }
 
     private fun isRewardNotification(data: JSONObject?): Boolean {
@@ -234,6 +238,12 @@ class MyApplication : Application(), OSSubscriptionObserver {
         val type = data.optString("type", "").lowercase()
         val targetType = data.optString("targetType", "").lowercase()
         return type == "reward" || type.startsWith("reward_") || targetType == "wallet"
+    }
+
+    private fun isCommunityPostNotification(data: JSONObject?): Boolean {
+        if (data == null) return false
+        return data.optString("type", "").equals("community_post", ignoreCase = true) ||
+            data.optString("notificationType", "").equals("community_post", ignoreCase = true)
     }
 
     override fun onOSSubscriptionChanged(stateChanges: OSSubscriptionStateChanges) {

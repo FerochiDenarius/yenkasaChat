@@ -13,10 +13,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -25,11 +21,12 @@ import java.io.File
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.SelectedMediaAdapter
 import xyz.yenkasa.app.model.ChatMediaItem
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 
 class ChatMediaPreviewActivity : AppCompatActivity() {
 
     private lateinit var previewImage: ImageView
-    private lateinit var previewVideoView: PlayerView
+    private lateinit var previewVideoView: YenkasaVideoPlayerView
     private lateinit var playOverlay: ImageView
     private lateinit var captionInput: EditText
     private lateinit var selectedCountText: TextView
@@ -49,7 +46,6 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
     private val selectedAdapter = SelectedMediaAdapter(::selectIndex, ::removeItem)
     private val mediaItems = mutableListOf<ChatMediaItem>()
     private var selectedIndex: Int = 0
-    private var previewPlayer: ExoPlayer? = null
     private var previewMuted = true
 
     private val cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -156,7 +152,7 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        previewPlayer?.pause()
+        previewVideoView.pause()
     }
 
     override fun onDestroy() {
@@ -178,7 +174,6 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
         playOverlay.isVisible = item.isVideo
         previewImage.isVisible = true
         previewVideoView.isVisible = false
-        previewVideoView.player = null
         setEditingControlsEnabled(!item.isVideo)
         loadingText.isVisible = true
         loadingText.text = getString(if (item.isVideo) R.string.chat_media_loading_video else R.string.chat_media_loading_image)
@@ -225,29 +220,23 @@ class ChatMediaPreviewActivity : AppCompatActivity() {
         previewVideoView.isVisible = true
         muteButton.isVisible = true
 
-        val player = ExoPlayer.Builder(this).build().also { exoPlayer ->
-            exoPlayer.setMediaItem(MediaItem.fromUri(uri))
-            exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
-            exoPlayer.volume = if (previewMuted) 0f else 1f
-            exoPlayer.playWhenReady = true
-            exoPlayer.prepare()
-        }
         releasePreviewPlayer()
-        previewPlayer = player
-        previewVideoView.player = player
+        previewVideoView.bindVideo(
+            mediaUrl = uri.toString(),
+            autoplay = true,
+            muted = previewMuted
+        )
         renderPreviewMute()
     }
 
     private fun releasePreviewPlayer() {
-        previewVideoView.player = null
-        previewPlayer?.release()
-        previewPlayer = null
+        previewVideoView.release()
         muteButton.isVisible = false
     }
 
     private fun togglePreviewMute() {
         previewMuted = !previewMuted
-        previewPlayer?.volume = if (previewMuted) 0f else 1f
+        previewVideoView.setMuted(previewMuted)
         renderPreviewMute()
     }
 

@@ -8,10 +8,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
-import androidx.media3.ui.PlayerView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
+import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.UserBadgeUtils
 import java.text.SimpleDateFormat
@@ -44,13 +45,14 @@ object PostBinder {
         val mediaContainer = root.findViewById<FrameLayout>(R.id.mediaContainer)
         val textBackgroundPost = root.findViewById<TextView>(R.id.textPostBackgroundContent)
         val postImage = root.findViewById<ImageView>(R.id.imagePostContent)
-        val playerView = root.findViewById<PlayerView>(R.id.playerView)
+        val playerView = root.findViewById<YenkasaVideoPlayerView>(R.id.playerView)
         val audioIcon = root.findViewById<LinearLayout>(R.id.audioIcon)
 
         // 🔁 FULL reset (match PostAdapter)
         mediaContainer.visibility = View.GONE
         postImage.visibility = View.GONE
         playerView.visibility = View.GONE
+        playerView.release()
         textBackgroundPost.visibility = View.GONE
         root.findViewById<ImageView>(R.id.imageVideoThumbnail)?.visibility = View.GONE
         val btnVideoPlay = root.findViewById<ImageButton>(R.id.btnVideoPlay)
@@ -133,6 +135,13 @@ object PostBinder {
             hasVideo -> {
                 mediaContainer.visibility = View.VISIBLE
                 playerView.visibility = View.VISIBLE
+                val videoUrl = post.optimizedVideoUrl() ?: post.videoUrl
+                playerView.bindVideo(
+                    mediaUrl = videoUrl,
+                    thumbnailUrl = CloudinaryMedia.videoPosterUrl(videoUrl, CloudinaryMedia.WIDTH_PREVIEW),
+                    autoplay = false,
+                    muted = true
+                )
             }
 
             hasAudio -> {

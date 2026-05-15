@@ -21,14 +21,15 @@ function computeTarget(notification) {
   // fallback by type
   if (type === "post_approved") return `/admin/post-approval/${activityId}`;
   if (type === "comment") return `/post/${activityId}?openComments=true`;
-  if (type === "like" || type === "post_liked") return `/post/${activityId}`;
+  if (type === "like" || type === "post_liked" || String(type || "").toLowerCase() === "community_post") return `/post/${activityId}`;
   return null;
 }
 
 function getNotificationPreferences(user) {
   return {
     inAppEnabled: user?.notificationPreferences?.inAppEnabled !== false,
-    rewardEnabled: user?.notificationPreferences?.rewardEnabled !== false
+    rewardEnabled: user?.notificationPreferences?.rewardEnabled !== false,
+    communityPostEnabled: user?.notificationPreferences?.communityPostEnabled !== false
   };
 }
 
@@ -44,6 +45,7 @@ function shouldDeliverNotification(user, type, targetType) {
   const preferences = getNotificationPreferences(user);
   if (!preferences.inAppEnabled) return false;
   if (isRewardNotification(type, targetType) && !preferences.rewardEnabled) return false;
+  if (String(type || "").toLowerCase() === "community_post" && !preferences.communityPostEnabled) return false;
   return true;
 }
 
@@ -80,6 +82,8 @@ router.post("/create", auth, async (req, res) => {
       case "post_approved":
       case "post_view":
       case "view_milestone":
+      case "community_post":
+      case "COMMUNITY_POST":
         targetType = "post";
         targetId = activityId;  // ALWAYS the postId
         break;
@@ -177,6 +181,7 @@ router.post("/create", auth, async (req, res) => {
       "post_comment",
       "comment_like",
       "comment_reply",
+      "community_post",
       "follow",
       "new_follower"
     ].includes(String(type || "").toLowerCase());
@@ -236,7 +241,11 @@ router.get("/all", auth, async (req, res) => {
       ? notifications
       : notifications.filter(n => !isRewardNotification(n.type, n.targetType));
 
-    const commentIds = visibleNotifications
+    const preferenceFilteredNotifications = preferences.communityPostEnabled
+      ? visibleNotifications
+      : visibleNotifications.filter(n => String(n.type || "").toLowerCase() !== "community_post");
+
+    const commentIds = preferenceFilteredNotifications
       .filter(n => String(n.targetType || "").toLowerCase() === "comment")
       .flatMap(n => [n.targetId, n.activityId])
       .filter(Boolean);
@@ -251,7 +260,7 @@ router.get("/all", auth, async (req, res) => {
       comments.map(comment => [comment._id.toString(), comment.postId?.toString?.() || null])
     );
 
-    const formatted = visibleNotifications.map(n => {
+    const formatted = preferenceFilteredNotifications.map(n => {
       const commentId = String(n.targetType || "").toLowerCase() === "comment"
         ? (n.targetId || n.activityId || null)
         : null;
@@ -269,7 +278,7 @@ router.get("/all", auth, async (req, res) => {
       message: n.message,
       postId: resolvedPostId || null,
       commentId,
-activityId: n.activityId,
+      activityId: n.activityId,
       status: n.status,
       createdAt: n.createdAt ? n.createdAt.toISOString() : null,
       readAt: n.readAt ? n.readAt.toISOString() : null,
@@ -311,6 +320,10 @@ router.put("/preferences", auth, async (req, res) => {
 
     if (typeof req.body?.rewardEnabled === "boolean") {
       allowedUpdates["notificationPreferences.rewardEnabled"] = req.body.rewardEnabled;
+    }
+
+    if (typeof req.body?.communityPostEnabled === "boolean") {
+      allowedUpdates["notificationPreferences.communityPostEnabled"] = req.body.communityPostEnabled;
     }
 
     if (Object.keys(allowedUpdates).length > 0) {

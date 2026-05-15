@@ -100,7 +100,7 @@
             android:layout_height="wrap_content">
 
             <!-- VIDEO -->
-            <androidx.media3.ui.PlayerView
+            <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
                 android:id="@+id/playerView"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -109,9 +109,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintDimensionRatio="9:16"
-                app:use_controller="true"
-                app:resize_mode="zoom"
-                app:surface_type="texture_view"
                 android:visibility="gone"
                 android:background="@android:color/black" />
 

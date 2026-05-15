@@ -2,19 +2,17 @@ package xyz.yenkasa.app.adapter
 
 import android.content.Context
 import android.media.MediaPlayer
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.PostApprovalItem
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
+import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.UserBadgeUtils
 
@@ -25,10 +23,6 @@ class PostApprovalAdapter(
     private val approveCallback: (String) -> Unit,
     private val rejectCallback: (String) -> Unit
 ) : RecyclerView.Adapter<PostApprovalAdapter.ViewHolder>() {
-
-    private var exoPlayer: ExoPlayer? = null
-    private var currentPlayerView: PlayerView? = null
-    private var currentPlayingPosition = -1
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 
@@ -45,7 +39,7 @@ class PostApprovalAdapter(
         val postImage: ImageView = view.findViewById(R.id.imagePostContent)
         val audioIcon: LinearLayout = view.findViewById(R.id.audioIcon)
 
-        val playerView: PlayerView? = view.findViewById(R.id.playerView)
+        val playerView: YenkasaVideoPlayerView? = view.findViewById(R.id.playerView)
         val btnPlayPause: ImageButton? = view.findViewById(R.id.btnPlayPause)
 
         // APPROVAL BUTTONS
@@ -99,7 +93,7 @@ class PostApprovalAdapter(
             postImage.visibility = if (hasImage) View.VISIBLE else View.GONE
             audioIcon.visibility = if (hasAudio) View.VISIBLE else View.GONE
             playerView?.visibility = if (hasVideo) View.VISIBLE else View.GONE
-            btnPlayPause?.visibility = if (hasVideo) View.VISIBLE else View.GONE
+            btnPlayPause?.visibility = View.GONE
             textBackgroundPost.visibility = if (hasTextBackground) View.VISIBLE else View.GONE
 
             postText.text = post.caption.orEmpty()
@@ -118,11 +112,13 @@ class PostApprovalAdapter(
             }
 
             if (hasVideo) {
-                if (position == currentPlayingPosition) attachPlayer(playerView)
-                else playerView?.player = null
-
-                btnPlayPause?.setOnClickListener { toggleVideo(post, position) }
-                playerView?.setOnClickListener { toggleVideo(post, position) }
+                val videoUrl = post.optimizedVideoUrl() ?: post.videoUrl
+                playerView?.bindVideo(
+                    mediaUrl = videoUrl,
+                    thumbnailUrl = CloudinaryMedia.videoPosterUrl(videoUrl, CloudinaryMedia.WIDTH_PREVIEW),
+                    autoplay = false,
+                    muted = true
+                )
             }
 
             if (hasAudio) {
@@ -135,41 +131,8 @@ class PostApprovalAdapter(
             }
         }
 
-        private fun toggleVideo(post: Post, position: Int) {
-            if (exoPlayer == null) {
-                exoPlayer = ExoPlayer.Builder(context).build()
-            }
-
-            if (position != currentPlayingPosition) {
-                playVideo(post, position)
-                return
-            }
-
-            if (exoPlayer!!.isPlaying) exoPlayer!!.pause()
-            else exoPlayer!!.play()
-
-            btnPlayPause?.setImageResource(
-                if (exoPlayer!!.isPlaying) R.drawable.ic_pause_circle
-                else R.drawable.ic_play_circle
-            )
-        }
-
-        private fun playVideo(post: Post, position: Int) {
-            currentPlayingPosition = position
-
-            exoPlayer!!.apply {
-                setMediaItem(MediaItem.fromUri(Uri.parse(post.videoUrl)))
-                prepare()
-                play()
-            }
-
-            notifyDataSetChanged()
-        }
-
-        private fun attachPlayer(pv: PlayerView?) {
-            currentPlayerView?.player = null
-            pv?.player = exoPlayer
-            currentPlayerView = pv
+        fun releaseVideo() {
+            playerView?.release()
         }
     }
 
@@ -183,6 +146,16 @@ class PostApprovalAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(items[position], position)
+    }
+
+    override fun onViewRecycled(holder: ViewHolder) {
+        holder.releaseVideo()
+        super.onViewRecycled(holder)
+    }
+
+    override fun onViewDetachedFromWindow(holder: ViewHolder) {
+        holder.playerView?.pause()
+        super.onViewDetachedFromWindow(holder)
     }
 
 

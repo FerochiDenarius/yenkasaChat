@@ -144,6 +144,8 @@
     <string name="enable_notifications_summary">Manage your notification preferences</string>
     <string name="reward_notifications">Reward Notifications</string>
     <string name="reward_notifications_summary">Mute wallet reward alerts only</string>
+    <string name="community_post_notifications">Community Post Notifications</string>
+    <string name="community_post_notifications_summary">Notify me when joined communities have new posts</string>
     <string name="moderation">Moderation</string>
     <string name="moderation_dashboard">Moderation Dashboard</string>
     <string name="moderation_dashboard_summary">Review reports, deletions and flags</string>
@@ -384,6 +386,8 @@
     <string name="notification_new_follower">New follower</string>
     <string name="notification_post_approved">Your post was approved</string>
     <string name="notification_view_milestone">Your post reached a new view milestone</string>
+    <string name="notification_community_post">New post in your community</string>
+    <string name="play_pause">Play or pause</string>
     <string name="tap_to_view_profile">Tap to view profile</string>
     <string name="tap_to_open_conversation">Tap to open the conversation</string>
     <string name="tap_to_view_post">Tap to view the post</string>

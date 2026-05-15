@@ -15,14 +15,11 @@
         android:visibility="gone" />
 
     <!-- ✅ Video Preview (Media3 version) -->
-    <androidx.media3.ui.PlayerView
+    <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
         android:id="@+id/previewVideoView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
-        app:use_controller="true"
-        app:show_buffering="when_playing"
-        app:resize_mode="fit" />
+        android:visibility="gone" />
 
     <!-- Audio Preview Layout -->
     <LinearLayout

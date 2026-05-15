@@ -24,7 +24,7 @@ function computeTarget(notification) {
     if (type === "ad_approved" || type === "ad_rejected") return "/ads/mine";
     if (type === "community_approved" || type === "community_rejected") return "/communities/mine";
     if (type === "comment") return `/post/${activityId}?openComments=true`;
-    if (type === "like" || type === "post_liked") return `/post/${activityId}`;
+    if (type === "like" || type === "post_liked" || String(type || "").toLowerCase() === "community_post") return `/post/${activityId}`;
 
     return null;
 }
@@ -59,7 +59,8 @@ function formatNotification(notification) {
 function getNotificationPreferences(user) {
     return {
         inAppEnabled: user?.notificationPreferences?.inAppEnabled !== false,
-        rewardEnabled: user?.notificationPreferences?.rewardEnabled !== false
+        rewardEnabled: user?.notificationPreferences?.rewardEnabled !== false,
+        communityPostEnabled: user?.notificationPreferences?.communityPostEnabled !== false
     };
 }
 
@@ -75,6 +76,7 @@ function shouldDeliverNotification(user, type, targetType) {
     const preferences = getNotificationPreferences(user);
     if (!preferences.inAppEnabled) return false;
     if (isRewardNotification(type, targetType) && !preferences.rewardEnabled) return false;
+    if (String(type || "").toLowerCase() === "community_post" && !preferences.communityPostEnabled) return false;
     return true;
 }
 

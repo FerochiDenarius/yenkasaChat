@@ -9,6 +9,7 @@ const authMiddleware = require("../middleware/auth");
 const { sendNotification } = require("../services/notification.service");
 const rewardService = require("../services/reward.service");
 const { getPermissions, canApproveContent, REVIEWER_RANKS } = require("../middleware/permissions");
+const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
 
 const ALLOWED_ROLES = REVIEWER_RANKS.map((rank) => rank.toLowerCase());
 const ALLOWED_ACCESS_ROLES = [...REVIEWER_RANKS];
@@ -168,6 +169,8 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
       { status: "approved" },
       { new: true }
     );
+    if (!post)
+      return res.status(404).json({ error: "Post not found" });
 
     approvalEntry.status = "approved";
     await approvalEntry.save();
@@ -216,6 +219,8 @@ await rewardService.reward(approver._id, 8, {
 });
 
     }
+
+    queueCommunityPostNotifications({ postId: post._id });
 
     res.json({
       success: true,

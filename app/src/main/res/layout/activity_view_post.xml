@@ -92,7 +92,7 @@
                     android:visibility="gone" />
 
                 <!-- 🎬 Actual Video Player -->
-                <VideoView
+                <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
                     android:id="@+id/videoContent"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"

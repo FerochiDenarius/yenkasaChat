@@ -14,6 +14,7 @@ const { sendNotification } = require("../services/notification.service");
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendPushNotification } = require("../utils/onesignal");
 const { logUploadAudit } = require("../utils/cloudinaryMedia");
+const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -389,6 +390,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
           timestamp: new Date(),
         });
       }
+
+      queueCommunityPostNotifications({ postId: post._id });
     }
 
     /* ------------------------------------

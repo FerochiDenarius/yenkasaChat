@@ -14,6 +14,7 @@ import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.model.ViewRequest
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,9 +26,8 @@ class PostMediaActivity : AppCompatActivity() {
     private lateinit var textCaption: TextView
     private lateinit var imageView: ImageView
 
-    private lateinit var videoView: VideoView
-    private lateinit var videoPlayPauseBtn: ImageButton
-    private lateinit var videoMuteBtn: ImageButton
+    private lateinit var videoContainer: View
+    private lateinit var videoView: YenkasaVideoPlayerView
 
     private lateinit var audioView: LinearLayout
     private lateinit var audioSeekBar: SeekBar
@@ -45,7 +45,6 @@ class PostMediaActivity : AppCompatActivity() {
     private var audioPlayer: MediaPlayer? = null
     private var handler = Handler(Looper.getMainLooper())
     private var isAudioPrepared = false
-    private var isVideoMuted = false
     private var hasRecordedView = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,9 +56,8 @@ class PostMediaActivity : AppCompatActivity() {
         textCaption = findViewById(R.id.textCaption)
         imageView = findViewById(R.id.imageView)
 
+        videoContainer = findViewById(R.id.videoContainer)
         videoView = findViewById(R.id.videoView)
-        videoPlayPauseBtn = findViewById(R.id.videoPlayPauseBtn)
-        videoMuteBtn = findViewById(R.id.videoMuteBtn)
 
         audioView = findViewById(R.id.audioView)
         audioSeekBar = findViewById(R.id.audioSeekBar)
@@ -90,7 +88,7 @@ class PostMediaActivity : AppCompatActivity() {
 
     private fun showImage() {
         imageView.visibility = View.VISIBLE
-        videoView.visibility = View.GONE
+        videoContainer.visibility = View.GONE
         audioView.visibility = View.GONE
 
         Glide.with(this)
@@ -103,57 +101,24 @@ class PostMediaActivity : AppCompatActivity() {
 
     private fun showVideo() {
         imageView.visibility = View.GONE
+        videoContainer.visibility = View.VISIBLE
         videoView.visibility = View.VISIBLE
         audioView.visibility = View.GONE
 
-        val uri = Uri.parse(mediaUrl)
-        videoView.setVideoURI(uri)
-
-        videoView.setOnPreparedListener { mp ->
-            mp.isLooping = true
-            mp.setVolume(1f, 1f) // ensure sound plays
-            videoView.start()
-            handler.postDelayed({
-                if (videoView.isPlaying) rewardView(10)
-            }, 10000)
-
-            // play/pause
-            videoPlayPauseBtn.setOnClickListener {
-                if (videoView.isPlaying) {
-                    videoView.pause()
-                    videoPlayPauseBtn.setImageResource(R.drawable.ic_play)
-                } else {
-                    videoView.start()
-                    handler.postDelayed({
-                        if (videoView.isPlaying) rewardView(10)
-                    }, 10000)
-
-                    videoPlayPauseBtn.setImageResource(R.drawable.ic_pause)
-                }
-            }
-
-            // mute/unmute
-            videoMuteBtn.setOnClickListener {
-                isVideoMuted = !isVideoMuted
-                if (isVideoMuted) {
-                    mp.setVolume(0f, 0f)
-                    videoMuteBtn.setImageResource(R.drawable.ic_volume_off)
-                } else {
-                    mp.setVolume(1f, 1f)
-                    videoMuteBtn.setImageResource(R.drawable.ic_volume_up)
-                }
-            }
-        }
-
-        videoView.setOnErrorListener { _, what, extra ->
-            Toast.makeText(this, getString(R.string.video_playback_error, what, extra), Toast.LENGTH_SHORT).show()
-            true
+        videoView.bindVideo(
+            mediaUrl = mediaUrl,
+            autoplay = true,
+            muted = false,
+            loop = true
+        )
+        videoView.setCheckpointListener { seconds ->
+            if (seconds >= 10) rewardView(10)
         }
     }
 
     private fun showAudio() {
         imageView.visibility = View.GONE
-        videoView.visibility = View.GONE
+        videoContainer.visibility = View.GONE
         audioView.visibility = View.VISIBLE
 
         audioPlayer = MediaPlayer()
@@ -232,17 +197,15 @@ class PostMediaActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (videoView.isPlaying) videoView.pause()
+        if (::videoView.isInitialized) videoView.pause()
         audioPlayer?.pause()
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        videoView.stopPlayback()
+        if (::videoView.isInitialized) videoView.release()
         audioPlayer?.release()
         handler.removeCallbacksAndMessages(null)
-
-
+        super.onDestroy()
     }
 
     private fun rewardView(durationSeconds: Int) {

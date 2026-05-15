@@ -261,7 +261,7 @@
                         android:layout_weight="1"
                         android:background="@drawable/bg_ad_soft_gold">
 
-                        <VideoView
+                        <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
                             android:id="@+id/previewAdVideo"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"

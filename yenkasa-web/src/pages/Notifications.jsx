@@ -23,6 +23,7 @@ export default function Notifications() {
   const [preferences, setPreferences] = useState({
     inAppEnabled: true,
     rewardEnabled: true,
+    communityPostEnabled: true,
   });
   const [loading, setLoading] = useState(true);
   const [busyAll, setBusyAll] = useState(false);
@@ -40,6 +41,7 @@ export default function Notifications() {
           getNotificationPreferences().catch(() => ({
             inAppEnabled: true,
             rewardEnabled: true,
+            communityPostEnabled: true,
           })),
           getNotifications(),
         ]);
@@ -48,6 +50,7 @@ export default function Notifications() {
         setPreferences({
           inAppEnabled: prefs?.inAppEnabled !== false,
           rewardEnabled: prefs?.rewardEnabled !== false,
+          communityPostEnabled: prefs?.communityPostEnabled !== false,
         });
         setNotifications(Array.isArray(items) ? items : []);
         setError("");
@@ -139,6 +142,7 @@ export default function Notifications() {
       setPreferences({
         inAppEnabled: next?.inAppEnabled !== false,
         rewardEnabled: next?.rewardEnabled !== false,
+        communityPostEnabled: next?.communityPostEnabled !== false,
       });
     } catch (requestError) {
       setError(
@@ -195,6 +199,13 @@ export default function Notifications() {
           checked={preferences.rewardEnabled}
           disabled={savingPref === "rewardEnabled" || !preferences.inAppEnabled}
           onChange={(value) => handleTogglePreference("rewardEnabled", value)}
+        />
+        <PreferenceToggle
+          label={t("communityPostNotifications", "Community post notifications")}
+          description={t("communityPostNotificationDescription", "Notify me when joined communities publish new posts.")}
+          checked={preferences.communityPostEnabled}
+          disabled={savingPref === "communityPostEnabled" || !preferences.inAppEnabled}
+          onChange={(value) => handleTogglePreference("communityPostEnabled", value)}
         />
       </section>
 

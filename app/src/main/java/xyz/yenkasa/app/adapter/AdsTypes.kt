@@ -2,12 +2,12 @@ package xyz.yenkasa.app.adapter
 
 import android.view.View
 import android.widget.*
-import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.ads.nativead.NativeAdView
 import xyz.yenkasa.app.R
 import android.widget.FrameLayout
 import com.google.android.gms.ads.nativead.MediaView
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 
 /**
  * Small helper file:
@@ -29,7 +29,7 @@ class YenkasaAdViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val adMediaFallback: TextView = itemView.findViewById(R.id.adMediaFallback)
     val adImageThumbnail: ImageView = itemView.findViewById(R.id.adImageThumbnail)
     val adVideoThumbnail: ImageView = itemView.findViewById(R.id.adVideoThumbnail)
-    val adPlayerView: PlayerView = itemView.findViewById(R.id.adPlayerView)
+    val adPlayerView: YenkasaVideoPlayerView = itemView.findViewById(R.id.adPlayerView)
     val adPlayButton: ImageButton = itemView.findViewById(R.id.adPlayButton)
     val adCTAButton: Button = itemView.findViewById(R.id.adCTAButton)
     val adWatchRewardButton: Button = itemView.findViewById(R.id.adWatchRewardButton)

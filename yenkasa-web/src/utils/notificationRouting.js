@@ -35,7 +35,7 @@ export function resolveNotificationTarget(notification = {}) {
   const resolvedPostId = firstNotBlank(
     postId,
     targetType === "post" ? targetId : null,
-    ["comment", "like", "post_liked", "post_comment", "post_reply"].includes(type)
+    ["comment", "like", "post_liked", "post_comment", "post_reply", "community_post"].includes(type)
       ? activityId
       : null
   );
@@ -95,4 +95,3 @@ function firstNotBlank(...values) {
     .map((value) => (value == null ? "" : String(value).trim()))
     .find(Boolean) || "";
 }
-

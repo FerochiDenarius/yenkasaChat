@@ -8,13 +8,13 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 
 class PostPreviewActivity : AppCompatActivity() {
 
     private lateinit var imageView: ImageView
-    private lateinit var playerView: PlayerView
+    private lateinit var playerView: YenkasaVideoPlayerView
     private lateinit var audioLayout: LinearLayout
     private lateinit var btnPlayAudio: ImageButton
     private lateinit var btnPauseAudio: ImageButton
@@ -77,13 +77,11 @@ class PostPreviewActivity : AppCompatActivity() {
         playerView.visibility = View.VISIBLE
         audioLayout.visibility = View.GONE
 
-        player = ExoPlayer.Builder(this).build().apply {
-            setMediaItem(MediaItem.fromUri(mediaUrl!!))
-            prepare()
-            playWhenReady = true
-        }
-
-        playerView.player = player
+        playerView.bindVideo(
+            mediaUrl = mediaUrl,
+            autoplay = true,
+            muted = false
+        )
     }
 
     // === AUDIO PREVIEW (Media3) ===
@@ -156,11 +154,13 @@ class PostPreviewActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         player?.pause()
+        if (::playerView.isInitialized) playerView.pause()
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        if (::playerView.isInitialized) playerView.release()
         player?.release()
         player = null
+        super.onDestroy()
     }
 }

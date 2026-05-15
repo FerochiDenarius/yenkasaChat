@@ -2,9 +2,8 @@ package xyz.yenkasa.app.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -27,6 +26,7 @@ import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UploadMediaOptimizer
@@ -48,9 +48,7 @@ class PostActivity : AppCompatActivity() {
     private lateinit var imagePreview: ImageView
     private lateinit var imagePreviewCount: TextView
     private lateinit var videoPreviewContainer: View
-    private lateinit var videoPreview: VideoView
-    private lateinit var videoPreviewThumbnail: ImageView
-    private lateinit var videoPreviewPlayHint: TextView
+    private lateinit var videoPreview: YenkasaVideoPlayerView
     private lateinit var audioPreview: TextView
     private lateinit var btnChooseMedia: View
     private lateinit var btnPost: Button
@@ -94,27 +92,6 @@ class PostActivity : AppCompatActivity() {
         imagePreviewCount = findViewById(R.id.imagePreviewCount)
         videoPreviewContainer = findViewById(R.id.videoPreviewContainer)
         videoPreview = findViewById(R.id.videoPreview)
-        videoPreview.setOnPreparedListener { mediaPlayer ->
-            val aspect = if (mediaPlayer.videoWidth > 0 && mediaPlayer.videoHeight > 0) {
-                mediaPlayer.videoWidth.toFloat() / mediaPlayer.videoHeight.toFloat()
-            } else {
-                readVideoAspect(videoUri) ?: (9f / 16f)
-            }
-            resizePreview(videoPreview, aspect)
-            videoPreview.setBackgroundColor(Color.TRANSPARENT)
-            videoPreviewThumbnail.visibility = View.GONE
-            videoPreviewPlayHint.visibility = View.GONE
-            mediaPlayer.isLooping = true
-            videoPreview.start()
-        }
-        videoPreview.setOnErrorListener { _, _, _ ->
-            videoPreviewThumbnail.visibility = View.VISIBLE
-            videoPreviewPlayHint.visibility = View.VISIBLE
-            Toast.makeText(this, R.string.video_preview_upload_still_allowed, Toast.LENGTH_SHORT).show()
-            true
-        }
-        videoPreviewThumbnail = findViewById(R.id.videoPreviewThumbnail)
-        videoPreviewPlayHint = findViewById(R.id.videoPreviewPlayHint)
         audioPreview = findViewById(R.id.audioPreview)
         btnChooseMedia = findViewById(R.id.btnChooseMedia)
         btnPost = findViewById(R.id.btnPost)
@@ -271,11 +248,8 @@ class PostActivity : AppCompatActivity() {
     private fun updatePreview() {
         imagePreview.visibility = View.GONE
         imagePreviewCount.visibility = View.GONE
-        videoPreview.stopPlayback()
+        videoPreview.release()
         videoPreviewContainer.visibility = View.GONE
-        videoPreviewThumbnail.setImageDrawable(null)
-        videoPreviewThumbnail.visibility = View.GONE
-        videoPreviewPlayHint.visibility = View.GONE
         audioPreview.visibility = View.GONE
 
         when {
@@ -295,12 +269,14 @@ class PostActivity : AppCompatActivity() {
             videoUri != null -> {
                 videoPreviewContainer.visibility = View.VISIBLE
                 videoPreview.visibility = View.VISIBLE
-                videoPreviewThumbnail.visibility = View.VISIBLE
-                videoPreviewPlayHint.visibility = View.VISIBLE
-                createVideoThumbnail(videoUri)?.let { videoPreviewThumbnail.setImageBitmap(it) }
                 val aspect = readVideoAspect(videoUri) ?: (9f / 16f)
                 resizePreview(videoPreviewContainer, aspect)
-                videoPreview.setVideoURI(videoUri)
+                videoPreview.bindVideo(
+                    mediaUrl = videoUri.toString(),
+                    autoplay = false,
+                    muted = true,
+                    loop = true
+                )
             }
             audioUri != null -> {
                 audioPreview.visibility = View.VISIBLE
@@ -346,20 +322,6 @@ class PostActivity : AppCompatActivity() {
         }
     }
 
-    private fun createVideoThumbnail(uri: Uri?): Bitmap? {
-        if (uri == null) return null
-        return try {
-            val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(this, uri)
-            val bitmap = retriever.getFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-            retriever.release()
-            bitmap
-        } catch (e: Exception) {
-            Log.w("PostActivity", "Unable to create video thumbnail: ${e.message}")
-            null
-        }
-    }
-
     private fun resizePreview(view: View, rawAspect: Float) {
         view.post {
             val aspect = rawAspect.coerceIn(9f / 16f, 16f / 9f)
@@ -376,6 +338,20 @@ class PostActivity : AppCompatActivity() {
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
+
+    override fun onPause() {
+        super.onPause()
+        if (::videoPreview.isInitialized) {
+            videoPreview.pause()
+        }
+    }
+
+    override fun onDestroy() {
+        if (::videoPreview.isInitialized) {
+            videoPreview.release()
+        }
+        super.onDestroy()
+    }
 
     private fun setupTextBackgroundPicker() {
         val density = resources.displayMetrics.density

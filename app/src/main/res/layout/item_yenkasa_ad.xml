@@ -68,7 +68,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <androidx.media3.ui.PlayerView
+            <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
                 android:id="@+id/adPlayerView"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -78,8 +78,7 @@
                 app:layout_constraintDimensionRatio="9:16"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:use_controller="false" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/adMediaFallback"

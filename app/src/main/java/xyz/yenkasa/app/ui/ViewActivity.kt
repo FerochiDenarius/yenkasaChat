@@ -10,7 +10,6 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -22,6 +21,7 @@ import xyz.yenkasa.app.model.ViewResponse
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -57,7 +57,7 @@ class ViewActivity : AppCompatActivity() {
     private lateinit var textCaption: TextView
     private lateinit var textViews: TextView
     private lateinit var imageContent: ImageView
-    private lateinit var videoContent: VideoView
+    private lateinit var videoContent: YenkasaVideoPlayerView
     private lateinit var audioIcon: ImageView
     private lateinit var mediaContainer: FrameLayout
     private lateinit var textBackgroundPost: TextView
@@ -153,7 +153,7 @@ class ViewActivity : AppCompatActivity() {
             hasVideo -> {
                 mediaContainer.visibility = View.VISIBLE
                 videoContent.visibility = View.VISIBLE
-                setupVideoView(Uri.parse(post?.videoUrl))
+                setupVideoView(post?.optimizedVideoUrl() ?: post?.videoUrl)
             }
             hasAudio -> {
                 mediaContainer.visibility = View.VISIBLE
@@ -225,25 +225,17 @@ class ViewActivity : AppCompatActivity() {
             })
     }
 
-    private fun setupVideoView(uri: Uri) {
-        videoContent.setVideoURI(uri)
-        videoContent.setOnPreparedListener { player ->
-            player.isLooping = true
-            videoContent.start()
-
-            var watchSeconds = 0
-            val rewardThreshold = 10
-            var rewarded = false
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                while (videoContent.isPlaying) {
-                    delay(1000)
-                    watchSeconds++
-                    if (watchSeconds >= rewardThreshold && !rewarded) {
-                        rewarded = true
-                        recordViewWithDuration(watchSeconds)
-                    }
-                }
+    private fun setupVideoView(url: String?) {
+        videoContent.bindVideo(
+            mediaUrl = url,
+            thumbnailUrl = post?.optimizedVideoPosterUrl(),
+            autoplay = true,
+            muted = false,
+            loop = true
+        )
+        videoContent.setCheckpointListener { seconds ->
+            if (seconds >= 10) {
+                lifecycleScope.launch { recordViewWithDuration(seconds) }
             }
         }
     }

@@ -42,6 +42,8 @@
     <string name="enable_notifications_summary">Sarrafa saitunan sanarwarka</string>
     <string name="reward_notifications">Sanarwar lada</string>
     <string name="reward_notifications_summary">Kashe sanarwar ladan wallet kawai</string>
+    <string name="community_post_notifications">Sanarwar sakonnin al’umma</string>
+    <string name="community_post_notifications_summary">Sanar da ni idan al’ummar da na shiga sun yi sabon sako</string>
     <string name="moderation">Kulawa</string>
     <string name="moderation_dashboard">Dashboard na kulawa</string>
     <string name="moderation_dashboard_summary">Bincika rahotanni, gogewa da alamomi</string>
@@ -282,6 +284,8 @@
     <string name="notification_new_follower">Sabon mai bi</string>
     <string name="notification_post_approved">An amince da wallafarka</string>
     <string name="notification_view_milestone">Wallafarka ta kai sabon matakin kallo</string>
+    <string name="notification_community_post">Sabon sako a al’ummarka</string>
+    <string name="play_pause">Kunna ko dakata</string>
     <string name="tap_to_view_profile">Taɓa don duba bayanin martaba</string>
     <string name="tap_to_open_conversation">Taɓa don buɗe tattaunawa</string>
     <string name="tap_to_view_post">Taɓa don duba wallafa</string>

@@ -57,7 +57,7 @@
             android:contentDescription="@string/chat_media_preview"
             android:scaleType="centerCrop" />
 
-        <androidx.media3.ui.PlayerView
+        <xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
             android:id="@+id/previewVideoView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

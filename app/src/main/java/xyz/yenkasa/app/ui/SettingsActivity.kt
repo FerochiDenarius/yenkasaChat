@@ -52,9 +52,11 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var itemNotificationSound: LinearLayout
     private lateinit var itemNotificationToggle: LinearLayout
     private lateinit var itemRewardNotificationToggle: LinearLayout
+    private lateinit var itemCommunityPostNotificationToggle: LinearLayout
     private lateinit var txtSoundCurrent: TextView
     private lateinit var switchNotifications: Switch
     private lateinit var switchRewardNotifications: Switch
+    private lateinit var switchCommunityPostNotifications: Switch
     private lateinit var itemDeleteAccount: LinearLayout
     private lateinit var itemModerationDashboard: LinearLayout
     private lateinit var moderationHeader: TextView
@@ -64,6 +66,7 @@ class SettingsActivity : AppCompatActivity() {
         const val PREFS_NAME = "settings"
         const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+        const val KEY_COMMUNITY_POST_NOTIFICATIONS_ENABLED = "community_post_notifications_enabled"
     }
 
 
@@ -107,9 +110,11 @@ class SettingsActivity : AppCompatActivity() {
         itemNotificationSound = findViewById(R.id.itemNotificationSound)
         itemNotificationToggle = findViewById(R.id.itemNotificationToggle)
         itemRewardNotificationToggle = findViewById(R.id.itemRewardNotificationToggle)
+        itemCommunityPostNotificationToggle = findViewById(R.id.itemCommunityPostNotificationToggle)
         txtSoundCurrent = findViewById(R.id.txtSoundCurrent)
         switchNotifications = findViewById(R.id.switchNotifications)
         switchRewardNotifications = findViewById(R.id.switchRewardNotifications)
+        switchCommunityPostNotifications = findViewById(R.id.switchCommunityPostNotifications)
         itemDeleteAccount = findViewById(R.id.itemDeleteAccount)
         itemModerationDashboard = findViewById(R.id.itemModerationDashboard)
         moderationHeader = findViewById(R.id.moderationHeader)
@@ -133,6 +138,7 @@ class SettingsActivity : AppCompatActivity() {
 
         switchNotifications.isChecked = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
         switchRewardNotifications.isChecked = prefs.getBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, true)
+        switchCommunityPostNotifications.isChecked = prefs.getBoolean(KEY_COMMUNITY_POST_NOTIFICATIONS_ENABLED, true)
         loadNotificationPreferences()
 
     }
@@ -184,6 +190,9 @@ class SettingsActivity : AppCompatActivity() {
         itemRewardNotificationToggle.setOnClickListener {
             switchRewardNotifications.toggle()
         }
+        itemCommunityPostNotificationToggle.setOnClickListener {
+            switchCommunityPostNotifications.toggle()
+        }
         switchNotifications.setOnCheckedChangeListener { _, isChecked ->
             if (updatingNotificationSwitches) return@setOnCheckedChangeListener
             saveNotificationPreferences(inAppEnabled = isChecked)
@@ -191,6 +200,10 @@ class SettingsActivity : AppCompatActivity() {
         switchRewardNotifications.setOnCheckedChangeListener { _, isChecked ->
             if (updatingNotificationSwitches) return@setOnCheckedChangeListener
             saveNotificationPreferences(rewardEnabled = isChecked)
+        }
+        switchCommunityPostNotifications.setOnCheckedChangeListener { _, isChecked ->
+            if (updatingNotificationSwitches) return@setOnCheckedChangeListener
+            saveNotificationPreferences(communityPostEnabled = isChecked)
         }
         itemDeleteAccount.setOnClickListener {
             showDeleteAccountDialog()
@@ -268,11 +281,13 @@ class SettingsActivity : AppCompatActivity() {
                 prefs.edit()
                     .putBoolean(KEY_NOTIFICATIONS_ENABLED, preferences.inAppEnabled)
                     .putBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, preferences.rewardEnabled)
+                    .putBoolean(KEY_COMMUNITY_POST_NOTIFICATIONS_ENABLED, preferences.communityPostEnabled)
                     .apply()
 
                 updatingNotificationSwitches = true
                 switchNotifications.isChecked = preferences.inAppEnabled
                 switchRewardNotifications.isChecked = preferences.rewardEnabled
+                switchCommunityPostNotifications.isChecked = preferences.communityPostEnabled
                 updatingNotificationSwitches = false
             }
 
@@ -284,18 +299,21 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveNotificationPreferences(
         inAppEnabled: Boolean? = null,
-        rewardEnabled: Boolean? = null
+        rewardEnabled: Boolean? = null,
+        communityPostEnabled: Boolean? = null
     ) {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().apply {
             inAppEnabled?.let { putBoolean(KEY_NOTIFICATIONS_ENABLED, it) }
             rewardEnabled?.let { putBoolean(KEY_REWARD_NOTIFICATIONS_ENABLED, it) }
+            communityPostEnabled?.let { putBoolean(KEY_COMMUNITY_POST_NOTIFICATIONS_ENABLED, it) }
         }.apply()
 
         api.updateNotificationPreferences(
             UpdateNotificationPreferencesRequest(
                 inAppEnabled = inAppEnabled,
-                rewardEnabled = rewardEnabled
+                rewardEnabled = rewardEnabled,
+                communityPostEnabled = communityPostEnabled
             )
         ).enqueue(object : retrofit2.Callback<NotificationPreferencesResponse> {
             override fun onResponse(

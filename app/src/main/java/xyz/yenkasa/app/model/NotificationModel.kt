@@ -34,7 +34,8 @@ data class NotificationSound(
 
 data class NotificationPreferences(
     val inAppEnabled: Boolean = true,
-    val rewardEnabled: Boolean = true
+    val rewardEnabled: Boolean = true,
+    val communityPostEnabled: Boolean = true
 )
 
 data class NotificationPreferencesResponse(
@@ -44,5 +45,6 @@ data class NotificationPreferencesResponse(
 
 data class UpdateNotificationPreferencesRequest(
     val inAppEnabled: Boolean? = null,
-    val rewardEnabled: Boolean? = null
+    val rewardEnabled: Boolean? = null,
+    val communityPostEnabled: Boolean? = null
 )

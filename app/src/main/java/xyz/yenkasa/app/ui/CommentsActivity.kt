@@ -15,12 +15,12 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.media3.ui.PlayerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.CommentAdapter
 import xyz.yenkasa.app.model.Comment
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.*
@@ -475,7 +475,10 @@ class CommentsActivity : AppCompatActivity() {
 
     private fun resetPostMedia(header: View) {
         header.findViewById<ImageView>(R.id.imagePostContent).visibility = View.GONE
-        header.findViewById<PlayerView>(R.id.playerView).visibility = View.GONE
+        header.findViewById<YenkasaVideoPlayerView>(R.id.playerView).apply {
+            release()
+            visibility = View.GONE
+        }
         header.findViewById<ImageView>(R.id.imageVideoThumbnail)?.visibility = View.GONE
         header.findViewById<ImageButton>(R.id.btnVideoPlay)?.visibility = View.GONE
         header.findViewById<LinearLayout>(R.id.audioIcon).visibility = View.GONE

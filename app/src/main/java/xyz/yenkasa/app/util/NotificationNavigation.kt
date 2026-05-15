@@ -150,7 +150,7 @@ object NotificationNavigation {
             "group_added" -> buildGroupIntent(context, firstNotBlank(data?.optString("groupId"), data?.optString("roomId"), targetId, activityId), data)
             "post_like", "post_liked", "like", "post_comment", "post_reply",
             "post_mention", "post_under_review", "post_pending", "post_approved",
-            "post_view", "view_milestone" -> Intent(context, CommentsActivity::class.java).apply {
+            "post_view", "view_milestone", "community_post" -> Intent(context, CommentsActivity::class.java).apply {
                 putExtra("POST_ID", resolvedPostId)
             }
             "comment", "comment_like", "comment_reply" -> Intent(context, CommentsActivity::class.java).apply {
@@ -191,7 +191,8 @@ object NotificationNavigation {
         "post_pending",
         "post_approved",
         "post_view",
-        "view_milestone"
+        "view_milestone",
+        "community_post"
     )
 
     private fun buildIntentFromTargetUrl(context: Context, targetUrl: String?, data: JSONObject?): Intent? {

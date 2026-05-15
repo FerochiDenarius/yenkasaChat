@@ -21,6 +21,10 @@ import xyz.yenkasa.app.model.LiveStreamResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
+import org.json.JSONObject
+import java.io.IOException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 class StartLiveActivity : AppCompatActivity() {
 
@@ -118,7 +122,7 @@ class StartLiveActivity : AppCompatActivity() {
                 setLoading(false)
                 Toast.makeText(
                     this@StartLiveActivity,
-                    getString(R.string.network_error_starting_live, t.message.orEmpty()),
+                    liveStartFailureMessage(t),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -137,14 +141,45 @@ class StartLiveActivity : AppCompatActivity() {
         body?.message?.takeIf { it.isNotBlank() }?.let { return it }
 
         val rawError = runCatching { response.errorBody()?.string().orEmpty() }.getOrDefault("")
+        parseServerMessage(rawError)?.let { return it }
+
         if (response.code() == 503 || response.code() == 504 || rawError.contains("via_upstream", ignoreCase = true)) {
             return getString(R.string.live_service_temporarily_unavailable)
+        }
+
+        if (response.code() == 401) {
+            return getString(R.string.session_expired_login_again)
+        }
+
+        if (response.code() == 403) {
+            return getString(R.string.livestream_staff_only_watch_allowed)
         }
 
         if (rawError.trimStart().startsWith("<")) {
             return getString(R.string.could_not_start_live)
         }
 
-        return rawError.takeIf { it.isNotBlank() } ?: getString(R.string.could_not_start_live)
+        return rawError.takeIf { it.isNotBlank() }
+            ?: getString(R.string.live_start_failed_with_code, response.code())
+    }
+
+    private fun parseServerMessage(rawError: String): String? {
+        val trimmed = rawError.trim()
+        if (!trimmed.startsWith("{")) return null
+        return runCatching {
+            val json = JSONObject(trimmed)
+            json.optString("message")
+                .takeIf { it.isNotBlank() }
+                ?: json.optString("error").takeIf { it.isNotBlank() }
+        }.getOrNull()
+    }
+
+    private fun liveStartFailureMessage(t: Throwable): String {
+        return when (t) {
+            is UnknownHostException -> getString(R.string.live_start_no_internet)
+            is SocketTimeoutException -> getString(R.string.live_start_timeout)
+            is IOException -> getString(R.string.live_start_connection_failed, t.message.orEmpty())
+            else -> getString(R.string.could_not_start_live)
+        }
     }
 }

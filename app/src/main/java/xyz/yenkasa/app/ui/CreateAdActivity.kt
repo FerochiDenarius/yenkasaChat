@@ -51,6 +51,7 @@ class CreateAdActivity : AppCompatActivity() {
     private var imageUri: Uri? = null
     private var videoUri: Uri? = null
     private var thumbUri: Uri? = null
+    private var isSubmittingAd = false
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -202,6 +203,7 @@ class CreateAdActivity : AppCompatActivity() {
     }
 
     private fun submitAd() {
+        if (isSubmittingAd) return
         val title = inputAdTitle.text.toString().trim()
         val ctaText = inputCtaText.text.toString().trim()
         val ctaUrl = inputCtaUrl.text.toString().trim()
@@ -228,6 +230,7 @@ class CreateAdActivity : AppCompatActivity() {
             return
         }
 
+        isSubmittingAd = true
         btnSubmitAd.isEnabled = false
         btnSubmitAd.text = "Submitting..."
         lifecycleScope.launch(Dispatchers.IO) {
@@ -330,6 +333,7 @@ class CreateAdActivity : AppCompatActivity() {
 
     private fun resetSubmitButton() {
         runOnUiThread {
+            isSubmittingAd = false
             btnSubmitAd.isEnabled = true
             btnSubmitAd.text = "Submit Ad"
         }

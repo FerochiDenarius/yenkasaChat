@@ -44,6 +44,8 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.adapter.AdBinder
+import xyz.yenkasa.app.ui.CoinWalletActivity
+import xyz.yenkasa.app.ui.ads.AdEligibilityManager
 import xyz.yenkasa.app.ui.feed.FeedCacheController
 import xyz.yenkasa.app.ui.feed.FeedChromeController
 import xyz.yenkasa.app.ui.feed.FeedCommunityController
@@ -150,6 +152,7 @@ class FeedFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         initAuth()
         initViews(view)
+        AdEligibilityManager.init(requireContext())
         initControllers()
         chromeController.setupInitialChrome(
             walletViews = floatingWalletViews,
@@ -314,7 +317,10 @@ class FeedFragment : Fragment() {
                 shouldLoadNextPage = { !isLoading && !isLoadingMore && !isLastPage },
                 onLoadNextPage = { loadFeed(currentPage + 1) },
                 onViewCountUpdated = { postId, viewsCount -> updateSourcePostViewCount(postId, viewsCount) }
-            ).also { it.setup() }
+            ).also {
+                it.setup()
+                it.setMonetizationAds(sponsoredAds)
+            }
             return
         }
 
@@ -360,7 +366,10 @@ class FeedFragment : Fragment() {
         return FeedPlayerCoordinator.Callbacks(
             onOpenProfile = { id -> postActionsController.openUserProfile(id) },
             onLike = { post, position -> postActionsController.handleLike(post, position) },
-            onComment = { post, _ -> postActionsController.openComments(post) },
+            onComment = { post, _ ->
+                AdEligibilityManager.setTyping(requireContext(), true)
+                postActionsController.openComments(post)
+            },
             onShare = { post -> postActionsController.sharePost(post) },
             onSave = { _, _ -> },
             onReward = { startActivity(Intent(requireContext(), CoinWalletActivity::class.java)) },
@@ -500,33 +509,48 @@ class FeedFragment : Fragment() {
 
     private fun buildMixedFeed(posts: List<Post>): List<Any> {
         val mixed = mutableListOf<Any>()
-        var counter = 0
+        val usedAdIds = mutableSetOf<String>()
+        var organicCount = 0
+        var lastAdOrganicCount = 0
+        var adSlot = 0
+
+        fun nextFeedGap(): Int = 4 + (adSlot % 2)
+        fun fallbackAd(slot: Int): AdModel = AdModel(
+            _id = "local-ad-slot-$slot",
+            sponsorName = "AdMob",
+            adType = "google",
+            title = getString(R.string.sponsored_ad),
+            imageUrl = null,
+            videoUrl = null,
+            thumbnailUrl = null,
+            ctaUrl = null,
+            ctaText = getString(R.string.learn_more),
+            rewardYKC = 0
+        )
+
+        fun pickAd(slot: Int): AdModel? {
+            val pool = sponsoredAds.filter { it._id.isNotBlank() && it._id !in usedAdIds }
+            if (pool.isEmpty()) return null
+            val ad = pool[slot % pool.size]
+            usedAdIds.add(ad._id)
+            return ad
+        }
 
         for (post in posts) {
             mixed.add(post)
-            counter++
+            organicCount++
 
-            if (counter % FEED_AD_INTERVAL == 0) {
-                val adIndex = (counter / FEED_AD_INTERVAL) - 1
-                val ad = sponsoredAds.getOrNull(adIndex % sponsoredAds.size.coerceAtLeast(1))
+            val gap = nextFeedGap()
+            val enoughDistance = organicCount - lastAdOrganicCount >= gap
+            if (organicCount >= gap && enoughDistance) {
+                val ad = pickAd(adSlot) ?: fallbackAd(adSlot)
+                lastAdOrganicCount = organicCount
+                adSlot++
                 Log.d(
                     "YenkasaAds",
-                    "insert ad after organicCount=$counter mixedIndex=${mixed.size} source=${ad?.sponsorName ?: "AdMob fallback"}"
+                    "insert ad after organicCount=$organicCount mixedIndex=${mixed.size} source=${ad.sponsorName ?: "AdMob fallback"}"
                 )
-                mixed.add(
-                    ad ?: AdModel(
-                        _id = "local-ad-${counter}",
-                        sponsorName = "AdMob",
-                        adType = "google",
-                        title = getString(R.string.sponsored_ad),
-                        imageUrl = null,
-                        videoUrl = null,
-                        thumbnailUrl = null,
-                        ctaUrl = null,
-                        ctaText = getString(R.string.learn_more),
-                        rewardYKC = 0
-                    )
-                )
+                mixed.add(ad)
             }
         }
 
@@ -544,6 +568,7 @@ class FeedFragment : Fragment() {
                 ) {
                     val ads = response.body()?.ads.orEmpty()
                     sponsoredAds = if (response.isSuccessful) ads else emptyList()
+                    playerCoordinator?.setMonetizationAds(sponsoredAds)
                     if (posts.isNotEmpty()) {
                         val mixedFeed = buildMixedFeed(posts)
                         if (USE_YENKASA_PLAYER_VIEW) {
@@ -557,6 +582,7 @@ class FeedFragment : Fragment() {
                 override fun onFailure(call: Call<AdsFeedResponse>, t: Throwable) {
                     Log.w("FeedFragment", "Sponsored ads unavailable, using AdMob fallback: ${t.message}")
                     sponsoredAds = emptyList()
+                    playerCoordinator?.setMonetizationAds(sponsoredAds)
                     if (USE_YENKASA_PLAYER_VIEW && posts.isNotEmpty()) {
                         playerCoordinator?.submitItems(buildMixedFeed(posts))
                     }
@@ -734,6 +760,8 @@ class FeedFragment : Fragment() {
         updateOfflineBanner(!isOnline())
         chromeController.onHostResume(floatingWalletViews)
         WalletBalanceManager.refreshBalance(requireContext())
+        AdEligibilityManager.onAppForeground(requireContext())
+        AdEligibilityManager.setTyping(requireContext(), false)
         if (USE_YENKASA_PLAYER_VIEW) {
             playerCoordinator?.resumeActive()
         }
@@ -743,6 +771,7 @@ class FeedFragment : Fragment() {
         super.onPause()
         saveCurrentScrollPosition()
         chromeController.onHostPause()
+        AdEligibilityManager.onAppBackground(requireContext())
         if (USE_YENKASA_PLAYER_VIEW) {
             playerCoordinator?.pauseActive()
         } else {
@@ -821,7 +850,7 @@ class FeedFragment : Fragment() {
     private fun mergeRefreshPosts(fresh: List<Post>, cachedOrExisting: List<Post>): List<Post> {
         if (fresh.isEmpty()) return emptyList()
         val seen = mutableSetOf<String>()
-        return (fresh + cachedOrExisting).filter { seen.add(stablePostMergeKey(it)) }
+        return fresh.filter { seen.add(stablePostMergeKey(it)) }
     }
 
     private fun stablePostMergeKey(post: Post): String {

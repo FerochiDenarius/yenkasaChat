@@ -10,6 +10,9 @@ const {
   resolveRewardCountry,
   recordRegionalRewardDaily
 } = require('../services/regionalRewards.service');
+const {
+  upsertMonetizationDailyMetrics
+} = require('../services/monetizationAnalytics.service');
 
 const AD_REVIEWER_ROLES = new Set(REVIEWER_RANKS.map((rank) => rank.toLowerCase()));
 const AD_REVIEWER_ACCESS_ROLES = [...REVIEWER_RANKS];
@@ -195,6 +198,34 @@ exports.rewardAdClick = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: "Server error rewarding ad click"
+    });
+  }
+};
+
+exports.trackMonetizationEvent = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId)
+      .select('verifiedCountry detectedCountry countryConfidence role roleName accessRole username')
+      .lean();
+
+    const payload = {
+      ...req.body,
+      platform: req.body?.platform || 'android'
+    };
+
+    const saved = await upsertMonetizationDailyMetrics(payload, user);
+
+    return res.json({
+      success: true,
+      metrics: saved,
+      message: 'Monetization event tracked.'
+    });
+  } catch (err) {
+    console.error('❌ Failed to track monetization event:', err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || 'Failed to track monetization event'
     });
   }
 };

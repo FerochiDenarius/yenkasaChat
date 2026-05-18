@@ -26,6 +26,7 @@ router.get('/pending', auth, adsController.getPendingAds);
 router.get('/mine', auth, adsController.getMyAds);
 router.post('/view/:adId', auth, adsController.recordAdView);
 router.post('/reward/:adId', auth, adsController.rewardAd);
+router.post('/track-monetization', auth, adsController.trackMonetizationEvent);
 
 function maybeParseAdUpload(req, res, next) {
   const contentType = req.headers["content-type"] || "";

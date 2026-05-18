@@ -1,6 +1,8 @@
 package xyz.yenkasa.app.network
 
 import android.content.Context
+import com.google.gson.GsonBuilder
+import xyz.yenkasa.app.model.UserBasic
 import xyz.yenkasa.app.model.RefreshTokenRequest
 import xyz.yenkasa.app.util.TokenManager
 import okhttp3.Interceptor
@@ -16,6 +18,11 @@ object ApiClient {
 
     private lateinit var retrofit: Retrofit
     private var initialized = false
+    private val gson by lazy {
+        GsonBuilder()
+            .registerTypeAdapter(UserBasic::class.java, UserBasicJsonAdapter())
+            .create()
+    }
 
     val apiService: ApiService by lazy {
         getClient().create(ApiService::class.java)
@@ -81,7 +88,7 @@ object ApiClient {
                         try {
                             val refreshRetrofit = Retrofit.Builder()
                                 .baseUrl(BASE_URL)
-                                .addConverterFactory(GsonConverterFactory.create())
+                                .addConverterFactory(GsonConverterFactory.create(gson))
                                 .build()
                             val refreshService = refreshRetrofit.create(AuthService::class.java)
                             val refreshResponse = refreshService.refreshToken(RefreshTokenRequest(refreshToken)).execute()
@@ -127,7 +134,7 @@ object ApiClient {
         retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(httpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
 
         initialized = true

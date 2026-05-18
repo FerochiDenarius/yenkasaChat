@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
-import xyz.yenkasa.app.BuildConfig
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.util.CloudinaryMedia
@@ -74,7 +73,7 @@ class FeedCacheController(
             } else if (cached != null && cached.posts.isNotEmpty()) {
                 Log.i(
                     "FeedCacheController",
-                    "cache_skipped_incompatible key=$cacheKey schema=${cached.cacheSchemaVersion} renderer=${cached.rendererVersion} appVersion=${cached.appVersionCode}"
+                    "cache_skipped_incompatible key=$cacheKey schema=${cached.cacheSchemaVersion} renderer=${cached.rendererVersion}"
                 )
             } else {
                 Log.d("FeedCacheController", "cache_empty key=$cacheKey")
@@ -100,7 +99,7 @@ class FeedCacheController(
                 posts = dedupePosts(posts).take(MAX_CACHED_POSTS),
                 currentPage = currentPage,
                 isLastPage = isLastPage,
-                cacheSchemaVersion = CACHE_SCHEMA_VERSION,
+                cacheSchemaVersion = CACHE_VERSION,
                 rendererVersion = PLAYER_RENDERER_VERSION,
                 appVersionCode = currentAppVersionCode()
             )
@@ -144,7 +143,7 @@ class FeedCacheController(
                 posts = dedupePosts(communityPosts).take(MAX_COMMUNITY_CACHED_POSTS),
                 currentPage = 1,
                 isLastPage = false,
-                cacheSchemaVersion = CACHE_SCHEMA_VERSION,
+                cacheSchemaVersion = CACHE_VERSION,
                 rendererVersion = PLAYER_RENDERER_VERSION,
                 appVersionCode = currentAppVersionCode()
             )
@@ -158,23 +157,22 @@ class FeedCacheController(
     }
 
     private fun CachedFeedPayload.isCompatibleWithCurrentRenderer(): Boolean {
-        return cacheSchemaVersion == CACHE_SCHEMA_VERSION &&
-            rendererVersion == PLAYER_RENDERER_VERSION &&
-            appVersionCode == currentAppVersionCode()
+        return cacheSchemaVersion == CACHE_VERSION &&
+            rendererVersion == PLAYER_RENDERER_VERSION
     }
 
     private fun currentFeedGeneration(): String {
-        return "$PLAYER_RENDERER_VERSION:$CACHE_SCHEMA_VERSION:${currentAppVersionCode()}"
+        return "$PLAYER_RENDERER_VERSION:$CACHE_VERSION"
     }
 
     private fun currentAppVersionCode(): Long {
-        return BuildConfig.VERSION_CODE.toLong()
+        return 0L
     }
 
     private companion object {
         const val FEED_CACHE_PREF_NAME = "yenkasa_cache"
         const val FEED_RENDERER_GENERATION_KEY = "feed_renderer_generation"
-        const val CACHE_SCHEMA_VERSION = 2
+        const val CACHE_VERSION = 3
         const val PLAYER_RENDERER_VERSION = "yenkasa_player_v3"
         const val DEFAULT_CACHE_KEY = "default"
         const val MAX_CACHED_POSTS = 100

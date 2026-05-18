@@ -161,16 +161,13 @@ function scheduleAutoEnd(stream) {
       streamId,
       message: 'Your livestream session has ended. Time limit reached.'
     };
-    emitToLiveRoom(streamId, 'livestream_time_limit', timeLimitEvent);
     emitToLiveRoom(streamId, 'live_time_limit', timeLimitEvent);
     const endedEvent = {
       streamId,
       reason: 'time_limit',
       message: 'Your livestream session has ended. Time limit reached.'
     };
-    emitToLiveRoom(streamId, 'livestream_ended', endedEvent);
     emitToLiveRoom(streamId, 'live_ended', endedEvent);
-    emitLiveDirectory('livestream_removed', { streamId, reason: 'time_limit' });
     emitLiveDirectory('live_removed', { streamId, reason: 'time_limit' });
     global.clearLiveParticipantsForStream?.(streamId);
     logLiveEvent('auto_end', activeStream, { reason: 'time_limit' });
@@ -214,7 +211,6 @@ async function failStartingStream(streamId, reason = 'startup_timeout') {
   if (!stream) return null;
   clearStartupTimer(streamId);
   const removedEvent = { streamId: stream._id.toString(), reason };
-  emitLiveDirectory('livestream_removed', removedEvent);
   emitLiveDirectory('live_removed', removedEvent);
   global.clearLiveParticipantsForStream?.(stream._id.toString());
   logLiveEvent('startup_failed', stream, { reason });
@@ -472,9 +468,7 @@ router.post('/end/:id', auth, async (req, res) => {
     clearStartupTimer(stream._id);
 
     const endedEvent = { streamId: stream._id.toString(), reason: 'host_ended' };
-    emitToLiveRoom(stream._id, 'livestream_ended', endedEvent);
     emitToLiveRoom(stream._id, 'live_ended', endedEvent);
-    emitLiveDirectory('livestream_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
     emitLiveDirectory('live_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
     global.clearLiveParticipantsForStream?.(stream._id.toString());
     logLiveEvent('end', stream, { reason: 'host_ended' });
@@ -511,7 +505,6 @@ router.post('/leave/:id', auth, async (req, res) => {
         streamId: stream._id.toString(),
         viewerCount: stream.viewerCount
       };
-      emitToLiveRoom(stream._id, 'livestream_viewer_count', countEvent);
       emitToLiveRoom(stream._id, 'live_viewer_count', countEvent);
     }
 
@@ -602,7 +595,6 @@ router.post('/gift', auth, async (req, res) => {
       hostId: stream.hostId.toString(),
       transactionId: tx?.[0]?.transactionId
     };
-    emitToLiveRoom(streamId, 'livestream_gift', event);
     emitToLiveRoom(streamId, 'live_gift', event);
     const reactionEvent = {
       streamId,
@@ -612,7 +604,6 @@ router.post('/gift', auth, async (req, res) => {
       type: gift.emoji,
       createdAt: new Date().toISOString()
     };
-    emitToLiveRoom(streamId, 'livestream_reaction', reactionEvent);
     emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
 
     return res.json({

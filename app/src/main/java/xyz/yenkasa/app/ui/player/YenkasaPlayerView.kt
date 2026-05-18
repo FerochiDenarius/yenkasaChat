@@ -118,6 +118,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
     private val uiHandler = Handler(Looper.getMainLooper())
     private var playbackProgressListener: ((Int) -> Unit)? = null
     private var walletReceiverRegistered = false
+    private var lastMonetizationSecond = -1
 
     private val autoHideRunnable = Runnable {
         if (isActiveItem && overlaysVisible) {
@@ -149,6 +150,13 @@ class YenkasaPlayerView @JvmOverloads constructor(
             val checkpoint = (currentPlayer.currentPosition / 1000L).toInt()
             if (checkpoint in listOf(5, 10, 30) && firedCheckpoints.add(checkpoint)) {
                 playbackProgressListener?.invoke(checkpoint)
+            }
+            if (checkpoint != lastMonetizationSecond) {
+                lastMonetizationSecond = checkpoint
+                boundPost?.let { post ->
+                    val durationSeconds = (currentPlayer.duration / 1000L).toInt().coerceAtLeast(0)
+                    actions?.onMonetizationProgress(post, checkpoint, durationSeconds)
+                }
             }
             if (currentPlayer.isPlaying) {
                 uiHandler.postDelayed(this, 300L)
@@ -596,6 +604,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         secondaryActionsExpanded = false
         imageIndex = 0
         firedCheckpoints.clear()
+        lastMonetizationSecond = -1
         secondaryActionsView.alpha = 0f
         secondaryActionsView.isVisible = false
         buttonExpandActions.rotation = 0f
@@ -748,6 +757,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         uiHandler.removeCallbacks(progressRunnable)
         uiHandler.removeCallbacks(autoHideRunnable)
         releasePlayer()
+        lastMonetizationSecond = -1
     }
 
     private fun renderMedia(item: YenkasaPlayerItem) {

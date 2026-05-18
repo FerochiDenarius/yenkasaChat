@@ -763,6 +763,8 @@
     <string name="get_started">Get Started</string>
     <string name="watch_earn_default_ykc">Watch &amp; Earn 5 YKC</string>
     <string name="watch_earn_ykc">Watch &amp; Earn %1$d YKC</string>
+    <string name="skip_ad">Skip ad</string>
+    <string name="skip_in_seconds">Skip in %1$d s</string>
     <string name="sponsored_earn_ykc">Sponsored - Earn %1$d YKC</string>
     <string name="watching">Watching...</string>
     <string name="reward_earned">Reward Earned!</string>

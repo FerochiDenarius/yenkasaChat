@@ -52,6 +52,7 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
     private val firedCheckpoints = mutableSetOf<Int>()
     private var checkpointListener: ((Int) -> Unit)? = null
     private var readyListener: (() -> Unit)? = null
+    private var completionListener: (() -> Unit)? = null
     private val handler = Handler(Looper.getMainLooper())
 
     private val hideControlsRunnable = Runnable {
@@ -138,6 +139,10 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
         readyListener = listener
     }
 
+    fun setCompletionListener(listener: (() -> Unit)?) {
+        completionListener = listener
+    }
+
     fun play() {
         val url = mediaUrl ?: return
         pauseActiveVideo()
@@ -219,6 +224,7 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
                     if (playbackState == Player.STATE_ENDED) {
                         stopAndShowPoster()
                         progress.progress = 0
+                        completionListener?.invoke()
                     }
                 }
 

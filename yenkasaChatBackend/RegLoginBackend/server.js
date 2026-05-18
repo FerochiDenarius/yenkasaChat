@@ -281,7 +281,6 @@ function emitLiveRoomMemberCount(streamId) {
     streamId: streamId?.toString(),
     viewerCount: getLiveRoomMemberCount(streamId)
   };
-  emitToLiveRoom(streamId, 'livestream_viewer_count', payload);
   emitToLiveRoom(streamId, 'live_viewer_count', payload);
   return payload.viewerCount;
 }
@@ -306,6 +305,21 @@ function joinLiveRooms(socket, streamId) {
 function leaveLiveRooms(socket, streamId) {
   socket.leave(getLiveRoom(streamId));
   socket.leave(getLegacyLiveRoom(streamId));
+}
+
+function emitLiveJoinAck(socket, payload = {}) {
+  if (!socket?.connected) return;
+  socket.emit('live_room_joined', {
+    success: true,
+    streamId: payload.streamId?.toString?.() || '',
+    userId: payload.userId?.toString?.() || '',
+    username: payload.username || '',
+    avatar: payload.avatar || '',
+    agoraUid: normalizeAgoraUid(payload.agoraUid),
+    liveRole: payload.liveRole || 'audience',
+    viewerCount: Number(payload.viewerCount || 0),
+    confirmedAt: new Date().toISOString()
+  });
 }
 
 function serializeLiveStream(stream) {
@@ -372,9 +386,7 @@ async function endLiveStreamForHostDrop(streamId, socketId) {
     streamId,
     reason: 'host_disconnected'
   };
-  emitToLiveRoom(streamId, 'livestream_ended', endedEvent);
   emitToLiveRoom(streamId, 'live_ended', endedEvent);
-  io.emit('livestream_removed', endedEvent);
   io.emit('live_removed', endedEvent);
   clearLiveParticipants(streamId);
   console.log(`📺 Livestream ${streamId} ended after host socket ${socketId} disconnected.`);
@@ -628,7 +640,6 @@ io.on('connection', (socket) => {
       streamId,
       viewerCount: stream.viewerCount
     };
-    emitToLiveRoom(streamId, 'livestream_viewer_count', payload);
     emitToLiveRoom(streamId, 'live_viewer_count', payload);
     return stream;
   };
@@ -668,17 +679,8 @@ io.on('connection', (socket) => {
       });
       addLiveParticipant(streamId, userId, payload.agoraUid);
 
-      const startedEvent = { stream: serializeLiveStream(stream) };
-      io.emit('livestream_started', startedEvent);
+    const startedEvent = { stream: serializeLiveStream(stream) };
       io.emit('live_started', startedEvent);
-      emitToLiveRoom(streamId, 'livestream_host_ready', {
-        streamId,
-        userId,
-        agoraUid: normalizeAgoraUid(payload.agoraUid),
-        liveRole: 'broadcaster',
-        username: stream.hostUsername,
-        createdAt: now.toISOString()
-      });
       emitLiveRoomMemberCount(streamId);
       console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
     } catch (err) {
@@ -724,10 +726,36 @@ io.on('connection', (socket) => {
   const handleLiveJoin = async (payload = {}) => {
     try {
       const streamId = payload.streamId?.toString();
-      if (!streamId || socket.data.liveStreams.has(streamId)) return;
+      if (!streamId) return;
       if (socket.data.hostLiveStreams.has(streamId)) {
         joinLiveRooms(socket, streamId);
         emitLiveRoomMemberCount(streamId);
+        const actor = await resolveLiveActor(payload);
+        emitLiveJoinAck(socket, {
+          streamId,
+          userId: actor.userId,
+          username: actor.username,
+          avatar: actor.avatar,
+          agoraUid: payload.agoraUid,
+          liveRole: payload.liveRole || 'broadcaster',
+          viewerCount: getLiveRoomMemberCount(streamId)
+        });
+        return;
+      }
+
+      if (socket.data.liveStreams.has(streamId)) {
+        joinLiveRooms(socket, streamId);
+        emitLiveRoomMemberCount(streamId);
+        const actor = await resolveLiveActor(payload);
+        emitLiveJoinAck(socket, {
+          streamId,
+          userId: actor.userId,
+          username: actor.username,
+          avatar: actor.avatar,
+          agoraUid: payload.agoraUid,
+          liveRole: payload.liveRole || 'audience',
+          viewerCount: getLiveRoomMemberCount(streamId)
+        });
         return;
       }
 
@@ -759,9 +787,17 @@ io.on('connection', (socket) => {
         avatar: actor.avatar,
         viewerCount: getLiveRoomMemberCount(streamId)
       };
-      emitToLiveRoom(streamId, 'livestream_join', event);
       emitToLiveRoom(streamId, 'live_join', event);
       emitLiveRoomMemberCount(streamId);
+      emitLiveJoinAck(socket, {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        avatar: actor.avatar,
+        agoraUid: payload.agoraUid,
+        liveRole: payload.liveRole || 'audience',
+        viewerCount: getLiveRoomMemberCount(streamId)
+      });
     } catch (err) {
       console.error('❌ live_join failed:', err.message);
     }
@@ -794,7 +830,6 @@ io.on('connection', (socket) => {
         avatar: actor.avatar,
         createdAt: new Date().toISOString()
       };
-      emitToLiveRoom(streamId, 'livestream_leave', event);
       emitToLiveRoom(streamId, 'live_leave', event);
       socket.data.liveStreams.delete(streamId);
       socket.data.hostLiveStreams.delete(streamId);
@@ -831,7 +866,6 @@ io.on('connection', (socket) => {
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString()
       };
-      emitToLiveRoom(streamId, 'livestream_comment', event);
       emitToLiveRoom(streamId, 'live_comment', event);
     } catch (err) {
       console.error('❌ live_comment failed:', err.message);
@@ -859,7 +893,6 @@ io.on('connection', (socket) => {
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString()
       };
-      emitToLiveRoom(streamId, 'livestream_reaction', event);
       emitToLiveRoom(streamId, 'live_reaction', event);
     } catch (err) {
       console.error('❌ live_reaction failed:', err.message);

@@ -8,8 +8,13 @@ import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.AdBinder
+import xyz.yenkasa.app.model.AdModel
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.ui.ads.AdEligibilityManager
+import xyz.yenkasa.app.ui.ads.MonetizationAdDialog
+import xyz.yenkasa.app.ui.ads.MonetizationAdRequest
+import xyz.yenkasa.app.ui.ads.MonetizationAdType
 import xyz.yenkasa.app.ui.CoinWalletActivity
 import xyz.yenkasa.app.ui.CreateAdActivity
 import xyz.yenkasa.app.ui.StartLiveActivity
@@ -50,8 +55,11 @@ class FeedPlayerCoordinator(
         onViewCountUpdated,
         AdBinder(fragment.requireContext())
     )
+    private var sponsoredAds: List<AdModel> = emptyList()
+    private var monetizationDialogShowing = false
 
     fun setup() {
+        AdEligibilityManager.init(fragment.requireContext())
         recyclerView.stopScroll()
         recyclerView.adapter = null
         recyclerView.recycledViewPool.clear()
@@ -120,6 +128,10 @@ class FeedPlayerCoordinator(
         playerAdapter.updateFeedMode(mode)
     }
 
+    fun setMonetizationAds(ads: List<AdModel>) {
+        sponsoredAds = ads.filter { !it.videoUrl.isNullOrBlank() }
+    }
+
     fun handleSnapToActiveItem() {
         val snapView = snapHelper.findSnapView(layoutManager) ?: return
         val position = recyclerView.getChildAdapterPosition(snapView)
@@ -143,6 +155,7 @@ class FeedPlayerCoordinator(
             }
 
             override fun onComment(post: Post, position: Int) {
+                AdEligibilityManager.setTyping(fragment.requireContext(), true)
                 callbacks.onComment(post, position)
             }
 
@@ -156,7 +169,35 @@ class FeedPlayerCoordinator(
             }
 
             override fun onReward(post: Post) {
-                callbacks.onReward(post)
+                if (monetizationDialogShowing) return
+                val context = fragment.requireContext()
+                val ad = pickMonetizationAd(post, MonetizationAdType.REWARDED) ?: run {
+                    callbacks.onReward(post)
+                    return
+                }
+                monetizationDialogShowing = true
+                playerAdapter.pauseActive(recyclerView)
+                if (AdEligibilityManager.shouldRegisterMonetizedSession(context)) {
+                    AdEligibilityManager.registerMonetizedSession(context)
+                }
+                MonetizationAdDialog.show(
+                    fragment = fragment,
+                    request = MonetizationAdRequest(
+                        ad = ad,
+                        placement = MonetizationAdType.REWARDED,
+                        rewardEligible = true,
+                        postId = post._id
+                    )
+                ) { outcome ->
+                    AdEligibilityManager.registerAdShown(context, MonetizationAdType.REWARDED, post._id)
+                    if (!outcome.completed) {
+                        AdEligibilityManager.registerAdSkipped(context, MonetizationAdType.REWARDED, post._id)
+                    }
+                    monetizationDialogShowing = false
+                    if (fragment.isAdded) {
+                        playerAdapter.resumeActive(recyclerView)
+                    }
+                }
             }
 
             override fun onOpenWallet() {
@@ -197,6 +238,7 @@ class FeedPlayerCoordinator(
             }
 
             override fun onSearchQuery(query: String) {
+                AdEligibilityManager.setTyping(fragment.requireContext(), query.isNotBlank())
                 Toast.makeText(
                     fragment.requireContext(),
                     fragment.getString(R.string.search_query, query),
@@ -208,11 +250,74 @@ class FeedPlayerCoordinator(
                 callbacks.onFeedModeSelected(mode)
             }
 
+            override fun onMonetizationProgress(post: Post, currentSeconds: Int, durationSeconds: Int) {
+                handleMonetizationProgress(post, currentSeconds, durationSeconds)
+            }
+
             override fun onNavigateTo(position: Int) {
                 if (position in 0 until playerAdapter.itemCount) {
                     recyclerView.smoothScrollToPosition(position)
                 }
             }
         }
+    }
+
+    private fun handleMonetizationProgress(post: Post, currentSeconds: Int, durationSeconds: Int) {
+        val context = fragment.requireContext()
+        if (monetizationDialogShowing || !fragment.isAdded) return
+
+        if (currentSeconds >= 10) {
+            AdEligibilityManager.registerVideoWatched(context, post._id)
+        }
+
+        if (durationSeconds > 60 && currentSeconds in 40..60) {
+            if (AdEligibilityManager.canShowMidRoll(context, post._id, durationSeconds)) {
+                showMonetizationAd(MonetizationAdType.MIDROLL, post, rewardEligible = false)
+                return
+            }
+        }
+
+        if (currentSeconds >= 12 && AdEligibilityManager.canShowInterstitial(context, post._id)) {
+            showMonetizationAd(MonetizationAdType.INTERSTITIAL, post, rewardEligible = false)
+        }
+    }
+
+    private fun showMonetizationAd(
+        type: MonetizationAdType,
+        post: Post,
+        rewardEligible: Boolean
+    ) {
+        if (monetizationDialogShowing) return
+        val ad = pickMonetizationAd(post, type) ?: return
+        monetizationDialogShowing = true
+        playerAdapter.pauseActive(recyclerView)
+        if (AdEligibilityManager.shouldRegisterMonetizedSession(fragment.requireContext())) {
+            AdEligibilityManager.registerMonetizedSession(fragment.requireContext())
+        }
+        MonetizationAdDialog.show(
+            fragment = fragment,
+            request = MonetizationAdRequest(
+                ad = ad,
+                placement = type,
+                rewardEligible = rewardEligible,
+                postId = post._id
+            )
+        ) { outcome ->
+            AdEligibilityManager.registerAdShown(fragment.requireContext(), type, post._id)
+            if (!outcome.completed) {
+                AdEligibilityManager.registerAdSkipped(fragment.requireContext(), type, post._id)
+            }
+            monetizationDialogShowing = false
+            if (fragment.isAdded) {
+                playerAdapter.resumeActive(recyclerView)
+            }
+        }
+    }
+
+    private fun pickMonetizationAd(post: Post, type: MonetizationAdType): AdModel? {
+        val available = sponsoredAds
+        if (available.isEmpty()) return null
+        val index = "${post._id}:${type.name}".hashCode().ushr(1) % available.size
+        return available[index]
     }
 }

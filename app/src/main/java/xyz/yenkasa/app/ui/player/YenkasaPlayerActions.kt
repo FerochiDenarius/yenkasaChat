@@ -22,4 +22,5 @@ interface YenkasaPlayerActions {
     fun onNavigateTo(position: Int)
     fun onSearchQuery(query: String)
     fun onFeedModeSelected(mode: FeedTabsController.FeedMode)
+    fun onMonetizationProgress(post: Post, currentSeconds: Int, durationSeconds: Int)
 }

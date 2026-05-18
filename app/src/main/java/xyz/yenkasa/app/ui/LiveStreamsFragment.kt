@@ -141,11 +141,8 @@ class LiveStreamsFragment : Fragment() {
         if (socketListenersAttached) return
         SocketManager.ensureConnected(TokenManager.getUserId(requireContext()))
         listOf(
-            "livestream_started",
             "live_started",
-            "livestream_ended",
             "live_ended",
-            "livestream_removed",
             "live_removed"
         ).forEach { event ->
             SocketManager.on(event) {
@@ -162,11 +159,8 @@ class LiveStreamsFragment : Fragment() {
     private fun detachLiveStreamSocketUpdates() {
         if (!socketListenersAttached) return
         listOf(
-            "livestream_started",
             "live_started",
-            "livestream_ended",
             "live_ended",
-            "livestream_removed",
             "live_removed"
         ).forEach(SocketManager::off)
         socketListenersAttached = false

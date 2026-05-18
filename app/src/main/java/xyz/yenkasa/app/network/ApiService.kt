@@ -7,6 +7,8 @@ import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.*
+import xyz.yenkasa.app.model.MonetizationEventRequest
+import xyz.yenkasa.app.model.MonetizationEventResponse
 import xyz.yenkasa.app.model.FeedResponse
 import xyz.yenkasa.app.model.LikeResponse
 import xyz.yenkasa.app.model.UnreadCountRequest
@@ -699,6 +701,12 @@ interface ApiService {
     fun trackAdView(
         @Header("Authorization") token: String
     ): Call<TrackAdViewResponse>
+
+    @POST("ads/track-monetization")
+    fun trackMonetizationEvent(
+        @Header("Authorization") token: String,
+        @Body request: MonetizationEventRequest
+    ): Call<MonetizationEventResponse>
 
     @POST("app-verification/update-metrics")
     fun updateVerificationMetric(

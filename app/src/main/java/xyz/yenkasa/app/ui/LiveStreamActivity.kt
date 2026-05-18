@@ -88,11 +88,16 @@ class LiveStreamActivity : AppCompatActivity() {
     private var endRequestSent = false
     private var joinRetried = false
     private var tokenRefreshInFlight = false
+    private var liveJoinAckPending = false
+    private var liveJoinRetryCount = 0
     private var scheduledEndAtMillis: Long = 0L
     private var liveIdentityUsername: String = ""
     private var liveIdentityAvatar: String = ""
     private var lastReactionAt = 0L
     private val recentLiveEventKeys = linkedMapOf<String, Long>()
+    private val liveJoinAckHandler = Handler(Looper.getMainLooper())
+    private val liveJoinRetryRunnable = Runnable { handleLiveJoinAckTimeout() }
+    private val liveSocketListeners = mutableMapOf<String, Emitter.Listener?>()
     private val timerHandler = Handler(Looper.getMainLooper())
     private val hostHeartbeatHandler = Handler(Looper.getMainLooper())
     private val hostHeartbeatRunnable = object : Runnable {
@@ -105,7 +110,8 @@ class LiveStreamActivity : AppCompatActivity() {
         runOnUiThread {
             if (isHost && hostReadyEmitted) {
                 emitHostReady(force = true)
-            } else if (!isHost && joinedSocketRoom) {
+            }
+            if (!joinedSocketRoom || liveJoinAckPending) {
                 emitLiveJoin(force = true)
             }
         }
@@ -162,7 +168,12 @@ class LiveStreamActivity : AppCompatActivity() {
                     finish()
                     return@runOnUiThread
                 }
-                if (isHost) emitHostReady() else emitLiveJoin()
+                if (isHost) {
+                    emitHostReady()
+                    emitLiveJoin()
+                } else {
+                    emitLiveJoin()
+                }
             }
         }
 
@@ -362,8 +373,25 @@ class LiveStreamActivity : AppCompatActivity() {
             val message = json.optString("message")
             runOnUiThread { addComment(getString(R.string.live_comment_format, username, message)) }
         }
-        SocketManager.on("livestream_comment", commentListener)
-        SocketManager.on("live_comment", commentListener)
+        registerLiveSocketListener("live_comment", commentListener)
+
+        val roomJoinedListener: (Any) -> Unit = roomJoinedListener@{ data ->
+            val json = data.asJson() ?: return@roomJoinedListener
+            if (json.optString("streamId") != streamId) return@roomJoinedListener
+            val ackUserId = json.optString("userId").takeIf { it.isNotBlank() }
+            val currentUserId = TokenManager.getUserId(this)
+            if (!ackUserId.isNullOrBlank() && !currentUserId.isNullOrBlank() && ackUserId != currentUserId) return@roomJoinedListener
+            if (!liveJoinAckPending && !joinedSocketRoom) return@roomJoinedListener
+            liveJoinAckHandler.removeCallbacks(liveJoinRetryRunnable)
+            liveJoinAckPending = false
+            liveJoinRetryCount = 0
+            joinedSocketRoom = true
+            Log.i(
+                tag,
+                "Live room join confirmed. streamId=$streamId userId=${ackUserId ?: currentUserId} role=${json.optString("liveRole")} viewerCount=${json.optInt("viewerCount", -1)}"
+            )
+        }
+        registerLiveSocketListener("live_room_joined", roomJoinedListener)
 
         val joinListener: (Any) -> Unit = joinListener@{ data ->
             val json = data.asJson() ?: return@joinListener
@@ -372,8 +400,7 @@ class LiveStreamActivity : AppCompatActivity() {
             val username = json.optString("username", getString(R.string.viewer_fallback))
             runOnUiThread { addComment(getString(R.string.live_user_joined, username)) }
         }
-        SocketManager.on("livestream_join", joinListener)
-        SocketManager.on("live_join", joinListener)
+        registerLiveSocketListener("live_join", joinListener)
 
         val leaveListener: (Any) -> Unit = leaveListener@{ data ->
             val json = data.asJson() ?: return@leaveListener
@@ -382,16 +409,14 @@ class LiveStreamActivity : AppCompatActivity() {
             val username = json.optString("username", getString(R.string.viewer_fallback))
             runOnUiThread { addComment(getString(R.string.live_user_left, username)) }
         }
-        SocketManager.on("livestream_leave", leaveListener)
-        SocketManager.on("live_leave", leaveListener)
+        registerLiveSocketListener("live_leave", leaveListener)
 
         val viewerCountListener: (Any) -> Unit = viewerCountListener@{ data ->
             val json = data.asJson() ?: return@viewerCountListener
             if (json.optString("streamId") != streamId) return@viewerCountListener
             runOnUiThread { updateViewerCount(json.optInt("viewerCount", 0)) }
         }
-        SocketManager.on("livestream_viewer_count", viewerCountListener)
-        SocketManager.on("live_viewer_count", viewerCountListener)
+        registerLiveSocketListener("live_viewer_count", viewerCountListener)
 
         val reactionListener: (Any) -> Unit = reactionListener@{ data ->
             val json = data.asJson() ?: return@reactionListener
@@ -399,12 +424,11 @@ class LiveStreamActivity : AppCompatActivity() {
             if (shouldSkipIncomingLiveEvent("reaction", json)) return@reactionListener
             runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
         }
-        SocketManager.on("livestream_reaction", reactionListener)
-        SocketManager.on("live_reaction", reactionListener)
+        registerLiveSocketListener("live_reaction", reactionListener)
 
-        SocketManager.on("livestream_gift") { data ->
-            val json = data.asJson() ?: return@on
-            if (json.optString("streamId") != streamId) return@on
+        val giftListener: (Any) -> Unit = giftListener@{ data ->
+            val json = data.asJson() ?: return@giftListener
+            if (json.optString("streamId") != streamId) return@giftListener
             val username = json.optString("senderUsername", getString(R.string.viewer_fallback))
             val emoji = json.optString("emoji", "❤️")
             val amount = json.optInt("amount", 0)
@@ -413,6 +437,7 @@ class LiveStreamActivity : AppCompatActivity() {
                 animateReaction(emoji)
             }
         }
+        registerLiveSocketListener("live_gift", giftListener)
 
         val endedListener: (Any) -> Unit = endedListener@{ data ->
             val json = data.asJson() ?: return@endedListener
@@ -423,25 +448,24 @@ class LiveStreamActivity : AppCompatActivity() {
                 finish()
             }
         }
-        SocketManager.on("livestream_ended", endedListener)
-        SocketManager.on("live_ended", endedListener)
+        registerLiveSocketListener("live_ended", endedListener)
 
     }
 
+    private fun registerLiveSocketListener(event: String, listener: (Any) -> Unit) {
+        liveSocketListeners[event]?.let { SocketManager.off(event, it) }
+        liveSocketListeners[event] = SocketManager.on(event, listener)
+    }
+
     private fun removeLiveSocketListeners() {
-        SocketManager.off("livestream_comment")
-        SocketManager.off("live_comment")
-        SocketManager.off("livestream_join")
-        SocketManager.off("live_join")
-        SocketManager.off("livestream_leave")
-        SocketManager.off("live_leave")
-        SocketManager.off("livestream_viewer_count")
-        SocketManager.off("live_viewer_count")
-        SocketManager.off("livestream_ended")
-        SocketManager.off("live_ended")
-        SocketManager.off("livestream_reaction")
-        SocketManager.off("live_reaction")
-        SocketManager.off("livestream_gift")
+        liveJoinAckHandler.removeCallbacks(liveJoinRetryRunnable)
+        liveSocketListeners.forEach { (event, listener) ->
+            SocketManager.off(event, listener)
+        }
+        liveSocketListeners.clear()
+        recentLiveEventKeys.clear()
+        liveJoinAckPending = false
+        liveJoinRetryCount = 0
     }
 
     private fun shouldSkipIncomingLiveEvent(type: String, json: JSONObject): Boolean {
@@ -452,16 +476,8 @@ class LiveStreamActivity : AppCompatActivity() {
         }
 
         val clientEventId = json.optString("clientEventId").takeIf { it.isNotBlank() }
-        val key = clientEventId?.let { "$type:$it" } ?: listOf(
-            type,
-            json.optString("streamId"),
-            json.optString("userId"),
-            json.optString("username"),
-            json.optString("message"),
-            json.optString("reaction", json.optString("type")),
-            json.optString("viewerCount"),
-            json.optString("reason")
-        ).joinToString("|")
+        if (clientEventId.isNullOrBlank()) return false
+        val key = "$type:$clientEventId"
 
         if (recentLiveEventKeys.containsKey(key)) return true
         recentLiveEventKeys[key] = now
@@ -522,8 +538,17 @@ class LiveStreamActivity : AppCompatActivity() {
             ?: resolveCachedLiveAvatar()
 
     private fun emitLiveJoin(force: Boolean = false) {
+        if (streamId.isBlank() || !isValidAgoraUid(agoraUid)) {
+            Log.w(tag, "Skipping live join emit. streamId=$streamId uid=$agoraUid host=$isHost")
+            return
+        }
         if (joinedSocketRoom && !force) return
+        if (liveJoinAckPending && !force) return
         val userId = TokenManager.getUserId(this)
+        if (userId.isNullOrBlank()) {
+            Log.w(tag, "Skipping live join emit because userId is blank. streamId=$streamId uid=$agoraUid host=$isHost")
+            return
+        }
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", userId.orEmpty())
@@ -532,16 +557,29 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("agoraUid", agoraUid)
             .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("clientEventId", liveClientEventId("join"))
-        emitLiveSocketEvent("send_livestream_join", "live_join", payload)
-        joinedSocketRoom = true
+        liveJoinAckPending = true
+        if (!force) liveJoinRetryCount = 0
+        liveJoinAckHandler.removeCallbacks(liveJoinRetryRunnable)
+        liveJoinAckHandler.postDelayed(liveJoinRetryRunnable, 4000L)
+        SocketManager.emit("live_join", payload)
+        Log.i(
+            tag,
+            "Emitted live join. streamId=$streamId userId=$userId uid=$agoraUid role=${if (isHost) "broadcaster" else "audience"} force=$force ackPending=$liveJoinAckPending retryCount=$liveJoinRetryCount"
+        )
     }
 
-    private fun emitLiveSocketEvent(sendEvent: String, legacyEvent: String, payload: JSONObject) {
-        SocketManager.emit(sendEvent, payload)
-        SocketManager.emit(
-            legacyEvent,
-            JSONObject(payload.toString())
-        )
+    private fun handleLiveJoinAckTimeout() {
+        if (!liveJoinAckPending || joinedSocketRoom) return
+        if (liveJoinRetryCount >= 1) {
+            Log.w(tag, "Live join ack still pending after retry. streamId=$streamId uid=$agoraUid host=$isHost")
+            liveJoinAckPending = false
+            return
+        }
+
+        liveJoinRetryCount += 1
+        liveJoinAckPending = false
+        Log.w(tag, "Retrying live join after missing ack. streamId=$streamId uid=$agoraUid host=$isHost")
+        emitLiveJoin(force = true)
     }
 
     private fun emitHostReady(force: Boolean = false) {
@@ -557,19 +595,7 @@ class LiveStreamActivity : AppCompatActivity() {
                 .put("agoraUid", agoraUid)
                 .put("liveRole", "broadcaster")
         )
-        SocketManager.emit(
-            "live_join",
-            JSONObject()
-                .put("streamId", streamId)
-                .put("userId", userId.orEmpty())
-                .put("username", liveEventUsername())
-                .put("avatar", liveEventAvatar())
-                .put("agoraUid", agoraUid)
-                .put("liveRole", "broadcaster")
-                .put("clientEventId", liveClientEventId("host_join"))
-        )
         hostReadyEmitted = true
-        joinedSocketRoom = true
         hostHeartbeatHandler.removeCallbacks(hostHeartbeatRunnable)
         hostHeartbeatHandler.post(hostHeartbeatRunnable)
     }
@@ -827,7 +853,7 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("message", message)
             .put("clientEventId", liveClientEventId("comment"))
-        emitLiveSocketEvent("send_livestream_comment", "live_comment", payload)
+        SocketManager.emit("live_comment", payload)
     }
 
     private fun sendReaction(reaction: String) {
@@ -843,7 +869,7 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("reaction", reaction)
             .put("clientEventId", liveClientEventId("reaction"))
-        emitLiveSocketEvent("send_livestream_reaction", "live_reaction", payload)
+        SocketManager.emit("live_reaction", payload)
     }
 
     private fun showGiftSheet() {
@@ -1042,6 +1068,7 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun leaveLive() {
         hostHeartbeatHandler.removeCallbacks(hostHeartbeatRunnable)
+        liveJoinAckHandler.removeCallbacks(liveJoinRetryRunnable)
         if (joinedSocketRoom) {
             val payload = JSONObject()
                 .put("streamId", streamId)
@@ -1051,9 +1078,11 @@ class LiveStreamActivity : AppCompatActivity() {
                 .put("agoraUid", agoraUid)
                 .put("liveRole", if (isHost) "broadcaster" else "audience")
                 .put("clientEventId", liveClientEventId("leave"))
-            emitLiveSocketEvent("send_livestream_leave", "live_leave", payload)
+            SocketManager.emit("live_leave", payload)
             joinedSocketRoom = false
         }
+        liveJoinAckPending = false
+        liveJoinRetryCount = 0
         if (isHost && !hostReadyEmitted && !endRequestSent) {
             cancelStartingLive()
         }

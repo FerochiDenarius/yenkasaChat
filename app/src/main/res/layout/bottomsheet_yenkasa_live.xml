@@ -38,7 +38,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Yenkasa Live"
+                    android:text="@string/yenkasa_live_title"
                     android:textColor="#FFFFFF"
                     android:textSize="22sp"
                     android:textStyle="bold" />
@@ -62,7 +62,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="LIVE"
+                        android:text="@string/live_caps"
                         android:textColor="#FF6C6C"
                         android:textSize="10sp"
                         android:textStyle="bold" />
@@ -73,7 +73,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Real-time competition happening now"
+                android:text="@string/live_competition_now"
                 android:textColor="#86A395"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -82,7 +82,7 @@
             android:id="@+id/buttonCloseLive"
             android:layout_width="28dp"
             android:layout_height="28dp"
-            android:contentDescription="Close"
+            android:contentDescription="@string/close"
             android:padding="4dp"
             android:src="@drawable/ic_close"
             android:tint="#93AAA0" />
@@ -108,7 +108,7 @@
                 android:gravity="center"
                 android:minWidth="54dp"
                 android:paddingHorizontal="14dp"
-                android:text="5m"
+                android:text="@string/live_window_5m"
                 android:textColor="#33D16E"
                 android:textStyle="bold" />
 
@@ -121,7 +121,7 @@
                 android:gravity="center"
                 android:minWidth="54dp"
                 android:paddingHorizontal="14dp"
-                android:text="1h"
+                android:text="@string/live_window_1h"
                 android:textColor="#81998D"
                 android:textStyle="bold" />
 
@@ -134,7 +134,7 @@
                 android:gravity="center"
                 android:minWidth="76dp"
                 android:paddingHorizontal="14dp"
-                android:text="Today"
+                android:text="@string/today"
                 android:textColor="#81998D"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -174,7 +174,7 @@
                         android:id="@+id/textLiveEventTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔥 Night Arena is ON"
+                        android:text="@string/night_arena_on"
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -184,7 +184,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2x YKC rewards"
+                        android:text="@string/live_rewards_2x"
                         android:textColor="#8BECA8"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -202,7 +202,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⚔️ Live Duel"
+                        android:text="@string/live_duel"
                         android:textColor="#FFFFFF"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -212,7 +212,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="You vs Ama"
+                        android:text="@string/live_duel_matchup_sample"
                         android:textColor="#E8F5EE"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -222,7 +222,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Comments battle"
+                        android:text="@string/comments_battle"
                         android:textColor="#90A99D"
                         android:textSize="12sp" />
 
@@ -242,7 +242,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="You"
+                                android:text="@string/you"
                                 android:textColor="#8BECA8"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
@@ -261,7 +261,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="vs"
+                            android:text="@string/versus"
                             android:textColor="#6D8E7D"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -277,7 +277,7 @@
                                 android:id="@+id/textLiveDuelOpponentLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Ama"
+                                android:text="@string/live_duel_opponent_sample"
                                 android:textColor="#F7D469"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
@@ -299,7 +299,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:text="⏱ 05:00 left"
+                        android:text="@string/live_duel_time_left_sample"
                         android:textColor="#A8BDAF"
                         android:textSize="12sp" />
 
@@ -310,7 +310,7 @@
                         android:layout_marginTop="12dp"
                         android:background="@drawable/bg_live_primary_action"
                         android:gravity="center"
-                        android:text="Start Duel"
+                        android:text="@string/start_duel"
                         android:textColor="#072012"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -330,7 +330,7 @@
                         android:id="@+id/textLiveRewardTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎯 Next burst reward"
+                        android:text="@string/next_burst_reward"
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -340,7 +340,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Top commenter +5 YKC"
+                        android:text="@string/top_commenter_reward_sample"
                         android:textColor="#F5D45D"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -359,7 +359,7 @@
                         android:id="@+id/textLiveStreakTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔥 Conversation Streak: 5 days"
+                        android:text="@string/live_conversation_streak_sample"
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -369,7 +369,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="⚡ Stay active in Live to maintain it"
+                        android:text="@string/stay_active_live"
                         android:textColor="#8BECA8"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -386,7 +386,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
-                    android:text="Live Activity"
+                    android:text="@string/live_activity"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -419,7 +419,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:text="Loading live data..."
+                android:text="@string/loading_live_data"
                 android:textColor="#D9EEE1"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -439,7 +439,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="⚠️ Live data unavailable. Pull to refresh."
+                android:text="@string/live_data_unavailable"
                 android:textColor="#F1C46D"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -453,7 +453,7 @@
                 android:gravity="center"
                 android:minWidth="112dp"
                 android:paddingHorizontal="18dp"
-                android:text="Retry"
+                android:text="@string/retry"
                 android:textColor="#072012"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -490,7 +490,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Comment"
+                android:text="@string/comment"
                 android:textColor="#D8EEE0"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -515,7 +515,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="View"
+                android:text="@string/view"
                 android:textColor="#D8EEE0"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -540,7 +540,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Like"
+                android:text="@string/like"
                 android:textColor="#D8EEE0"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -565,7 +565,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Follow"
+                android:text="@string/follow"
                 android:textColor="#D8EEE0"
                 android:textSize="11sp" />
         </LinearLayout>

@@ -335,6 +335,7 @@ class PostAdapter(
         holder.username.setOnClickListener { onUserClick(post.userId.id) }
 
         holder.communityName.text = post.communityId?.displayName ?: context.getString(R.string.general)
+        holder.timestamp.visibility = View.VISIBLE
         holder.timestamp.text = formatTimestamp(post.createdAt)
         holder.likeCount.text = context.resources.getQuantityString(R.plurals.likes_count, post.likeCount, post.likeCount)
         holder.commentCount.text = context.resources.getQuantityString(R.plurals.comments_count, post.commentCount, post.commentCount)
@@ -712,7 +713,7 @@ class PostAdapter(
     }
 
     private fun formatTimestamp(rawTimestamp: String?): String {
-        val timestamp = parseTimestampMillis(rawTimestamp) ?: return ""
+        val timestamp = parseTimestampMillis(rawTimestamp) ?: return context.getString(R.string.time_now_short)
         val diffMillis = System.currentTimeMillis() - timestamp
         val diffSeconds = diffMillis / 1000
 

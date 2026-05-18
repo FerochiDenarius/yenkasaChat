@@ -89,7 +89,7 @@ class UserProfileActivity : AppCompatActivity() {
 
         userId = intent.getStringExtra("USER_ID")
         if (userId.isNullOrEmpty()) {
-            Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.user_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -173,13 +173,17 @@ class UserProfileActivity : AppCompatActivity() {
                             intent.putExtra("roomId", roomId)
                             startActivity(intent)
                         } else {
-                            val message = response.body()?.message ?: "Could not open chat"
+                            val message = response.body()?.message ?: getString(R.string.could_not_open_chat)
                             Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
                         }
                     }
 
                     override fun onFailure(call: Call<CreateChatRoomResponse>, t: Throwable) {
-                        Toast.makeText(this@UserProfileActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@UserProfileActivity,
+                            getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 })
         }
@@ -217,7 +221,7 @@ class UserProfileActivity : AppCompatActivity() {
         val userId = intent.getStringExtra("USER_ID") ?: return
 
         val path = "profile/users/$userId/profile"
-        showPostsLoading("Loading posts...")
+        showPostsLoading(getString(R.string.loading_posts))
 
         ApiClient.apiService.getProfileDynamic(path, "Bearer $token")
             .enqueue(object : Callback<ProfileResponse> {
@@ -234,13 +238,13 @@ class UserProfileActivity : AppCompatActivity() {
                             TAG,
                             "❌ Profile load failed: ${response.code()} ${response.message()}"
                         )
-                        showPostsMessage("Could not load posts.")
+                        showPostsMessage(getString(R.string.could_not_load_posts))
                     }
                 }
 
                 override fun onFailure(call: Call<ProfileResponse>, t: Throwable) {
                     Log.e(TAG, "⚠️ Network error while fetching profile: ${t.message}", t)
-                    showPostsMessage("Could not load posts.")
+                    showPostsMessage(getString(R.string.could_not_load_posts))
                 }
             })
     }
@@ -276,14 +280,16 @@ class UserProfileActivity : AppCompatActivity() {
     private fun bindConversationStreak(streak: ConversationStreak) {
         conversationStreakLayout.visibility = View.VISIBLE
         val prefix = if (streak.current >= 3) "🔥 " else ""
-        val suffix = if (streak.current == 1) "day" else "days"
-        conversationStreakSubtitleView.text = "Longest streak: ${streak.longest} ${if (streak.longest == 1) "day" else "days"} • Private metric"
+        val currentDays = resources.getQuantityString(R.plurals.profile_days_count, streak.current, streak.current)
+        val longestDays = resources.getQuantityString(R.plurals.profile_days_count, streak.longest, streak.longest)
+        conversationStreakSubtitleView.text = getString(R.string.conversation_streak_longest, longestDays)
 
         ValueAnimator.ofInt(0, streak.current).apply {
             duration = 450L
             addUpdateListener { animator ->
                 val value = animator.animatedValue as Int
-                conversationStreakView.text = "${prefix}Conversation Streak: $value $suffix"
+                val days = resources.getQuantityString(R.plurals.profile_days_count, value, value)
+                conversationStreakView.text = getString(R.string.conversation_streak_value, prefix, days)
             }
             start()
         }
@@ -389,7 +395,7 @@ class UserProfileActivity : AppCompatActivity() {
     private fun showPostsContent(hasPosts: Boolean) {
         recyclerUserPosts.visibility = if (hasPosts) View.VISIBLE else View.GONE
         loadingPostsLayout.visibility = if (hasPosts) View.GONE else View.VISIBLE
-        postsStateView.text = if (hasPosts) "" else "No posts yet."
+        postsStateView.text = if (hasPosts) "" else getString(R.string.no_posts_yet)
     }
 
     private fun showPostsMessage(message: String) {
@@ -399,7 +405,7 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     private fun updateActionButtons() {
-        btnFollow.text = if (isFollowing) "Following" else "Follow"
+        btnFollow.text = if (isFollowing) getString(R.string.following) else getString(R.string.follow)
         btnFollow.setBackgroundResource(
             if (isFollowing) R.drawable.bg_profile_secondary_button else R.drawable.bg_profile_follow_button
         )
@@ -407,7 +413,7 @@ class UserProfileActivity : AppCompatActivity() {
             ContextCompat.getColor(this, if (isFollowing) R.color.account_primary_text else R.color.white)
         )
 
-        btnBlock.text = if (isBlocked) "Unblock" else "Block"
+        btnBlock.text = if (isBlocked) getString(R.string.unblock) else getString(R.string.block)
         btnBlock.setTextColor(
             ContextCompat.getColor(this, if (isBlocked) R.color.account_accent_green else R.color.account_danger)
         )
@@ -443,7 +449,7 @@ class UserProfileActivity : AppCompatActivity() {
                     Log.e(TAG, "Follow update failed: ${response.code()} ${response.errorBody()?.string()}")
                     Toast.makeText(
                         this@UserProfileActivity,
-                        "Failed to update follow",
+                        R.string.failed_to_update_follow,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -454,7 +460,7 @@ class UserProfileActivity : AppCompatActivity() {
                 btnFollow.isEnabled = true
                 Toast.makeText(
                     this@UserProfileActivity,
-                    "Network error: ${t.message}",
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -489,19 +495,23 @@ class UserProfileActivity : AppCompatActivity() {
                     isBlocked = !isBlocked
                     updateActionButtons()
                 } else {
-                    Toast.makeText(this@UserProfileActivity, "Failed to update block", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@UserProfileActivity, R.string.failed_to_update_block, Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Toast.makeText(this@UserProfileActivity, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@UserProfileActivity,
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }
 
     private fun showProfileSafetyMenu(anchor: View) {
         PopupMenu(this, anchor).apply {
-            menu.add("Report user")
+            menu.add(getString(R.string.report_user))
             setOnMenuItemClickListener {
                 showReportUserDialog()
                 true
@@ -511,21 +521,21 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     private fun showReportUserDialog() {
-        val reasons = arrayOf(
-            "Harassment or bullying",
-            "Hate or abusive content",
-            "Spam or scam",
-            "Impersonation",
-            "Sexual or unsafe content",
-            "Other"
+        val reasons = listOf(
+            getString(R.string.report_reason_harassment) to "Harassment or bullying",
+            getString(R.string.report_reason_hate) to "Hate or abusive content",
+            getString(R.string.report_reason_spam) to "Spam or scam",
+            getString(R.string.report_reason_impersonation) to "Impersonation",
+            getString(R.string.report_reason_sexual_unsafe) to "Sexual or unsafe content",
+            getString(R.string.other) to "Other"
         )
 
         AlertDialog.Builder(this)
-            .setTitle("Report user")
-            .setItems(reasons) { _, which ->
-                reportUser(reasons[which])
+            .setTitle(R.string.report_user)
+            .setItems(reasons.map { it.first }.toTypedArray()) { _, which ->
+                reportUser(reasons[which].second)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -535,9 +545,9 @@ class UserProfileActivity : AppCompatActivity() {
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     val message = response.body()?.message ?: if (response.isSuccessful) {
-                        "Report submitted"
+                        getString(R.string.report_submitted)
                     } else {
-                        "Failed to submit report"
+                        getString(R.string.failed_to_submit_report)
                     }
                     Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
                 }
@@ -545,7 +555,7 @@ class UserProfileActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                     Toast.makeText(
                         this@UserProfileActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

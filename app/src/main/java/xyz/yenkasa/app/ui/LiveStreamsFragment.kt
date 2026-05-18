@@ -2,6 +2,7 @@ package xyz.yenkasa.app.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,6 +30,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
 class LiveStreamsFragment : Fragment() {
+    private val tag = "LiveStreamsFragment"
 
     private lateinit var adapter: LiveStreamAdapter
     private lateinit var emptyText: TextView
@@ -104,18 +106,32 @@ class LiveStreamsFragment : Fragment() {
                     val body = response.body()
                     val joinedStream = body?.stream
                     val agora = body?.agora
-                    if (!response.isSuccessful || body?.success != true || joinedStream == null || agora == null) {
-                        val message = body?.message
-                            ?: parseServerMessage(response.errorBody()?.string())
-                            ?: getString(R.string.live_join_failed_with_code, response.code())
+                    val agoraUid = agora?.uid
+                    if (!response.isSuccessful || body?.success != true || joinedStream == null || agora == null || !isValidAgoraUid(agoraUid)) {
+                        Log.w(
+                            tag,
+                            "joinLiveStream rejected. http=${response.code()} code=${body?.code} message=${body?.message} streamId=${stream.id} tokenUid=$agoraUid"
+                        )
+                        val message = if (body?.success == true && !isValidAgoraUid(agoraUid)) {
+                            getString(R.string.live_video_credentials_invalid)
+                        } else {
+                            body?.message
+                                ?: parseServerMessage(response.errorBody()?.string())
+                                ?: getString(R.string.live_join_failed_with_code, response.code())
+                        }
                         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                         return
                     }
+                    Log.i(
+                        tag,
+                        "joinLiveStream token received. streamId=${joinedStream.id} channel=${joinedStream.agoraChannel} uid=${agora.uid} role=${agora.role} expiresAt=${agora.expiresAt}"
+                    )
                     startActivity(LiveStreamActivity.intentForAudience(requireContext(), joinedStream, agora))
                 }
 
                 override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
                     if (!isAdded) return
+                    Log.e(tag, "joinLiveStream transport failure: ${t.javaClass.simpleName}: ${t.message}", t)
                     Toast.makeText(requireContext(), liveJoinFailureMessage(t), Toast.LENGTH_SHORT).show()
                 }
             })
@@ -173,6 +189,8 @@ class LiveStreamsFragment : Fragment() {
             else -> getString(R.string.live_stream_unavailable)
         }
     }
+
+    private fun isValidAgoraUid(uid: Int?): Boolean = uid != null && uid > 0
 
     private fun parseServerMessage(rawError: String?): String? {
         val raw = rawError?.trim().orEmpty()

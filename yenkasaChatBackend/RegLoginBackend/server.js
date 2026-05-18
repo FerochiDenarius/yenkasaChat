@@ -25,6 +25,7 @@ const seedCommunities = require('./seed/seedCommunities');
 const commentRoutes = require('./routes/comments.routes');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { cloudinaryMediaResponseOptimizer } = require('./utils/cloudinaryMedia');
+const { agoraUidFromUserId } = require('./utils/agoraTokenGenerator');
 
 
 
@@ -144,6 +145,7 @@ const LIVE_HOST_DISCONNECT_GRACE_MS = Number(process.env.LIVESTREAM_HOST_DISCONN
 const liveEventDedupe = new Map();
 const LIVE_EVENT_DEDUPE_TTL_MS = Number(process.env.LIVESTREAM_EVENT_DEDUPE_TTL_MS || 30000);
 const liveParticipants = new Map();
+const liveParticipantAgoraUids = new Map();
 
 function getLiveRoom(streamId) {
   return `livestream_${streamId}`;
@@ -162,10 +164,75 @@ function getLiveParticipantSet(streamId) {
   return liveParticipants.get(normalizedStreamId);
 }
 
-function addLiveParticipant(streamId, userId) {
+function normalizeAgoraUid(value) {
+  const uid = Number(value);
+  return Number.isInteger(uid) && uid > 0 && uid <= 2147483647 ? uid : null;
+}
+
+function expectedAgoraUidForUser(userId) {
+  try {
+    return userId ? agoraUidFromUserId(userId) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function logLiveSocketUid(event, { streamId, userId, agoraUid, role, socketId }) {
+  const expectedUid = expectedAgoraUidForUser(userId);
+  const normalizedAgoraUid = normalizeAgoraUid(agoraUid);
+  const uidMatchesUser = Boolean(expectedUid && normalizedAgoraUid && expectedUid === normalizedAgoraUid);
+
+  console.log('[YenkasaLiveSocket][uid]', {
+    event,
+    streamId: streamId?.toString?.(),
+    userId: userId?.toString?.(),
+    socketId,
+    role: role || '',
+    payloadAgoraUid: normalizedAgoraUid,
+    expectedAgoraUid: expectedUid,
+    uidMatchesUser
+  });
+
+  if (expectedUid && normalizedAgoraUid && expectedUid !== normalizedAgoraUid) {
+    console.warn('[YenkasaLiveSocket][uid_mismatch]', {
+      event,
+      streamId: streamId?.toString?.(),
+      userId: userId?.toString?.(),
+      payloadAgoraUid: normalizedAgoraUid,
+      expectedAgoraUid: expectedUid,
+      socketId
+    });
+  }
+}
+
+function rememberLiveParticipantAgoraUid(streamId, userId, agoraUid) {
+  const normalizedStreamId = streamId?.toString();
+  const normalizedUserId = userId?.toString();
+  const normalizedAgoraUid = normalizeAgoraUid(agoraUid);
+  if (!normalizedStreamId || !normalizedUserId || !normalizedAgoraUid) return;
+  if (!liveParticipantAgoraUids.has(normalizedStreamId)) {
+    liveParticipantAgoraUids.set(normalizedStreamId, new Map());
+  }
+  liveParticipantAgoraUids.get(normalizedStreamId).set(normalizedUserId, normalizedAgoraUid);
+}
+
+function forgetLiveParticipantAgoraUid(streamId, userId) {
+  const normalizedStreamId = streamId?.toString();
+  const normalizedUserId = userId?.toString();
+  if (!normalizedStreamId || !normalizedUserId || !liveParticipantAgoraUids.has(normalizedStreamId)) return;
+
+  const participants = liveParticipantAgoraUids.get(normalizedStreamId);
+  participants.delete(normalizedUserId);
+  if (participants.size === 0) {
+    liveParticipantAgoraUids.delete(normalizedStreamId);
+  }
+}
+
+function addLiveParticipant(streamId, userId, agoraUid) {
   const normalizedUserId = userId?.toString();
   if (!normalizedUserId) return;
   getLiveParticipantSet(streamId).add(normalizedUserId);
+  rememberLiveParticipantAgoraUid(streamId, normalizedUserId, agoraUid);
 }
 
 function removeLiveParticipant(streamId, userId) {
@@ -175,6 +242,7 @@ function removeLiveParticipant(streamId, userId) {
 
   const participants = liveParticipants.get(normalizedStreamId);
   participants.delete(normalizedUserId);
+  forgetLiveParticipantAgoraUid(normalizedStreamId, normalizedUserId);
   if (participants.size === 0) {
     liveParticipants.delete(normalizedStreamId);
   }
@@ -184,6 +252,7 @@ function clearLiveParticipants(streamId) {
   const normalizedStreamId = streamId?.toString();
   if (!normalizedStreamId) return;
   liveParticipants.delete(normalizedStreamId);
+  liveParticipantAgoraUids.delete(normalizedStreamId);
 }
 global.clearLiveParticipantsForStream = clearLiveParticipants;
 
@@ -590,7 +659,14 @@ io.on('connection', (socket) => {
       clearLiveHostDisconnectTimer(streamId);
       joinLiveRooms(socket, streamId);
       socket.data.hostLiveStreams.add(streamId);
-      addLiveParticipant(streamId, userId);
+      logLiveSocketUid('host_ready', {
+        streamId,
+        userId,
+        agoraUid: payload.agoraUid,
+        role: payload.liveRole || 'broadcaster',
+        socketId: socket.id
+      });
+      addLiveParticipant(streamId, userId, payload.agoraUid);
 
       const startedEvent = { stream: serializeLiveStream(stream) };
       io.emit('livestream_started', startedEvent);
@@ -598,6 +674,8 @@ io.on('connection', (socket) => {
       emitToLiveRoom(streamId, 'livestream_host_ready', {
         streamId,
         userId,
+        agoraUid: normalizeAgoraUid(payload.agoraUid),
+        liveRole: 'broadcaster',
         username: stream.hostUsername,
         createdAt: now.toISOString()
       });
@@ -627,6 +705,13 @@ io.on('connection', (socket) => {
         },
         { $set: { hostLastSeenAt: new Date(), hostConnected: true } }
       );
+      logLiveSocketUid('host_heartbeat', {
+        streamId,
+        userId,
+        agoraUid: payload.agoraUid,
+        role: payload.liveRole || 'broadcaster',
+        socketId: socket.id
+      });
     } catch (err) {
       console.error('❌ livestream_host_heartbeat failed:', err.message);
     }
@@ -647,9 +732,16 @@ io.on('connection', (socket) => {
       }
 
       const actor = await resolveLiveActor(payload);
+      logLiveSocketUid('join', {
+        streamId,
+        userId: actor.userId,
+        agoraUid: payload.agoraUid,
+        role: payload.liveRole || 'audience',
+        socketId: socket.id
+      });
       joinLiveRooms(socket, streamId);
       socket.data.liveStreams.add(streamId);
-      addLiveParticipant(streamId, actor.userId);
+      addLiveParticipant(streamId, actor.userId, payload.agoraUid);
       const stream = await updateLiveViewerCount(streamId, 1);
       if (!stream) {
         leaveLiveRooms(socket, streamId);
@@ -661,6 +753,8 @@ io.on('connection', (socket) => {
       const event = {
         streamId,
         userId: actor.userId,
+        agoraUid: normalizeAgoraUid(payload.agoraUid),
+        liveRole: payload.liveRole || 'audience',
         username: actor.username,
         avatar: actor.avatar,
         viewerCount: getLiveRoomMemberCount(streamId)
@@ -684,9 +778,18 @@ io.on('connection', (socket) => {
       const isHostParticipant = socket.data.hostLiveStreams.has(streamId);
       if (!streamId || (!isAudienceParticipant && !isHostParticipant)) return;
       const actor = await resolveLiveActor(payload);
+      logLiveSocketUid('leave', {
+        streamId,
+        userId: actor.userId,
+        agoraUid: payload.agoraUid,
+        role: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
+        socketId: socket.id
+      });
       const event = {
         streamId,
         userId: actor.userId,
+        agoraUid: normalizeAgoraUid(payload.agoraUid),
+        liveRole: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
         username: actor.username,
         avatar: actor.avatar,
         createdAt: new Date().toISOString()
@@ -720,6 +823,8 @@ io.on('connection', (socket) => {
       const event = {
         streamId,
         userId: actor.userId,
+        agoraUid: normalizeAgoraUid(payload.agoraUid),
+        liveRole: payload.liveRole || '',
         username: actor.username,
         avatar: actor.avatar,
         message: message.slice(0, 240),
@@ -746,6 +851,8 @@ io.on('connection', (socket) => {
       const event = {
         streamId,
         userId: actor.userId,
+        agoraUid: normalizeAgoraUid(payload.agoraUid),
+        liveRole: payload.liveRole || '',
         username: actor.username,
         reaction: payload.reaction || '🔥',
         type: payload.type || payload.reaction || '🔥',
@@ -835,6 +942,7 @@ safeMount('/api/chatrooms', './routes/chatroom.routes');
 safeMount('/api/groups', './routes/group.routes');
 safeMount('/api/onesignal', './routes/onesignal');
 safeMount('/api/profile', './routes/profile');
+safeMount('/api/app', './routes/app.routes');
 // ---------------------------------
 // 🧩 New API Routes
 // ---------------------------------

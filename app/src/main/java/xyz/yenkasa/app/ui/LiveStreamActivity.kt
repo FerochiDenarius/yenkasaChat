@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.SurfaceView
 import android.view.View
 import android.widget.Button
@@ -48,6 +49,7 @@ import java.util.TimeZone
 import java.util.UUID
 
 class LiveStreamActivity : AppCompatActivity() {
+    private val tag = "LiveStreamActivity"
 
     private lateinit var videoContainer: FrameLayout
     private lateinit var reactionsLayer: FrameLayout
@@ -75,12 +77,14 @@ class LiveStreamActivity : AppCompatActivity() {
     private var channelName: String = ""
     private var agoraToken: String = ""
     private var agoraAppId: String = ""
-    private var agoraUid: Int = 0
+    private var agoraUid: Int = INVALID_AGORA_UID
     private var isHost: Boolean = false
     private var muted = false
     private var joinedSocketRoom = false
     private var hostReadyEmitted = false
     private var endRequestSent = false
+    private var joinRetried = false
+    private var tokenRefreshInFlight = false
     private var scheduledEndAtMillis: Long = 0L
     private var liveIdentityUsername: String = ""
     private var liveIdentityAvatar: String = ""
@@ -125,8 +129,65 @@ class LiveStreamActivity : AppCompatActivity() {
 
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
             runOnUiThread {
+                Log.i(
+                    tag,
+                    "Agora join success. streamId=$streamId channel=$channel uid=$uid expectedUid=$agoraUid elapsed=$elapsed host=$isHost"
+                )
+                if (uid != agoraUid) {
+                    Log.e(
+                        tag,
+                        "Agora UID mismatch after join. streamId=$streamId channel=$channel expectedUid=$agoraUid joinedUid=$uid host=$isHost"
+                    )
+                    Toast.makeText(this@LiveStreamActivity, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
+                    if (isHost && !hostReadyEmitted) cancelStartingLive()
+                    finish()
+                    return@runOnUiThread
+                }
                 if (isHost) emitHostReady() else emitLiveJoin()
             }
+        }
+
+        override fun onError(err: Int) {
+            runOnUiThread {
+                val message = agoraUserMessage(err)
+                Log.e(
+                    tag,
+                    "Agora error. streamId=$streamId channel=$channelName uid=$agoraUid error=$err message=$message host=$isHost"
+                )
+                if (shouldRefreshTokenForAgoraError(err)) {
+                    refreshAgoraToken("agora_error_$err", retryJoinAfterRefresh = true)
+                    return@runOnUiThread
+                }
+                if (!joinRetried) {
+                    retryAgoraJoin("agora_error_$err")
+                } else {
+                    Toast.makeText(this@LiveStreamActivity, message, Toast.LENGTH_LONG).show()
+                    if (isHost && !hostReadyEmitted) cancelStartingLive()
+                    finish()
+                }
+            }
+        }
+
+        override fun onConnectionLost() {
+            runOnUiThread {
+                Log.w(tag, "Agora connection lost. streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+                Toast.makeText(
+                    this@LiveStreamActivity,
+                    R.string.live_connection_lost_retrying,
+                    Toast.LENGTH_SHORT
+                ).show()
+                retryAgoraJoin("connection_lost")
+            }
+        }
+
+        override fun onTokenPrivilegeWillExpire(token: String?) {
+            Log.w(tag, "Agora token will expire soon. streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+            refreshAgoraToken("token_will_expire", retryJoinAfterRefresh = false)
+        }
+
+        override fun onRequestToken() {
+            Log.w(tag, "Agora requested a fresh token. streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+            refreshAgoraToken("token_requested", retryJoinAfterRefresh = true)
         }
     }
 
@@ -148,8 +209,12 @@ class LiveStreamActivity : AppCompatActivity() {
         channelName = intent.getStringExtra(EXTRA_CHANNEL).orEmpty()
         agoraToken = intent.getStringExtra(EXTRA_TOKEN).orEmpty()
         agoraAppId = intent.getStringExtra(EXTRA_APP_ID).orEmpty()
-        agoraUid = intent.getIntExtra(EXTRA_UID, 0)
+        agoraUid = intent.getIntExtra(EXTRA_UID, INVALID_AGORA_UID)
         isHost = intent.getBooleanExtra(EXTRA_IS_HOST, false)
+        Log.i(
+            tag,
+            "Live extras loaded. streamId=$streamId channel=$channelName tokenBlank=${agoraToken.isBlank()} appIdBlank=${agoraAppId.isBlank()} tokenUid=$agoraUid host=$isHost"
+        )
     }
 
     private fun bindViews() {
@@ -266,6 +331,8 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun setupSocket() {
         val userId = TokenManager.getUserId(this)
         SocketManager.ensureConnected(userId)
+        removeLiveSocketListeners()
+        SocketManager.instance?.off(Socket.EVENT_CONNECT, socketReconnectListener)
         SocketManager.instance?.on(Socket.EVENT_CONNECT, socketReconnectListener)
 
         val commentListener: (Any) -> Unit = commentListener@{ data ->
@@ -340,6 +407,22 @@ class LiveStreamActivity : AppCompatActivity() {
         SocketManager.on("livestream_ended", endedListener)
         SocketManager.on("live_ended", endedListener)
 
+    }
+
+    private fun removeLiveSocketListeners() {
+        SocketManager.off("livestream_comment")
+        SocketManager.off("live_comment")
+        SocketManager.off("livestream_join")
+        SocketManager.off("live_join")
+        SocketManager.off("livestream_leave")
+        SocketManager.off("live_leave")
+        SocketManager.off("livestream_viewer_count")
+        SocketManager.off("live_viewer_count")
+        SocketManager.off("livestream_ended")
+        SocketManager.off("live_ended")
+        SocketManager.off("livestream_reaction")
+        SocketManager.off("live_reaction")
+        SocketManager.off("livestream_gift")
     }
 
     private fun shouldSkipIncomingLiveEvent(type: String, json: JSONObject): Boolean {
@@ -427,6 +510,8 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("userId", userId.orEmpty())
             .put("username", liveEventUsername())
             .put("avatar", liveEventAvatar())
+            .put("agoraUid", agoraUid)
+            .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("clientEventId", liveClientEventId("join"))
         emitLiveSocketEvent("send_livestream_join", "live_join", payload)
         joinedSocketRoom = true
@@ -450,6 +535,8 @@ class LiveStreamActivity : AppCompatActivity() {
                 .put("userId", userId.orEmpty())
                 .put("username", liveEventUsername())
                 .put("avatar", liveEventAvatar())
+                .put("agoraUid", agoraUid)
+                .put("liveRole", "broadcaster")
         )
         SocketManager.emit(
             "live_join",
@@ -458,6 +545,8 @@ class LiveStreamActivity : AppCompatActivity() {
                 .put("userId", userId.orEmpty())
                 .put("username", liveEventUsername())
                 .put("avatar", liveEventAvatar())
+                .put("agoraUid", agoraUid)
+                .put("liveRole", "broadcaster")
                 .put("clientEventId", liveClientEventId("host_join"))
         )
         hostReadyEmitted = true
@@ -473,12 +562,22 @@ class LiveStreamActivity : AppCompatActivity() {
             JSONObject()
                 .put("streamId", streamId)
                 .put("userId", TokenManager.getUserId(this).orEmpty())
+                .put("agoraUid", agoraUid)
+                .put("liveRole", "broadcaster")
         )
     }
 
     private fun initializeAgora() {
-        if (agoraAppId.isBlank() || channelName.isBlank() || agoraToken.isBlank()) {
-            Toast.makeText(this, R.string.livestream_token_missing, Toast.LENGTH_LONG).show()
+        if (agoraAppId.isBlank() || channelName.isBlank() || agoraToken.isBlank() || !isValidAgoraUid(agoraUid)) {
+            Log.e(
+                tag,
+                "Agora startup missing/invalid token data. appIdBlank=${agoraAppId.isBlank()} channelBlank=${channelName.isBlank()} tokenBlank=${agoraToken.isBlank()} tokenUid=$agoraUid streamId=$streamId host=$isHost"
+            )
+            Toast.makeText(
+                this,
+                if (isValidAgoraUid(agoraUid)) R.string.livestream_token_missing else R.string.live_video_credentials_invalid,
+                Toast.LENGTH_LONG
+            ).show()
             if (isHost) cancelStartingLive()
             finish()
             return
@@ -499,7 +598,17 @@ class LiveStreamActivity : AppCompatActivity() {
         }
 
         if (isHost) setupLocalVideo()
+        joinAgoraChannel("initial")
+    }
 
+    private fun joinAgoraChannel(reason: String) {
+        if (!isValidAgoraUid(agoraUid)) {
+            Log.e(tag, "Blocked Agora join with invalid UID. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+            Toast.makeText(this, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
+            if (isHost && !hostReadyEmitted) cancelStartingLive()
+            finish()
+            return
+        }
         val options = ChannelMediaOptions().apply {
             channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             clientRoleType = if (isHost) Constants.CLIENT_ROLE_BROADCASTER else Constants.CLIENT_ROLE_AUDIENCE
@@ -508,7 +617,116 @@ class LiveStreamActivity : AppCompatActivity() {
             autoSubscribeAudio = true
             autoSubscribeVideo = true
         }
-        rtcEngine?.joinChannel(agoraToken, channelName, agoraUid, options)
+        val result = rtcEngine?.joinChannel(agoraToken, channelName, agoraUid, options) ?: -1
+        Log.i(
+            tag,
+            "Agora joinChannel requested. reason=$reason result=$result streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost tokenExpiresAt=${intent.getLongExtra(EXTRA_EXPIRES_AT, 0L)}"
+        )
+        if (result < 0) {
+            if (!joinRetried) {
+                retryAgoraJoin("join_result_$result")
+            } else {
+                Toast.makeText(this, R.string.live_join_setup_failed, Toast.LENGTH_LONG).show()
+                if (isHost && !hostReadyEmitted) cancelStartingLive()
+                finish()
+            }
+        }
+    }
+
+    private fun retryAgoraJoin(reason: String) {
+        if (joinRetried || isFinishing || isDestroyed) return
+        joinRetried = true
+        Log.w(tag, "Retrying Agora join once. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+        rtcEngine?.leaveChannel()
+        videoContainer.postDelayed({ joinAgoraChannel("retry_$reason") }, 1_000L)
+    }
+
+    private fun refreshAgoraToken(reason: String, retryJoinAfterRefresh: Boolean) {
+        if (tokenRefreshInFlight || streamId.isBlank()) return
+        tokenRefreshInFlight = true
+        Log.i(tag, "Refreshing Agora token. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+        ApiClient.apiService.joinLiveStream(
+            streamId,
+            xyz.yenkasa.app.model.JoinLiveStreamRequest(if (isHost) "broadcaster" else "audience")
+        ).enqueue(object : Callback<LiveStreamResponse> {
+            override fun onResponse(call: Call<LiveStreamResponse>, response: Response<LiveStreamResponse>) {
+                tokenRefreshInFlight = false
+                val body = response.body()
+                val token = body?.agora
+                val stream = body?.stream
+                if (!response.isSuccessful || body?.success != true || token == null || stream == null) {
+                    Log.w(
+                        tag,
+                        "Agora token refresh rejected. reason=$reason http=${response.code()} code=${body?.code} message=${body?.message} streamId=$streamId"
+                    )
+                    Toast.makeText(
+                        this@LiveStreamActivity,
+                        body?.message ?: getString(R.string.live_token_refresh_failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    if (isHost && !hostReadyEmitted) cancelStartingLive()
+                    finish()
+                    return
+                }
+
+                val refreshedUid = token.uid
+                if (!isValidAgoraUid(refreshedUid)) {
+                    Log.e(
+                        tag,
+                        "Agora token refresh returned invalid UID. reason=$reason streamId=$streamId channel=${stream.agoraChannel} oldUid=$agoraUid newUid=$refreshedUid role=${token.role}"
+                    )
+                    Toast.makeText(this@LiveStreamActivity, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
+                    if (isHost && !hostReadyEmitted) cancelStartingLive()
+                    finish()
+                    return
+                }
+                if (refreshedUid != agoraUid) {
+                    Log.e(
+                        tag,
+                        "Agora token refresh UID mismatch. reason=$reason streamId=$streamId channel=${stream.agoraChannel} oldUid=$agoraUid newUid=$refreshedUid role=${token.role}"
+                    )
+                    Toast.makeText(this@LiveStreamActivity, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
+                    if (isHost && !hostReadyEmitted) cancelStartingLive()
+                    finish()
+                    return
+                }
+
+                agoraToken = token.token
+                agoraAppId = token.appId
+                channelName = stream.agoraChannel
+                Log.i(
+                    tag,
+                    "Agora token refreshed. reason=$reason streamId=$streamId channel=$channelName tokenUid=$refreshedUid joinUid=$agoraUid role=${token.role} expiresAt=${token.expiresAt}"
+                )
+                rtcEngine?.renewToken(agoraToken)
+                if (retryJoinAfterRefresh) retryAgoraJoin("token_refresh_$reason")
+            }
+
+            override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
+                tokenRefreshInFlight = false
+                Log.e(tag, "Agora token refresh transport failure. reason=$reason ${t.javaClass.simpleName}: ${t.message}", t)
+                Toast.makeText(
+                    this@LiveStreamActivity,
+                    R.string.live_token_refresh_failed,
+                    Toast.LENGTH_LONG
+                ).show()
+                if (isHost && !hostReadyEmitted) cancelStartingLive()
+                finish()
+            }
+        })
+    }
+
+    private fun shouldRefreshTokenForAgoraError(err: Int): Boolean {
+        return err == 109 || err == 110
+    }
+
+    private fun agoraUserMessage(err: Int): String {
+        return when (err) {
+            109, 110 -> getString(R.string.live_token_expired_user_message)
+            17 -> getString(R.string.live_join_setup_failed)
+            101 -> getString(R.string.live_video_credentials_invalid)
+            else -> getString(R.string.live_video_join_failed)
+        }
     }
 
     private fun setupLocalVideo() {
@@ -534,6 +752,8 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("userId", TokenManager.getUserId(this).orEmpty())
             .put("username", liveEventUsername())
             .put("avatar", liveEventAvatar())
+            .put("agoraUid", agoraUid)
+            .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("message", message)
             .put("clientEventId", liveClientEventId("comment"))
         emitLiveSocketEvent("send_livestream_comment", "live_comment", payload)
@@ -548,6 +768,8 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("userId", TokenManager.getUserId(this).orEmpty())
             .put("username", liveEventUsername())
             .put("avatar", liveEventAvatar())
+            .put("agoraUid", agoraUid)
+            .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("reaction", reaction)
             .put("clientEventId", liveClientEventId("reaction"))
         emitLiveSocketEvent("send_livestream_reaction", "live_reaction", payload)
@@ -755,6 +977,8 @@ class LiveStreamActivity : AppCompatActivity() {
                 .put("userId", TokenManager.getUserId(this).orEmpty())
                 .put("username", liveEventUsername())
                 .put("avatar", liveEventAvatar())
+                .put("agoraUid", agoraUid)
+                .put("liveRole", if (isHost) "broadcaster" else "audience")
                 .put("clientEventId", liveClientEventId("leave"))
             emitLiveSocketEvent("send_livestream_leave", "live_leave", payload)
             joinedSocketRoom = false
@@ -762,19 +986,7 @@ class LiveStreamActivity : AppCompatActivity() {
         if (isHost && !hostReadyEmitted && !endRequestSent) {
             cancelStartingLive()
         }
-        SocketManager.off("livestream_comment")
-        SocketManager.off("live_comment")
-        SocketManager.off("livestream_join")
-        SocketManager.off("live_join")
-        SocketManager.off("livestream_leave")
-        SocketManager.off("live_leave")
-        SocketManager.off("livestream_viewer_count")
-        SocketManager.off("live_viewer_count")
-        SocketManager.off("livestream_ended")
-        SocketManager.off("live_ended")
-        SocketManager.off("livestream_reaction")
-        SocketManager.off("live_reaction")
-        SocketManager.off("livestream_gift")
+        removeLiveSocketListeners()
         SocketManager.instance?.off(Socket.EVENT_CONNECT, socketReconnectListener)
         timerHandler.removeCallbacks(timerRunnable)
 
@@ -819,7 +1031,10 @@ class LiveStreamActivity : AppCompatActivity() {
         return "$streamId:$type:${UUID.randomUUID()}"
     }
 
+    private fun isValidAgoraUid(uid: Int?): Boolean = uid != null && uid > 0
+
     companion object {
+        private const val INVALID_AGORA_UID = -1
         private const val EXTRA_STREAM_ID = "stream_id"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_HOST = "host"
@@ -830,6 +1045,7 @@ class LiveStreamActivity : AppCompatActivity() {
         private const val EXTRA_UID = "uid"
         private const val EXTRA_IS_HOST = "is_host"
         private const val EXTRA_SCHEDULED_END_AT = "scheduled_end_at"
+        private const val EXTRA_EXPIRES_AT = "expires_at"
 
         fun intentForHost(context: Context, stream: LiveStream, agora: AgoraLiveToken): Intent {
             return baseIntent(context, stream, agora, true)
@@ -848,7 +1064,8 @@ class LiveStreamActivity : AppCompatActivity() {
                 .putExtra(EXTRA_CHANNEL, stream.agoraChannel)
                 .putExtra(EXTRA_TOKEN, agora.token)
                 .putExtra(EXTRA_APP_ID, agora.appId)
-                .putExtra(EXTRA_UID, agora.uid)
+                .putExtra(EXTRA_UID, agora.uid ?: INVALID_AGORA_UID)
+                .putExtra(EXTRA_EXPIRES_AT, agora.expiresAt)
                 .putExtra(EXTRA_IS_HOST, isHost)
                 .putExtra(EXTRA_SCHEDULED_END_AT, stream.scheduledEndAt)
         }

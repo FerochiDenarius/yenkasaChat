@@ -7,7 +7,7 @@ const LiveStream = require('../models/LiveStream');
 const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const { canStartLivestream } = require('../config/livestreamPermissions');
-const { generateRtcToken } = require('../utils/agoraTokenGenerator');
+const { agoraUidFromUserId, generateRtcToken } = require('../utils/agoraTokenGenerator');
 
 const liveAutoEndTimers = new Map();
 const liveStartupTimers = new Map();
@@ -84,6 +84,52 @@ function logLiveEvent(event, stream, extra = {}) {
     startTime: stream?.startedAt,
     endTime: stream?.endedAt,
     viewerPeak: stream?.peakViewerCount || 0,
+    ...extra
+  });
+}
+
+function liveUserContext(user) {
+  return {
+    userId: user?._id?.toString?.() || user?.id?.toString?.(),
+    username: user?.username,
+    role: user?.roleName || user?.staffRole || user?.accessRole || user?.role?.role || user?.role?.name || '',
+    roleName: user?.roleName || '',
+    staffRole: user?.staffRole || '',
+    accessRole: user?.accessRole || '',
+    permissionRole: user?.role?.role || user?.role?.name || '',
+    verified: Boolean(user?.verified),
+    hasVerifiedBanner: Boolean(user?.hasVerifiedBanner),
+    verificationPhase: user?.verificationPhase || ''
+  };
+}
+
+function liveApiError(res, status, code, message, logContext = {}) {
+  console.warn('[YenkasaLiveStream][reject]', {
+    status,
+    code,
+    message,
+    ...logContext
+  });
+  return res.status(status).json({
+    success: false,
+    code,
+    message
+  });
+}
+
+function logLiveToken(event, user, stream, agora, extra = {}) {
+  const expectedUid = agoraUidFromUserId(user?._id || user?.id);
+  console.log('[YenkasaLiveStream][token]', {
+    event,
+    ...liveUserContext(user),
+    streamId: stream?._id?.toString?.(),
+    channelName: stream?.agoraChannel,
+    uid: agora?.uid,
+    expectedUid,
+    uidMatchesUser: agora?.uid === expectedUid,
+    tokenRole: agora?.role,
+    tokenExpiresAt: agora?.expiresAt,
+    tokenExpiresIn: agora?.expiresIn,
     ...extra
   });
 }
@@ -213,15 +259,18 @@ router.post('/create', auth, async (req, res) => {
   try {
     const permission = canStartLivestream(req.user);
     if (!permission.allowed) {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account is not eligible to start livestreams.'
+      return liveApiError(res, 403, permission.code || 'STREAM_PERMISSION_DENIED', permission.reason, {
+        action: 'create',
+        ...liveUserContext(req.user)
       });
     }
 
     const title = req.body?.title?.toString?.().trim();
     if (!title) {
-      return res.status(400).json({ success: false, message: 'Live title is required.' });
+      return liveApiError(res, 400, 'CHANNEL_INVALID', 'Please enter a title before starting your livestream.', {
+        action: 'create',
+        ...liveUserContext(req.user)
+      });
     }
 
     const agoraChannel = `yenkasa_live_${req.user._id}_${Date.now()}`;
@@ -269,6 +318,7 @@ router.post('/create', auth, async (req, res) => {
     scheduleStartupExpiry(stream);
     scheduleAutoEnd(stream);
     logLiveEvent('create_starting', stream, { rankLimitMinutes: permission.maxDurationMinutes });
+    logLiveToken('create', req.user, stream, agora, { joinResult: 'token_generated' });
 
     return res.status(201).json({
       success: true,
@@ -276,10 +326,17 @@ router.post('/create', auth, async (req, res) => {
       agora
     });
   } catch (err) {
-    console.error('Create livestream failed:', err);
+    console.error('Create livestream failed:', {
+      code: err.code || 'LIVE_CREATE_FAILED',
+      message: err.message,
+      ...liveUserContext(req.user)
+    });
     return res.status(err.status || 500).json({
       success: false,
-      message: err.message || 'Failed to create livestream.'
+      code: err.code || 'BACKEND_AUTH_FAILED',
+      message: err.code === 'AGORA_CONFIG_MISSING' || err.code === 'AGORA_UID_INVALID'
+        ? 'Live video is temporarily unavailable. Please try again later.'
+        : (err.message || 'We could not start your livestream. Please try again.')
     });
   }
 });
@@ -310,7 +367,11 @@ router.get('/active', auth, async (req, res) => {
 router.post('/join/:id', auth, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid livestream id.' });
+      return liveApiError(res, 400, 'CHANNEL_INVALID', 'This livestream link is invalid.', {
+        action: 'join',
+        streamId: req.params.id,
+        ...liveUserContext(req.user)
+      });
     }
 
     let role = 'audience';
@@ -322,20 +383,32 @@ router.post('/join/:id', auth, async (req, res) => {
         : { isLive: true, lifecycleStatus: 'live', hostConnected: true })
     });
     if (!stream) {
-      return res.status(404).json({ success: false, message: 'Livestream is no longer active.' });
+      return liveApiError(res, 404, 'CHANNEL_INVALID', 'This livestream has ended or is no longer available.', {
+        action: 'join',
+        requestedBroadcaster,
+        streamId: req.params.id,
+        ...liveUserContext(req.user)
+      });
     }
 
     if (requestedBroadcaster && stream.hostId.toString() === req.user._id.toString()) {
       const permission = canStartLivestream(req.user);
       if (!permission.allowed) {
-        return res.status(403).json({
-          success: false,
-          message: 'Your account is not eligible to broadcast livestreams.'
+        return liveApiError(res, 403, permission.code || 'STREAM_PERMISSION_DENIED', permission.reason, {
+          action: 'join_broadcaster',
+          streamId: stream._id.toString(),
+          channelName: stream.agoraChannel,
+          ...liveUserContext(req.user)
         });
       }
       role = 'broadcaster';
     } else if (requestedBroadcaster) {
-      return res.status(403).json({ success: false, message: 'Only the host can broadcast this livestream.' });
+      return liveApiError(res, 403, 'STREAM_PERMISSION_DENIED', 'Only the host can broadcast this livestream.', {
+        action: 'join_broadcaster',
+        streamId: stream._id.toString(),
+        hostId: stream.hostId?.toString?.(),
+        ...liveUserContext(req.user)
+      });
     }
 
     const agora = generateRtcToken({
@@ -343,6 +416,7 @@ router.post('/join/:id', auth, async (req, res) => {
       userId: req.user._id,
       role
     });
+    logLiveToken('join', req.user, stream, agora, { joinRole: role, joinResult: 'token_generated' });
 
     return res.json({
       success: true,
@@ -350,10 +424,18 @@ router.post('/join/:id', auth, async (req, res) => {
       agora
     });
   } catch (err) {
-    console.error('Join livestream failed:', err);
+    console.error('Join livestream failed:', {
+      code: err.code || 'LIVE_JOIN_FAILED',
+      message: err.message,
+      streamId: req.params.id,
+      ...liveUserContext(req.user)
+    });
     return res.status(err.status || 500).json({
       success: false,
-      message: err.message || 'Failed to join livestream.'
+      code: err.code || 'BACKEND_AUTH_FAILED',
+      message: err.code === 'AGORA_CONFIG_MISSING' || err.code === 'AGORA_UID_INVALID'
+        ? 'Live video is temporarily unavailable. Please try again later.'
+        : (err.message || 'We could not join this livestream. Please try again.')
     });
   }
 });

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -27,6 +28,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
 class StartLiveActivity : AppCompatActivity() {
+    private val tag = "StartLiveActivity"
 
     private lateinit var titleInput: EditText
     private lateinit var communityInput: EditText
@@ -105,21 +107,35 @@ class StartLiveActivity : AppCompatActivity() {
                 val body = response.body()
                 val stream = body?.stream
                 val agora = body?.agora
-                if (!response.isSuccessful || body?.success != true || stream == null || agora == null) {
+                val agoraUid = agora?.uid
+                if (!response.isSuccessful || body?.success != true || stream == null || agora == null || !isValidAgoraUid(agoraUid)) {
+                    Log.w(
+                        tag,
+                        "createLiveStream rejected. http=${response.code()} code=${body?.code} message=${body?.message} tokenUid=$agoraUid"
+                    )
                     Toast.makeText(
                         this@StartLiveActivity,
-                        liveStartErrorMessage(response, body),
+                        if (body?.success == true && !isValidAgoraUid(agoraUid)) {
+                            getString(R.string.live_video_credentials_invalid)
+                        } else {
+                            liveStartErrorMessage(response, body)
+                        },
                         Toast.LENGTH_LONG
                     ).show()
                     return
                 }
 
+                Log.i(
+                    tag,
+                    "createLiveStream token received. streamId=${stream.id} channel=${stream.agoraChannel} uid=${agora.uid} role=${agora.role} expiresAt=${agora.expiresAt}"
+                )
                 startActivity(LiveStreamActivity.intentForHost(this@StartLiveActivity, stream, agora))
                 finish()
             }
 
             override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
                 setLoading(false)
+                Log.e(tag, "createLiveStream transport failure: ${t.javaClass.simpleName}: ${t.message}", t)
                 Toast.makeText(
                     this@StartLiveActivity,
                     liveStartFailureMessage(t),
@@ -139,6 +155,9 @@ class StartLiveActivity : AppCompatActivity() {
         body: LiveStreamResponse?
     ): String {
         body?.message?.takeIf { it.isNotBlank() }?.let { return it }
+        body?.code?.takeIf { it.isNotBlank() }?.let {
+            Log.w(tag, "Backend returned livestream error code=$it without message.")
+        }
 
         val rawError = runCatching { response.errorBody()?.string().orEmpty() }.getOrDefault("")
         parseServerMessage(rawError)?.let { return it }
@@ -182,4 +201,6 @@ class StartLiveActivity : AppCompatActivity() {
             else -> getString(R.string.could_not_start_live)
         }
     }
+
+    private fun isValidAgoraUid(uid: Int?): Boolean = uid != null && uid > 0
 }

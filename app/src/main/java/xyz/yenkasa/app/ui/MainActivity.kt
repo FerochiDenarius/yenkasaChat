@@ -22,6 +22,7 @@ import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UpdateManager
 import xyz.yenkasa.app.util.UserPermissions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.json.JSONObject
@@ -42,11 +43,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnCreateAd: LinearLayout
     private lateinit var btnMenu: ImageView
     private lateinit var btnNotifications: ImageView
+    private lateinit var updateManager: UpdateManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main) // ✅ links to your activity_main.xml
+        updateManager = UpdateManager(this)
+        updateManager.checkForUpdates(
+            forceCheck = intent.getBooleanExtra(EXTRA_CHECK_UPDATES_AFTER_LOGIN, false),
+            source = if (intent.getBooleanExtra(EXTRA_CHECK_UPDATES_AFTER_LOGIN, false)) "after_login" else "main_launch"
+        )
 
         applySystemBarSpacing()
 
@@ -108,6 +115,33 @@ class MainActivity : AppCompatActivity() {
                 replace(R.id.feedContainer, FeedFragment())
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::updateManager.isInitialized) {
+            updateManager.completeUpdateIfDownloaded()
+            updateManager.checkForUpdates(source = "foreground")
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (::updateManager.isInitialized && updateManager.onActivityResult(requestCode, resultCode)) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onDestroy() {
+        if (::updateManager.isInitialized) {
+            updateManager.destroy()
+        }
+        super.onDestroy()
+    }
+
+    companion object {
+        const val EXTRA_CHECK_UPDATES_AFTER_LOGIN = "check_updates_after_login"
     }
 
     private fun applySystemBarSpacing() {

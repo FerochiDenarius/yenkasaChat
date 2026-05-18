@@ -26,6 +26,9 @@ interface ApiService {
     @POST("login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
+    @GET("app/minimum-version")
+    fun getMinimumVersion(): Call<AppMinimumVersionResponse>
+
     @POST("reset-password/request")
     suspend fun requestPasswordReset(@Body request: ForgotPasswordRequest): Response<Void>
 
@@ -306,6 +309,7 @@ interface ApiService {
         @Part("communityId") communityId: RequestBody,
         @Part("communityName") communityName: RequestBody,
         @Part("textBackgroundColor") textBackgroundColor: RequestBody,
+        @Part("clientRequestId") clientRequestId: RequestBody,
         @Part media: List<MultipartBody.Part> // optional: repeated imageUrl, videoUrl, or audioUrl
     ): Call<CreatePostResponse>
 

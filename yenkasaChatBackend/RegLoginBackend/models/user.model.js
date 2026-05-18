@@ -205,6 +205,13 @@ const userSchema = new Schema({
   // 🔐 AUTH & SYSTEM
   // ===============================
   refreshToken: { type: String },
+  sessionRevokedAt: { type: Date, default: null },
+  accessTokenRevokedAt: { type: Date, default: null },
+  refreshTokenRevokedAt: { type: Date, default: null },
+  lastLoginAt: { type: Date, default: null },
+  lastLoginIp: { type: String, default: '' },
+  lastLoginUserAgent: { type: String, default: '' },
+  lastAuthAnomalyAt: { type: Date, default: null },
 
   suspendedUntil: { type: Date, default: null },
 

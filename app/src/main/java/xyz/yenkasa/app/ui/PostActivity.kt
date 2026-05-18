@@ -40,6 +40,7 @@ import retrofit2.Response
 import java.io.File
 import java.io.IOException
 import org.json.JSONObject
+import java.util.UUID
 import kotlin.math.roundToInt
 
 class PostActivity : AppCompatActivity() {
@@ -532,12 +533,17 @@ class PostActivity : AppCompatActivity() {
             "text/plain".toMediaTypeOrNull(),
             textBackgroundColor
         )
+        val clientRequestIdBody = RequestBody.create(
+            "text/plain".toMediaTypeOrNull(),
+            UUID.randomUUID().toString()
+        )
 
         ApiClient.apiService.createPost(
             textBody,
             communityIdBody,
             communityNameBody,
             textBackgroundColorBody,
+            clientRequestIdBody,
             mediaParts
         ).enqueue(object : Callback<CreatePostResponse> {
             override fun onResponse(

@@ -14,6 +14,23 @@ function regexFor(query) {
   return new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 }
 
+const PUBLIC_ROLE_NAMES = new Set([
+  "verified_creator",
+  "rising_star",
+  "legend",
+  "top_vendor",
+  "business_account",
+  "premium_seller",
+  "campus_influencer",
+  "brand_ambassador"
+]);
+
+function safePublicRoleName(user) {
+  const roleName = String(user.roleName || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (PUBLIC_ROLE_NAMES.has(roleName)) return roleName;
+  return user.verified ? "verified" : "user";
+}
+
 async function searchPosts(query, viewerId, limit = 12) {
   const regex = regexFor(query);
   const posts = await Post.find({
@@ -49,7 +66,7 @@ async function searchUsers(query, limit = 12) {
       { location: regex }
     ]
   })
-    .select("username profileImage verified roleName accessRole bio followers following")
+    .select("username profileImage verified roleName bio followersCount followingCount")
     .sort({ verified: -1, createdAt: -1 })
     .limit(limit)
     .lean()
@@ -58,11 +75,11 @@ async function searchUsers(query, limit = 12) {
       username: user.username,
       profileImage: user.profileImage,
       verified: user.verified,
-      roleName: user.roleName || user.accessRole || "USER",
+      roleName: safePublicRoleName(user),
       bio: user.bio || "",
       rank: index + 1,
-      followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
-      followingCount: Array.isArray(user.following) ? user.following.length : 0
+      followersCount: Number(user.followersCount || 0),
+      followingCount: Number(user.followingCount || 0)
     })));
 }
 

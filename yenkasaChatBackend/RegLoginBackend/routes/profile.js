@@ -27,7 +27,9 @@ router.get('/users/:userId/profile', authMiddleware, async (req, res) => {
     const profileUserId = req.params.userId;
     const viewerId = req.user.id;
 
-    const user = await User.findById(profileUserId);
+    const user = await User.findById(profileUserId)
+      .select('_id username bio profileImage verified followersCount followingCount')
+      .lean();
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -58,6 +60,7 @@ router.get('/users/:userId/profile', authMiddleware, async (req, res) => {
       username: user.username,
       bio: user.bio || '',
       profileImage: user.profileImage,
+      verified: Boolean(user.verified),
       followers,
       following,
       followersCount,

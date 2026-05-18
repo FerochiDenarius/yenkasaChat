@@ -22,7 +22,7 @@
         android:id="@+id/textStats"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Approved: 0 • Followers: 0 • Comments: 0"
+        android:text="@string/pending_post_stats_placeholder"
         android:textColor="@color/dark_gray"
         android:textSize="12sp"
         android:paddingTop="4dp"
@@ -39,7 +39,7 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Approve"
+            android:text="@string/approve"
             android:backgroundTint="@color/yenkasa_black"
             android:textColor="@color/yenkasa_amber" />
 
@@ -48,7 +48,7 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Reject"
+            android:text="@string/reject"
             android:backgroundTint="@color/red"
             android:textColor="@android:color/white" />
     </LinearLayout>

@@ -56,6 +56,37 @@ async function reward(toUserId, amount, opts = {}) {
       ? opts.activityId
       : uuidv4();
 
+    if (opts.activityId && opts.activityId !== "null") {
+      const existingTx = await CoinTransaction.findOne({
+        toUserId,
+        type,
+        activityId,
+        status: "completed"
+      });
+
+      if (existingTx) {
+        console.warn("[YKC Reward] duplicate reward blocked", {
+          userId: toUserId?.toString(),
+          type,
+          activityId,
+          transactionId: existingTx.transactionId
+        });
+        await logYkcActivity({
+          userId: toUserId,
+          action: type,
+          coinsAwarded: 0,
+          timestamp: now,
+          suspicious: true,
+          metadata: {
+            reason: "duplicate_activity_id",
+            activityId,
+            transactionId: existingTx.transactionId
+          }
+        });
+        return existingTx;
+      }
+    }
+
     /* ---------------------------------------------------
      * Ensure supply bucket exists
      * --------------------------------------------------- */
@@ -230,8 +261,7 @@ const tx = await CoinTransaction.create({
   // ============================
 
     case "REWARD_POST_APPROVED":
-  ver.metrics.postsCreated += 1;
-  ver.metrics.totalPostCount += 1;
+  // Post totals are derived from actual Post documents during verification sync.
   break;
 
 

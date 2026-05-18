@@ -18,14 +18,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Followers"/>
+            android:text="@string/followers"/>
 
         <Button
             android:id="@+id/btnFollowing"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Following"/>
+            android:text="@string/following"/>
     </LinearLayout>
 
     <!-- User List -->

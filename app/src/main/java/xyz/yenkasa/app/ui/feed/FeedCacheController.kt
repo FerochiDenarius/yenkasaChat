@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
+import xyz.yenkasa.app.BuildConfig
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.util.CloudinaryMedia
@@ -15,6 +16,19 @@ class FeedCacheController(
     private val context: Context,
     private val gson: Gson
 ) {
+    fun invalidateStaleFeedStateIfNeeded() {
+        val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
+        val expectedGeneration = currentFeedGeneration()
+        val storedGeneration = prefs.getString(FEED_RENDERER_GENERATION_KEY, null)
+        if (storedGeneration == expectedGeneration) return
+
+        prefs.edit().clear().putString(FEED_RENDERER_GENERATION_KEY, expectedGeneration).apply()
+        Log.i(
+            "FeedCacheController",
+            "feed_state_invalidated oldGeneration=$storedGeneration newGeneration=$expectedGeneration"
+        )
+    }
+
     fun cacheKeyForCommunityNames(names: List<String>): String {
         val normalized = names
             .map { it.trim().lowercase(Locale.US) }
@@ -50,13 +64,18 @@ class FeedCacheController(
         runCatching {
             gson.fromJson(raw, CachedFeedPayload::class.java)
         }.onSuccess { cached ->
-            if (cached != null && cached.posts.isNotEmpty()) {
+            if (cached != null && cached.posts.isNotEmpty() && cached.isCompatibleWithCurrentRenderer()) {
                 Log.d(
                     "FeedCacheController",
                     "cache_hit key=$cacheKey posts=${cached.posts.size} ageMs=${System.currentTimeMillis() - cached.cachedAt}"
                 )
                 onLoaded(cached)
                 loaded = true
+            } else if (cached != null && cached.posts.isNotEmpty()) {
+                Log.i(
+                    "FeedCacheController",
+                    "cache_skipped_incompatible key=$cacheKey schema=${cached.cacheSchemaVersion} renderer=${cached.rendererVersion} appVersion=${cached.appVersionCode}"
+                )
             } else {
                 Log.d("FeedCacheController", "cache_empty key=$cacheKey")
             }
@@ -80,7 +99,10 @@ class FeedCacheController(
             val payload = CachedFeedPayload(
                 posts = dedupePosts(posts).take(MAX_CACHED_POSTS),
                 currentPage = currentPage,
-                isLastPage = isLastPage
+                isLastPage = isLastPage,
+                cacheSchemaVersion = CACHE_SCHEMA_VERSION,
+                rendererVersion = PLAYER_RENDERER_VERSION,
+                appVersionCode = currentAppVersionCode()
             )
             TokenManager.saveFeedCache(context, cacheKey, gson.toJson(payload))
             saveCommunitySlices(payload.posts)
@@ -121,7 +143,10 @@ class FeedCacheController(
             val payload = CachedFeedPayload(
                 posts = dedupePosts(communityPosts).take(MAX_COMMUNITY_CACHED_POSTS),
                 currentPage = 1,
-                isLastPage = false
+                isLastPage = false,
+                cacheSchemaVersion = CACHE_SCHEMA_VERSION,
+                rendererVersion = PLAYER_RENDERER_VERSION,
+                appVersionCode = currentAppVersionCode()
             )
             TokenManager.saveFeedCache(context, key, gson.toJson(payload), updateLegacy = false)
         }
@@ -132,7 +157,25 @@ class FeedCacheController(
         return source.filter { seen.add(it._id) }
     }
 
+    private fun CachedFeedPayload.isCompatibleWithCurrentRenderer(): Boolean {
+        return cacheSchemaVersion == CACHE_SCHEMA_VERSION &&
+            rendererVersion == PLAYER_RENDERER_VERSION &&
+            appVersionCode == currentAppVersionCode()
+    }
+
+    private fun currentFeedGeneration(): String {
+        return "$PLAYER_RENDERER_VERSION:$CACHE_SCHEMA_VERSION:${currentAppVersionCode()}"
+    }
+
+    private fun currentAppVersionCode(): Long {
+        return BuildConfig.VERSION_CODE.toLong()
+    }
+
     private companion object {
+        const val FEED_CACHE_PREF_NAME = "yenkasa_cache"
+        const val FEED_RENDERER_GENERATION_KEY = "feed_renderer_generation"
+        const val CACHE_SCHEMA_VERSION = 2
+        const val PLAYER_RENDERER_VERSION = "yenkasa_player_v2"
         const val DEFAULT_CACHE_KEY = "default"
         const val MAX_CACHED_POSTS = 100
         const val MAX_COMMUNITY_CACHED_POSTS = 60

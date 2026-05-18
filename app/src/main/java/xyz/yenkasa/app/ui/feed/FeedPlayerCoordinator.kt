@@ -90,6 +90,11 @@ class FeedPlayerCoordinator(
         playerAdapter.submitItems(items)
     }
 
+    fun resetRenderedState() {
+        playerAdapter.releaseAll(recyclerView)
+        recyclerView.recycledViewPool.clear()
+    }
+
     fun pauseActive() {
         playerAdapter.pauseActive(recyclerView)
     }

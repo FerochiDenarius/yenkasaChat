@@ -13,6 +13,12 @@ const { profileImageUpload, uploadFiles } = require('../utils/upload');
 const cloudinaryConfig = require('../config/cloudinary');
 const cloudinary = cloudinaryConfig.cloudinary;
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const {
+    auditSecurityEvent,
+    createMemoryRateLimiter,
+    normalizeRoleKey: normalizeSecurityRoleKey,
+    requireRoles
+} = require('../utils/securityAudit');
 console.log("CLOUDINARY LOADED?", !!cloudinary);
 
 // --- Logger ---
@@ -24,6 +30,12 @@ const logger = {
 };
 
 const STAFF_ROLES = new Set(['moderator', 'admin', 'junior_developer', 'senior_developer']);
+const MAINTENANCE_ROLES = ['admin', 'senior_developer'];
+const maintenanceLimiter = createMemoryRateLimiter({
+    windowMs: 5 * 60 * 1000,
+    max: 3,
+    label: 'user_maintenance'
+});
 const PUBLIC_ROLE_PRIORITY = [
     'campus_influencer',
     'premium_seller',
@@ -65,19 +77,86 @@ function getPermissionLookupRole(roleName) {
     return PERMISSION_ROLE_FALLBACK[roleName] || roleName || 'unverified';
 }
 
+function safePublicRoleName(user) {
+    const roleName = normalizeSecurityRoleKey(user.roleName);
+    if (PUBLIC_ROLE_PRIORITY.includes(roleName)) return roleName;
+    return user.verified ? 'verified' : 'user';
+}
+
+function toPublicUser(user) {
+    return {
+        _id: user._id,
+        username: user.username,
+        profileImage: user.profileImage || '',
+        verified: Boolean(user.verified),
+        bio: user.bio || '',
+        location: user.location || '',
+        roleName: safePublicRoleName(user),
+        followersCount: Number(user.followersCount || 0),
+        followingCount: Number(user.followingCount || 0),
+        online: Boolean(user.online),
+        lastSeen: user.lastSeen || null
+    };
+}
+
+function escapedRegex(value) {
+    return new RegExp(String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+}
+
 // ======================================================================
-// GET ALL USERS
+// GET USERS (SAFE PUBLIC FIELDS ONLY)
 // ======================================================================
 router.get('/', authMiddleware, async (req, res) => {
     const requestId = `req_get_users_${Date.now()}`;
     const userId = req.user?.id || req.user?._id;
 
-    logger.info(`[${requestId}] GET / - Fetching all users`);
+    logger.info(`[${requestId}] GET / - Fetching public users page`);
 
     try {
-        const users = await User.find().select('-password').lean();
-        logger.info(`[${requestId}] GET / - Found ${users.length} users`);
-        res.status(200).json(users);
+        const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 30));
+        const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 80) : '';
+        const filter = q.length >= 2
+            ? {
+                $or: [
+                    { username: escapedRegex(q) },
+                    { bio: escapedRegex(q) },
+                    { location: escapedRegex(q) }
+                ]
+            }
+            : {};
+
+        const [users, total] = await Promise.all([
+            User.find(filter)
+                .select('_id username profileImage verified bio location roleName followersCount followingCount online lastSeen createdAt')
+                .sort({ verified: -1, createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            User.countDocuments(filter)
+        ]);
+
+        const publicUsers = users.map(toPublicUser);
+        res.set('X-Total-Count', String(total));
+        res.set('X-Page', String(page));
+        res.set('X-Limit', String(limit));
+
+        logger.info(`[${requestId}] GET / - Returned ${publicUsers.length}/${total} safe public users for ${userId}`);
+
+        if (req.query.includePagination === 'true' || req.query.format === 'page') {
+            return res.status(200).json({
+                success: true,
+                users: publicUsers,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    hasMore: page * limit < total
+                }
+            });
+        }
+
+        return res.status(200).json(publicUsers);
 
     } catch (err) {
         logger.error(`[${requestId}] ❌ Failed to fetch users: ${err.message}`);
@@ -136,7 +215,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 
     try {
         const user = await User.findById(userId)
-            .select('-password -verificationCode -emailVerificationCode -refreshToken')
+            .select('-password -refreshToken -verificationCode -emailVerificationCode -phoneVerificationCode -passwordResetToken -passwordResetExpires')
             .populate({ path: 'community', select: '_id name location membersCount' })
             .lean();
 
@@ -354,9 +433,15 @@ router.post('/toggle-follow/:targetUserId', authMiddleware, async (req, res) => 
 // ======================================================================
 // FIX CONTACTS (ADMIN TOOL)
 // ======================================================================
-router.post('/fix-contacts', async (req, res) => {
+router.post(
+  '/fix-contacts',
+  authMiddleware,
+  maintenanceLimiter,
+  requireRoles(MAINTENANCE_ROLES, { label: 'fix_contacts' }),
+  async (req, res) => {
     const requestId = `req_fix_contacts_${Date.now()}`;
     logger.info(`[${requestId}] Fixing user contacts`);
+    auditSecurityEvent('maintenance_fix_contacts_started', req);
 
     try {
         const result = await User.updateMany(
@@ -369,6 +454,11 @@ router.post('/fix-contacts', async (req, res) => {
             }]
         );
 
+        auditSecurityEvent('maintenance_fix_contacts_completed', req, {
+            matched: result.matchedCount,
+            modified: result.modifiedCount
+        });
+
         res.json({
             success: true,
             message: 'Contacts normalized',
@@ -380,7 +470,8 @@ router.post('/fix-contacts', async (req, res) => {
         logger.error(`[${requestId}] ❌ Fix contacts error: ${err.message}`);
         res.status(500).json({ error: 'Server error fixing users' });
     }
-});
+  }
+);
 
 // ======================================================================
 // UPDATE USER PROFILE
@@ -419,7 +510,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
       userId,
       { $set: updates },
       { new: true, runValidators: true }
-    ).select("-password");
+    ).select("-password -refreshToken -emailVerificationCode -verificationCode -phoneVerificationCode -passwordResetToken -passwordResetExpires");
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });

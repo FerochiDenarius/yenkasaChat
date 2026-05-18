@@ -52,8 +52,13 @@ data class Post(
     val coinsEarned: Int = 0,
 
     // Timestamps
-    val createdAt: String,
+    val createdAt: String = "",
     val updatedAt: String? = null,
+    val eventId: String? = null,
+    val requestId: String? = null,
+    val clientRequestId: String? = null,
+    val logicalPostKey: String? = null,
+    val eventTimestamp: String? = null,
 
     // Client-side UI state
     @SerializedName("likedByUser")
@@ -89,6 +94,12 @@ data class Post(
                 List(arr.length()) { i -> arr.optString(i) }.filter { it.isNotBlank() }
             }.orEmpty()
 
+            val eventTimestamp = cleanJsonString(json, "eventTimestamp")
+            val createdAt = cleanJsonString(json, "createdAt")
+                ?: cleanJsonString(json, "timestamp")
+                ?: eventTimestamp
+                ?: java.time.Instant.now().toString()
+
             return Post(
                 _id = json.optString("_id"),
                 caption = json.optString("text", json.optString("caption", null)),
@@ -119,12 +130,24 @@ data class Post(
                     List(arr.length()) { i -> arr.optString(i) }
                 } ?: emptyList(),
                 location = json.optString("location", null),
-                createdAt = json.optString("createdAt"),
-                updatedAt = json.optString("updatedAt", null),
+                createdAt = createdAt,
+                updatedAt = cleanJsonString(json, "updatedAt"),
+                eventId = cleanJsonString(json, "eventId"),
+                requestId = cleanJsonString(json, "requestId"),
+                clientRequestId = cleanJsonString(json, "clientRequestId"),
+                logicalPostKey = cleanJsonString(json, "logicalPostKey"),
+                eventTimestamp = eventTimestamp,
                 likedByUser = json.optBoolean("likedByUser", json.optBoolean("likedByCurrentUser", false)),
                 userId = UserBasic.fromJson(json.optJSONObject("userId")),
                 communityId = CommunityBasic.fromJson(json.optJSONObject("communityId"))
             )
+        }
+
+        private fun cleanJsonString(json: JSONObject, key: String): String? {
+            if (!json.has(key) || json.isNull(key)) return null
+            return json.optString(key).trim().takeIf {
+                it.isNotBlank() && !it.equals("null", ignoreCase = true)
+            }
         }
     }
 }

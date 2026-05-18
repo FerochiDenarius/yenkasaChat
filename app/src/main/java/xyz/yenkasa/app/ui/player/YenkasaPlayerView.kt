@@ -43,6 +43,10 @@ import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.WalletBalanceManager
 import xyz.yenkasa.app.util.YenkasaMediaCache
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 
 class YenkasaPlayerView @JvmOverloads constructor(
@@ -622,7 +626,7 @@ class YenkasaPlayerView @JvmOverloads constructor(
         usernameView.text = item.username
         captionView.text = item.caption.orEmpty()
         captionView.isVisible = !item.caption.isNullOrBlank()
-        sourceView.text = item.audioTitle ?: item.communityName ?: context.getString(R.string.original_sound_yenkasa)
+        sourceView.text = formatSourceLine(item)
 
         UserBadgeUtils.applyBadge(verifiedBadgeView, item.isVerified, post.userId.roleName)
         Glide.with(context)
@@ -680,6 +684,49 @@ class YenkasaPlayerView @JvmOverloads constructor(
         } else {
             uiHandler.removeCallbacks(autoHideRunnable)
             pausePlayback()
+        }
+    }
+
+    private fun formatSourceLine(item: YenkasaPlayerItem): String {
+        val time = formatTimestamp(item.createdAt)
+        val source = item.audioTitle ?: item.communityName ?: context.getString(R.string.original_sound_yenkasa)
+        return if (time.isBlank()) source else "$source ${context.getString(R.string.bullet_separator)} $time"
+    }
+
+    private fun formatTimestamp(rawTimestamp: String?): String {
+        val timestamp = parseTimestampMillis(rawTimestamp) ?: return context.getString(R.string.time_now_short)
+        val diffMillis = System.currentTimeMillis() - timestamp
+        val diffSeconds = diffMillis / 1000
+
+        return when {
+            diffSeconds < 60 -> context.getString(R.string.time_now_short)
+            diffSeconds < 3600 -> context.getString(R.string.time_minutes_short, diffSeconds / 60)
+            diffSeconds < 86400 -> context.getString(R.string.time_hours_short, diffSeconds / 3600)
+            diffSeconds < 604800 -> context.getString(R.string.time_days_short, diffSeconds / 86400)
+            else -> SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(timestamp))
+        }
+    }
+
+    private fun parseTimestampMillis(rawTimestamp: String?): Long? {
+        if (rawTimestamp.isNullOrBlank()) return null
+
+        rawTimestamp.toLongOrNull()?.let { value ->
+            return if (value < 10_000_000_000L) value * 1000 else value
+        }
+
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX"
+        )
+
+        return formats.firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(rawTimestamp)?.time
+            }.getOrNull()
         }
     }
 

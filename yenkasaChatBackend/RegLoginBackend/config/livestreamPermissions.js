@@ -1,8 +1,12 @@
-const STAFF_UNLIMITED_ROLES = new Set([
-  'senior_developer',
+const STAFF_ROLES = [
   'admin',
   'moderator',
-  'junior_developer',
+  'junior developer',
+  'senior developer'
+];
+
+const STAFF_UNLIMITED_ROLES = new Set([
+  ...STAFF_ROLES,
   'staff',
   'support',
   'analyst'
@@ -22,7 +26,11 @@ const RANK_DURATION_LIMITS_MINUTES = {
 const ACTIVE_CREATOR_ROLES = new Set(STAFF_UNLIMITED_ROLES);
 
 function normalizeRole(role) {
-  return role?.toString?.().trim().toLowerCase().replace(/[\s-]+/g, '_') || '';
+  return role?.toString?.().trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ') || '';
+}
+
+function canonicalRole(role) {
+  return normalizeRole(role).replace(/\s+/g, '_');
 }
 
 function getUserRoleSet(user) {
@@ -31,6 +39,8 @@ function getUserRoleSet(user) {
     normalizeRole(user?.staffRole),
     normalizeRole(user?.roleName),
     normalizeRole(user?.accessRole),
+    normalizeRole(typeof user?.role === 'string' ? user.role : ''),
+    normalizeRole(roleObject?.role),
     normalizeRole(roleObject?.roleName),
     normalizeRole(roleObject?.name),
     normalizeRole(roleObject?.accessRole),
@@ -46,6 +56,7 @@ function canStartLivestream(user) {
   if (!user || hasActiveSuspension(user)) {
     return {
       allowed: false,
+      code: 'STREAM_PERMISSION_DENIED',
       reason: 'Your account is not eligible to start livestreams.'
     };
   }
@@ -55,13 +66,14 @@ function canStartLivestream(user) {
   if (!staffRole) {
     return {
       allowed: false,
+      code: 'INVALID_ROLE',
       reason: 'Only Yenkasa staff can start livestreams. You can still watch active livestreams.'
     };
   }
 
   return {
     allowed: true,
-    role: staffRole,
+    role: canonicalRole(staffRole),
     maxDurationMinutes: null,
     unlimited: true
   };
@@ -70,8 +82,10 @@ function canStartLivestream(user) {
 module.exports = {
   ACTIVE_CREATOR_ROLES,
   RANK_DURATION_LIMITS_MINUTES,
+  STAFF_ROLES,
   STAFF_UNLIMITED_ROLES,
   canStartLivestream,
+  canonicalRole,
   getUserRoleSet,
   normalizeRole
 };

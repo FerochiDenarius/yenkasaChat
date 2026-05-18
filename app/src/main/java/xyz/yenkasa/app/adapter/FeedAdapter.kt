@@ -29,6 +29,7 @@ class FeedAdapter(
 
     init {
         setHasStableIds(true)
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
     }
 
     // 🔥 NEW CALLBACKS FOR DELETE / HIDE / DOWNLOAD / FLAG
@@ -171,7 +172,7 @@ class FeedAdapter(
 
     private fun stableItemKey(item: Any): String {
         return when (item) {
-            is Post -> "post:${item._id}"
+            is Post -> "post:${item.logicalPostKey?.takeIf { it.isNotBlank() } ?: item.clientRequestId?.takeIf { it.isNotBlank() } ?: item._id}"
             is AdModel -> "ad:${item._id}"
             else -> "unknown:${item.hashCode()}"
         }

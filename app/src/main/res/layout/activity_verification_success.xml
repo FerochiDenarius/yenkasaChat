@@ -25,7 +25,7 @@
         <ImageView
             android:layout_width="86dp"
             android:layout_height="86dp"
-            android:contentDescription="Yenkasa"
+            android:contentDescription="@string/yenkasa_brand"
             android:src="@drawable/ic_yenkasa_logo" />
 
         <FrameLayout
@@ -50,7 +50,7 @@
             android:layout_marginTop="28dp"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:text="Verification Successful!"
+            android:text="@string/verification_successful"
             android:textColor="@color/wallet_primary_text"
             android:textSize="25sp"
             android:textStyle="bold" />
@@ -61,7 +61,7 @@
             android:layout_marginTop="10dp"
             android:gravity="center"
             android:lineSpacingExtra="3dp"
-            android:text="Your account has been verified and is now secure."
+            android:text="@string/verification_success_message"
             android:textColor="@color/post_create_secondary_text"
             android:textSize="15sp" />
 
@@ -93,7 +93,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Account Verified"
+                    android:text="@string/account_verified"
                     android:textColor="@color/yenkasa_emerald"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -103,7 +103,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:lineSpacingExtra="2dp"
-                    android:text="You can now access all features and enjoy a seamless experience."
+                    android:text="@string/account_verified_description"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -117,7 +117,7 @@
             android:background="@drawable/bg_verify_primary_button"
             android:fontFamily="sans-serif-medium"
             android:stateListAnimator="@null"
-            android:text="Go to Dashboard"
+            android:text="@string/go_to_dashboard"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="15sp" />
@@ -128,7 +128,7 @@
             android:layout_height="46dp"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:text="Go to Wallet"
+            android:text="@string/go_to_wallet"
             android:textColor="@color/yenkasa_emerald"
             android:textSize="14sp"
             android:textStyle="bold" />

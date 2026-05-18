@@ -88,7 +88,7 @@ class FollowFeedActivity : AppCompatActivity() {
     private fun handleFollowAction(user: User, currentlyFollowing: Boolean) {
         val token = TokenManager.getToken(this)
         if (token.isNullOrEmpty()) {
-            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in_first, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -116,7 +116,7 @@ class FollowFeedActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(
                         this@FollowFeedActivity,
-                        "Failed: ${response.message()}",
+                        getString(R.string.failed_with_message, response.message()),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -125,7 +125,7 @@ class FollowFeedActivity : AppCompatActivity() {
             override fun onFailure(call: Call<FollowResponse>, t: Throwable) {
                 Toast.makeText(
                     this@FollowFeedActivity,
-                    "Network error: ${t.message}",
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -138,7 +138,7 @@ class FollowFeedActivity : AppCompatActivity() {
     private fun loadFollowList() {
         val token = TokenManager.getToken(this)
         if (token.isNullOrEmpty()) {
-            Toast.makeText(this, "Please log in", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.please_log_in, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -156,12 +156,16 @@ class FollowFeedActivity : AppCompatActivity() {
                     users.addAll(if (listType == "followers") body.followers else body.following)
                     adapter.notifyDataSetChanged()
 
-                    val title = if (listType == "followers") "Followers" else "Following"
-                    Toast.makeText(this@FollowFeedActivity, "$title updated", Toast.LENGTH_SHORT).show()
+                    val title = if (listType == "followers") {
+                        getString(R.string.followers)
+                    } else {
+                        getString(R.string.following)
+                    }
+                    Toast.makeText(this@FollowFeedActivity, getString(R.string.list_updated, title), Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(
                         this@FollowFeedActivity,
-                        "Failed to load $listType",
+                        getString(R.string.failed_to_load_list, listType),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -170,7 +174,7 @@ class FollowFeedActivity : AppCompatActivity() {
             override fun onFailure(call: Call<FollowListResponse>, t: Throwable) {
                 Toast.makeText(
                     this@FollowFeedActivity,
-                    "Network error: ${t.message}",
+                    getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                     Toast.LENGTH_SHORT
                 ).show()
             }

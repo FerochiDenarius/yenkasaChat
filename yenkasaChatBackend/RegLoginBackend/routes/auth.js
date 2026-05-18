@@ -268,6 +268,9 @@ router.post('/login', async (req, res) => {
 
     // ✅ Update refresh token
     user.refreshToken = refreshTokenValue;
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = req.ip || req.socket?.remoteAddress || '';
+    user.lastLoginUserAgent = (req.get('user-agent') || '').slice(0, 300);
     await user.save();
 
     const effectiveRoleName = getEffectiveRoleName(user);

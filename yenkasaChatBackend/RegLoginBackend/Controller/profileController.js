@@ -70,7 +70,7 @@ const updateProfile = async (req, res) => {
       userId,
       { $set: updates }, // Use $set to only update provided fields
       { new: true, runValidators: true } // new:true returns the updated doc, runValidators:true applies schema validation
-    ).select('-password'); // Exclude password from the response
+    ).select('-password -refreshToken -emailVerificationCode -verificationCode -phoneVerificationCode -passwordResetToken -passwordResetExpires'); // Exclude sensitive auth fields from the response
 
     if (!updatedUser) {
       // This means the findByIdAndUpdate operation didn't find the user, which is unlikely if userId is correct

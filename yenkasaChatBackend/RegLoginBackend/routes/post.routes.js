@@ -2,10 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const { v2: cloudinary } = require('cloudinary');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const Community = require('../models/community.model');
+const ShareActivity = require('../models/shareActivity.model');
 const { uploadFiles } = require('../utils/upload');
 const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
@@ -15,6 +17,7 @@ const { SYSTEM_USER_ID } = require('../config/system');
 const { sendPushNotification } = require("../utils/onesignal");
 const { logUploadAudit } = require("../utils/cloudinaryMedia");
 const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
+const { auditSecurityEvent } = require("../utils/securityAudit");
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -67,6 +70,76 @@ function attachLikedByUser(posts, viewerId) {
   });
 
   return Array.isArray(posts) ? posts.map(decorate) : decorate(posts);
+}
+
+function normalizeClientRequestId(req) {
+  return (req.body?.clientRequestId || req.get("X-Client-Request-Id") || "")
+    .toString()
+    .trim()
+    .slice(0, 120);
+}
+
+function stableHash(value) {
+  return crypto.createHash("sha256").update(value).digest("hex").slice(0, 24);
+}
+
+function postLogicalKey(post) {
+  if (!post) return "";
+  if (post.clientRequestId) return `client:${post.userId}:${post.clientRequestId}`;
+  const communityId = post.communityId?._id || post.communityId || "";
+  const mediaKey = [
+    post.imageUrl || "",
+    ...(post.imageUrls || []),
+    post.videoUrl || "",
+    post.audioUrl || ""
+  ].filter(Boolean).join("|");
+  const textKey = (post.text || "").trim().toLowerCase();
+  return `post:${stableHash([post.userId, communityId, textKey, mediaKey].join("|"))}`;
+}
+
+async function populateFeedPost(postId, viewerId = null) {
+  const post = await Post.findById(postId)
+    .populate("userId", "username profileImage verified roleName")
+    .populate("communityId", "name displayName")
+    .lean();
+  if (!post) return null;
+  await attachAccurateViewCounts(post);
+  return attachLikedByUser(post, viewerId);
+}
+
+async function emitApprovedPostCreated(postId, source, requestId = "") {
+  if (!global.io) return;
+
+  const post = await populateFeedPost(postId);
+  if (!post) return;
+
+  const timestamp = new Date().toISOString();
+  const eventId = `post_created:${post._id}`;
+  const logicalPostKey = postLogicalKey(post);
+  const socketPost = {
+    ...post,
+    eventId,
+    requestId,
+    logicalPostKey,
+    eventSource: source,
+    eventTimestamp: timestamp
+  };
+
+  global.io.emit("newPost", socketPost);
+  global.io.emit("feedUpdate", {
+    eventId,
+    requestId,
+    logicalPostKey,
+    type: "newPost",
+    action: "new_post",
+    source,
+    postId: post._id,
+    userId: post.userId?._id || post.userId,
+    community: post.communityName || post.communityId?.displayName || post.communityId?.name || "",
+    createdAt: post.createdAt,
+    timestamp,
+    post: socketPost
+  });
 }
 
 /* ---------------------------------------------------
@@ -151,9 +224,31 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     } = req.body;
 
     const userId = req.user.userId || req.user.id;
+    const clientRequestId = normalizeClientRequestId(req);
+    const requestId = clientRequestId || `server_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
     const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (clientRequestId) {
+      const existingPost = await Post.findOne({ userId, clientRequestId })
+        .populate("userId", "username profileImage verified roleName")
+        .populate("communityId", "name displayName")
+        .lean();
+
+      if (existingPost) {
+        return res.status(200).json({
+          success: true,
+          duplicate: true,
+          eventId: `post_created:${existingPost._id}`,
+          requestId,
+          post: existingPost,
+          message: existingPost.status === "approved"
+            ? "Post published successfully."
+            : "Post submitted for approval."
+        });
+      }
+    }
 
     const normalizedRole = await getNormalizedUserRole(user);
 
@@ -290,6 +385,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
 
     const post = await Post.create({
       userId,
+      clientRequestId,
       communityId: selectedCommunity._id,
       text: text?.trim() || "",
       textBackgroundColor: textOnlyBackgroundColor,
@@ -381,15 +477,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
         activityId: `create_post_${post._id}_${userId}`,
       });
 
-      if (global.io) {
-        global.io.emit("feedUpdate", {
-          action: "new_post",
-          postId: post._id,
-          userId,
-          community: post.communityName,
-          timestamp: new Date(),
-        });
-      }
+      await emitApprovedPostCreated(post._id, "post_create", requestId);
 
       queueCommunityPostNotifications({ postId: post._id });
     }
@@ -399,6 +487,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
      * ------------------------------------ */
     res.status(201).json({
       success: true,
+      eventId: `post_created:${post._id}`,
+      requestId,
       post,
       message: postStatus === "approved"
         ? "Post published successfully."
@@ -415,6 +505,30 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     });
 
   } catch (err) {
+    if (err?.code === 11000) {
+      const userId = req.user?.userId || req.user?.id;
+      const clientRequestId = normalizeClientRequestId(req);
+      if (userId && clientRequestId) {
+        const existingPost = await Post.findOne({ userId, clientRequestId })
+          .populate("userId", "username profileImage verified roleName")
+          .populate("communityId", "name displayName")
+          .lean()
+          .catch(() => null);
+
+        if (existingPost) {
+          return res.status(200).json({
+            success: true,
+            duplicate: true,
+            eventId: `post_created:${existingPost._id}`,
+            requestId: clientRequestId,
+            post: existingPost,
+            message: existingPost.status === "approved"
+              ? "Post published successfully."
+              : "Post submitted for approval."
+          });
+        }
+      }
+    }
     console.error("❌ Failed to create post:", err);
     res.status(500).json({ error: "Failed to create post", details: err.message });
   }
@@ -793,6 +907,39 @@ router.post("/:postId/share", authMiddleware, async (req, res) => {
     const ownerId = post.userId.toString();
     if (await isBlocked(userId, ownerId)) {
       return res.status(403).json({ success: false, message: "Action blocked by privacy settings" });
+    }
+
+    const existingShare = await ShareActivity.findOne({ userId, postId }).select("_id").lean();
+    if (existingShare) {
+      auditSecurityEvent("duplicate_share_metric_blocked", req, { postId, ownerId });
+      return res.json({
+        success: true,
+        message: "Share already recorded",
+        duplicate: true,
+        shareCount: post.shareCount || 0
+      });
+    }
+
+    try {
+      await ShareActivity.create({
+        userId,
+        postId,
+        ownerId,
+        sharedAt: new Date(),
+        userAgent: (req.get('user-agent') || '').slice(0, 300),
+        ip: req.ip || req.socket?.remoteAddress || ''
+      });
+    } catch (shareErr) {
+      if (shareErr?.code === 11000) {
+        auditSecurityEvent("duplicate_share_metric_blocked", req, { postId, ownerId });
+        return res.json({
+          success: true,
+          message: "Share already recorded",
+          duplicate: true,
+          shareCount: post.shareCount || 0
+        });
+      }
+      throw shareErr;
     }
 
     const updatedPost = await Post.findByIdAndUpdate(

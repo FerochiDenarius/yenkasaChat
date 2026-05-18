@@ -104,14 +104,14 @@ class VerificationActivity : AppCompatActivity() {
                 currentMode = VerificationMode.EMAIL
                 requestEmailVerification(email)
             } else {
-                toast("Enter a valid email")
+                toast(getString(R.string.enter_valid_email))
             }
         }
 
         // ================= PHONE =================
         btnPhoneCode.setOnClickListener {
-            statusText.text = "SMS verification is coming soon."
-            toast("SMS verification is not ready yet")
+            statusText.text = getString(R.string.sms_verification_coming_soon)
+            toast(getString(R.string.sms_verification_not_ready))
         }
 
         // ================= CONFIRM =================
@@ -119,7 +119,7 @@ class VerificationActivity : AppCompatActivity() {
             val code = codeInput.text.toString().trim()
 
             if (code.isEmpty()) {
-                toast("Enter verification code")
+                toast(getString(R.string.enter_verification_code))
                 return@setOnClickListener
             }
 
@@ -127,7 +127,7 @@ class VerificationActivity : AppCompatActivity() {
                 VerificationMode.EMAIL -> {
 
                     if (!emailCodeRequested) {
-                        toast("Request a verification code first")
+                        toast(getString(R.string.request_verification_code_first))
                         return@setOnClickListener
                     }
 
@@ -139,7 +139,7 @@ class VerificationActivity : AppCompatActivity() {
                 }
 
                 VerificationMode.NONE -> {
-                    toast("Request a verification code first")
+                    toast(getString(R.string.request_verification_code_first))
                 }
             }
         }
@@ -148,7 +148,7 @@ class VerificationActivity : AppCompatActivity() {
     // ================= EMAIL API =================
 
     private fun requestEmailVerification(email: String) {
-        statusText.text = "Requesting email code..."
+        statusText.text = getString(R.string.requesting_email_code)
         btnEmailCode.isEnabled = false
 
         lifecycleScope.launch {
@@ -160,8 +160,8 @@ class VerificationActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     emailCodeRequested = true
-                    statusText.text = "📧 Email code sent"
-                    toast("Email verification code sent")
+                    statusText.text = getString(R.string.email_code_sent)
+                    toast(getString(R.string.email_verification_code_sent))
 
                     val raw = response.body()?.let {
                         JSONObject(it.toString())
@@ -189,7 +189,7 @@ class VerificationActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 Log.e("Verification", "🔥 Email request error", e)
-                toast("Network error")
+                toast(getString(R.string.network_error))
             }
         }
     }
@@ -211,7 +211,7 @@ class VerificationActivity : AppCompatActivity() {
                 val minutes = totalSeconds / 60
                 val secs = totalSeconds % 60
                 emailTimerText.text = String.format(
-                    "Resend in %02d:%02d",
+                    getString(R.string.resend_in_time),
                     minutes,
                     secs
                 )
@@ -225,7 +225,7 @@ class VerificationActivity : AppCompatActivity() {
     }
 
     private fun confirmEmailVerification(code: String) {
-        statusText.text = "Confirming email code..."
+        statusText.text = getString(R.string.confirming_email_code)
 
         lifecycleScope.launch {
             try {
@@ -237,7 +237,7 @@ class VerificationActivity : AppCompatActivity() {
                     // 1️⃣ Persist email verification
                     TokenManager.setEmailVerified(this@VerificationActivity, true)
 
-                    statusText.text = "✅ Email verified"
+                    statusText.text = getString(R.string.email_verified_status)
 
                     // 2️⃣ Update UI using stored truth
                     showVerifiedStatus(
@@ -248,11 +248,11 @@ class VerificationActivity : AppCompatActivity() {
                     finish()
 
                 } else {
-                    statusText.text = "❌ Invalid or expired code"
+                    statusText.text = getString(R.string.invalid_or_expired_code)
                 }
 
             } catch (e: Exception) {
-                statusText.text = "⚠️ Verification failed. Try again."
+                statusText.text = getString(R.string.verification_failed_try_again)
             }
         }
     }
@@ -270,7 +270,7 @@ class VerificationActivity : AppCompatActivity() {
             }
 
             override fun onVerificationFailed(e: FirebaseException) {
-                statusText.text = "❌ SMS verification failed"
+                statusText.text = getString(R.string.sms_verification_failed)
             }
 
             override fun onCodeSent(
@@ -278,13 +278,13 @@ class VerificationActivity : AppCompatActivity() {
                 token: PhoneAuthProvider.ForceResendingToken
             ) {
                 verificationId = id
-                statusText.text = "📱 SMS code sent"
+                statusText.text = getString(R.string.sms_code_sent)
             }
         }
     }
 
     private fun sendOtp(phone: String) {
-        statusText.text = "Sending SMS..."
+        statusText.text = getString(R.string.sending_sms)
 
         val options = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(phone)
@@ -298,7 +298,7 @@ class VerificationActivity : AppCompatActivity() {
 
     private fun verifyPhoneCode(code: String) {
         val id = verificationId ?: run {
-            toast("Request SMS code first")
+            toast(getString(R.string.request_sms_code_first))
             return
         }
 
@@ -313,7 +313,7 @@ class VerificationActivity : AppCompatActivity() {
 
                     TokenManager.setPhoneVerified(this, true)
 
-                    statusText.text = "✅ Phone verified"
+                    statusText.text = getString(R.string.phone_verified_status)
 
                     showVerifiedStatus(
                         emailVerified = TokenManager.isEmailVerified(this),
@@ -321,7 +321,7 @@ class VerificationActivity : AppCompatActivity() {
                     )
 
                 } else {
-                    toast("Invalid verification code")
+                    toast(getString(R.string.invalid_verification_code))
                 }
             }
     }
@@ -331,7 +331,7 @@ class VerificationActivity : AppCompatActivity() {
     private fun showVerifiedStatus(emailVerified: Boolean, phoneVerified: Boolean) {
         verifiedLayout.visibility = LinearLayout.VISIBLE
 
-        emailStatus.text = if (emailVerified) "Verified" else "Not verified"
+        emailStatus.text = if (emailVerified) getString(R.string.verified) else getString(R.string.not_verified)
         emailStatus.setTextColor(
             ContextCompat.getColor(
                 this,
@@ -339,7 +339,7 @@ class VerificationActivity : AppCompatActivity() {
             )
         )
 
-        phoneStatus.text = if (phoneVerified) "Verified" else "Not verified"
+        phoneStatus.text = if (phoneVerified) getString(R.string.verified) else getString(R.string.not_verified)
         phoneStatus.setTextColor(
             ContextCompat.getColor(
                 this,
@@ -356,9 +356,9 @@ class VerificationActivity : AppCompatActivity() {
     private fun handleApiError(response: Response<*>) {
         val raw = response.errorBody()?.string()
         val msg = try {
-            JSONObject(raw ?: "").optString("message", "Server error")
+            JSONObject(raw ?: "").optString("message", getString(R.string.server_error))
         } catch (e: Exception) {
-            "Server error"
+            getString(R.string.server_error)
         }
         toast(msg)
     }

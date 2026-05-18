@@ -54,7 +54,7 @@
                 android:background="@drawable/bg_live_you_pill"
                 android:gravity="center"
                 android:paddingHorizontal="7dp"
-                android:text="You"
+                android:text="@string/you"
                 android:textColor="#5CEB89"
                 android:textSize="10sp"
                 android:textStyle="bold"

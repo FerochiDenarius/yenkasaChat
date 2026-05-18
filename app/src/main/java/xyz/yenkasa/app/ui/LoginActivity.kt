@@ -21,6 +21,7 @@ import com.google.android.material.textfield.TextInputEditText
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.OneSignalHelper
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.UpdateManager
 import xyz.yenkasa.app.viewmodel.UserViewModel
 import xyz.yenkasa.app.network.SocketManager
 import com.onesignal.OneSignal
@@ -40,6 +41,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var loginCard: View
     private lateinit var loginRoot: View
     private lateinit var loginScroll: ScrollView
+    private var updateManager: UpdateManager? = null
 
 
     private val userViewModel: UserViewModel by viewModels()
@@ -68,6 +70,8 @@ class LoginActivity : AppCompatActivity() {
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
         )
         setContentView(R.layout.activity_login)
+        updateManager = UpdateManager(this)
+        updateManager?.checkForUpdates(source = "login_screen")
 
         // UI elements
         editIdentifier = findViewById(R.id.editLoginIdentifier)
@@ -264,7 +268,10 @@ class LoginActivity : AppCompatActivity() {
                     if (!TokenManager.hasAcceptedPolicies(this@LoginActivity)) {
                         startActivity(Intent(this@LoginActivity, PolicyDisclosureActivity::class.java))
                     } else {
-                        startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                        startActivity(
+                            Intent(this@LoginActivity, MainActivity::class.java)
+                                .putExtra(MainActivity.EXTRA_CHECK_UPDATES_AFTER_LOGIN, true)
+                        )
                     }
                     finish()
 
@@ -303,5 +310,18 @@ class LoginActivity : AppCompatActivity() {
                     Log.w("LoginActivity", "Daily login tracking failed: ${t.message}")
                 }
             })
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (updateManager?.onActivityResult(requestCode, resultCode) == true) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onDestroy() {
+        updateManager?.destroy()
+        super.onDestroy()
     }
 }

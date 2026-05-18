@@ -8,5 +8,5 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitCenter"
-        android:contentDescription="Profile Image Preview" />
+        android:contentDescription="@string/profile_image_preview" />
 </FrameLayout>

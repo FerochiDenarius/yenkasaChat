@@ -12,7 +12,10 @@ data class CachedFeedPayload(
     val posts: List<Post>,
     val currentPage: Int = 1,
     val isLastPage: Boolean = false,
-    val cachedAt: Long = System.currentTimeMillis()
+    val cachedAt: Long = System.currentTimeMillis(),
+    val cacheSchemaVersion: Int = 0,
+    val rendererVersion: String? = null,
+    val appVersionCode: Long = 0L
 )
 
 // Like/unlike response

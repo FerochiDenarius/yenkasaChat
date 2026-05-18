@@ -32,7 +32,7 @@
                     android:layout_width="44dp"
                     android:layout_height="44dp"
                     android:background="@drawable/bg_profile_icon_button"
-                    android:contentDescription="Back"
+                    android:contentDescription="@string/back"
                     android:padding="10dp"
                     android:src="@drawable/ic_arrow_back"
                     app:tint="@color/account_primary_text" />
@@ -70,7 +70,7 @@
                     android:layout_width="44dp"
                     android:layout_height="44dp"
                     android:background="@drawable/bg_profile_icon_button"
-                    android:contentDescription="More"
+                    android:contentDescription="@string/more"
                     android:padding="10dp"
                     android:src="@drawable/ic_more_vert"
                     app:tint="@color/account_primary_text" />
@@ -101,7 +101,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:background="@drawable/ic_user_placeholder"
-                            android:contentDescription="Profile photo"
+                            android:contentDescription="@string/profile_photo"
                             android:scaleType="centerCrop"
                             android:src="@drawable/default_avatar" />
                     </FrameLayout>
@@ -135,7 +135,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="3dp"
-                                android:text="Posts"
+                                android:text="@string/posts"
                                 android:textColor="@color/account_secondary_text"
                                 android:textSize="13sp" />
                         </LinearLayout>
@@ -164,7 +164,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="3dp"
-                                android:text="Followers"
+                                android:text="@string/followers"
                                 android:textColor="@color/account_secondary_text"
                                 android:textSize="13sp" />
                         </LinearLayout>
@@ -193,7 +193,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="3dp"
-                                android:text="Following"
+                                android:text="@string/following"
                                 android:textColor="@color/account_secondary_text"
                                 android:textSize="13sp" />
                         </LinearLayout>
@@ -345,7 +345,7 @@
                         android:layout_weight="1"
                         android:ellipsize="end"
                         android:maxLines="1"
-                        android:text="Rising Creator"
+                        android:text="@string/rising_creator"
                         android:textColor="@color/account_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -353,7 +353,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Top 82%"
+                        android:text="@string/top_82_percent"
                         android:textColor="@color/account_accent_green"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -385,7 +385,7 @@
                         android:id="@+id/textConversationStreak"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🔥 Conversation Streak: 0 days"
+                        android:text="@string/conversation_streak_placeholder"
                         android:textColor="@color/account_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -395,7 +395,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Private metric. Partners are never shown."
+                        android:text="@string/private_metric_partners_hidden"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -419,7 +419,7 @@
                         android:minWidth="0dp"
                         android:paddingStart="10dp"
                         android:paddingEnd="10dp"
-                        android:text="Follow"
+                        android:text="@string/follow"
                         android:textAllCaps="false"
                         android:textColor="@color/white"
                         android:textSize="15sp"
@@ -436,7 +436,7 @@
                         android:minWidth="0dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
-                        android:text="Message"
+                        android:text="@string/message"
                         android:textAllCaps="false"
                         android:textColor="@color/account_primary_text"
                         android:textSize="15sp"
@@ -453,7 +453,7 @@
                         android:minWidth="0dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
-                        android:text="Block"
+                        android:text="@string/block"
                         android:textAllCaps="false"
                         android:textColor="@color/account_danger"
                         android:textSize="15sp"
@@ -464,7 +464,7 @@
                         android:layout_width="54dp"
                         android:layout_height="54dp"
                         android:background="@drawable/bg_profile_secondary_button"
-                        android:contentDescription="More actions"
+                        android:contentDescription="@string/more_actions"
                         android:padding="15dp"
                         android:src="@drawable/ic_more_vert"
                         app:tint="@color/account_primary_text" />
@@ -570,7 +570,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:text="Loading posts..."
+                        android:text="@string/loading_posts"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="16sp" />
                 </LinearLayout>
@@ -604,7 +604,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Home"
+            android:text="@string/home"
             android:textColor="@color/wallet_accent_green"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -621,7 +621,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Search"
+            android:text="@string/search"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
 
@@ -637,7 +637,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Create"
+            android:text="@string/create"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
 
@@ -653,7 +653,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Wallet"
+            android:text="@string/wallet"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
 
@@ -669,7 +669,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Profile"
+            android:text="@string/profile"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
     </LinearLayout>

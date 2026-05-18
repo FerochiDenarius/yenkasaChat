@@ -115,6 +115,8 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 
     implementation("com.google.firebase:firebase-messaging:23.4.1")
     implementation("com.google.android.gms:play-services-auth:20.7.0")

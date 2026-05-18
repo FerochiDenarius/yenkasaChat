@@ -9,6 +9,7 @@ const {
   splitMetrics,
   syncUserRole,
 } = require("../services/ranking.service");
+const { auditSecurityEvent } = require("../utils/securityAudit");
 
 
 // ensure all metrics are integers
@@ -182,6 +183,7 @@ exports.trackLogin = async (req, res) => {
 exports.trackAdView = async (req, res) => {
   try {
     const userId = req.user.id;
+    const user = await User.findById(userId).select("createdAt role roleName");
 
     let appVerification = await AppVerification.findOne({ userId });
     if (!appVerification) {
@@ -189,10 +191,16 @@ exports.trackAdView = async (req, res) => {
       await appVerification.save();
     }
 
-    await appVerification.trackAdView();
+    auditSecurityEvent("client_ad_metric_increment_blocked", req, {
+      reason: "adsViewed is counted only after a verified ad reward/impression event"
+    });
+
+    await syncVerificationMetrics(appVerification, user);
 
     return res.json({
       success: true,
+      trustedMetricsOnly: true,
+      message: "Ad verification progress is updated after a verified ad view is completed.",
       adsViewed: appVerification.metrics.adsViewed
     });
 
@@ -208,7 +216,7 @@ exports.trackAdView = async (req, res) => {
 exports.updateMetrics = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { type, value } = req.body;
+    const user = await User.findById(userId).select("createdAt role roleName");
 
     let appVerification = await AppVerification.findOne({ userId });
     if (!appVerification) {
@@ -216,115 +224,18 @@ exports.updateMetrics = async (req, res) => {
       await appVerification.save();
     }
 
-    const m = appVerification.metrics;
+    auditSecurityEvent("client_verification_metric_update_blocked", req, {
+      reason: "verification metrics are derived from trusted backend events only",
+      requestedType: req.body?.type || req.body?.metricType || null,
+      requestedValue: req.body?.value ?? req.body?.amount ?? req.body?.increment ?? null
+    });
 
-switch (type) {
-
-  case "commentMade":
-  case "comment":
-    m.totalComments += value || 1;
-    m.totalCommentsMade += value || 1;
-    break;
-
-  case "commentReceived":
-    m.totalCommentsReceived += value || 1;
-    break;
-
-  case "replyMade":
-    m.repliesMade += value || 1;
-    break;
-
-  case "replyReceived":
-    m.totalRepliesReceived += value || 1;
-    break;
-
-  case "following":
-  case "follow":
-  case "followMade":
-    m.totalFollowing += value || 1;
-    break;
-
-  case "follower":
-  case "followerReceived":
-    m.totalFollowers += value || 1;
-    break;
-
-  case "postCreated":
-    m.postsCreated += value || 1;
-    m.totalPostCount += value || 1;
-    break;
-
-  case "likeGiven":
-  case "like":
-  case "postLiked":
-    m.postsLiked += value || 1;
-    m.totalLikesCount += value || 1;
-    break;
-
-  case "likeReceived":
-    m.totalLikesReceived += value || 1;
-    break;
-
-  case "likeOnComment":
-    m.commentLikesReceived += value || 1;
-    break;
-
-  case "viewMade":
-    m.totalViewsMade += value || 1;
-    break;
-
-  case "viewReceived":
-    m.totalViewsReceived += value || 1;
-    m.totalViewsCount += value || 1;
-    break;
-
-  case "share":
-  case "shareMade":
-    m.sharesMade += value || 1;
-    break;
-
-  case "shareReceived":
-    m.totalShares += value || 1;
-    break;
-
-  case "maxLikes":
-    if (value > m.maxLikesOnPost) {
-      m.maxLikesOnPost = value;
-    }
-    break;
-
-  case "profileVisited":
-    m.profilesVisited += value || 1;
-    break;
-
-  case "communityJoined":
-    m.communitiesJoined += value || 1;
-    break;
-
-  case "communityEngaged":
-    m.communitiesEngaged += value || 1;
-    break;
-
-  case "reportMade":
-    m.reportsMade += value || 1;
-    break;
-
-  case "validReport":
-    m.validReports += value || 1;
-    break;
-
-  default:
-    return res.status(400).json({ error: "Invalid metric type" });
-}
-  
-
-
-    // sanitize + save
-    appVerification.metrics = sanitizeMetrics(m);
-    await appVerification.save();
+    await syncVerificationMetrics(appVerification, user);
 
     return res.json({
       success: true,
+      trustedMetricsOnly: true,
+      message: "Verification progress was refreshed from trusted Yenkasa activity.",
       metrics: sanitizeMetrics(appVerification.metrics),
     });
 

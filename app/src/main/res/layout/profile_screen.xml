@@ -19,7 +19,7 @@
 
             <TextView
                 android:id="@+id/tvProfileTitle"
-                android:text="Profile"
+                android:text="@string/profile"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"
@@ -41,7 +41,7 @@
             <!-- USER NAME -->
             <TextView
                 android:id="@+id/tvName"
-                android:text="Becca William"
+                android:text="@string/profile_sample_name"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white"
@@ -112,7 +112,7 @@
                     app:tint="@color/yenkasa_black"/>
 
                 <TextView
-                    android:text="Change Password"
+                    android:text="@string/change_password"
                     android:textColor="@color/yenkasa_black"
                     android:textSize="16sp"
                     android:layout_marginStart="12dp"

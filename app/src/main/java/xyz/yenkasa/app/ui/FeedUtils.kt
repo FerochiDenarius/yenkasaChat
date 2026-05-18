@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
+import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
@@ -52,14 +53,18 @@ object FeedUtils {
                             "⚠️ Like failed -> code=${response.code()}, msg=${response.message()}"
                         )
                         onError?.invoke()
-                        Toast.makeText(context, "Failed to like post", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.failed_to_like_post, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<LikeResponse>, t: Throwable) {
                     Log.e("FeedUtils", "❌ Like toggle error: ${t.message}", t)
                     onError?.invoke()
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.network_error_with_message, t.message ?: context.getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -95,12 +100,12 @@ object FeedUtils {
 
             val shareIntent = Intent(Intent.ACTION_SEND)
             shareIntent.type = "text/plain"
-            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post on Yenkasa")
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_post_subject_yenkasa))
             shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
-            context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+            context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_via)))
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(context, "Error sharing post", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.error_sharing_post, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -119,15 +124,19 @@ object FeedUtils {
                     response: Response<GenericResponse>
                 ) {
                     if (response.isSuccessful && response.body()?.success == true) {
-                        Toast.makeText(context, "Post deleted", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.post_deleted, Toast.LENGTH_SHORT).show()
                         onDeleted?.invoke()
                     } else {
-                        Toast.makeText(context, "Failed to delete post", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.failed_to_delete_post, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.network_error_with_message, t.message ?: context.getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -145,15 +154,19 @@ object FeedUtils {
                     response: Response<GenericResponse>
                 ) {
                     if (response.isSuccessful && response.body()?.success == true) {
-                        Toast.makeText(context, "Post hidden", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.post_hidden, Toast.LENGTH_SHORT).show()
                         onHidden?.invoke()
                     } else {
-                        Toast.makeText(context, "Failed to hide post", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.failed_to_hide_post, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.network_error_with_message, t.message ?: context.getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -170,7 +183,7 @@ object FeedUtils {
                     response: Response<MediaResponse>
                 ) {
                     if (!response.isSuccessful || response.body() == null) {
-                        Toast.makeText(context, "Unable to get media", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.unable_to_get_media, Toast.LENGTH_SHORT).show()
                         return
                     }
 
@@ -183,7 +196,11 @@ object FeedUtils {
                 }
 
                 override fun onFailure(call: Call<MediaResponse>, t: Throwable) {
-                    Toast.makeText(context, "Network error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.network_error_with_message, t.message ?: context.getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -202,15 +219,19 @@ object FeedUtils {
         ).enqueue(object : Callback<GenericResponse> {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
                 if (response.isSuccessful && response.body()?.success == true) {
-                    Toast.makeText(context, "Reported successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.reported_successfully, Toast.LENGTH_SHORT).show()
                     onFlagged?.invoke()
                 } else {
-                    Toast.makeText(context, "Failed to report", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.failed_to_report, Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.error_with_message, t.message ?: context.getString(R.string.unknown_error)),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
     }

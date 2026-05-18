@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.network.SocketManager
+import java.util.Locale
 
 class FeedSocketController(
     private val lifecycleScope: LifecycleCoroutineScope,
@@ -15,6 +16,8 @@ class FeedSocketController(
     private val onScrollToTop: () -> Unit,
     private val onViewCountUpdated: (String, Int) -> Unit
 ) {
+    private var listenersAttached = false
+
     fun connect(userId: String?) {
         SocketManager.ensureConnected(userId)
         setupSocketListeners()
@@ -24,14 +27,27 @@ class FeedSocketController(
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
         SocketManager.off("viewUpdate")
+        listenersAttached = false
     }
 
     private fun setupSocketListeners() {
+        if (listenersAttached) return
+        SocketManager.off("newPost")
+        SocketManager.off("likeUpdate")
+        SocketManager.off("viewUpdate")
+        listenersAttached = true
+
         SocketManager.on("newPost") { data ->
             try {
                 val newPost = Post.fromJson(data as JSONObject)
                 lifecycleScope.launch {
-                    postsProvider().add(0, newPost)
+                    val posts = postsProvider()
+                    val incomingKey = stablePostEventKey(newPost)
+                    if (posts.any { stablePostEventKey(it) == incomingKey }) {
+                        Log.d("FeedSocketController", "duplicate newPost skipped key=$incomingKey id=${newPost._id}")
+                        return@launch
+                    }
+                    posts.add(0, newPost)
                     onPostsChanged()
                     onCacheChanged()
                     onScrollToTop()
@@ -72,5 +88,36 @@ class FeedSocketController(
                 Log.e("FeedSocketController", "Error parsing likeUpdate", e)
             }
         }
+    }
+
+    private fun stablePostEventKey(post: Post): String {
+        post.logicalPostKey?.takeIf { it.isNotBlank() }?.let { return "logical:$it" }
+        post.clientRequestId?.takeIf { it.isNotBlank() }?.let { return "client:${post.userId.id}:$it" }
+        post.eventId?.takeIf { it.isNotBlank() }?.let { return "event:$it" }
+
+        val timestampBucket = (FeedTimeUtils.parsePostTimestampMillis(post.createdAt) ?: 0L) / 120_000L
+        val mediaKey = listOfNotNull(post.videoUrl, post.audioUrl, post.imageUrl)
+            .filter { it.isNotBlank() }
+            .plus(post.imageUrls.orEmpty().filter { it.isNotBlank() })
+            .joinToString("|")
+        val captionKey = post.caption.orEmpty().trim().lowercase(Locale.US)
+        if (captionKey.isNotBlank() || mediaKey.isNotBlank()) {
+            return listOf(
+                "semantic",
+                post.userId.id,
+                post.communityId?.id.orEmpty(),
+                captionKey,
+                mediaKey,
+                timestampBucket.toString()
+            ).joinToString("|")
+        }
+        if (post._id.isNotBlank()) return "id:${post._id}"
+        return listOf(
+            post.userId.id,
+            post.communityId?.id.orEmpty(),
+            captionKey,
+            mediaKey,
+            timestampBucket.toString()
+        ).joinToString("|")
     }
 }

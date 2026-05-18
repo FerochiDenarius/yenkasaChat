@@ -216,6 +216,7 @@ class FeedFragment : Fragment() {
         )
         networkController = FeedNetworkController(this)
         cacheController = FeedCacheController(requireContext(), Gson())
+        cacheController.invalidateStaleFeedStateIfNeeded()
         postActionsController = FeedPostActionsController(
             fragment = this,
             tokenProvider = { token },
@@ -298,6 +299,8 @@ class FeedFragment : Fragment() {
 
     private fun setupRecyclerView() {
         layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.itemAnimator = null
+        recyclerView.setItemViewCacheSize(0)
 
         if (USE_YENKASA_PLAYER_VIEW) {
             playerCoordinator = FeedPlayerCoordinator(
@@ -538,11 +541,12 @@ class FeedFragment : Fragment() {
                 ) {
                     val ads = response.body()?.ads.orEmpty()
                     sponsoredAds = if (response.isSuccessful) ads else emptyList()
-                    if (::feedAdapter.isInitialized && posts.isNotEmpty()) {
+                    if (posts.isNotEmpty()) {
                         val mixedFeed = buildMixedFeed(posts)
-                        feedAdapter.updateItems(mixedFeed)
                         if (USE_YENKASA_PLAYER_VIEW) {
                             playerCoordinator?.submitItems(mixedFeed)
+                        } else if (::feedAdapter.isInitialized) {
+                            feedAdapter.updateItems(mixedFeed)
                         }
                     }
                 }
@@ -807,14 +811,48 @@ class FeedFragment : Fragment() {
     }
 
     private fun mergeUniquePosts(existing: List<Post>, incoming: List<Post>): List<Post> {
-        val existingIds = existing.map { it._id }.toMutableSet()
-        return incoming.filter { existingIds.add(it._id) }
+        val existingKeys = existing.map { stablePostMergeKey(it) }.toMutableSet()
+        return incoming.filter { existingKeys.add(stablePostMergeKey(it)) }
     }
 
     private fun mergeRefreshPosts(fresh: List<Post>, cachedOrExisting: List<Post>): List<Post> {
         if (fresh.isEmpty()) return emptyList()
         val seen = mutableSetOf<String>()
-        return (fresh + cachedOrExisting).filter { seen.add(it._id) }
+        return (fresh + cachedOrExisting).filter { seen.add(stablePostMergeKey(it)) }
+    }
+
+    private fun stablePostMergeKey(post: Post): String {
+        post.logicalPostKey?.takeIf { it.isNotBlank() }?.let { return "logical:$it" }
+        post.clientRequestId?.takeIf { it.isNotBlank() }?.let { return "client:${post.userId.id}:$it" }
+        post.eventId?.takeIf { it.isNotBlank() }?.let { return "event:$it" }
+
+        val timestampBucket = (FeedTimeUtils.parsePostTimestampMillis(post.createdAt) ?: 0L) / 120_000L
+        val mediaKey = listOfNotNull(
+            post.videoUrl,
+            post.audioUrl,
+            post.imageUrl
+        ).filter { it.isNotBlank() }
+            .plus(post.imageUrls.orEmpty().filter { it.isNotBlank() })
+            .joinToString("|")
+        val captionKey = post.caption.orEmpty().trim().lowercase(Locale.US)
+        if (captionKey.isNotBlank() || mediaKey.isNotBlank()) {
+            return listOf(
+                "semantic",
+                post.userId.id,
+                post.communityId?.id.orEmpty(),
+                captionKey,
+                mediaKey,
+                timestampBucket.toString()
+            ).joinToString("|")
+        }
+        if (post._id.isNotBlank()) return "id:${post._id}"
+        return listOf(
+            post.userId.id,
+            post.communityId?.id.orEmpty(),
+            captionKey,
+            mediaKey,
+            timestampBucket.toString()
+        ).joinToString("|")
     }
 
     private fun syncCommunitySelectionUi() {
@@ -844,6 +882,11 @@ class FeedFragment : Fragment() {
         isLoadingMore = false
         currentPage = 1
         isLastPage = false
+        if (USE_YENKASA_PLAYER_VIEW) {
+            playerCoordinator?.resetRenderedState()
+        } else if (::feedAdapter.isInitialized) {
+            recyclerView.recycledViewPool.clear()
+        }
         val cacheKey = feedCacheKeyFor(selectedCommunityNames())
         loadCachedFeed(
             cacheKey = cacheKey,

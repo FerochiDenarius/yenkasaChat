@@ -10,12 +10,58 @@ const { sendNotification } = require("../services/notification.service");
 const rewardService = require("../services/reward.service");
 const { getPermissions, canApproveContent, REVIEWER_RANKS } = require("../middleware/permissions");
 const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
+const { auditSecurityEvent, createMemoryRateLimiter } = require("../utils/securityAudit");
 
 const ALLOWED_ROLES = REVIEWER_RANKS.map((rank) => rank.toLowerCase());
 const ALLOWED_ACCESS_ROLES = [...REVIEWER_RANKS];
+const pendingBackfillLimiter = createMemoryRateLimiter({
+  windowMs: 60 * 1000,
+  max: 10,
+  label: "post_approval_pending"
+});
 
 function canApprove(userOrRole) {
   return canApproveContent(userOrRole);
+}
+
+async function emitApprovedPostCreated(postId, source, requestId = "") {
+  if (!global.io) return;
+
+  const post = await Post.findById(postId)
+    .populate("userId", "username profileImage verified roleName")
+    .populate("communityId", "name displayName")
+    .lean();
+  if (!post) return;
+
+  const timestamp = new Date().toISOString();
+  const eventId = `post_created:${post._id}`;
+  const logicalPostKey = post.clientRequestId
+    ? `client:${post.userId?._id || post.userId}:${post.clientRequestId}`
+    : `post:${post._id}`;
+  const socketPost = {
+    ...post,
+    eventId,
+    requestId,
+    logicalPostKey,
+    eventSource: source,
+    eventTimestamp: timestamp
+  };
+
+  global.io.emit("newPost", socketPost);
+  global.io.emit("feedUpdate", {
+    eventId,
+    requestId,
+    logicalPostKey,
+    type: "newPost",
+    action: "new_post",
+    source,
+    postId: post._id,
+    userId: post.userId?._id || post.userId,
+    community: post.communityName || post.communityId?.displayName || post.communityId?.name || "",
+    createdAt: post.createdAt,
+    timestamp,
+    post: socketPost
+  });
 }
 
 // Helper: fetch all approvers
@@ -31,7 +77,7 @@ async function getApprovers() {
 // ================================
 // GET Pending Posts + Notify Admins/Mods/Developers
 // ================================
-router.get("/pending", authMiddleware, async (req, res) => {
+router.get("/pending", authMiddleware, pendingBackfillLimiter, async (req, res) => {
   try {
   const user = await User.findById(req.user.id);
   const permissions = getPermissions(user);
@@ -43,6 +89,9 @@ router.get("/pending", authMiddleware, async (req, res) => {
   });
 
   if (!canApprove(user)) {
+    auditSecurityEvent("post_approval_pending_unauthorized", req, {
+      rank: permissions.rank
+    });
     return res.status(403).json({ error: "Not authorized" });
   }
 
@@ -54,6 +103,9 @@ router.get("/pending", authMiddleware, async (req, res) => {
 
   if (missingApprovalPosts.length > 0) {
     console.warn("[PostApproval] Backfilling missing approval rows", {
+      count: missingApprovalPosts.length
+    });
+    auditSecurityEvent("post_approval_backfill_started", req, {
       count: missingApprovalPosts.length
     });
 
@@ -82,6 +134,9 @@ router.get("/pending", authMiddleware, async (req, res) => {
 
     if (backfillOps.length > 0) {
       await PostApproval.bulkWrite(backfillOps);
+      auditSecurityEvent("post_approval_backfill_completed", req, {
+        count: backfillOps.length
+      });
     }
   }
 
@@ -164,9 +219,18 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
     if (!approvalEntry)
       return res.status(404).json({ error: "Approval item not found" });
 
+    if (approvalEntry.status === "approved") {
+      return res.json({
+        success: true,
+        duplicate: true,
+        message: "Post already approved",
+        reward: 0
+      });
+    }
+
     const post = await Post.findByIdAndUpdate(
       approvalEntry.post,
-      { status: "approved" },
+      { $set: { status: "approved" } },
       { new: true }
     );
     if (!post)
@@ -220,6 +284,7 @@ await rewardService.reward(approver._id, 8, {
 
     }
 
+    await emitApprovedPostCreated(post._id, "post_approval", `post_approved:${post._id}`);
     queueCommunityPostNotifications({ postId: post._id });
 
     res.json({

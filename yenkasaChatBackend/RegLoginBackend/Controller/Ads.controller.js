@@ -388,14 +388,8 @@ exports.rewardAd = async (req, res) => {
       }
     });
 
-    // Count fully watched in-app video ads in the verification dashboard.
-    const AppVerification = require('../models/appverification.model');
-    let av = await AppVerification.findOne({ userId });
-    if (!av) {
-      av = new AppVerification({ userId });
-    }
-    if(av && !adView.verificationCounted){
-      await av.trackAdView();
+    // Verification adsViewed is incremented once by rewardService for REWARD_VIEWS.
+    if (!adView.verificationCounted) {
       adView.verificationCounted = true;
       await adView.save();
     }

@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.gson.Gson
+import xyz.yenkasa.app.BuildConfig
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.feed.FeedCacheController
@@ -42,7 +43,10 @@ class FeedSyncWorker(
             val payload = CachedFeedPayload(
                 posts = body.posts,
                 currentPage = body.pagination.currentPage,
-                isLastPage = body.pagination.currentPage >= body.pagination.totalPages
+                isLastPage = body.pagination.currentPage >= body.pagination.totalPages,
+                cacheSchemaVersion = CACHE_SCHEMA_VERSION,
+                rendererVersion = PLAYER_RENDERER_VERSION,
+                appVersionCode = BuildConfig.VERSION_CODE.toLong()
             )
 
             TokenManager.saveFeedCache(
@@ -57,5 +61,10 @@ class FeedSyncWorker(
             Log.e("FeedSyncWorker", "Feed sync error", e)
             Result.retry()
         }
+    }
+
+    private companion object {
+        const val CACHE_SCHEMA_VERSION = 2
+        const val PLAYER_RENDERER_VERSION = "yenkasa_player_v2"
     }
 }

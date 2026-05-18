@@ -25,7 +25,7 @@ class MessageActionHandler(
             popup.menuInflater.inflate(R.menu.message_context_menu, popup.menu)
         } catch (e: Exception) {
             Log.e("MessageActionHandler", "Error inflating menu: R.menu.message_context_menu. Check if menu resource exists.", e)
-            Toast.makeText(context, "Error showing menu options.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.error_showing_menu_options, Toast.LENGTH_SHORT).show()
             return
         }
 

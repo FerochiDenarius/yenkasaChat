@@ -23,6 +23,12 @@ const postSchema = new Schema({
     default: ''
   },
 
+  clientRequestId: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+
   // Post type
   postType: {
     type: String,
@@ -125,6 +131,13 @@ postSchema.index({ likeCount: -1 });
 postSchema.index({ status: 1, isActive: 1, createdAt: -1 });
 postSchema.index({ status: 1, isActive: 1, userId: 1, createdAt: -1 });
 postSchema.index({ status: 1, isActive: 1, communityId: 1, createdAt: -1 });
+postSchema.index(
+  { userId: 1, clientRequestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientRequestId: { $type: 'string', $gt: '' } }
+  }
+);
 postSchema.index({
   status: 1,
   isActive: 1,

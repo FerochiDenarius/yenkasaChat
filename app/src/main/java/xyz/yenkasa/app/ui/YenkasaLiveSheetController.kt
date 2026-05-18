@@ -350,8 +350,12 @@ class YenkasaLiveSheetController(
         eventBannerView?.isVisible = hasEvent
         if (!hasEvent) return
 
-        eventTitleView?.text = "${activeEvent?.name.orEmpty()} is ON"
-        eventSubtitleView?.text = "${activeEvent?.bonusMultiplier ?: 1.0}x YKC rewards • ${activeEvent?.duration.orEmpty()}"
+        eventTitleView?.text = fragment.getString(R.string.live_event_is_on, activeEvent?.name.orEmpty())
+        eventSubtitleView?.text = fragment.getString(
+            R.string.live_event_reward_summary,
+            activeEvent?.bonusMultiplier ?: 1.0,
+            activeEvent?.duration.orEmpty()
+        )
     }
 
     private fun bindMicroReward(microReward: LiveMicroReward?) {
@@ -359,17 +363,25 @@ class YenkasaLiveSheetController(
         rewardCardView?.isVisible = hasReward
         if (!hasReward) return
 
-        rewardTitleView?.text = "🎯 Next burst reward"
+        rewardTitleView?.text = fragment.getString(R.string.next_burst_reward)
         val commenter = microReward?.topCommenter
         val viewer = microReward?.topViewer
         val commenterText = commenter?.let {
-            "${if (it.isCurrentUser) "You" else it.username} lead comments (${it.count})"
-        } ?: "No comment leader yet"
+            fragment.getString(
+                R.string.live_lead_comments,
+                if (it.isCurrentUser) fragment.getString(R.string.you) else it.username,
+                it.count
+            )
+        } ?: fragment.getString(R.string.no_comment_leader_yet)
         val viewerText = viewer?.let {
-            "${if (it.isCurrentUser) "You" else it.username} lead views (${it.count})"
-        } ?: "No view leader yet"
+            fragment.getString(
+                R.string.live_lead_views,
+                if (it.isCurrentUser) fragment.getString(R.string.you) else it.username,
+                it.count
+            )
+        } ?: fragment.getString(R.string.no_view_leader_yet)
         rewardSubtitleView?.text =
-            "Top commenter +${microReward?.rewardAmount ?: 0} YKC • $commenterText • $viewerText"
+            fragment.getString(R.string.live_top_commenter_reward, microReward?.rewardAmount ?: 0, commenterText, viewerText)
     }
 
     private fun bindConversationStreak(streakMessage: String?) {
@@ -378,41 +390,45 @@ class YenkasaLiveSheetController(
         if (!hasStreak) return
 
         streakTitleView?.text = streakMessage
-        streakSubtitleView?.text = "⚡ Stay active in Live to maintain it"
+        streakSubtitleView?.text = fragment.getString(R.string.stay_active_live)
     }
 
     private fun bindDuel(duel: LiveDuelState?) {
         duelCardView?.isVisible = true
         if (duel == null) {
-            duelMatchupView?.text = "You vs a matched rival"
-            duelMetricView?.text = "Post likes battle • Prize +12 YKC"
+            duelMatchupView?.text = fragment.getString(R.string.you_vs_matched_rival)
+            duelMetricView?.text = fragment.getString(R.string.live_duel_metric_prize, fragment.getString(R.string.post_likes), 12)
             duelYouScoreView?.text = "0"
-            duelOpponentLabelView?.text = "Rival"
+            duelOpponentLabelView?.text = fragment.getString(R.string.rival)
             duelOpponentScoreView?.text = "0"
-            duelTimerView?.text = "⏱ 05:00 duel window"
-            duelActionView?.text = "Start Like Duel"
+            duelTimerView?.text = fragment.getString(R.string.live_duel_window_sample)
+            duelActionView?.text = fragment.getString(R.string.start_like_duel)
             duelActionView?.alpha = 1f
             duelActionView?.setOnClickListener { createDuel("like") }
             return
         }
 
-        duelMatchupView?.text = "You vs ${duel.opponentName}"
-        duelMetricView?.text = "${formatMetricLabel(duel.metricType)} battle • Prize +${duel.prizeYkc} YKC"
+        duelMatchupView?.text = fragment.getString(R.string.you_vs_name, duel.opponentName)
+        duelMetricView?.text = fragment.getString(R.string.live_duel_metric_prize, formatMetricLabel(duel.metricType), duel.prizeYkc)
         duelYouScoreView?.text = duel.yourScore.toString()
         duelOpponentLabelView?.text = duel.opponentName
         duelOpponentScoreView?.text = duel.opponentScore.toString()
         duelTimerView?.text = when (duel.status) {
-            "active" -> "⏱ ${formatDuration(duel.timeLeftSeconds)} left"
-            "pending" -> if (duel.canJoin) "⏱ 05:00 duel window" else "Waiting for opponent"
-            "completed" -> if ((duel.winner ?: "") == TokenManager.getUserId(fragment.requireContext()).orEmpty()) "🏆 You won this duel" else "🏁 Duel completed"
+            "active" -> fragment.getString(R.string.live_duel_time_left, formatDuration(duel.timeLeftSeconds))
+            "pending" -> if (duel.canJoin) fragment.getString(R.string.live_duel_window_sample) else fragment.getString(R.string.waiting_for_opponent)
+            "completed" -> if ((duel.winner ?: "") == TokenManager.getUserId(fragment.requireContext()).orEmpty()) {
+                fragment.getString(R.string.you_won_duel)
+            } else {
+                fragment.getString(R.string.duel_completed)
+            }
             else -> ""
         }
 
         duelActionView?.text = when {
-            duel.canJoin -> "Join Duel"
-            duel.status == "pending" -> "Waiting..."
-            duel.status == "active" -> "Battle Live"
-            else -> "Start Duel"
+            duel.canJoin -> fragment.getString(R.string.join_duel)
+            duel.status == "pending" -> fragment.getString(R.string.waiting)
+            duel.status == "active" -> fragment.getString(R.string.battle_live)
+            else -> fragment.getString(R.string.start_duel)
         }
         duelActionView?.alpha = if (duel.status == "pending" && !duel.canJoin) 0.72f else 1f
         duelActionView?.setOnClickListener {
@@ -508,7 +524,7 @@ class YenkasaLiveSheetController(
         val context = fragment.context ?: return
         val token = TokenManager.getToken(context).orEmpty()
         if (token.isBlank()) return
-        if (!beginBattleRequest("Starting...")) return
+        if (!beginBattleRequest(context.getString(R.string.starting))) return
 
         duelActionCall = ApiClient.apiService.createLiveDuel(
             "Bearer $token",
@@ -518,15 +534,15 @@ class YenkasaLiveSheetController(
             override fun onResponse(call: Call<LiveDuelEnvelope>, response: Response<LiveDuelEnvelope>) {
                 handleDuelActionResponse(
                     response = response,
-                    successMessage = "Live duel created.",
-                    fallbackError = "Could not start live duel."
+                    successMessage = context.getString(R.string.live_duel_created),
+                    fallbackError = context.getString(R.string.could_not_start_live_duel)
                 )
             }
 
             override fun onFailure(call: Call<LiveDuelEnvelope>, t: Throwable) {
                 if (call.isCanceled && !battleLoading) return
                 finishBattleRequest()
-                Toast.makeText(context, "Could not start live duel. Check your connection.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.could_not_start_live_duel_check_connection, Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -535,7 +551,7 @@ class YenkasaLiveSheetController(
         val context = fragment.context ?: return
         val token = TokenManager.getToken(context).orEmpty()
         if (token.isBlank()) return
-        if (!beginBattleRequest("Joining...")) return
+        if (!beginBattleRequest(context.getString(R.string.joining))) return
 
         duelActionCall = ApiClient.apiService.joinLiveDuel(
             "Bearer $token",
@@ -545,15 +561,15 @@ class YenkasaLiveSheetController(
             override fun onResponse(call: Call<LiveDuelEnvelope>, response: Response<LiveDuelEnvelope>) {
                 handleDuelActionResponse(
                     response = response,
-                    successMessage = "Live duel joined.",
-                    fallbackError = "Could not join live duel."
+                    successMessage = context.getString(R.string.live_duel_joined),
+                    fallbackError = context.getString(R.string.could_not_join_live_duel)
                 )
             }
 
             override fun onFailure(call: Call<LiveDuelEnvelope>, t: Throwable) {
                 if (call.isCanceled && !battleLoading) return
                 finishBattleRequest()
-                Toast.makeText(context, "Could not join live duel. Check your connection.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.could_not_join_live_duel_check_connection, Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -570,7 +586,7 @@ class YenkasaLiveSheetController(
             if (!battleLoading) return@Runnable
             duelActionCall?.cancel()
             finishBattleRequest()
-            Toast.makeText(context, "Live battle is taking too long. Try again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.live_battle_taking_too_long, Toast.LENGTH_SHORT).show()
         }.also { pollHandler.postDelayed(it, BATTLE_ACTION_TIMEOUT_MS) }
         return true
     }
@@ -608,13 +624,13 @@ class YenkasaLiveSheetController(
         finishBattleRequest()
         if (response.code() == 409 && body?.duel != null) {
             bindDuel(body.duel)
-            Toast.makeText(context, body.error ?: "You already have a live battle.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, body.error ?: context.getString(R.string.already_have_live_battle), Toast.LENGTH_SHORT).show()
             return
         }
 
         val message = when (response.code()) {
-            404 -> body?.error ?: "No available opponent right now. Try again shortly."
-            409 -> body?.error ?: "That battle is no longer available. Refreshing Live."
+            404 -> body?.error ?: context.getString(R.string.no_available_opponent)
+            409 -> body?.error ?: context.getString(R.string.battle_no_longer_available)
             else -> body?.error ?: fallbackError
         }
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -630,10 +646,10 @@ class YenkasaLiveSheetController(
 
     private fun formatMetricLabel(metricType: String?): String {
         return when (metricType?.lowercase()) {
-            "comment", "comments" -> "Comments"
-            "view", "views" -> "Views"
-            "like", "likes" -> "Likes"
-            else -> "Comments"
+            "comment", "comments" -> fragment.getString(R.string.comments)
+            "view", "views" -> fragment.getString(R.string.views)
+            "like", "likes" -> fragment.getString(R.string.likes)
+            else -> fragment.getString(R.string.comments)
         }
     }
 

@@ -30,7 +30,7 @@ data class LiveStream(
 data class AgoraLiveToken(
     val appId: String = "",
     val token: String = "",
-    val uid: Int = 0,
+    val uid: Int? = null,
     val role: String = "audience",
     val expiresAt: Long = 0L
 )
@@ -47,6 +47,7 @@ data class JoinLiveStreamRequest(
 
 data class LiveStreamResponse(
     val success: Boolean = false,
+    val code: String? = null,
     val message: String? = null,
     val stream: LiveStream? = null,
     val agora: AgoraLiveToken? = null

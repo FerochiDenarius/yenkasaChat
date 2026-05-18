@@ -48,7 +48,7 @@ class PostApprovalActivity : AppCompatActivity() {
         Log.d(TAG, "Post approval permission check role=$role canApprove=$canApprove")
 
         if (!canApprove) {
-            emptyText.text = "🚫 You are not authorized to approve posts."
+            emptyText.text = getString(R.string.not_authorized_approve_posts)
             emptyText.visibility = View.VISIBLE
             return
         }
@@ -92,17 +92,17 @@ class PostApprovalActivity : AppCompatActivity() {
                             adapter.updateItems(pending)
                             recyclerView.visibility = View.VISIBLE
                         } else {
-                            showEmpty("No pending posts.")
+                            showEmpty(getString(R.string.no_pending_posts))
                         }
                     } else {
                         Log.w(TAG, "Failed to load pending approvals code=${response.code()} error=${response.errorBody()?.string()}")
-                        showEmpty("Failed to load pending posts.")
+                        showEmpty(getString(R.string.failed_to_load_pending_posts))
                     }
                 }
 
                 override fun onFailure(call: Call<PostApprovalResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
-                    showEmpty("Network error: ${t.message}")
+                    showEmpty(getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)))
                 }
             })
 
@@ -115,15 +115,19 @@ class PostApprovalActivity : AppCompatActivity() {
             .enqueue(object : Callback<Void> {
                 override fun onResponse(call: Call<Void>, response: Response<Void>) {
                     if (response.isSuccessful) {
-                        Toast.makeText(this@PostApprovalActivity, "Post Approved!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PostApprovalActivity, R.string.post_approved, Toast.LENGTH_SHORT).show()
                         loadPendingPosts()
                     } else {
-                        Toast.makeText(this@PostApprovalActivity, "Approval failed.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PostApprovalActivity, R.string.approval_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<Void>, t: Throwable) {
-                    Toast.makeText(this@PostApprovalActivity, t.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@PostApprovalActivity,
+                        getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -135,15 +139,19 @@ class PostApprovalActivity : AppCompatActivity() {
             .enqueue(object : Callback<Void> {
                 override fun onResponse(call: Call<Void>, response: Response<Void>) {
                     if (response.isSuccessful) {
-                        Toast.makeText(this@PostApprovalActivity, "Post Rejected.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PostApprovalActivity, R.string.post_rejected, Toast.LENGTH_SHORT).show()
                         loadPendingPosts()
                     } else {
-                        Toast.makeText(this@PostApprovalActivity, "Rejection failed.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PostApprovalActivity, R.string.rejection_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<Void>, t: Throwable) {
-                    Toast.makeText(this@PostApprovalActivity, t.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@PostApprovalActivity,
+                        getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }

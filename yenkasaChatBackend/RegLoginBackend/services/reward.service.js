@@ -2,6 +2,7 @@ const CoinTransaction = require('../models/cointransaction.model');
 const User = require('../models/user.model');
 const Post = require('../models/post.model');
 const CoinSupply = require('../models/coinSupply');
+const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 const { SYSTEM_USER_ID, SYSTEM_USERNAME, SYSTEM_WALLET_ID } = require('../config/system');
 const { sendNotification } = require('./notification.service');
@@ -10,7 +11,10 @@ const {
   normalizeRewardAmount,
   startOfMonth,
   getRewardGuard,
-  logYkcActivity
+  logYkcActivity,
+  recordCountryRewardAnalytics,
+  resolveRewardCountry,
+  getCountryRewardConfig
 } = require('./ykcEconomy.service');
 
 
@@ -22,20 +26,50 @@ async function reward(toUserId, amount, opts = {}) {
     const now = new Date();
     const type = opts.type || "BONUS";
     const normalizedAmount = normalizeRewardAmount(type, amount, now);
-    console.log('⚙️ [Reward] Begin →', { toUserId, requestedAmount: amount, amount: normalizedAmount, type });
-
     if (!toUserId || !normalizedAmount || Number(normalizedAmount) <= 0) {
       console.warn('⚠️ Invalid reward params', { toUserId, amount: normalizedAmount, type });
       return null;
     }
 
-    const guard = await getRewardGuard({ userId: toUserId, type, amount: normalizedAmount, now });
+    if (!mongoose.Types.ObjectId.isValid(toUserId)) {
+      console.warn('⚠️ Invalid reward user id', { toUserId, type });
+      return null;
+    }
+
+    const toUser = await User.findById(toUserId).select('username walletId coinsBalance ykcBalance ykcEarnedThisMonth ykcLastReset country verifiedCountry detectedCountry countryConfidence countryVerificationStatus');
+    if (!toUser) {
+      console.error("❌ Reward aborted → User not found:", toUserId);
+      return null;
+    }
+
+    const rewardCountry = resolveRewardCountry(toUser);
+    const rewardCap = getCountryRewardConfig(rewardCountry.country).dailyYkcCap;
+    console.log('⚙️ [Reward] Begin →', {
+      toUserId,
+      requestedAmount: amount,
+      amount: normalizedAmount,
+      type,
+      country: rewardCountry.country,
+      countrySource: rewardCountry.source,
+      dailyCap: rewardCap
+    });
+
+    const guard = await getRewardGuard({
+      userId: toUserId,
+      type,
+      amount: normalizedAmount,
+      now,
+      country: rewardCountry.country,
+      dailyCap: rewardCap
+    });
     if (!guard.allowed) {
       console.warn('[YKC Reward] blocked', {
         userId: toUserId?.toString(),
         action: type,
         coinsAwarded: 0,
         reason: guard.reason,
+        country: rewardCountry.country,
+        dailyCap: guard.dailyCap || rewardCap,
         timestamp: now
       });
       await logYkcActivity({
@@ -44,7 +78,19 @@ async function reward(toUserId, amount, opts = {}) {
         coinsAwarded: 0,
         timestamp: now,
         suspicious: true,
-        metadata: { reason: guard.reason, dailyEarned: guard.dailyEarned }
+        metadata: {
+          reason: guard.reason,
+          dailyEarned: guard.dailyEarned,
+          country: rewardCountry.country,
+          countrySource: rewardCountry.source,
+          dailyCap: guard.dailyCap || rewardCap
+        }
+      });
+      await recordCountryRewardAnalytics(toUser, 0, {
+        type,
+        activityId: opts.activityId || null,
+        blocked: true,
+        reason: guard.reason
       });
       return null;
     }
@@ -80,8 +126,16 @@ async function reward(toUserId, amount, opts = {}) {
           metadata: {
             reason: "duplicate_activity_id",
             activityId,
-            transactionId: existingTx.transactionId
+            transactionId: existingTx.transactionId,
+            country: rewardCountry.country,
+            countrySource: rewardCountry.source
           }
+        });
+        await recordCountryRewardAnalytics(toUser, 0, {
+          type,
+          activityId,
+          blocked: true,
+          reason: "duplicate_activity_id"
         });
         return existingTx;
       }
@@ -107,15 +161,6 @@ async function reward(toUserId, amount, opts = {}) {
 
     if (!supply) {
       console.error("❌ FAILED TO UPDATE SUPPLY: supply=null");
-      return null;
-    }
-
-    /* ---------------------------------------------------
-     * Load user
-     * --------------------------------------------------- */
-    const toUser = await User.findById(toUserId).select('username walletId coinsBalance ykcBalance ykcEarnedThisMonth ykcLastReset');
-    if (!toUser) {
-      console.error("❌ Reward aborted → User not found:", toUserId);
       return null;
     }
 
@@ -181,8 +226,19 @@ const tx = await CoinTransaction.create({
       metadata: {
         transactionId: tx.transactionId,
         activityId,
-        dailyEarnedBefore: guard.dailyEarned || 0
+        dailyEarnedBefore: guard.dailyEarned || 0,
+        country: rewardCountry.country,
+        countrySource: rewardCountry.source,
+        dailyCap: rewardCap
       }
+    });
+
+    await recordCountryRewardAnalytics(toUser, Number(normalizedAmount), {
+      type,
+      activityId,
+      transactionId: tx.transactionId,
+      country: rewardCountry.country,
+      countrySource: rewardCountry.source
     });
 
     try {

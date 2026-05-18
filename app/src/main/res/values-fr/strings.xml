@@ -959,6 +959,8 @@
     <string name="already_have_live_battle">Vous avez déjà un duel Live.</string>
     <string name="no_available_opponent">Aucun adversaire disponible pour le moment. Réessayez bientôt.</string>
     <string name="battle_no_longer_available">Ce duel n’est plus disponible. Actualisation de Live.</string>
+    <string name="live_audience_permissions_required">Les autorisations caméra et microphone sont nécessaires pour regarder les directs sur cet appareil.</string>
+    <string name="live_agora_join_failed_with_code">La vidéo en direct n’a pas pu démarrer. La connexion Agora a échoué avec le code %1$d.</string>
     <plurals name="profile_days_count">
         <item quantity="one">%d jour</item>
         <item quantity="other">%d jours</item>

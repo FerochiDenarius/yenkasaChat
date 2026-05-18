@@ -65,6 +65,6 @@ class FeedSyncWorker(
 
     private companion object {
         const val CACHE_SCHEMA_VERSION = 2
-        const val PLAYER_RENDERER_VERSION = "yenkasa_player_v2"
+        const val PLAYER_RENDERER_VERSION = "yenkasa_player_v3"
     }
 }

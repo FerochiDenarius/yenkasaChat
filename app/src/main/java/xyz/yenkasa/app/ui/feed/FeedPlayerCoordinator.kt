@@ -52,6 +52,9 @@ class FeedPlayerCoordinator(
     )
 
     fun setup() {
+        recyclerView.stopScroll()
+        recyclerView.adapter = null
+        recyclerView.recycledViewPool.clear()
         recyclerView.layoutManager = layoutManager
         recyclerView.adapter = playerAdapter
         recyclerView.itemAnimator = null
@@ -92,6 +95,7 @@ class FeedPlayerCoordinator(
 
     fun resetRenderedState() {
         playerAdapter.releaseAll(recyclerView)
+        playerAdapter.resetTransientState()
         recyclerView.recycledViewPool.clear()
     }
 

@@ -116,11 +116,6 @@ class FeedAdapter(
             is Post -> {
                 val indexInPosts = computePostIndex(position)
 
-                if (currentPostsForInternal.size != totalPostsCount()) {
-                    currentPostsForInternal = extractPosts(items)
-                    internalPostAdapter.updatePosts(currentPostsForInternal)
-                }
-
                 internalPostAdapter.onBindViewHolder(
                     holder as PostAdapter.PostViewHolder,
                     indexInPosts
@@ -166,7 +161,8 @@ class FeedAdapter(
             }
         })
         items = newItems
-        currentPostsForInternal = emptyList()
+        currentPostsForInternal = extractPosts(newItems)
+        internalPostAdapter.updatePosts(currentPostsForInternal)
         diff.dispatchUpdatesTo(this)
     }
 
@@ -202,11 +198,6 @@ class FeedAdapter(
     fun autoPlayCenteredVideo(recyclerView: RecyclerView, adapterPosition: Int) {
         val item = items.getOrNull(adapterPosition) as? Post ?: return
         if (item.videoUrl.isNullOrBlank()) return
-
-        if (currentPostsForInternal.size != totalPostsCount()) {
-            currentPostsForInternal = extractPosts(items)
-            internalPostAdapter.updatePosts(currentPostsForInternal)
-        }
 
         val holder = recyclerView.findViewHolderForAdapterPosition(adapterPosition) as? PostAdapter.PostViewHolder
             ?: return

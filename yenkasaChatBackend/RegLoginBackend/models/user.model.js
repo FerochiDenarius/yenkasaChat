@@ -54,6 +54,37 @@ const userSchema = new Schema({
     default: "Ghana"
   },
 
+  verifiedCountry: {
+    type: String,
+    default: ''
+  },
+
+  detectedCountry: {
+    type: String,
+    default: ''
+  },
+
+  countryConfidence: {
+    type: Number,
+    default: 0
+  },
+
+  countryVerificationStatus: {
+    type: String,
+    enum: ['geoip_verified', 'client_fallback', 'fallback', 'unknown'],
+    default: 'unknown'
+  },
+
+  countryLastVerifiedAt: {
+    type: Date,
+    default: null
+  },
+
+  lastCountrySwitchAt: {
+    type: Date,
+    default: null
+  },
+
   location: { type: String, default: '' },
   community: { type: Schema.Types.ObjectId, ref: 'Community', default: null },
 

@@ -1,7 +1,9 @@
 package xyz.yenkasa.app.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -16,6 +18,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -113,6 +116,22 @@ class LiveStreamActivity : AppCompatActivity() {
             if (scheduledEndAtMillis > 0L) timerHandler.postDelayed(this, 1_000L)
         }
     }
+    private val agoraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        val granted = hasAgoraPermissions()
+        Log.i(
+            tag,
+            "Agora permission result. granted=$granted host=$isHost streamId=$streamId channel=$channelName result=$result"
+        )
+        if (granted) {
+            initializeAgora()
+        } else {
+            Toast.makeText(this, agoraPermissionDeniedMessage(), Toast.LENGTH_LONG).show()
+            if (isHost && !hostReadyEmitted) cancelStartingLive()
+            finish()
+        }
+    }
 
     private val rtcHandler = object : IRtcEngineEventHandler() {
         override fun onUserJoined(uid: Int, elapsed: Int) {
@@ -201,7 +220,7 @@ class LiveStreamActivity : AppCompatActivity() {
         bindActions()
         refreshLiveIdentity()
         setupSocket()
-        initializeAgora()
+        ensureAgoraPermissionsThenStart()
     }
 
     private fun readExtras() {
@@ -567,6 +586,39 @@ class LiveStreamActivity : AppCompatActivity() {
         )
     }
 
+    private fun ensureAgoraPermissionsThenStart() {
+        val missing = requiredAgoraPermissions()
+            .filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+            .toTypedArray()
+        Log.i(
+            tag,
+            "Agora permission check. missing=${missing.toList()} host=$isHost streamId=$streamId channel=$channelName uid=$agoraUid"
+        )
+        if (missing.isEmpty()) {
+            initializeAgora()
+        } else {
+            agoraPermissionLauncher.launch(missing)
+        }
+    }
+
+    private fun requiredAgoraPermissions(): Array<String> {
+        return arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+    }
+
+    private fun hasAgoraPermissions(): Boolean {
+        return requiredAgoraPermissions().all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun agoraPermissionDeniedMessage(): Int {
+        return if (isHost) {
+            R.string.camera_mic_permissions_required
+        } else {
+            R.string.live_audience_permissions_required
+        }
+    }
+
     private fun initializeAgora() {
         if (agoraAppId.isBlank() || channelName.isBlank() || agoraToken.isBlank() || !isValidAgoraUid(agoraUid)) {
             Log.e(
@@ -582,6 +634,18 @@ class LiveStreamActivity : AppCompatActivity() {
             finish()
             return
         }
+        if (!hasAgoraPermissions()) {
+            Log.w(tag, "Blocked Agora startup without runtime permissions. host=$isHost streamId=$streamId channel=$channelName uid=$agoraUid")
+            Toast.makeText(this, agoraPermissionDeniedMessage(), Toast.LENGTH_LONG).show()
+            if (isHost && !hostReadyEmitted) cancelStartingLive()
+            finish()
+            return
+        }
+
+        Log.i(
+            tag,
+            "Creating Agora engine. host=$isHost streamId=$streamId channel=$channelName uid=$agoraUid cameraGranted=${ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED} micGranted=${ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED}"
+        )
 
         rtcEngine = RtcEngine.create(applicationContext, agoraAppId, rtcHandler).apply {
             setChannelProfile(Constants.CHANNEL_PROFILE_LIVE_BROADCASTING)
@@ -602,6 +666,13 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun joinAgoraChannel(reason: String) {
+        if (!hasAgoraPermissions()) {
+            Log.w(tag, "Blocked Agora join without runtime permissions. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+            Toast.makeText(this, agoraPermissionDeniedMessage(), Toast.LENGTH_LONG).show()
+            if (isHost && !hostReadyEmitted) cancelStartingLive()
+            finish()
+            return
+        }
         if (!isValidAgoraUid(agoraUid)) {
             Log.e(tag, "Blocked Agora join with invalid UID. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
             Toast.makeText(this, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
@@ -620,13 +691,13 @@ class LiveStreamActivity : AppCompatActivity() {
         val result = rtcEngine?.joinChannel(agoraToken, channelName, agoraUid, options) ?: -1
         Log.i(
             tag,
-            "Agora joinChannel requested. reason=$reason result=$result streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost tokenExpiresAt=${intent.getLongExtra(EXTRA_EXPIRES_AT, 0L)}"
+            "Agora joinChannel requested. reason=$reason result=$result streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost publishCamera=${options.publishCameraTrack} publishMic=${options.publishMicrophoneTrack} tokenExpiresAt=${intent.getLongExtra(EXTRA_EXPIRES_AT, 0L)}"
         )
         if (result < 0) {
             if (!joinRetried) {
                 retryAgoraJoin("join_result_$result")
             } else {
-                Toast.makeText(this, R.string.live_join_setup_failed, Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.live_agora_join_failed_with_code, result), Toast.LENGTH_LONG).show()
                 if (isHost && !hostReadyEmitted) cancelStartingLive()
                 finish()
             }

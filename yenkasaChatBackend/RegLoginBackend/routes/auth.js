@@ -7,6 +7,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model'); 
 const Community = require('../models/community.model');
+const ActivityLog = require('../models/activityLog.model');
+const {
+  buildCountryVerification,
+  normalizeCountryLabel,
+  recordCountrySecuritySignal
+} = require('../services/regionalRewards.service');
 
 
 // ✅ Sanitize helper
@@ -53,6 +59,10 @@ function getEffectiveRoleName(user) {
   return normalizeRoleKey(user.roleName || user.accessRole || user.role?.role || user.role) || 'unverified';
 }
 
+function utcStartOfDay(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
 router.post('/register', async (req, res) => {
   console.log("🔥 /api/auth/register HIT");
   console.log("📩 Incoming body:", req.body);
@@ -89,6 +99,11 @@ router.post('/register', async (req, res) => {
         message: "Registration is currently available only in Ghana and Nigeria."
       });
     }
+
+    const countryContext = await buildCountryVerification(req, {
+      clientCountry: selectedCountry,
+      currentCountry: selectedCountry
+    });
 
     // Validate required
     console.log("🔍 Checking required fields…");
@@ -163,6 +178,11 @@ router.post('/register', async (req, res) => {
       username,
       location,
       country: selectedCountry,
+      verifiedCountry: countryContext.detectedCountry || '',
+      detectedCountry: countryContext.detectedCountry || '',
+      countryConfidence: countryContext.countryConfidence,
+      countryVerificationStatus: countryContext.verificationStatus,
+      countryLastVerifiedAt: countryContext.detectedCountry ? new Date() : null,
       password: hashedPassword,
       community: selectedCommunityIds[0],
       joinedCommunities: selectedCommunityIds,
@@ -181,6 +201,31 @@ router.post('/register', async (req, res) => {
         await Community.findByIdAndUpdate(id, { memberCount: count });
       })
     );
+
+    const sameIpAccountCreations = countryContext.ipAddress
+      ? await ActivityLog.countDocuments({
+          action: 'ACCOUNT_CREATED',
+          ipAddress: countryContext.ipAddress,
+          timestamp: { $gte: utcStartOfDay(new Date()) }
+        })
+      : 0;
+
+    await recordCountrySecuritySignal({
+      req,
+      userId: newUser._id,
+      action: 'ACCOUNT_CREATED',
+      country: selectedCountry,
+      detectedCountry: countryContext.detectedCountry,
+      verifiedCountry: newUser.verifiedCountry,
+      countryConfidence: newUser.countryConfidence,
+      suspicious: Boolean(countryContext.countrySwitchSuspected || sameIpAccountCreations >= 5),
+      metadata: {
+        registrationCountry: selectedCountry,
+        detectedCountry: countryContext.detectedCountry || '',
+        sameIpAccountCreations
+      }
+    });
+
     console.log("🎉 User created successfully:", newUser._id);
 
     // 🔥 THIS WAS MISSING — MUST RETURN A RESPONSE
@@ -188,6 +233,11 @@ router.post('/register', async (req, res) => {
       success: true,
       message: "User registered successfully",
       userId: newUser._id,
+      country: newUser.country,
+      verifiedCountry: newUser.verifiedCountry || '',
+      detectedCountry: newUser.detectedCountry || '',
+      countryConfidence: newUser.countryConfidence || 0,
+      countryVerificationStatus: newUser.countryVerificationStatus || 'unknown'
     });
 
   } catch (err) {
@@ -234,6 +284,47 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const countryContext = await buildCountryVerification(req, {
+      clientCountry: user.country,
+      currentCountry: user.country,
+      userId: user._id
+    });
+    const existingVerifiedCountry = normalizeCountryLabel(user.verifiedCountry);
+    const detectedCountry = countryContext.detectedCountry || '';
+    const countryMismatch = Boolean(detectedCountry) && existingVerifiedCountry
+      ? normalizeCountryLabel(detectedCountry).toLowerCase() !== existingVerifiedCountry.toLowerCase()
+      : false;
+
+    if (detectedCountry) {
+      user.detectedCountry = detectedCountry;
+      user.countryConfidence = Math.max(Number(user.countryConfidence || 0), Number(countryContext.countryConfidence || 0));
+      if (!existingVerifiedCountry) {
+        user.verifiedCountry = detectedCountry;
+        user.countryVerificationStatus = 'geoip_verified';
+        user.countryLastVerifiedAt = new Date();
+      }
+      if (countryMismatch || countryContext.countrySwitchSuspected) {
+        user.lastCountrySwitchAt = new Date();
+      }
+      await user.save();
+
+      await recordCountrySecuritySignal({
+        req,
+        userId: user._id,
+        action: 'LOGIN_COUNTRY_CHECK',
+        country: user.country,
+        detectedCountry,
+        verifiedCountry: user.verifiedCountry,
+        countryConfidence: user.countryConfidence,
+        suspicious: countryMismatch || Boolean(countryContext.countrySwitchSuspected),
+        metadata: {
+          verificationStatus: user.countryVerificationStatus,
+          currentCountry: user.country,
+          detectedCountry
+        }
+      });
     }
 
     // 🔹 MIGRATION FIX: if user.role is a string or invalid, correct it on the fly
@@ -297,6 +388,11 @@ router.post('/login', async (req, res) => {
     accessRole: user.accessRole || effectiveRoleName.toUpperCase(),
     staffRole: user.staffRole || null,
     publicRoles: user.publicRoles || [],
+    country: user.country,
+    verifiedCountry: user.verifiedCountry || '',
+    detectedCountry: user.detectedCountry || '',
+    countryConfidence: user.countryConfidence || 0,
+    countryVerificationStatus: user.countryVerificationStatus || 'unknown',
   },
   token: accessTokenValue,
   refreshToken: refreshTokenValue,

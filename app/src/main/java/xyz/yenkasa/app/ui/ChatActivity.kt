@@ -55,6 +55,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import io.socket.emitter.Emitter
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.EmojiPickerAdapter
 import xyz.yenkasa.app.webrtc.VideoCallActivity
@@ -149,6 +150,15 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private var lastInChatMessageSoundAt: Long = 0L
     private var lastLaughReactionSentAt: Long = 0L
     private var lastLaughReactionPlayedAt: Long = 0L
+    private val fallbackSoundPlayers = mutableSetOf<MediaPlayer>()
+    private var presenceListenersAttached = false
+    private var realtimeListenersAttached = false
+    private var onlineUsersListener: Emitter.Listener? = null
+    private var userStatusChangedListener: Emitter.Listener? = null
+    private var presenceUpdateListener: Emitter.Listener? = null
+    private var messageCreatedListener: Emitter.Listener? = null
+    private var messageEditedListener: Emitter.Listener? = null
+    private var messageDeletedListener: Emitter.Listener? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
@@ -408,11 +418,6 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             return
         }
 
-        if (!isGroupChat) {
-            setupPresenceListeners()
-        }
-        setupRealtimeMessageListeners()
-
         // --- Listen for signaling messages (CALL_REQUEST / ACCEPT / REJECT) ---
         lifecycleScope.launch {
             webSocketManager.signalingMessages.collect { msg ->
@@ -458,7 +463,12 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.startFetchingMessagesRepeatedly()
         }
-        joinRealtimeChatRoom()
+        if (::chatMessageHandler.isInitialized) {
+            if (!isGroupChat) {
+                setupPresenceListeners()
+            }
+            setupRealtimeMessageListeners()
+        }
     }
 
     override fun onResume() {
@@ -478,6 +488,8 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
         isChatVisible = false
         ChatNotificationState.clearActiveRoom(roomId)
         leaveRealtimeChatRoom()
+        removeRealtimeMessageListeners()
+        removePresenceListeners()
         if (::chatActivityHelper.isInitialized) {
             chatActivityHelper.stopFetchingMessages()
         }
@@ -495,14 +507,19 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             chatActivityHelper.cleanup()
         }
         if (::messageAdapter.isInitialized) {
-            messageAdapter.pauseAllVideos()
+            messageAdapter.releaseAllMedia()
+            messageAdapter.setOnMessageLongClickListener(null)
         }
-        SocketManager.off("getOnlineUsers")
-        SocketManager.off("userStatusChanged")
-        SocketManager.off("presence:update")
-        SocketManager.off("messageCreated")
-        SocketManager.off("messageEdited")
-        SocketManager.off("messageDeleted")
+        removeRealtimeMessageListeners()
+        removePresenceListeners()
+        if (::recyclerView.isInitialized) {
+            recyclerView.adapter = null
+        }
+        if (::imageMediaPreview.isInitialized) {
+            runCatching { Glide.with(this).clear(imageMediaPreview) }
+        }
+        pendingPermissionAction = null
+        uiHandler.removeCallbacksAndMessages(null)
         releaseChatSoundEffects()
         super.onDestroy()
     }
@@ -1533,10 +1550,11 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private fun setupPresenceListeners() {
+        if (presenceListenersAttached) return
         SocketManager.ensureConnected(senderId)
         SocketManager.emitUserConnected(senderId)
 
-        SocketManager.on("getOnlineUsers") { data ->
+        onlineUsersListener = SocketManager.on("getOnlineUsers") { data ->
             val receiverId = receiverParticipant?._id ?: return@on
             val isOnline = isReceiverOnline(data, receiverId)
             runOnUiThread {
@@ -1547,22 +1565,24 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
         }
 
-        SocketManager.on("userStatusChanged") { data ->
+        userStatusChangedListener = SocketManager.on("userStatusChanged") { data ->
             handlePresenceChangedEvent(data)
         }
 
-        SocketManager.on("presence:update") { data ->
+        presenceUpdateListener = SocketManager.on("presence:update") { data ->
             handlePresenceChangedEvent(data)
         }
 
+        presenceListenersAttached = true
         SocketManager.requestOnlineUsers()
     }
 
     private fun setupRealtimeMessageListeners() {
+        if (realtimeListenersAttached) return
         SocketManager.ensureConnected(senderId)
         joinRealtimeChatRoom()
 
-        SocketManager.on("messageCreated") { data ->
+        messageCreatedListener = SocketManager.on("messageCreated") { data ->
             val incoming = parseSocketMessage(data) ?: return@on
             if (incoming.roomId != roomId) return@on
             runOnUiThread {
@@ -1581,13 +1601,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
         }
 
-        SocketManager.on("messageEdited") { data ->
+        messageEditedListener = SocketManager.on("messageEdited") { data ->
             val edited = parseSocketMessage(data) ?: return@on
             if (edited.roomId != roomId) return@on
             runOnUiThread { upsertRealtimeMessage(edited) }
         }
 
-        SocketManager.on("messageDeleted") { data ->
+        messageDeletedListener = SocketManager.on("messageDeleted") { data ->
             val json = parseSocketJson(data) ?: return@on
             if (json.optString("roomId") != roomId) return@on
             val deletedMessageId = json.optString("messageId")
@@ -1599,6 +1619,27 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
             }
         }
 
+        realtimeListenersAttached = true
+    }
+
+    private fun removePresenceListeners() {
+        SocketManager.off("getOnlineUsers", onlineUsersListener)
+        SocketManager.off("userStatusChanged", userStatusChangedListener)
+        SocketManager.off("presence:update", presenceUpdateListener)
+        onlineUsersListener = null
+        userStatusChangedListener = null
+        presenceUpdateListener = null
+        presenceListenersAttached = false
+    }
+
+    private fun removeRealtimeMessageListeners() {
+        SocketManager.off("messageCreated", messageCreatedListener)
+        SocketManager.off("messageEdited", messageEditedListener)
+        SocketManager.off("messageDeleted", messageDeletedListener)
+        messageCreatedListener = null
+        messageEditedListener = null
+        messageDeletedListener = null
+        realtimeListenersAttached = false
     }
 
     private fun joinRealtimeChatRoom() {
@@ -1673,8 +1714,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
         runCatching {
             MediaPlayer.create(this, rawFallbackRes)?.apply {
-                setOnCompletionListener { player -> player.release() }
+                fallbackSoundPlayers.add(this)
+                setOnCompletionListener { player ->
+                    fallbackSoundPlayers.remove(player)
+                    player.release()
+                }
                 setOnErrorListener { player, _, _ ->
+                    fallbackSoundPlayers.remove(player)
                     player.release()
                     true
                 }
@@ -1688,6 +1734,13 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     private fun releaseChatSoundEffects() {
         soundPool?.release()
         soundPool = null
+        fallbackSoundPlayers.toList().forEach { player ->
+            runCatching {
+                if (player.isPlaying) player.stop()
+                player.release()
+            }
+        }
+        fallbackSoundPlayers.clear()
         loadedSoundIds.clear()
         inChatMessageSoundId = 0
         laughReactionSoundId = 0

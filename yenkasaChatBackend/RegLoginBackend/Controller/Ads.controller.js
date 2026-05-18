@@ -6,6 +6,10 @@ const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
 const rewardService = require('../services/reward.service');
 const { canApproveContent, canCreateAd, getPermissions, REVIEWER_RANKS } = require('../middleware/permissions');
+const {
+  resolveRewardCountry,
+  recordRegionalRewardDaily
+} = require('../services/regionalRewards.service');
 
 const AD_REVIEWER_ROLES = new Set(REVIEWER_RANKS.map((rank) => rank.toLowerCase()));
 const AD_REVIEWER_ACCESS_ROLES = [...REVIEWER_RANKS];
@@ -72,12 +76,28 @@ exports.recordAdView = async (req, res) => {
     const userId = req.user.id;
     const { adId } = req.params;
     const { durationMs = 0, fullyWatched = false, deviceInfo = {} } = req.body;
+    const userCountry = resolveRewardCountry(req.user);
 
     const ad = await Ad.findOne({ _id: adId, ...publicAdFilter() });
     if(!ad) return res.status(404).json({ success:false, message:'Ad not found' });
 
     const adView = new AdView({ adId, userId, durationMs, fullyWatched, deviceInfo });
     await adView.save();
+
+    await recordRegionalRewardDaily({
+      country: userCountry.country,
+      platform: 'android',
+      impressions: 1,
+      requests: 1,
+      verifiedCountry: req.user?.verifiedCountry || '',
+      detectedCountry: req.user?.detectedCountry || '',
+      countryConfidence: req.user?.countryConfidence || userCountry.confidence,
+      metadata: {
+        event: 'ad_view',
+        adId: adId.toString(),
+        fullyWatched: Boolean(fullyWatched)
+      }
+    });
 
     // increment impressions
     ad.impressions = (ad.impressions||0) + 1;

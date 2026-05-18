@@ -223,6 +223,11 @@ class YenkasaChatMediaView @JvmOverloads constructor(
             activeView?.restoreVideoThumb()
         }
 
+        fun releaseActiveVideo() {
+            activeView?.release()
+            activeView = null
+        }
+
         fun inferPayload(imageUrl: String?, videoUrl: String?, fileUrl: String?): MediaPayload {
             videoUrl?.takeIf { it.isNotBlank() }?.let {
                 return MediaPayload(it, MediaKind.VIDEO)

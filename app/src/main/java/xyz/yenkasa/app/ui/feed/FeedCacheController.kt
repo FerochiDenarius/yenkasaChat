@@ -175,7 +175,7 @@ class FeedCacheController(
         const val FEED_CACHE_PREF_NAME = "yenkasa_cache"
         const val FEED_RENDERER_GENERATION_KEY = "feed_renderer_generation"
         const val CACHE_SCHEMA_VERSION = 2
-        const val PLAYER_RENDERER_VERSION = "yenkasa_player_v2"
+        const val PLAYER_RENDERER_VERSION = "yenkasa_player_v3"
         const val DEFAULT_CACHE_KEY = "default"
         const val MAX_CACHED_POSTS = 100
         const val MAX_COMMUNITY_CACHED_POSTS = 60

@@ -1,6 +1,10 @@
 const AdMetricDaily = require('../models/adMetricDaily.model');
 const User = require('../models/user.model');
 const YkcPayout = require('../models/ykcPayout.model');
+const {
+  normalizeCountryLabel,
+  recordRegionalRewardDaily
+} = require('./regionalRewards.service');
 
 const REWARD_POOL_RATIO = 0.25;
 
@@ -41,6 +45,7 @@ function monthBounds(month = currentMonth()) {
 
 function normalizeDailyMetricInput(input) {
   const date = (input.date || '').toString().trim();
+  const country = normalizeCountryLabel(input.country || 'Ghana') || 'Ghana';
   const platform = (input.platform || '').toString().trim().toLowerCase();
   const impressions = Number(input.impressions);
   const requests = Number(input.requests);
@@ -66,6 +71,7 @@ function normalizeDailyMetricInput(input) {
 
   return {
     date,
+    country,
     platform,
     impressions,
     requests,
@@ -82,7 +88,11 @@ async function upsertDailyAdMetrics(input) {
     { date: metric.date, platform: metric.platform },
     {
       $set: {
-        ...metric,
+        date: metric.date,
+        platform: metric.platform,
+        impressions: metric.impressions,
+        requests: metric.requests,
+        revenue: metric.revenue,
         ecpm: roundMetric(ecpm),
         fillRate: roundMetric(fillRate)
       }
@@ -98,6 +108,18 @@ async function upsertDailyAdMetrics(input) {
     revenue: saved.revenue,
     ecpm: saved.ecpm,
     fillRate: saved.fillRate
+  });
+
+  await recordRegionalRewardDaily({
+    country: metric.country,
+    platform: metric.platform,
+    impressions: metric.impressions,
+    requests: metric.requests,
+    adRevenue: metric.revenue,
+    metadata: {
+      source: 'adRevenue.dailyUpsert',
+      date: metric.date
+    }
   });
 
   return saved;

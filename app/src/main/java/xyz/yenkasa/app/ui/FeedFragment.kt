@@ -299,6 +299,9 @@ class FeedFragment : Fragment() {
 
     private fun setupRecyclerView() {
         layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.stopScroll()
+        recyclerView.adapter = null
+        recyclerView.recycledViewPool.clear()
         recyclerView.itemAnimator = null
         recyclerView.setItemViewCacheSize(0)
 

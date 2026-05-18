@@ -651,6 +651,8 @@
     <string name="live_token_expired_user_message">Your live video session expired. Reconnecting...</string>
     <string name="live_video_credentials_invalid">Live video is temporarily unavailable. Please try again later.</string>
     <string name="live_video_join_failed">We could not connect to the live video. Please try again.</string>
+    <string name="live_audience_permissions_required">Camera and microphone permissions are required to watch live streams on this device.</string>
+    <string name="live_agora_join_failed_with_code">Live video could not start. Agora join failed with code %1$d.</string>
     <string name="gift_love">❤️ Love</string>
     <string name="gift_fire">🔥 Fire</string>
     <string name="gift_crown">👑 Crown</string>

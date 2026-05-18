@@ -35,7 +35,7 @@ class MessageAdapter(
 
     private var longClickListener: OnMessageLongClickListener? = null
 
-    fun setOnMessageLongClickListener(listener: OnMessageLongClickListener) {
+    fun setOnMessageLongClickListener(listener: OnMessageLongClickListener?) {
         this.longClickListener = listener
     }
 
@@ -79,6 +79,13 @@ class MessageAdapter(
             holder.recycleMediaState()
         }
         super.onViewRecycled(holder)
+    }
+
+    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
+        if (holder is BaseMessageViewHolder) {
+            holder.recycleMediaState()
+        }
+        super.onViewDetachedFromWindow(holder)
     }
 
     // ------------------------------------------------------------
@@ -388,5 +395,9 @@ class MessageAdapter(
 
     fun pauseAllVideos() {
         YenkasaChatMediaView.pauseActiveVideo()
+    }
+
+    fun releaseAllMedia() {
+        YenkasaChatMediaView.releaseActiveVideo()
     }
 }

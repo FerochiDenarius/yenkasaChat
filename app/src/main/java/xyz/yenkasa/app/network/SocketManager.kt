@@ -4,6 +4,7 @@ import android.util.Log
 import xyz.yenkasa.app.model.*
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import org.json.JSONObject
 import java.net.URISyntaxException
 
@@ -130,17 +131,24 @@ object SocketManager {
     // ------------------------------------------------------------------
     // 🔹 Event Handling
     // ------------------------------------------------------------------
-    fun on(event: String, listener: (data: Any) -> Unit) {
+    fun on(event: String, listener: (data: Any) -> Unit): Emitter.Listener? {
         if (socket == null && !currentUserId.isNullOrEmpty()) {
             connect(currentUserId)
         }
-        socket?.on(event) { args ->
+        val emitterListener = Emitter.Listener { args ->
             if (args.isNotEmpty()) listener(args[0])
         }
+        socket?.on(event, emitterListener)
+        return emitterListener
     }
 
     fun off(event: String) {
         socket?.off(event)
+    }
+
+    fun off(event: String, listener: Emitter.Listener?) {
+        if (listener == null) return
+        socket?.off(event, listener)
     }
 
     fun emit(event: String, data: Any) {

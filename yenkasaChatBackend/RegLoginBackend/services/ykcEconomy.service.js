@@ -1,6 +1,12 @@
 const CoinTransaction = require('../models/cointransaction.model');
 const ActivityLog = require('../models/activityLog.model');
 const mongoose = require('mongoose');
+const {
+  getCountryRewardConfig,
+  resolveRewardCountry,
+  recordRegionalRewardDaily,
+  DEFAULT_COUNTRY
+} = require('./regionalRewards.service');
 
 const GO_LIVE_DATE = new Date('2026-05-05T00:00:00.000Z');
 const MAX_DAILY_YKC = 500;
@@ -86,14 +92,20 @@ async function sumDailyRewards(userId, now = new Date()) {
   return Number(row?.total || 0);
 }
 
-async function getRewardGuard({ userId, type, amount, now = new Date() }) {
+async function getRewardGuard({ userId, type, amount, now = new Date(), country = null, dailyCap = null }) {
   const dailyEarned = await sumDailyRewards(userId, now);
-  if (dailyEarned + Number(amount) > MAX_DAILY_YKC) {
+  const effectiveCap = Number.isFinite(Number(dailyCap))
+    ? Number(dailyCap)
+    : getCountryRewardConfig(country).dailyYkcCap;
+
+  if (dailyEarned + Number(amount) > effectiveCap) {
     return {
       allowed: false,
       reason: 'daily_cap',
       dailyEarned,
-      remainingDailyYkc: Math.max(0, MAX_DAILY_YKC - dailyEarned)
+      remainingDailyYkc: Math.max(0, effectiveCap - dailyEarned),
+      dailyCap: effectiveCap,
+      country: country || DEFAULT_COUNTRY || 'Ghana'
     };
   }
 
@@ -136,6 +148,22 @@ async function getRewardGuard({ userId, type, amount, now = new Date() }) {
   return { allowed: true, dailyEarned };
 }
 
+async function recordCountryRewardAnalytics(user, rewardAmount, opts = {}) {
+  const countryContext = resolveRewardCountry(user);
+  return recordRegionalRewardDaily({
+    country: countryContext.country,
+    rewardPayout: Number(rewardAmount || 0),
+    rewardCount: Number(rewardAmount || 0) > 0 ? 1 : 0,
+    verifiedCountry: user?.verifiedCountry || '',
+    detectedCountry: user?.detectedCountry || '',
+    countryConfidence: user?.countryConfidence || countryContext.confidence,
+    metadata: {
+      ...opts,
+      countrySource: countryContext.source
+    }
+  });
+}
+
 async function logYkcActivity(payload) {
   console.log('[YKC Activity]', {
     userId: payload.userId?.toString(),
@@ -160,5 +188,8 @@ module.exports = {
   getRequestIp,
   getDeviceId,
   getRewardGuard,
-  logYkcActivity
+  logYkcActivity,
+  recordCountryRewardAnalytics,
+  resolveRewardCountry,
+  getCountryRewardConfig
 };

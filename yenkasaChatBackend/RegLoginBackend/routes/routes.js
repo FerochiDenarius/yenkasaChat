@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/user.model'); // ✅ Correct
+const {
+  buildCountryVerification,
+  normalizeCountryLabel,
+  recordCountrySecuritySignal
+} = require('../services/regionalRewards.service');
 
 const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || '1h';
 const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || '7d';
@@ -54,6 +59,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const countryContext = await buildCountryVerification(req, { currentCountry: 'Ghana' });
+
     const existingUser = await User.findOne({
       $or: [
         ...(email ? [{ email }] : []),
@@ -71,12 +78,30 @@ router.post('/register', async (req, res) => {
     const user = new User({
       username,
       location,
+      country: 'Ghana',
+      verifiedCountry: countryContext.detectedCountry || '',
+      detectedCountry: countryContext.detectedCountry || '',
+      countryConfidence: countryContext.countryConfidence,
+      countryVerificationStatus: countryContext.verificationStatus,
+      countryLastVerifiedAt: countryContext.detectedCountry ? new Date() : null,
       password: hashedPassword,
       ...(email && { email }),
       ...(phone && { phone })
     });
 
     await user.save();
+
+    await recordCountrySecuritySignal({
+      req,
+      userId: user._id,
+      action: 'ACCOUNT_CREATED',
+      country: user.country,
+      detectedCountry: countryContext.detectedCountry,
+      verifiedCountry: user.verifiedCountry,
+      countryConfidence: user.countryConfidence,
+      suspicious: Boolean(countryContext.countrySwitchSuspected),
+      metadata: { legacyRoute: true }
+    });
 
     // ✅ Generate tokens immediately after register
     const accessToken = jwt.sign(
@@ -102,6 +127,11 @@ router.post('/register', async (req, res) => {
         username: user.username,
         location: user.location,
         verified: user.verified,
+        country: user.country,
+        verifiedCountry: user.verifiedCountry || '',
+        detectedCountry: user.detectedCountry || '',
+        countryConfidence: user.countryConfidence || 0,
+        countryVerificationStatus: user.countryVerificationStatus || 'unknown',
         roleName: getEffectiveRoleName(user),
         accessRole: user.accessRole || getEffectiveRoleName(user).toUpperCase(),
         staffRole: user.staffRole || null,
@@ -142,6 +172,46 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
+    const countryContext = await buildCountryVerification(req, {
+      clientCountry: user.country,
+      currentCountry: user.country,
+      userId: user._id
+    });
+    if (countryContext.detectedCountry) {
+      const detectedCountry = countryContext.detectedCountry;
+      const existingVerifiedCountry = normalizeCountryLabel(user.verifiedCountry);
+      const mismatch = existingVerifiedCountry
+        ? normalizeCountryLabel(detectedCountry).toLowerCase() !== existingVerifiedCountry.toLowerCase()
+        : false;
+
+      user.detectedCountry = detectedCountry;
+      user.countryConfidence = Math.max(Number(user.countryConfidence || 0), Number(countryContext.countryConfidence || 0));
+      if (!existingVerifiedCountry) {
+        user.verifiedCountry = detectedCountry;
+        user.countryVerificationStatus = 'geoip_verified';
+        user.countryLastVerifiedAt = new Date();
+      }
+      if (mismatch || countryContext.countrySwitchSuspected) {
+        user.lastCountrySwitchAt = new Date();
+      }
+      await user.save();
+
+      await recordCountrySecuritySignal({
+        req,
+        userId: user._id,
+        action: 'LOGIN_COUNTRY_CHECK',
+        country: user.country,
+        detectedCountry,
+        verifiedCountry: user.verifiedCountry,
+        countryConfidence: user.countryConfidence,
+        suspicious: mismatch || Boolean(countryContext.countrySwitchSuspected),
+        metadata: {
+          verificationStatus: user.countryVerificationStatus,
+          currentCountry: user.country
+        }
+      });
+    }
+
     // ✅ Issue new tokens
     const accessToken = jwt.sign(
       { userId: user._id },
@@ -166,6 +236,11 @@ router.post('/login', async (req, res) => {
         username: user.username,
         location: user.location,
         verified: user.verified,
+        country: user.country,
+        verifiedCountry: user.verifiedCountry || '',
+        detectedCountry: user.detectedCountry || '',
+        countryConfidence: user.countryConfidence || 0,
+        countryVerificationStatus: user.countryVerificationStatus || 'unknown',
         roleName: getEffectiveRoleName(user),
         accessRole: user.accessRole || getEffectiveRoleName(user).toUpperCase(),
         staffRole: user.staffRole || null,

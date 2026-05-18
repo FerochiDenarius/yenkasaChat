@@ -183,6 +183,11 @@ class YenkasaPlayerFeedAdapter(
         notifyDataSetChanged()
     }
 
+    fun resetTransientState() {
+        activePosition = RecyclerView.NO_POSITION
+        lastViewTime.clear()
+    }
+
     fun setPostSaved(postId: String, saved: Boolean) {
         if (saved) {
             savedPostIds.add(postId)

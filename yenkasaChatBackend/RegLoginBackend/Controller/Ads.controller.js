@@ -56,7 +56,12 @@ function getLocalUploadInfo(value) {
     return { isLocalUpload: false, path: null };
   }
 
-  const relativePath = decodeURIComponent(pathname.slice(markerIndex + marker.length));
+  let relativePath = '';
+  try {
+    relativePath = decodeURIComponent(pathname.slice(markerIndex + marker.length));
+  } catch (err) {
+    return { isLocalUpload: true, path: null };
+  }
   const resolvedPath = path.resolve(UPLOADS_DIR, relativePath);
   const insideUploads = resolvedPath === UPLOADS_DIR || resolvedPath.startsWith(`${UPLOADS_DIR}${path.sep}`);
 

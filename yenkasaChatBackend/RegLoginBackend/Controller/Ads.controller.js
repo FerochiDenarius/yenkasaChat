@@ -1,7 +1,9 @@
 const Ad = require('../models/Ad.model');
 const AdView = require('../models/AdView.model');
 const User = require('../models/user.model');
+const Post = require('../models/post.model');
 const RewardTx = require('../models/Rewards.Transaction.model');
+const mongoose = require('mongoose');
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
 const rewardService = require('../services/reward.service');
@@ -208,10 +210,17 @@ exports.trackMonetizationEvent = async (req, res) => {
     const user = await User.findById(userId)
       .select('verifiedCountry detectedCountry countryConfidence role roleName accessRole username')
       .lean();
+    let creatorUserId = '';
+    const postId = req.body?.postId?.toString();
+    if (postId && mongoose.Types.ObjectId.isValid(postId)) {
+      const post = await Post.findById(postId).select('userId').lean();
+      creatorUserId = post?.userId?.toString() || '';
+    }
 
     const payload = {
       ...req.body,
-      platform: req.body?.platform || 'android'
+      platform: req.body?.platform || 'android',
+      creatorUserId
     };
 
     const saved = await upsertMonetizationDailyMetrics(payload, user);

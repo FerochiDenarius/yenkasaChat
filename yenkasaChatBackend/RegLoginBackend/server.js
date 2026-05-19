@@ -322,6 +322,25 @@ function emitLiveJoinAck(socket, payload = {}) {
   });
 }
 
+function serializeLiveGuests(guests = []) {
+  return (guests || []).map((guest) => {
+    let agoraUid = Number(guest.agoraUid || 0);
+    if ((!Number.isInteger(agoraUid) || agoraUid <= 0) && guest.userId) {
+      agoraUid = expectedAgoraUidForUser(guest.userId) || 0;
+    }
+
+    return {
+      userId: guest.userId?.toString?.() || guest.userId || '',
+      username: guest.username || '',
+      avatar: guest.avatar || '',
+      agoraUid,
+      isMuted: Boolean(guest.isMuted),
+      isVideoStopped: Boolean(guest.isVideoStopped),
+      joinedAt: guest.joinedAt || null
+    };
+  }).filter((guest) => guest.userId && guest.agoraUid > 0);
+}
+
 function serializeLiveStream(stream) {
   return {
     _id: stream._id.toString(),
@@ -337,6 +356,7 @@ function serializeLiveStream(stream) {
     hostConnected: Boolean(stream.hostConnected),
     viewerCount: stream.viewerCount || 0,
     peakViewerCount: stream.peakViewerCount || 0,
+    guests: serializeLiveGuests(stream.guests),
     hostRole: stream.hostRole || '',
     maxDurationMinutes: stream.maxDurationMinutes ?? null,
     scheduledEndAt: stream.scheduledEndAt || null,
@@ -679,7 +699,18 @@ io.on('connection', (socket) => {
       });
       addLiveParticipant(streamId, userId, payload.agoraUid);
 
-    const startedEvent = { stream: serializeLiveStream(stream) };
+      const actor = await resolveLiveActor(payload);
+      emitLiveJoinAck(socket, {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        avatar: actor.avatar,
+        agoraUid: payload.agoraUid,
+        liveRole: 'broadcaster',
+        viewerCount: getLiveRoomMemberCount(streamId)
+      });
+
+      const startedEvent = { stream: serializeLiveStream(stream) };
       io.emit('live_started', startedEvent);
       emitLiveRoomMemberCount(streamId);
       console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
@@ -688,8 +719,6 @@ io.on('connection', (socket) => {
     }
   };
 
-  socket.on('send_livestream_host_ready', handleLiveHostReady);
-  socket.on('livestream_host_ready', handleLiveHostReady);
   socket.on('live_host_ready', handleLiveHostReady);
 
   const handleLiveHostHeartbeat = async (payload = {}) => {
@@ -719,8 +748,6 @@ io.on('connection', (socket) => {
     }
   };
 
-  socket.on('send_livestream_host_heartbeat', handleLiveHostHeartbeat);
-  socket.on('livestream_host_heartbeat', handleLiveHostHeartbeat);
   socket.on('live_host_heartbeat', handleLiveHostHeartbeat);
 
   const handleLiveJoin = async (payload = {}) => {
@@ -803,8 +830,6 @@ io.on('connection', (socket) => {
     }
   };
 
-  socket.on('send_livestream_join', handleLiveJoin);
-  socket.on('livestream_join', handleLiveJoin);
   socket.on('live_join', handleLiveJoin);
 
   const handleLiveLeave = async (payload = {}) => {
@@ -834,6 +859,13 @@ io.on('connection', (socket) => {
       socket.data.liveStreams.delete(streamId);
       socket.data.hostLiveStreams.delete(streamId);
       removeLiveParticipant(streamId, actor.userId);
+      const guestLeaveResult = await LiveStream.updateOne(
+        { _id: streamId, 'guests.userId': actor.userId },
+        { $pull: { guests: { userId: actor.userId } } }
+      );
+      if (guestLeaveResult.modifiedCount > 0) {
+        emitToLiveRoom(streamId, 'live_guest_left', { streamId, guestUserId: actor.userId });
+      }
       leaveLiveRooms(socket, streamId);
       if (isAudienceParticipant) {
         await updateLiveViewerCount(streamId, -1);
@@ -844,8 +876,6 @@ io.on('connection', (socket) => {
     }
   };
 
-  socket.on('send_livestream_leave', handleLiveLeave);
-  socket.on('livestream_leave', handleLiveLeave);
   socket.on('live_leave', handleLiveLeave);
 
   const handleLiveComment = async (payload = {}) => {
@@ -872,8 +902,6 @@ io.on('connection', (socket) => {
     }
   };
 
-  socket.on('send_livestream_comment', handleLiveComment);
-  socket.on('livestream_comment', handleLiveComment);
   socket.on('live_comment', handleLiveComment);
 
   const handleLiveReaction = async (payload = {}) => {
@@ -899,9 +927,180 @@ io.on('connection', (socket) => {
     }
   };
 
-  socket.on('send_livestream_reaction', handleLiveReaction);
-  socket.on('livestream_reaction', handleLiveReaction);
   socket.on('live_reaction', handleLiveReaction);
+
+  const handleLiveRequestGuestSeat = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId)) return;
+      const actor = await resolveLiveActor(payload);
+      if (!actor.userId || !mongoose.Types.ObjectId.isValid(actor.userId)) return;
+
+      const stream = await LiveStream.findOne({
+        _id: streamId,
+        isLive: true,
+        lifecycleStatus: 'live',
+        hostConnected: true
+      }).select('hostId guests').lean();
+      if (!stream) return;
+      if (stream.hostId.toString() === actor.userId.toString()) return;
+
+      const expectedUid = expectedAgoraUidForUser(actor.userId);
+      const payloadUid = normalizeAgoraUid(payload.agoraUid);
+      if (!expectedUid) return;
+      if (payloadUid && payloadUid !== expectedUid) {
+        console.warn('[YenkasaLiveSocket][guest_uid_mismatch]', {
+          event: 'live_request_guest_seat',
+          streamId,
+          userId: actor.userId,
+          payloadAgoraUid: payloadUid,
+          expectedAgoraUid: expectedUid,
+          socketId: socket.id
+        });
+      }
+
+      const event = {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        avatar: actor.avatar,
+        agoraUid: expectedUid,
+        createdAt: new Date().toISOString()
+      };
+      io.to(stream.hostId.toString()).emit('live_guest_seat_requested', event);
+    } catch (err) {
+      console.error('❌ live_request_guest_seat failed:', err.message);
+    }
+  };
+
+  socket.on('live_request_guest_seat', handleLiveRequestGuestSeat);
+
+  const handleLiveApproveGuestSeat = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const guestUserId = payload.guestUserId?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId) || !guestUserId || !mongoose.Types.ObjectId.isValid(guestUserId)) return;
+
+      const stream = await LiveStream.findOne({
+        _id: streamId,
+        hostId: socket.data.userId,
+        isLive: true,
+        lifecycleStatus: 'live',
+        hostConnected: true
+      });
+      if (!stream) return;
+
+      const guestActor = await User.findById(guestUserId).select('username profileImage avatar').lean();
+      if (!guestActor) return;
+
+      const expectedGuestUid = expectedAgoraUidForUser(guestUserId);
+      const payloadGuestUid = normalizeAgoraUid(payload.guestAgoraUid);
+      if (!expectedGuestUid) return;
+      if (payloadGuestUid && payloadGuestUid !== expectedGuestUid) {
+        console.warn('[YenkasaLiveSocket][guest_uid_mismatch]', {
+          event: 'live_approve_guest_seat',
+          streamId,
+          guestUserId,
+          payloadAgoraUid: payloadGuestUid,
+          expectedAgoraUid: expectedGuestUid,
+          socketId: socket.id
+        });
+      }
+
+      const guestData = {
+        userId: guestUserId,
+        username: guestActor.username,
+        avatar: guestActor.profileImage || guestActor.avatar || '',
+        agoraUid: expectedGuestUid,
+        isMuted: false,
+        isVideoStopped: false,
+        joinedAt: new Date()
+      };
+
+      await LiveStream.updateOne(
+        { _id: streamId },
+        { $pull: { guests: { userId: guestUserId } } }
+      );
+      await LiveStream.updateOne(
+        { _id: streamId },
+        { $push: { guests: guestData } }
+      );
+
+      const event = {
+        streamId,
+        guest: guestData,
+        approvedBy: socket.data.userId
+      };
+
+      emitToLiveRoom(streamId, 'live_guest_seat_approved', event);
+    } catch (err) {
+      console.error('❌ live_approve_guest_seat failed:', err.message);
+    }
+  };
+
+  socket.on('live_approve_guest_seat', handleLiveApproveGuestSeat);
+
+  const handleLiveDeclineGuestSeat = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const guestUserId = payload.guestUserId?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId) || !guestUserId || !mongoose.Types.ObjectId.isValid(guestUserId)) return;
+
+      const stream = await LiveStream.findOne({ _id: streamId, hostId: socket.data.userId, isLive: true });
+      if (!stream) return;
+
+      io.to(guestUserId).emit('live_guest_seat_declined', { streamId });
+    } catch (err) {
+      console.error('❌ live_decline_guest_seat failed:', err.message);
+    }
+  };
+
+  socket.on('live_decline_guest_seat', handleLiveDeclineGuestSeat);
+
+  const handleLiveMuteGuest = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const guestUserId = payload.guestUserId?.toString();
+      const muted = Boolean(payload.muted);
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId) || !guestUserId || !mongoose.Types.ObjectId.isValid(guestUserId)) return;
+
+      const stream = await LiveStream.findOne({ _id: streamId, hostId: socket.data.userId, isLive: true });
+      if (!stream) return;
+
+      await LiveStream.updateOne(
+        { _id: streamId, 'guests.userId': guestUserId },
+        { $set: { 'guests.$.isMuted': muted } }
+      );
+
+      emitToLiveRoom(streamId, 'live_guest_muted', { streamId, guestUserId, muted });
+    } catch (err) {
+      console.error('❌ live_mute_guest failed:', err.message);
+    }
+  };
+
+  socket.on('live_mute_guest', handleLiveMuteGuest);
+
+  const handleLiveKickGuest = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const guestUserId = payload.guestUserId?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId) || !guestUserId || !mongoose.Types.ObjectId.isValid(guestUserId)) return;
+
+      const stream = await LiveStream.findOne({ _id: streamId, hostId: socket.data.userId, isLive: true });
+      if (!stream) return;
+
+      await LiveStream.updateOne(
+        { _id: streamId },
+        { $pull: { guests: { userId: guestUserId } } }
+      );
+
+      emitToLiveRoom(streamId, 'live_guest_kicked', { streamId, guestUserId });
+    } catch (err) {
+      console.error('❌ live_kick_guest failed:', err.message);
+    }
+  };
+
+  socket.on('live_kick_guest', handleLiveKickGuest);
 
   // ✅ User disconnects
   socket.on('disconnect', async (reason) => {
@@ -925,8 +1124,15 @@ io.on('connection', (socket) => {
 
       if (socket.data.liveStreams?.size) {
         await Promise.allSettled(
-          Array.from(socket.data.liveStreams).map((streamId) => {
+          Array.from(socket.data.liveStreams).map(async (streamId) => {
             removeLiveParticipant(streamId, socket.data.userId);
+            const guestLeaveResult = await LiveStream.updateOne(
+              { _id: streamId, 'guests.userId': socket.data.userId },
+              { $pull: { guests: { userId: socket.data.userId } } }
+            );
+            if (guestLeaveResult.modifiedCount > 0) {
+              emitToLiveRoom(streamId, 'live_guest_left', { streamId, guestUserId: socket.data.userId });
+            }
             return updateLiveViewerCount(streamId, -1);
           })
         );

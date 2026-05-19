@@ -21,9 +21,12 @@ object AdEligibilityManager {
     private const val KEY_SHOWN_MIDROLL_POSTS = "midroll_shown_posts"
     private const val KEY_SHOWN_INTERSTITIAL_POSTS = "interstitial_shown_posts"
     private const val KEY_WATCHED_POSTS = "watched_posts"
+    private const val KEY_LAST_BACKGROUND = "last_background_ms"
 
     private const val MIN_INTERSTITIAL_GAP_MS = 5 * 60 * 1000L
     private const val SESSION_INTERSTITIAL_MIN_MS = 2 * 60 * 1000L
+    private const val SESSION_RESET_AFTER_BACKGROUND_MS = 30 * 60 * 1000L
+    private const val MAX_TRACKED_POST_IDS = 120
     private const val FEED_AD_MIN_GAP = 4
     private const val FEED_AD_MAX_GAP = 5
 
@@ -41,17 +44,19 @@ object AdEligibilityManager {
 
     fun init(context: Context) {
         val shared = prefs(context)
-        if (shared.getLong(KEY_SESSION_START, 0L) <= 0L) {
-            shared.edit {
-                putLong(KEY_SESSION_START, System.currentTimeMillis())
-                putInt(KEY_INTERSTITIAL_THRESHOLD, 4 + (absSeed() % 3))
-                putBoolean(KEY_MONETIZED_SESSION, false)
-            }
-        }
+        ensureSession(shared)
     }
 
     fun onAppForeground(context: Context) {
-        prefs(context).edit {
+        val shared = prefs(context)
+        val now = System.currentTimeMillis()
+        val lastBackground = shared.getLong(KEY_LAST_BACKGROUND, 0L)
+        if (lastBackground > 0L && now - lastBackground >= SESSION_RESET_AFTER_BACKGROUND_MS) {
+            resetSession(shared, now)
+        } else {
+            ensureSession(shared, now)
+        }
+        shared.edit {
             putBoolean(KEY_APP_FOREGROUND, true)
         }
     }
@@ -60,6 +65,7 @@ object AdEligibilityManager {
         prefs(context).edit {
             putBoolean(KEY_APP_FOREGROUND, false)
             putBoolean(KEY_TYPING, false)
+            putLong(KEY_LAST_BACKGROUND, System.currentTimeMillis())
         }
     }
 
@@ -84,18 +90,19 @@ object AdEligibilityManager {
         val typing = shared.getBoolean(KEY_TYPING, false)
         val threshold = shared.getInt(KEY_INTERSTITIAL_THRESHOLD, 4 + (absSeed() % 3))
         val shownPosts = shared.getStringSet(KEY_SHOWN_INTERSTITIAL_POSTS, emptySet()).orEmpty()
+        val sessionEligible = now - sessionStart >= SESSION_INTERSTITIAL_MIN_MS
+        val watchCountEligible = watchedVideos >= threshold
 
         return foreground &&
             !typing &&
-            watchedVideos >= threshold &&
+            (watchCountEligible || sessionEligible) &&
             videosSinceAd >= 4 &&
-            now - sessionStart >= SESSION_INTERSTITIAL_MIN_MS &&
             now - lastInterstitial >= MIN_INTERSTITIAL_GAP_MS &&
             (postId.isNullOrBlank() || !shownPosts.contains(postId))
     }
 
     fun canShowMidRoll(context: Context, postId: String, videoDurationSeconds: Int): Boolean {
-        if (videoDurationSeconds < 60) return false
+        if (videoDurationSeconds <= 60) return false
         val shared = prefs(context)
         val foreground = shared.getBoolean(KEY_APP_FOREGROUND, true)
         val typing = shared.getBoolean(KEY_TYPING, false)
@@ -109,9 +116,14 @@ object AdEligibilityManager {
         return shared.getBoolean(KEY_APP_FOREGROUND, true) && !shared.getBoolean(KEY_TYPING, false)
     }
 
-    fun canShowFeedAd(organicCount: Int, lastAdOrganicCount: Int): Boolean {
-        val gap = FEED_AD_MIN_GAP + (absSeed() % (FEED_AD_MAX_GAP - FEED_AD_MIN_GAP + 1))
+    fun canShowFeedAd(organicCount: Int, lastAdOrganicCount: Int, adSlot: Int = 0): Boolean {
+        val gap = feedAdGapForSlot(adSlot)
         return organicCount >= gap && (organicCount - lastAdOrganicCount) >= gap
+    }
+
+    fun feedAdGapForSlot(adSlot: Int): Int {
+        val range = FEED_AD_MAX_GAP - FEED_AD_MIN_GAP + 1
+        return FEED_AD_MIN_GAP + ((adSlot + absSeed()) % range)
     }
 
     fun registerVideoWatched(context: Context, postId: String) {
@@ -134,10 +146,10 @@ object AdEligibilityManager {
         when (type) {
             MonetizationAdType.INTERSTITIAL -> {
                 edits.putLong(KEY_LAST_INTERSTITIAL, now)
-                postId?.let { appendStringSet(edits, KEY_SHOWN_INTERSTITIAL_POSTS, it) }
+                postId?.let { appendStringSet(shared, edits, KEY_SHOWN_INTERSTITIAL_POSTS, it) }
             }
             MonetizationAdType.MIDROLL -> {
-                postId?.let { appendStringSet(edits, KEY_SHOWN_MIDROLL_POSTS, it) }
+                postId?.let { appendStringSet(shared, edits, KEY_SHOWN_MIDROLL_POSTS, it) }
             }
             MonetizationAdType.REWARDED -> Unit
             MonetizationAdType.FEED -> Unit
@@ -150,10 +162,18 @@ object AdEligibilityManager {
     }
 
     fun registerAdSkipped(context: Context, type: MonetizationAdType, postId: String? = null) {
-        if (type == MonetizationAdType.MIDROLL) {
-            val shared = prefs(context)
-            postId?.let { appendStringSet(shared.edit(), KEY_SHOWN_MIDROLL_POSTS, it).apply() }
+        val shared = prefs(context)
+        val edit = shared.edit()
+        when (type) {
+            MonetizationAdType.MIDROLL -> postId?.let {
+                appendStringSet(shared, edit, KEY_SHOWN_MIDROLL_POSTS, it)
+            }
+            MonetizationAdType.INTERSTITIAL -> postId?.let {
+                appendStringSet(shared, edit, KEY_SHOWN_INTERSTITIAL_POSTS, it)
+            }
+            else -> Unit
         }
+        edit.apply()
     }
 
     fun shouldRegisterMonetizedSession(context: Context): Boolean {
@@ -174,10 +194,38 @@ object AdEligibilityManager {
         return prefs(context).getInt(KEY_INTERSTITIAL_THRESHOLD, 4 + (absSeed() % 3))
     }
 
-    private fun appendStringSet(edit: SharedPreferences.Editor, key: String, value: String): SharedPreferences.Editor {
-        val current = prefs?.getStringSet(key, emptySet()).orEmpty().toMutableSet()
+    private fun appendStringSet(
+        shared: SharedPreferences,
+        edit: SharedPreferences.Editor,
+        key: String,
+        value: String
+    ): SharedPreferences.Editor {
+        val current = shared.getStringSet(key, emptySet()).orEmpty().toMutableSet()
         current.add(value)
+        while (current.size > MAX_TRACKED_POST_IDS) {
+            current.remove(current.first())
+        }
         return edit.putStringSet(key, current)
+    }
+
+    private fun ensureSession(shared: SharedPreferences, now: Long = System.currentTimeMillis()) {
+        if (shared.getLong(KEY_SESSION_START, 0L) <= 0L) {
+            resetSession(shared, now)
+        }
+    }
+
+    private fun resetSession(shared: SharedPreferences, now: Long) {
+        shared.edit {
+            putLong(KEY_SESSION_START, now)
+            putLong(KEY_LAST_BACKGROUND, 0L)
+            putInt(KEY_INTERSTITIAL_THRESHOLD, 4 + (absSeed() % 3))
+            putBoolean(KEY_MONETIZED_SESSION, false)
+            putInt(KEY_VIDEOS_WATCHED, 0)
+            putInt(KEY_VIDEOS_SINCE_AD, 0)
+            putStringSet(KEY_WATCHED_POSTS, emptySet<String>())
+            putStringSet(KEY_SHOWN_MIDROLL_POSTS, emptySet<String>())
+            putStringSet(KEY_SHOWN_INTERSTITIAL_POSTS, emptySet<String>())
+        }
     }
 
     private fun absSeed(): Int = max(0, sessionSeed)

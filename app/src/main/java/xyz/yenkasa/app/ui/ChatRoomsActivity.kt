@@ -30,6 +30,7 @@ import xyz.yenkasa.app.model.CreateChatRoomResponse
 import xyz.yenkasa.app.model.GroupResponse
 import xyz.yenkasa.app.model.GroupsListResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.ChatCacheManager
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 // Removed: import kotlin.io.path.name // This import was likely added due to the incorrect 'name' access
@@ -451,6 +452,11 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
 
     private fun loadChatRooms() {
         Log.d("ChatRoomsActivity", "Attempting to load chat rooms...")
+        val cachedRooms = ChatCacheManager.getCachedChatRooms(this, currentUserId)
+        if (cachedRooms.isNotEmpty()) {
+            recentChatRooms = cachedRooms
+            chatRoomAdapter.submitList(cachedRooms)
+        }
         ApiClient.apiService.getChatRooms()
             .enqueue(object : Callback<List<ChatRoom>> {
                 override fun onResponse(
@@ -476,26 +482,38 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                         Log.d("ChatRoomsActivity", "Filtered unique chat rooms: ${uniqueRooms.size}")
 
                         recentChatRooms = uniqueRooms
+                        ChatCacheManager.saveChatRoomsAsync(this@ChatRoomsActivity, currentUserId, uniqueRooms)
                         chatRoomAdapter.submitList(uniqueRooms)
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ChatRoomsActivity", "Failed to load rooms. Code: ${response.code()}, Error: $errorMsg")
-                        Toast.makeText(this@ChatRoomsActivity, getString(R.string.failed_to_load_rooms_with_error, errorMsg), Toast.LENGTH_LONG).show()
+                        if (cachedRooms.isEmpty()) {
+                            Toast.makeText(this@ChatRoomsActivity, getString(R.string.failed_to_load_rooms_with_error, errorMsg), Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
 
                 override fun onFailure(call: Call<List<ChatRoom>>, t: Throwable) {
                     Log.e("ChatRoomsActivity", "Error loading chat rooms: ${t.message}", t)
-                    Toast.makeText(
-                        this@ChatRoomsActivity,
-                        getString(R.string.error_loading_chat_rooms_with_message, t.message ?: getString(R.string.unknown_error)),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (cachedRooms.isNotEmpty()) {
+                        Toast.makeText(this@ChatRoomsActivity, R.string.chat_showing_saved_conversations, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(
+                            this@ChatRoomsActivity,
+                            getString(R.string.error_loading_chat_rooms_with_message, t.message ?: getString(R.string.unknown_error)),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             })
     }
 
     private fun loadGroups() {
+        val cachedGroups = ChatCacheManager.getCachedGroups(this, currentUserId)
+        if (cachedGroups.isNotEmpty()) {
+            updateGroupUnreadBadge(cachedGroups)
+            chatRoomAdapter.submitList(cachedGroups)
+        }
         ApiClient.apiService.getGroups()
             .enqueue(object : Callback<GroupsListResponse> {
                 override fun onResponse(
@@ -508,21 +526,28 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
                                 .thenByDescending { it.unreadCount })
                         Log.d("ChatRoomsActivity", "Loaded ${groups.size} groups")
                         updateGroupUnreadBadge(groups)
+                        ChatCacheManager.saveGroupsAsync(this@ChatRoomsActivity, currentUserId, groups)
                         chatRoomAdapter.submitList(groups)
                     } else {
                         val errorMsg = parseError(response)
                         Log.e("ChatRoomsActivity", "Failed to load groups. Code: ${response.code()}, Error: $errorMsg")
-                        Toast.makeText(this@ChatRoomsActivity, getString(R.string.failed_to_load_groups_with_error, errorMsg), Toast.LENGTH_LONG).show()
+                        if (cachedGroups.isEmpty()) {
+                            Toast.makeText(this@ChatRoomsActivity, getString(R.string.failed_to_load_groups_with_error, errorMsg), Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
 
                 override fun onFailure(call: Call<GroupsListResponse>, t: Throwable) {
                     Log.e("ChatRoomsActivity", "Error loading groups: ${t.message}", t)
-                    Toast.makeText(
-                        this@ChatRoomsActivity,
-                        getString(R.string.error_loading_groups_with_message, t.message ?: getString(R.string.unknown_error)),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (cachedGroups.isNotEmpty()) {
+                        Toast.makeText(this@ChatRoomsActivity, R.string.chat_showing_saved_conversations, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(
+                            this@ChatRoomsActivity,
+                            getString(R.string.error_loading_groups_with_message, t.message ?: getString(R.string.unknown_error)),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             })
     }

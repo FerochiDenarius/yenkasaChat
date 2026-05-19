@@ -53,6 +53,7 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
     private var checkpointListener: ((Int) -> Unit)? = null
     private var readyListener: (() -> Unit)? = null
     private var completionListener: (() -> Unit)? = null
+    private var errorListener: ((PlaybackException) -> Unit)? = null
     private val handler = Handler(Looper.getMainLooper())
 
     private val hideControlsRunnable = Runnable {
@@ -141,6 +142,10 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
 
     fun setCompletionListener(listener: (() -> Unit)?) {
         completionListener = listener
+    }
+
+    fun setErrorListener(listener: ((PlaybackException) -> Unit)?) {
+        errorListener = listener
     }
 
     fun play() {
@@ -244,6 +249,7 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
                     loading.isVisible = false
                     errorText.isVisible = true
                     stopAndShowPoster()
+                    errorListener?.invoke(error)
                 }
             })
             surface.player = exo

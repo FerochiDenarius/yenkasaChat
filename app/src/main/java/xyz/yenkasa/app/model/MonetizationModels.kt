@@ -8,6 +8,7 @@ data class MonetizationEventRequest(
     val durationMs: Int? = null,
     val skipped: Boolean = false,
     val completed: Boolean = false,
+    val failed: Boolean = false,
     val rewarded: Boolean = false,
     val monetizedSession: Boolean = false,
     val platform: String = "android"

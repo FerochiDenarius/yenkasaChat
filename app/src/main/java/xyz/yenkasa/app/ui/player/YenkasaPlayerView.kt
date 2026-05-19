@@ -241,37 +241,30 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
     private fun applyEdgeToEdgeSpacing() {
         ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
-            val statusAndCutout = insets.getInsets(
-                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout()
-            )
             val safeBars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
             val side = dp(16)
             val controlsSide = dp(20)
-            val topGap = dp(if (isCompactWidth()) 8 else 12)
             val controlsBottomGap = dp(36)
 
             topBar.updateMargins(
                 start = safeBars.left + side,
-                top = statusAndCutout.top + topGap,
                 end = safeBars.right + side
             )
-            searchBar.updateMargins(start = safeBars.left + side, top = dp(if (isCompactWidth()) 5 else 8))
+            searchBar.updateMargins(start = safeBars.left + side)
             feedTabsView.updateMargins(
                 start = safeBars.left + side,
-                top = dp(6),
                 end = safeBars.right + dp(if (isCompactWidth()) 72 else 82)
             )
             communitiesPanel.updateMargins(
-                top = dp(if (isCompactWidth()) 12 else 16),
                 end = safeBars.right + side
             )
-            engagementRail.updateMargins(start = safeBars.left + side, bottom = dp(110))
+            engagementRail.updateMargins(start = safeBars.left + side, bottom = safeBars.bottom + dp(110))
             moreOptionsButton.updateMargins(start = safeBars.left + side, bottom = dp(8))
-            liveArenaButton.updateMargins(end = safeBars.right + side, bottom = dp(72))
-            liveStreamButton.updateMargins(end = safeBars.right + side, bottom = dp(154))
-            bottomMetaView.updateMargins(start = safeBars.left + side, end = safeBars.right + side, bottom = dp(56))
+            liveArenaButton.updateMargins(end = safeBars.right + side, bottom = safeBars.bottom + dp(72))
+            liveStreamButton.updateMargins(end = safeBars.right + side, bottom = safeBars.bottom + dp(154))
+            bottomMetaView.updateMargins(start = safeBars.left + side, end = safeBars.right + side, bottom = safeBars.bottom + dp(56))
             controlsView.updateMargins(
                 start = safeBars.left + controlsSide,
                 end = safeBars.right + controlsSide,

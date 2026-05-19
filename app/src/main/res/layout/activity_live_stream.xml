@@ -252,6 +252,23 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
+            android:id="@+id/containerLiveRequestSeat"
+            style="@style/LiveActionRailItem">
+
+            <ImageButton
+                android:id="@+id/buttonRequestLiveSeat"
+                style="@style/LiveActionRailButton"
+                android:contentDescription="@string/request_to_speak"
+                android:src="@drawable/ic_mic"
+                android:tint="#101114" />
+
+            <TextView
+                style="@style/LiveActionRailLabel"
+                android:text="@string/speak" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/containerLiveShare"
             style="@style/LiveActionRailItem">
 
             <ImageButton
@@ -267,6 +284,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/containerLiveReaction"
             style="@style/LiveActionRailItem">
 
             <ImageButton
@@ -282,6 +300,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/containerLiveComments"
             style="@style/LiveActionRailItem">
 
             <ImageButton
@@ -297,6 +316,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/containerLiveGift"
             style="@style/LiveActionRailItem">
 
             <ImageButton
@@ -312,6 +332,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/containerLiveReport"
             style="@style/LiveActionRailItem">
 
             <ImageButton
@@ -326,6 +347,19 @@
                 android:text="@string/live_report_label" />
         </LinearLayout>
     </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerLiveGuests"
+        android:layout_width="0dp"
+        android:layout_height="110dp"
+        android:layout_marginBottom="8dp"
+        android:clipToPadding="false"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        app:layout_constraintBottom_toTopOf="@id/liveCommentsContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <LinearLayout
         android:id="@+id/liveCommentsContainer"

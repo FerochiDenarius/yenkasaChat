@@ -74,7 +74,7 @@ class YenkasaPlayerFeedAdapter(
             }
             typeYenkasaAd -> {
                 val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_ad_post, parent, false)
+                    .inflate(R.layout.item_yenkasa_ad, parent, false)
                     .apply { layoutParams = fullscreenLayoutParams() }
                 YenkasaAdViewHolder(view)
             }

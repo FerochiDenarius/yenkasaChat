@@ -12,9 +12,9 @@ import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 /**
  * Small helper file:
  * - AdAdapterCallbacks: interface FeedAdapter expects to call to bind ads
- * - AdsViewHolder: simple ViewHolder that finds the views inside item_ad_post.xml
+ * - AdsViewHolder: simple ViewHolder that finds the views inside item_yenkasa_ad.xml
  *
- * Keep these field ids consistent with your item_ad_post.xml.
+ * Keep these field ids consistent with your item_yenkasa_ad.xml.
  * If your layout uses slightly different ids, update them here.
  */
 

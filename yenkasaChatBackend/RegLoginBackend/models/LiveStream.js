@@ -81,6 +81,17 @@ const liveStreamSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
+    guests: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        username: String,
+        avatar: String,
+        agoraUid: Number,
+        isMuted: { type: Boolean, default: false },
+        isVideoStopped: { type: Boolean, default: false },
+        joinedAt: { type: Date, default: Date.now }
+      }
+    ],
     hostRole: {
       type: String,
       default: ''

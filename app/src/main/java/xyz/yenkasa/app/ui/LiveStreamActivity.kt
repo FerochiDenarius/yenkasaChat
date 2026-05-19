@@ -32,6 +32,7 @@ import io.agora.rtc2.RtcEngine
 import io.agora.rtc2.video.VideoCanvas
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
+import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -40,6 +41,7 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.AgoraLiveToken
 import xyz.yenkasa.app.model.LiveGiftRequest
 import xyz.yenkasa.app.model.LiveGiftResponse
+import xyz.yenkasa.app.model.LiveGuest
 import xyz.yenkasa.app.model.LiveStream
 import xyz.yenkasa.app.model.LiveStreamResponse
 import xyz.yenkasa.app.model.User
@@ -72,10 +74,14 @@ class LiveStreamActivity : AppCompatActivity() {
     private lateinit var shareButton: ImageButton
     private lateinit var commentsButton: ImageButton
     private lateinit var reportButton: ImageButton
+    private lateinit var buttonRequestSeat: ImageButton
+    private lateinit var recyclerGuests: androidx.recyclerview.widget.RecyclerView
 
     private var rtcEngine: RtcEngine? = null
     private var localView: SurfaceView? = null
     private var remoteView: SurfaceView? = null
+    private var guestAdapter: xyz.yenkasa.app.adapter.LiveGuestAdapter? = null
+    private val activeGuests = mutableListOf<xyz.yenkasa.app.model.LiveGuest>()
     private var streamId: String = ""
     private var channelName: String = ""
     private var agoraToken: String = ""
@@ -241,9 +247,11 @@ class LiveStreamActivity : AppCompatActivity() {
         agoraAppId = intent.getStringExtra(EXTRA_APP_ID).orEmpty()
         agoraUid = intent.getIntExtra(EXTRA_UID, INVALID_AGORA_UID)
         isHost = intent.getBooleanExtra(EXTRA_IS_HOST, false)
+        activeGuests.clear()
+        activeGuests.addAll(parseGuestsExtra(intent.getStringExtra(EXTRA_GUESTS)))
         Log.i(
             tag,
-            "Live extras loaded. streamId=$streamId channel=$channelName tokenBlank=${agoraToken.isBlank()} appIdBlank=${agoraAppId.isBlank()} tokenUid=$agoraUid host=$isHost"
+            "Live extras loaded. streamId=$streamId channel=$channelName tokenBlank=${agoraToken.isBlank()} appIdBlank=${agoraAppId.isBlank()} tokenUid=$agoraUid host=$isHost guests=${activeGuests.size}"
         )
     }
 
@@ -266,6 +274,15 @@ class LiveStreamActivity : AppCompatActivity() {
         shareButton = findViewById(R.id.buttonLiveShare)
         commentsButton = findViewById(R.id.buttonLiveComments)
         reportButton = findViewById(R.id.buttonLiveReport)
+        buttonRequestSeat = findViewById(R.id.buttonRequestLiveSeat)
+        recyclerGuests = findViewById(R.id.recyclerLiveGuests)
+
+        guestAdapter = xyz.yenkasa.app.adapter.LiveGuestAdapter({ rtcEngine }, { agoraUid }, isHost) { guest, action ->
+            handleGuestAction(guest, action)
+        }
+        recyclerGuests.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+        recyclerGuests.adapter = guestAdapter
+        guestAdapter?.submitList(activeGuests.toList())
 
         val hostName = intent.getStringExtra(EXTRA_HOST).orEmpty()
         val liveTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
@@ -277,6 +294,7 @@ class LiveStreamActivity : AppCompatActivity() {
             liveTitle.ifBlank { getString(R.string.live_from_yenkasa) }
         }
         hostControls.visibility = if (isHost) View.VISIBLE else View.GONE
+        buttonRequestSeat.visibility = if (isHost) View.GONE else View.VISIBLE
         scheduledEndAtMillis = parseIsoMillis(intent.getStringExtra(EXTRA_SCHEDULED_END_AT))
         timerText.visibility = if (isHost && scheduledEndAtMillis > 0L) View.VISIBLE else View.GONE
         if (timerText.visibility == View.VISIBLE) {
@@ -326,15 +344,30 @@ class LiveStreamActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.more_options, Toast.LENGTH_SHORT).show()
         }
         sendButton.setOnClickListener { sendComment() }
+
+        // Expanded click targets for the action rail
+        findViewById<View>(R.id.containerLiveShare).setOnClickListener { shareLiveStream() }
         shareButton.setOnClickListener { shareLiveStream() }
-        commentsButton.setOnClickListener {
-            commentInput.requestFocus()
-            val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            inputMethodManager.showSoftInput(commentInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+
+        findViewById<View>(R.id.containerLiveComments).setOnClickListener { focusCommentInput() }
+        commentsButton.setOnClickListener { focusCommentInput() }
+
+        findViewById<View>(R.id.containerLiveReaction).setOnClickListener { sendReaction("❤️") }
+        reactionButton.setOnClickListener { sendReaction("❤️") }
+        reactionButton.setOnLongClickListener {
+            sendReaction(listOf("❤️", "🔥", "😂").random())
+            true
         }
-        reportButton.setOnClickListener {
-            Toast.makeText(this, R.string.live_report_unavailable, Toast.LENGTH_SHORT).show()
-        }
+
+        findViewById<View>(R.id.containerLiveGift).setOnClickListener { showGiftSheet() }
+        giftButton.setOnClickListener { showGiftSheet() }
+
+        findViewById<View>(R.id.containerLiveReport).setOnClickListener { showReportToast() }
+        reportButton.setOnClickListener { showReportToast() }
+
+        findViewById<View>(R.id.containerLiveRequestSeat).setOnClickListener { requestGuestSeat() }
+        buttonRequestSeat.setOnClickListener { requestGuestSeat() }
+
         flipButton.setOnClickListener { rtcEngine?.switchCamera() }
         muteButton.setOnClickListener {
             muted = !muted
@@ -342,12 +375,79 @@ class LiveStreamActivity : AppCompatActivity() {
             muteButton.setImageResource(if (muted) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
         }
         endButton.setOnClickListener { endLiveAndFinish() }
-        reactionButton.setOnClickListener { sendReaction("❤️") }
-        reactionButton.setOnLongClickListener {
-            sendReaction(listOf("❤️", "🔥", "😂").random())
-            true
+    }
+
+    private fun focusCommentInput() {
+        commentInput.requestFocus()
+        val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        inputMethodManager.showSoftInput(commentInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun showReportToast() {
+        Toast.makeText(this, R.string.live_report_unavailable, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun requestGuestSeat() {
+        val payload = JSONObject()
+            .put("streamId", streamId)
+            .put("userId", TokenManager.getUserId(this).orEmpty())
+            .put("username", liveIdentityUsername)
+            .put("avatar", liveIdentityAvatar)
+            .put("agoraUid", agoraUid)
+        SocketManager.emit("live_request_guest_seat", payload)
+        Toast.makeText(this, R.string.live_guest_request_sent, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun handleGuestAction(guest: xyz.yenkasa.app.model.LiveGuest, action: xyz.yenkasa.app.adapter.LiveGuestAdapter.Action) {
+        val payload = JSONObject()
+            .put("streamId", streamId)
+            .put("guestUserId", guest.userId)
+        
+        when (action) {
+            xyz.yenkasa.app.adapter.LiveGuestAdapter.Action.MUTE -> {
+                payload.put("muted", true)
+                SocketManager.emit("live_mute_guest", payload)
+            }
+            xyz.yenkasa.app.adapter.LiveGuestAdapter.Action.UNMUTE -> {
+                payload.put("muted", false)
+                SocketManager.emit("live_mute_guest", payload)
+            }
+            xyz.yenkasa.app.adapter.LiveGuestAdapter.Action.KICK -> {
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.remove_guest)
+                    .setMessage(getString(R.string.remove_guest_confirm, guest.username))
+                    .setPositiveButton(R.string.remove) { _, _ ->
+                        SocketManager.emit("live_kick_guest", payload)
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
         }
-        giftButton.setOnClickListener { showGiftSheet() }
+    }
+
+    private fun parseGuestsExtra(raw: String?): List<LiveGuest> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val guest = LiveGuest(
+                        userId = item.optString("userId"),
+                        username = item.optString("username"),
+                        avatar = item.optString("avatar"),
+                        agoraUid = item.optInt("agoraUid"),
+                        isMuted = item.optBoolean("isMuted", false),
+                        isVideoStopped = item.optBoolean("isVideoStopped", false),
+                        joinedAt = item.optString("joinedAt").takeIf { it.isNotBlank() }
+                    )
+                    if (guest.userId.isNotBlank() && isValidAgoraUid(guest.agoraUid)) add(guest)
+                }
+            }
+        }.getOrElse { error ->
+            Log.w(tag, "Failed to parse live guests extra: ${error.message}")
+            emptyList()
+        }
     }
 
     private fun shareLiveStream() {
@@ -378,9 +478,6 @@ class LiveStreamActivity : AppCompatActivity() {
         val roomJoinedListener: (Any) -> Unit = roomJoinedListener@{ data ->
             val json = data.asJson() ?: return@roomJoinedListener
             if (json.optString("streamId") != streamId) return@roomJoinedListener
-            val ackUserId = json.optString("userId").takeIf { it.isNotBlank() }
-            val currentUserId = TokenManager.getUserId(this)
-            if (!ackUserId.isNullOrBlank() && !currentUserId.isNullOrBlank() && ackUserId != currentUserId) return@roomJoinedListener
             if (!liveJoinAckPending && !joinedSocketRoom) return@roomJoinedListener
             liveJoinAckHandler.removeCallbacks(liveJoinRetryRunnable)
             liveJoinAckPending = false
@@ -388,7 +485,7 @@ class LiveStreamActivity : AppCompatActivity() {
             joinedSocketRoom = true
             Log.i(
                 tag,
-                "Live room join confirmed. streamId=$streamId userId=${ackUserId ?: currentUserId} role=${json.optString("liveRole")} viewerCount=${json.optInt("viewerCount", -1)}"
+                "Live room join confirmed. streamId=$streamId role=${json.optString("liveRole")} viewerCount=${json.optInt("viewerCount", -1)}"
             )
         }
         registerLiveSocketListener("live_room_joined", roomJoinedListener)
@@ -450,6 +547,178 @@ class LiveStreamActivity : AppCompatActivity() {
         }
         registerLiveSocketListener("live_ended", endedListener)
 
+        val guestRequestedListener: (Any) -> Unit = guestRequestedListener@{ data ->
+            if (isHost) {
+                val json = data.asJson() ?: return@guestRequestedListener
+                if (json.optString("streamId") == streamId) {
+                    runOnUiThread { showGuestRequestDialog(json) }
+                }
+            }
+        }
+        registerLiveSocketListener("live_guest_seat_requested", guestRequestedListener)
+
+        val guestDeclinedListener: (Any) -> Unit = guestDeclinedListener@{ data ->
+            val json = data.asJson() ?: return@guestDeclinedListener
+            if (json.optString("streamId") == streamId) {
+                runOnUiThread {
+                    Toast.makeText(this, R.string.live_guest_request_declined, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        registerLiveSocketListener("live_guest_seat_declined", guestDeclinedListener)
+
+        val guestApprovedListener: (Any) -> Unit = guestApprovedListener@{ data ->
+            val json = data.asJson() ?: return@guestApprovedListener
+            if (json.optString("streamId") == streamId) {
+                val guestJson = json.optJSONObject("guest") ?: return@guestApprovedListener
+                val guest = xyz.yenkasa.app.model.LiveGuest(
+                    userId = guestJson.optString("userId"),
+                    username = guestJson.optString("username"),
+                    avatar = guestJson.optString("avatar"),
+                    agoraUid = guestJson.optInt("agoraUid"),
+                    isMuted = guestJson.optBoolean("isMuted", false),
+                    isVideoStopped = guestJson.optBoolean("isVideoStopped", false),
+                    joinedAt = guestJson.optString("joinedAt")
+                )
+                runOnUiThread {
+                    activeGuests.removeAll { it.userId == guest.userId }
+                    activeGuests.add(guest)
+                    guestAdapter?.submitList(activeGuests.toList())
+                    
+                    if (guest.userId == TokenManager.getUserId(this)) {
+                        switchRoleToBroadcaster()
+                    } else {
+                        addComment(getString(R.string.live_guest_joined_the_broadcast, guest.username))
+                    }
+                }
+            }
+        }
+        registerLiveSocketListener("live_guest_seat_approved", guestApprovedListener)
+
+        val guestMutedListener: (Any) -> Unit = guestMutedListener@{ data ->
+            val json = data.asJson() ?: return@guestMutedListener
+            if (json.optString("streamId") == streamId) {
+                val guestUserId = json.optString("guestUserId")
+                val isMuted = json.optBoolean("muted")
+                runOnUiThread {
+                    val index = activeGuests.indexOfFirst { it.userId == guestUserId }
+                    if (index != -1) {
+                        activeGuests[index] = activeGuests[index].copy(isMuted = isMuted)
+                        guestAdapter?.submitList(activeGuests.toList())
+                    }
+                    if (guestUserId == TokenManager.getUserId(this)) {
+                        rtcEngine?.muteLocalAudioStream(isMuted)
+                        muted = isMuted
+                        muteButton.setImageResource(if (muted) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
+                        Toast.makeText(this, if (isMuted) R.string.live_you_were_muted_by_host else R.string.mute_microphone, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        registerLiveSocketListener("live_guest_muted", guestMutedListener)
+
+        val guestLeftListener: (Any) -> Unit = guestLeftListener@{ data ->
+            val json = data.asJson() ?: return@guestLeftListener
+            if (json.optString("streamId") == streamId) {
+                val guestUserId = json.optString("guestUserId")
+                runOnUiThread {
+                    activeGuests.removeAll { it.userId == guestUserId }
+                    guestAdapter?.submitList(activeGuests.toList())
+                }
+            }
+        }
+        registerLiveSocketListener("live_guest_left", guestLeftListener)
+
+        val guestKickedListener: (Any) -> Unit = guestKickedListener@{ data ->
+            val json = data.asJson() ?: return@guestKickedListener
+            if (json.optString("streamId") == streamId) {
+                val guestUserId = json.optString("guestUserId")
+                runOnUiThread {
+                    activeGuests.removeAll { it.userId == guestUserId }
+                    guestAdapter?.submitList(activeGuests.toList())
+                    if (guestUserId == TokenManager.getUserId(this)) {
+                        switchRoleToAudience()
+                        Toast.makeText(this, R.string.live_you_were_kicked_by_host, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+        registerLiveSocketListener("live_guest_kicked", guestKickedListener)
+    }
+
+    private fun showGuestRequestDialog(json: JSONObject) {
+        val guestUserId = json.optString("userId")
+        val guestUsername = json.optString("username", getString(R.string.viewer_fallback))
+        val guestAgoraUid = json.optInt("agoraUid")
+        
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.request_to_speak)
+            .setMessage(getString(R.string.live_guest_requested_to_speak, guestUsername))
+            .setPositiveButton(R.string.approve) { _, _ ->
+                val payload = JSONObject()
+                    .put("streamId", streamId)
+                    .put("guestUserId", guestUserId)
+                    .put("guestAgoraUid", guestAgoraUid)
+                SocketManager.emit("live_approve_guest_seat", payload)
+            }
+            .setNegativeButton(R.string.decline) { _, _ ->
+                val payload = JSONObject()
+                    .put("streamId", streamId)
+                    .put("guestUserId", guestUserId)
+                SocketManager.emit("live_decline_guest_seat", payload)
+            }
+            .show()
+    }
+
+    private fun switchRoleToBroadcaster() {
+        refreshAgoraToken(
+            reason = "guest_seat_approved",
+            retryJoinAfterRefresh = false,
+            requestedRole = "broadcaster",
+            finishOnFailure = false
+        ) {
+            applyGuestBroadcasterRole()
+        }
+    }
+
+    private fun applyGuestBroadcasterRole() {
+        rtcEngine?.setClientRole(Constants.CLIENT_ROLE_BROADCASTER)
+        rtcEngine?.enableVideo()
+        rtcEngine?.updateChannelMediaOptions(ChannelMediaOptions().apply {
+            channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
+            clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
+            publishCameraTrack = true
+            publishMicrophoneTrack = true
+            autoSubscribeAudio = true
+            autoSubscribeVideo = true
+        })
+        rtcEngine?.startPreview()
+        guestAdapter?.submitList(activeGuests.toList())
+        buttonRequestSeat.visibility = View.GONE
+        hostControls.visibility = View.VISIBLE
+        muteButton.visibility = View.VISIBLE
+        flipButton.visibility = View.VISIBLE
+        endButton.visibility = View.GONE // Guests shouldn't end the stream
+        Toast.makeText(this, R.string.live_you_are_now_broadcasting, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun switchRoleToAudience() {
+        rtcEngine?.setClientRole(Constants.CLIENT_ROLE_AUDIENCE)
+        rtcEngine?.updateChannelMediaOptions(ChannelMediaOptions().apply {
+            channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
+            clientRoleType = Constants.CLIENT_ROLE_AUDIENCE
+            publishCameraTrack = false
+            publishMicrophoneTrack = false
+            autoSubscribeAudio = true
+            autoSubscribeVideo = true
+        })
+        rtcEngine?.stopPreview()
+        if (isHost) {
+            localView?.let { videoContainer.removeView(it) }
+            localView = null
+        }
+        hostControls.visibility = View.GONE
+        buttonRequestSeat.visibility = View.VISIBLE
     }
 
     private fun registerLiveSocketListener(event: String, listener: (Any) -> Unit) {
@@ -738,13 +1007,19 @@ class LiveStreamActivity : AppCompatActivity() {
         videoContainer.postDelayed({ joinAgoraChannel("retry_$reason") }, 1_000L)
     }
 
-    private fun refreshAgoraToken(reason: String, retryJoinAfterRefresh: Boolean) {
+    private fun refreshAgoraToken(
+        reason: String,
+        retryJoinAfterRefresh: Boolean,
+        requestedRole: String = if (isHost) "broadcaster" else "audience",
+        finishOnFailure: Boolean = true,
+        onRefreshed: (() -> Unit)? = null
+    ) {
         if (tokenRefreshInFlight || streamId.isBlank()) return
         tokenRefreshInFlight = true
-        Log.i(tag, "Refreshing Agora token. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost")
+        Log.i(tag, "Refreshing Agora token. reason=$reason streamId=$streamId channel=$channelName uid=$agoraUid host=$isHost requestedRole=$requestedRole")
         ApiClient.apiService.joinLiveStream(
             streamId,
-            xyz.yenkasa.app.model.JoinLiveStreamRequest(if (isHost) "broadcaster" else "audience")
+            xyz.yenkasa.app.model.JoinLiveStreamRequest(requestedRole)
         ).enqueue(object : Callback<LiveStreamResponse> {
             override fun onResponse(call: Call<LiveStreamResponse>, response: Response<LiveStreamResponse>) {
                 tokenRefreshInFlight = false
@@ -761,8 +1036,10 @@ class LiveStreamActivity : AppCompatActivity() {
                         body?.message ?: getString(R.string.live_token_refresh_failed),
                         Toast.LENGTH_LONG
                     ).show()
-                    if (isHost && !hostReadyEmitted) cancelStartingLive()
-                    finish()
+                    if (finishOnFailure) {
+                        if (isHost && !hostReadyEmitted) cancelStartingLive()
+                        finish()
+                    }
                     return
                 }
 
@@ -773,8 +1050,10 @@ class LiveStreamActivity : AppCompatActivity() {
                         "Agora token refresh returned invalid UID. reason=$reason streamId=$streamId channel=${stream.agoraChannel} oldUid=$agoraUid newUid=$refreshedUid role=${token.role}"
                     )
                     Toast.makeText(this@LiveStreamActivity, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
-                    if (isHost && !hostReadyEmitted) cancelStartingLive()
-                    finish()
+                    if (finishOnFailure) {
+                        if (isHost && !hostReadyEmitted) cancelStartingLive()
+                        finish()
+                    }
                     return
                 }
                 if (refreshedUid != agoraUid) {
@@ -783,8 +1062,10 @@ class LiveStreamActivity : AppCompatActivity() {
                         "Agora token refresh UID mismatch. reason=$reason streamId=$streamId channel=${stream.agoraChannel} oldUid=$agoraUid newUid=$refreshedUid role=${token.role}"
                     )
                     Toast.makeText(this@LiveStreamActivity, R.string.live_video_credentials_invalid, Toast.LENGTH_LONG).show()
-                    if (isHost && !hostReadyEmitted) cancelStartingLive()
-                    finish()
+                    if (finishOnFailure) {
+                        if (isHost && !hostReadyEmitted) cancelStartingLive()
+                        finish()
+                    }
                     return
                 }
 
@@ -797,6 +1078,7 @@ class LiveStreamActivity : AppCompatActivity() {
                 )
                 rtcEngine?.renewToken(agoraToken)
                 if (retryJoinAfterRefresh) retryAgoraJoin("token_refresh_$reason")
+                onRefreshed?.invoke()
             }
 
             override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
@@ -807,8 +1089,10 @@ class LiveStreamActivity : AppCompatActivity() {
                     R.string.live_token_refresh_failed,
                     Toast.LENGTH_LONG
                 ).show()
-                if (isHost && !hostReadyEmitted) cancelStartingLive()
-                finish()
+                if (finishOnFailure) {
+                    if (isHost && !hostReadyEmitted) cancelStartingLive()
+                    finish()
+                }
             }
         })
     }
@@ -827,6 +1111,7 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun setupLocalVideo() {
+        if (localView != null) return
         localView = SurfaceView(this)
         videoContainer.addView(localView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         rtcEngine?.setupLocalVideo(VideoCanvas(localView, VideoCanvas.RENDER_MODE_HIDDEN, agoraUid))
@@ -834,6 +1119,11 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun setupRemoteVideo(uid: Int) {
+        if (activeGuests.any { it.agoraUid == uid }) {
+            guestAdapter?.submitList(activeGuests.toList())
+            return
+        }
+        if (isHost) return
         if (remoteView != null) return
         remoteView = SurfaceView(this)
         videoContainer.addView(remoteView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
@@ -858,8 +1148,12 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun sendReaction(reaction: String) {
         val now = System.currentTimeMillis()
-        if (now - lastReactionAt < 700L) return
+        if (now - lastReactionAt < 300L) return
         lastReactionAt = now
+
+        // Immediate local visual feedback
+        animateReaction(reaction)
+
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -877,7 +1171,9 @@ class LiveStreamActivity : AppCompatActivity() {
             Triple("love", getString(R.string.gift_love), 5),
             Triple("fire", getString(R.string.gift_fire), 10),
             Triple("crown", getString(R.string.gift_crown), 50),
-            Triple("rocket", getString(R.string.gift_rocket), 100)
+            Triple("rocket", getString(R.string.gift_rocket), 100),
+            Triple("diamond", getString(R.string.gift_diamond), 500),
+            Triple("galaxy", getString(R.string.gift_galaxy), 1000)
         )
         val dialog = BottomSheetDialog(this)
         val sheet = LinearLayout(this).apply {
@@ -901,10 +1197,20 @@ class LiveStreamActivity : AppCompatActivity() {
             sheet.addView(Button(this).apply {
                 text = getString(R.string.gift_option_format, label, amount)
                 setTextColor(Color.WHITE)
-                setBackgroundColor(Color.rgb(0, 132, 61))
+                // Use a modern green button style
+                background = ContextCompat.getDrawable(context, R.drawable.bg_live_send_button)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(0, 132, 61))
+                isAllCaps = false
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(48)
+                ).apply {
+                    setMargins(0, 0, 0, dp(8))
+                }
+                layoutParams = params
                 setOnClickListener {
                     dialog.dismiss()
-                    sendGift(key)
+                    sendGift(key, label, amount)
                 }
             })
         }
@@ -912,7 +1218,7 @@ class LiveStreamActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun sendGift(giftKey: String) {
+    private fun sendGift(giftKey: String, label: String, amount: Int) {
         ApiClient.apiService.sendLiveGift(LiveGiftRequest(streamId, giftKey))
             .enqueue(object : Callback<LiveGiftResponse> {
                 override fun onResponse(call: Call<LiveGiftResponse>, response: Response<LiveGiftResponse>) {
@@ -921,6 +1227,20 @@ class LiveStreamActivity : AppCompatActivity() {
                         Toast.makeText(this@LiveStreamActivity, body?.message ?: getString(R.string.gift_failed), Toast.LENGTH_SHORT).show()
                         return
                     }
+
+                    // Success: Immediate local feedback
+                    val emoji = when (giftKey) {
+                        "love" -> "❤️"
+                        "fire" -> "🔥"
+                        "crown" -> "👑"
+                        "rocket" -> "🚀"
+                        "diamond" -> "💎"
+                        "galaxy" -> "🌌"
+                        else -> "🎁"
+                    }
+                    addComment(getString(R.string.live_user_sent_gift, getString(R.string.you), emoji, amount))
+                    animateReaction(emoji)
+
                     val updatedBalance = body.ykcBalance ?: body.coinsBalance ?: body.balance
                     TokenManager.saveCoinsPrecise(this@LiveStreamActivity, updatedBalance)
                 }
@@ -1146,6 +1466,7 @@ class LiveStreamActivity : AppCompatActivity() {
         private const val EXTRA_IS_HOST = "is_host"
         private const val EXTRA_SCHEDULED_END_AT = "scheduled_end_at"
         private const val EXTRA_EXPIRES_AT = "expires_at"
+        private const val EXTRA_GUESTS = "guests"
 
         fun intentForHost(context: Context, stream: LiveStream, agora: AgoraLiveToken): Intent {
             return baseIntent(context, stream, agora, true)
@@ -1168,6 +1489,24 @@ class LiveStreamActivity : AppCompatActivity() {
                 .putExtra(EXTRA_EXPIRES_AT, agora.expiresAt)
                 .putExtra(EXTRA_IS_HOST, isHost)
                 .putExtra(EXTRA_SCHEDULED_END_AT, stream.scheduledEndAt)
+                .putExtra(EXTRA_GUESTS, guestsJson(stream.guests))
+        }
+
+        private fun guestsJson(guests: List<LiveGuest>): String {
+            val array = JSONArray()
+            guests.forEach { guest ->
+                array.put(
+                    JSONObject()
+                        .put("userId", guest.userId)
+                        .put("username", guest.username)
+                        .put("avatar", guest.avatar)
+                        .put("agoraUid", guest.agoraUid)
+                        .put("isMuted", guest.isMuted)
+                        .put("isVideoStopped", guest.isVideoStopped)
+                        .put("joinedAt", guest.joinedAt)
+                )
+            }
+            return array.toString()
         }
     }
 }

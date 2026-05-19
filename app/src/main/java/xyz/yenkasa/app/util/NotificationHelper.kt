@@ -85,14 +85,14 @@ object NotificationHelper {
             .setSmallIcon(R.drawable.ic_call)
             .setContentTitle("Incoming $callType")
             .setContentText("Call from $callerName")
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setOngoing(true)
-            .setFullScreenIntent(acceptPendingIntent, true)
+            .setContentIntent(acceptPendingIntent)
+            .setAutoCancel(true)
             .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
             .addAction(R.drawable.ic_call, "Accept", acceptPendingIntent)
             .addAction(R.drawable.ic_call_end, "Reject", rejectPendingIntent)
-
         if (soundUri != null) builder.setSound(soundUri)
 
         try {

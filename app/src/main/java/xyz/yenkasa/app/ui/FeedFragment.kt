@@ -29,7 +29,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.adapter.FeedAdapter
 import xyz.yenkasa.app.adapter.FeedCommunityStoryAdapter
 import xyz.yenkasa.app.adapter.CommunityStoryPreview
 import xyz.yenkasa.app.model.*
@@ -66,7 +65,6 @@ import java.util.concurrent.TimeUnit
 
 class FeedFragment : Fragment() {
     companion object {
-        const val USE_YENKASA_PLAYER_VIEW = true
         private const val FEED_AD_INTERVAL = 4
     }
 
@@ -86,7 +84,6 @@ class FeedFragment : Fragment() {
     private lateinit var floatingWalletViews: FeedChromeController.FloatingWalletViews
 
     private val posts = mutableListOf<Post>()
-    private lateinit var feedAdapter: FeedAdapter
     private var playerCoordinator: FeedPlayerCoordinator? = null
     private lateinit var communityStoryAdapter: FeedCommunityStoryAdapter
 
@@ -98,7 +95,6 @@ class FeedFragment : Fragment() {
     private var isLoading = false
     private var isLoadingMore = false
     private var isLastPage = false
-    private var hasShownCachedFeed = false
     private var feedRequestGeneration = 0
     private var activeCacheKey = "default"
     private var lastLoadedPostId: String? = null
@@ -163,7 +159,7 @@ class FeedFragment : Fragment() {
             feedFilterBar = feedFilterBar,
             mainAppBar = requireActivity().findViewById(R.id.mainAppBar),
             fabCreatePost = fabCreatePost,
-            usePlayerChrome = USE_YENKASA_PLAYER_VIEW,
+            usePlayerChrome = true,
             userIdProvider = { userId },
             onFeedFocusRequested = { recyclerView.smoothScrollToPosition(0) }
         )
@@ -186,8 +182,6 @@ class FeedFragment : Fragment() {
             }
         )
         setupFeedTabs()
-        setupInfiniteScroll()
-        loadCachedFeed()
         scheduleBackgroundFeedSync()
         setupNetworkMonitoring()
 
@@ -235,11 +229,7 @@ class FeedFragment : Fragment() {
             onScrollToTop = { recyclerView.scrollToPosition(0) },
             onViewCountUpdated = { postId, viewsCount ->
                 updateSourcePostViewCount(postId, viewsCount)
-                if (!USE_YENKASA_PLAYER_VIEW) {
-                    feedAdapter.updatePostViewCount(postId, viewsCount)
-                } else {
-                    renderPosts()
-                }
+                renderPosts()
             }
         )
         chromeController = FeedChromeController(this)
@@ -290,10 +280,6 @@ class FeedFragment : Fragment() {
             view.findViewById(R.id.tabTop)
         )
 
-        if (!USE_YENKASA_PLAYER_VIEW) {
-            EdgeToEdgeInsets.applySystemBarMargins(floatingWalletViews.walletCard, left = true, bottom = true)
-        }
-
         communitiesBar.post {
             communitiesBarNaturalHeight = communitiesBar.height
         }
@@ -308,58 +294,18 @@ class FeedFragment : Fragment() {
         recyclerView.itemAnimator = null
         recyclerView.setItemViewCacheSize(0)
 
-        if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator = FeedPlayerCoordinator(
-                fragment = this,
-                recyclerView = recyclerView,
-                layoutManager = layoutManager,
-                callbacks = createPlayerCallbacks(),
-                shouldLoadNextPage = { !isLoading && !isLoadingMore && !isLastPage },
-                onLoadNextPage = { loadFeed(currentPage + 1) },
-                onViewCountUpdated = { postId, viewsCount -> updateSourcePostViewCount(postId, viewsCount) }
-            ).also {
-                it.setup()
-                it.setMonetizationAds(sponsoredAds)
-            }
-            return
+        playerCoordinator = FeedPlayerCoordinator(
+            fragment = this,
+            recyclerView = recyclerView,
+            layoutManager = layoutManager,
+            callbacks = createPlayerCallbacks(),
+            shouldLoadNextPage = { !isLoading && !isLoadingMore && !isLastPage },
+            onLoadNextPage = { loadFeed(currentPage + 1) },
+            onViewCountUpdated = { postId, viewsCount -> updateSourcePostViewCount(postId, viewsCount) }
+        ).also {
+            it.setup()
+            it.setMonetizationAds(sponsoredAds)
         }
-
-        feedAdapter = FeedAdapter(
-            requireContext(),
-            onLikeClick = { post, position -> postActionsController.handleLike(post, position) },
-            onCommentClick = { post, _ -> postActionsController.openComments(post) },
-            onUserClick = { id -> postActionsController.openUserProfile(id) },
-            onPostClick = { post ->
-                when {
-                    !post.videoUrl.isNullOrEmpty() || !post.audioUrl.isNullOrEmpty() || post.effectiveImageUrls().isNotEmpty() ->
-                        postActionsController.openMedia(post)
-                }
-            },
-            onShareClick = { post -> postActionsController.sharePost(post) },
-            onViewCountUpdated = { postId, viewsCount ->
-                updateSourcePostViewCount(postId, viewsCount)
-            },
-            adAdapterCallbacks = AdBinder(requireContext())
-        )
-// 🔥 CONNECT POST OPTIONS (delete / hide / flag / download)
-        feedAdapter.onDelete = { post ->
-            postActionsController.confirmDeletePost(post)
-        }
-
-        feedAdapter.onHide = { post ->
-            postActionsController.hidePost(post)
-        }
-
-        feedAdapter.onFlag = { post ->
-            postActionsController.flagPost(post)
-        }
-
-        feedAdapter.onDownload = { post ->
-            postActionsController.downloadPost(post)
-        }
-
-        recyclerView.layoutManager = layoutManager
-        recyclerView.adapter = feedAdapter
     }
 
     private fun createPlayerCallbacks(): FeedPlayerCoordinator.Callbacks {
@@ -402,38 +348,6 @@ class FeedFragment : Fragment() {
                 onFeedReloadRequested = { reloadFeedFromStart() }
             )
         }
-    }
-
-    private fun setupInfiniteScroll() {
-        if (USE_YENKASA_PLAYER_VIEW) return
-
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                updateCommunitiesBarForScroll(recyclerView, dy)
-                if (dy <= 0) return
-
-                val lastVisible = layoutManager.findLastVisibleItemPosition()
-                val totalItemCount = layoutManager.itemCount
-                preloadFeedAround(lastVisible)
-
-                if (!isLoading && !isLoadingMore && !isLastPage && lastVisible >= totalItemCount - 3) {
-                    loadFeed(currentPage + 1)
-                }
-            }
-
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                super.onScrollStateChanged(recyclerView, newState)
-                if (newState != RecyclerView.SCROLL_STATE_IDLE) return
-
-                val first = layoutManager.findFirstVisibleItemPosition()
-                val last = layoutManager.findLastVisibleItemPosition()
-                if (first == RecyclerView.NO_POSITION || last == RecyclerView.NO_POSITION) return
-
-                val center = (first + last) / 2
-                feedAdapter.autoPlayCenteredVideo(recyclerView, center)
-            }
-        })
     }
 
     private fun updateCommunitiesBarForScroll(recyclerView: RecyclerView, dy: Int) {
@@ -514,7 +428,6 @@ class FeedFragment : Fragment() {
         var lastAdOrganicCount = 0
         var adSlot = 0
 
-        fun nextFeedGap(): Int = 4 + (adSlot % 2)
         fun fallbackAd(slot: Int): AdModel = AdModel(
             _id = "local-ad-slot-$slot",
             sponsorName = "AdMob",
@@ -540,9 +453,7 @@ class FeedFragment : Fragment() {
             mixed.add(post)
             organicCount++
 
-            val gap = nextFeedGap()
-            val enoughDistance = organicCount - lastAdOrganicCount >= gap
-            if (organicCount >= gap && enoughDistance) {
+            if (AdEligibilityManager.canShowFeedAd(organicCount, lastAdOrganicCount, adSlot)) {
                 val ad = pickAd(adSlot) ?: fallbackAd(adSlot)
                 lastAdOrganicCount = organicCount
                 adSlot++
@@ -571,11 +482,7 @@ class FeedFragment : Fragment() {
                     playerCoordinator?.setMonetizationAds(sponsoredAds)
                     if (posts.isNotEmpty()) {
                         val mixedFeed = buildMixedFeed(posts)
-                        if (USE_YENKASA_PLAYER_VIEW) {
-                            playerCoordinator?.submitItems(mixedFeed)
-                        } else if (::feedAdapter.isInitialized) {
-                            feedAdapter.updateItems(mixedFeed)
-                        }
+                        playerCoordinator?.submitItems(mixedFeed)
                     }
                 }
 
@@ -583,7 +490,7 @@ class FeedFragment : Fragment() {
                     Log.w("FeedFragment", "Sponsored ads unavailable, using AdMob fallback: ${t.message}")
                     sponsoredAds = emptyList()
                     playerCoordinator?.setMonetizationAds(sponsoredAds)
-                    if (USE_YENKASA_PLAYER_VIEW && posts.isNotEmpty()) {
+                    if (posts.isNotEmpty()) {
                         playerCoordinator?.submitItems(buildMixedFeed(posts))
                     }
                 }
@@ -762,9 +669,7 @@ class FeedFragment : Fragment() {
         WalletBalanceManager.refreshBalance(requireContext())
         AdEligibilityManager.onAppForeground(requireContext())
         AdEligibilityManager.setTyping(requireContext(), false)
-        if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator?.resumeActive()
-        }
+        playerCoordinator?.resumeActive()
     }
 
     override fun onPause() {
@@ -772,26 +677,19 @@ class FeedFragment : Fragment() {
         saveCurrentScrollPosition()
         chromeController.onHostPause()
         AdEligibilityManager.onAppBackground(requireContext())
-        if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator?.pauseActive()
-        } else {
-            feedAdapter.pauseAllVideos()
-        }
+        playerCoordinator?.pauseActive()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         chromeController.detach()
-        if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator?.releaseAll()
-            playerCoordinator = null
-            chromeController.restoreMainChrome(
-                mainAppBar = requireActivity().findViewById(R.id.mainAppBar),
-                fabYenkasaLive = fabYenkasaLive
-            )
-        } else {
-            feedAdapter.pauseAllVideos()
-        }
+        playerCoordinator?.releaseAll()
+        playerCoordinator = null
+        chromeController.restoreMainChrome(
+            mainAppBar = requireActivity().findViewById(R.id.mainAppBar),
+            fabYenkasaLive = fabYenkasaLive,
+            fabCreatePost = fabCreatePost
+        )
         socketController.detach()
         networkController.tearDown()
     }
@@ -818,27 +716,18 @@ class FeedFragment : Fragment() {
     }
 
     private fun renderPosts() {
-        if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator?.setFeedMode(selectedFeedMode)
-            playerCoordinator?.submitItems(buildMixedFeed(posts))
-            playerCoordinator?.setCommunities(
-                allCommunities,
-                selectedCommunities.mapNotNull { it.id }.toSet()
-            )
-            updateEmptyFeedUi(isRefreshing = isLoading && posts.isEmpty())
-            if (posts.isNotEmpty()) {
-                preloadFeedAround(layoutManager.findFirstVisibleItemPosition().coerceAtLeast(0))
-                recyclerView.post {
-                    playerCoordinator?.handleSnapToActiveItem()
-                }
-            }
-            return
-        }
-
-        feedAdapter.updateItems(buildMixedFeed(posts))
+        playerCoordinator?.setFeedMode(selectedFeedMode)
+        playerCoordinator?.submitItems(buildMixedFeed(posts))
+        playerCoordinator?.setCommunities(
+            allCommunities,
+            selectedCommunities.mapNotNull { it.id }.toSet()
+        )
         updateEmptyFeedUi(isRefreshing = isLoading && posts.isEmpty())
         if (posts.isNotEmpty()) {
             preloadFeedAround(layoutManager.findFirstVisibleItemPosition().coerceAtLeast(0))
+            recyclerView.post {
+                playerCoordinator?.handleSnapToActiveItem()
+            }
         }
     }
 
@@ -914,11 +803,7 @@ class FeedFragment : Fragment() {
         isLoadingMore = false
         currentPage = 1
         isLastPage = false
-        if (USE_YENKASA_PLAYER_VIEW) {
-            playerCoordinator?.resetRenderedState()
-        } else if (::feedAdapter.isInitialized) {
-            recyclerView.recycledViewPool.clear()
-        }
+        playerCoordinator?.resetRenderedState()
         val cacheKey = feedCacheKeyFor(selectedCommunityNames())
         loadCachedFeed(
             cacheKey = cacheKey,
@@ -941,7 +826,6 @@ class FeedFragment : Fragment() {
                 currentPage = cached.currentPage.coerceAtLeast(1)
                 isLastPage = cached.isLastPage
                 lastLoadedPostId = posts.lastOrNull()?._id
-                hasShownCachedFeed = true
                 renderPosts()
                 restoreScrollPositionIfNeeded(cacheKey)
             }
@@ -989,15 +873,23 @@ class FeedFragment : Fragment() {
     }
 
     private fun updatePlayerEmptyRecoveryChrome(show: Boolean) {
-        if (!USE_YENKASA_PLAYER_VIEW || !::communitiesBar.isInitialized) return
+        if (!::communitiesBar.isInitialized) return
         val visibility = if (show) View.VISIBLE else View.GONE
         communitiesBar.visibility = visibility
         feedFilterBar.visibility = visibility
         floatingWalletViews.walletCard.visibility = visibility
         fabYenkasaLive.visibility = visibility
+        fabCreatePost.visibility = visibility
         val mainAppBar: View? = requireActivity().findViewById(R.id.mainAppBar)
         mainAppBar?.visibility = visibility
+
+        if (show) {
+            activity?.let { xyz.yenkasa.app.util.EdgeToEdgeInsets.showSystemBars(it) }
+        } else {
+            activity?.let { xyz.yenkasa.app.util.EdgeToEdgeInsets.hideSystemBars(it) }
+        }
     }
+
 
     private fun updateOfflineBanner(isOffline: Boolean) {
         if (!::offlineBanner.isInitialized) return
@@ -1031,7 +923,7 @@ class FeedFragment : Fragment() {
     private fun setupNetworkMonitoring() {
         networkController.setupNetworkMonitoring(
             offlineBanner = offlineBanner,
-            shouldReload = { posts.isEmpty() || hasShownCachedFeed },
+            shouldReload = { posts.isEmpty() },
             onReload = { loadFeed(1) }
         )
     }

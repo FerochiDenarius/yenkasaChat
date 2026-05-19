@@ -33,12 +33,23 @@ object EdgeToEdgeInsets {
         }
     }
 
-    fun hideSystemBars(activity: Activity) {
-        WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
-            systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    fun hideSystemBars(window: Window) {
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
+    }
+
+    fun showSystemBars(window: Window) {
+        WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+    }
+
+    fun hideSystemBars(activity: Activity) {
+        hideSystemBars(activity.window)
+    }
+
+    fun showSystemBars(activity: Activity) {
+        showSystemBars(activity.window)
     }
 
     fun applySystemBarPadding(

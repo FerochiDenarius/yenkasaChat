@@ -13,6 +13,7 @@ import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.ads.AdEligibilityManager
 import xyz.yenkasa.app.ui.ads.MonetizationAdDialog
+import xyz.yenkasa.app.ui.ads.MonetizationAdPreloader
 import xyz.yenkasa.app.ui.ads.MonetizationAdRequest
 import xyz.yenkasa.app.ui.ads.MonetizationAdType
 import xyz.yenkasa.app.ui.CoinWalletActivity
@@ -57,6 +58,7 @@ class FeedPlayerCoordinator(
     )
     private var sponsoredAds: List<AdModel> = emptyList()
     private var monetizationDialogShowing = false
+    private val monetizationAdPreloader = MonetizationAdPreloader(fragment.requireContext())
 
     fun setup() {
         AdEligibilityManager.init(fragment.requireContext())
@@ -117,6 +119,7 @@ class FeedPlayerCoordinator(
 
     fun releaseAll() {
         playerAdapter.releaseAll(recyclerView)
+        monetizationAdPreloader.release()
         snapHelper.attachToRecyclerView(null)
     }
 
@@ -171,6 +174,10 @@ class FeedPlayerCoordinator(
             override fun onReward(post: Post) {
                 if (monetizationDialogShowing) return
                 val context = fragment.requireContext()
+                if (!AdEligibilityManager.canShowRewarded(context)) {
+                    callbacks.onReward(post)
+                    return
+                }
                 val ad = pickMonetizationAd(post, MonetizationAdType.REWARDED) ?: run {
                     callbacks.onReward(post)
                     return
@@ -189,9 +196,13 @@ class FeedPlayerCoordinator(
                         postId = post._id
                     )
                 ) { outcome ->
-                    AdEligibilityManager.registerAdShown(context, MonetizationAdType.REWARDED, post._id)
-                    if (!outcome.completed) {
+                    if (outcome.failed) {
                         AdEligibilityManager.registerAdSkipped(context, MonetizationAdType.REWARDED, post._id)
+                    } else {
+                        AdEligibilityManager.registerAdShown(context, MonetizationAdType.REWARDED, post._id)
+                        if (!outcome.completed) {
+                            AdEligibilityManager.registerAdSkipped(context, MonetizationAdType.REWARDED, post._id)
+                        }
                     }
                     monetizationDialogShowing = false
                     if (fragment.isAdded) {
@@ -265,12 +276,17 @@ class FeedPlayerCoordinator(
     private fun handleMonetizationProgress(post: Post, currentSeconds: Int, durationSeconds: Int) {
         val context = fragment.requireContext()
         if (monetizationDialogShowing || !fragment.isAdded) return
+        val isVideoPost = !post.videoUrl.isNullOrBlank()
 
-        if (currentSeconds >= 10) {
+        if (isVideoPost && currentSeconds >= 10) {
             AdEligibilityManager.registerVideoWatched(context, post._id)
         }
 
-        if (durationSeconds > 60 && currentSeconds in 40..60) {
+        if (isVideoPost && durationSeconds > 60 && currentSeconds in 30..39) {
+            monetizationAdPreloader.preload(pickMonetizationAd(post, MonetizationAdType.MIDROLL))
+        }
+
+        if (isVideoPost && durationSeconds > 60 && currentSeconds in 40..60) {
             if (AdEligibilityManager.canShowMidRoll(context, post._id, durationSeconds)) {
                 showMonetizationAd(MonetizationAdType.MIDROLL, post, rewardEligible = false)
                 return
@@ -290,6 +306,7 @@ class FeedPlayerCoordinator(
         if (monetizationDialogShowing) return
         val ad = pickMonetizationAd(post, type) ?: return
         monetizationDialogShowing = true
+        monetizationAdPreloader.release()
         playerAdapter.pauseActive(recyclerView)
         if (AdEligibilityManager.shouldRegisterMonetizedSession(fragment.requireContext())) {
             AdEligibilityManager.registerMonetizedSession(fragment.requireContext())
@@ -303,9 +320,13 @@ class FeedPlayerCoordinator(
                 postId = post._id
             )
         ) { outcome ->
-            AdEligibilityManager.registerAdShown(fragment.requireContext(), type, post._id)
-            if (!outcome.completed) {
+            if (outcome.failed) {
                 AdEligibilityManager.registerAdSkipped(fragment.requireContext(), type, post._id)
+            } else {
+                AdEligibilityManager.registerAdShown(fragment.requireContext(), type, post._id)
+                if (!outcome.completed) {
+                    AdEligibilityManager.registerAdSkipped(fragment.requireContext(), type, post._id)
+                }
             }
             monetizationDialogShowing = false
             if (fragment.isAdded) {

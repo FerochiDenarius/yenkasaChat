@@ -17,13 +17,38 @@ const LIVE_GIFTS = {
   love: { label: 'Love', emoji: '❤️', amount: 5 },
   fire: { label: 'Fire', emoji: '🔥', amount: 10 },
   crown: { label: 'Crown', emoji: '👑', amount: 50 },
-  rocket: { label: 'Rocket', emoji: '🚀', amount: 100 }
+  rocket: { label: 'Rocket', emoji: '🚀', amount: 100 },
+  diamond: { label: 'Diamond', emoji: '💎', amount: 500 },
+  galaxy: { label: 'Galaxy', emoji: '🌌', amount: 1000 }
 };
 
 function resolveYkcBalance(user) {
   const ykcBalance = Number(user?.ykcBalance || 0);
   const coinsBalance = Number(user?.coinsBalance || 0);
   return Math.max(ykcBalance, coinsBalance);
+}
+
+function serializeLiveGuests(guests = []) {
+  return (guests || []).map((guest) => {
+    let agoraUid = Number(guest.agoraUid || 0);
+    if ((!Number.isInteger(agoraUid) || agoraUid <= 0) && guest.userId) {
+      try {
+        agoraUid = agoraUidFromUserId(guest.userId);
+      } catch (err) {
+        agoraUid = 0;
+      }
+    }
+
+    return {
+      userId: guest.userId?.toString?.() || guest.userId || '',
+      username: guest.username || '',
+      avatar: guest.avatar || '',
+      agoraUid,
+      isMuted: Boolean(guest.isMuted),
+      isVideoStopped: Boolean(guest.isVideoStopped),
+      joinedAt: guest.joinedAt || null
+    };
+  }).filter((guest) => guest.userId && guest.agoraUid > 0);
 }
 
 function serializeStream(stream) {
@@ -44,6 +69,7 @@ function serializeStream(stream) {
     startupExpiresAt: stream.startupExpiresAt || null,
     viewerCount: stream.viewerCount || 0,
     peakViewerCount: stream.peakViewerCount || 0,
+    guests: serializeLiveGuests(stream.guests),
     hostRole: stream.hostRole || '',
     maxDurationMinutes: stream.maxDurationMinutes ?? null,
     scheduledEndAt: stream.scheduledEndAt || null,
@@ -341,11 +367,19 @@ router.get('/active', auth, async (req, res) => {
   try {
     await cleanupExpiredStartingStreams();
     const limit = Math.min(Number(req.query.limit || 30), 50);
-    const streams = await LiveStream.find({
+    const community = req.query.community?.toString();
+
+    const query = {
       isLive: true,
       lifecycleStatus: 'live',
       hostConnected: true
-    })
+    };
+
+    if (community && community !== 'global' && community !== 'all') {
+      query.community = community;
+    }
+
+    const streams = await LiveStream.find(query)
       .sort({ viewerCount: -1, startedAt: -1 })
       .limit(limit)
       .lean();
@@ -387,7 +421,12 @@ router.post('/join/:id', auth, async (req, res) => {
       });
     }
 
-    if (requestedBroadcaster && stream.hostId.toString() === req.user._id.toString()) {
+    const isHostBroadcaster = requestedBroadcaster && stream.hostId.toString() === req.user._id.toString();
+    const isApprovedGuestBroadcaster = requestedBroadcaster && (stream.guests || []).some(
+      (guest) => guest.userId?.toString?.() === req.user._id.toString()
+    );
+
+    if (isHostBroadcaster) {
       const permission = canStartLivestream(req.user);
       if (!permission.allowed) {
         return liveApiError(res, 403, permission.code || 'STREAM_PERMISSION_DENIED', permission.reason, {
@@ -398,8 +437,10 @@ router.post('/join/:id', auth, async (req, res) => {
         });
       }
       role = 'broadcaster';
+    } else if (isApprovedGuestBroadcaster) {
+      role = 'broadcaster';
     } else if (requestedBroadcaster) {
-      return liveApiError(res, 403, 'STREAM_PERMISSION_DENIED', 'Only the host can broadcast this livestream.', {
+      return liveApiError(res, 403, 'STREAM_PERMISSION_DENIED', 'Only the host or an approved guest can broadcast this livestream.', {
         action: 'join_broadcaster',
         streamId: stream._id.toString(),
         hostId: stream.hostId?.toString?.(),
@@ -572,7 +613,7 @@ router.post('/gift', auth, async (req, res) => {
         fromWalletId: sender.walletId || '',
         toWalletId: host.walletId || '',
         amount: gift.amount,
-        type: 'LIVE_GIFT',
+        type: 'TRANSFER',
         description: `${sender.username} sent ${gift.label} to ${stream.hostUsername}'s live`,
         activityId: `live:${stream._id}`,
         transactionId: `LIVE-${stream._id}-${sender._id}-${Date.now()}`,

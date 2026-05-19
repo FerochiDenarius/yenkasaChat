@@ -11,6 +11,7 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,11 +27,11 @@ import retrofit2.Response
 
 class MyAdsActivity : AppCompatActivity() {
 
-    private enum class StatusFilter(val label: String) {
-        ALL("All"),
-        PENDING("Pending"),
-        APPROVED("Approved"),
-        REJECTED("Rejected")
+    private enum class StatusFilter(@StringRes val labelRes: Int) {
+        ALL(R.string.status_all),
+        PENDING(R.string.status_pending),
+        APPROVED(R.string.status_approved),
+        REJECTED(R.string.status_rejected)
     }
 
     private lateinit var recyclerView: RecyclerView
@@ -48,7 +49,7 @@ class MyAdsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_status_list)
-        title = "My Ads"
+        title = getString(R.string.my_ads_title)
 
         backButton = findViewById(R.id.buttonStatusListBack)
         titleView = findViewById(R.id.textStatusListTitle)
@@ -59,11 +60,11 @@ class MyAdsActivity : AppCompatActivity() {
         searchInput = findViewById(R.id.inputStatusSearch)
         filterButton = findViewById(R.id.btnStatusFilter)
 
-        titleView.text = "My Ads"
-        subtitleView.text = "Track pending, approved, and rejected sponsored ads."
-        emptyView.text = "No ads yet."
-        searchInput.hint = "Search ads..."
-        filterButton.text = currentFilter.label
+        titleView.text = getString(R.string.my_ads_title)
+        subtitleView.text = getString(R.string.my_ads_subtitle)
+        emptyView.text = getString(R.string.my_ads_empty)
+        searchInput.hint = getString(R.string.ads_search_hint)
+        filterButton.text = filterLabel(currentFilter)
 
         adapter = MyAdsAdapter(mutableListOf())
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -92,7 +93,7 @@ class MyAdsActivity : AppCompatActivity() {
     private fun loadAds() {
         val token = TokenManager.getToken(this)
         if (token.isNullOrBlank()) {
-            Toast.makeText(this, "Login required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.login_required, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -109,7 +110,7 @@ class MyAdsActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<AdsFeedResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
                     emptyView.visibility = View.VISIBLE
-                    emptyView.text = "Failed to load your ads."
+                    emptyView.text = getString(R.string.my_ads_failed_load)
                 }
             })
     }
@@ -118,14 +119,14 @@ class MyAdsActivity : AppCompatActivity() {
         val filters = StatusFilter.entries.toTypedArray()
         val currentIndex = filters.indexOf(currentFilter).coerceAtLeast(0)
         AlertDialog.Builder(this)
-            .setTitle("Filter ads")
-            .setSingleChoiceItems(filters.map { it.label }.toTypedArray(), currentIndex) { dialog, which ->
+            .setTitle(R.string.ads_filter_title)
+            .setSingleChoiceItems(filters.map { filterLabel(it) }.toTypedArray(), currentIndex) { dialog, which ->
                 currentFilter = filters[which]
-                filterButton.text = currentFilter.label
+                filterButton.text = filterLabel(currentFilter)
                 renderAds()
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -138,8 +139,17 @@ class MyAdsActivity : AppCompatActivity() {
         adapter.submit(rows)
         emptyView.visibility = if (rows.isEmpty()) View.VISIBLE else View.GONE
         subtitleView.text = when (currentFilter) {
-            StatusFilter.ALL -> "Showing ${filteredAds.size} ad${if (filteredAds.size == 1) "" else "s"} across all statuses."
-            else -> "Showing ${filteredAds.size} ${currentFilter.label.lowercase()} ad${if (filteredAds.size == 1) "" else "s"}."
+            StatusFilter.ALL -> resources.getQuantityString(
+                R.plurals.my_ads_showing_all_statuses,
+                filteredAds.size,
+                filteredAds.size
+            )
+            else -> resources.getQuantityString(
+                R.plurals.my_ads_showing_status,
+                filteredAds.size,
+                filteredAds.size,
+                filterLabel(currentFilter).lowercase()
+            )
         }
     }
 
@@ -163,13 +173,13 @@ class MyAdsActivity : AppCompatActivity() {
         val rows = mutableListOf<MyAdsAdapter.Row>()
         when (currentFilter) {
             StatusFilter.ALL -> {
-                addSection(rows, "Pending", pending)
-                addSection(rows, "Approved", approved)
-                addSection(rows, "Rejected", rejected)
+                addSection(rows, getString(R.string.status_pending), pending)
+                addSection(rows, getString(R.string.status_approved), approved)
+                addSection(rows, getString(R.string.status_rejected), rejected)
             }
-            StatusFilter.PENDING -> addSection(rows, "Pending", pending)
-            StatusFilter.APPROVED -> addSection(rows, "Approved", approved)
-            StatusFilter.REJECTED -> addSection(rows, "Rejected", rejected)
+            StatusFilter.PENDING -> addSection(rows, getString(R.string.status_pending), pending)
+            StatusFilter.APPROVED -> addSection(rows, getString(R.string.status_approved), approved)
+            StatusFilter.REJECTED -> addSection(rows, getString(R.string.status_rejected), rejected)
         }
         return rows
     }
@@ -188,4 +198,6 @@ class MyAdsActivity : AppCompatActivity() {
         rows += MyAdsAdapter.Row.Header(title)
         rows += ads.map { MyAdsAdapter.Row.Item(it) }
     }
+
+    private fun filterLabel(filter: StatusFilter): String = getString(filter.labelRes)
 }

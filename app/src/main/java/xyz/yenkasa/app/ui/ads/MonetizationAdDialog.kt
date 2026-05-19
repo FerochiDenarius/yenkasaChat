@@ -22,6 +22,7 @@ import xyz.yenkasa.app.util.TokenManager
 data class MonetizationAdOutcome(
     val completed: Boolean,
     val skipped: Boolean,
+    val failed: Boolean = false,
     val durationMs: Long
 )
 
@@ -40,6 +41,10 @@ object MonetizationAdDialog {
     ) {
         if (!fragment.isAdded) return
         val context = fragment.requireContext()
+        if (request.ad.videoUrl.isNullOrBlank()) {
+            onClosed(MonetizationAdOutcome(completed = false, skipped = false, failed = true, durationMs = 0L))
+            return
+        }
         val dialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_monetization_ad, null, false)
         val player = view.findViewById<YenkasaVideoPlayerView>(R.id.monetizationVideoPlayer)
@@ -52,8 +57,9 @@ object MonetizationAdDialog {
         var closed = false
         var skipEnabled = false
         var completionReported = false
+        var readyReported = false
 
-        fun close(skipped: Boolean, completed: Boolean) {
+        fun close(skipped: Boolean, completed: Boolean, failed: Boolean = false) {
             if (closed) return
             closed = true
             handler.removeCallbacksAndMessages(null)
@@ -63,12 +69,19 @@ object MonetizationAdDialog {
                 MonetizationAdOutcome(
                     completed = completed,
                     skipped = skipped,
+                    failed = failed,
                     durationMs = System.currentTimeMillis() - startedAt
                 )
             )
         }
 
-        fun trackEvent(eventType: String, durationMs: Long = 0L, skipped: Boolean = false, completed: Boolean = false) {
+        fun trackEvent(
+            eventType: String,
+            durationMs: Long = 0L,
+            skipped: Boolean = false,
+            completed: Boolean = false,
+            failed: Boolean = false
+        ) {
             val token = TokenManager.getToken(context) ?: return
             val payload = MonetizationEventRequest(
                 eventType = eventType,
@@ -78,6 +91,7 @@ object MonetizationAdDialog {
                 durationMs = durationMs.toInt(),
                 skipped = skipped,
                 completed = completed,
+                failed = failed,
                 rewarded = request.rewardEligible,
                 monetizedSession = true
             )
@@ -92,9 +106,10 @@ object MonetizationAdDialog {
         fun finishCompleted() {
             if (completionReported) return
             completionReported = true
-            trackEvent("completed", durationMs = System.currentTimeMillis() - startedAt, completed = true)
+            val durationMs = System.currentTimeMillis() - startedAt
+            trackEvent("completed", durationMs = durationMs, completed = true)
             if (request.rewardEligible) {
-                rewardUser(context, fragment, request)
+                rewardUser(context, fragment, request, durationMs)
             }
             close(skipped = false, completed = true)
         }
@@ -124,10 +139,20 @@ object MonetizationAdDialog {
         )
 
         player.setReadyListener {
+            readyReported = true
             trackEvent("shown")
         }
         player.setCompletionListener {
             finishCompleted()
+        }
+        player.setErrorListener { error ->
+            if (closed) return@setErrorListener
+            trackEvent(
+                "failed",
+                durationMs = System.currentTimeMillis() - startedAt,
+                failed = true
+            )
+            close(skipped = false, completed = false, failed = true)
         }
 
         skipButton.isEnabled = false
@@ -139,15 +164,25 @@ object MonetizationAdDialog {
                 skipButton.text = context.getString(R.string.skip_ad)
             }
         }, 5000L)
+        handler.postDelayed({
+            if (!closed && !readyReported) {
+                trackEvent(
+                    "failed",
+                    durationMs = System.currentTimeMillis() - startedAt,
+                    failed = true
+                )
+                close(skipped = false, completed = false, failed = true)
+            }
+        }, 10000L)
 
         skipButton.setOnClickListener {
             if (!skipEnabled) return@setOnClickListener
-            trackEvent("skipped", skipped = true)
+            trackEvent("skipped", durationMs = System.currentTimeMillis() - startedAt, skipped = true)
             close(skipped = true, completed = false)
         }
         closeButton.setOnClickListener {
             if (!skipEnabled) return@setOnClickListener
-            trackEvent("skipped", skipped = true)
+            trackEvent("skipped", durationMs = System.currentTimeMillis() - startedAt, skipped = true)
             close(skipped = true, completed = false)
         }
 
@@ -163,7 +198,12 @@ object MonetizationAdDialog {
         dialog.show()
     }
 
-    private fun rewardUser(context: Context, fragment: Fragment, request: MonetizationAdRequest) {
+    private fun rewardUser(
+        context: Context,
+        fragment: Fragment,
+        request: MonetizationAdRequest,
+        durationMs: Long
+    ) {
         val token = TokenManager.getToken(context) ?: return
         val auth = "Bearer $token"
         fragment.lifecycleScope.launch(Dispatchers.IO) {
@@ -171,7 +211,7 @@ object MonetizationAdDialog {
                 ApiClient.apiService.recordAdView(
                     request.ad._id,
                     auth,
-                    mapOf("durationMs" to 15000, "fullyWatched" to true)
+                    mapOf("durationMs" to durationMs.coerceAtLeast(0L), "fullyWatched" to true)
                 ).execute()
             }.getOrNull()
 

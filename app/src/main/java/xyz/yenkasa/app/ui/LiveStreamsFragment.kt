@@ -35,6 +35,7 @@ class LiveStreamsFragment : Fragment() {
     private lateinit var adapter: LiveStreamAdapter
     private lateinit var emptyText: TextView
     private var socketListenersAttached = false
+    private var selectedCommunity: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_live_streams, container, false)
@@ -49,6 +50,10 @@ class LiveStreamsFragment : Fragment() {
         startLiveButton.setOnClickListener {
             startActivity(Intent(requireContext(), StartLiveActivity::class.java))
         }
+
+        // TODO: Add UI for selecting a community, e.g. a dropdown or tabs.
+        // On selection, call setCommunity(community)
+
         view.findViewById<RecyclerView>(R.id.recyclerLiveStreams).apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@LiveStreamsFragment.adapter
@@ -70,8 +75,14 @@ class LiveStreamsFragment : Fragment() {
         super.onDestroyView()
     }
 
+    fun setCommunity(community: String?) {
+        selectedCommunity = community
+        loadStreams()
+    }
+
     private fun loadStreams() {
-        ApiClient.apiService.getActiveLiveStreams().enqueue(object : Callback<LiveStreamsResponse> {
+        val community = selectedCommunity
+        ApiClient.apiService.getActiveLiveStreams(community = community).enqueue(object : Callback<LiveStreamsResponse> {
             override fun onResponse(call: Call<LiveStreamsResponse>, response: Response<LiveStreamsResponse>) {
                 if (!isAdded) return
                 if (!response.isSuccessful) {

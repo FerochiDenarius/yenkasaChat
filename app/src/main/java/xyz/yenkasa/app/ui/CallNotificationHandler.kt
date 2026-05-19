@@ -95,18 +95,17 @@ object CallNotificationHandler {
                     )
                 )
                 .setContentText(context.getString(R.string.call_from_user, callerName))
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_CALL)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setOngoing(true)
                 .setColor(ContextCompat.getColor(context, R.color.yenkasa_black))
                 .setAutoCancel(true)
+                .setContentIntent(acceptPendingIntent)
                 .addAction(R.drawable.ic_call, context.getString(R.string.accept), acceptPendingIntent)
                 .addAction(R.drawable.ic_call_end, context.getString(R.string.reject), rejectPendingIntent)
-                .setFullScreenIntent(acceptPendingIntent, true) // ⚡ show even on lock screen
-
             if (ringtoneUri != null) builder.setSound(ringtoneUri)
 
-// ✅ Safe notification post with runtime permission check
+            // Only post a notification here. Do not background-launch call UI.
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(
                     context,
@@ -115,8 +114,7 @@ object CallNotificationHandler {
             ) {
                 NotificationManagerCompat.from(context).notify(CALL_NOTIFICATION_ID, builder.build())
             } else {
-                Log.w(TAG, "🔕 Notification permission not granted; attempting direct call screen launch")
-                context.startActivity(acceptIntent)
+                Log.w(TAG, "Notification permission not granted; incoming call UI requires user interaction.")
             }
 
         } catch (e: Exception) {

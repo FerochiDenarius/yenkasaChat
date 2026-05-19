@@ -17,6 +17,7 @@ data class LiveStream(
     val hostConnected: Boolean = false,
     val viewerCount: Int = 0,
     val peakViewerCount: Int = 0,
+    val guests: List<LiveGuest> = emptyList(),
     val hostRole: String = "",
     val maxDurationMinutes: Int? = null,
     val scheduledEndAt: String? = null,
@@ -25,6 +26,16 @@ data class LiveStream(
     val startupExpiresAt: String? = null,
     val startedAt: String? = null,
     val endedAt: String? = null
+)
+
+data class LiveGuest(
+    val userId: String,
+    val username: String,
+    val avatar: String,
+    val agoraUid: Int,
+    val isMuted: Boolean = false,
+    val isVideoStopped: Boolean = false,
+    val joinedAt: String? = null
 )
 
 data class AgoraLiveToken(

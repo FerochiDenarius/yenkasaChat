@@ -47,8 +47,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main) // ✅ links to your activity_main.xml
+        setContentView(R.layout.activity_main)
         updateManager = UpdateManager(this)
         updateManager.checkForUpdates(
             forceCheck = intent.getBooleanExtra(EXTRA_CHECK_UPDATES_AFTER_LOGIN, false),
@@ -106,16 +107,21 @@ class MainActivity : AppCompatActivity() {
 
         // ✅ Load user info for permissions
         loadUserProfile()
-        handleIntentExtras()
 
-        // ✅ Load FeedFragment into the container
+        // ✅ Clear container and load FeedFragment into the container if not already handled
         if (savedInstanceState == null) {
-            Log.d("MainActivity", "🧩 Loading FeedFragment into container")
-            supportFragmentManager.commit {
-                replace(R.id.feedContainer, FeedFragment())
+            val openFragment = intent.getStringExtra("openFragment")
+            if (openFragment != "feed") {
+                Log.d("MainActivity", "🧩 Loading default FeedFragment into container")
+                supportFragmentManager.commit {
+                    replace(R.id.feedContainer, FeedFragment())
+                }
+            } else {
+                handleIntentExtras()
             }
         }
     }
+
 
     override fun onResume() {
         super.onResume()

@@ -40,12 +40,12 @@ class AdsApprovalActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_approval_list)
-        findViewById<TextView>(R.id.textApprovalTitle).text = "Sponsored Ads Approval"
-        findViewById<TextView>(R.id.textApprovalSubtitle).text = "Review and approve new sponsored ads"
+        findViewById<TextView>(R.id.textApprovalTitle).text = getString(R.string.ads_approval_title)
+        findViewById<TextView>(R.id.textApprovalSubtitle).text = getString(R.string.ads_approval_subtitle)
 
         authToken = TokenManager.getToken(this)?.let { "Bearer $it" }
         if (authToken.isNullOrBlank()) {
-            Toast.makeText(this, "Login required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.login_required, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -56,7 +56,7 @@ class AdsApprovalActivity : AppCompatActivity() {
         backButton = findViewById(R.id.buttonApprovalBack)
         searchInput = findViewById(R.id.inputSearch)
         filterButton = findViewById(R.id.btnFilter)
-        emptyView.text = "No pending ads."
+        emptyView.text = getString(R.string.ads_pending_empty)
 
         adapter = AdsApprovalAdapter(
             mutableListOf(),
@@ -68,9 +68,9 @@ class AdsApprovalActivity : AppCompatActivity() {
         backButton.setOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
-        searchInput.hint = "Search ads..."
+        searchInput.hint = getString(R.string.ads_search_hint)
         filterButton.setOnClickListener {
-            Toast.makeText(this, "Showing pending ads", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.ads_pending_showing, Toast.LENGTH_SHORT).show()
         }
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -96,7 +96,7 @@ class AdsApprovalActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<AdsFeedResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
                     emptyView.visibility = View.VISIBLE
-                    emptyView.text = "Failed to load pending ads."
+                    emptyView.text = getString(R.string.ads_pending_failed_load)
                 }
             })
     }
@@ -119,28 +119,28 @@ class AdsApprovalActivity : AppCompatActivity() {
                         adapter.removeAd(ad._id)
                         allAds = allAds.filterNot { it._id == ad._id }
                         filterAds(searchInput.text?.toString().orEmpty())
-                        Toast.makeText(this@AdsApprovalActivity, "Ad approved", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdsApprovalActivity, R.string.ad_approved, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@AdsApprovalActivity, "Failed to approve ad", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdsApprovalActivity, R.string.ad_approve_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<AdCreateResponse>, t: Throwable) {
-                    Toast.makeText(this@AdsApprovalActivity, "Approval failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AdsApprovalActivity, R.string.approval_failed, Toast.LENGTH_SHORT).show()
                 }
             })
     }
 
     private fun promptReject(ad: AdModel) {
         val input = EditText(this)
-        input.hint = "Optional rejection reason"
+        input.hint = getString(R.string.ad_rejection_reason_hint)
         AlertDialog.Builder(this)
-            .setTitle("Reject ad")
+            .setTitle(R.string.reject_ad_title)
             .setView(input)
-            .setPositiveButton("Reject") { _, _ ->
+            .setPositiveButton(R.string.reject) { _, _ ->
                 rejectAd(ad, input.text?.toString().orEmpty())
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -152,14 +152,14 @@ class AdsApprovalActivity : AppCompatActivity() {
                         adapter.removeAd(ad._id)
                         allAds = allAds.filterNot { it._id == ad._id }
                         filterAds(searchInput.text?.toString().orEmpty())
-                        Toast.makeText(this@AdsApprovalActivity, "Ad rejected", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdsApprovalActivity, R.string.ad_rejected, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@AdsApprovalActivity, "Failed to reject ad", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AdsApprovalActivity, R.string.ad_reject_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<AdCreateResponse>, t: Throwable) {
-                    Toast.makeText(this@AdsApprovalActivity, "Reject failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AdsApprovalActivity, R.string.reject_failed, Toast.LENGTH_SHORT).show()
                 }
             })
     }

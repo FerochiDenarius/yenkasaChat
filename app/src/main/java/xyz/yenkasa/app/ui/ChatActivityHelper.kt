@@ -11,10 +11,12 @@ import android.os.Handler
 import android.provider.ContactsContract
 import android.util.Log
 import android.widget.Toast
+import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.Participant
 import xyz.yenkasa.app.model.ReceiverResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.ChatCacheManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -68,6 +70,7 @@ class ChatActivityHelper(
     private val refreshInterval = 5000L
     private var isFetchingActive = false
     private var currentMessagesCall: Call<List<ChatMessage>>? = null
+    private var cachedMessagesNoticeShown = false
 
     private val refreshMessagesRunnable = object : Runnable {
         override fun run() {
@@ -91,6 +94,17 @@ class ChatActivityHelper(
     }
 
     // --- Message Fetching ---
+    fun fetchInitialMessages() {
+        val cachedMessages = ChatCacheManager.getCachedMessages(context, roomId)
+        if (cachedMessages.isNotEmpty() && callback.getCurrentMessageList().isEmpty()) {
+            callback.updateMessages(cachedMessages)
+        }
+        if (isFetchingActive) return
+        isFetchingActive = true
+        uiHandler.removeCallbacks(refreshMessagesRunnable)
+        fetchMessages()
+    }
+
     fun startFetchingMessagesRepeatedly() {
         if (isFetchingActive) return
         isFetchingActive = true
@@ -124,6 +138,7 @@ class ChatActivityHelper(
 
                     if (response.isSuccessful) {
                         val messages = response.body().orEmpty()
+                        ChatCacheManager.saveMessagesAsync(context, roomId, messages)
 
                         if (messages.isNotEmpty()) {
                             // ✅ Parse latest timestamp from the current list
@@ -150,7 +165,13 @@ class ChatActivityHelper(
                     } else {
                         val error = friendlyFetchError(response)
                         Log.e("ChatActivityHelper", "Fetch failed: $error")
-                        callback.showToast(error, Toast.LENGTH_LONG)
+                        if (error.contains("blocked", ignoreCase = true)) {
+                            ChatCacheManager.saveMessagesAsync(context, roomId, emptyList())
+                            callback.updateMessages(emptyList())
+                            callback.showToast(error, Toast.LENGTH_LONG)
+                        } else if (callback.getCurrentMessageList().isEmpty()) {
+                            callback.showToast(error, Toast.LENGTH_LONG)
+                        }
                     }
                 }
 
@@ -160,6 +181,10 @@ class ChatActivityHelper(
                     }
                     if (!isFetchingActive || call.isCanceled) return
                     Log.w("ChatActivityHelper", "Message refresh failed: ${t.message}", t)
+                    if (callback.getCurrentMessageList().isNotEmpty() && !cachedMessagesNoticeShown) {
+                        cachedMessagesNoticeShown = true
+                        callback.showToast(context.getString(R.string.chat_showing_saved_messages), Toast.LENGTH_SHORT)
+                    }
                 }
             })
     }

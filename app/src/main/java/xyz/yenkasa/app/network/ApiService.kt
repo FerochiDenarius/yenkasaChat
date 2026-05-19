@@ -222,6 +222,7 @@ interface ApiService {
 
     @GET("livestream/active")
     fun getActiveLiveStreams(
+        @Query("community") community: String? = null,
         @Query("limit") limit: Int = 30
     ): Call<LiveStreamsResponse>
 

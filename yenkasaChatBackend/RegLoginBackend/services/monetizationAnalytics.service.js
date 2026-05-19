@@ -1,4 +1,5 @@
 const MonetizationDaily = require('../models/monetizationDaily.model');
+const MonetizationEvent = require('../models/monetizationEvent.model');
 const {
   normalizeCountryLabel,
   resolveRewardCountry,
@@ -50,8 +51,10 @@ function sanitizePayload(input = {}) {
     durationMs: safeNumber(input.durationMs),
     skipped: Boolean(input.skipped),
     completed: Boolean(input.completed),
+    failed: Boolean(input.failed),
     rewarded: Boolean(input.rewarded),
-    monetizedSession: Boolean(input.monetizedSession)
+    monetizedSession: Boolean(input.monetizedSession),
+    creatorUserId: (input.creatorUserId || '').toString().trim()
   };
 }
 
@@ -60,6 +63,7 @@ async function upsertMonetizationDailyMetrics(input = {}, user = null) {
   const countrySource = user
     ? resolveRewardCountry(user)
     : { country: metric.country, confidence: 0, source: 'client' };
+  const resolvedCountry = countrySource.country || metric.country;
 
   const increments = {
     totalAdImpressions: 0,
@@ -87,18 +91,18 @@ async function upsertMonetizationDailyMetrics(input = {}, user = null) {
       break;
     case 'completed':
     case 'rewarded_completed':
-      increments.totalAdImpressions = 1;
       increments.rewardedAdsCompleted = metric.rewarded || metric.placement === 'rewarded' ? 1 : 0;
       if (metric.durationMs > 0) {
         increments.adWatchDuration = metric.durationMs;
       }
-      if (metric.monetizedSession) {
-        increments.monetizedPlaybackSessions = 1;
-      }
       break;
     case 'skipped':
-      increments.totalAdImpressions = 1;
       increments.skippedAds = 1;
+      if (metric.durationMs > 0) {
+        increments.adWatchDuration = metric.durationMs;
+      }
+      break;
+    case 'failed':
       if (metric.durationMs > 0) {
         increments.adWatchDuration = metric.durationMs;
       }
@@ -114,20 +118,45 @@ async function upsertMonetizationDailyMetrics(input = {}, user = null) {
   }
 
   const saved = await MonetizationDaily.findOneAndUpdate(
-    { date: metric.date, platform: metric.platform, country: metric.country },
+    { date: metric.date, platform: metric.platform, country: resolvedCountry },
     {
       $inc: increments,
       $setOnInsert: {
         date: metric.date,
         platform: metric.platform,
-        country: metric.country
+        country: resolvedCountry
       }
     },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   ).lean();
 
+  try {
+    await MonetizationEvent.create({
+      userId: user?._id || null,
+      creatorUserId: metric.creatorUserId || null,
+      adId: metric.adId,
+      postId: metric.postId,
+      eventType: metric.eventType,
+      placement: metric.placement,
+      platform: metric.platform,
+      country: resolvedCountry,
+      durationMs: metric.durationMs,
+      skipped: metric.skipped,
+      completed: metric.completed,
+      failed: metric.failed,
+      rewarded: metric.rewarded,
+      monetizedSession: metric.monetizedSession,
+      metadata: {
+        countrySource: countrySource.source || '',
+        countryConfidence: countrySource.confidence || 0
+      }
+    });
+  } catch (eventErr) {
+    console.warn('[MonetizationAnalytics] event insert failed:', eventErr.message);
+  }
+
   await recordRegionalRewardDaily({
-    country: countrySource.country || metric.country,
+    country: resolvedCountry,
     platform: metric.platform,
     impressions: increments.totalAdImpressions,
     requests: metric.eventType === 'impression' || metric.eventType === 'shown' ? 1 : 0,
@@ -144,8 +173,10 @@ async function upsertMonetizationDailyMetrics(input = {}, user = null) {
       durationMs: metric.durationMs,
       skipped: metric.skipped,
       completed: metric.completed,
+      failed: metric.failed,
       rewarded: metric.rewarded,
-      monetizedSession: metric.monetizedSession
+      monetizedSession: metric.monetizedSession,
+      creatorUserId: metric.creatorUserId || null
     }
   });
 

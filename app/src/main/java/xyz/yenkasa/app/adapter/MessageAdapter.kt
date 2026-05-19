@@ -1,14 +1,25 @@
 package xyz.yenkasa.app.adapter
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.URLSpan
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -42,6 +53,12 @@ class MessageAdapter(
     companion object {
         private const val TYPE_SENT = 1
         private const val TYPE_RECEIVED = 2
+    }
+
+    private enum class ChatLinkAction {
+        WEB,
+        PHONE,
+        EMAIL
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -145,6 +162,7 @@ class MessageAdapter(
 
             if (message.isLaughReaction()) {
                 messageText.text = "😂"
+                messageText.movementMethod = null
                 messageText.textSize = 26f
                 messageText.visibility = View.VISIBLE
                 chatMediaView.release()
@@ -207,7 +225,7 @@ class MessageAdapter(
 
             // ---------------- Text ----------------
             messageText.visibility = if (!message.text.isNullOrBlank()) {
-                messageText.text = message.text
+                bindInteractiveText(message.text!!)
                 View.VISIBLE
             } else View.GONE
 
@@ -253,6 +271,132 @@ class MessageAdapter(
                 "$timestampLabel - edited"
             } else {
                 timestampLabel
+            }
+        }
+
+        private fun bindInteractiveText(rawText: String) {
+            val spannable = SpannableString(rawText)
+            Linkify.addLinks(
+                spannable,
+                Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES or Linkify.PHONE_NUMBERS
+            )
+
+            val urlSpans = spannable.getSpans(0, spannable.length, URLSpan::class.java)
+            if (urlSpans.isEmpty()) {
+                messageText.text = rawText
+                messageText.movementMethod = null
+                return
+            }
+
+            urlSpans.forEach { span ->
+                val start = spannable.getSpanStart(span)
+                val end = spannable.getSpanEnd(span)
+                val flags = spannable.getSpanFlags(span)
+                val url = span.url
+                spannable.removeSpan(span)
+                spannable.setSpan(
+                    object : ClickableSpan() {
+                        override fun onClick(widget: View) {
+                            showLinkActionDialog(url)
+                        }
+                    },
+                    start,
+                    end,
+                    flags.takeIf { it != 0 } ?: Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+
+            messageText.text = spannable
+            messageText.linksClickable = true
+            messageText.movementMethod = LinkMovementMethod.getInstance()
+            messageText.setLinkTextColor(ContextCompat.getColor(itemView.context, R.color.blue))
+        }
+
+        private fun showLinkActionDialog(rawUrl: String) {
+            val context = itemView.context
+            val action = classifyLinkAction(rawUrl)
+            val displayValue = displayLinkValue(rawUrl, action)
+            val titleRes = when (action) {
+                ChatLinkAction.WEB -> R.string.chat_open_link_title
+                ChatLinkAction.PHONE -> R.string.chat_call_phone_title
+                ChatLinkAction.EMAIL -> R.string.chat_email_title
+            }
+            val messageRes = when (action) {
+                ChatLinkAction.WEB -> R.string.chat_open_link_message
+                ChatLinkAction.PHONE -> R.string.chat_call_phone_message
+                ChatLinkAction.EMAIL -> R.string.chat_email_message
+            }
+            val positiveRes = when (action) {
+                ChatLinkAction.WEB -> R.string.open
+                ChatLinkAction.PHONE -> R.string.call_phone
+                ChatLinkAction.EMAIL -> R.string.send_email
+            }
+
+            AlertDialog.Builder(context)
+                .setTitle(titleRes)
+                .setMessage(context.getString(messageRes, displayValue))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(positiveRes) { _, _ ->
+                    openDetectedLink(rawUrl, action)
+                }
+                .show()
+        }
+
+        private fun openDetectedLink(rawUrl: String, action: ChatLinkAction) {
+            val context = itemView.context
+            val intent = when (action) {
+                ChatLinkAction.WEB -> {
+                    val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(normalizeWebUrl(rawUrl)))
+                    Intent.createChooser(viewIntent, context.getString(R.string.open_with))
+                }
+                ChatLinkAction.PHONE -> Intent(
+                    Intent.ACTION_DIAL,
+                    Uri.fromParts("tel", displayLinkValue(rawUrl, action), null)
+                )
+                ChatLinkAction.EMAIL -> Intent(
+                    Intent.ACTION_SENDTO,
+                    Uri.fromParts("mailto", displayLinkValue(rawUrl, action), null)
+                )
+            }
+
+            if (context !is Activity) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            try {
+                context.startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(context, R.string.chat_no_app_for_link, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        private fun classifyLinkAction(rawUrl: String): ChatLinkAction {
+            val normalized = rawUrl.trim().lowercase(Locale.US)
+            return when {
+                normalized.startsWith("tel:") -> ChatLinkAction.PHONE
+                normalized.startsWith("mailto:") -> ChatLinkAction.EMAIL
+                normalized.contains("@") && !normalized.startsWith("http://") && !normalized.startsWith("https://") -> ChatLinkAction.EMAIL
+                else -> ChatLinkAction.WEB
+            }
+        }
+
+        private fun displayLinkValue(rawUrl: String, action: ChatLinkAction): String {
+            val trimmed = rawUrl.trim()
+            return when (action) {
+                ChatLinkAction.PHONE -> trimmed.removePrefix("tel:")
+                ChatLinkAction.EMAIL -> trimmed.removePrefix("mailto:")
+                ChatLinkAction.WEB -> trimmed
+            }
+        }
+
+        private fun normalizeWebUrl(rawUrl: String): String {
+            val trimmed = rawUrl.trim()
+            return if (trimmed.startsWith("http://", ignoreCase = true) ||
+                trimmed.startsWith("https://", ignoreCase = true)
+            ) {
+                trimmed
+            } else {
+                "https://$trimmed"
             }
         }
 
@@ -322,11 +466,13 @@ class MessageAdapter(
             layoutLocation?.setOnClickListener(null)
             layoutLocation?.visibility = View.GONE
             layoutContact?.visibility = View.GONE
+            messageText.movementMethod = null
+            messageText.linksClickable = false
         }
 
         private fun resolveSenderName(message: ChatMessage, currentUserId: String, receiverName: String): String {
             return when {
-                message.senderId == currentUserId -> "You"
+                message.senderId == currentUserId -> itemView.context.getString(R.string.you)
                 message.sender?.username?.isNotBlank() == true -> message.sender!!.username!!
                 receiverName.isNotBlank() -> receiverName
                 else -> ""

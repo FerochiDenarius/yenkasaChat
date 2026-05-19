@@ -17,8 +17,8 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 50
-        versionName = "0.4.4"
+        versionCode = 51
+        versionName = "0.4.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -163,6 +163,11 @@ dependencies {
 
 
     }
+
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
 
 
     // Add the dependency for the Firebase Phone Number Verification library

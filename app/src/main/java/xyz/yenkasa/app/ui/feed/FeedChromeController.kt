@@ -64,6 +64,7 @@ class FeedChromeController(
                 feedFilterBar = feedFilterBar,
                 floatingWalletCard = walletViews.walletCard,
                 fabYenkasaLive = fabYenkasaLive,
+                fabCreatePost = fabCreatePost,
                 mainAppBar = mainAppBar
             )
         }
@@ -139,13 +140,19 @@ class FeedChromeController(
         feedFilterBar: View,
         floatingWalletCard: View,
         fabYenkasaLive: View,
+        fabCreatePost: View,
         mainAppBar: View?
     ) {
         communitiesBar.visibility = View.GONE
         feedFilterBar.visibility = View.GONE
         floatingWalletCard.visibility = View.GONE
         fabYenkasaLive.visibility = View.GONE
+        fabCreatePost.visibility = View.GONE
         mainAppBar?.visibility = View.GONE
+
+        // Activate immersive fullscreen
+        fragment.activity?.let { xyz.yenkasa.app.util.EdgeToEdgeInsets.hideSystemBars(it) }
+
         ViewCompat.setOnApplyWindowInsetsListener(recyclerView, null)
         recyclerView.setPadding(0, 0, 0, 0)
         recyclerView.clipToPadding = false
@@ -251,9 +258,12 @@ class FeedChromeController(
         liveSheetController = null
     }
 
-    fun restoreMainChrome(mainAppBar: View?, fabYenkasaLive: View) {
+    fun restoreMainChrome(mainAppBar: View?, fabYenkasaLive: View, fabCreatePost: View) {
         mainAppBar?.visibility = View.VISIBLE
         fabYenkasaLive.visibility = View.VISIBLE
+        fabCreatePost.visibility = View.VISIBLE
+        // Exit immersive fullscreen
+        fragment.activity?.let { xyz.yenkasa.app.util.EdgeToEdgeInsets.showSystemBars(it) }
     }
 
     private fun setupCreatePostButton(

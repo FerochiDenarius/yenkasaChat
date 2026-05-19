@@ -4,6 +4,8 @@ const User = require('../models/user.model');
 const Post = require('../models/post.model');
 const RewardTx = require('../models/Rewards.Transaction.model');
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
 const rewardService = require('../services/reward.service');
@@ -18,6 +20,7 @@ const {
 
 const AD_REVIEWER_ROLES = new Set(REVIEWER_RANKS.map((rank) => rank.toLowerCase()));
 const AD_REVIEWER_ACCESS_ROLES = [...REVIEWER_RANKS];
+const UPLOADS_DIR = path.resolve(__dirname, '..', 'uploads');
 
 function canReviewAds(user) {
   return canApproveContent(user);
@@ -27,18 +30,78 @@ function canCreateAds(user) {
   return canCreateAd(user);
 }
 
+function resolvePublicBaseUrl(req) {
+  return (process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+}
+
+function toUploadUrl(req, filename) {
+  return `${resolvePublicBaseUrl(req)}/uploads/${filename}`;
+}
+
+function getLocalUploadInfo(value) {
+  if (!value || typeof value !== 'string') {
+    return { isLocalUpload: false, path: null };
+  }
+
+  let pathname = '';
+  try {
+    pathname = new URL(value, 'http://local').pathname;
+  } catch (err) {
+    return { isLocalUpload: false, path: null };
+  }
+
+  const marker = '/uploads/';
+  const markerIndex = pathname.indexOf(marker);
+  if (markerIndex === -1) {
+    return { isLocalUpload: false, path: null };
+  }
+
+  const relativePath = decodeURIComponent(pathname.slice(markerIndex + marker.length));
+  const resolvedPath = path.resolve(UPLOADS_DIR, relativePath);
+  const insideUploads = resolvedPath === UPLOADS_DIR || resolvedPath.startsWith(`${UPLOADS_DIR}${path.sep}`);
+
+  return {
+    isLocalUpload: true,
+    path: insideUploads ? resolvedPath : null
+  };
+}
+
+function sanitizeAdMediaUrl(value) {
+  const url = typeof value === 'string' ? value.trim() : '';
+  if (!url || url === 'null' || url === 'undefined') return null;
+
+  const uploadInfo = getLocalUploadInfo(url);
+  if (!uploadInfo.isLocalUpload) return url;
+
+  if (uploadInfo.path && fs.existsSync(uploadInfo.path)) {
+    return url;
+  }
+
+  return null;
+}
+
 function normalizeAdForClient(ad) {
   if (!ad) return ad;
 
   const meta = ad.meta || {};
+  const imageUrl = sanitizeAdMediaUrl(ad.imageUrl);
+  const videoUrl = sanitizeAdMediaUrl(ad.videoUrl);
+  const thumbnailUrl = sanitizeAdMediaUrl(ad.thumbnailUrl || meta.thumbnail || meta.thumbnailUrl);
 
   return {
     ...ad,
-    thumbnailUrl: ad.thumbnailUrl || meta.thumbnail || null,
+    imageUrl,
+    videoUrl,
+    thumbnailUrl,
     ctaText: ad.ctaText || meta.ctaText || null,
     ctaUrl: ad.ctaUrl || meta.ctaUrl || null,
     sponsorName: ad.sponsorName || meta.sponsorName || null
   };
+}
+
+function hasRenderableAdMedia(ad) {
+  if (!ad) return false;
+  return Boolean(ad.imageUrl || ad.videoUrl);
 }
 
 function publicAdFilter() {
@@ -69,9 +132,13 @@ exports.getAdsFeed = async (req, res) => {
     const ads = await Ad.find(publicAdFilter())
       .sort({ impressions: 1, createdAt: -1 })
       .skip(skip)
-      .limit(limit)
+      .limit(Math.min(limit * 3, 50))
       .lean();
-    res.json({ success:true, ads: ads.map(normalizeAdForClient) });
+    const renderableAds = ads
+      .map(normalizeAdForClient)
+      .filter(hasRenderableAdMedia)
+      .slice(0, limit);
+    res.json({ success:true, ads: renderableAds });
   } catch(err){ res.status(500).json({ success:false, err: err.message }); }
 };
 
@@ -239,9 +306,6 @@ exports.trackMonetizationEvent = async (req, res) => {
   }
 };
 
-const path = require('path');
-const fs = require('fs');
-
 exports.createAd = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -320,19 +384,17 @@ const adData = {
     const videoFile = req.files?.video?.[0] || req.files?.videoUrl?.[0] || req.files?.media?.[0];
     const thumbnailFile = req.files?.thumbnail?.[0] || req.files?.customThumbnail?.[0];
 
-  const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
-
 if (imageFile) {
-  adData.imageUrl = `${baseUrl}/uploads/${imageFile.filename}`;
+  adData.imageUrl = toUploadUrl(req, imageFile.filename);
 }
 
 if (videoFile) {
-  adData.videoUrl = `${baseUrl}/uploads/${videoFile.filename}`;
+  adData.videoUrl = toUploadUrl(req, videoFile.filename);
 }
 
 if (thumbnailFile) {
-  adData.thumbnailUrl = `${baseUrl}/uploads/${thumbnailFile.filename}`;
-  adData.meta.thumbnail = `${baseUrl}/uploads/${thumbnailFile.filename}`;
+  adData.thumbnailUrl = toUploadUrl(req, thumbnailFile.filename);
+  adData.meta.thumbnail = adData.thumbnailUrl;
 }
 
 // Google AdMob ads are handled only by the Android SDK.

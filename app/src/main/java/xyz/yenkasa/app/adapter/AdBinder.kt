@@ -25,9 +25,14 @@ import xyz.yenkasa.app.util.WalletBalanceManager
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
     private val trackedImpressions = mutableSetOf<String>()
+    private val failedMediaUrls = linkedSetOf<String>()
 
     override fun bindYenkasa(holder: YenkasaAdViewHolder, ad: AdModel) {
         Log.d("YenkasaAds", "Binding Yenkasa ad id=${ad._id} image=${ad.imageUrl} video=${ad.videoUrl} thumb=${ad.thumbnailUrl}")
+        val imageUrl = usableMediaUrl(ad.imageUrl)
+        val videoUrl = usableMediaUrl(ad.videoUrl)
+        val thumbnailUrl = usableMediaUrl(ad.thumbnailUrl) ?: imageUrl
+
         holder.adImageThumbnail.visibility = View.GONE
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayerView.visibility = View.GONE
@@ -51,22 +56,22 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             holder.adTitle.visibility = View.GONE
         }
 
-        if (ad.imageUrl.isNullOrEmpty() && ad.videoUrl.isNullOrEmpty()) {
+        if (imageUrl == null && videoUrl == null) {
             holder.adMediaFallback.visibility = View.VISIBLE
             return
         }
 
         holder.itemView.post {
-            if (ad.videoUrl.isNullOrEmpty() && !trackedImpressions.contains(ad._id)) {
+            if (videoUrl == null && !trackedImpressions.contains(ad._id)) {
                 trackedImpressions.add(ad._id)
                 sendVerificationAdView("in_app_ad")
             }
         }
 
-        if (!ad.imageUrl.isNullOrEmpty()) {
+        if (imageUrl != null) {
             holder.adImageThumbnail.visibility = View.VISIBLE
             Glide.with(context)
-                .load(ad.imageUrl)
+                .load(imageUrl)
                 .placeholder(R.drawable.placeholder_image)
                 .error(R.drawable.placeholder_image)
                 .listener(object : RequestListener<android.graphics.drawable.Drawable> {
@@ -77,8 +82,9 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                         isFirstResource: Boolean
                     ): Boolean {
                         Log.e("YenkasaAds", "Image ad failed id=${ad._id}: ${e?.message}")
+                        rememberFailedMediaUrl(imageUrl)
                         holder.adImageThumbnail.visibility = View.GONE
-                        holder.adMediaFallback.visibility = View.VISIBLE
+                        holder.adMediaFallback.visibility = if (videoUrl == null) View.VISIBLE else View.GONE
                         return false
                     }
 
@@ -97,13 +103,13 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                 .into(holder.adImageThumbnail)
         }
 
-        if (!ad.videoUrl.isNullOrEmpty()) {
+        if (videoUrl != null) {
             holder.adVideoThumbnail.visibility = View.VISIBLE
             holder.adPlayButton.visibility = View.VISIBLE
             holder.adWatchRewardButton.visibility = View.VISIBLE
 
             Glide.with(context)
-                .load(ad.thumbnailUrl ?: ad.imageUrl ?: R.drawable.placeholder_image)
+                .load(thumbnailUrl ?: R.drawable.placeholder_image)
                 .error(R.drawable.placeholder_image)
                 .listener(object : RequestListener<android.graphics.drawable.Drawable> {
                     override fun onLoadFailed(
@@ -113,7 +119,8 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                         isFirstResource: Boolean
                     ): Boolean {
                         Log.e("YenkasaAds", "Video thumbnail failed id=${ad._id}: ${e?.message}")
-                        holder.adMediaFallback.visibility = View.VISIBLE
+                        rememberFailedMediaUrl(thumbnailUrl)
+                        holder.adMediaFallback.visibility = View.GONE
                         return false
                     }
 
@@ -132,7 +139,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                 .into(holder.adVideoThumbnail)
 
             holder.adPlayButton.setOnClickListener {
-                playVideo(holder, ad)
+                playVideo(holder, ad, videoUrl, thumbnailUrl)
             }
         }
 
@@ -146,7 +153,7 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
             }
         }
 
-        if (!ad.videoUrl.isNullOrEmpty()) {
+        if (videoUrl != null) {
             holder.adWatchRewardButton.visibility = View.VISIBLE
             holder.adWatchRewardButton.text = context.getString(R.string.watch_earn_ykc, ad.rewardYKC)
             holder.adWatchRewardButton.setOnClickListener {
@@ -155,6 +162,24 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                     holder.adWatchRewardButton.text = context.getString(R.string.reward_earned)
                 }
             }
+        }
+    }
+
+    private fun usableMediaUrl(value: String?): String? {
+        val normalized = value?.trim().orEmpty()
+        if (normalized.isBlank()) return null
+        if (normalized.equals("null", ignoreCase = true)) return null
+        if (normalized.equals("undefined", ignoreCase = true)) return null
+        return normalized.takeUnless { failedMediaUrls.contains(it) }
+    }
+
+    private fun rememberFailedMediaUrl(value: String?) {
+        val normalized = value?.trim().orEmpty()
+        if (normalized.isBlank()) return
+        failedMediaUrls.add(normalized)
+        while (failedMediaUrls.size > 100) {
+            val oldest = failedMediaUrls.firstOrNull() ?: break
+            failedMediaUrls.remove(oldest)
         }
     }
 
@@ -191,14 +216,19 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         }
     }
 
-    private fun playVideo(holder: YenkasaAdViewHolder, ad: AdModel) {
+    private fun playVideo(
+        holder: YenkasaAdViewHolder,
+        ad: AdModel,
+        videoUrl: String,
+        thumbnailUrl: String?
+    ) {
         holder.adVideoThumbnail.visibility = View.GONE
         holder.adPlayButton.visibility = View.GONE
         holder.adPlayerView.visibility = View.VISIBLE
         holder.adMediaFallback.visibility = View.GONE
         holder.adPlayerView.bindVideo(
-            mediaUrl = ad.videoUrl,
-            thumbnailUrl = ad.thumbnailUrl ?: ad.imageUrl,
+            mediaUrl = videoUrl,
+            thumbnailUrl = thumbnailUrl,
             autoplay = true,
             muted = false
         )

@@ -36,7 +36,7 @@ const app = express();
 app.set('trust proxy', true);
 
 app.use((req, res, next) => {
-  if (req.hostname === "yenkasa.xyz") {
+  if (req.hostname === "yenkasa.xyz" && !req.path.startsWith('/.well-known/')) {
     return res.redirect(301, `https://www.yenkasa.xyz${req.originalUrl}`);
   }
   next();
@@ -1302,6 +1302,9 @@ app.get('/app-ads.txt', (req, res) => {
 app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'images', 'yc.png'));
 });
+
+const deepLinkPreviewRoutes = require('./routes/deeplinkPreview.routes');
+app.use('/', deepLinkPreviewRoutes);
 
 // ---------------------------------
 // Static Files

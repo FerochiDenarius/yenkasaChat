@@ -7,6 +7,8 @@ import android.content.res.Configuration
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.OpenableColumns
 import android.text.InputFilter
 import android.text.method.LinkMovementMethod
@@ -52,6 +54,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.roundToInt
+import org.json.JSONObject
 
 class YenkasaUpdateComposerActivity : AppCompatActivity() {
 
@@ -87,6 +90,7 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
     private lateinit var uploadStatusSubtitle: TextView
     private lateinit var uploadStatusPercent: TextView
     private lateinit var uploadStatusProgress: ProgressBar
+    private val completionHandler = Handler(Looper.getMainLooper())
 
     private val selectedMedia = mutableListOf<ComposerMediaItem>()
     private val communityOptions = mutableListOf<Community>()
@@ -102,6 +106,11 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
     }
     private var scheduledAt: Calendar? = null
     private var submissionMode: SubmissionMode? = null
+
+    companion object {
+        private const val MAX_MEDIA_FILES = 5
+        private const val LARGE_VIDEO_HINT_BYTES = 25L * 1024L * 1024L
+    }
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { addMedia(it, "image") }
@@ -274,7 +283,7 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
     }
 
     private fun addMedia(uri: Uri, type: String) {
-        if (selectedMedia.size >= 5) {
+        if (selectedMedia.size >= MAX_MEDIA_FILES) {
             Toast.makeText(this, R.string.announcement_media_limit_reached, Toast.LENGTH_SHORT).show()
             return
         }
@@ -534,11 +543,17 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
         }
 
         val totalBytes = preparedParts.sumOf { maxOf(it.second.length(), 1L) }
-        val hasLargeVideo = preparedParts.any { it.first.type == "video" && it.second.length() >= 25L * 1024L * 1024L }
+        val hasLargeVideo = preparedParts.any { it.first.type == "video" && it.second.length() >= LARGE_VIDEO_HINT_BYTES }
         val mediaSubtitle = when {
             hasLargeVideo -> getString(R.string.announcement_upload_large_video_hint)
             preparedParts.isEmpty() -> getString(R.string.announcement_upload_text_only)
             else -> getString(R.string.announcement_upload_media_subtitle)
+        }
+
+        val scheduledAtIso = if (shouldSchedule && scheduledTime != null) {
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(scheduledTime.time)
+        } else {
+            null
         }
 
         showUploadStatus(
@@ -580,10 +595,7 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
             communityName = (selectedCommunity?.displayName ?: selectedCommunity?.name)
                 ?.takeIf { audienceKey == "community" }
                 ?.toRequestBody("text/plain".toMediaTypeOrNull()),
-            scheduledAt = scheduledTime?.timeInMillis
-                ?.takeIf { shouldSchedule }
-                ?.let { java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(scheduledTime.time) }
-                ?.toRequestBody("text/plain".toMediaTypeOrNull()),
+            scheduledAt = scheduledAtIso?.toRequestBody("text/plain".toMediaTypeOrNull()),
             targetUrl = targetUrl.takeIf { it.isNotBlank() }?.toRequestBody("text/plain".toMediaTypeOrNull()),
             deepLinkUrl = targetUrl.takeIf { it.isNotBlank() }?.toRequestBody("text/plain".toMediaTypeOrNull()),
             media = mediaParts
@@ -591,7 +603,9 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
             override fun onResponse(call: Call<AnnouncementResponse>, response: Response<AnnouncementResponse>) {
                 setSubmitting(false, mode)
                 if (!response.isSuccessful || response.body()?.success != true) {
-                    val message = response.body()?.message ?: getString(R.string.announcement_publish_failed)
+                    val backendMessage = response.body()?.message?.takeIf { it.isNotBlank() }
+                        ?: readBackendError(response)
+                    val message = backendMessage.ifBlank { getString(R.string.announcement_publish_failed) }
                     setUploadFailureState(message)
                     Toast.makeText(this@YenkasaUpdateComposerActivity, message, Toast.LENGTH_LONG).show()
                     return
@@ -654,6 +668,7 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
         switchPinned.isEnabled = enabled
         switchSchedule.isEnabled = enabled
         buttonSchedule.isEnabled = enabled
+        setUploadInteractionEnabled(enabled)
 
         buttonSaveDraft.text = if (submitting && mode == SubmissionMode.DRAFT) {
             getString(R.string.announcement_saving_draft)
@@ -668,6 +683,15 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
         } else {
             getString(R.string.announcement_send)
         }
+    }
+
+    private fun setUploadInteractionEnabled(enabled: Boolean) {
+        findViewById<View>(R.id.buttonUpdateBack).isEnabled = enabled
+        findViewById<View>(R.id.buttonAddAnnouncementImage).isEnabled = enabled
+        findViewById<View>(R.id.buttonAddAnnouncementVideo).isEnabled = enabled
+        findViewById<View>(R.id.buttonAddAnnouncementAudio).isEnabled = enabled
+        findViewById<View>(R.id.buttonAddAnnouncementFile).isEnabled = enabled
+        mediaListLayout.isEnabled = enabled
     }
 
     private fun showUploadStatus(title: String, subtitle: String, progress: Int, success: Boolean = false) {
@@ -718,6 +742,25 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
             setOnCompletionListener { player -> player.release() }
             start()
         }
-        buttonSend.postDelayed({ finish() }, 900L)
+        completionHandler.removeCallbacksAndMessages(null)
+        completionHandler.postDelayed({ finish() }, 900L)
+    }
+
+    private fun readBackendError(response: Response<AnnouncementResponse>): String {
+        val errorText = try {
+            response.errorBody()?.string().orEmpty()
+        } catch (_: Exception) {
+            ""
+        }
+        if (errorText.isBlank()) return ""
+
+        return try {
+            val json = JSONObject(errorText)
+            json.optString("message")
+                .ifBlank { json.optString("error") }
+                .ifBlank { errorText }
+        } catch (_: Exception) {
+            errorText
+        }
     }
 }

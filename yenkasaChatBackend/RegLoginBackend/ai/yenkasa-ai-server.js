@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 
-const AI_PUBLIC_DIR = path.resolve(__dirname, '..', '..', '..', 'yenkasa-ai', 'dist');
+const AI_PUBLIC_DIR = path.join(__dirname, '..', 'public', 'yenkasa_ai');
 const AI_INDEX_PATH = path.join(AI_PUBLIC_DIR, 'index.html');
 
 function hasBuiltAiApp() {

@@ -839,6 +839,9 @@ interface ApiService {
     @GET("notifications/all")
     fun getNotifications(): Call<List<NotificationModel>>
 
+    @GET("updates")
+    fun getUpdates(): Call<List<NotificationModel>>
+
     @GET("notifications/preferences")
     fun getNotificationPreferences(): Call<NotificationPreferencesResponse>
 

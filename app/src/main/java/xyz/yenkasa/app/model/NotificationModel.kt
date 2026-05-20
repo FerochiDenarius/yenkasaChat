@@ -6,6 +6,8 @@ data class NotificationModel(
     val senderId: String?,
     val receiverId: String?,
     val message: String?,
+    val title: String? = null,
+    val subtitle: String? = null,
     val postId: String?,
     val commentId: String? = null,
     val activityId: String?,
@@ -15,7 +17,16 @@ data class NotificationModel(
     val targetType: String?,
     val targetId: String?,
     val targetUrl: String?,
-    val sender: Sender? = null
+    val sender: Sender? = null,
+    val thumbnailUrl: String? = null,
+    val mediaType: String? = null,
+    val pinned: Boolean = false,
+    val badge: String? = null,
+    val channelName: String? = null,
+    val verifiedBadge: Boolean = false,
+    val reactionFireCount: Int = 0,
+    val reactionHeartCount: Int = 0,
+    val reactionClapCount: Int = 0
 )
 
 data class Sender(

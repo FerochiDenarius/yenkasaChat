@@ -198,6 +198,12 @@ object NotificationNavigation {
     private fun buildIntentFromTargetUrl(context: Context, targetUrl: String?, data: JSONObject?): Intent? {
         val raw = targetUrl?.takeIf { it.isNotBlank() } ?: return null
         val normalizedUri = AppLinkManager.canonicalizeUri(raw) ?: Uri.parse(raw)
+        val scheme = normalizedUri.scheme.orEmpty().lowercase()
+
+        if (!AppLinkManager.isSupportedAppLink(normalizedUri) && scheme in setOf("https", "http", "market")) {
+            return Intent(Intent.ACTION_VIEW, normalizedUri)
+        }
+
         if (AppLinkManager.parseRoute(normalizedUri) != null) {
             return AppLinkManager.buildMainActivityIntent(context, normalizedUri)
         }
@@ -221,7 +227,7 @@ object NotificationNavigation {
             }
             segments.firstOrNull() == "chat" -> buildChatIntent(context, segments.getOrNull(1).orEmpty(), data)
             segments.firstOrNull() == "groups" -> buildGroupIntent(context, segments.getOrNull(1).orEmpty(), data)
-            else -> null
+            else -> if (scheme in setOf("https", "http", "market")) Intent(Intent.ACTION_VIEW, normalizedUri) else null
         }
     }
 

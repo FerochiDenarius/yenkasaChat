@@ -1,0 +1,15 @@
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/your/vertex-service-account.json
+
+VERTEX_AI_PROJECT_ID=project-10405180-0afd-4ecc-9f8
+VERTEX_AI_LOCATION=us-central1
+VERTEX_AI_MODEL=gemini-2.5-flash
+VERTEX_AI_TEMPERATURE=0.2
+
+CHROMA_PERSIST_DIR=./chroma_db
+CHROMA_COLLECTION_NAME=yenkasa_research
+
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+RETRIEVAL_K=5
+MAX_HISTORY_TURNS=6
+LOG_LEVEL=INFO

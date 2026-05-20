@@ -879,7 +879,9 @@ class FeedFragment : Fragment() {
         feedFilterBar.visibility = visibility
         floatingWalletViews.walletCard.visibility = visibility
         fabYenkasaLive.visibility = visibility
-        fabCreatePost.visibility = visibility
+        fabCreatePost.visibility = View.VISIBLE
+        fabCreatePost.alpha = 1f
+        fabCreatePost.bringToFront()
         val mainAppBar: View? = requireActivity().findViewById(R.id.mainAppBar)
         mainAppBar?.visibility = visibility
 

@@ -17,8 +17,8 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 35
-        versionCode = 52
-        versionName = "0.4.6"
+        versionCode = 54
+        versionName = "0.4.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }

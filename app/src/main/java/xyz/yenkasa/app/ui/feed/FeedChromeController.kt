@@ -147,7 +147,9 @@ class FeedChromeController(
         feedFilterBar.visibility = View.GONE
         floatingWalletCard.visibility = View.GONE
         fabYenkasaLive.visibility = View.GONE
-        fabCreatePost.visibility = View.GONE
+        fabCreatePost.visibility = View.VISIBLE
+        fabCreatePost.alpha = 1f
+        fabCreatePost.bringToFront()
         mainAppBar?.visibility = View.GONE
 
         // Activate immersive fullscreen
@@ -262,6 +264,7 @@ class FeedChromeController(
         mainAppBar?.visibility = View.VISIBLE
         fabYenkasaLive.visibility = View.VISIBLE
         fabCreatePost.visibility = View.VISIBLE
+        fabCreatePost.alpha = 1f
         // Exit immersive fullscreen
         fragment.activity?.let { xyz.yenkasa.app.util.EdgeToEdgeInsets.showSystemBars(it) }
     }

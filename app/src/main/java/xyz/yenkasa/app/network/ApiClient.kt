@@ -12,11 +12,13 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 object ApiClient {
     const val BASE_URL = "https://yenkasa-8rjea.ondigitalocean.app/api/"
 
     private lateinit var retrofit: Retrofit
+    private lateinit var uploadRetrofit: Retrofit
     private var initialized = false
     private val gson by lazy {
         GsonBuilder()
@@ -30,6 +32,10 @@ object ApiClient {
 
     val authService: AuthService by lazy {
         getClient().create(AuthService::class.java)
+    }
+
+    val uploadApiService: ApiService by lazy {
+        getUploadClient().create(ApiService::class.java)
     }
 
     val dailyApi: ApiService by lazy {
@@ -129,11 +135,27 @@ object ApiClient {
         val httpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
+
+        val uploadHttpClient = httpClient.newBuilder()
+            .readTimeout(240, TimeUnit.SECONDS)
+            .writeTimeout(240, TimeUnit.SECONDS)
+            .callTimeout(300, TimeUnit.SECONDS)
             .build()
 
         retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+
+        uploadRetrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(uploadHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
 
@@ -145,6 +167,13 @@ object ApiClient {
             throw IllegalStateException("ApiClient not initialized. Call ApiClient.init(context) first.")
         }
         return retrofit
+    }
+
+    private fun getUploadClient(): Retrofit {
+        if (!initialized || !::uploadRetrofit.isInitialized) {
+            throw IllegalStateException("ApiClient not initialized. Call ApiClient.init(context) first.")
+        }
+        return uploadRetrofit
     }
 
     @Synchronized

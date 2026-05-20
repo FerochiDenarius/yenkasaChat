@@ -376,6 +376,13 @@ class MainActivity : AppCompatActivity() {
         val communityId = intent.getStringExtra("communityId")
         val communityName = intent.getStringExtra("communityName")
         val openFragment = intent.getStringExtra("openFragment")
+        val refreshFeed = intent.getBooleanExtra("refreshFeed", false)
+
+        if (refreshFeed) {
+            intent.removeExtra("refreshFeed")
+            loadDefaultFeedFragment()
+            return true
+        }
 
         if (openFragment == "feed" && !communityId.isNullOrBlank()) {
             openCommunityFeed(communityId, communityName)

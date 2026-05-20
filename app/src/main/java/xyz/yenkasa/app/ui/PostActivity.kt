@@ -2,14 +2,18 @@ package xyz.yenkasa.app.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -30,6 +34,7 @@ import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UploadMediaOptimizer
+import xyz.yenkasa.app.util.UploadProgressRequestBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -39,11 +44,18 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
+import java.net.SocketTimeoutException
 import org.json.JSONObject
 import java.util.UUID
 import kotlin.math.roundToInt
 
 class PostActivity : AppCompatActivity() {
+
+    private data class PreparedUploadPart(
+        val fieldName: String,
+        val file: File,
+        val mimeType: String
+    )
 
     private lateinit var editTextContent: EditText
     private lateinit var imagePreview: ImageView
@@ -54,6 +66,12 @@ class PostActivity : AppCompatActivity() {
     private lateinit var btnChooseMedia: View
     private lateinit var btnPost: Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var uploadStatusPill: View
+    private lateinit var uploadStatusIcon: ImageView
+    private lateinit var uploadStatusTitle: TextView
+    private lateinit var uploadStatusSubtitle: TextView
+    private lateinit var uploadStatusPercent: TextView
+    private lateinit var uploadStatusProgress: ProgressBar
     private lateinit var spinnerCommunity: Spinner
     private lateinit var textBackgroundLabel: TextView
     private lateinit var textBackgroundPicker: LinearLayout
@@ -66,6 +84,7 @@ class PostActivity : AppCompatActivity() {
     private var selectedCommunityId: String? = null
     private var selectedTextBackgroundColor: String = ""
     private var defaultContentBackground: Drawable? = null
+    private val completionHandler = Handler(Looper.getMainLooper())
 
     // 🎯 Each media type handled separately
     private var imageUri: Uri? = null
@@ -75,6 +94,7 @@ class PostActivity : AppCompatActivity() {
 
     companion object {
         private const val PICK_MEDIA_REQUEST = 101
+        private const val LARGE_VIDEO_HINT_BYTES = 25L * 1024L * 1024L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,6 +117,12 @@ class PostActivity : AppCompatActivity() {
         btnChooseMedia = findViewById(R.id.btnChooseMedia)
         btnPost = findViewById(R.id.btnPost)
         progressBar = findViewById(R.id.progressBar)
+        uploadStatusPill = findViewById(R.id.uploadStatusPill)
+        uploadStatusIcon = findViewById(R.id.imageUploadStatusIcon)
+        uploadStatusTitle = findViewById(R.id.textUploadStatusTitle)
+        uploadStatusSubtitle = findViewById(R.id.textUploadStatusSubtitle)
+        uploadStatusPercent = findViewById(R.id.textUploadStatusPercent)
+        uploadStatusProgress = findViewById(R.id.progressUploadStatus)
         spinnerCommunity = findViewById(R.id.spinnerCommunity)
         textBackgroundLabel = findViewById(R.id.textBackgroundLabel)
         textBackgroundPicker = findViewById(R.id.textBackgroundPicker)
@@ -348,6 +374,7 @@ class PostActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        completionHandler.removeCallbacksAndMessages(null)
         if (::videoPreview.isInitialized) {
             videoPreview.release()
         }
@@ -478,8 +505,8 @@ class PostActivity : AppCompatActivity() {
             return
         }
 
-        btnPost.isEnabled = false
-        progressBar.visibility = View.VISIBLE
+        setUploadInteractionEnabled(false)
+        progressBar.visibility = View.GONE
 
         val textBody = RequestBody.create("text/plain".toMediaTypeOrNull(), content)
         val communityIdBody = RequestBody.create("text/plain".toMediaTypeOrNull(), selectedCommunityId ?: "")
@@ -488,14 +515,19 @@ class PostActivity : AppCompatActivity() {
             spinnerCommunity.selectedItem?.toString() ?: ""
         )
 
-        // Prepare correct media part
-        val mediaParts = mutableListOf<MultipartBody.Part>()
+        val preparedParts = mutableListOf<PreparedUploadPart>()
         val mediaUris = when {
             imageUris.isNotEmpty() -> imageUris.map { "imageUrl" to it }
             videoUri != null -> listOf("videoUrl" to videoUri!!)
             audioUri != null -> listOf("audioUrl" to audioUri!!)
             else -> emptyList()
         }
+
+        showUploadStatus(
+            title = getString(R.string.post_upload_preparing),
+            subtitle = getString(R.string.post_upload_preparing_subtitle),
+            progress = 4
+        )
 
         for ((fieldName, uriToUpload) in mediaUris) {
             try {
@@ -514,16 +546,53 @@ class PostActivity : AppCompatActivity() {
                 ) ?: getFileFromUri(uriToUpload)
                     ?: throw IOException("File could not be read")
                 val mime = contentResolver.getType(uriToUpload) ?: "application/octet-stream"
-                val requestFile = file.asRequestBody(mime.toMediaTypeOrNull())
-                mediaParts.add(MultipartBody.Part.createFormData(fieldName, file.name, requestFile))
+                preparedParts.add(PreparedUploadPart(fieldName, file, mime))
             } catch (e: Exception) {
                 Log.e("PostActivity", "Error preparing media", e)
                 Toast.makeText(this, R.string.error_preparing_file_upload, Toast.LENGTH_SHORT).show()
-                btnPost.isEnabled = true
-                progressBar.visibility = View.GONE
+                setUploadFailureState(getString(R.string.error_preparing_file_upload))
                 return
             }
         }
+
+        val hasLargeVideo = preparedParts.any { it.fieldName == "videoUrl" && it.file.length() >= LARGE_VIDEO_HINT_BYTES }
+        val totalUploadBytes = preparedParts.sumOf { maxOf(it.file.length(), 1L) }
+        val mediaSubtitle = when {
+            hasLargeVideo -> getString(R.string.post_upload_large_video_hint)
+            preparedParts.isEmpty() -> getString(R.string.post_upload_text_only)
+            else -> getString(R.string.post_upload_media_subtitle)
+        }
+
+        showUploadStatus(
+            title = getString(R.string.post_upload_in_progress),
+            subtitle = mediaSubtitle,
+            progress = if (preparedParts.isEmpty()) 24 else 8
+        )
+
+        var uploadedOffset = 0L
+        val mediaParts = preparedParts.map { preparedPart ->
+            val partLength = maxOf(preparedPart.file.length(), 1L)
+            val baseOffset = uploadedOffset
+            uploadedOffset += partLength
+
+            val requestFile = preparedPart.file.asRequestBody(preparedPart.mimeType.toMediaTypeOrNull())
+            val wrappedBody = UploadProgressRequestBody(requestFile) { bytesWritten, _ ->
+                if (totalUploadBytes <= 0L) return@UploadProgressRequestBody
+                val rawPercent = (((baseOffset + bytesWritten).toDouble() / totalUploadBytes.toDouble()) * 100.0)
+                    .roundToInt()
+                    .coerceIn(0, 100)
+                val uiPercent = (8 + ((rawPercent / 100f) * 84f).roundToInt()).coerceIn(8, 92)
+                runOnUiThread {
+                    showUploadStatus(
+                        title = getString(R.string.post_upload_in_progress),
+                        subtitle = mediaSubtitle,
+                        progress = uiPercent
+                    )
+                }
+            }
+            MultipartBody.Part.createFormData(preparedPart.fieldName, preparedPart.file.name, wrappedBody)
+        }
+
         val textBackgroundColor = if (mediaParts.isEmpty() && content.isNotBlank()) {
             TextPostBackgrounds.normalize(selectedTextBackgroundColor)
         } else {
@@ -533,12 +602,13 @@ class PostActivity : AppCompatActivity() {
             "text/plain".toMediaTypeOrNull(),
             textBackgroundColor
         )
+        val clientRequestId = UUID.randomUUID().toString()
         val clientRequestIdBody = RequestBody.create(
             "text/plain".toMediaTypeOrNull(),
-            UUID.randomUUID().toString()
+            clientRequestId
         )
 
-        ApiClient.apiService.createPost(
+        ApiClient.uploadApiService.createPost(
             textBody,
             communityIdBody,
             communityNameBody,
@@ -550,30 +620,16 @@ class PostActivity : AppCompatActivity() {
                 call: Call<CreatePostResponse>,
                 response: Response<CreatePostResponse>
             ) {
-                btnPost.isEnabled = true
-                progressBar.visibility = View.GONE
-
                 if (response.isSuccessful) {
                     val responseBody = response.body()
                     val requiresReview = responseBody?.postingAccess?.requiresReview ?: true
-                    val toastMessage = responseBody?.message
-                        ?: if (requiresReview) {
-                            getString(R.string.post_submitted_for_approval)
-                        } else {
-                            getString(R.string.post_published_successfully)
-                        }
-
-                    Toast.makeText(
-                        this@PostActivity,
-                        toastMessage,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    val successMessage = responseBody?.message?.takeIf { it.isNotBlank() }
+                        ?: if (requiresReview) getString(R.string.post_submitted_for_approval)
+                        else getString(R.string.post_published_successfully)
 
                     val postId = responseBody?.post?.get("_id")?.asString ?: "unknown"
                     Log.i("PostActivity", "Post created: $postId")
-                    TokenManager.saveRecentPostedCommunity(this@PostActivity, selectedCommunityId)
-                    setResult(Activity.RESULT_OK)
-                    finish()
+                    completeUploadSuccess(successMessage, requiresReview)
                 } else {
                     val backendMessage = readBackendError(response)
                     Log.e("PostActivity", "Error response (${response.code()}): $backendMessage")
@@ -591,26 +647,121 @@ class PostActivity : AppCompatActivity() {
                         400 -> backendMessage.ifBlank {
                             getString(R.string.complete_post_details_correctly)
                         }
-                        else -> backendMessage.ifBlank {
-                            getString(R.string.failed_to_create_post_code, response.code())
-                        }
+                        else -> getString(R.string.post_upload_failed_friendly)
                     }
 
+                    setUploadFailureState(message)
                     Toast.makeText(this@PostActivity, message, Toast.LENGTH_LONG).show()
                 }
             }
 
             override fun onFailure(call: Call<CreatePostResponse>, t: Throwable) {
-                btnPost.isEnabled = true
-                progressBar.visibility = View.GONE
                 Log.e("PostActivity", "Upload failed", t)
+                val message = when (t) {
+                    is SocketTimeoutException -> getString(R.string.post_upload_timeout_friendly)
+                    is IOException -> getString(R.string.post_upload_connection_issue)
+                    else -> getString(R.string.post_upload_failed_friendly)
+                }
+                setUploadFailureState(message)
                 Toast.makeText(
                     this@PostActivity,
-                    getString(R.string.error_with_message, t.message ?: getString(R.string.unknown_error)),
+                    message,
                     Toast.LENGTH_SHORT
                 ).show()
             }
         })
+    }
+
+    private fun setUploadInteractionEnabled(enabled: Boolean) {
+        btnPost.isEnabled = enabled
+        btnChooseMedia.isEnabled = enabled
+        spinnerCommunity.isEnabled = enabled
+        findViewById<View>(R.id.selectCommunityCard).isEnabled = enabled
+        findViewById<View>(R.id.btnAddVideoPlaceholder).isEnabled = enabled
+        findViewById<View>(R.id.btnAddAudioPlaceholder).isEnabled = enabled
+        findViewById<View>(R.id.btnAddPollPlaceholder).isEnabled = enabled
+        findViewById<View>(R.id.btnAddEventPlaceholder).isEnabled = enabled
+        findViewById<TextView>(R.id.btnDrafts).isEnabled = enabled
+        findViewById<Button>(R.id.btnSchedulePlaceholder).isEnabled = enabled
+    }
+
+    private fun showUploadStatus(title: String, subtitle: String, progress: Int, success: Boolean = false) {
+        if (uploadStatusPill.visibility != View.VISIBLE) {
+            uploadStatusPill.alpha = 0f
+            uploadStatusPill.visibility = View.VISIBLE
+            uploadStatusPill.animate().alpha(1f).setDuration(180L).start()
+        }
+
+        uploadStatusTitle.text = title
+        uploadStatusSubtitle.text = subtitle
+        uploadStatusProgress.isIndeterminate = false
+        uploadStatusProgress.progress = progress
+        uploadStatusPercent.text = getString(R.string.post_upload_percent, progress)
+        uploadStatusProgress.progressTintList = ColorStateList.valueOf(
+            ContextCompat.getColor(
+                this,
+                if (success) R.color.yenkasa_emerald else R.color.yenkasa_amber
+            )
+        )
+        uploadStatusIcon.setImageResource(if (success) R.drawable.ic_check_circle else R.drawable.ic_upload)
+        uploadStatusIcon.imageTintList = ColorStateList.valueOf(
+            ContextCompat.getColor(
+                this,
+                if (success) R.color.yenkasa_emerald else R.color.post_create_accent
+            )
+        )
+    }
+
+    private fun setUploadFailureState(message: String) {
+        setUploadInteractionEnabled(true)
+        showUploadStatus(
+            title = getString(R.string.post_upload_failed_title),
+            subtitle = message,
+            progress = uploadStatusProgress.progress.coerceAtLeast(0),
+            success = false
+        )
+    }
+
+    private fun completeUploadSuccess(message: String, requiresReview: Boolean) {
+        TokenManager.saveRecentPostedCommunity(this, selectedCommunityId)
+        setResult(Activity.RESULT_OK, Intent().putExtra("postCreated", true))
+        setUploadInteractionEnabled(false)
+
+        val subtitle = if (requiresReview) {
+            getString(R.string.post_submitted_for_approval_returning)
+        } else {
+            getString(R.string.post_published_successfully_returning)
+        }
+
+        showUploadStatus(
+            title = message,
+            subtitle = subtitle,
+            progress = 100,
+            success = true
+        )
+
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        playUploadSuccessSound()
+
+        completionHandler.removeCallbacksAndMessages(null)
+        completionHandler.postDelayed({
+            startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    putExtra("refreshFeed", true)
+                }
+            )
+            finish()
+        }, 900L)
+    }
+
+    private fun playUploadSuccessSound() {
+        MediaPlayer.create(applicationContext, R.raw.sound_chime)?.apply {
+            setOnCompletionListener { player ->
+                player.release()
+            }
+            start()
+        }
     }
 
     private fun readBackendError(response: Response<CreatePostResponse>): String {

@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.NotificationModel
 import java.text.SimpleDateFormat
@@ -24,12 +25,17 @@ class NotificationAdapter(
     private var items: MutableList<NotificationModel>,
     private val onItemClick: (NotificationModel) -> Unit,
     private val onSwipeDelete: (NotificationModel) -> Unit
-) : RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    private companion object {
+        const val TYPE_DEFAULT = 0
+        const val TYPE_UPDATE = 1
+    }
 
     val itemsList: List<NotificationModel>
         get() = items
 
-    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    inner class DefaultViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val title: TextView = view.findViewById(R.id.txtNotificationTitle)
         val subtitle: TextView = view.findViewById(R.id.txtNotificationSubtitle)
         val time: TextView = view.findViewById(R.id.txtNotificationTime)
@@ -39,16 +45,43 @@ class NotificationAdapter(
         val rewardBadge: TextView = view.findViewById(R.id.txtRewardBadge)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val v = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_notification, parent, false)
-        return ViewHolder(v)
+    inner class UpdateViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val channel: TextView = view.findViewById(R.id.txtUpdateChannel)
+        val verifiedIcon: ImageView = view.findViewById(R.id.imgUpdateVerified)
+        val badge: TextView = view.findViewById(R.id.txtUpdateBadge)
+        val unreadDot: ImageView = view.findViewById(R.id.imgUpdateUnreadIndicator)
+        val time: TextView = view.findViewById(R.id.txtUpdateTime)
+        val title: TextView = view.findViewById(R.id.txtUpdateTitle)
+        val body: TextView = view.findViewById(R.id.txtUpdateBody)
+        val preview: ImageView = view.findViewById(R.id.imgUpdatePreview)
+        val reactions: TextView = view.findViewById(R.id.txtUpdateReactions)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == TYPE_UPDATE) {
+            UpdateViewHolder(inflater.inflate(R.layout.item_notification_update, parent, false))
+        } else {
+            DefaultViewHolder(inflater.inflate(R.layout.item_notification, parent, false))
+        }
     }
 
     override fun getItemCount() = items.size
 
-    override fun onBindViewHolder(holder: ViewHolder, pos: Int) {
+    override fun getItemViewType(position: Int): Int {
+        return if (isUpdateItem(items[position])) TYPE_UPDATE else TYPE_DEFAULT
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, pos: Int) {
         val item = items[pos]
+        if (holder is UpdateViewHolder) {
+            bindUpdate(holder, item)
+        } else {
+            bindDefault(holder as DefaultViewHolder, item)
+        }
+    }
+
+    private fun bindDefault(holder: DefaultViewHolder, item: NotificationModel) {
         val content = buildNotificationContent(holder.itemView.context, item)
 
         holder.title.text = content.title
@@ -58,7 +91,7 @@ class NotificationAdapter(
         holder.unreadDot.visibility = if (item.status == "unread") View.VISIBLE else View.INVISIBLE
 
         holder.icon.setImageResource(getNotificationIcon(item.type))
-        holder.iconContainer.background = roundedIconBackground(holder, getNotificationColor(item.type))
+        holder.iconContainer.background = roundedIconBackground(holder.itemView.context, holder.itemView, getNotificationColor(item.type))
 
         if (content.rewardBadge == null) {
             holder.rewardBadge.visibility = View.GONE
@@ -71,6 +104,62 @@ class NotificationAdapter(
             holder.itemView.animate()
                 .scaleX(0.97f)
                 .scaleY(0.97f)
+                .setDuration(70)
+                .withEndAction {
+                    holder.itemView.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(90)
+                        .withEndAction { onItemClick(item) }
+                        .start()
+                }
+                .start()
+        }
+    }
+
+    private fun bindUpdate(holder: UpdateViewHolder, item: NotificationModel) {
+        val context = holder.itemView.context
+        holder.channel.text = item.channelName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.yenkasa_updates)
+        holder.verifiedIcon.visibility = if (item.verifiedBadge) View.VISIBLE else View.GONE
+        val badgeText = item.badge?.takeIf { it.isNotBlank() }
+        if (badgeText == null) {
+            holder.badge.visibility = View.GONE
+        } else {
+            holder.badge.visibility = View.VISIBLE
+            holder.badge.text = badgeText
+        }
+        holder.unreadDot.visibility = if (item.status == "unread") View.VISIBLE else View.INVISIBLE
+        holder.time.text = formatRelativeTime(context, item.createdAt)
+        holder.title.text = item.title?.takeIf { it.isNotBlank() } ?: item.message.orEmpty()
+
+        val subtitle = item.subtitle?.takeIf { it.isNotBlank() }
+        holder.body.text = subtitle ?: context.getString(R.string.yenkasa_updates_open_for_more)
+        holder.body.visibility = View.VISIBLE
+
+        val thumbnailUrl = item.thumbnailUrl?.takeIf { it.isNotBlank() }
+        if (thumbnailUrl == null) {
+            holder.preview.visibility = View.GONE
+            Glide.with(holder.preview).clear(holder.preview)
+        } else {
+            holder.preview.visibility = View.VISIBLE
+            Glide.with(holder.preview)
+                .load(thumbnailUrl)
+                .placeholder(R.drawable.placeholder_image)
+                .error(R.drawable.placeholder_image)
+                .into(holder.preview)
+        }
+
+        holder.reactions.text = context.getString(
+            R.string.updates_reactions_format,
+            item.reactionFireCount,
+            item.reactionHeartCount,
+            item.reactionClapCount
+        )
+
+        holder.itemView.setOnClickListener {
+            holder.itemView.animate()
+                .scaleX(0.985f)
+                .scaleY(0.985f)
                 .setDuration(70)
                 .withEndAction {
                     holder.itemView.animate()
@@ -129,6 +218,8 @@ class NotificationAdapter(
 
     fun getNotificationIcon(type: String): Int {
         return when (type.lowercase()) {
+            "update_announcement", "update_livestream", "update_rewards", "update_ranking",
+            "update_creator", "update_community", "update_feature", "update_app_update" -> R.drawable.ic_bell
             "reward_post_view", "reward_post_view_received", "post_view", "view_milestone" -> R.drawable.ic_eye
             "reward_post", "video" -> R.drawable.ic_play_arrow
             "image", "reward_image" -> R.drawable.ic_image
@@ -143,6 +234,8 @@ class NotificationAdapter(
 
     fun getNotificationColor(type: String): Int {
         return when (type.lowercase()) {
+            "update_announcement", "update_livestream", "update_rewards", "update_ranking",
+            "update_creator", "update_community", "update_feature", "update_app_update" -> R.color.notification_view_bg
             "reward_image", "image" -> R.color.notification_image_bg
             "reward_post_view", "reward_post_view_received", "post_view", "view_milestone" -> R.color.notification_view_bg
             "comment", "post_comment", "comment_reply", "comment_like", "reward_comment" -> R.color.notification_comment_bg
@@ -153,6 +246,14 @@ class NotificationAdapter(
     }
 
     private fun buildNotificationContent(context: Context, n: NotificationModel): NotificationContent {
+        if (isUpdateItem(n)) {
+            return NotificationContent(
+                title = n.title?.takeIf { it.isNotBlank() } ?: n.message.orEmpty(),
+                subtitle = n.subtitle?.takeIf { it.isNotBlank() } ?: context.getString(R.string.yenkasa_updates_open_for_more),
+                rewardBadge = n.badge?.takeIf { it.isNotBlank() }
+            )
+        }
+
         val rawMessage = n.message?.trim().orEmpty()
         val fallbackTitle = formatMessage(context, n)
         val rewardAmount = extractRewardAmount(rawMessage)
@@ -229,11 +330,11 @@ class NotificationAdapter(
         }
     }
 
-    private fun roundedIconBackground(holder: ViewHolder, colorRes: Int): GradientDrawable {
+    private fun roundedIconBackground(context: Context, view: View, colorRes: Int): GradientDrawable {
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = holder.itemView.resources.displayMetrics.density * 14f
-            setColor(ContextCompat.getColor(holder.itemView.context, colorRes))
+            cornerRadius = view.resources.displayMetrics.density * 14f
+            setColor(ContextCompat.getColor(context, colorRes))
         }
     }
 
@@ -251,6 +352,10 @@ class NotificationAdapter(
         return type == "reward" || type.startsWith("reward_") || n.targetType?.lowercase() == "wallet"
     }
 
+    private fun isUpdateItem(item: NotificationModel): Boolean {
+        return item.type.lowercase().startsWith("update_")
+    }
+
     class NotificationDiff(
         private val oldList: List<NotificationModel>,
         private val newList: List<NotificationModel>
@@ -266,6 +371,15 @@ class NotificationAdapter(
 
     fun attachSwipeToRecyclerView(rv: RecyclerView) {
         val swipe = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+            override fun getSwipeDirs(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder
+            ): Int {
+                val position = viewHolder.bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) return 0
+                return if (isUpdateItem(items[position])) 0 else super.getSwipeDirs(recyclerView, viewHolder)
+            }
+
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
 
             override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {

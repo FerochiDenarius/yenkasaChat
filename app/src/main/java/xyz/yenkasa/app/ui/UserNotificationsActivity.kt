@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.NotificationAdapter
 import xyz.yenkasa.app.model.ApiResponse
@@ -26,6 +27,7 @@ import xyz.yenkasa.app.model.NotificationModel
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.google.android.material.chip.ChipGroup
 import org.json.JSONObject
 import retrofit2.Call
@@ -42,15 +44,19 @@ class UserNotificationsActivity : AppCompatActivity() {
     private lateinit var progressNotifications: ProgressBar
     private lateinit var textNotificationsState: TextView
     private lateinit var chipGroupFilters: ChipGroup
+    private lateinit var swipeNotifications: SwipeRefreshLayout
 
     private var previousList: List<NotificationModel> = emptyList()
     private var allNotifications: List<NotificationModel> = emptyList()
+    private var allUpdates: List<NotificationModel> = emptyList()
     private var activeFilter: NotificationFilter = NotificationFilter.ALL
 
     private companion object {
         const val PREFS_NAME = "settings"
         const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
+        const val KEY_UPDATES_CACHE = "updates_cache"
+        const val KEY_UPDATES_READ_IDS = "updates_read_ids"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,7 +71,9 @@ class UserNotificationsActivity : AppCompatActivity() {
         progressNotifications = findViewById(R.id.progressNotifications)
         textNotificationsState = findViewById(R.id.textNotificationsState)
         chipGroupFilters = findViewById(R.id.chipGroupNotificationFilters)
+        swipeNotifications = findViewById(R.id.swipeNotifications)
         rvNotifications.layoutManager = LinearLayoutManager(this)
+        swipeNotifications.setColorSchemeResources(R.color.notification_badge_text)
 
         adapter = NotificationAdapter(
             items = mutableListOf(),
@@ -78,12 +86,15 @@ class UserNotificationsActivity : AppCompatActivity() {
 
         rvNotifications.adapter = adapter
         adapter.attachSwipeToRecyclerView(rvNotifications)
+        swipeNotifications.setOnRefreshListener {
+            refreshContent(fromSwipe = true)
+        }
         findViewById<View>(R.id.btnNotificationSettings).setOnClickListener {
             startActivity(android.content.Intent(this, SettingsActivity::class.java))
         }
         initFilters()
 
-        loadNotifications()
+        refreshContent()
         initSocketListeners()
     }
 
@@ -109,8 +120,18 @@ class UserNotificationsActivity : AppCompatActivity() {
     // ============================================================
     // LOAD EXISTING NOTIFICATIONS
     // ============================================================
+    private fun refreshContent(fromSwipe: Boolean = false) {
+        if (!fromSwipe) {
+            showLoadingState()
+        }
+        loadNotifications()
+        loadUpdates()
+    }
+
     private fun loadNotifications() {
-        showLoadingState()
+        if (!swipeNotifications.isRefreshing) {
+            progressNotifications.visibility = View.VISIBLE
+        }
 
         ApiClient.apiService.getNotifications().enqueue(object : Callback<List<NotificationModel>> {
             override fun onResponse(
@@ -120,9 +141,9 @@ class UserNotificationsActivity : AppCompatActivity() {
                 if (!res.isSuccessful) {
                     Log.e("NOTIF", "Failed to load notifications: ${res.code()}")
                     allNotifications = emptyList()
-                    adapter.updateList(emptyList())
                     previousList = emptyList()
-                    showMessageState(getString(R.string.could_not_load_notifications))
+                    renderFilteredNotifications()
+                    swipeNotifications.isRefreshing = false
                     return
                 }
 
@@ -130,9 +151,9 @@ class UserNotificationsActivity : AppCompatActivity() {
                 if (body == null) {
                     Log.e("NOTIF", "Notifications response body was empty")
                     allNotifications = emptyList()
-                    adapter.updateList(emptyList())
                     previousList = emptyList()
-                    showMessageState(getString(R.string.no_notifications_yet))
+                    renderFilteredNotifications()
+                    swipeNotifications.isRefreshing = false
                     return
                 }
 
@@ -149,19 +170,50 @@ class UserNotificationsActivity : AppCompatActivity() {
                 allNotifications = newList
                 renderFilteredNotifications()
                 previousList = newList
+                swipeNotifications.isRefreshing = false
             }
 
             override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
                 Log.e("NOTIF", "Network error loading notifications", t)
                 allNotifications = emptyList()
-                adapter.updateList(emptyList())
                 previousList = emptyList()
-                showMessageState(getString(R.string.network_error_check_connection))
+                renderFilteredNotifications()
+                swipeNotifications.isRefreshing = false
                 Toast.makeText(
                     this@UserNotificationsActivity,
                     getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown_error)),
                     Toast.LENGTH_SHORT
                 ).show()
+            }
+        })
+    }
+
+    private fun loadUpdates() {
+        ApiClient.apiService.getUpdates().enqueue(object : Callback<List<NotificationModel>> {
+            override fun onResponse(
+                call: Call<List<NotificationModel>>,
+                response: Response<List<NotificationModel>>
+            ) {
+                if (!response.isSuccessful) {
+                    Log.e("NOTIF", "Failed to load updates: ${response.code()}")
+                    allUpdates = loadCachedUpdates()
+                    renderFilteredNotifications()
+                    swipeNotifications.isRefreshing = false
+                    return
+                }
+
+                val updates = applyLocalUpdateReadState(response.body().orEmpty())
+                allUpdates = updates
+                cacheUpdates(updates)
+                renderFilteredNotifications()
+                swipeNotifications.isRefreshing = false
+            }
+
+            override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
+                Log.e("NOTIF", "Network error loading updates", t)
+                allUpdates = loadCachedUpdates()
+                renderFilteredNotifications()
+                swipeNotifications.isRefreshing = false
             }
         })
     }
@@ -217,24 +269,27 @@ class UserNotificationsActivity : AppCompatActivity() {
     private fun showLoadingState() {
         progressNotifications.visibility = View.VISIBLE
         textNotificationsState.visibility = View.GONE
-        rvNotifications.visibility = View.GONE
+        swipeNotifications.visibility = View.GONE
     }
 
     private fun showContentState(items: List<NotificationModel>) {
         progressNotifications.visibility = View.GONE
         if (items.isEmpty()) {
-            rvNotifications.visibility = View.GONE
-            textNotificationsState.text = getString(R.string.notifications_all_caught_up)
+            swipeNotifications.visibility = View.GONE
+            textNotificationsState.text = when (activeFilter) {
+                NotificationFilter.UPDATES -> getString(R.string.no_updates_yet)
+                else -> getString(R.string.notifications_all_caught_up)
+            }
             textNotificationsState.visibility = View.VISIBLE
         } else {
             textNotificationsState.visibility = View.GONE
-            rvNotifications.visibility = View.VISIBLE
+            swipeNotifications.visibility = View.VISIBLE
         }
     }
 
     private fun showMessageState(message: String) {
         progressNotifications.visibility = View.GONE
-        rvNotifications.visibility = View.GONE
+        swipeNotifications.visibility = View.GONE
         textNotificationsState.text = message
         textNotificationsState.visibility = View.VISIBLE
     }
@@ -249,6 +304,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 R.id.chipFilterRewards -> NotificationFilter.REWARDS
                 R.id.chipFilterComments -> NotificationFilter.COMMENTS
                 R.id.chipFilterLikes -> NotificationFilter.LIKES
+                R.id.chipFilterUpdates -> NotificationFilter.UPDATES
                 R.id.chipFilterMentions -> NotificationFilter.MENTIONS
                 else -> NotificationFilter.ALL
             }
@@ -257,7 +313,15 @@ class UserNotificationsActivity : AppCompatActivity() {
     }
 
     private fun renderFilteredNotifications() {
-        val filtered = allNotifications.filter { activeFilter.matches(it) }
+        val filtered = when (activeFilter) {
+            NotificationFilter.UPDATES -> allUpdates
+                .sortedWith(compareByDescending<NotificationModel> { it.pinned }
+                    .thenByDescending { it.createdAt.orEmpty() })
+            NotificationFilter.ALL -> (allNotifications + allUpdates)
+                .sortedWith(compareByDescending<NotificationModel> { it.pinned }
+                    .thenByDescending { it.createdAt.orEmpty() })
+            else -> allNotifications.filter { activeFilter.matches(it) }
+        }
         adapter.updateList(filtered)
         showContentState(filtered)
     }
@@ -280,6 +344,12 @@ class UserNotificationsActivity : AppCompatActivity() {
     // WHEN USER TAPS A NOTIFICATION
     // ============================================================
     private fun handleNotificationClick(item: NotificationModel) {
+        if (isUpdateItem(item)) {
+            markUpdateAsRead(item.id)
+            navigateFromNotification(item)
+            return
+        }
+
         if (item.type.equals("message_request", ignoreCase = true)) {
             showMessageRequestDialog(item)
             return
@@ -344,7 +414,7 @@ class UserNotificationsActivity : AppCompatActivity() {
 
 
     private fun navigateFromNotification(item: NotificationModel) {
-        if (item.targetType.equals("system", ignoreCase = true)) {
+        if (item.targetType.equals("system", ignoreCase = true) && !isUpdateItem(item)) {
             Toast.makeText(this, item.message ?: getString(R.string.system_notification), Toast.LENGTH_SHORT).show()
         }
         startActivity(NotificationNavigation.buildIntent(this, item))
@@ -400,11 +470,54 @@ class UserNotificationsActivity : AppCompatActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun applyLocalUpdateReadState(items: List<NotificationModel>): List<NotificationModel> {
+        val readIds = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getStringSet(KEY_UPDATES_READ_IDS, emptySet())
+            .orEmpty()
+
+        return items.map { item ->
+            if (item.id in readIds) item.copy(status = "read") else item
+        }
+    }
+
+    private fun markUpdateAsRead(id: String) {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val updatedReadIds = prefs.getStringSet(KEY_UPDATES_READ_IDS, emptySet()).orEmpty().toMutableSet()
+        if (updatedReadIds.add(id)) {
+            prefs.edit().putStringSet(KEY_UPDATES_READ_IDS, updatedReadIds).apply()
+        }
+        allUpdates = allUpdates.map { if (it.id == id) it.copy(status = "read") else it }
+        adapter.markItemAsRead(id)
+    }
+
+    private fun cacheUpdates(items: List<NotificationModel>) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putString(KEY_UPDATES_CACHE, Gson().toJson(items))
+            .apply()
+    }
+
+    private fun loadCachedUpdates(): List<NotificationModel> {
+        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_UPDATES_CACHE, null)
+            ?: return emptyList()
+        return runCatching {
+            val type = object : TypeToken<List<NotificationModel>>() {}.type
+            applyLocalUpdateReadState(Gson().fromJson(raw, type) ?: emptyList())
+        }.getOrElse {
+            emptyList()
+        }
+    }
+
+    private fun isUpdateItem(item: NotificationModel): Boolean {
+        return item.type.lowercase().startsWith("update_")
+    }
+
     private enum class NotificationFilter {
         ALL,
         REWARDS,
         COMMENTS,
         LIKES,
+        UPDATES,
         MENTIONS;
 
         fun matches(notification: NotificationModel): Boolean {
@@ -415,6 +528,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 REWARDS -> type == "reward" || type.startsWith("reward_") || notification.targetType?.lowercase() == "wallet"
                 COMMENTS -> "comment" in type || "reply" in type
                 LIKES -> "like" in type
+                UPDATES -> type.startsWith("update_")
                 MENTIONS -> "mention" in type || "mentioned" in message
             }
         }

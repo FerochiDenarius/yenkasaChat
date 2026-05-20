@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.Announcement
 import xyz.yenkasa.app.adapter.NotificationAdapter
 import xyz.yenkasa.app.model.ApiResponse
 import xyz.yenkasa.app.util.TokenManager
@@ -48,15 +49,15 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private var previousList: List<NotificationModel> = emptyList()
     private var allNotifications: List<NotificationModel> = emptyList()
-    private var allUpdates: List<NotificationModel> = emptyList()
+    private var allAnnouncements: List<NotificationModel> = emptyList()
     private var activeFilter: NotificationFilter = NotificationFilter.ALL
 
     private companion object {
         const val PREFS_NAME = "settings"
         const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
-        const val KEY_UPDATES_CACHE = "updates_cache"
-        const val KEY_UPDATES_READ_IDS = "updates_read_ids"
+        const val KEY_ANNOUNCEMENTS_CACHE = "announcements_cache"
+        const val KEY_ANNOUNCEMENTS_READ_IDS = "announcements_read_ids"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,6 +116,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         super.onDestroy()
         SocketManager.off("notificationCreated")
         SocketManager.off("notificationRead")
+        SocketManager.off("newAnnouncement")
     }
 
     // ============================================================
@@ -125,7 +127,7 @@ class UserNotificationsActivity : AppCompatActivity() {
             showLoadingState()
         }
         loadNotifications()
-        loadUpdates()
+        loadAnnouncements()
     }
 
     private fun loadNotifications() {
@@ -188,30 +190,32 @@ class UserNotificationsActivity : AppCompatActivity() {
         })
     }
 
-    private fun loadUpdates() {
-        ApiClient.apiService.getUpdates().enqueue(object : Callback<List<NotificationModel>> {
+    private fun loadAnnouncements() {
+        ApiClient.apiService.getAnnouncementsFeed().enqueue(object : Callback<List<Announcement>> {
             override fun onResponse(
-                call: Call<List<NotificationModel>>,
-                response: Response<List<NotificationModel>>
+                call: Call<List<Announcement>>,
+                response: Response<List<Announcement>>
             ) {
                 if (!response.isSuccessful) {
-                    Log.e("NOTIF", "Failed to load updates: ${response.code()}")
-                    allUpdates = loadCachedUpdates()
+                    Log.e("NOTIF", "Failed to load announcements: ${response.code()}")
+                    allAnnouncements = loadCachedAnnouncements()
                     renderFilteredNotifications()
                     swipeNotifications.isRefreshing = false
                     return
                 }
 
-                val updates = applyLocalUpdateReadState(response.body().orEmpty())
-                allUpdates = updates
-                cacheUpdates(updates)
+                val announcements = applyLocalAnnouncementReadState(
+                    response.body().orEmpty().map { it.toNotificationModel() }
+                )
+                allAnnouncements = announcements
+                cacheAnnouncements(announcements)
                 renderFilteredNotifications()
                 swipeNotifications.isRefreshing = false
             }
 
-            override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
-                Log.e("NOTIF", "Network error loading updates", t)
-                allUpdates = loadCachedUpdates()
+            override fun onFailure(call: Call<List<Announcement>>, t: Throwable) {
+                Log.e("NOTIF", "Network error loading announcements", t)
+                allAnnouncements = loadCachedAnnouncements()
                 renderFilteredNotifications()
                 swipeNotifications.isRefreshing = false
             }
@@ -254,6 +258,21 @@ class UserNotificationsActivity : AppCompatActivity() {
                 } catch (_: Exception) {}
             }
         }
+
+        SocketManager.on("newAnnouncement") { data ->
+            runOnUiThread {
+                try {
+                    val announcement = Gson().fromJson(data.toString(), Announcement::class.java)
+                    val mapped = applyLocalAnnouncementReadState(listOf(announcement.toNotificationModel())).firstOrNull()
+                        ?: return@runOnUiThread
+                    allAnnouncements = listOf(mapped) + allAnnouncements.filterNot { it.id == mapped.id }
+                    cacheAnnouncements(allAnnouncements)
+                    renderFilteredNotifications()
+                } catch (e: Exception) {
+                    Log.e("NOTIF", "Could not handle new announcement", e)
+                }
+            }
+        }
     }
 
     // JSON → Model
@@ -277,7 +296,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         if (items.isEmpty()) {
             swipeNotifications.visibility = View.GONE
             textNotificationsState.text = when (activeFilter) {
-                NotificationFilter.UPDATES -> getString(R.string.no_updates_yet)
+                NotificationFilter.ANNOUNCEMENTS -> getString(R.string.no_announcements_yet)
                 else -> getString(R.string.notifications_all_caught_up)
             }
             textNotificationsState.visibility = View.VISIBLE
@@ -304,7 +323,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 R.id.chipFilterRewards -> NotificationFilter.REWARDS
                 R.id.chipFilterComments -> NotificationFilter.COMMENTS
                 R.id.chipFilterLikes -> NotificationFilter.LIKES
-                R.id.chipFilterUpdates -> NotificationFilter.UPDATES
+                R.id.chipFilterUpdates -> NotificationFilter.ANNOUNCEMENTS
                 R.id.chipFilterMentions -> NotificationFilter.MENTIONS
                 else -> NotificationFilter.ALL
             }
@@ -314,10 +333,10 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private fun renderFilteredNotifications() {
         val filtered = when (activeFilter) {
-            NotificationFilter.UPDATES -> allUpdates
+            NotificationFilter.ANNOUNCEMENTS -> allAnnouncements
                 .sortedWith(compareByDescending<NotificationModel> { it.pinned }
                     .thenByDescending { it.createdAt.orEmpty() })
-            NotificationFilter.ALL -> (allNotifications + allUpdates)
+            NotificationFilter.ALL -> (allNotifications + allAnnouncements)
                 .sortedWith(compareByDescending<NotificationModel> { it.pinned }
                     .thenByDescending { it.createdAt.orEmpty() })
             else -> allNotifications.filter { activeFilter.matches(it) }
@@ -344,8 +363,8 @@ class UserNotificationsActivity : AppCompatActivity() {
     // WHEN USER TAPS A NOTIFICATION
     // ============================================================
     private fun handleNotificationClick(item: NotificationModel) {
-        if (isUpdateItem(item)) {
-            markUpdateAsRead(item.id)
+        if (isAnnouncementItem(item)) {
+            markAnnouncementAsRead(item.id)
             navigateFromNotification(item)
             return
         }
@@ -414,7 +433,7 @@ class UserNotificationsActivity : AppCompatActivity() {
 
 
     private fun navigateFromNotification(item: NotificationModel) {
-        if (item.targetType.equals("system", ignoreCase = true) && !isUpdateItem(item)) {
+        if (item.targetType.equals("system", ignoreCase = true) && !isAnnouncementItem(item)) {
             Toast.makeText(this, item.message ?: getString(R.string.system_notification), Toast.LENGTH_SHORT).show()
         }
         startActivity(NotificationNavigation.buildIntent(this, item))
@@ -470,9 +489,9 @@ class UserNotificationsActivity : AppCompatActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun applyLocalUpdateReadState(items: List<NotificationModel>): List<NotificationModel> {
+    private fun applyLocalAnnouncementReadState(items: List<NotificationModel>): List<NotificationModel> {
         val readIds = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getStringSet(KEY_UPDATES_READ_IDS, emptySet())
+            .getStringSet(KEY_ANNOUNCEMENTS_READ_IDS, emptySet())
             .orEmpty()
 
         return items.map { item ->
@@ -480,36 +499,37 @@ class UserNotificationsActivity : AppCompatActivity() {
         }
     }
 
-    private fun markUpdateAsRead(id: String) {
+    private fun markAnnouncementAsRead(id: String) {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val updatedReadIds = prefs.getStringSet(KEY_UPDATES_READ_IDS, emptySet()).orEmpty().toMutableSet()
+        val updatedReadIds = prefs.getStringSet(KEY_ANNOUNCEMENTS_READ_IDS, emptySet()).orEmpty().toMutableSet()
         if (updatedReadIds.add(id)) {
-            prefs.edit().putStringSet(KEY_UPDATES_READ_IDS, updatedReadIds).apply()
+            prefs.edit().putStringSet(KEY_ANNOUNCEMENTS_READ_IDS, updatedReadIds).apply()
         }
-        allUpdates = allUpdates.map { if (it.id == id) it.copy(status = "read") else it }
+        allAnnouncements = allAnnouncements.map { if (it.id == id) it.copy(status = "read") else it }
         adapter.markItemAsRead(id)
     }
 
-    private fun cacheUpdates(items: List<NotificationModel>) {
+    private fun cacheAnnouncements(items: List<NotificationModel>) {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .edit()
-            .putString(KEY_UPDATES_CACHE, Gson().toJson(items))
+            .putString(KEY_ANNOUNCEMENTS_CACHE, Gson().toJson(items))
             .apply()
     }
 
-    private fun loadCachedUpdates(): List<NotificationModel> {
-        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_UPDATES_CACHE, null)
+    private fun loadCachedAnnouncements(): List<NotificationModel> {
+        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_ANNOUNCEMENTS_CACHE, null)
             ?: return emptyList()
         return runCatching {
             val type = object : TypeToken<List<NotificationModel>>() {}.type
-            applyLocalUpdateReadState(Gson().fromJson(raw, type) ?: emptyList())
+            applyLocalAnnouncementReadState(Gson().fromJson(raw, type) ?: emptyList())
         }.getOrElse {
             emptyList()
         }
     }
 
-    private fun isUpdateItem(item: NotificationModel): Boolean {
-        return item.type.lowercase().startsWith("update_")
+    private fun isAnnouncementItem(item: NotificationModel): Boolean {
+        val type = item.type.lowercase()
+        return type.startsWith("update_") || type == "announcement"
     }
 
     private enum class NotificationFilter {
@@ -517,7 +537,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         REWARDS,
         COMMENTS,
         LIKES,
-        UPDATES,
+        ANNOUNCEMENTS,
         MENTIONS;
 
         fun matches(notification: NotificationModel): Boolean {
@@ -528,7 +548,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 REWARDS -> type == "reward" || type.startsWith("reward_") || notification.targetType?.lowercase() == "wallet"
                 COMMENTS -> "comment" in type || "reply" in type
                 LIKES -> "like" in type
-                UPDATES -> type.startsWith("update_")
+                ANNOUNCEMENTS -> type.startsWith("update_") || type == "announcement"
                 MENTIONS -> "mention" in type || "mentioned" in message
             }
         }

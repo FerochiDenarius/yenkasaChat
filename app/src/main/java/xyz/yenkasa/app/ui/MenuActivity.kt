@@ -69,6 +69,7 @@ class MenuActivity : AppCompatActivity() {
         val textAdminSectionHeader = findViewById<TextView>(R.id.textAdminSectionHeader)
         val btnAdminEconomy = findViewById<LinearLayout>(R.id.btnAdminEconomy)
         val btnUserRoleDashboard = findViewById<LinearLayout>(R.id.btnUserRoleDashboard)
+        val btnYenkasaUpdatesComposer = findViewById<LinearLayout>(R.id.btnYenkasaUpdatesComposer)
         val btnLogout = findViewById<LinearLayout>(R.id.btnLogout)
         val btnCommunities = findViewById<LinearLayout>(R.id.btnCommunities)
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
@@ -77,9 +78,10 @@ class MenuActivity : AppCompatActivity() {
         val currentRole = resolveCurrentRole()
         val canAccessAnalytics = UserPermissions.canAccessAnalytics(currentRole)
         val canModerate = UserPermissions.canModerate(currentRole)
+        val canPublishGlobalUpdates = UserPermissions.canPublishGlobalUpdates(currentRole)
         Log.d(
             TAG,
-            "RBAC currentRole=$currentRole analyticsVisibility=$canAccessAnalytics moderationVisibility=$canModerate"
+            "RBAC currentRole=$currentRole analyticsVisibility=$canAccessAnalytics moderationVisibility=$canModerate publishUpdates=$canPublishGlobalUpdates"
         )
 
         btnPostApproval.visibility = if (canModerate) View.VISIBLE else View.GONE
@@ -88,9 +90,10 @@ class MenuActivity : AppCompatActivity() {
         textAdminSectionHeader.visibility = if (canAccessAnalytics) View.VISIBLE else View.GONE
         btnAdminEconomy.visibility = if (canAccessAnalytics) View.VISIBLE else View.GONE
         btnUserRoleDashboard.visibility = if (UserPermissions.canManageRoles(currentRole)) View.VISIBLE else View.GONE
+        btnYenkasaUpdatesComposer.visibility = if (canPublishGlobalUpdates) View.VISIBLE else View.GONE
         Log.d(
             TAG,
-            "Admin menu visibility=$canAccessAnalytics visibleItems=${listOf(btnPostApproval, btnAdsApproval, btnCommunityApproval, btnAdminEconomy).count { it.visibility == View.VISIBLE }}"
+            "Admin menu visibility=$canAccessAnalytics visibleItems=${listOf(btnPostApproval, btnAdsApproval, btnCommunityApproval, btnAdminEconomy, btnYenkasaUpdatesComposer).count { it.visibility == View.VISIBLE }}"
         )
 
         textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
@@ -183,6 +186,11 @@ class MenuActivity : AppCompatActivity() {
         btnUserRoleDashboard.setOnClickListener {
             Log.d(TAG, "UserRoleDashboard clicked; launching UserRoleDashboardActivity")
             startActivity(Intent(this, UserRoleDashboardActivity::class.java))
+        }
+
+        btnYenkasaUpdatesComposer.setOnClickListener {
+            Log.d(TAG, "YenkasaUpdatesComposer clicked; launching YenkasaUpdateComposerActivity")
+            startActivity(Intent(this, YenkasaUpdateComposerActivity::class.java))
         }
 
         // ✔ Notifications

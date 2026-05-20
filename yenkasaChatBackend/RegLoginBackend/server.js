@@ -1199,6 +1199,7 @@ safeMount('/api/follow', './routes/follow.routes');
 safeMount('/api/post-approval', './routes/postapproval.routes');
 safeMount('/api/notifications', './routes/notifications.routes');
 safeMount('/api/updates', './routes/updates.routes');
+safeMount('/api/announcements', './routes/announcement.routes');
 safeMount('/api/user-privacy', './routes/userPrivacy.routes');
 safeMount('/api/metrics', './routes/metrics.routes');
 safeMount('/api/live', './routes/live.routes');

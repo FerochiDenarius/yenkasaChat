@@ -35,117 +35,111 @@
         app:layout_constraintTop_toTopOf="@id/notificationsTitle"
         app:tint="@color/notification_primary_text" />
 
-    <HorizontalScrollView
-        android:id="@+id/filterScroll"
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupNotificationFilters"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:clipToPadding="false"
-        android:overScrollMode="never"
-        android:scrollbars="none"
+        app:chipSpacingHorizontal="10dp"
+        app:chipSpacingVertical="10dp"
+        app:selectionRequired="true"
+        app:singleLine="false"
+        app:singleSelection="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/notificationsTitle">
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupNotificationFilters"
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFilterAll"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:singleLine="true"
-            app:singleSelection="true">
+            android:layout_height="40dp"
+            android:checkable="true"
+            android:checked="true"
+            android:text="@string/all"
+            android:textColor="@color/selector_notification_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_notification_chip_background"
+            app:chipCornerRadius="20dp"
+            app:chipMinHeight="40dp"
+            app:chipStrokeColor="@color/transparent"
+            app:chipStrokeWidth="0dp" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterAll"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:checked="true"
-                android:text="@string/all"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFilterRewards"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:checkable="true"
+            android:text="@string/rewards"
+            android:textColor="@color/selector_notification_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_notification_chip_background"
+            app:chipCornerRadius="20dp"
+            app:chipMinHeight="40dp"
+            app:chipStrokeColor="@color/transparent"
+            app:chipStrokeWidth="0dp" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterRewards"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/rewards"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFilterLikes"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:checkable="true"
+            android:text="@string/likes"
+            android:textColor="@color/selector_notification_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_notification_chip_background"
+            app:chipCornerRadius="20dp"
+            app:chipMinHeight="40dp"
+            app:chipStrokeColor="@color/transparent"
+            app:chipStrokeWidth="0dp" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterComments"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/comments"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFilterUpdates"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:checkable="true"
+            android:text="@string/updates"
+            android:textColor="@color/selector_notification_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_notification_chip_background"
+            app:chipCornerRadius="20dp"
+            app:chipMinHeight="40dp"
+            app:chipStrokeColor="@color/transparent"
+            app:chipStrokeWidth="0dp" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterLikes"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/likes"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFilterComments"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:checkable="true"
+            android:text="@string/comments"
+            android:textColor="@color/selector_notification_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_notification_chip_background"
+            app:chipCornerRadius="20dp"
+            app:chipMinHeight="40dp"
+            app:chipStrokeColor="@color/transparent"
+            app:chipStrokeWidth="0dp" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterUpdates"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/updates"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterMentions"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/mentions"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFilterMentions"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:checkable="true"
+            android:text="@string/mentions"
+            android:textColor="@color/selector_notification_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_notification_chip_background"
+            app:chipCornerRadius="20dp"
+            app:chipMinHeight="40dp"
+            app:chipStrokeColor="@color/transparent"
+            app:chipStrokeWidth="0dp" />
+    </com.google.android.material.chip.ChipGroup>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeNotifications"
@@ -155,7 +149,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/filterScroll">
+        app:layout_constraintTop_toBottomOf="@id/chipGroupNotificationFilters">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvNotifications"

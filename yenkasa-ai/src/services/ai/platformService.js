@@ -1,4 +1,8 @@
-const API_BASE = (import.meta.env.VITE_AI_API_BASE || "http://localhost:8008/api/ai").replace(/\/$/, "");
+const DEFAULT_API_BASE = import.meta.env.PROD
+  ? "https://yenkasa-ai-496173204476.europe-west1.run.app"
+  : "http://localhost:8008/api/ai";
+
+const API_BASE = (import.meta.env.VITE_AI_API_BASE || DEFAULT_API_BASE).replace(/\/$/, "");
 
 function buildUrl(path) {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;

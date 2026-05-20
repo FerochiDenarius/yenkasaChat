@@ -842,6 +842,48 @@ interface ApiService {
     @GET("updates")
     fun getUpdates(): Call<List<NotificationModel>>
 
+    @GET("announcements/feed")
+    fun getAnnouncementsFeed(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Call<List<Announcement>>
+
+    @GET("announcements/{id}")
+    fun getAnnouncement(
+        @Path("id") id: String
+    ): Call<AnnouncementResponse>
+
+    @Multipart
+    @POST("announcements/create")
+    fun createAnnouncement(
+        @Part("title") title: RequestBody,
+        @Part("message") message: RequestBody,
+        @Part("audience") audience: RequestBody,
+        @Part("status") status: RequestBody,
+        @Part("isPinned") isPinned: RequestBody,
+        @Part("communityId") communityId: RequestBody?,
+        @Part("communityName") communityName: RequestBody?,
+        @Part("scheduledAt") scheduledAt: RequestBody?,
+        @Part("targetUrl") targetUrl: RequestBody?,
+        @Part("deepLinkUrl") deepLinkUrl: RequestBody?,
+        @Part media: List<MultipartBody.Part>
+    ): Call<AnnouncementResponse>
+
+    @POST("announcements/{id}/like")
+    fun likeAnnouncement(
+        @Path("id") id: String
+    ): Call<AnnouncementReactionResponse>
+
+    @POST("announcements/{id}/view")
+    fun viewAnnouncement(
+        @Path("id") id: String
+    ): Call<AnnouncementReactionResponse>
+
+    @POST("updates/admin")
+    fun createAdminUpdate(
+        @Body request: CreateYenkasaUpdateRequest
+    ): Call<CreateYenkasaUpdateResponse>
+
     @GET("notifications/preferences")
     fun getNotificationPreferences(): Call<NotificationPreferencesResponse>
 

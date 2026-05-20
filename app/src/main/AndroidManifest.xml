@@ -109,6 +109,9 @@
         <activity android:name=".ui.AdminEconomyActivity" />
         <activity android:name=".ui.UserRoleDashboardActivity" />
         <activity
+            android:name=".ui.YenkasaUpdateComposerActivity"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
             android:name=".ui.StartLiveActivity"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize|stateHidden" />

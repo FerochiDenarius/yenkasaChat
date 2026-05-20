@@ -145,6 +145,11 @@ object UserPermissions {
         return canGenerateRoleCodes(role)
     }
 
+    fun canPublishGlobalUpdates(role: String?): Boolean {
+        val r = normalize(role)
+        return r in listOf("senior_developer", "admin")
+    }
+
     fun canStartLivestream(role: String?): Boolean {
         val r = normalize(role)
         return r in listOf("senior_developer", "junior_developer", "admin", "moderator", "staff", "support", "analyst")

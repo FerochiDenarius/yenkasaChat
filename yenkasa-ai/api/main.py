@@ -37,14 +37,36 @@ RAG_VENV_PYTHON = RAG_DIR / "venv" / "bin" / "python"
 ASK_SCRIPT = RAG_DIR / "ask.py"
 INGEST_SCRIPT = RAG_DIR / "ingest.py"
 PUBLIC_KNOWLEDGE_DIR = ROOT_DIR / "yenkasa_knowledge" / "public"
+LOCAL_API_CHROMA_DIR = ROOT_DIR / "yenkasa-ai" / "chroma_db"
+HF_MODEL_CACHE_ROOT = (
+    Path.home()
+    / ".cache"
+    / "huggingface"
+    / "hub"
+    / "models--sentence-transformers--all-MiniLM-L6-v2"
+    / "snapshots"
+)
+
+
+def resolve_default_embedding_model() -> str:
+    configured = os.getenv("EMBEDDING_MODEL")
+    if configured:
+        return configured
+
+    if HF_MODEL_CACHE_ROOT.exists():
+        snapshots = sorted(path for path in HF_MODEL_CACHE_ROOT.iterdir() if path.is_dir())
+        if snapshots:
+            return str(snapshots[-1].resolve())
+
+    return "sentence-transformers/all-MiniLM-L6-v2"
 
 ENGINEERING_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_NAME", "yenkasa_research")
 PUBLIC_COLLECTION_NAME = os.getenv("CHROMA_PUBLIC_COLLECTION_NAME", "yenkasa_platform_knowledge")
-DEFAULT_PERSIST_DIR = Path(os.getenv("CHROMA_PERSIST_DIR", str(RAG_DIR / "chroma_db"))).resolve()
+DEFAULT_PERSIST_DIR = Path(os.getenv("CHROMA_PERSIST_DIR", str(LOCAL_API_CHROMA_DIR))).resolve()
 DEFAULT_PROJECT_ID = os.getenv("VERTEX_AI_PROJECT_ID", "project-10405180-0afd-4ecc-9f8")
 DEFAULT_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")
 DEFAULT_MODEL = os.getenv("VERTEX_AI_MODEL", "gemini-2.5-flash")
-DEFAULT_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+DEFAULT_EMBEDDING_MODEL = resolve_default_embedding_model()
 DEFAULT_RETRIEVAL_K = int(os.getenv("RETRIEVAL_K", "5"))
 DEFAULT_MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "6"))
 PUBLIC_CHUNK_SIZE = int(os.getenv("PUBLIC_DOC_CHUNK_SIZE", "950"))
@@ -224,6 +246,11 @@ def startup_rag() -> None:
     ask_module = load_ask_module()
     ask_module.configure_logging(os.getenv("LOG_LEVEL", "INFO"))
     ask_module.load_environment(RAG_DIR)
+
+    if Path(DEFAULT_EMBEDDING_MODEL).exists():
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        LOGGER.info("Using local embedding snapshot path=%s offline_mode=true", DEFAULT_EMBEDDING_MODEL)
 
     embedding_start = time.perf_counter()
     embedding_function = ask_module.build_embedding_function(DEFAULT_EMBEDDING_MODEL)

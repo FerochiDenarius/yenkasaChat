@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import org.json.JSONObject
 import xyz.yenkasa.app.model.NotificationModel
+import xyz.yenkasa.app.ui.AnnouncementDetailActivity
 import xyz.yenkasa.app.ui.ChatActivity
 import xyz.yenkasa.app.ui.CoinWalletActivity
 import xyz.yenkasa.app.ui.CommentsActivity
@@ -108,6 +109,9 @@ object NotificationNavigation {
             "wallet" -> Intent(context, CoinWalletActivity::class.java).apply {
                 putExtra("ACTIVITY_ID", firstNotBlank(activityId, targetId))
             }
+            "announcement" -> Intent(context, AnnouncementDetailActivity::class.java).apply {
+                putExtra("ANNOUNCEMENT_ID", firstNotBlank(targetId, activityId))
+            }
             "post" -> Intent(context, CommentsActivity::class.java).apply {
                 putExtra("POST_ID", resolvedPostId)
             }
@@ -173,6 +177,9 @@ object NotificationNavigation {
             }
             "ad_approved", "ad_rejected" -> Intent(context, MyAdsActivity::class.java)
             "community_approved", "community_rejected" -> Intent(context, MyCommunitiesActivity::class.java)
+            "announcement" -> Intent(context, AnnouncementDetailActivity::class.java).apply {
+                putExtra("ANNOUNCEMENT_ID", firstNotBlank(targetId, activityId, data?.optString("announcementId")))
+            }
             else -> Intent(context, MainActivity::class.java)
         }
     }
@@ -212,6 +219,9 @@ object NotificationNavigation {
         val openComments = normalizedUri.getQueryParameter("openComments").equals("true", ignoreCase = true)
 
         return when {
+            path.startsWith("/announcements/") -> Intent(context, AnnouncementDetailActivity::class.java).apply {
+                putExtra("ANNOUNCEMENT_ID", segments.lastOrNull().orEmpty())
+            }
             path == "/wallet" || path.startsWith("/wallet/") -> Intent(context, CoinWalletActivity::class.java)
             path == "/ads/mine" -> Intent(context, MyAdsActivity::class.java)
             path == "/communities/mine" -> Intent(context, MyCommunitiesActivity::class.java)

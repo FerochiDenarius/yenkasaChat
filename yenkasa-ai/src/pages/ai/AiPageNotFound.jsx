@@ -11,13 +11,13 @@ export default function AiPageNotFound() {
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
-            to="/ai"
+            to="/"
             className="rounded-2xl bg-gradient-to-r from-ai-600 to-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-glow"
           >
             Go to launchpad
           </Link>
           <Link
-            to="/ai/chat"
+            to="/chat"
             className="rounded-2xl border border-white/40 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
           >
             Open AI chat

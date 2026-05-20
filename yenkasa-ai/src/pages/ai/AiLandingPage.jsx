@@ -36,7 +36,7 @@ export default function AiLandingPage() {
           <BrandMark />
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              to="/ai/chat"
+              to="/chat"
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-ai-600 to-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-glow"
             >
               Launch YenkasaAI
@@ -97,19 +97,19 @@ export default function AiLandingPage() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  to="/ai/chat"
+                  to="/chat"
                   className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-ai-600 to-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-glow"
                 >
                   Launch YenkasaAI
                 </Link>
                 <Link
-                  to="/ai/ingestion"
+                  to="/ingestion"
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/40 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
                 >
                   Upload Knowledge
                 </Link>
                 <Link
-                  to="/ai/knowledge"
+                  to="/knowledge"
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/40 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
                 >
                   Explore APIs

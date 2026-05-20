@@ -212,11 +212,11 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
             insertIntoBody("\n- ")
         }
         findViewById<Button>(R.id.buttonFormatLink).setOnClickListener {
-            insertIntoBody(" https://www.yenkasa.xyz/ ")
+            insertIntoBody(getString(R.string.announcement_insert_link_placeholder))
             inputLink.requestFocus()
         }
         findViewById<Button>(R.id.buttonFormatEmoji).setOnClickListener {
-            insertIntoBody(" 🔥 ")
+            insertIntoBody(getString(R.string.announcement_insert_emoji))
         }
     }
 
@@ -380,12 +380,12 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
     }
 
     private fun formatBytes(bytes: Long): String {
-        if (bytes <= 0L) return "0 KB"
+        if (bytes <= 0L) return getString(R.string.announcement_file_size_zero)
         val kb = bytes / 1024.0
         return if (kb >= 1024.0) {
-            String.format(Locale.US, "%.1f MB", kb / 1024.0)
+            getString(R.string.announcement_file_size_mb, kb / 1024.0)
         } else {
-            String.format(Locale.US, "%.0f KB", kb)
+            getString(R.string.announcement_file_size_kb, kb)
         }
     }
 

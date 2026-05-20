@@ -129,7 +129,11 @@ class AnnouncementDetailActivity : AppCompatActivity() {
         }
         textTitle.text = announcement.title
         val author = announcement.authorUsername?.takeIf { it.isNotBlank() } ?: getString(R.string.announcement_unknown_author)
-        textAuthor.text = getString(R.string.announcement_detail_author, author) + " | " + formatTime(announcement.createdAt)
+        textAuthor.text = getString(
+            R.string.announcement_detail_author_with_time,
+            getString(R.string.announcement_detail_author, author),
+            formatTime(announcement.createdAt)
+        )
         textBody.text = HtmlCompat.fromHtml(announcement.message, HtmlCompat.FROM_HTML_MODE_LEGACY)
         textBody.movementMethod = LinkMovementMethod.getInstance()
         textMetrics.text = getString(R.string.announcements_metrics_format, announcement.viewsCount, announcement.likesCount)

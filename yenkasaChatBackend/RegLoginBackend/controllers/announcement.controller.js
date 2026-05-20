@@ -170,7 +170,7 @@ function serializeAnnouncement(announcement) {
     isDeleted: Boolean(announcement.isDeleted),
     viewsCount: Number(announcement.viewsCount || 0),
     likesCount: Number(announcement.likesCount || 0),
-    targetUrl: buildAnnouncementTargetUrl(announcement),
+    targetUrl: normalizeString(announcement.targetUrl),
     deepLinkUrl: normalizeString(announcement.deepLinkUrl),
     previewText: stripRichText(announcement.message).slice(0, 220),
     primaryThumbnailUrl: normalizeString(primaryMedia?.thumbnail || primaryMedia?.url),

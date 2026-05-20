@@ -473,8 +473,8 @@ class UserNotificationsActivity : AppCompatActivity() {
 
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_bell)
-            .setContentTitle(notification.type)
-            .setContentText(notification.message ?: "")
+            .setContentTitle(notification.title ?: notification.type)
+            .setContentText(notification.subtitle ?: notification.message ?: "")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(NotificationNavigation.buildPendingIntent(this, notification))

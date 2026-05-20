@@ -108,6 +108,7 @@
             android:label="Menu" />
         <activity android:name=".ui.AdminEconomyActivity" />
         <activity android:name=".ui.UserRoleDashboardActivity" />
+        <activity android:name=".ui.AnnouncementDetailActivity" />
         <activity
             android:name=".ui.YenkasaUpdateComposerActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />

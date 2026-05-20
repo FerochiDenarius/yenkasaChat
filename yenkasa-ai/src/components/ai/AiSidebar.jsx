@@ -3,11 +3,11 @@ import { Link, NavLink } from "react-router-dom";
 import BrandMark from "./BrandMark";
 
 const navItems = [
-  { to: "/ai/chat", label: "AI Chat", icon: Bot },
-  { to: "/ai/knowledge", label: "Knowledge Base", icon: Database },
-  { to: "/ai/moderation", label: "Moderation Console", icon: Flag },
-  { to: "/ai/analytics", label: "System Analytics", icon: Activity },
-  { to: "/ai/ingestion", label: "Upload & Ingestion", icon: UploadCloud },
+  { to: "/chat", label: "AI Chat", icon: Bot },
+  { to: "/knowledge", label: "Knowledge Base", icon: Database },
+  { to: "/moderation", label: "Moderation Console", icon: Flag },
+  { to: "/analytics", label: "System Analytics", icon: Activity },
+  { to: "/ingestion", label: "Upload & Ingestion", icon: UploadCloud },
 ];
 
 export default function AiSidebar({ mobileOpen, onClose }) {
@@ -21,7 +21,7 @@ export default function AiSidebar({ mobileOpen, onClose }) {
         className={`ai-glass ai-glass-strong fixed inset-y-4 left-4 z-50 flex w-[286px] flex-col rounded-[30px] p-5 transition-transform duration-200 lg:sticky lg:top-4 lg:z-20 lg:h-[calc(100vh-2rem)] ${mobileOpen ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0"}`}
       >
         <div className="flex items-start justify-between gap-4">
-          <Link to="/ai" className="min-w-0">
+          <Link to="/" className="min-w-0">
             <BrandMark />
           </Link>
           <button
@@ -40,7 +40,7 @@ export default function AiSidebar({ mobileOpen, onClose }) {
             RAG answers, moderation signals, ingestion health, and infrastructure analytics in one place.
           </p>
           <Link
-            to="/ai"
+            to="/"
             className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-white/18 px-4 py-2 text-sm font-semibold text-white"
           >
             <Home className="h-4 w-4" />

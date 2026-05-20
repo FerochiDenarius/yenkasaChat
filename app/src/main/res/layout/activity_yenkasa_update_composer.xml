@@ -74,8 +74,7 @@
                     android:text="@string/announcement_preview"
                     android:textAllCaps="false"
                     android:textColor="@color/purple_500"
-                    android:textStyle="bold"
-                    app:iconTint="@color/purple_500" />
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <LinearLayout
@@ -559,7 +558,7 @@
                         android:id="@+id/textAnnouncementMediaCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/announcement_media_count"
+                        android:text="@string/announcement_media_count_zero"
                         android:textColor="@color/menu_accent"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -750,7 +749,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    android:text="@string/announcement_upload_percent"
+                    android:text="@string/announcement_upload_percent_zero"
                     android:textColor="@color/post_create_accent"
                     android:textSize="13sp"
                     android:textStyle="bold" />

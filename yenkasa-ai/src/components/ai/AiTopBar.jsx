@@ -26,7 +26,7 @@ export default function AiTopBar({ theme, onToggleTheme, onOpenSidebar }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Link
-          to="/ai/ingestion"
+          to="/ingestion"
           className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-ai-600 to-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-glow"
         >
           <Sparkles className="h-4 w-4" />

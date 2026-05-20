@@ -399,6 +399,7 @@
     <string name="announcement_added_media">Added Media</string>
     <string name="announcement_media_limit_note">You can add up to 5 media files.</string>
     <string name="announcement_media_count">%1$d/5 files added</string>
+    <string name="announcement_media_count_zero">0/5 files added</string>
     <string name="announcement_audience_summary">This announcement will be sent to:</string>
     <string name="announcement_audience_all_title">All Users</string>
     <string name="announcement_audience_all_summary">All registered users on Yenkasa</string>
@@ -439,6 +440,7 @@
     <string name="announcement_upload_large_video_hint">Large video uploads can take longer. Keep the app open until it finishes.</string>
     <string name="announcement_upload_failed_title">Announcement not sent</string>
     <string name="announcement_upload_percent">%1$d%%</string>
+    <string name="announcement_upload_percent_zero">0%%</string>
     <string name="announcement_upload_success_subtitle">Your users will see it shortly.</string>
     <string name="announcement_publish_success">Announcement sent.</string>
     <string name="announcement_draft_saved">Draft saved.</string>
@@ -465,8 +467,14 @@
     <string name="announcement_media_type_video">Video</string>
     <string name="announcement_media_type_audio">Audio</string>
     <string name="announcement_media_type_file">File</string>
+    <string name="announcement_file_size_zero">0 KB</string>
+    <string name="announcement_file_size_kb">%.0f KB</string>
+    <string name="announcement_file_size_mb">%.1f MB</string>
+    <string name="announcement_insert_link_placeholder"> https://www.yenkasa.xyz/ </string>
+    <string name="announcement_insert_emoji"> 🔥 </string>
     <string name="announcement_detail_title">Announcement</string>
     <string name="announcement_detail_author">By %1$s</string>
+    <string name="announcement_detail_author_with_time">%1$s | %2$s</string>
     <string name="announcement_detail_open_target">Open linked screen</string>
     <string name="announcement_detail_like">Like</string>
     <string name="announcement_detail_like_added">You liked this announcement.</string>
@@ -950,7 +958,6 @@
     <string name="start_chat_instruction">Type a username above, then add the user to your chat list.</string>
     <string name="chats">Chats</string>
     <string name="groups">Groups</string>
-    <string name="announcements">Announcements</string>
     <string name="status">Status</string>
     <string name="search_groups">Search groups</string>
     <string name="create">Create</string>

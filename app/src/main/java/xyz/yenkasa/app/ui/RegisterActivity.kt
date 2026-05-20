@@ -12,6 +12,7 @@ import xyz.yenkasa.app.model.RegisterRequest
 import xyz.yenkasa.app.model.LoginResponse
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLinkManager
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONObject
@@ -103,6 +104,7 @@ class RegisterActivity : AppCompatActivity() {
         textLoginLink.setOnClickListener {
             // Add shared element transition back to login
             val intent = Intent(this, LoginActivity::class.java)
+            AppLinkManager.copyPendingDeepLink(this.intent, intent)
             val options = androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation(
                 this,
                 androidx.core.util.Pair(findViewById(R.id.textRegisterTitle), "hero_title")
@@ -443,6 +445,7 @@ class RegisterActivity : AppCompatActivity() {
                         Toast.makeText(this@RegisterActivity, getString(R.string.registered_successfully), Toast.LENGTH_SHORT).show()
 
                         val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
+                        AppLinkManager.copyPendingDeepLink(this@RegisterActivity.intent, intent)
                         startActivity(intent)
                         finish()
 

@@ -19,6 +19,7 @@ import xyz.yenkasa.app.model.LoginResponse
 import xyz.yenkasa.app.model.TrackLoginResponse
 import com.google.android.material.textfield.TextInputEditText
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.OneSignalHelper
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UpdateManager
@@ -60,7 +61,9 @@ class LoginActivity : AppCompatActivity() {
         val existingUserId = TokenManager.getUserId(this)
 
         if (!existingToken.isNullOrEmpty() && !existingUserId.isNullOrEmpty()) {
-            startActivity(Intent(this, MainActivity::class.java))
+            val mainIntent = Intent(this, MainActivity::class.java)
+            AppLinkManager.copyPendingDeepLink(intent, mainIntent)
+            startActivity(mainIntent)
             finish()
             return
         }
@@ -93,9 +96,17 @@ class LoginActivity : AppCompatActivity() {
         btnLogin.setOnClickListener { handleLogin() }
         setupKeyboardAwareScrolling()
         findViewById<TextView>(R.id.textRegisterLink)
-            .setOnClickListener { startActivity(Intent(this, RegisterActivity::class.java)) }
+            .setOnClickListener {
+                val registerIntent = Intent(this, RegisterActivity::class.java)
+                AppLinkManager.copyPendingDeepLink(intent, registerIntent)
+                startActivity(registerIntent)
+            }
         findViewById<TextView>(R.id.textForgotPassword)
-            .setOnClickListener { startActivity(Intent(this, ForgotPasswordActivity::class.java)) }
+            .setOnClickListener {
+                val forgotPasswordIntent = Intent(this, ForgotPasswordActivity::class.java)
+                AppLinkManager.copyPendingDeepLink(intent, forgotPasswordIntent)
+                startActivity(forgotPasswordIntent)
+            }
 
         // Player ID update observer
         userViewModel.playerIdUpdateResult.observe(this, Observer { success ->
@@ -266,12 +277,14 @@ class LoginActivity : AppCompatActivity() {
                     SocketManager.connect(user._id)
 
                     if (!TokenManager.hasAcceptedPolicies(this@LoginActivity)) {
-                        startActivity(Intent(this@LoginActivity, PolicyDisclosureActivity::class.java))
+                        val policyIntent = Intent(this@LoginActivity, PolicyDisclosureActivity::class.java)
+                        AppLinkManager.copyPendingDeepLink(intent, policyIntent)
+                        startActivity(policyIntent)
                     } else {
-                        startActivity(
-                            Intent(this@LoginActivity, MainActivity::class.java)
-                                .putExtra(MainActivity.EXTRA_CHECK_UPDATES_AFTER_LOGIN, true)
-                        )
+                        val mainIntent = Intent(this@LoginActivity, MainActivity::class.java)
+                            .putExtra(MainActivity.EXTRA_CHECK_UPDATES_AFTER_LOGIN, true)
+                        AppLinkManager.copyPendingDeepLink(intent, mainIntent)
+                        startActivity(mainIntent)
                     }
                     finish()
 

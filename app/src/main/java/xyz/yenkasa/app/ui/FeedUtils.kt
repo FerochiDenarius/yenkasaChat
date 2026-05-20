@@ -7,6 +7,7 @@ import android.widget.Toast
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
@@ -92,11 +93,8 @@ object FeedUtils {
                     })
             }
 
-            val shareUrl = "https://www.yenkasa.xyz/web/post/${post._id}"
-            val shareText = listOfNotNull(
-                post.caption?.takeIf { it.isNotBlank() },
-                shareUrl
-            ).joinToString("\n\n").ifBlank { shareUrl }
+            val shareUrl = AppLinkManager.buildPostUrl(post._id)
+            val shareText = AppLinkManager.buildShareText(post.caption, shareUrl)
 
             val shareIntent = Intent(Intent.ACTION_SEND)
             shareIntent.type = "text/plain"

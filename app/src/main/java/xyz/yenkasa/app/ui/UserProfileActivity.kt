@@ -28,6 +28,7 @@ import xyz.yenkasa.app.model.ProfileResponse
 import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.FeedResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import retrofit2.Call
@@ -39,6 +40,7 @@ import xyz.yenkasa.app.model.BlockUserRequest
 import xyz.yenkasa.app.model.ApiResponse
 import xyz.yenkasa.app.model.ConversationStreak
 import xyz.yenkasa.app.model.FlagRequest
+import xyz.yenkasa.app.model.SearchResponse
 
 
 
@@ -74,6 +76,7 @@ class UserProfileActivity : AppCompatActivity() {
     private val userPostsList = mutableListOf<Post>()
 
     private var userId: String? = null
+    private var currentProfileUsername: String? = null
     private var isFollowing = false
     private var isBlocked = false
 
@@ -95,7 +98,6 @@ class UserProfileActivity : AppCompatActivity() {
         }
 
         fetchUserProfile()
-        fetchConversationStreakIfOwnProfile()
     }
 
     private fun bindViews() {
@@ -218,9 +220,10 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun fetchUserProfile() {
         val token = TokenManager.getToken(this) ?: return
-        val userId = intent.getStringExtra("USER_ID") ?: return
+        val requestedIdentifier = userId ?: intent.getStringExtra("USER_ID") ?: return
+        userId = requestedIdentifier
 
-        val path = "profile/users/$userId/profile"
+        val path = "profile/users/$requestedIdentifier/profile"
         showPostsLoading(getString(R.string.loading_posts))
 
         ApiClient.apiService.getProfileDynamic(path, "Bearer $token")
@@ -231,8 +234,13 @@ class UserProfileActivity : AppCompatActivity() {
                 ) {
                     if (response.isSuccessful && response.body() != null) {
                         val profile = response.body()!!
+                        userId = profile._id
+                        currentProfileUsername = profile.username
+                        fetchConversationStreakIfOwnProfile()
                         updateUI(profile)
-                        fetchUserPosts(userId, token)
+                        fetchUserPosts(profile._id, token)
+                    } else if (response.code() == 404 && !AppLinkManager.isLikelyObjectId(requestedIdentifier)) {
+                        resolveUserProfileIdentifier(requestedIdentifier, token)
                     } else {
                         Log.e(
                             TAG,
@@ -244,6 +252,36 @@ class UserProfileActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<ProfileResponse>, t: Throwable) {
                     Log.e(TAG, "⚠️ Network error while fetching profile: ${t.message}", t)
+                    showPostsMessage(getString(R.string.could_not_load_posts))
+                }
+            })
+    }
+
+    private fun resolveUserProfileIdentifier(identifier: String, token: String) {
+        ApiClient.apiService.searchYenkasa("Bearer $token", identifier)
+            .enqueue(object : Callback<SearchResponse> {
+                override fun onResponse(
+                    call: Call<SearchResponse>,
+                    response: Response<SearchResponse>
+                ) {
+                    val match = response.body()
+                        ?.users
+                        ?.firstOrNull {
+                            it.username.equals(identifier, ignoreCase = true) ||
+                                it.id.equals(identifier, ignoreCase = true)
+                        }
+
+                    if (response.isSuccessful && match != null) {
+                        userId = match.id
+                        fetchUserProfile()
+                    } else {
+                        Toast.makeText(this@UserProfileActivity, R.string.user_not_found, Toast.LENGTH_SHORT).show()
+                        showPostsMessage(getString(R.string.could_not_load_posts))
+                    }
+                }
+
+                override fun onFailure(call: Call<SearchResponse>, t: Throwable) {
+                    Log.e(TAG, "⚠️ Failed to resolve profile identifier: ${t.message}", t)
                     showPostsMessage(getString(R.string.could_not_load_posts))
                 }
             })
@@ -334,6 +372,7 @@ class UserProfileActivity : AppCompatActivity() {
     private fun updateUI(profile: ProfileResponse) {
         if (isFinishing || isDestroyed) return
 
+        currentProfileUsername = profile.username
         headerUsernameView.text = profile.username
         usernameView.text = profile.username
         followersCountView.text = (profile.followersCount ?: profile.followers.size).toString()
@@ -511,13 +550,39 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun showProfileSafetyMenu(anchor: View) {
         PopupMenu(this, anchor).apply {
+            menu.add(getString(R.string.share_profile))
             menu.add(getString(R.string.report_user))
             setOnMenuItemClickListener {
-                showReportUserDialog()
+                when (it.title) {
+                    getString(R.string.share_profile) -> shareProfile()
+                    else -> showReportUserDialog()
+                }
                 true
             }
             show()
         }
+    }
+
+    private fun shareProfile() {
+        val identifier = currentProfileUsername?.takeIf { it.isNotBlank() }
+            ?: userId?.takeIf { it.isNotBlank() }
+            ?: run {
+                Toast.makeText(this, R.string.user_not_found, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+        val shareUrl = AppLinkManager.buildProfileUrl(identifier)
+        val shareText = AppLinkManager.buildShareText(usernameView.text?.toString(), shareUrl)
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_profile_subject))
+                    putExtra(Intent.EXTRA_TEXT, shareText)
+                },
+                getString(R.string.share_via)
+            )
+        )
     }
 
     private fun showReportUserDialog() {

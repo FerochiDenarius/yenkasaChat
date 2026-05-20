@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.AppUrls
 import xyz.yenkasa.app.util.TokenManager
 
@@ -47,7 +48,9 @@ class PolicyDisclosureActivity : AppCompatActivity() {
             TokenManager.setPoliciesAccepted(this)
 
             // Send user to main home page
-            startActivity(Intent(this, MainActivity::class.java))
+            val mainIntent = Intent(this, MainActivity::class.java)
+            AppLinkManager.copyPendingDeepLink(intent, mainIntent)
+            startActivity(mainIntent)
             finish()
         }
     }

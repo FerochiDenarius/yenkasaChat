@@ -22,6 +22,7 @@ import xyz.yenkasa.app.ui.CommentsActivity
 import xyz.yenkasa.app.ui.FeedUtils
 import xyz.yenkasa.app.ui.PostMediaActivity
 import xyz.yenkasa.app.ui.UserProfileActivity
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 
 class FeedPostActionsController(
@@ -91,11 +92,8 @@ class FeedPostActionsController(
     }
 
     fun sharePost(post: Post) {
-        val shareUrl = "https://www.yenkasa.xyz/web/post/${post._id}"
-        val shareText = listOfNotNull(
-            post.caption?.takeIf { it.isNotBlank() },
-            shareUrl
-        ).joinToString("\n\n").ifBlank { shareUrl }
+        val shareUrl = AppLinkManager.buildPostUrl(post._id)
+        val shareText = AppLinkManager.buildShareText(post.caption, shareUrl)
 
         tokenProvider()?.takeIf { it.isNotBlank() }?.let { authToken ->
             ApiClient.apiService.recordPostShare(post._id, "Bearer $authToken")

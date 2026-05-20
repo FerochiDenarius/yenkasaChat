@@ -17,6 +17,7 @@ import java.util.HashMap
 import com.jakewharton.threetenabp.AndroidThreeTen
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import org.json.JSONObject
 import xyz.yenkasa.app.ui.CallNotificationHandler
 import xyz.yenkasa.app.util.CallPayloadUtils
@@ -45,6 +46,13 @@ class MyApplication : Application(), OSSubscriptionObserver {
         LocaleManager.restoreSavedLocale(this)
         AndroidThreeTen.init(this)
         // Initialize Google Mobile Ads SDK
+        if (BuildConfig.DEBUG) {
+            MobileAds.setRequestConfiguration(
+                RequestConfiguration.Builder()
+                    .setTestDeviceIds(listOf("E78DC7AF6A5521AAF9BD602110FA0BCC"))
+                    .build()
+            )
+        }
         MobileAds.initialize(this) { initializationStatus ->
             Log.d("Ads", "Google Mobile Ads initialized: $initializationStatus")
         }

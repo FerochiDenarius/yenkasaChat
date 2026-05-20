@@ -59,7 +59,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-5051666473627498~2429775027" />
+            android:value="ca-app-pub-5051666473627498~2883468181" />
 
 
         <!-- Google Maps API Key -->
@@ -173,8 +173,24 @@
         <activity
             android:name=".ui.ForgotPasswordActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
-        <activity android:name=".ui.MainActivity"
-            android:launchMode="singleTask" />
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.yenkasa.xyz" android:pathPrefix="/post/" />
+                <data android:scheme="https" android:host="www.yenkasa.xyz" android:pathPrefix="/user/" />
+                <data android:scheme="https" android:host="www.yenkasa.xyz" android:pathPrefix="/community/" />
+                <data android:scheme="https" android:host="www.yenkasa.xyz" android:pathPrefix="/live/" />
+                <data android:scheme="https" android:host="yenkasa.xyz" android:pathPrefix="/post/" />
+                <data android:scheme="https" android:host="yenkasa.xyz" android:pathPrefix="/user/" />
+                <data android:scheme="https" android:host="yenkasa.xyz" android:pathPrefix="/community/" />
+                <data android:scheme="https" android:host="yenkasa.xyz" android:pathPrefix="/live/" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.ChatActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />

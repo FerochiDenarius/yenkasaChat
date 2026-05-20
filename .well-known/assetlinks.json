@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "xyz.yenkasa.app",
+      "sha256_cert_fingerprints": [
+        "39:FD:0C:0F:89:E9:E2:3F:0A:4B:A7:BC:25:DB:8F:3C:8D:D7:2C:FB:1B:9A:CC:34:44:DA:E8:A9:22:35:DC:F4",
+        "DB:9F:83:74:27:5E:8D:08:CA:1C:44:DA:EE:9F:74:61:03:72:00:42:1D:D9:1D:49:B2:06:51:12:C0:36:FC:72"
+      ]
+    }
+  }
+]

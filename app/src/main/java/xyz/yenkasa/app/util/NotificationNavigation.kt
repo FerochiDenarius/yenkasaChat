@@ -197,10 +197,13 @@ object NotificationNavigation {
 
     private fun buildIntentFromTargetUrl(context: Context, targetUrl: String?, data: JSONObject?): Intent? {
         val raw = targetUrl?.takeIf { it.isNotBlank() } ?: return null
-        val uri = Uri.parse(raw)
-        val path = uri.path.orEmpty()
-        val segments = uri.pathSegments
-        val openComments = uri.getQueryParameter("openComments").equals("true", ignoreCase = true)
+        val normalizedUri = AppLinkManager.canonicalizeUri(raw) ?: Uri.parse(raw)
+        if (AppLinkManager.parseRoute(normalizedUri) != null) {
+            return AppLinkManager.buildMainActivityIntent(context, normalizedUri)
+        }
+        val path = normalizedUri.path.orEmpty()
+        val segments = normalizedUri.pathSegments
+        val openComments = normalizedUri.getQueryParameter("openComments").equals("true", ignoreCase = true)
 
         return when {
             path == "/wallet" || path.startsWith("/wallet/") -> Intent(context, CoinWalletActivity::class.java)

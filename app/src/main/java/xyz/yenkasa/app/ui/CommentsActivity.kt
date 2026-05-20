@@ -21,6 +21,7 @@ import xyz.yenkasa.app.model.Comment
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import kotlinx.coroutines.*
@@ -53,6 +54,7 @@ class CommentsActivity : AppCompatActivity() {
     private var autoRefreshJob: Job? = null
     private var latestCommentCount: Int? = null
     private var currentPost: Post? = null
+    private var deepLinkMediaOpened = false
     private val pendingCommentLikeIds = mutableSetOf<String>()
     // Post header root
     private lateinit var postHeaderView: View
@@ -753,12 +755,41 @@ class CommentsActivity : AppCompatActivity() {
                 } ?: post
 
                 postHeaderAdapter.submitPost(displayPost)
+                openDeepLinkedMediaIfNeeded(post)
 
             }
 
             override fun onFailure(call: Call<Post>, t: Throwable) {
                 Log.e("CommentsActivity", "Failed to load post", t)
             }
+        })
+    }
+
+    private fun openDeepLinkedMediaIfNeeded(post: Post) {
+        if (deepLinkMediaOpened) return
+        if (!intent.getBooleanExtra(AppLinkManager.EXTRA_OPEN_MEDIA_FROM_DEEP_LINK, false)) return
+
+        val startAtSeconds = intent.getIntExtra(AppLinkManager.EXTRA_START_AT_SECONDS, 0).coerceAtLeast(0)
+        val mediaType = when {
+            !post.videoUrl.isNullOrBlank() -> "video"
+            !post.audioUrl.isNullOrBlank() -> "audio"
+            else -> null
+        } ?: return
+
+        val mediaUrl = when (mediaType) {
+            "video" -> post.optimizedVideoUrl() ?: post.videoUrl
+            "audio" -> post.optimizedAudioUrl() ?: post.audioUrl
+            else -> null
+        } ?: return
+
+        deepLinkMediaOpened = true
+        startActivity(Intent(this, PostMediaActivity::class.java).apply {
+            putExtra("POST_ID", post._id)
+            putExtra("MEDIA_URL", mediaUrl)
+            putExtra("MEDIA_TYPE", mediaType)
+            putExtra("USERNAME", post.userId.username)
+            putExtra("CAPTION", post.caption ?: "")
+            putExtra(AppLinkManager.EXTRA_START_AT_SECONDS, startAtSeconds)
         })
     }
 

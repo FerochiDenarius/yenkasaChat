@@ -12,6 +12,7 @@ import xyz.yenkasa.app.model.AdModel
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.ads.AdEligibilityManager
+import xyz.yenkasa.app.ui.ads.AdMobRewardedInterstitialController
 import xyz.yenkasa.app.ui.ads.MonetizationAdDialog
 import xyz.yenkasa.app.ui.ads.MonetizationAdPreloader
 import xyz.yenkasa.app.ui.ads.MonetizationAdRequest
@@ -59,9 +60,11 @@ class FeedPlayerCoordinator(
     private var sponsoredAds: List<AdModel> = emptyList()
     private var monetizationDialogShowing = false
     private val monetizationAdPreloader = MonetizationAdPreloader(fragment.requireContext())
+    private val admobRewardedInterstitialController = AdMobRewardedInterstitialController(fragment.requireContext())
 
     fun setup() {
         AdEligibilityManager.init(fragment.requireContext())
+        admobRewardedInterstitialController.preload()
         recyclerView.stopScroll()
         recyclerView.adapter = null
         recyclerView.recycledViewPool.clear()
@@ -120,6 +123,7 @@ class FeedPlayerCoordinator(
     fun releaseAll() {
         playerAdapter.releaseAll(recyclerView)
         monetizationAdPreloader.release()
+        admobRewardedInterstitialController.release()
         snapHelper.attachToRecyclerView(null)
     }
 
@@ -304,7 +308,13 @@ class FeedPlayerCoordinator(
         rewardEligible: Boolean
     ) {
         if (monetizationDialogShowing) return
-        val ad = pickMonetizationAd(post, type) ?: return
+        val ad = pickMonetizationAd(post, type)
+        if (ad == null) {
+            if (type == MonetizationAdType.INTERSTITIAL && showAdMobRewardedInterstitial(post)) {
+                return
+            }
+            return
+        }
         monetizationDialogShowing = true
         monetizationAdPreloader.release()
         playerAdapter.pauseActive(recyclerView)
@@ -333,6 +343,34 @@ class FeedPlayerCoordinator(
                 playerAdapter.resumeActive(recyclerView)
             }
         }
+    }
+
+    private fun showAdMobRewardedInterstitial(post: Post): Boolean {
+        if (monetizationDialogShowing) return false
+        monetizationDialogShowing = true
+        playerAdapter.pauseActive(recyclerView)
+
+        val started = admobRewardedInterstitialController.showIfReady(fragment) { outcome ->
+            if (outcome.failed) {
+                AdEligibilityManager.registerAdSkipped(fragment.requireContext(), MonetizationAdType.INTERSTITIAL, post._id)
+            } else {
+                AdEligibilityManager.registerAdShown(fragment.requireContext(), MonetizationAdType.INTERSTITIAL, post._id)
+                if (!outcome.completed) {
+                    AdEligibilityManager.registerAdSkipped(fragment.requireContext(), MonetizationAdType.INTERSTITIAL, post._id)
+                }
+            }
+            monetizationDialogShowing = false
+            if (fragment.isAdded) {
+                playerAdapter.resumeActive(recyclerView)
+            }
+        }
+
+        if (!started) {
+            monetizationDialogShowing = false
+            playerAdapter.resumeActive(recyclerView)
+            return false
+        }
+        return true
     }
 
     private fun pickMonetizationAd(post: Post, type: MonetizationAdType): AdModel? {

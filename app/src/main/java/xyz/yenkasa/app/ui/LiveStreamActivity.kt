@@ -47,6 +47,7 @@ import xyz.yenkasa.app.model.LiveStreamResponse
 import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -451,9 +452,16 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun shareLiveStream() {
+        val title = intent.getStringExtra(EXTRA_TITLE).orEmpty().ifBlank { titleText.text.toString() }
+        val shareUrl = AppLinkManager.buildLiveUrl(streamId)
+        val shareText = AppLinkManager.buildShareText(
+            getString(R.string.live_share_text, title),
+            shareUrl
+        )
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, getString(R.string.live_share_text, titleText.text.toString()))
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_live_stream_subject))
+            putExtra(Intent.EXTRA_TEXT, shareText)
         }
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_via)))
     }

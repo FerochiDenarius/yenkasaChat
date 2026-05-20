@@ -19,6 +19,7 @@ import xyz.yenkasa.app.model.JoinCommunityResponse
 import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -47,6 +48,8 @@ class CommunitiesActivity : AppCompatActivity() {
     private lateinit var joinedAdapter: JoinedCommunityAdapter // For joined communities
     private var token: String? = null
     private var primaryCommunityId: String? = null
+    private var pendingDeepLinkCommunityIdentifier: String? = null
+    private var deepLinkCommunityHandled = false
 
     // ✅ ONLY views that exist in your XML
     private lateinit var tabMyCommunities: TextView
@@ -76,6 +79,10 @@ class CommunitiesActivity : AppCompatActivity() {
         }
 
         primaryCommunityId = TokenManager.getPrimaryCommunityId(this)
+        pendingDeepLinkCommunityIdentifier = intent
+            .getStringExtra(AppLinkManager.EXTRA_COMMUNITY_IDENTIFIER)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
 
         initViews()
         setupRecyclerView()
@@ -210,6 +217,7 @@ class CommunitiesActivity : AppCompatActivity() {
                         adapter.notifyDataSetChanged()
 
                         updateJoinedSectionVisibility()
+                        maybeHandleCommunityDeepLink()
                         Log.d("JOINED_DEBUG", "✅ Joined communities section updated with ${userCommunities.size} communities")
                     } else {
                         Log.e("JOINED_DEBUG", "❌ API call failed: ${response.code()} - ${response.message()}")
@@ -273,6 +281,7 @@ class CommunitiesActivity : AppCompatActivity() {
                     }
 
                     updateJoinedSectionVisibility()
+                    maybeHandleCommunityDeepLink()
 
                     Log.d(
                         "PRIMARY_COMMUNITY",
@@ -443,6 +452,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
                         // Handle empty state
                         emptyView.visibility = if (allCommunities.isEmpty()) View.VISIBLE else View.GONE
+                        maybeHandleCommunityDeepLink()
                     } else {
                         Toast.makeText(
                             this@CommunitiesActivity,
@@ -513,6 +523,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
     private fun showCommunityDialog(community: Community) {
         val isMember = community.isCurrentUserMember()
+        val canEdit = canEditCommunity(community)
 
         val dialogBuilder = android.app.AlertDialog.Builder(this)
             .setTitle(community.displayName ?: community.name ?: "Community")
@@ -532,14 +543,56 @@ class CommunitiesActivity : AppCompatActivity() {
             if (isMember) leaveCommunity(community) else joinCommunity(community)
         }
 
-        if (canEditCommunity(community)) {
-            dialogBuilder.setNeutralButton("Edit") { _, _ ->
-                openEditCommunity(community)
+        dialogBuilder.setNeutralButton(
+            if (canEdit) getString(R.string.community_options) else getString(R.string.share_community)
+        ) { _, _ ->
+            if (canEdit) {
+                showCommunityMoreDialog(community)
+            } else {
+                shareCommunity(community)
             }
         }
 
         val dialog = dialogBuilder.create()
         dialog.show()
+    }
+
+    private fun showCommunityMoreDialog(community: Community) {
+        val options = arrayOf(getString(R.string.share_community), getString(R.string.edit_community))
+        android.app.AlertDialog.Builder(this)
+            .setTitle(community.displayName ?: community.name ?: getString(R.string.community))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> shareCommunity(community)
+                    1 -> openEditCommunity(community)
+                }
+            }
+            .show()
+    }
+
+    private fun shareCommunity(community: Community) {
+        val identifier = AppLinkManager.communityShareIdentifier(community)
+        if (identifier.isBlank()) {
+            Toast.makeText(this, R.string.selected_community_not_found, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val shareUrl = AppLinkManager.buildCommunityUrl(identifier)
+        val shareText = AppLinkManager.buildShareText(
+            community.displayName ?: community.name,
+            shareUrl
+        )
+
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_community_subject))
+                    putExtra(Intent.EXTRA_TEXT, shareText)
+                },
+                getString(R.string.share_via)
+            )
+        )
     }
 
     private fun openCommunityFeed(community: Community) {
@@ -728,6 +781,24 @@ class CommunitiesActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.navCommunityProfile).setOnClickListener {
             startActivity(Intent(this, AccountInfoActivity::class.java))
+        }
+    }
+
+    private fun maybeHandleCommunityDeepLink() {
+        val identifier = pendingDeepLinkCommunityIdentifier ?: return
+        if (deepLinkCommunityHandled || communities.isEmpty()) return
+
+        val match = (joinedCommunities + communities).firstOrNull {
+            AppLinkManager.matchesCommunityIdentifier(it, identifier)
+        }
+
+        deepLinkCommunityHandled = true
+        pendingDeepLinkCommunityIdentifier = null
+
+        if (match != null) {
+            openCommunityFeed(match)
+        } else {
+            Toast.makeText(this, R.string.selected_community_not_found, Toast.LENGTH_SHORT).show()
         }
     }
 

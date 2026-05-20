@@ -148,6 +148,10 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
         errorListener = listener
     }
 
+    fun seekTo(positionMs: Long) {
+        player?.seekTo(positionMs.coerceAtLeast(0L))
+    }
+
     fun play() {
         val url = mediaUrl ?: return
         pauseActiveVideo()

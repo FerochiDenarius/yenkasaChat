@@ -1211,4 +1211,13 @@
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>
     </plurals>
+    <string name="share_profile">Share profile</string>
+    <string name="share_profile_subject">Check out this profile on Yenkasa</string>
+    <string name="share_community">Share community</string>
+    <string name="share_community_subject">Check out this community on Yenkasa</string>
+    <string name="share_live_stream_subject">Join this Yenkasa livestream</string>
+    <string name="community_options">Community options</string>
+    <string name="edit_community">Edit community</string>
+    <string name="invalid_deep_link">This link is invalid or no longer available.</string>
+    <string name="live_link_unavailable">This live stream is unavailable right now.</string>
 </resources>

@@ -10,6 +10,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
 import xyz.yenkasa.app.network.ApiClient
@@ -41,6 +42,7 @@ class PostMediaActivity : AppCompatActivity() {
     private var mediaType: String? = null
     private var username: String? = null
     private var caption: String? = null
+    private var startAtSeconds: Int = 0
 
     private var audioPlayer: MediaPlayer? = null
     private var handler = Handler(Looper.getMainLooper())
@@ -72,6 +74,7 @@ class PostMediaActivity : AppCompatActivity() {
         mediaType = intent.getStringExtra("MEDIA_TYPE")
         username = intent.getStringExtra("USERNAME")
         caption = intent.getStringExtra("CAPTION")
+        startAtSeconds = intent.getIntExtra(AppLinkManager.EXTRA_START_AT_SECONDS, 0).coerceAtLeast(0)
 
         // Set UI text
         textUsername.text = username ?: getString(R.string.unknown_user)
@@ -111,6 +114,11 @@ class PostMediaActivity : AppCompatActivity() {
             muted = false,
             loop = true
         )
+        videoView.setReadyListener {
+            if (startAtSeconds > 0) {
+                videoView.seekTo(startAtSeconds * 1000L)
+            }
+        }
         videoView.setCheckpointListener { seconds ->
             if (seconds >= 10) rewardView(10)
         }
@@ -133,8 +141,13 @@ class PostMediaActivity : AppCompatActivity() {
 
         audioPlayer!!.setOnPreparedListener { mp ->
             isAudioPrepared = true
+            if (startAtSeconds > 0) {
+                mp.seekTo((startAtSeconds * 1000).coerceAtMost(mp.duration))
+            }
             audioSeekBar.max = mp.duration
             audioTotalTime.text = formatTime(mp.duration)
+            audioCurrentTime.text = formatTime(mp.currentPosition)
+            audioSeekBar.progress = mp.currentPosition
             audioTitle.text = getString(R.string.audio)
 
             audioPlayBtn.visibility = View.VISIBLE

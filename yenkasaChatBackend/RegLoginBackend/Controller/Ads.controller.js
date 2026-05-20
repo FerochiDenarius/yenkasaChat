@@ -126,6 +126,12 @@ async function getAdReviewers() {
   }).select("_id username playerId");
 }
 
+async function loadAdForClient(adId) {
+  return Ad.findById(adId)
+    .populate("submittedBy", "username profileImage verified roleName")
+    .lean();
+}
+
 
 // GET /ads/feed?page=&limit=
 exports.getAdsFeed = async (req, res) => {
@@ -135,6 +141,7 @@ exports.getAdsFeed = async (req, res) => {
     const skip = (page-1)*limit;
 
     const ads = await Ad.find(publicAdFilter())
+      .populate("submittedBy", "username profileImage verified roleName")
       .sort({ impressions: 1, createdAt: -1 })
       .skip(skip)
       .limit(Math.min(limit * 3, 50))
@@ -439,10 +446,13 @@ if (!adData.imageUrl && !adData.videoUrl) {
       }
     }
 
+    const hydratedAd = await loadAdForClient(ad._id);
+
     return res.json({
       success: true,
       message: autoApprove ? "Ad created and approved successfully." : "Ad submitted for approval.",
-      ad: normalizeAdForClient(ad.toObject())
+      adId: ad._id.toString(),
+      ad: normalizeAdForClient(hydratedAd || ad.toObject())
     });
 
   } catch (err) {
@@ -590,7 +600,8 @@ exports.approveAd = async (req, res) => {
       });
     }
 
-    return res.json({ success: true, ad: normalizeAdForClient(ad.toObject()) });
+    const hydratedAd = await loadAdForClient(ad._id);
+    return res.json({ success: true, ad: normalizeAdForClient(hydratedAd || ad.toObject()) });
   } catch (err) {
     console.error("❌ Failed to approve ad:", err);
     return res.status(500).json({ success: false, message: "Failed to approve ad" });
@@ -642,7 +653,8 @@ exports.rejectAd = async (req, res) => {
       });
     }
 
-    return res.json({ success: true, ad: normalizeAdForClient(ad.toObject()) });
+    const hydratedAd = await loadAdForClient(ad._id);
+    return res.json({ success: true, ad: normalizeAdForClient(hydratedAd || ad.toObject()) });
   } catch (err) {
     console.error("❌ Failed to reject ad:", err);
     return res.status(500).json({ success: false, message: "Failed to reject ad" });
@@ -652,6 +664,7 @@ exports.rejectAd = async (req, res) => {
 exports.getMyAds = async (req, res) => {
   try {
     const ads = await Ad.find({ submittedBy: req.user.id })
+      .populate("submittedBy", "username profileImage verified roleName")
       .sort({ createdAt: -1 })
       .lean();
 

@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.os.Bundle
@@ -18,8 +19,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.commit
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.JoinLiveStreamRequest
+import xyz.yenkasa.app.model.LiveStreamResponse
 import xyz.yenkasa.app.model.User
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UpdateManager
@@ -87,7 +91,9 @@ class MainActivity : AppCompatActivity() {
 
         if (retrievedToken.isNullOrBlank() || retrievedUserId.isNullOrBlank()) {
             Toast.makeText(this, getString(R.string.please_log_in_again), Toast.LENGTH_LONG).show()
-            startActivity(Intent(this, LoginActivity::class.java))
+            val loginIntent = Intent(this, LoginActivity::class.java)
+            AppLinkManager.copyPendingDeepLink(intent, loginIntent)
+            startActivity(loginIntent)
             finish()
             return
         }
@@ -108,18 +114,19 @@ class MainActivity : AppCompatActivity() {
         // ✅ Load user info for permissions
         loadUserProfile()
 
-        // ✅ Clear container and load FeedFragment into the container if not already handled
         if (savedInstanceState == null) {
-            val openFragment = intent.getStringExtra("openFragment")
-            if (openFragment != "feed") {
-                Log.d("MainActivity", "🧩 Loading default FeedFragment into container")
-                supportFragmentManager.commit {
-                    replace(R.id.feedContainer, FeedFragment())
-                }
-            } else {
-                handleIntentExtras()
+            if (!handleIntentExtras()) {
+                loadDefaultFeedFragment()
             }
+            handleAppLinkIntent(intent)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (handleAppLinkIntent(intent)) return
+        handleIntentExtras()
     }
 
 
@@ -272,7 +279,6 @@ class MainActivity : AppCompatActivity() {
                                 put("canAssignRoles", UserPermissions.canAssignRoles(roleName))
                             }
                             put("permissions", permissionsJson)
-                            put("permissions", permissionsJson)
                         }.toString()
 
                         TokenManager.saveUserJson(this@MainActivity, userJson)
@@ -359,24 +365,108 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleIntentExtras() {
+    private fun loadDefaultFeedFragment() {
+        Log.d("MainActivity", "🧩 Loading default FeedFragment into container")
+        supportFragmentManager.commit {
+            replace(R.id.feedContainer, FeedFragment())
+        }
+    }
+
+    private fun handleIntentExtras(): Boolean {
         val communityId = intent.getStringExtra("communityId")
         val communityName = intent.getStringExtra("communityName")
         val openFragment = intent.getStringExtra("openFragment")
 
-        if (openFragment == "feed" && communityId != null) {
-            val bundle = Bundle().apply {
-                putString("communityId", communityId)
-                putString("communityName", communityName)
-            }
-
-            val feedFragment = FeedFragment().apply {
-                arguments = bundle
-            }
-
-            supportFragmentManager.commit {
-                replace(R.id.feedContainer, feedFragment)
-            }
+        if (openFragment == "feed" && !communityId.isNullOrBlank()) {
+            openCommunityFeed(communityId, communityName)
+            return true
         }
+        return false
+    }
+
+    private fun openCommunityFeed(communityId: String, communityName: String?) {
+        val bundle = Bundle().apply {
+            putString("communityId", communityId)
+            putString("communityName", communityName)
+        }
+
+        val feedFragment = FeedFragment().apply {
+            arguments = bundle
+        }
+
+        supportFragmentManager.commit {
+            replace(R.id.feedContainer, feedFragment)
+        }
+    }
+
+    private fun handleAppLinkIntent(sourceIntent: Intent?): Boolean {
+        val uri = sourceIntent?.data ?: return false
+        if (!AppLinkManager.isSupportedAppLink(uri)) return false
+
+        val route = AppLinkManager.parseRoute(uri)
+        if (route == null) {
+            showInvalidDeepLink(uri)
+            return true
+        }
+
+        when (route) {
+            is AppLinkManager.Route.Post -> openPostDeepLink(route)
+            is AppLinkManager.Route.User -> openUserDeepLink(route.identifier)
+            is AppLinkManager.Route.CommunityRoute -> openCommunityDeepLink(route.identifier)
+            is AppLinkManager.Route.Live -> openLiveDeepLink(route.streamId)
+        }
+        return true
+    }
+
+    private fun openPostDeepLink(route: AppLinkManager.Route.Post) {
+        startActivity(Intent(this, CommentsActivity::class.java).apply {
+            putExtra("POST_ID", route.postId)
+            route.startAtSeconds?.takeIf { it > 0 }?.let { seconds ->
+                putExtra(AppLinkManager.EXTRA_OPEN_MEDIA_FROM_DEEP_LINK, true)
+                putExtra(AppLinkManager.EXTRA_START_AT_SECONDS, seconds)
+            }
+        })
+    }
+
+    private fun openUserDeepLink(identifier: String) {
+        startActivity(Intent(this, UserProfileActivity::class.java).apply {
+            putExtra("USER_ID", identifier)
+        })
+    }
+
+    private fun openCommunityDeepLink(identifier: String) {
+        startActivity(Intent(this, CommunitiesActivity::class.java).apply {
+            putExtra(AppLinkManager.EXTRA_COMMUNITY_IDENTIFIER, identifier)
+        })
+    }
+
+    private fun openLiveDeepLink(streamId: String) {
+        ApiClient.apiService.joinLiveStream(streamId, JoinLiveStreamRequest("audience"))
+            .enqueue(object : Callback<LiveStreamResponse> {
+                override fun onResponse(
+                    call: Call<LiveStreamResponse>,
+                    response: Response<LiveStreamResponse>
+                ) {
+                    val body = response.body()
+                    val stream = body?.stream
+                    val agora = body?.agora
+                    if (response.isSuccessful && body?.success == true && stream != null && agora != null) {
+                        startActivity(LiveStreamActivity.intentForAudience(this@MainActivity, stream, agora))
+                    } else {
+                        Toast.makeText(this@MainActivity, R.string.live_link_unavailable, Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@MainActivity, LiveStreamsActivity::class.java))
+                    }
+                }
+
+                override fun onFailure(call: Call<LiveStreamResponse>, t: Throwable) {
+                    Toast.makeText(this@MainActivity, R.string.live_link_unavailable, Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this@MainActivity, LiveStreamsActivity::class.java))
+                }
+            })
+    }
+
+    private fun showInvalidDeepLink(uri: Uri) {
+        Log.w("MainActivity", "Unsupported deep link: $uri")
+        Toast.makeText(this, R.string.invalid_deep_link, Toast.LENGTH_SHORT).show()
     }
 }

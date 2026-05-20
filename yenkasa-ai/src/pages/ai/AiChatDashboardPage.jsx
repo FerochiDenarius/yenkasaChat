@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Clock3, Database, Send, ShieldCheck, Sparkles, Waypoints } from "lucide-react";
 import AnswerCard from "../../components/ai/AnswerCard";
@@ -65,6 +65,7 @@ export default function AiChatDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [resultMeta, setResultMeta] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const chatThreadRef = useRef(null);
 
   function switchAudience(nextAudience) {
     setAudience(nextAudience);
@@ -74,8 +75,13 @@ export default function AiChatDashboardPage() {
     setErrorMessage("");
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  useEffect(() => {
+    const thread = chatThreadRef.current;
+    if (!thread) return;
+    thread.scrollTop = thread.scrollHeight;
+  }, [messages, loading]);
+
+  async function submitQuestion() {
     const nextQuestion = question.trim();
     if (!nextQuestion || loading) return;
 
@@ -109,6 +115,18 @@ export default function AiChatDashboardPage() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    await submitQuestion();
+  }
+
+  function handleComposerKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void submitQuestion();
     }
   }
 
@@ -176,7 +194,7 @@ export default function AiChatDashboardPage() {
               {errorMessage}
             </div>
           ) : null}
-          <div className="ai-scroll flex max-h-[560px] flex-col gap-4 overflow-y-auto pr-1">
+          <div ref={chatThreadRef} className="ai-scroll flex max-h-[560px] flex-col gap-4 overflow-y-auto pr-1">
             {messages.map((message) => (
               <ChatMessageBubble key={message.id} role={message.role}>
                 {message.content}
@@ -208,6 +226,7 @@ export default function AiChatDashboardPage() {
               id="ai-chat-input"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
+              onKeyDown={handleComposerKeyDown}
               placeholder={currentConfig.placeholder}
               rows={4}
               className="w-full resize-none border-0 bg-transparent text-sm leading-7 text-[var(--ai-text)] outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400"

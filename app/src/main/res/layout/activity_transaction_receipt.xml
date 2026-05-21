@@ -38,7 +38,7 @@
                         android:layout_height="42dp"
                         android:background="@drawable/bg_wallet_pill"
                         android:clickable="true"
-                        android:contentDescription="Back"
+                        android:contentDescription="@string/back"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
                         android:padding="11dp"
@@ -56,7 +56,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:includeFontPadding="false"
-                            android:text="Transaction Receipt"
+                            android:text="@string/transaction_receipt_title"
                             android:textColor="@color/wallet_primary_text"
                             android:textSize="21sp"
                             android:textStyle="bold" />
@@ -67,7 +67,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
                             android:includeFontPadding="false"
-                            android:text="Transaction Successful"
+                            android:text="@string/transaction_successful"
                             android:textColor="@color/wallet_accent_green"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -79,7 +79,7 @@
                         android:layout_height="42dp"
                         android:background="@drawable/bg_wallet_pill"
                         android:clickable="true"
-                        android:contentDescription="Share"
+                        android:contentDescription="@string/share"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
                         android:padding="10dp"
@@ -135,7 +135,7 @@
                                 android:id="@+id/textReceiptTitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Transaction Successful"
+                                android:text="@string/transaction_successful"
                                 android:textColor="@color/wallet_accent_green"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
@@ -145,7 +145,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="5dp"
-                                android:text="Your coins have been sent successfully."
+                                android:text="@string/transaction_sent_success_description"
                                 android:textColor="@color/wallet_secondary_text"
                                 android:textSize="12sp" />
 
@@ -154,7 +154,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="- 10.00 YKC"
+                                android:text="@string/transaction_receipt_amount_placeholder"
                                 android:textColor="@color/wallet_primary_text"
                                 android:textSize="20sp"
                                 android:textStyle="bold" />
@@ -164,7 +164,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="YKC value depends on platform revenue"
+                                android:text="@string/transaction_receipt_value_copy"
                                 android:textColor="@color/wallet_secondary_text"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
@@ -189,7 +189,7 @@
                         android:drawableStart="@drawable/ic_shield"
                         android:drawablePadding="8dp"
                         android:drawableTint="@color/wallet_accent_green"
-                        android:text="Confirmed on-chain"
+                        android:text="@string/transaction_confirmed_on_chain"
                         android:textColor="@color/wallet_accent_green"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -199,7 +199,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="center"
-                        android:text="12 Confirmations"
+                        android:text="@string/transaction_confirmations_placeholder"
                         android:textColor="@color/wallet_primary_text"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -210,7 +210,7 @@
                         android:layout_marginStart="14dp"
                         android:background="@drawable/bg_wallet_transaction_status"
                         android:gravity="center"
-                        android:text="Completed"
+                        android:text="@string/transaction_completed"
                         android:textColor="@color/wallet_accent_green"
                         android:textSize="10sp"
                         android:textStyle="bold" />
@@ -220,7 +220,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    android:text="Transaction Details"
+                    android:text="@string/transaction_details_title"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -241,7 +241,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Transaction ID" />
+                            android:text="@string/transaction_id_label" />
 
                         <TextView
                             android:id="@+id/textReceiptTransactionId"
@@ -258,7 +258,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Date &amp; Time" />
+                            android:text="@string/date_time_label" />
 
                         <TextView
                             android:id="@+id/textReceiptDate"
@@ -274,7 +274,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Status" />
+                            android:text="@string/status" />
 
                         <TextView
                             android:id="@+id/textReceiptStatus"
@@ -291,7 +291,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Network" />
+                            android:text="@string/network_label" />
 
                         <TextView
                             android:id="@+id/textReceiptNetwork"
@@ -307,7 +307,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Block Number" />
+                            android:text="@string/block_number_label" />
 
                         <TextView
                             android:id="@+id/textReceiptBlock"
@@ -323,7 +323,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Confirmations" />
+                            android:text="@string/confirmations_label" />
 
                         <TextView
                             android:id="@+id/textReceiptConfirmations"
@@ -336,7 +336,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="Transfer Summary"
+                    android:text="@string/transfer_summary"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -357,7 +357,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="From" />
+                            android:text="@string/from_label" />
 
                         <TextView
                             android:id="@+id/textReceiptFrom"
@@ -373,7 +373,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="To" />
+                            android:text="@string/to_label" />
 
                         <TextView
                             android:id="@+id/textReceiptTo"
@@ -390,7 +390,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Amount" />
+                            android:text="@string/amount" />
 
                         <TextView
                             android:id="@+id/textReceiptSummaryAmount"
@@ -406,7 +406,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Network Fee" />
+                            android:text="@string/network_fee_label" />
 
                         <TextView
                             android:id="@+id/textReceiptFee"
@@ -422,7 +422,7 @@
 
                         <TextView
                             style="@style/TransactionReceiptLabel"
-                            android:text="Total" />
+                            android:text="@string/total" />
 
                         <TextView
                             android:id="@+id/textReceiptTotal"
@@ -458,7 +458,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Secure &amp; Verified"
+                            android:text="@string/secure_verified"
                             android:textColor="@color/wallet_primary_text"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -467,7 +467,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="This transaction is recorded securely on the Yenkasa Chain."
+                            android:text="@string/transaction_chain_record_copy"
                             android:textColor="@color/wallet_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -495,7 +495,7 @@
                 android:drawablePadding="4dp"
                 android:drawableTint="@color/wallet_secondary_text"
                 android:gravity="center"
-                android:text="Home"
+                android:text="@string/home"
                 android:textColor="@color/wallet_secondary_text"
                 android:textSize="11sp" />
 
@@ -508,7 +508,7 @@
                 android:drawablePadding="4dp"
                 android:drawableTint="@color/wallet_secondary_text"
                 android:gravity="center"
-                android:text="Wallet"
+                android:text="@string/wallet"
                 android:textColor="@color/wallet_secondary_text"
                 android:textSize="11sp" />
 
@@ -522,7 +522,7 @@
                 android:drawablePadding="4dp"
                 android:drawableTint="@color/wallet_accent_green"
                 android:gravity="center"
-                android:text="Transact"
+                android:text="@string/transact"
                 android:textColor="@color/wallet_accent_green"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -536,7 +536,7 @@
                 android:drawablePadding="4dp"
                 android:drawableTint="@color/wallet_secondary_text"
                 android:gravity="center"
-                android:text="Receive"
+                android:text="@string/receive"
                 android:textColor="@color/wallet_secondary_text"
                 android:textSize="11sp" />
 
@@ -549,7 +549,7 @@
                 android:drawablePadding="4dp"
                 android:drawableTint="@color/wallet_secondary_text"
                 android:gravity="center"
-                android:text="Profile"
+                android:text="@string/profile"
                 android:textColor="@color/wallet_secondary_text"
                 android:textSize="11sp" />
         </LinearLayout>

@@ -102,7 +102,7 @@ class CreateAdActivity : AppCompatActivity() {
         if (!canCurrentUserCreateAd()) {
             Toast.makeText(
                 this,
-                "Only verified users and approved reviewer roles can create sponsored ads.",
+                getString(R.string.create_ads_requires_verified),
                 Toast.LENGTH_LONG
             ).show()
             finish()
@@ -148,21 +148,21 @@ class CreateAdActivity : AppCompatActivity() {
     }
 
     private fun setupTextCounter() {
-        textAdTitleCount.text = "${inputAdTitle.text?.length ?: 0}/70"
+        textAdTitleCount.text = getString(R.string.create_ad_title_count_format, inputAdTitle.text?.length ?: 0)
         inputAdTitle.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                textAdTitleCount.text = "${s?.length ?: 0}/70"
+                textAdTitleCount.text = getString(R.string.create_ad_title_count_format, s?.length ?: 0)
             }
             override fun afterTextChanged(s: Editable?) = Unit
         })
     }
 
     private fun updateWalletBalance() {
-        textAdWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
+        textAdWalletBalance.text = getString(R.string.ykc_amount_format, TokenManager.getCoins(this))
         WalletBalanceManager.refreshBalance(this) { balance ->
             runOnUiThread {
-                textAdWalletBalance.text = "$balance YKC"
+                textAdWalletBalance.text = getString(R.string.ykc_amount_format, balance)
             }
         }
     }
@@ -210,34 +210,34 @@ class CreateAdActivity : AppCompatActivity() {
         val rewardText = inputReward.text.toString().trim()
 
         if (title.isEmpty()) {
-            inputAdTitle.error = "Title is required"
+            inputAdTitle.error = getString(R.string.create_ad_title_required)
             return
         }
 
         if (rewardText.isEmpty()) {
-            inputReward.error = "Reward is required"
+            inputReward.error = getString(R.string.create_ad_reward_required)
             return
         }
 
         val reward = rewardText.toIntOrNull()
         if (reward == null || reward <= 0) {
-            inputReward.error = "Invalid reward amount"
+            inputReward.error = getString(R.string.create_ad_reward_invalid)
             return
         }
 
         if (imageUri == null && videoUri == null) {
-            showToast("Select an image or video for the ad")
+            showToast(getString(R.string.create_ad_media_required))
             return
         }
 
         isSubmittingAd = true
         btnSubmitAd.isEnabled = false
-        btnSubmitAd.text = "Submitting..."
+        btnSubmitAd.text = getString(R.string.create_ad_submitting)
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val token = TokenManager.getToken(this@CreateAdActivity)
                 if (token == null) {
-                    showToast("Login required")
+                    showToast(getString(R.string.login_required))
                     resetSubmitButton()
                     return@launch
                 }
@@ -280,10 +280,16 @@ class CreateAdActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful && response.body()?.success == true) {
-                        showToast(response.body()?.message ?: "Ad submitted for approval")
+                        showToast(response.body()?.message ?: getString(R.string.create_ad_submitted_for_approval))
                         finish()
                     } else {
-                        showToast("Ad failed (${response.code()}): ${readBackendError(response.errorBody()?.string())}")
+                        showToast(
+                            getString(
+                                R.string.create_ad_failed_with_code,
+                                response.code(),
+                                readBackendError(response.errorBody()?.string())
+                            )
+                        )
                         resetSubmitButton()
                     }
                 }
@@ -291,7 +297,8 @@ class CreateAdActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e("CreateAd", "Error submitting ad: ${e.message}")
                 withContext(Dispatchers.Main) {
-                    showToast("Error: ${e.message}")
+                    val message = e.message?.takeIf { it.isNotBlank() } ?: getString(R.string.create_ad_unknown_server_error)
+                    showToast(getString(R.string.create_ad_error_with_message, message))
                     resetSubmitButton()
                 }
             }
@@ -335,12 +342,12 @@ class CreateAdActivity : AppCompatActivity() {
         runOnUiThread {
             isSubmittingAd = false
             btnSubmitAd.isEnabled = true
-            btnSubmitAd.text = "Submit Ad"
+            btnSubmitAd.text = getString(R.string.submit_ad)
         }
     }
 
     private fun readBackendError(errorText: String?): String {
-        if (errorText.isNullOrBlank()) return "Unknown server error"
+        if (errorText.isNullOrBlank()) return getString(R.string.create_ad_unknown_server_error)
         return runCatching {
             val json = JSONObject(errorText)
             json.optString("message").ifBlank {

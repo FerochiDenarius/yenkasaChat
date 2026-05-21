@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../models/backend_health.dart';
@@ -33,7 +34,13 @@ class AiApiService {
 
   Future<BackendHealth> fetchHealth() async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>('/health');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/health',
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
       return BackendHealth.fromJson(response.data ?? const {});
     } on DioException catch (error) {
       throw _mapDioError(error);
@@ -160,6 +167,15 @@ class AiApiService {
   }
 
   ApiException _mapDioError(DioException error) {
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return ApiException(
+        'YenkasaAI backend is unreachable at ${AppConfig.apiBaseUrl}.',
+        statusCode: error.response?.statusCode,
+      );
+    }
     final data = error.response?.data;
     if (data is Map<String, dynamic>) {
       final detail = data['detail'] ?? data['error'];

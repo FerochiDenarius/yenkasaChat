@@ -50,10 +50,10 @@ class CreateTransactionActivity : AppCompatActivity() {
             startActivity(Intent(this, CoinWalletActivity::class.java))
         }
         findViewById<View>(R.id.buttonTransactionScan).setOnClickListener {
-            Toast.makeText(this, "Scan will be available when wallet QR payments are ready", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.wallet_scan_unavailable), Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.textTransactionMax).setOnClickListener {
-            Toast.makeText(this, "Max amount will be enabled after spendable balance is finalized", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.transaction_max_unavailable), Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.navTransactionHome).setOnClickListener {
             startActivity(
@@ -68,7 +68,7 @@ class CreateTransactionActivity : AppCompatActivity() {
             finish()
         }
         findViewById<View>(R.id.navTransactionActive).setOnClickListener {
-            Toast.makeText(this, "You are already on transactions", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.transaction_already_here), Toast.LENGTH_SHORT).show()
         }
         findViewById<View>(R.id.navTransactionReceive).setOnClickListener {
             findViewById<View>(R.id.layoutSendCoins).visibility = View.GONE
@@ -81,9 +81,9 @@ class CreateTransactionActivity : AppCompatActivity() {
 
         btnCopyWalletId.setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Wallet ID", tvWalletId.text.toString())
+            val clip = ClipData.newPlainText(getString(R.string.copy_wallet_id), tvWalletId.text.toString())
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, "Wallet ID copied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.wallet_id_copied), Toast.LENGTH_SHORT).show()
         }
 
         btnSend.setOnClickListener {
@@ -91,13 +91,13 @@ class CreateTransactionActivity : AppCompatActivity() {
             val amountText = etAmount.text.toString().trim()
 
             if (recipientWalletId.isEmpty() || amountText.isEmpty()) {
-                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.please_fill_all_fields), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val amount = amountText.toIntOrNull()
             if (amount == null || amount <= 0) {
-                Toast.makeText(this, "Enter a valid amount", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.enter_valid_amount), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -119,12 +119,12 @@ class CreateTransactionActivity : AppCompatActivity() {
                     val body = response.body()
                     if (response.isSuccessful && body != null && body.success) {
                         currentWalletId = body.walletId
-                        tvWalletId.text = body.walletId ?: "N/A"
+                        tvWalletId.text = body.walletId ?: getString(R.string.not_available_short)
                     } else {
-                        tvWalletId.text = "N/A"
+                        tvWalletId.text = getString(R.string.not_available_short)
                         Toast.makeText(
                             this@CreateTransactionActivity,
-                            "Failed to fetch wallet info",
+                            getString(R.string.failed_to_fetch_wallet_info),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -132,10 +132,10 @@ class CreateTransactionActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
-                    tvWalletId.text = "N/A"
+                    tvWalletId.text = getString(R.string.not_available_short)
                     Toast.makeText(
                         this@CreateTransactionActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -158,7 +158,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                         btnSend.isEnabled = true
                         Toast.makeText(
                             this@CreateTransactionActivity,
-                            "Recipient not found",
+                            getString(R.string.recipient_not_found),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -169,7 +169,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                     btnSend.isEnabled = true
                     Toast.makeText(
                         this@CreateTransactionActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -201,9 +201,10 @@ class CreateTransactionActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     val body = response.body()
                     if (response.isSuccessful && body?.success == true) {
+                        val recipientLabel = recipientUsername ?: getString(R.string.unknown)
                         Toast.makeText(
                             this@CreateTransactionActivity,
-                            "✅ Sent $amount coins to $recipientUsername",
+                            getString(R.string.transaction_sent_success_format, amount, recipientLabel),
                             Toast.LENGTH_LONG
                         ).show()
 
@@ -218,7 +219,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                             newBalance = (tx?.toUserBalanceAfter ?: 0).toDouble(),
                             senderUsername = tx?.fromUsername ?: TokenManager.getUsername(this@CreateTransactionActivity),
                             recipientUsername = tx?.toUsername ?: recipientUsername ?: "",
-                            description = "Sent $amount coins to $recipientUsername",
+                            description = getString(R.string.transaction_sent_description_format, amount, recipientLabel),
                             type = "transfer",
                             createdAt = tx?.createdAt ?: System.currentTimeMillis().toString(),
                             activityId = tx?.activityId ?: activityId
@@ -235,7 +236,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                         val errorMsg = body?.error ?: response.message()
                         Toast.makeText(
                             this@CreateTransactionActivity,
-                            "❌ Transaction failed: $errorMsg",
+                            getString(R.string.transaction_failed_with_message, errorMsg),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -246,7 +247,7 @@ class CreateTransactionActivity : AppCompatActivity() {
                     btnSend.isEnabled = true
                     Toast.makeText(
                         this@CreateTransactionActivity,
-                        "Network error: ${t.message}",
+                        getString(R.string.network_error_with_message, t.message ?: getString(R.string.unknown)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

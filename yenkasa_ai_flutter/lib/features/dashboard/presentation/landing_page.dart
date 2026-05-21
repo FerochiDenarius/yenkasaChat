@@ -32,24 +32,54 @@ class LandingPage extends StatelessWidget {
                   children: [
                     GlassCard(
                       strong: true,
-                      child: Row(
-                        children: [
-                          const Expanded(child: AppLogo()),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              FilledButton(
-                                onPressed: () => context.go('/chat'),
-                                child: const Text('Launch YenkasaAI'),
-                              ),
-                              OutlinedButton(
-                                onPressed: () => context.go('/knowledge'),
-                                child: const Text('Explore APIs'),
-                              ),
-                            ],
-                          ),
-                        ],
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compactHeader = constraints.maxWidth < 720;
+                          return compactHeader
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const AppLogo(),
+                                    const SizedBox(height: 18),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton(
+                                        onPressed: () => context.go('/chat'),
+                                        child: const Text('Launch YenkasaAI'),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            context.go('/knowledge'),
+                                        child: const Text('Explore APIs'),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    const Expanded(child: AppLogo()),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: [
+                                        FilledButton(
+                                          onPressed: () => context.go('/chat'),
+                                          child: const Text('Launch YenkasaAI'),
+                                        ),
+                                        OutlinedButton(
+                                          onPressed: () =>
+                                              context.go('/knowledge'),
+                                          child: const Text('Explore APIs'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                );
+                        },
                       ),
                     ),
                     const SizedBox(height: 22),
@@ -155,27 +185,49 @@ class LandingPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 22),
                     GlassCard(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Expanded(
-                            child: SectionHeader(
-                              eyebrow: 'Mission',
-                              title:
-                                  'Use AI to build a better Yenkasa, help creators grow, protect communities, and power the next generation of products.',
-                              description:
-                                  'This frontend is prepared for voice input, auth-aware AI history, creator tooling, and moderation-grade retrieval experiences.',
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 360),
-                            child: const GlassCard(
-                              strong: true,
-                              child: AppLogo(compact: true),
-                            ),
-                          ),
-                        ],
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compactMission = constraints.maxWidth < 920;
+                          return Flex(
+                            direction: compactMission
+                                ? Axis.vertical
+                                : Axis.horizontal,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (compactMission)
+                                const SectionHeader(
+                                  eyebrow: 'Mission',
+                                  title:
+                                      'Use AI to build a better Yenkasa, help creators grow, protect communities, and power the next generation of products.',
+                                  description:
+                                      'This frontend is prepared for voice input, auth-aware AI history, creator tooling, and moderation-grade retrieval experiences.',
+                                )
+                              else
+                                const Expanded(
+                                  child: SectionHeader(
+                                    eyebrow: 'Mission',
+                                    title:
+                                        'Use AI to build a better Yenkasa, help creators grow, protect communities, and power the next generation of products.',
+                                    description:
+                                        'This frontend is prepared for voice input, auth-aware AI history, creator tooling, and moderation-grade retrieval experiences.',
+                                  ),
+                                ),
+                              SizedBox(
+                                width: compactMission ? 0 : 18,
+                                height: compactMission ? 18 : 0,
+                              ),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 360,
+                                ),
+                                child: const GlassCard(
+                                  strong: true,
+                                  child: AppLogo(compact: true),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],

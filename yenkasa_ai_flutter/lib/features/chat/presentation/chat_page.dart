@@ -60,6 +60,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth > 1180;
+        final compactComposer = constraints.maxWidth < 760;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -147,7 +148,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           const SizedBox(height: 14),
                         ],
                         SizedBox(
-                          height: 520,
+                          height: compactComposer ? 420 : 520,
                           child: ListView.separated(
                             controller: _scrollController,
                             itemCount:
@@ -190,19 +191,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               .toList(),
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            const StatusChip(
-                              label: 'Voice input ready next',
-                              tone: StatusTone.info,
-                            ),
-                            const SizedBox(width: 10),
-                            const StatusChip(
-                              label: 'History sync planned',
-                              tone: StatusTone.neutral,
-                            ),
-                            const Spacer(),
-                            FilledButton.icon(
+                        if (compactComposer) ...[
+                          const Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              StatusChip(
+                                label: 'Voice input ready next',
+                                tone: StatusTone.info,
+                                compact: true,
+                              ),
+                              StatusChip(
+                                label: 'History sync planned',
+                                tone: StatusTone.neutral,
+                                compact: true,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
                               onPressed: state.isSending
                                   ? null
                                   : () {
@@ -220,8 +229,42 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     : 'Send to YenkasaAI',
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ] else
+                          Row(
+                            children: [
+                              const StatusChip(
+                                label: 'Voice input ready next',
+                                tone: StatusTone.info,
+                              ),
+                              const SizedBox(width: 10),
+                              const StatusChip(
+                                label: 'History sync planned',
+                                tone: StatusTone.neutral,
+                              ),
+                              const Spacer(),
+                              FilledButton.icon(
+                                onPressed: state.isSending
+                                    ? null
+                                    : () {
+                                        controller.sendMessage(
+                                          _controller.text,
+                                        );
+                                        _controller.clear();
+                                      },
+                                icon: Icon(
+                                  state.isSending
+                                      ? Icons.hourglass_top_rounded
+                                      : Icons.send_rounded,
+                                ),
+                                label: Text(
+                                  state.isSending
+                                      ? 'Thinking...'
+                                      : 'Send to YenkasaAI',
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

@@ -80,20 +80,27 @@ class ChatResponseModel {
   final Map<String, dynamic>? debug;
 
   factory ChatResponseModel.fromJson(Map<String, dynamic> json) {
+    final answerCardsJson =
+        (json['answer_cards'] as List?) ??
+        (json['answerCards'] as List?) ??
+        const [];
+    final suggestedFollowUpsJson =
+        (json['suggested_follow_ups'] as List?) ??
+        (json['suggestedFollowUps'] as List?) ??
+        const [];
     return ChatResponseModel(
       provider: json['provider'] as String? ?? '',
       model: json['model'] as String? ?? '',
       audience: json['audience'] as String? ?? 'public',
       answer: json['answer'] as String? ?? '',
-      answerCards: ((json['answer_cards'] as List?) ?? const [])
+      answerCards: answerCardsJson
           .map(
             (item) => AnswerCardModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ),
           )
           .toList(),
-      suggestedFollowUps: ((json['suggested_follow_ups'] as List?) ?? const [])
-          .cast<String>(),
+      suggestedFollowUps: suggestedFollowUpsJson.cast<String>(),
       sources: ((json['sources'] as List?) ?? const [])
           .map(
             (item) => SourceChunkModel.fromJson(

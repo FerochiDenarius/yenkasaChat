@@ -5,7 +5,9 @@ import '../../../core/widgets/status_chip.dart';
 import 'health_controller.dart';
 
 class HealthIndicator extends ConsumerWidget {
-  const HealthIndicator({super.key});
+  const HealthIndicator({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -14,20 +16,25 @@ class HealthIndicator extends ConsumerWidget {
     return healthAsync.when(
       data: (health) => Tooltip(
         message: '${health.provider} · ${health.model} · ${health.location}',
-        child: const StatusChip(
-          label: 'Backend healthy',
+        child: StatusChip(
+          label: compact ? 'Online' : 'Backend healthy',
           tone: StatusTone.success,
+          compact: compact,
         ),
       ),
       error: (error, _) => Tooltip(
         message: error.toString(),
-        child: const StatusChip(
-          label: 'Backend unreachable',
+        child: StatusChip(
+          label: compact ? 'Offline' : 'Backend unreachable',
           tone: StatusTone.danger,
+          compact: compact,
         ),
       ),
-      loading: () =>
-          const StatusChip(label: 'Checking backend', tone: StatusTone.info),
+      loading: () => StatusChip(
+        label: compact ? 'Checking' : 'Checking backend',
+        tone: StatusTone.info,
+        compact: compact,
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
@@ -112,7 +113,7 @@ class AppVerificationActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Ranks unlock as you complete the milestones below.",
+                    getString(R.string.verification_unlock_milestones_copy),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -120,11 +121,11 @@ class AppVerificationActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnVerificationBack).setOnClickListener { finish() }
         findViewById<ImageButton>(R.id.btnVerificationInfo).setOnClickListener {
-            Toast.makeText(this, "Complete each milestone to unlock the next rank.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.verification_rank_info_copy), Toast.LENGTH_SHORT).show()
         }
         findViewById<TextView>(R.id.btnLearnMoreRanks).setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-            Toast.makeText(this, "Account age, comments made, following, posts liked, logins, and rewarded ads move your rank forward.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.verification_rank_requirements_copy), Toast.LENGTH_LONG).show()
         }
 
         textStoreName = findViewById(R.id.textVerificationStoreName)
@@ -152,9 +153,9 @@ class AppVerificationActivity : AppCompatActivity() {
         textMetricSharesGoal = findViewById(R.id.textMetricSharesGoal)
         progressMetricShares = findViewById(R.id.progressMetricShares)
 
-        tabVerified.text = "Verified"
-        tabAdmin.text = "Rising Star"
-        tabModerator.text = "Legend"
+        tabVerified.text = getString(R.string.rank_verified)
+        tabAdmin.text = getString(R.string.rank_rising_star)
+        tabModerator.text = getString(R.string.rank_legend)
     }
 
     private fun authHeader(): String = "Bearer ${TokenManager.getToken(this)}"
@@ -223,12 +224,20 @@ class AppVerificationActivity : AppCompatActivity() {
                     showLoading(false)
 
                     if (!response.isSuccessful) {
-                        Toast.makeText(this@AppVerificationActivity, "Failed to load dashboard: ${response.code()}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            getString(R.string.verification_failed_to_load_dashboard_with_code, response.code()),
+                            Toast.LENGTH_LONG
+                        ).show()
                         return
                     }
 
                     val body = response.body() ?: run {
-                        Toast.makeText(this@AppVerificationActivity, "Empty dashboard response", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            getString(R.string.verification_empty_dashboard_response),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         return
                     }
 
@@ -246,7 +255,12 @@ class AppVerificationActivity : AppCompatActivity() {
 
                 override fun onFailure(call: Call<VerificationDashboard>, t: Throwable) {
                     showLoading(false)
-                    Toast.makeText(this@AppVerificationActivity, "Network error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    val message = t.localizedMessage?.takeIf { it.isNotBlank() } ?: getString(R.string.unknown)
+                    Toast.makeText(
+                        this@AppVerificationActivity,
+                        getString(R.string.verification_network_error_with_message, message),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -275,9 +289,9 @@ class AppVerificationActivity : AppCompatActivity() {
         val met = dashboardData?.appVerification?.progress?.allMet == true
         btnAdvance.visibility = View.VISIBLE
         btnAdvance.text = if (dashboardData?.appVerification?.rankingPeriodStatus == "active_phase" && met) {
-            "Advance"
+            getString(R.string.verification_advance)
         } else {
-            "View all ranks"
+            getString(R.string.verification_view_all_ranks)
         }
     }
 
@@ -289,11 +303,19 @@ class AppVerificationActivity : AppCompatActivity() {
                     response: Response<PhaseAdvancementResponse>
                 ) {
                     if (!response.isSuccessful) {
-                        Toast.makeText(this@AppVerificationActivity, "Server error: ${response.code()}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            getString(R.string.verification_server_error_with_code, response.code()),
+                            Toast.LENGTH_LONG
+                        ).show()
                         return
                     }
                     val res = response.body() ?: run {
-                        Toast.makeText(this@AppVerificationActivity, "Empty response", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@AppVerificationActivity,
+                            getString(R.string.verification_empty_response),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         return
                     }
                     Toast.makeText(this@AppVerificationActivity, res.message, Toast.LENGTH_LONG).show()
@@ -301,7 +323,12 @@ class AppVerificationActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<PhaseAdvancementResponse>, t: Throwable) {
-                    Toast.makeText(this@AppVerificationActivity, "Network error: ${t.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    val message = t.localizedMessage?.takeIf { it.isNotBlank() } ?: getString(R.string.unknown)
+                    Toast.makeText(
+                        this@AppVerificationActivity,
+                        getString(R.string.verification_network_error_with_message, message),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
@@ -347,7 +374,9 @@ class AppVerificationActivity : AppCompatActivity() {
         val requirements = app.requirements
 
         val currentRank = rankLabel(app.currentRank ?: app.currentRankKey, app.currentPhase)
-        val nextRank = rankLabel(app.nextRank ?: app.nextRankKey, app.currentPhase).takeIf { it != "Unverified" } ?: "Top Rank"
+        val nextRank = rankLabel(app.nextRank ?: app.nextRankKey, app.currentPhase)
+            .takeIf { it != getString(R.string.unverified) }
+            ?: getString(R.string.verification_top_rank)
         val overallProgress = progressOverride ?: app.progressToNextRank ?: calculateOverallProgress(metrics, requirements)
 
         if (!userSelectedRankTab) {
@@ -355,23 +384,31 @@ class AppVerificationActivity : AppCompatActivity() {
             highlightTab(selectedRankTab)
         }
 
-        textStoreName.text = TokenManager.getUsername(this)?.takeIf { it.isNotBlank() } ?: "Yenkasa"
+        textStoreName.text = TokenManager.getUsername(this)?.takeIf { it.isNotBlank() } ?: getString(R.string.yenkasa_title)
         bindAvatar()
         textRankChip.text = currentRank
         textMemberSince.text = buildRankingStatusText(app)
         textCurrentRank.text = currentRank
         textNextRank.text = nextRank
-        textRequirementTitle.text = "To reach $nextRank"
+        textRequirementTitle.text = getString(R.string.verification_to_reach_placeholder, nextRank)
         imageVerificationShield.setImageResource(rankBadge(app.currentRank ?: app.currentRankKey))
-        textProgressPercent.text = "$overallProgress%"
+        textProgressPercent.text = getString(R.string.verification_percent_format, overallProgress)
         progressCircle.setProgressCompat(overallProgress, true)
         progressRankBar.progress = overallProgress
 
         val currentPoints = currentRequirementPoints(metrics, requirements)
         val targetPoints = targetRequirementPoints(requirements)
         val remaining = (targetPoints - currentPoints).coerceAtLeast(0)
-        textCurrentPoints.text = "${formatNumber(currentPoints)} / ${formatNumber(targetPoints)} points"
-        textRemainingPoints.text = "${formatNumber(remaining)} points to $nextRank"
+        textCurrentPoints.text = getString(
+            R.string.verification_points_format,
+            formatNumber(currentPoints),
+            formatNumber(targetPoints)
+        )
+        textRemainingPoints.text = getString(
+            R.string.verification_remaining_points_format,
+            formatNumber(remaining),
+            nextRank
+        )
 
         bindMetricCard(
             valueView = textMetricViews,
@@ -379,7 +416,7 @@ class AppVerificationActivity : AppCompatActivity() {
             progressView = progressMetricViews,
             value = metrics.totalViewsReceived,
             goal = 0,
-            label = "Views tracked"
+            label = getString(R.string.verification_metric_views_tracked)
         )
         bindMetricCard(
             valueView = textMetricComments,
@@ -387,7 +424,7 @@ class AppVerificationActivity : AppCompatActivity() {
             progressView = progressMetricComments,
             value = metrics.totalCommentsMade,
             goal = requirements.commentsMade,
-            label = "Goal: ${formatNumber(requirements.commentsMade)}"
+            label = getString(R.string.verification_goal_format, formatNumber(requirements.commentsMade))
         )
 
         bindMetricCard(
@@ -396,7 +433,7 @@ class AppVerificationActivity : AppCompatActivity() {
             progressView = progressMetricFollowing,
             value = metrics.totalFollowing,
             goal = requirements.following,
-            label = "Goal: ${formatNumber(requirements.following)}"
+            label = getString(R.string.verification_goal_format, formatNumber(requirements.following))
         )
 
         bindMetricCard(
@@ -405,7 +442,7 @@ class AppVerificationActivity : AppCompatActivity() {
             progressView = progressMetricShares,
             value = metrics.postsLiked,
             goal = 0,
-            label = "Posts liked tracked"
+            label = getString(R.string.verification_metric_posts_liked_tracked)
         )
 
         bindRequirementRows(metrics, requirements)
@@ -429,32 +466,68 @@ class AppVerificationActivity : AppCompatActivity() {
         requirementRows.removeAllViews()
 
         val rows = listOf(
-            RequirementRow("Account Age", "Keep your account active", metrics.accountAge, requirements.accountAge, "days"),
-            RequirementRow("Comments Made", "Engage on posts", metrics.totalCommentsMade, requirements.commentsMade, "left"),
-            RequirementRow("Following", "Support other users", metrics.totalFollowing, requirements.following, "left"),
-            RequirementRow("Posts Liked", "Support posts you enjoy", metrics.postsLiked, requirements.likesGiven, "left"),
-            RequirementRow("Daily Logins", "Return daily and stay active", metrics.dailyLogins, requirements.dailyLogins, "left"),
-            RequirementRow("Ads Viewed", "Watch rewarded ads", metrics.adsViewed, requirements.adsViewed, "left")
+            RequirementRow(
+                getString(R.string.verification_requirement_account_age_title),
+                getString(R.string.verification_requirement_account_age_helper),
+                metrics.accountAge,
+                requirements.accountAge,
+                getString(R.string.verification_remaining_days)
+            ),
+            RequirementRow(
+                getString(R.string.verification_requirement_comments_title),
+                getString(R.string.verification_requirement_comments_helper),
+                metrics.totalCommentsMade,
+                requirements.commentsMade,
+                getString(R.string.verification_remaining_left)
+            ),
+            RequirementRow(
+                getString(R.string.verification_requirement_following_title),
+                getString(R.string.verification_requirement_following_helper),
+                metrics.totalFollowing,
+                requirements.following,
+                getString(R.string.verification_remaining_left)
+            ),
+            RequirementRow(
+                getString(R.string.verification_requirement_posts_liked_title),
+                getString(R.string.verification_requirement_posts_liked_helper),
+                metrics.postsLiked,
+                requirements.likesGiven,
+                getString(R.string.verification_remaining_left)
+            ),
+            RequirementRow(
+                getString(R.string.verification_requirement_logins_title),
+                getString(R.string.verification_requirement_logins_helper),
+                metrics.dailyLogins,
+                requirements.dailyLogins,
+                getString(R.string.verification_remaining_left)
+            ),
+            RequirementRow(
+                getString(R.string.verification_requirement_ads_title),
+                getString(R.string.verification_requirement_ads_helper),
+                metrics.adsViewed,
+                requirements.adsViewed,
+                getString(R.string.verification_remaining_left)
+            )
         ) + buildList {
             if (requirements.followers > 0) {
                 add(
                     RequirementRow(
-                        "Followers",
-                        "Passive impact needed for this tier",
+                        getString(R.string.verification_requirement_followers_title),
+                        getString(R.string.verification_requirement_followers_helper),
                         metrics.totalFollowers,
                         requirements.followers,
-                        "left"
+                        getString(R.string.verification_remaining_left)
                     )
                 )
             }
             if (requirements.commentsReceived > 0) {
                 add(
                     RequirementRow(
-                        "Comments Received",
-                        "Your content must attract replies",
+                        getString(R.string.verification_requirement_comments_received_title),
+                        getString(R.string.verification_requirement_comments_received_helper),
                         metrics.totalCommentsReceived,
                         requirements.commentsReceived,
-                        "left"
+                        getString(R.string.verification_remaining_left)
                     )
                 )
             }
@@ -490,7 +563,7 @@ class AppVerificationActivity : AppCompatActivity() {
         }
 
         val icon = TextView(this).apply {
-            text = "•"
+            text = getString(R.string.bullet_symbol)
             textSize = 22f
             gravity = android.view.Gravity.CENTER
             setTextColor(ContextCompat.getColor(this@AppVerificationActivity, R.color.amber_300))
@@ -539,7 +612,11 @@ class AppVerificationActivity : AppCompatActivity() {
         root.addView(content)
 
         val count = TextView(this).apply {
-            text = "${formatNumber(row.current)} / ${formatNumber(row.target)}"
+            text = getString(
+                R.string.verification_row_count_format,
+                formatNumber(row.current),
+                formatNumber(row.target)
+            )
             setTextColor(ContextCompat.getColor(this@AppVerificationActivity, R.color.wallet_accent_green))
             textSize = 12f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -549,7 +626,11 @@ class AppVerificationActivity : AppCompatActivity() {
         root.addView(count)
 
         val badge = TextView(this).apply {
-            text = if (remaining == 0) "Done" else "${formatNumber(remaining)} ${row.remainingLabel}"
+            text = if (remaining == 0) {
+                getString(R.string.done)
+            } else {
+                getString(R.string.verification_row_remaining_format, formatNumber(remaining), row.remainingLabel)
+            }
             setTextColor(ContextCompat.getColor(this@AppVerificationActivity, R.color.amber_300))
             textSize = 11f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -670,18 +751,18 @@ class AppVerificationActivity : AppCompatActivity() {
 
     private fun rankLabel(rankKey: String?, phase: Int?): String {
         when (rankKey?.lowercase(Locale.getDefault())) {
-            "verified" -> return "Verified"
-            "rising_star" -> return "Rising Star"
-            "legend" -> return "Legend"
-            "admin" -> return "Admin"
-            "moderator" -> return "Moderator"
-            "junior_developer" -> return "Junior Developer"
-            "senior_developer" -> return "Senior Developer"
+            "verified" -> return getString(R.string.rank_verified)
+            "rising_star" -> return getString(R.string.rank_rising_star)
+            "legend" -> return getString(R.string.rank_legend)
+            "admin" -> return getString(R.string.rank_admin)
+            "moderator" -> return getString(R.string.rank_moderator)
+            "junior_developer" -> return getString(R.string.rank_junior_developer)
+            "senior_developer" -> return getString(R.string.rank_senior_developer)
         }
 
         return when {
-            phase == null || phase <= 1 -> "Unverified"
-            else -> "Verified"
+            phase == null || phase <= 1 -> getString(R.string.unverified)
+            else -> getString(R.string.rank_verified)
         }
     }
 
@@ -733,12 +814,19 @@ class AppVerificationActivity : AppCompatActivity() {
 
     private fun buildMemberSinceText(periodLabel: String?, raw: String?): String {
         val memberSince = formatMemberSince(raw)
-        return if (periodLabel.isNullOrBlank()) memberSince else "$periodLabel • $memberSince"
+        return if (periodLabel.isNullOrBlank()) {
+            memberSince
+        } else {
+            getString(R.string.verification_member_since_with_period_format, periodLabel, memberSince)
+        }
     }
 
     private fun buildRankingStatusText(app: xyz.yenkasa.app.model.AppVerification): String {
         return when (app.rankingPeriodStatus) {
-            "pre_launch" -> "Pre-launch ranking period. Official Phase 1 begins on ${formatLaunchDate(app.officialPhaseStartDate ?: app.rankingLaunchDate)}. You can still earn ranks now."
+            "pre_launch" -> getString(
+                R.string.ranking_prelaunch_copy_dynamic,
+                formatLaunchDate(app.officialPhaseStartDate ?: app.rankingLaunchDate)
+            )
             "active_phase" -> getString(R.string.ranking_active_phase_copy)
             else -> buildMemberSinceText(app.rankingPeriodLabel, app.phaseStartDate)
         }
@@ -758,7 +846,8 @@ class AppVerificationActivity : AppCompatActivity() {
             null
         }
 
-        return formatted?.let { "Member since $it" } ?: "Member since your first login"
+        return formatted?.let { getString(R.string.verification_member_since_format, it) }
+            ?: getString(R.string.verification_member_since_first_login)
     }
 
     private fun formatLaunchDate(raw: String?): String {
@@ -775,7 +864,7 @@ class AppVerificationActivity : AppCompatActivity() {
             null
         }
 
-        return formatted ?: "25 May 2026"
+        return formatted ?: getString(R.string.ranking_default_launch_date)
     }
 
     private fun formatNumber(value: Int): String {

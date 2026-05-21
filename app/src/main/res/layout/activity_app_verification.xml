@@ -32,7 +32,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="@drawable/bg_verification_icon_pill"
-                    android:contentDescription="Back"
+                    android:contentDescription="@string/back"
                     android:padding="10dp"
                     android:src="@drawable/ic_arrow_back"
                     app:tint="@color/on_surface" />
@@ -43,7 +43,7 @@
                     android:layout_marginStart="12dp"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:text="Verification &amp; Ranking"
+                    android:text="@string/verification_ranking_title"
                     android:textColor="@color/on_surface"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -53,7 +53,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="@drawable/bg_verification_icon_pill"
-                    android:contentDescription="Verification info"
+                    android:contentDescription="@string/verification_info_content_description"
                     android:padding="10dp"
                     android:src="@drawable/ic_info"
                     app:tint="@color/amber_300" />
@@ -112,7 +112,7 @@
                                 android:layout_height="wrap_content"
                                 android:ellipsize="end"
                                 android:maxLines="1"
-                                android:text="Yenkasa"
+                                android:text="@string/yenkasa_title"
                                 android:textColor="@color/on_surface"
                                 android:textSize="20sp"
                                 android:textStyle="bold" />
@@ -132,7 +132,7 @@
                             android:background="@drawable/bg_verification_badge_chip"
                             android:gravity="center"
                             android:paddingHorizontal="12dp"
-                            android:text="Verified Member"
+                            android:text="@string/verification_rank_verified_member"
                             android:textColor="@color/on_primary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -142,7 +142,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
-                            android:text="Member since your first login"
+                            android:text="@string/verification_member_since_first_login"
                             android:textColor="#A9B6AF"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -177,7 +177,7 @@
                     android:drawablePadding="3dp"
                     android:drawableTint="@color/on_surface"
                     android:gravity="center"
-                    android:text="Verified"
+                    android:text="@string/rank_verified"
                     android:textColor="@color/on_surface"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -191,7 +191,7 @@
                     android:drawablePadding="3dp"
                     android:drawableTint="#8F9B96"
                     android:gravity="center"
-                    android:text="Admin"
+                    android:text="@string/verification_rank_rising_star"
                     android:textColor="#8F9B96"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -205,7 +205,7 @@
                     android:drawablePadding="3dp"
                     android:drawableTint="#8F9B96"
                     android:gravity="center"
-                    android:text="Moderator"
+                    android:text="@string/verification_rank_legend"
                     android:textColor="#8F9B96"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -235,7 +235,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Your Current Rank"
+                            android:text="@string/verification_current_rank_label"
                             android:textColor="#A9B6AF"
                             android:textSize="12sp" />
 
@@ -244,7 +244,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Verified Member"
+                            android:text="@string/verification_rank_verified_member"
                             android:textColor="#1DD36F"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -253,7 +253,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Keep going. You're making great progress."
+                            android:text="@string/verification_keep_going_copy"
                             android:textColor="#A9B6AF"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -285,7 +285,7 @@
                                 android:id="@+id/textProgressPercent"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="0%"
+                                android:text="@string/verification_progress_zero"
                                 android:textColor="@color/on_surface"
                                 android:textSize="20sp"
                                 android:textStyle="bold" />
@@ -293,7 +293,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Progress"
+                                android:text="@string/progress_label"
                                 android:textColor="#A9B6AF"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -308,7 +308,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Next Rank"
+                            android:text="@string/verification_next_rank_label"
                             android:textColor="#A9B6AF"
                             android:textSize="12sp" />
 
@@ -317,7 +317,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Admin"
+                            android:text="@string/rank_admin"
                             android:textColor="@color/amber_300"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -327,7 +327,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Reach the next milestone to unlock more."
+                            android:text="@string/verification_next_rank_hint"
                             android:textColor="#A9B6AF"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -354,7 +354,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="0 / 0 points"
+                        android:text="@string/verification_points_placeholder"
                         android:textColor="#C7D0CB"
                         android:textSize="12sp" />
 
@@ -364,7 +364,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="end"
-                        android:text="0 points to next rank"
+                        android:text="@string/verification_remaining_points_placeholder"
                         android:textColor="#C7D0CB"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -374,7 +374,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:text="Your Metrics"
+                android:text="@string/verification_metrics_title"
                 android:textColor="@color/on_surface"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -410,7 +410,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
-                        android:text="0"
+                        android:text="@string/zero"
                         android:textColor="@color/on_surface"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -420,7 +420,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Views"
+                        android:text="@string/views"
                         android:textColor="#A9B6AF"
                         android:gravity="center"
                         android:maxLines="1"
@@ -460,7 +460,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
-                        android:text="0"
+                        android:text="@string/zero"
                         android:textColor="@color/on_surface"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -470,7 +470,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Comments Made"
+                        android:text="@string/comments_made"
                         android:textColor="#A9B6AF"
                         android:gravity="center"
                         android:maxLines="1"
@@ -510,7 +510,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
-                        android:text="0"
+                        android:text="@string/zero"
                         android:textColor="@color/on_surface"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -520,7 +520,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Following"
+                        android:text="@string/following"
                         android:textColor="#A9B6AF"
                         android:gravity="center"
                         android:maxLines="1"
@@ -560,7 +560,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
-                        android:text="0"
+                        android:text="@string/zero"
                         android:textColor="@color/on_surface"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -570,7 +570,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Shares"
+                        android:text="@string/shares"
                         android:textColor="#A9B6AF"
                         android:gravity="center"
                         android:maxLines="1"
@@ -599,7 +599,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="To reach Admin"
+                    android:text="@string/verification_to_reach_placeholder"
                     android:textColor="@color/on_surface"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -611,7 +611,7 @@
                     android:background="@drawable/bg_verification_gold_chip"
                     android:gravity="center"
                     android:paddingHorizontal="14dp"
-                    android:text="View all ranks"
+                    android:text="@string/verification_view_all_ranks"
                     android:textColor="@color/amber_300"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -655,7 +655,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="You're doing great!"
+                        android:text="@string/verification_footer_title"
                         android:textColor="@color/on_surface"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -664,7 +664,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Keep engaging to unlock rank benefits."
+                        android:text="@string/verification_footer_subtitle"
                         android:textColor="#A9B6AF"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -676,7 +676,7 @@
                     android:background="@drawable/bg_transaction_primary_button"
                     android:gravity="center"
                     android:paddingHorizontal="14dp"
-                    android:text="Learn More"
+                    android:text="@string/learn_more"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="12sp"
                     android:textStyle="bold" />

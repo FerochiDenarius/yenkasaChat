@@ -27,7 +27,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="@drawable/bg_feed_icon_button"
-                android:contentDescription="Back"
+                android:contentDescription="@string/back"
                 android:padding="10dp"
                 android:src="@drawable/ic_arrow_back"
                 app:tint="@color/post_create_primary_text" />
@@ -45,7 +45,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:includeFontPadding="false"
-                    android:text="Create Sponsored Ad"
+                    android:text="@string/create_ad_page_title"
                     android:textColor="@color/post_create_primary_text"
                     android:textSize="22sp" />
 
@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:includeFontPadding="false"
-                    android:text="Promote your brand. Reach more. Get results."
+                    android:text="@string/create_ad_page_subtitle"
                     android:textColor="@color/post_create_secondary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -71,7 +71,7 @@
                 <ImageView
                     android:layout_width="18dp"
                     android:layout_height="18dp"
-                    android:contentDescription="YKC balance"
+                    android:contentDescription="@string/ykc_balance_content_description"
                     android:src="@drawable/ic_coin" />
 
                 <LinearLayout
@@ -84,7 +84,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:includeFontPadding="false"
-                        android:text="Balance"
+                        android:text="@string/balance_label"
                         android:textColor="@color/wallet_secondary_text"
                         android:textSize="10sp" />
 
@@ -114,7 +114,7 @@
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:background="@drawable/bg_ad_soft_green"
-                android:contentDescription="Ad title"
+                android:contentDescription="@string/ad_title_content_description"
                 android:padding="10dp"
                 android:src="@drawable/ic_post"
                 app:tint="@color/yenkasa_emerald" />
@@ -130,7 +130,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Ad Title"
+                    android:text="@string/create_ad_title_label"
                     android:textColor="@color/post_create_primary_text"
                     android:textSize="14sp" />
 
@@ -140,7 +140,7 @@
                     android:layout_height="0dp"
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
-                    android:hint="e.g. 50% Off Sale!"
+                    android:hint="@string/create_ad_title_hint"
                     android:inputType="textCapSentences"
                     android:maxLength="70"
                     android:maxLines="1"
@@ -154,7 +154,7 @@
                 android:layout_width="42dp"
                 android:layout_height="wrap_content"
                 android:gravity="end"
-                android:text="0/70"
+                android:text="@string/create_ad_title_count_zero"
                 android:textColor="@color/post_create_secondary_text"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -177,7 +177,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_ad_soft_green"
-                    android:contentDescription="Add media"
+                    android:contentDescription="@string/create_ad_media_content_description"
                     android:padding="9dp"
                     android:src="@drawable/ic_image"
                     app:tint="@color/yenkasa_emerald" />
@@ -193,7 +193,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Add Media"
+                        android:text="@string/create_ad_media_title"
                         android:textColor="@color/post_create_primary_text"
                         android:textSize="15sp" />
 
@@ -201,7 +201,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Choose an image or video that represents your ad."
+                        android:text="@string/create_ad_media_subtitle"
                         android:textColor="@color/post_create_secondary_text"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -240,7 +240,7 @@
                         android:drawableTint="@color/yenkasa_emerald"
                         android:fontFamily="sans-serif-medium"
                         android:stateListAnimator="@null"
-                        android:text="Select Image"
+                        android:text="@string/select_image"
                         android:textAllCaps="false"
                         android:textColor="@color/yenkasa_emerald"
                         android:textSize="11sp" />
@@ -272,7 +272,7 @@
                             android:layout_width="42dp"
                             android:layout_height="42dp"
                             android:layout_gravity="center"
-                            android:contentDescription="Upload video"
+                            android:contentDescription="@string/upload_video_content_description"
                             android:src="@drawable/ic_video"
                             app:tint="@color/post_create_accent" />
                     </FrameLayout>
@@ -287,7 +287,7 @@
                         android:drawableTint="@color/post_create_accent"
                         android:fontFamily="sans-serif-medium"
                         android:stateListAnimator="@null"
-                        android:text="Select Video"
+                        android:text="@string/select_video"
                         android:textAllCaps="false"
                         android:textColor="@color/post_create_accent"
                         android:textSize="11sp" />
@@ -313,7 +313,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_ad_soft_gold"
-                    android:contentDescription="Call to action"
+                    android:contentDescription="@string/create_ad_cta_content_description"
                     android:padding="9dp"
                     android:src="@drawable/ic_ads_plus"
                     app:tint="@color/post_create_accent" />
@@ -329,7 +329,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Call To Action"
+                        android:text="@string/create_ad_cta_title"
                         android:textColor="@color/post_create_primary_text"
                         android:textSize="15sp" />
 
@@ -337,7 +337,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Tell people what to do next."
+                        android:text="@string/create_ad_cta_subtitle"
                         android:textColor="@color/post_create_secondary_text"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -358,7 +358,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Button Text"
+                        android:text="@string/create_ad_button_text_label"
                         android:textColor="@color/post_create_primary_text"
                         android:textSize="11sp" />
 
@@ -368,7 +368,7 @@
                         android:layout_height="46dp"
                         android:layout_marginTop="5dp"
                         android:background="@drawable/bg_input_rounded"
-                        android:hint="e.g. Learn More"
+                        android:hint="@string/create_ad_button_text_hint"
                         android:inputType="textCapWords"
                         android:maxLines="1"
                         android:paddingHorizontal="12dp"
@@ -387,7 +387,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Button URL"
+                        android:text="@string/create_ad_button_url_label"
                         android:textColor="@color/post_create_primary_text"
                         android:textSize="11sp" />
 
@@ -397,7 +397,7 @@
                         android:layout_height="46dp"
                         android:layout_marginTop="5dp"
                         android:background="@drawable/bg_input_rounded"
-                        android:hint="https://yourwebsite.com"
+                        android:hint="@string/create_ad_button_url_hint"
                         android:inputType="textUri"
                         android:maxLines="1"
                         android:paddingHorizontal="12dp"
@@ -421,7 +421,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="@drawable/bg_ad_soft_gold"
-                android:contentDescription="Reward"
+                android:contentDescription="@string/reward"
                 android:padding="10dp"
                 android:src="@drawable/ic_coin"
                 app:tint="@color/post_create_accent" />
@@ -437,7 +437,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Reward (YKC) for watching"
+                    android:text="@string/create_ad_reward_title"
                     android:textColor="@color/post_create_primary_text"
                     android:textSize="14sp" />
 
@@ -445,7 +445,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Incentivize users to watch your ad."
+                    android:text="@string/create_ad_reward_subtitle"
                     android:textColor="@color/post_create_secondary_text"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -456,7 +456,7 @@
                 android:layout_height="44dp"
                 android:background="@drawable/bg_input_rounded"
                 android:gravity="center"
-                android:hint="50"
+                android:hint="@string/create_ad_reward_hint"
                 android:inputType="number"
                 android:maxLength="5"
                 android:maxLines="1"
@@ -483,7 +483,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_ad_soft_green"
-                    android:contentDescription="Custom thumbnail"
+                    android:contentDescription="@string/create_ad_thumbnail_content_description"
                     android:padding="9dp"
                     android:src="@drawable/ic_image"
                     app:tint="@color/yenkasa_emerald" />
@@ -499,7 +499,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Custom Thumbnail"
+                        android:text="@string/create_ad_thumbnail_title"
                         android:textColor="@color/post_create_primary_text"
                         android:textSize="15sp" />
 
@@ -507,7 +507,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Choose a custom thumbnail to represent your ad."
+                        android:text="@string/create_ad_thumbnail_subtitle"
                         android:textColor="@color/post_create_secondary_text"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -532,7 +532,7 @@
                 android:drawableTint="@color/yenkasa_emerald"
                 android:fontFamily="sans-serif-medium"
                 android:stateListAnimator="@null"
-                android:text="Select Thumbnail"
+                android:text="@string/select_thumbnail"
                 android:textAllCaps="false"
                 android:textColor="@color/yenkasa_emerald"
                 android:textSize="11sp" />
@@ -551,7 +551,7 @@
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:background="@drawable/bg_ad_soft_green"
-                android:contentDescription="Make it count"
+                android:contentDescription="@string/create_ad_make_count_content_description"
                 android:padding="8dp"
                 android:src="@drawable/ic_check_circle"
                 app:tint="@color/yenkasa_emerald" />
@@ -567,7 +567,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Make It Count!"
+                    android:text="@string/create_ad_make_count_title"
                     android:textColor="@color/yenkasa_emerald"
                     android:textSize="14sp" />
 
@@ -575,7 +575,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
-                    android:text="Use high quality visuals and a clear call to action."
+                    android:text="@string/create_ad_make_count_subtitle"
                     android:textColor="@color/post_create_primary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -593,7 +593,7 @@
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
             android:stateListAnimator="@null"
-            android:text="Submit Ad"
+            android:text="@string/submit_ad"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="15sp" />
@@ -603,7 +603,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center"
-            android:text="Your ad will be reviewed before it goes live."
+            android:text="@string/create_ad_review_notice"
             android:textColor="@color/post_create_secondary_text"
             android:textSize="11sp" />
     </LinearLayout>

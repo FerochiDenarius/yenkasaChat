@@ -25,38 +25,49 @@ class TransactionReceiptActivity : AppCompatActivity() {
         val currentWalletId = intent.getStringExtra(EXTRA_CURRENT_WALLET_ID)
         val isOutgoing = currentWalletId != null && transaction.from == currentWalletId
         val amountPrefix = if (isOutgoing) "-" else "+"
-        val amountText = "$amountPrefix ${formatCoins(transaction.amount)} YKC"
+        val amountText = getString(
+            R.string.signed_ykc_amount_format,
+            amountPrefix,
+            formatCoins(transaction.amount)
+        )
         val total = if (isOutgoing) transaction.amount + NETWORK_FEE else transaction.amount.toDouble()
 
-        findViewById<TextView>(R.id.textReceiptStatusSubtitle).text = "Transaction Successful"
-        findViewById<TextView>(R.id.textReceiptTitle).text = "Transaction Successful"
+        findViewById<TextView>(R.id.textReceiptStatusSubtitle).text = getString(R.string.transaction_successful)
+        findViewById<TextView>(R.id.textReceiptTitle).text = getString(R.string.transaction_successful)
         findViewById<TextView>(R.id.textReceiptDescription).text = if (isOutgoing) {
-            "Your coins have been sent successfully."
+            getString(R.string.transaction_sent_success_description)
         } else {
-            "Yenkasa Coins have been received successfully."
+            getString(R.string.transaction_received_success_description)
         }
         findViewById<TextView>(R.id.textReceiptAmount).text = amountText
-        findViewById<TextView>(R.id.textReceiptUsd).text =
-            "YKC value depends on monetizable activity and platform revenue."
+        findViewById<TextView>(R.id.textReceiptUsd).text = getString(R.string.transaction_receipt_value_copy)
 
         findViewById<TextView>(R.id.textReceiptTransactionId).text = shorten(transaction.transactionId)
         findViewById<TextView>(R.id.textReceiptDate).text = formatDate(transaction.createdAt)
-        findViewById<TextView>(R.id.textReceiptStatus).text = "• Success"
-        findViewById<TextView>(R.id.textReceiptNetwork).text = "Yenkasa Chain"
+        findViewById<TextView>(R.id.textReceiptStatus).text = getString(R.string.transaction_status_success)
+        findViewById<TextView>(R.id.textReceiptNetwork).text = getString(R.string.yenkasa_chain)
         findViewById<TextView>(R.id.textReceiptBlock).text =
-            "#${buildBlockNumber(transaction.transactionId)}"
-        findViewById<TextView>(R.id.textReceiptConfirmations).text = "12"
+            getString(R.string.block_number_format, buildBlockNumber(transaction.transactionId))
+        findViewById<TextView>(R.id.textReceiptConfirmations).text = getString(R.string.transaction_confirmations_count, 12)
 
         findViewById<TextView>(R.id.textReceiptFrom).text =
-            if (isOutgoing) "You\n${shorten(transaction.from)}" else displayParty(transaction.senderUsername, transaction.from)
+            if (isOutgoing) {
+                getString(R.string.user_wallet_summary_format, getString(R.string.you), shorten(transaction.from))
+            } else {
+                displayParty(transaction.senderUsername, transaction.from)
+            }
         findViewById<TextView>(R.id.textReceiptTo).text =
-            if (isOutgoing) displayParty(transaction.recipientUsername, transaction.to) else "You\n${shorten(transaction.to)}"
+            if (isOutgoing) {
+                displayParty(transaction.recipientUsername, transaction.to)
+            } else {
+                getString(R.string.user_wallet_summary_format, getString(R.string.you), shorten(transaction.to))
+            }
         findViewById<TextView>(R.id.textReceiptSummaryAmount).text =
-            "${formatCoins(transaction.amount)} YKC"
+            getString(R.string.ykc_amount_format, formatCoins(transaction.amount))
         findViewById<TextView>(R.id.textReceiptFee).text =
-            "${formatCoins(NETWORK_FEE)} YKC"
+            getString(R.string.ykc_amount_format, formatCoins(NETWORK_FEE))
         findViewById<TextView>(R.id.textReceiptTotal).text =
-            "${formatCoins(total)} YKC"
+            getString(R.string.ykc_amount_format, formatCoins(total))
 
         findViewById<android.view.View>(R.id.buttonReceiptBack).setOnClickListener { finish() }
         findViewById<android.view.View>(R.id.buttonReceiptShare).setOnClickListener {
@@ -104,7 +115,7 @@ class TransactionReceiptActivity : AppCompatActivity() {
     private fun displayParty(username: String?, walletId: String): String {
         return listOfNotNull(username?.takeIf { it.isNotBlank() }, shorten(walletId).takeIf { it.isNotBlank() })
             .joinToString("\n")
-            .ifBlank { "Unknown" }
+            .ifBlank { getString(R.string.unknown) }
     }
 
     private fun shorten(value: String): String {
@@ -129,7 +140,7 @@ class TransactionReceiptActivity : AppCompatActivity() {
             val date = parser.parse(value) ?: return value
             SimpleDateFormat("MMM d, yyyy • hh:mm a", Locale.getDefault()).format(date)
         } catch (_: Exception) {
-            value.ifBlank { "Pending" }
+            value.ifBlank { getString(R.string.pending) }
         }
     }
 
@@ -139,13 +150,17 @@ class TransactionReceiptActivity : AppCompatActivity() {
     }
 
     private fun shareReceipt(transaction: TransactionUiModel, amountText: String) {
-        val shareText = "Yenkasa transaction ${transaction.transactionId}: $amountText"
+        val shareText = getString(
+            R.string.transaction_share_text_format,
+            transaction.transactionId,
+            amountText
+        )
         startActivity(
             Intent.createChooser(
                 Intent(Intent.ACTION_SEND)
                     .setType("text/plain")
                     .putExtra(Intent.EXTRA_TEXT, shareText),
-                "Share receipt"
+                getString(R.string.transaction_receipt_share_title)
             )
         )
     }

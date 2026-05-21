@@ -9,10 +9,12 @@ class StatusChip extends StatelessWidget {
     super.key,
     required this.label,
     this.tone = StatusTone.neutral,
+    this.compact = false,
   });
 
   final String label;
   final StatusTone tone;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -40,13 +42,18 @@ class StatusChip extends StatelessWidget {
       ),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 6 : 8,
+      ),
       decoration: BoxDecoration(
         color: colors.$2,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: colors.$1,
           fontWeight: FontWeight.w700,

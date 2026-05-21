@@ -68,6 +68,7 @@ class AiShell extends ConsumerWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final compactTopBar = constraints.maxWidth < 760;
             return Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -103,56 +104,134 @@ class AiShell extends ConsumerWidget {
                               horizontal: 20,
                               vertical: 16,
                             ),
-                            child: Row(
-                              children: [
-                                if (!isDesktop)
-                                  Builder(
-                                    builder: (context) => IconButton(
-                                      onPressed: () =>
-                                          Scaffold.of(context).openDrawer(),
-                                      icon: const Icon(Icons.menu_rounded),
-                                    ),
-                                  ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    decoration: InputDecoration(
-                                      hintText:
-                                          'Search prompts, architecture, moderation, or rewards',
-                                      prefixIcon: const Icon(
-                                        Icons.search_rounded,
+                            child: compactTopBar
+                                ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          if (!isDesktop)
+                                            Builder(
+                                              builder: (context) => IconButton(
+                                                onPressed: () => Scaffold.of(
+                                                  context,
+                                                ).openDrawer(),
+                                                icon: const Icon(
+                                                  Icons.menu_rounded,
+                                                ),
+                                              ),
+                                            ),
+                                          Expanded(
+                                            child: Text(
+                                              'YenkasaAI Workspace',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: () {
+                                              ref
+                                                      .read(
+                                                        themeModeProvider
+                                                            .notifier,
+                                                      )
+                                                      .state =
+                                                  themeMode == ThemeMode.dark
+                                                  ? ThemeMode.light
+                                                  : ThemeMode.dark;
+                                            },
+                                            icon: Icon(
+                                              themeMode == ThemeMode.dark
+                                                  ? Icons.light_mode_rounded
+                                                  : Icons.dark_mode_rounded,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      suffixIcon: IconButton(
-                                        onPressed: () =>
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        decoration: InputDecoration(
+                                          hintText:
+                                              'Search prompts, architecture, moderation, or rewards',
+                                          prefixIcon: const Icon(
+                                            Icons.search_rounded,
+                                          ),
+                                          suffixIcon: IconButton(
+                                            onPressed: () =>
+                                                context.go('/knowledge'),
+                                            icon: const Icon(
+                                              Icons.arrow_forward_rounded,
+                                            ),
+                                          ),
+                                        ),
+                                        onSubmitted: (_) =>
                                             context.go('/knowledge'),
-                                        icon: const Icon(
-                                          Icons.arrow_forward_rounded,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const HealthIndicator(compact: true),
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      if (!isDesktop)
+                                        Builder(
+                                          builder: (context) => IconButton(
+                                            onPressed: () => Scaffold.of(
+                                              context,
+                                            ).openDrawer(),
+                                            icon: const Icon(
+                                              Icons.menu_rounded,
+                                            ),
+                                          ),
+                                        ),
+                                      if (!isDesktop) const SizedBox(width: 8),
+                                      Expanded(
+                                        child: TextField(
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                'Search prompts, architecture, moderation, or rewards',
+                                            prefixIcon: const Icon(
+                                              Icons.search_rounded,
+                                            ),
+                                            suffixIcon: IconButton(
+                                              onPressed: () =>
+                                                  context.go('/knowledge'),
+                                              icon: const Icon(
+                                                Icons.arrow_forward_rounded,
+                                              ),
+                                            ),
+                                          ),
+                                          onSubmitted: (_) =>
+                                              context.go('/knowledge'),
                                         ),
                                       ),
-                                    ),
-                                    onSubmitted: (_) =>
-                                        context.go('/knowledge'),
+                                      const SizedBox(width: 16),
+                                      const HealthIndicator(),
+                                      const SizedBox(width: 12),
+                                      IconButton(
+                                        onPressed: () {
+                                          ref
+                                                  .read(
+                                                    themeModeProvider.notifier,
+                                                  )
+                                                  .state =
+                                              themeMode == ThemeMode.dark
+                                              ? ThemeMode.light
+                                              : ThemeMode.dark;
+                                        },
+                                        icon: Icon(
+                                          themeMode == ThemeMode.dark
+                                              ? Icons.light_mode_rounded
+                                              : Icons.dark_mode_rounded,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                const HealthIndicator(),
-                                const SizedBox(width: 12),
-                                IconButton(
-                                  onPressed: () {
-                                    ref
-                                        .read(themeModeProvider.notifier)
-                                        .state = themeMode == ThemeMode.dark
-                                        ? ThemeMode.light
-                                        : ThemeMode.dark;
-                                  },
-                                  icon: Icon(
-                                    themeMode == ThemeMode.dark
-                                        ? Icons.light_mode_rounded
-                                        : Icons.dark_mode_rounded,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
                           const SizedBox(height: 16),
                           Expanded(child: SingleChildScrollView(child: child)),
@@ -183,6 +262,7 @@ class _SidebarDrawer extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: _SidebarPanel(
           currentLocation: GoRouterState.of(context).uri.path,
+          scrollable: true,
         ),
       ),
     );
@@ -190,107 +270,110 @@ class _SidebarDrawer extends StatelessWidget {
 }
 
 class _SidebarPanel extends StatelessWidget {
-  const _SidebarPanel({required this.currentLocation});
+  const _SidebarPanel({required this.currentLocation, this.scrollable = false});
 
   final String currentLocation;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return SizedBox(
-      width: 298,
+      width: scrollable ? double.infinity : 298,
       child: GlassCard(
         strong: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AppLogo(),
-            const SizedBox(height: 28),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF5B21B6),
-                    Color(0xFF7C3AED),
-                    Color(0xFF3B82F6),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppLogo(),
+              const SizedBox(height: 28),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF5B21B6),
+                      Color(0xFF7C3AED),
+                      Color(0xFF3B82F6),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Control Plane',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: Colors.white70,
+                        letterSpacing: 1.6,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Engineering intelligence workspace',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'RAG answers, moderation signals, ingestion health, and infrastructure analytics in one place.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton.tonal(
+                      onPressed: () => context.go('/'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.18),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Launchpad'),
+                    ),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
               ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Control Plane',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: Colors.white70,
-                      letterSpacing: 1.6,
-                      fontWeight: FontWeight.w700,
-                    ),
+              const SizedBox(height: 24),
+              for (final item in navItems)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _NavButton(
+                    item: item,
+                    active: currentLocation == item.route,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Engineering intelligence workspace',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                ),
+              SizedBox(height: scrollable ? 24 : 72),
+              GlassCard(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Runtime',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'RAG answers, moderation signals, ingestion health, and infrastructure analytics in one place.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton.tonal(
-                    onPressed: () => context.go('/'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.18),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Launchpad'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            for (final item in navItems)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _NavButton(
-                  item: item,
-                  active: currentLocation == item.route,
+                    const SizedBox(height: 16),
+                    _runtimeRow(context, 'Generation', 'Vertex AI'),
+                    const SizedBox(height: 10),
+                    _runtimeRow(context, 'Retrieval', 'Chroma + HF'),
+                    const SizedBox(height: 10),
+                    _runtimeRow(context, 'Future', 'Voice + Auth'),
+                  ],
                 ),
               ),
-            const Spacer(),
-            GlassCard(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Runtime',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _runtimeRow(context, 'Generation', 'Vertex AI'),
-                  const SizedBox(height: 10),
-                  _runtimeRow(context, 'Retrieval', 'Chroma + HF'),
-                  const SizedBox(height: 10),
-                  _runtimeRow(context, 'Future', 'Voice + Auth'),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -73,7 +73,7 @@ class CommunitiesActivity : AppCompatActivity() {
         Log.d("CommunitiesActivity", "Retrieved token from TokenManager: $token")
 
         if (token == null) {
-            Toast.makeText(this, "Please log in", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.login_required, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -162,8 +162,9 @@ class CommunitiesActivity : AppCompatActivity() {
         layoutMyCommunitiesHeader.visibility = if (showJoined) View.VISIBLE else View.GONE
         recyclerJoinedCommunities.visibility = if (showJoined) View.VISIBLE else View.GONE
         dividerAfterJoined.visibility = if (showJoined) View.VISIBLE else View.GONE
-        textJoinedCommunitiesTitle.text = "My Communities (${joinedCommunities.size})"
-        tabMyCommunities.text = "My Communities (${joinedCommunities.size})"
+        val label = getString(R.string.my_communities_with_count, joinedCommunities.size)
+        textJoinedCommunitiesTitle.text = label
+        tabMyCommunities.text = label
     }
 
     private fun setupJoinedCommunitiesRecyclerView() {
@@ -314,17 +315,17 @@ class CommunitiesActivity : AppCompatActivity() {
 
             // ID missing → stop here
             if (communityId == null) {
-                Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.invalid_community, Toast.LENGTH_SHORT).show()
                 // no return needed
             }
             // Already joined? stop
             else if (joinedCommunityIds.contains(communityId)) {
-                Toast.makeText(this, "Already a member", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.already_a_member, Toast.LENGTH_SHORT).show()
                 // no return needed
             }
             // Primary community? stop
             else if (primaryCommunityId == communityId) {
-                Toast.makeText(this, "Already your primary community", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.already_primary_community, Toast.LENGTH_SHORT).show()
                 // no return needed
             }
             else {
@@ -359,7 +360,7 @@ class CommunitiesActivity : AppCompatActivity() {
         if (communityId == null) {
             Log.e("LEAVE_COMMUNITY", "❌ Community ID is null")
             progressBar.visibility = View.GONE
-            Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.invalid_community_id, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -379,11 +380,11 @@ class CommunitiesActivity : AppCompatActivity() {
                     if (response.isSuccessful && body?.success == true) {
                         Log.d("LEAVE_COMMUNITY", "✔ Left successfully: ${body.message}")
 
-                        val displayName = community.displayName ?: "Community"
+                        val displayName = community.displayName ?: getString(R.string.community)
 
                         Toast.makeText(
                             this@CommunitiesActivity,
-                            "Left $displayName!",
+                            getString(R.string.left_community_success, displayName),
                             Toast.LENGTH_SHORT
                         ).show()
 
@@ -393,9 +394,9 @@ class CommunitiesActivity : AppCompatActivity() {
 
                     } else {
                         val message = body?.message ?: when (response.code()) {
-                            400 -> "You are not a member of this community"
-                            404 -> "Community not found"
-                            else -> "Failed to leave community"
+                            400 -> getString(R.string.not_member_of_community)
+                            404 -> getString(R.string.community_not_found)
+                            else -> getString(R.string.failed_to_leave_community)
                         }
 
                         Log.e("LEAVE_COMMUNITY", "❌ Leave failed: $message")
@@ -409,7 +410,7 @@ class CommunitiesActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@CommunitiesActivity,
-                        "Connection error. Try again.",
+                        R.string.connection_error_try_again,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -456,7 +457,7 @@ class CommunitiesActivity : AppCompatActivity() {
                     } else {
                         Toast.makeText(
                             this@CommunitiesActivity,
-                            "Failed to load communities",
+                            R.string.failed_to_load_communities,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -466,7 +467,7 @@ class CommunitiesActivity : AppCompatActivity() {
                     showLoading(false)
                     Toast.makeText(
                         this@CommunitiesActivity,
-                        "Error: ${t.message}",
+                        getString(R.string.error_loading_communities, t.message ?: getString(R.string.unknown_error)),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -494,7 +495,7 @@ class CommunitiesActivity : AppCompatActivity() {
                     adapter.notifyDataSetChanged()
 
                     if (communities.isEmpty()) {
-                        emptyView.text = "No communities found for \"$query\""
+                        emptyView.text = getString(R.string.no_communities_found_for_query, query)
                         emptyView.visibility = View.VISIBLE
                         recyclerView.visibility = View.GONE
                     } else {
@@ -504,7 +505,7 @@ class CommunitiesActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(
                         this@CommunitiesActivity,
-                        "Failed to search communities (${response.code()})",
+                        getString(R.string.failed_to_search_communities, response.code()),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -514,7 +515,7 @@ class CommunitiesActivity : AppCompatActivity() {
                 showLoading(false)
                 Toast.makeText(
                     this@CommunitiesActivity,
-                    "Search error: ${t.message}",
+                    getString(R.string.search_error_message, t.message ?: getString(R.string.unknown_error)),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -526,20 +527,27 @@ class CommunitiesActivity : AppCompatActivity() {
         val canEdit = canEditCommunity(community)
 
         val dialogBuilder = android.app.AlertDialog.Builder(this)
-            .setTitle(community.displayName ?: community.name ?: "Community")
+            .setTitle(community.displayName ?: community.name ?: getString(R.string.community))
             .setMessage(
-                "${community.description.orEmpty().ifBlank { "No description yet." }}\n\n" +
-                        "Location: ${community.location ?: "Interest-based"}\n" +
-                        "Members: ${community.memberCount}\n" +
-                        "Posts: ${community.postCount}\n" +
-                        "Status: ${if (community.isApproved) "Approved" else "Pending approval"}"
+                getString(
+                    R.string.community_dialog_message,
+                    community.description.orEmpty().ifBlank { getString(R.string.no_description_yet) },
+                    community.location ?: getString(R.string.location_interest_based),
+                    community.memberCount,
+                    community.postCount,
+                    if (community.isApproved) {
+                        getString(R.string.community_status_approved)
+                    } else {
+                        getString(R.string.community_status_pending_approval)
+                    }
+                )
             )
 
-        dialogBuilder.setPositiveButton("View Feed") { _, _ ->
+        dialogBuilder.setPositiveButton(R.string.view_feed) { _, _ ->
             openCommunityFeed(community)
         }
 
-        dialogBuilder.setNegativeButton(if (isMember) "Leave" else "Join") { _, _ ->
+        dialogBuilder.setNegativeButton(if (isMember) getString(R.string.leave) else getString(R.string.join)) { _, _ ->
             if (isMember) leaveCommunity(community) else joinCommunity(community)
         }
 
@@ -598,7 +606,7 @@ class CommunitiesActivity : AppCompatActivity() {
     private fun openCommunityFeed(community: Community) {
         val communityId = community.id
         if (communityId.isNullOrBlank()) {
-            Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.invalid_community, Toast.LENGTH_SHORT).show()
             return
         }
         val intent = Intent(this, MainActivity::class.java)
@@ -618,7 +626,7 @@ class CommunitiesActivity : AppCompatActivity() {
     private fun openEditCommunity(community: Community) {
         val communityId = community.id
         if (communityId.isNullOrBlank()) {
-            Toast.makeText(this, "Invalid community", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.invalid_community, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -639,19 +647,19 @@ class CommunitiesActivity : AppCompatActivity() {
 
         if (communityId.isNullOrEmpty()) {
             Log.e("JOIN_COMMUNITY", "❌ ERROR: community.id is NULL")
-            Toast.makeText(this, "Invalid community ID", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.invalid_community_id, Toast.LENGTH_SHORT).show()
             return
         }
 
         // 🔒 Prevent joining a community the user already joined
         if (joinedCommunityIds.contains(communityId)) {
-            Toast.makeText(this, "Already a member", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.already_a_member, Toast.LENGTH_SHORT).show()
             return
         }
 
         // 🔒 Prevent joining the primary community again
         if (primaryCommunityId != null && primaryCommunityId == communityId) {
-            Toast.makeText(this, "Already your primary community", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.already_primary_community, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -679,15 +687,18 @@ class CommunitiesActivity : AppCompatActivity() {
 
                             Toast.makeText(
                                 this@CommunitiesActivity,
-                                "Joined ${community.displayName ?: "community"}!",
+                                getString(
+                                    R.string.joined_community_success,
+                                    community.displayName ?: getString(R.string.community)
+                                ),
                                 Toast.LENGTH_SHORT
                             ).show()
 
                             // Save locally
                             TokenManager.saveSelectedCommunity(
                                 context = this@CommunitiesActivity,
-                                communityId = communityId,
-                                communityName = community.displayName ?: ""
+                            communityId = communityId,
+                                communityName = community.displayName ?: getString(R.string.community)
                             )
 
                             // Reload lists
@@ -697,21 +708,17 @@ class CommunitiesActivity : AppCompatActivity() {
 
                         response.code() == 404 -> {
                             Log.e("JOIN_COMMUNITY", "❌ ERROR: Community not found")
-                            Toast.makeText(this@CommunitiesActivity, "Community not found.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@CommunitiesActivity, R.string.community_not_found, Toast.LENGTH_LONG).show()
                         }
 
                         response.code() == 403 -> {
                             Log.e("JOIN_COMMUNITY", "❌ ERROR: Join limit reached")
-                            Toast.makeText(
-                                this@CommunitiesActivity,
-                                "You can join up to 5 communities: 2 at signup and 3 more in the app.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            Toast.makeText(this@CommunitiesActivity, R.string.community_join_limit_reached, Toast.LENGTH_LONG).show()
                         }
 
                         else -> {
                             Log.e("JOIN_COMMUNITY", "❌ ERROR: Failed to join")
-                            Toast.makeText(this@CommunitiesActivity, "Failed to join community.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@CommunitiesActivity, R.string.failed_to_join_community, Toast.LENGTH_LONG).show()
                         }
                     }
                 }
@@ -719,7 +726,7 @@ class CommunitiesActivity : AppCompatActivity() {
                 override fun onFailure(call: Call<JoinCommunityResponse>, t: Throwable) {
                     progressBar.visibility = View.GONE
                     Log.e("JOIN_COMMUNITY", "❌ NETWORK ERROR: ${t.message}", t)
-                    Toast.makeText(this@CommunitiesActivity, "Connection error. Try again.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CommunitiesActivity, R.string.connection_error_try_again, Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -753,7 +760,7 @@ class CommunitiesActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "You need a privileged role or verified creator access to create a community.",
+                    R.string.create_community_requires_access,
                     Toast.LENGTH_LONG
                 ).show()
             }

@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 const cron = require('node-cron');
 const Announcement = require('../models/announcement.model');
-const Notification = require('../models/notifications.model');
 const User = require('../models/user.model');
 const { cloudinary } = require('../config/cloudinary');
 const { getPermissions } = require('../middleware/permissions');
+const { sendNotification } = require('../services/notification.service');
 
 const CHANNEL_NAME = 'Yenkasa Updates';
 const MAX_MEDIA_FILES = 5;
@@ -261,8 +261,11 @@ async function dispatchAnnouncementNotifications(announcement) {
     .map(userId => String(userId))
     .filter(userId => userId !== String(announcement.authorId));
 
+  const previewText = stripRichText(announcement.message).slice(0, 160) || announcement.title;
+  const serialized = serializeAnnouncement(announcement.toObject ? announcement.toObject() : announcement);
+
   if (receiverIds.length) {
-    const docs = receiverIds.map(receiverId => ({
+    const notificationJobs = receiverIds.map(receiverId => sendNotification({
       type: 'announcement',
       senderId: announcement.authorId,
       receiverId,
@@ -271,18 +274,36 @@ async function dispatchAnnouncementNotifications(announcement) {
       targetId: String(announcement._id),
       targetUrl: buildAnnouncementTargetUrl(announcement),
       message: announcement.title,
-      status: 'unread',
-      createdAt: announcement.publishedAt || announcement.createdAt || new Date()
+      push: true,
+      pushTitle: announcement.title,
+      pushBody: previewText,
+      pushData: {
+        announcementId: String(announcement._id),
+        previewText,
+        mediaThumbnail: serialized.primaryThumbnailUrl || '',
+        targetUrl: buildAnnouncementTargetUrl(announcement)
+      },
+      allowSelfNotification: true,
+      pushCollapseId: `announcement_${announcement._id}`,
+      pushAndroidGroup: 'yenkasa_updates',
+      pushAndroidGroupMessage: '$[notif_count] new Yenkasa updates'
     }));
 
-    await Notification.insertMany(docs, { ordered: false });
+    const results = await Promise.allSettled(notificationJobs);
+    const rejected = results.filter(result => result.status === 'rejected');
+    if (rejected.length) {
+      console.error('[announcements] some notifications failed to dispatch', {
+        announcementId: String(announcement._id),
+        failedCount: rejected.length
+      });
+    }
   }
 
   announcement.notificationsDispatchedAt = new Date();
   await announcement.save();
 
   if (global.io) {
-    global.io.emit('newAnnouncement', serializeAnnouncement(announcement.toObject ? announcement.toObject() : announcement));
+    global.io.emit('newAnnouncement', serialized);
   }
 }
 

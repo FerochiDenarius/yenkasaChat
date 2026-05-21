@@ -99,7 +99,8 @@ async function sendNotification({
     pushAndroidGroupMessage = null,
     pushTtl = null,
     pushPriority = null,
-    excludePlayerIds = []
+    excludePlayerIds = [],
+    allowSelfNotification = false
 }) {
     try {
         if (!type || !senderId || !receiverId || !message) {
@@ -107,7 +108,7 @@ async function sendNotification({
             return false;
         }
 
-        if (senderId.toString() === receiverId.toString()) {
+        if (!allowSelfNotification && senderId.toString() === receiverId.toString()) {
             console.warn("[NotificationService] Skipping self notification", {
                 type,
                 senderId: senderId.toString(),

@@ -234,6 +234,11 @@ class UserNotificationsActivity : AppCompatActivity() {
                     val notif = parseNotification(data)
                     if (isMutedNotification(notif)) return@runOnUiThread
 
+                    if (isAnnouncementItem(notif)) {
+                        triggerLocalNotification(notif)
+                        return@runOnUiThread
+                    }
+
                     val updated = allNotifications.toMutableList()
                     updated.add(0, notif)
 

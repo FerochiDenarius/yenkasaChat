@@ -245,7 +245,11 @@ router.get("/all", auth, async (req, res) => {
       ? visibleNotifications
       : visibleNotifications.filter(n => String(n.type || "").toLowerCase() !== "community_post");
 
-    const commentIds = preferenceFilteredNotifications
+    const nonAnnouncementNotifications = preferenceFilteredNotifications.filter(
+      n => String(n.type || "").toLowerCase() !== "announcement"
+    );
+
+    const commentIds = nonAnnouncementNotifications
       .filter(n => String(n.targetType || "").toLowerCase() === "comment")
       .flatMap(n => [n.targetId, n.activityId])
       .filter(Boolean);
@@ -260,7 +264,7 @@ router.get("/all", auth, async (req, res) => {
       comments.map(comment => [comment._id.toString(), comment.postId?.toString?.() || null])
     );
 
-    const formatted = preferenceFilteredNotifications.map(n => {
+    const formatted = nonAnnouncementNotifications.map(n => {
       const commentId = String(n.targetType || "").toLowerCase() === "comment"
         ? (n.targetId || n.activityId || null)
         : null;

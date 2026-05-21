@@ -132,8 +132,8 @@ class CoinWalletActivity : AppCompatActivity() {
         navWalletProfile = findViewById(R.id.navWalletProfile)
         recyclerViewTransactions = findViewById(R.id.recyclerViewTransactions)
 
-        tvTitle.text = "Yenkasa Coin Wallet"
-        tvBalanceLabel.text = "Current Balance"
+        tvTitle.text = getString(R.string.coin_wallet_title)
+        tvBalanceLabel.text = getString(R.string.current_balance)
         refreshWalletHero()
 
         // RecyclerView
@@ -160,11 +160,11 @@ class CoinWalletActivity : AppCompatActivity() {
         }
 
         btnWalletConvert.setOnClickListener {
-            Toast.makeText(this, "Convert will be available when YKC exchange is ready", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_convert_unavailable, Toast.LENGTH_SHORT).show()
         }
 
         btnWalletScan.setOnClickListener {
-            Toast.makeText(this, "Scan will be available when wallet QR payments are ready", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_scan_unavailable, Toast.LENGTH_SHORT).show()
         }
 
         btnWalletCopyAddress.setOnClickListener {
@@ -176,7 +176,7 @@ class CoinWalletActivity : AppCompatActivity() {
         }
 
         textWalletExplorer.setOnClickListener {
-            Toast.makeText(this, "Explorer will be available after blockchain integration", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_explorer_unavailable, Toast.LENGTH_SHORT).show()
         }
 
         tabRecentTransactions.setOnClickListener {
@@ -190,7 +190,7 @@ class CoinWalletActivity : AppCompatActivity() {
         }
 
         btnWalletFilter.setOnClickListener {
-            Toast.makeText(this, "Transaction filters will be available after wallet categories are finalized", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_filters_unavailable, Toast.LENGTH_SHORT).show()
         }
 
         navWalletHome.setOnClickListener {
@@ -202,7 +202,7 @@ class CoinWalletActivity : AppCompatActivity() {
         }
 
         navWalletExplore.setOnClickListener {
-            Toast.makeText(this, "Explore tab will be connected after the shared bottom navigation is ready", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_explore_unavailable, Toast.LENGTH_SHORT).show()
         }
 
         navWalletWallet.setOnClickListener {
@@ -210,7 +210,7 @@ class CoinWalletActivity : AppCompatActivity() {
         }
 
         navWalletRewards.setOnClickListener {
-            Toast.makeText(this, "Rewards tab will be connected after the rewards page is ready", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_rewards_unavailable, Toast.LENGTH_SHORT).show()
         }
 
         navWalletProfile.setOnClickListener {
@@ -242,17 +242,17 @@ class CoinWalletActivity : AppCompatActivity() {
                         val body = response.body()!!
                         val roundedBalance = body.balance.toInt()
                         updateBalance(roundedBalance, body.walletId, animate = roundedBalance != currentBalance)
-                        textWalletAddress.text = body.walletId?.let { shortenWalletId(it) } ?: "Wallet pending"
+                        textWalletAddress.text = body.walletId?.let { shortenWalletId(it) } ?: getString(R.string.wallet_pending)
                     } else {
                         currentBalance = 0
-                        textWalletAddress.text = "Wallet pending"
+                        textWalletAddress.text = getString(R.string.wallet_pending)
                         refreshWalletHero()
                     }
                 }
 
                 override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
                     currentBalance = 0
-                    textWalletAddress.text = "Wallet unavailable"
+                    textWalletAddress.text = getString(R.string.wallet_unavailable)
                     refreshWalletHero()
                 }
             })
@@ -276,7 +276,7 @@ class CoinWalletActivity : AppCompatActivity() {
                     response: Response<CoinTransactionResponse>
                 ) {
                     if (!response.isSuccessful || response.body() == null) {
-                        Toast.makeText(this@CoinWalletActivity, "Failed to load transactions", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@CoinWalletActivity, R.string.wallet_failed_to_load_transactions, Toast.LENGTH_SHORT).show()
                         return
                     }
 
@@ -323,7 +323,7 @@ class CoinWalletActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<CoinTransactionResponse>, t: Throwable) {
-                    Toast.makeText(this@CoinWalletActivity, "Failed to load transactions", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CoinWalletActivity, R.string.wallet_failed_to_load_transactions, Toast.LENGTH_SHORT).show()
                     refreshWalletHero()
                 }
             })
@@ -380,7 +380,7 @@ class CoinWalletActivity : AppCompatActivity() {
 
     private fun refreshWalletHero() {
         tvBalance.text = if (isBalanceHidden) "••••" else formatCoinAmount(currentBalance)
-        textWalletUsdValue.text = "Value depends on platform revenue"
+        textWalletUsdValue.text = getString(R.string.wallet_value_depends_on_platform_revenue)
 
         val walletId = currentWalletId
         val totalEarned = allTransactions
@@ -390,9 +390,9 @@ class CoinWalletActivity : AppCompatActivity() {
             .filter { tx -> walletId != null && tx.from == walletId }
             .sumOf { it.amount }
 
-        textWalletTotalEarned.text = "Total Earned\n${formatWholeCoins(totalEarned)} YKC ↑"
-        textWalletTotalSpent.text = "Total Spent\n${formatWholeCoins(totalSpent)} YKC ↓"
-        textWalletTransactionsCount.text = "Transactions\n${formatWholeCoins(allTransactions.size)}"
+        textWalletTotalEarned.text = getString(R.string.wallet_total_earned_format, formatWholeCoins(totalEarned))
+        textWalletTotalSpent.text = getString(R.string.wallet_total_spent_format, formatWholeCoins(totalSpent))
+        textWalletTransactionsCount.text = getString(R.string.wallet_transactions_count_format, formatWholeCoins(allTransactions.size))
     }
 
     private fun updateBalance(newBalance: Int, walletId: String?, animate: Boolean) {
@@ -488,13 +488,13 @@ class CoinWalletActivity : AppCompatActivity() {
     private fun copyWalletAddress() {
         val walletId = currentWalletId
         if (walletId.isNullOrBlank()) {
-            Toast.makeText(this, "Wallet address is not available yet", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.wallet_address_not_available, Toast.LENGTH_SHORT).show()
             return
         }
 
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Yenkasa wallet address", walletId))
-        Toast.makeText(this, "Wallet address copied", Toast.LENGTH_SHORT).show()
+        clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.wallet_clipboard_label), walletId))
+        Toast.makeText(this, R.string.wallet_address_copied, Toast.LENGTH_SHORT).show()
     }
 
     private enum class TransactionTab {
@@ -529,7 +529,7 @@ class CoinWalletActivity : AppCompatActivity() {
             val soundUri = NotificationSoundManager.getSoundUri(this@CoinWalletActivity)
 
             val body = tx.description.ifBlank {
-                "You received ${formatWholeCoins(tx.amount)} YKC"
+                getString(R.string.wallet_reward_received, formatWholeCoins(tx.amount))
             }
 
             val notification = NotificationCompat.Builder(
@@ -537,7 +537,7 @@ class CoinWalletActivity : AppCompatActivity() {
                 channelId
             )
                 .setSmallIcon(R.drawable.ic_coin)
-                .setContentTitle("Reward Earned!")
+                .setContentTitle(getString(R.string.reward_earned))
                 .setContentText(body)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)

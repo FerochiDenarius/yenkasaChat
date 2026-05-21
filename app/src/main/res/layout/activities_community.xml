@@ -41,7 +41,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Communities"
+                            android:text="@string/communities"
                             android:textColor="@color/account_primary_text"
                             android:textSize="23sp"
                             android:textStyle="bold" />
@@ -50,7 +50,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="Connect. Share. Grow together."
+                            android:text="@string/communities_subtitle"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -62,7 +62,7 @@
                         android:layout_marginEnd="9dp"
                         android:background="@drawable/bg_account_circle_button"
                         android:iconifiedByDefault="true"
-                        android:queryHint="Search communities..." />
+                        android:queryHint="@string/search_communities_hint" />
 
                     <TextView
                         android:id="@+id/btnCreateCommunity"
@@ -94,7 +94,7 @@
                         android:layout_weight="1"
                         android:background="@drawable/bg_community_tab_selected"
                         android:gravity="center"
-                        android:text="My Communities"
+                        android:text="@string/my_communities"
                         android:textColor="@color/yenkasa_black"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -105,7 +105,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center"
-                        android:text="All Communities"
+                        android:text="@string/all_communities"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -124,7 +124,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="My Communities"
+                        android:text="@string/my_communities"
                         android:textColor="@color/account_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -132,7 +132,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="See All  ›"
+                        android:text="@string/see_all_chevron"
                         android:textColor="@color/account_accent_gold"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -165,7 +165,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Discover Communities"
+                        android:text="@string/discover_communities"
                         android:textColor="@color/account_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -173,7 +173,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="See All  ›"
+                        android:text="@string/see_all_chevron"
                         android:textColor="@color/account_accent_gold"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -193,7 +193,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:gravity="center"
-                    android:text="No communities found"
+                    android:text="@string/no_communities_found"
                     android:textColor="@color/account_secondary_text"
                     android:textSize="14sp"
                     android:visibility="gone" />
@@ -213,7 +213,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:text="Popular Categories"
+                    android:text="@string/popular_categories"
                     android:textColor="@color/account_secondary_text"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -236,27 +236,27 @@
 
                         <TextView
                             style="@style/CommunityCategoryChip"
-                            android:text="★  All" />
+                            android:text="@string/community_category_all" />
 
                         <TextView
                             style="@style/CommunityCategoryChip"
                             android:layout_marginStart="8dp"
-                            android:text="♫  Music" />
+                            android:text="@string/community_category_music" />
 
                         <TextView
                             style="@style/CommunityCategoryChip"
                             android:layout_marginStart="8dp"
-                            android:text="▣  Business" />
+                            android:text="@string/community_category_business" />
 
                         <TextView
                             style="@style/CommunityCategoryChip"
                             android:layout_marginStart="8dp"
-                            android:text="⌘  Tech" />
+                            android:text="@string/community_category_tech" />
 
                         <TextView
                             style="@style/CommunityCategoryChip"
                             android:layout_marginStart="8dp"
-                            android:text="More  ▾" />
+                            android:text="@string/community_category_more" />
                     </LinearLayout>
                 </HorizontalScrollView>
 
@@ -300,7 +300,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Home"
+                android:text="@string/home"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -325,7 +325,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Wallet"
+                android:text="@string/wallet"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -350,7 +350,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Send"
+                android:text="@string/send"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -375,7 +375,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Receive"
+                android:text="@string/receive"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -400,7 +400,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Profile"
+                android:text="@string/profile"
                 android:textColor="@color/community_create_button_bg"
                 android:textSize="10sp"
                 android:textStyle="bold" />
@@ -412,7 +412,7 @@
         android:layout_width="1dp"
         android:layout_height="1dp"
         android:alpha="0"
-        android:contentDescription="Create community"
+        android:contentDescription="@string/create_community_content_description"
         app:layout_anchor="@id/swipeRefreshCommunities"
         app:layout_anchorGravity="bottom|end"
         app:srcCompat="@drawable/ic_add" />

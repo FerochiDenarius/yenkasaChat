@@ -30,7 +30,7 @@
                 android:layout_height="38dp"
                 android:background="@drawable/bg_wallet_pill"
                 android:clickable="true"
-                android:contentDescription="Back"
+                android:contentDescription="@string/back"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:padding="10dp"
@@ -49,7 +49,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:includeFontPadding="false"
-                    android:text="Yenkasa Coin Wallet"
+                    android:text="@string/coin_wallet_title"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -59,7 +59,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:includeFontPadding="false"
-                    android:text="Secure • Decentralized • Yours"
+                    android:text="@string/wallet_subtitle_secure"
                     android:textColor="@color/wallet_secondary_text"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -69,7 +69,7 @@
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="@drawable/bg_wallet_pill"
-                android:contentDescription="Notifications"
+                android:contentDescription="@string/notifications"
                 android:padding="9dp"
                 android:src="@drawable/ic_bell"
                 app:tint="@color/wallet_primary_text" />
@@ -110,7 +110,7 @@
                         android:id="@+id/tvBalanceLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Current Balance"
+                        android:text="@string/current_balance"
                         android:textColor="#B8C7BE"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -120,7 +120,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:layout_marginStart="6dp"
-                        android:contentDescription="Toggle balance visibility"
+                        android:contentDescription="@string/toggle_balance_visibility"
                         android:src="@drawable/ic_eye"
                         app:tint="#B8C7BE" />
                 </LinearLayout>
@@ -131,7 +131,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:includeFontPadding="false"
-                    android:text="0"
+                    android:text="@string/live_zero_viewers_short"
                     android:textColor="@color/white"
                     android:textSize="34sp"
                     android:textStyle="bold" />
@@ -140,7 +140,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="YENKASA COINS"
+                    android:text="@string/wallet_coins_caps"
                     android:textColor="@color/wallet_accent_green"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -154,7 +154,7 @@
                     android:gravity="center"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="6dp"
-                    android:text="Value depends on platform revenue"
+                    android:text="@string/wallet_value_depends_on_platform_revenue"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="10sp"
                     android:textStyle="bold" />
@@ -173,7 +173,7 @@
                         android:layout_weight="1"
                         android:includeFontPadding="false"
                         android:lineSpacingExtra="2dp"
-                        android:text="Total Earned\n--"
+                        android:text="@string/wallet_total_earned_placeholder"
                         android:textColor="#DDE7E1"
                         android:textSize="11sp" />
 
@@ -184,7 +184,7 @@
                         android:layout_weight="1"
                         android:includeFontPadding="false"
                         android:lineSpacingExtra="2dp"
-                        android:text="Total Spent\n--"
+                        android:text="@string/wallet_total_spent_placeholder"
                         android:textColor="#DDE7E1"
                         android:textSize="11sp" />
 
@@ -195,7 +195,7 @@
                         android:layout_weight="1"
                         android:includeFontPadding="false"
                         android:lineSpacingExtra="2dp"
-                        android:text="Transactions\n--"
+                        android:text="@string/wallet_transactions_placeholder"
                         android:textColor="#DDE7E1"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -225,7 +225,7 @@
                 android:drawableTop="@drawable/ic_send"
                 android:drawablePadding="4dp"
                 android:drawableTint="@color/wallet_accent_green"
-                android:text="Send\nCoins"
+                android:text="@string/wallet_send_coins"
                 android:textAllCaps="false"
                 android:textColor="@color/wallet_primary_text"
                 android:textSize="11sp"
@@ -245,7 +245,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="Receive\nCoins"
+                android:text="@string/wallet_receive_coins"
                 android:textColor="@color/wallet_primary_text"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -264,7 +264,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="Convert\nRevenue"
+                android:text="@string/wallet_convert_revenue"
                 android:textColor="@color/wallet_primary_text"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -283,7 +283,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="Scan\nPay"
+                android:text="@string/wallet_scan_pay"
                 android:textColor="@color/wallet_primary_text"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -315,7 +315,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Your Wallet Address"
+                    android:text="@string/wallet_address_title"
                     android:textColor="@color/wallet_secondary_text"
                     android:textSize="10sp" />
 
@@ -325,7 +325,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="middle"
                     android:maxLines="1"
-                    android:text="ykc1q23...pending"
+                    android:text="@string/wallet_address_placeholder"
                     android:textColor="@color/wallet_primary_text"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -337,7 +337,7 @@
                 android:layout_height="32dp"
                 android:background="@drawable/bg_wallet_pill"
                 android:clickable="true"
-                android:contentDescription="Copy wallet address"
+                android:contentDescription="@string/copy_wallet_address"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:padding="8dp"
@@ -354,7 +354,7 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:paddingHorizontal="8dp"
-                android:text="View on Explorer"
+                android:text="@string/wallet_view_on_explorer"
                 android:textColor="@color/wallet_accent_green"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -378,7 +378,7 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:paddingHorizontal="2dp"
-                android:text="Recent Transactions"
+                android:text="@string/recent_transactions"
                 android:textColor="@color/wallet_accent_green"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -393,7 +393,7 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
                 android:paddingHorizontal="2dp"
-                android:text="All Transactions"
+                android:text="@string/all_transactions"
                 android:textColor="@color/wallet_secondary_text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -412,7 +412,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center"
-                android:text="Filter"
+                android:text="@string/filter"
                 android:textColor="@color/wallet_primary_text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -453,7 +453,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Home"
+            android:text="@string/home"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
 
@@ -469,7 +469,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Explore"
+            android:text="@string/explore"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
 
@@ -486,7 +486,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Wallet"
+            android:text="@string/wallet"
             android:textColor="@color/wallet_accent_green"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -503,7 +503,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Rewards"
+            android:text="@string/rewards"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
 
@@ -519,7 +519,7 @@
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:text="Profile"
+            android:text="@string/profile"
             android:textColor="@color/wallet_secondary_text"
             android:textSize="11sp" />
     </LinearLayout>

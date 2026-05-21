@@ -120,7 +120,7 @@ class AccountInfoActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btnAccountLogout).setOnClickListener {
             TokenManager.clearAll(this)
-            Toast.makeText(this, "Logged out successfully.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.logged_out_successfully, Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
@@ -144,13 +144,13 @@ class AccountInfoActivity : AppCompatActivity() {
     }
 
     private fun loadProfileFromCache() {
-        usernameView.text = TokenManager.getUsername(this) ?: "Unknown"
-        emailView.text = TokenManager.getEmail(this) ?: "Not provided"
-        phoneView.text = TokenManager.getPhone(this) ?: "Not provided"
-        locationView.text = TokenManager.getLocation(this) ?: "No location"
+        usernameView.text = TokenManager.getUsername(this) ?: getString(R.string.unknown)
+        emailView.text = TokenManager.getEmail(this) ?: getString(R.string.account_not_provided)
+        phoneView.text = TokenManager.getPhone(this) ?: getString(R.string.account_not_provided)
+        locationView.text = TokenManager.getLocation(this) ?: getString(R.string.account_no_location)
         coinsBalanceView.text = formatCoins(TokenManager.getCoinsPrecise(this))
-        communityView.text = "Community: None"
-        dateJoinedView.text = "Joined: Unknown"
+        communityView.text = getString(R.string.account_communities_none)
+        dateJoinedView.text = getString(R.string.account_joined_unknown)
 
         Glide.with(this)
             .load(TokenManager.getProfilePicUrl(this) ?: R.drawable.default_avatar)
@@ -230,7 +230,7 @@ class AccountInfoActivity : AppCompatActivity() {
                         // ✅ Continue app logic
                         fetchFollowStats(user._id)
                     } else {
-                        Toast.makeText(this@AccountInfoActivity, "Failed to load profile", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AccountInfoActivity, R.string.failed_to_load_profile, Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -250,8 +250,8 @@ class AccountInfoActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<FollowResponse>, response: Response<FollowResponse>) {
                     if (response.isSuccessful && response.body() != null) {
                         val stats = response.body()!!
-                        followersCountView.text = "${stats.followersCount}\nFollowers"
-                        followingCountView.text = "${stats.followingCount}\nFollowing"
+                        followersCountView.text = getString(R.string.account_followers_count, stats.followersCount)
+                        followingCountView.text = getString(R.string.account_following_count, stats.followingCount)
                     }
                 }
 
@@ -264,16 +264,16 @@ class AccountInfoActivity : AppCompatActivity() {
 
     private fun updateUI(user: User) {
         usernameView.text = user.username
-        emailView.text = user.email ?: "Not provided"
-        phoneView.text = user.phone ?: "Not provided"
-        locationView.text = user.location ?: "No location"
+        emailView.text = user.email ?: getString(R.string.account_not_provided)
+        phoneView.text = user.phone ?: getString(R.string.account_not_provided)
+        locationView.text = user.location ?: getString(R.string.account_no_location)
         val balance = user.resolvedCoinsBalance()
         TokenManager.saveCoinsPrecise(this, balance)
         coinsBalanceView.text = formatCoins(balance)
 
         // ✅ Correct property — your Community model uses displayName, not name
-        communityView.text = "Communities: Loading..."
-        dateJoinedView.text = "Joined: ${formatDate(user.createdAt)}"
+        communityView.text = getString(R.string.account_communities_loading)
+        dateJoinedView.text = getString(R.string.account_joined_format, formatDate(user.createdAt))
 
         val roleName = user.roleName ?: user.role?.name ?: "user"
         UserBadgeUtils.applyBadge(iconVerified, user.verified, roleName, user.role)
@@ -331,7 +331,7 @@ class AccountInfoActivity : AppCompatActivity() {
                     response: Response<JoinedCommunitiesResponse>
                 ) {
                     if (!response.isSuccessful || response.body() == null) {
-                        communityView.text = "Communities: None"
+                        communityView.text = getString(R.string.account_communities_none)
                         return
                     }
 
@@ -349,19 +349,19 @@ class AccountInfoActivity : AppCompatActivity() {
                     finalList.addAll(joined)
 
                     if (finalList.isEmpty()) {
-                        communityView.text = "Communities: None"
+                        communityView.text = getString(R.string.account_communities_none)
                         return
                     }
 
                     val text = finalList.joinToString(", ") {
-                        it.displayName ?: it.name ?: "Unknown"
+                        it.displayName ?: it.name ?: getString(R.string.unknown)
                     }
 
-                    communityView.text = "Communities: $text"
+                    communityView.text = getString(R.string.account_communities_format, text)
                 }
 
                 override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
-                    communityView.text = "Communities: Failed to load"
+                    communityView.text = getString(R.string.account_communities_failed)
                 }
             })
     }
@@ -380,7 +380,7 @@ class AccountInfoActivity : AppCompatActivity() {
                         userPostsList.addAll(allPosts)
                         postAdapter.submitPosts(allPosts)
 
-                        postsCountView.text = "${allPosts.size}\nPosts"
+                        postsCountView.text = getString(R.string.account_posts_count, allPosts.size)
                     } else {
                         Log.w(TAG, "⚠️ Failed to load posts: ${response.code()} - ${response.message()}")
                     }
@@ -399,7 +399,7 @@ class AccountInfoActivity : AppCompatActivity() {
             val formatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
             formatter.format(date!!)
         } catch (e: Exception) {
-            "Unknown"
+            getString(R.string.unknown)
         }
     }
 

@@ -32,7 +32,7 @@
                     android:layout_width="38dp"
                     android:layout_height="38dp"
                     android:background="@drawable/bg_account_circle_button"
-                    android:contentDescription="Back"
+                    android:contentDescription="@string/back"
                     android:padding="10dp"
                     android:src="@drawable/ic_arrow_back"
                     app:tint="@color/account_primary_text" />
@@ -43,7 +43,7 @@
                     android:layout_weight="1"
                     android:fontFamily="sans"
                     android:gravity="center"
-                    android:text="Account Info"
+                    android:text="@string/account_info_title"
                     android:textColor="@color/account_primary_text"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -53,7 +53,7 @@
                     android:layout_width="38dp"
                     android:layout_height="38dp"
                     android:background="@drawable/bg_account_circle_button"
-                    android:contentDescription="Settings"
+                    android:contentDescription="@string/settings"
                     android:padding="10dp"
                     android:src="@drawable/ic_settings"
                     app:tint="@color/account_primary_text" />
@@ -82,7 +82,7 @@
                             android:layout_width="82dp"
                             android:layout_height="82dp"
                             android:layout_gravity="center"
-                            android:contentDescription="Profile picture"
+                            android:contentDescription="@string/profile_picture"
                             android:scaleType="centerCrop"
                             android:src="@drawable/default_avatar" />
 
@@ -114,7 +114,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans"
-                                android:text="Username"
+                                android:text="@string/username"
                                 android:textColor="@color/account_primary_text"
                                 android:textSize="22sp"
                                 android:textStyle="bold" />
@@ -124,7 +124,7 @@
                                 android:layout_width="18dp"
                                 android:layout_height="18dp"
                                 android:layout_marginStart="6dp"
-                                android:contentDescription="Verified badge"
+                                android:contentDescription="@string/verified_badge_content_description"
                                 android:src="@drawable/ic_verified"
                                 android:visibility="gone" />
                         </LinearLayout>
@@ -136,7 +136,7 @@
                             android:layout_marginTop="4dp"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="No location"
+                            android:text="@string/account_no_location"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -156,7 +156,7 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:lineSpacingExtra="3dp"
-                        android:text="0\nPosts"
+                        android:text="@string/account_posts_placeholder"
                         android:textColor="@color/account_primary_text"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -173,7 +173,7 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:lineSpacingExtra="3dp"
-                        android:text="0\nFollowers"
+                        android:text="@string/account_followers_placeholder"
                         android:textColor="@color/account_primary_text"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -190,7 +190,7 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:lineSpacingExtra="3dp"
-                        android:text="0\nFollowing"
+                        android:text="@string/account_following_placeholder"
                         android:textColor="@color/account_primary_text"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -227,7 +227,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="YenkasaCoins"
+                        android:text="@string/yenkasa_coins_label"
                         android:textColor="@color/account_secondary_text"
                         android:textSize="12sp" />
 
@@ -236,7 +236,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="0 YKC"
+                        android:text="@string/ykc_zero_balance"
                         android:textColor="@color/account_primary_text"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -246,7 +246,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_account_wallet_button"
-                    android:text="View Wallet  ›"
+                    android:text="@string/account_view_wallet"
                     android:textColor="@color/account_accent_gold"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -256,7 +256,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="About You"
+                android:text="@string/about_you"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="12sp" />
 
@@ -293,7 +293,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Joined"
+                            android:text="@string/joined_label"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -304,7 +304,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="Joined: Unknown"
+                            android:text="@string/account_joined_unknown"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -346,7 +346,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Role"
+                            android:text="@string/role_label"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -357,7 +357,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="User"
+                            android:text="@string/user"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -399,7 +399,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Communities"
+                            android:text="@string/communities"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -410,7 +410,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="Communities: None"
+                            android:text="@string/account_communities_none"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -427,7 +427,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Contact Information"
+                android:text="@string/contact_information"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="12sp" />
 
@@ -464,7 +464,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Email"
+                            android:text="@string/email"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -475,7 +475,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="user@example.com"
+                            android:text="@string/account_not_provided"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -517,7 +517,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Phone"
+                            android:text="@string/phone"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -528,7 +528,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="+233 000 000 000"
+                            android:text="@string/account_not_provided"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -545,7 +545,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Account"
+                android:text="@string/account_section_title"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="12sp" />
 
@@ -585,7 +585,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Security"
+                            android:text="@string/security"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -593,7 +593,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Password, 2FA, and security settings"
+                            android:text="@string/account_security_subtitle"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -638,7 +638,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Edit Profile"
+                            android:text="@string/edit_profile"
                             android:textColor="@color/account_primary_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -646,7 +646,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Update your profile information"
+                            android:text="@string/edit_profile_subtitle"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -691,7 +691,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Log Out"
+                            android:text="@string/log_out"
                             android:textColor="@color/account_danger"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -699,7 +699,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Sign out of your account"
+                            android:text="@string/account_logout_subtitle"
                             android:textColor="@color/account_secondary_text"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -716,7 +716,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:text="Posts"
+                android:text="@string/posts"
                 android:textColor="@color/account_primary_text"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -762,7 +762,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Home"
+                android:text="@string/home"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -787,7 +787,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Wallet"
+                android:text="@string/wallet"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -812,7 +812,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Send"
+                android:text="@string/send"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -837,7 +837,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Receive"
+                android:text="@string/receive"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -860,7 +860,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Profile"
+                android:text="@string/profile"
                 android:textColor="@color/account_accent_green"
                 android:textSize="10sp"
                 android:textStyle="bold" />

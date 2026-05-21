@@ -28,7 +28,7 @@
             <ImageView
                 android:layout_width="52dp"
                 android:layout_height="52dp"
-                android:contentDescription="Yenkasa"
+                android:contentDescription="@string/yenkasa_title"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_logo_emblem" />
 
@@ -43,7 +43,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:includeFontPadding="false"
-                    android:text="Yenkasa"
+                    android:text="@string/yenkasa_title"
                     android:textColor="@color/menu_primary_text"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -53,7 +53,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:includeFontPadding="false"
-                    android:text="Secure. Connect. Earn."
+                    android:text="@string/yenkasa_tagline_secure_connect_earn"
                     android:textColor="@color/menu_secondary_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -70,7 +70,7 @@
                 <ImageView
                     android:layout_width="16dp"
                     android:layout_height="16dp"
-                    android:contentDescription="Yenkasa coin"
+                    android:contentDescription="@string/yenkasa_coin_content_description"
                     android:src="@drawable/ic_coin" />
 
                 <TextView
@@ -79,7 +79,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:includeFontPadding="false"
-                    android:text="0 YKC"
+                    android:text="@string/ykc_zero_balance"
                     android:textColor="@color/menu_wallet_text"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -131,7 +131,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Contacts"
+                        android:text="@string/contacts"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -140,7 +140,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Manage saved contacts"
+                        android:text="@string/menu_contacts_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -180,7 +180,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Chat Rooms"
+                        android:text="@string/chat_rooms"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -189,7 +189,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="View all your chats"
+                        android:text="@string/menu_chat_rooms_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -229,7 +229,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Communities"
+                        android:text="@string/communities"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -238,7 +238,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Join or create communities"
+                        android:text="@string/menu_communities_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -278,7 +278,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Account Info"
+                        android:text="@string/account_info_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -287,7 +287,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Your account details"
+                        android:text="@string/menu_account_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -327,7 +327,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Wallet"
+                        android:text="@string/wallet"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -336,7 +336,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Your YKC balance"
+                        android:text="@string/menu_wallet_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -376,7 +376,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Edit Profile"
+                        android:text="@string/edit_profile"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -385,7 +385,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Update your profile"
+                        android:text="@string/menu_edit_profile_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -425,7 +425,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Verify Account"
+                        android:text="@string/verify_account"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -434,7 +434,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Verification options"
+                        android:text="@string/menu_verify_account_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -474,7 +474,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Yenkasa Verification"
+                        android:text="@string/menu_verification_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -483,7 +483,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Secure your identity"
+                        android:text="@string/menu_verification_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -523,7 +523,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Post Approvals"
+                        android:text="@string/menu_post_approvals_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -532,7 +532,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Review pending posts"
+                        android:text="@string/menu_post_approvals_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -572,7 +572,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="My Ads"
+                        android:text="@string/menu_my_ads_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -581,7 +581,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="See pending, approved, and rejected ads"
+                        android:text="@string/menu_my_ads_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -621,7 +621,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="My Communities"
+                        android:text="@string/menu_my_communities_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -630,7 +630,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="See your created communities and status"
+                        android:text="@string/menu_my_communities_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -671,7 +671,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Approve Ads"
+                        android:text="@string/menu_approve_ads_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -680,7 +680,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Review pending ads"
+                        android:text="@string/menu_approve_ads_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -721,7 +721,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Approve Communities"
+                        android:text="@string/menu_approve_communities_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -730,7 +730,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Review pending communities"
+                        android:text="@string/menu_approve_communities_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -748,7 +748,7 @@
                 android:paddingHorizontal="16dp"
                 android:paddingTop="14dp"
                 android:paddingBottom="6dp"
-                android:text="Yenkasa Admin"
+                android:text="@string/menu_admin_section_title"
                 android:textColor="@color/menu_accent"
                 android:textSize="12sp"
                 android:textStyle="bold"
@@ -784,7 +784,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Admin Economy"
+                        android:text="@string/menu_admin_economy_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -793,7 +793,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Revenue, reward pool, creators, and fraud alerts"
+                        android:text="@string/menu_admin_economy_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -834,7 +834,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="User Roles"
+                        android:text="@string/menu_user_roles_title"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -843,7 +843,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Staff roles, public roles, and generated IDs"
+                        android:text="@string/menu_user_roles_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -933,7 +933,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Notifications"
+                        android:text="@string/notifications"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -942,7 +942,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="See your alerts"
+                        android:text="@string/menu_notifications_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -982,7 +982,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Settings"
+                        android:text="@string/settings"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -991,7 +991,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Privacy &amp; preferences"
+                        android:text="@string/menu_settings_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -1040,7 +1040,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Log out"
+                        android:text="@string/log_out"
                         android:textColor="@color/menu_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -1049,7 +1049,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Sign out from Yenkasa"
+                        android:text="@string/menu_logout_subtitle"
                         android:textColor="@color/menu_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -1067,7 +1067,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:text="Your security is our priority"
+            android:text="@string/menu_security_footer"
             android:textColor="@color/menu_secondary_text"
             android:textSize="11sp" />
     </LinearLayout>

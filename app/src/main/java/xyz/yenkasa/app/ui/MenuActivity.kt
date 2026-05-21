@@ -35,7 +35,7 @@ class MenuActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != WalletBalanceManager.ACTION_BALANCE_UPDATED) return
             val balance = intent.getIntExtra(WalletBalanceManager.EXTRA_BALANCE, TokenManager.getCoins(this@MenuActivity))
-            textMenuWalletBalance.text = "$balance YKC"
+            textMenuWalletBalance.text = getString(R.string.ykc_amount_format, balance.toString())
         }
     }
 
@@ -96,7 +96,7 @@ class MenuActivity : AppCompatActivity() {
             "Admin menu visibility=$canAccessAnalytics visibleItems=${listOf(btnPostApproval, btnAdsApproval, btnCommunityApproval, btnAdminEconomy, btnYenkasaUpdatesComposer).count { it.visibility == View.VISIBLE }}"
         )
 
-        textMenuWalletBalance.text = "${TokenManager.getCoins(this)} YKC"
+        textMenuWalletBalance.text = getString(R.string.ykc_amount_format, TokenManager.getCoins(this).toString())
         loadWalletBalance()
         walletBalanceChip.visibility = if (isNightMode) View.GONE else View.VISIBLE
         walletBalanceChip.setOnClickListener {
@@ -209,7 +209,7 @@ class MenuActivity : AppCompatActivity() {
         btnLogout.setOnClickListener {
             Log.d(TAG, "Logout clicked")
             TokenManager.clearAll(this)
-            Toast.makeText(this, "Logged out successfully.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.logged_out_successfully, Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
@@ -255,15 +255,15 @@ class MenuActivity : AppCompatActivity() {
                     val balance = response.body()?.balance
                     if (response.isSuccessful && balance != null) {
                         TokenManager.saveCoinsPrecise(this@MenuActivity, balance)
-                        textMenuWalletBalance.text = "$balance YKC"
+                        textMenuWalletBalance.text = getString(R.string.ykc_amount_format, balance.toString())
                     } else {
-                        textMenuWalletBalance.text = "${TokenManager.getCoins(this@MenuActivity)} YKC"
+                        textMenuWalletBalance.text = getString(R.string.ykc_amount_format, TokenManager.getCoins(this@MenuActivity).toString())
                     }
                 }
 
                 override fun onFailure(call: Call<CoinBalanceResponse>, t: Throwable) {
                     Log.w(TAG, "Failed to load wallet balance: ${t.message}")
-                    textMenuWalletBalance.text = "${TokenManager.getCoins(this@MenuActivity)} YKC"
+                    textMenuWalletBalance.text = getString(R.string.ykc_amount_format, TokenManager.getCoins(this@MenuActivity).toString())
                 }
             })
     }

@@ -42,6 +42,11 @@ import androidx.recyclerview.widget.ConcatAdapter
 
 
 class CommentsActivity : AppCompatActivity() {
+    companion object {
+        const val EXTRA_RESULT_POST_ID = "extra_result_post_id"
+        const val EXTRA_RESULT_COMMENT_COUNT = "extra_result_comment_count"
+    }
+
 
     private lateinit var recyclerComments: RecyclerView
     private lateinit var editComment: EditText
@@ -398,6 +403,23 @@ class CommentsActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         stopAutoRefresh()
+    }
+
+    override fun finish() {
+        val resolvedPostId = postId
+        if (!resolvedPostId.isNullOrBlank()) {
+            setResult(
+                RESULT_OK,
+                Intent().apply {
+                    putExtra(EXTRA_RESULT_POST_ID, resolvedPostId)
+                    putExtra(
+                        EXTRA_RESULT_COMMENT_COUNT,
+                        latestCommentCount ?: comments.size
+                    )
+                }
+            )
+        }
+        super.finish()
     }
 
     private fun startAutoRefresh() {

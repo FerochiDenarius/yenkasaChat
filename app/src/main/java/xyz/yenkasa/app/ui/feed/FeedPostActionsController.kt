@@ -30,7 +30,14 @@ class FeedPostActionsController(
     private val tokenProvider: () -> String?,
     private val postsProvider: () -> MutableList<Post>,
     private val onPostsChanged: () -> Unit,
-    private val onCacheChanged: () -> Unit
+    private val onCacheChanged: () -> Unit,
+    private val onOpenComments: (Post) -> Unit = { post ->
+        fragment.startActivity(
+            Intent(fragment.requireContext(), CommentsActivity::class.java).apply {
+                putExtra("POST_ID", post._id)
+            }
+        )
+    }
 ) {
     fun handleLike(post: Post, position: Int) {
         val context = fragment.requireContext()
@@ -68,11 +75,7 @@ class FeedPostActionsController(
     }
 
     fun openComments(post: Post) {
-        fragment.startActivity(
-            Intent(fragment.requireContext(), CommentsActivity::class.java).apply {
-                putExtra("POST_ID", post._id)
-            }
-        )
+        onOpenComments(post)
     }
 
     fun openUserProfile(userId: String) {

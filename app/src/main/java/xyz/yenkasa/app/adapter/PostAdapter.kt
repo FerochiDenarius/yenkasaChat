@@ -338,7 +338,12 @@ class PostAdapter(
         holder.timestamp.visibility = View.VISIBLE
         holder.timestamp.text = formatTimestamp(post.createdAt)
         holder.likeCount.text = context.resources.getQuantityString(R.plurals.likes_count, post.likeCount, post.likeCount)
-        holder.commentCount.text = context.resources.getQuantityString(R.plurals.comments_count, post.commentCount, post.commentCount)
+        val resolvedCommentCount = post.resolvedCommentCount()
+        holder.commentCount.text = context.resources.getQuantityString(
+            R.plurals.comments_count,
+            resolvedCommentCount,
+            resolvedCommentCount
+        )
         holder.viewCount.text = context.getString(R.string.views_count, post.viewCount)
 
         holder.coinsEarned.visibility = if (post.coinsEarned > 0) {

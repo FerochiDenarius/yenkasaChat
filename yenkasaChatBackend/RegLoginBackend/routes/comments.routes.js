@@ -71,6 +71,27 @@ async function isBlocked(userA, userB) {
   return areUsersBlocked(userA, userB);
 }
 
+async function syncTopLevelCommentCount(postId) {
+  const commentCount = await Comment.countDocuments({
+    postId,
+    isActive: true,
+    parentCommentId: null
+  });
+
+  await Post.findByIdAndUpdate(postId, { $set: { commentCount } });
+  return commentCount;
+}
+
+function emitCommentCountUpdate(postId, commentCount) {
+  if (!global.io) return;
+  global.io.emit("commentCountUpdate", {
+    postId: postId.toString(),
+    commentCount,
+    commentsCount: commentCount,
+    timestamp: new Date()
+  });
+}
+
 
 /* ---------------------------------------------------
  * ADD COMMENT or REPLY
@@ -102,11 +123,10 @@ router.post('/', authMiddleware, async (req, res) => {
       parentCommentId: parentCommentId || null,
     });
 
+let updatedCommentCount = null;
+
 if (!parentCommentId) {
-  await Post.updateOne(
-    { _id: postId },
-    { $inc: { commentCount: 1 } }
-  );
+  updatedCommentCount = await syncTopLevelCommentCount(postId);
 
   var commentRewardTx = await rewardService.reward(userId, REWARD_COMMENT, {
     type: "REWARD_COMMENT",
@@ -209,6 +229,10 @@ if (global.io) {
     parentCommentId: parentCommentId || null,
     comment: populatedComment,
   });
+}
+
+if (!parentCommentId && updatedCommentCount != null) {
+  emitCommentCountUpdate(postId, updatedCommentCount);
 }
 
 return res.status(201).json({
@@ -456,10 +480,15 @@ router.delete('/:commentId', authMiddleware, async (req, res) => {
     comment.isActive = false;
     await comment.save();
 
+    let updatedCommentCount = null;
     if (!comment.parentCommentId) {
-      await Post.findByIdAndUpdate(comment.postId, { $inc: { commentCount: -1 } });
+      updatedCommentCount = await syncTopLevelCommentCount(comment.postId);
     } else {
       await Comment.findByIdAndUpdate(comment.parentCommentId, { $inc: { replyCount: -1 } });
+    }
+
+    if (updatedCommentCount != null) {
+      emitCommentCountUpdate(comment.postId, updatedCommentCount);
     }
 
     res.json({ success: true, message: 'Comment deleted successfully' });

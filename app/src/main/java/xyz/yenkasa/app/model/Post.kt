@@ -31,6 +31,7 @@ data class Post(
     @SerializedName(value = "shareCount", alternate = ["sharesCount", "totalShares"])
     val shareCount: Int = 0,
     val saveCount: Int = 0,
+    @SerializedName(value = "viewCount", alternate = ["viewsCount", "totalViews"])
     var viewCount: Int = 0,
 
     // Status
@@ -115,11 +116,20 @@ data class Post(
                 likeCount = json.optInt("likeCount", 0),
                 commentCount = json.optInt(
                     "commentCount",
-                    json.optInt("commentsCount", json.optInt("totalComments", 0))
+                    json.optInt(
+                        "commentsCount",
+                        json.optInt(
+                            "totalComments",
+                            json.optJSONArray("comments")?.length() ?: 0
+                        )
+                    )
                 ),
                 shareCount = json.optInt("shareCount", 0),
                 saveCount = json.optInt("saveCount", 0),
-                viewCount = json.optInt("viewCount", 0),
+                viewCount = json.optInt(
+                    "viewCount",
+                    json.optInt("viewsCount", json.optInt("totalViews", 0))
+                ),
                 coinsEarned = json.optInt("coinsEarned", 0),
                 isActive = json.optBoolean("isActive", true),
                 isPinned = json.optBoolean("isPinned", false),

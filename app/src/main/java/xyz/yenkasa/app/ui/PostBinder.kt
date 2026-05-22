@@ -107,7 +107,12 @@ object PostBinder {
             View.VISIBLE
         }
         likeCount.text = context.resources.getQuantityString(R.plurals.likes_count, post.likeCount, post.likeCount)
-        commentCount.text = context.resources.getQuantityString(R.plurals.comments_count, post.commentCount, post.commentCount)
+        val resolvedCommentCount = post.resolvedCommentCount()
+        commentCount.text = context.resources.getQuantityString(
+            R.plurals.comments_count,
+            resolvedCommentCount,
+            resolvedCommentCount
+        )
         viewCount.text = context.getString(R.string.views_count, post.viewCount)
         likeButton.setImageResource(if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)
         likeButton.imageTintList = ColorStateList.valueOf(

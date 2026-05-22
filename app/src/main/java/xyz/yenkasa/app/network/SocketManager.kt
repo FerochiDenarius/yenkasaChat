@@ -235,9 +235,21 @@ object SocketManager {
                     List(arr.length()) { i -> arr.optString(i) }
                 },
                 likeCount = json.optInt("likeCount", 0),
-                commentCount = json.optInt("commentCount", 0),
+                commentCount = json.optInt(
+                    "commentCount",
+                    json.optInt(
+                        "commentsCount",
+                        json.optInt(
+                            "totalComments",
+                            json.optJSONArray("comments")?.length() ?: 0
+                        )
+                    )
+                ),
                 shareCount = json.optInt("shareCount", 0),
-                viewCount = json.optInt("viewCount", 0),
+                viewCount = json.optInt(
+                    "viewCount",
+                    json.optInt("viewsCount", json.optInt("totalViews", 0))
+                ),
                 coinsEarned = json.optInt("coinsEarned", 0),
                 isActive = json.optBoolean("isActive", true),
                 isPinned = json.optBoolean("isPinned", false),

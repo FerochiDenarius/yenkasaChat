@@ -14,7 +14,8 @@ class FeedSocketController(
     private val onPostsChanged: () -> Unit,
     private val onCacheChanged: () -> Unit,
     private val onScrollToTop: () -> Unit,
-    private val onViewCountUpdated: (String, Int) -> Unit
+    private val onViewCountUpdated: (String, Int) -> Unit,
+    private val onCommentCountUpdated: (String, Int) -> Unit
 ) {
     private var listenersAttached = false
 
@@ -27,6 +28,7 @@ class FeedSocketController(
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
         SocketManager.off("viewUpdate")
+        SocketManager.off("commentCountUpdate")
         listenersAttached = false
     }
 
@@ -35,6 +37,7 @@ class FeedSocketController(
         SocketManager.off("newPost")
         SocketManager.off("likeUpdate")
         SocketManager.off("viewUpdate")
+        SocketManager.off("commentCountUpdate")
         listenersAttached = true
 
         SocketManager.on("newPost") { data ->
@@ -61,12 +64,31 @@ class FeedSocketController(
             try {
                 val json = data as JSONObject
                 val postId = json.getString("postId")
-                val viewsCount = json.getInt("viewsCount")
+                val viewsCount = maxOf(
+                    json.optInt("viewsCount", 0),
+                    json.optInt("viewCount", 0)
+                )
                 lifecycleScope.launch {
                     onViewCountUpdated(postId, viewsCount)
                 }
             } catch (e: Exception) {
                 Log.e("FeedSocketController", "Error parsing viewUpdate: ${e.message}")
+            }
+        }
+
+        SocketManager.on("commentCountUpdate") { data ->
+            try {
+                val json = data as JSONObject
+                val postId = json.getString("postId")
+                val commentCount = maxOf(
+                    json.optInt("commentCount", 0),
+                    json.optInt("commentsCount", 0)
+                )
+                lifecycleScope.launch {
+                    onCommentCountUpdated(postId, commentCount)
+                }
+            } catch (e: Exception) {
+                Log.e("FeedSocketController", "Error parsing commentCountUpdate: ${e.message}")
             }
         }
 

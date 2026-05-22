@@ -17,6 +17,7 @@ import android.os.Build
 import android.util.Log
 import android.view.*
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -105,6 +106,23 @@ class FeedFragment : Fragment() {
     private var communitiesBarNaturalHeight = 0
     private var communitiesBarAnimator: ValueAnimator? = null
     private var walletReceiverRegistered = false
+
+    private val commentsActivityLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val data = result.data ?: return@registerForActivityResult
+            val postId = data.getStringExtra(CommentsActivity.EXTRA_RESULT_POST_ID).orEmpty()
+            if (postId.isBlank()) return@registerForActivityResult
+
+            val commentCount = data.getIntExtra(
+                CommentsActivity.EXTRA_RESULT_COMMENT_COUNT,
+                -1
+            )
+            if (commentCount >= 0) {
+                updateSourcePostCommentCount(postId, commentCount)
+                renderPosts()
+                saveCurrentFeedCache()
+            }
+        }
 
     private lateinit var tabsController: FeedTabsController
     private lateinit var communityController: FeedCommunityController
@@ -219,7 +237,14 @@ class FeedFragment : Fragment() {
             tokenProvider = { token },
             postsProvider = { posts },
             onPostsChanged = { renderPosts() },
-            onCacheChanged = { saveCurrentFeedCache() }
+            onCacheChanged = { saveCurrentFeedCache() },
+            onOpenComments = { post ->
+                commentsActivityLauncher.launch(
+                    Intent(requireContext(), CommentsActivity::class.java).apply {
+                        putExtra("POST_ID", post._id)
+                    }
+                )
+            }
         )
         socketController = FeedSocketController(
             lifecycleScope = viewLifecycleOwner.lifecycleScope,
@@ -230,6 +255,12 @@ class FeedFragment : Fragment() {
             onViewCountUpdated = { postId, viewsCount ->
                 updateSourcePostViewCount(postId, viewsCount)
                 renderPosts()
+                saveCurrentFeedCache()
+            },
+            onCommentCountUpdated = { postId, commentCount ->
+                updateSourcePostCommentCount(postId, commentCount)
+                renderPosts()
+                saveCurrentFeedCache()
             }
         )
         chromeController = FeedChromeController(this)
@@ -659,6 +690,13 @@ class FeedFragment : Fragment() {
         val index = posts.indexOfFirst { it._id == postId }
         if (index >= 0) {
             posts[index] = posts[index].copy(viewCount = viewsCount)
+        }
+    }
+
+    private fun updateSourcePostCommentCount(postId: String, commentCount: Int) {
+        val index = posts.indexOfFirst { it._id == postId }
+        if (index >= 0) {
+            posts[index] = posts[index].copy(commentCount = commentCount.coerceAtLeast(0))
         }
     }
 

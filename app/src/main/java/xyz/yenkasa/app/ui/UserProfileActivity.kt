@@ -28,6 +28,7 @@ import xyz.yenkasa.app.model.ProfileResponse
 import xyz.yenkasa.app.model.FollowResponse
 import xyz.yenkasa.app.model.FeedResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -525,9 +526,9 @@ class UserProfileActivity : AppCompatActivity() {
                     Toast.makeText(this@UserProfileActivity, message, Toast.LENGTH_SHORT).show()
 
                     if (isBlocked) {
-                        TokenManager.removeBlockedUser(this@UserProfileActivity, targetId)
+                        AppLocalStore.removeBlockedUser(this@UserProfileActivity, targetId)
                     } else {
-                        TokenManager.addBlockedUser(this@UserProfileActivity, targetId)
+                        AppLocalStore.addBlockedUser(this@UserProfileActivity, targetId)
                     }
 
                     // Update UI

@@ -55,6 +55,7 @@ import xyz.yenkasa.app.ui.feed.FeedPostActionsController
 import xyz.yenkasa.app.ui.feed.FeedSocketController
 import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.ui.feed.FeedTimeUtils
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.work.FeedSyncWorker
 import java.text.SimpleDateFormat
@@ -259,6 +260,11 @@ class FeedFragment : Fragment() {
             },
             onCommentCountUpdated = { postId, commentCount ->
                 updateSourcePostCommentCount(postId, commentCount)
+                renderPosts()
+                saveCurrentFeedCache()
+            },
+            onShareCountUpdated = { postId, shareCount ->
+                updateSourcePostShareCount(postId, shareCount)
                 renderPosts()
                 saveCurrentFeedCache()
             }
@@ -558,7 +564,7 @@ class FeedFragment : Fragment() {
 
         val namesString = names.joinToString(",")
         if (namesString.isNotBlank()) {
-            TokenManager.saveFeedCacheCommunityNames(requireContext(), namesString)
+            AppLocalStore.saveFeedCacheCommunityNames(requireContext(), namesString)
         }
         val requestGeneration = feedRequestGeneration
         val requestStartedAt = System.currentTimeMillis()
@@ -697,6 +703,13 @@ class FeedFragment : Fragment() {
         val index = posts.indexOfFirst { it._id == postId }
         if (index >= 0) {
             posts[index] = posts[index].copy(commentCount = commentCount.coerceAtLeast(0))
+        }
+    }
+
+    private fun updateSourcePostShareCount(postId: String, shareCount: Int) {
+        val index = posts.indexOfFirst { it._id == postId }
+        if (index >= 0) {
+            posts[index] = posts[index].copy(shareCount = shareCount.coerceAtLeast(0))
         }
     }
 
@@ -882,13 +895,13 @@ class FeedFragment : Fragment() {
         if (!::layoutManager.isInitialized) return
         val position = layoutManager.findFirstVisibleItemPosition()
         if (position == RecyclerView.NO_POSITION) return
-        TokenManager.saveFeedScrollPosition(requireContext(), activeCacheKey, position)
+        AppLocalStore.saveFeedScrollPosition(requireContext(), activeCacheKey, position)
         Log.d("FeedFragment", "feed_scroll_saved key=$activeCacheKey position=$position")
     }
 
     private fun restoreScrollPositionIfNeeded(cacheKey: String) {
         if (!restoredScrollCacheKeys.add(cacheKey)) return
-        val position = TokenManager.getFeedScrollPosition(requireContext(), cacheKey)
+        val position = AppLocalStore.getFeedScrollPosition(requireContext(), cacheKey)
         if (position <= 0 || posts.isEmpty()) return
         recyclerView.post {
             val bounded = position.coerceAtMost((recyclerView.adapter?.itemCount ?: posts.size) - 1)

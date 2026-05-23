@@ -45,6 +45,90 @@ PUBLIC_FOLLOW_UPS = {
     ],
 }
 
+ENGINEERING_FOLLOW_UPS = [
+    "How does this compare with standard social platform architecture?",
+    "What should be refactored first to reduce scaling risk?",
+    "Which parts should stay monolithic and which should split out?",
+]
+
+HYBRID_GENERAL_FOLLOW_UPS = [
+    "How does this compare with engineering best practice?",
+    "What are the biggest scaling risks here?",
+    "What would you improve first if this had to grow fast?",
+]
+
+ENGINEERING_INTENT_TERMS = (
+    "api",
+    "architecture",
+    "backend",
+    "cache",
+    "cloud run",
+    "code",
+    "database",
+    "deploy",
+    "engineering",
+    "feed",
+    "flutter",
+    "infrastructure",
+    "kotlin",
+    "latency",
+    "microservice",
+    "mobile",
+    "node",
+    "performance",
+    "queue",
+    "redis",
+    "scal",
+    "socket",
+    "system design",
+)
+
+FOUNDER_INTENT_TERMS = (
+    "bright kofi",
+    "bright kofi ofosu menya",
+    "creator",
+    "developer identity",
+    "ferochi",
+    "ferochi denarius",
+    "founded",
+    "founder",
+    "history",
+    "origin",
+    "who built",
+    "who created",
+    "why yenkasa exists",
+)
+
+TOKENOMICS_INTENT_TERMS = (
+    "coin",
+    "economy",
+    "monetization",
+    "reward",
+    "rewards",
+    "token",
+    "tokenomics",
+    "ykc",
+)
+
+COMMUNITY_INTENT_TERMS = (
+    "blocking",
+    "communities",
+    "community",
+    "feed",
+    "filtering",
+    "privacy",
+    "verification",
+)
+
+CURATED_SOURCE_MARKERS = (
+    "/tmp/yenkasa-ai/uploads/",
+    "/backend/knowledge/semantic/",
+)
+
+LEGACY_YENKASA_SOURCE_MARKERS = (
+    "/Users/kofibright/yenkasaChat/yenkasa_knowledge/",
+)
+
 PUBLIC_UNSAFE_PATTERNS = [
     re.compile(pattern, re.IGNORECASE)
     for pattern in [
@@ -111,6 +195,45 @@ def search_chunks(vector_store: Any, question: str, top_k: int) -> tuple[list[tu
     return dedupe_results(raw_results, top_k), time.perf_counter() - started
 
 
+def source_priority(metadata: dict[str, Any]) -> tuple[int, int]:
+    source_path = str(metadata.get("source_path", ""))
+    source_file = str(metadata.get("source_file", "")).lower()
+    category = str(metadata.get("category", "")).lower()
+
+    if any(marker in source_path for marker in CURATED_SOURCE_MARKERS):
+        return (0, 0)
+
+    if any(marker in source_path for marker in LEGACY_YENKASA_SOURCE_MARKERS):
+        return (1, 0)
+
+    if "yenkasa" in source_file or "ykc" in source_file or category.startswith("founder") or category.startswith("ecosystem"):
+        return (1, 1)
+
+    return (2, 0)
+
+
+def search_chunks_with_queries(vector_store: Any, queries: list[str], top_k: int) -> tuple[list[tuple], float]:
+    started = time.perf_counter()
+    merged_results: list[tuple] = []
+    seen_queries: set[str] = set()
+
+    for query in queries:
+        normalized_query = query.strip()
+        if not normalized_query or normalized_query in seen_queries:
+            continue
+        seen_queries.add(normalized_query)
+        merged_results.extend(vector_store.similarity_search_with_score(normalized_query, k=top_k))
+
+    sorted_results = sorted(
+        merged_results,
+        key=lambda item: (
+            *source_priority(dict(getattr(item[0], "metadata", {}) or {})),
+            float(item[1]) if item[1] is not None else float("inf"),
+        ),
+    )
+    return dedupe_results(sorted_results, max(top_k * 2, top_k)), time.perf_counter() - started
+
+
 def build_section_path(metadata: dict[str, Any]) -> str:
     parts = [metadata.get("section_path"), metadata.get("h1"), metadata.get("h2"), metadata.get("h3")]
     for part in parts:
@@ -142,9 +265,9 @@ def format_sources(results: list[tuple]) -> list[SourceChunk]:
     return sources
 
 
-def format_context(results: list[tuple]) -> str:
+def format_context(results: list[tuple], empty_message: str = "No relevant context retrieved.") -> str:
     if not results:
-        return "No relevant context retrieved."
+        return empty_message
 
     blocks = []
     for index, (document, score) in enumerate(results, start=1):
@@ -206,11 +329,7 @@ def build_answer_cards(results: list[tuple]) -> list[AnswerCard]:
 
 def build_follow_ups(results: list[tuple], audience: str) -> list[str]:
     if audience == "engineering":
-        return [
-            "What are the main scaling risks in this subsystem?",
-            "Which routes or sockets own this behavior today?",
-            "What should be refactored first to reduce operational risk?",
-        ]
+        return ENGINEERING_FOLLOW_UPS
 
     categories: list[str] = []
     for document, _score in results:
@@ -225,6 +344,172 @@ def build_follow_ups(results: list[tuple], audience: str) -> list[str]:
             if suggestion not in suggestions:
                 suggestions.append(suggestion)
     return suggestions[:3] or PUBLIC_FOLLOW_UPS["platform"]
+
+
+def is_engineering_question(question: str) -> bool:
+    lowered = question.lower()
+    return any(term in lowered for term in ENGINEERING_INTENT_TERMS)
+
+
+def contains_any_term(question: str, terms: tuple[str, ...]) -> bool:
+    lowered = question.lower()
+    return any(term in lowered for term in terms)
+
+
+def build_public_search_queries(question: str) -> list[str]:
+    queries = [question]
+
+    if contains_any_term(question, FOUNDER_INTENT_TERMS):
+        queries.insert(
+            0,
+            (
+                f"{question}\n"
+                "Focus on founder identity, creator biography, project origin, history, and motivation. "
+                "Important entities: Bright Kofi Ofosu Menya, Ferochi Denarius, Yenkasa Soft-O-Tech."
+            ),
+        )
+
+    if contains_any_term(question, TOKENOMICS_INTENT_TERMS):
+        queries.append(
+            (
+                f"{question}\n"
+                "Focus on Yenkasa Coin, YKC utility, rewards, tokenomics, monetization, and participation economy."
+            )
+        )
+
+    if contains_any_term(question, COMMUNITY_INTENT_TERMS):
+        queries.append(
+            (
+                f"{question}\n"
+                "Focus on verification systems, privacy controls, communities, feed filtering, and trust architecture."
+            )
+        )
+
+    return queries
+
+
+def build_engineering_search_queries(question: str) -> list[str]:
+    queries = [question]
+
+    if is_engineering_question(question):
+        queries.append(
+            (
+                f"{question}\n"
+                "Focus on current implementation, architecture, scalability risks, cloud deployment, "
+                "backend design, mobile engineering, and best-practice tradeoffs."
+            )
+        )
+
+    if "compare" in question.lower() or "versus" in question.lower() or " vs " in question.lower():
+        queries.append(
+            (
+                f"{question}\n"
+                "Focus on architecture comparison, scaling tradeoffs, and engineering standards."
+            )
+        )
+
+    return queries
+
+
+def best_relevance(results: list[tuple]) -> float:
+    if not results:
+        return 0.0
+    return max(1 / (1 + max(0.0, float(score or 0.0))) for _document, score in results)
+
+
+def filter_results_for_context(results: list[tuple], min_relevance: float = 0.34) -> list[tuple]:
+    filtered = [
+        (document, score)
+        for document, score in results
+        if (1 / (1 + max(0.0, float(score or 0.0)))) >= min_relevance
+    ]
+    return filtered
+
+
+def merge_results_by_priority(*result_groups: list[tuple], limit: int) -> list[tuple]:
+    merged: list[tuple] = []
+    seen: set[str] = set()
+    for results in result_groups:
+        for document, score in results:
+            metadata = dict(getattr(document, "metadata", {}) or {})
+            chunk_id = metadata.get("chunk_id") or metadata.get("source_relative_path")
+            dedupe_key = f"{chunk_id}:{hash((document.page_content or '').strip())}"
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            merged.append((document, score))
+            if len(merged) >= limit:
+                return merged
+    return merged
+
+
+def build_combined_context(public_results: list[tuple], engineering_results: list[tuple]) -> str:
+    public_context = format_context(
+        public_results,
+        empty_message="No direct Yenkasa platform passages were retrieved for this question.",
+    )
+    engineering_context = format_context(
+        engineering_results,
+        empty_message="No direct engineering or uploaded-document passages were retrieved for this question.",
+    )
+    return (
+        "YENKASA KNOWLEDGE:\n"
+        f"{public_context}\n\n"
+        "ENGINEERING KNOWLEDGE:\n"
+        f"{engineering_context}"
+    )
+
+
+def build_retrieval_status(public_results: list[tuple], engineering_results: list[tuple]) -> str:
+    public_relevance = best_relevance(public_results)
+    engineering_relevance = best_relevance(engineering_results)
+
+    if not public_results and not engineering_results:
+        return (
+            "No high-confidence knowledge-base matches were retrieved. "
+            "Answer using general engineering and product reasoning, and clearly mark that the answer is best-practice guidance."
+        )
+
+    status = [
+        f"Yenkasa retrieval relevance: {public_relevance:.2f}",
+        f"Engineering retrieval relevance: {engineering_relevance:.2f}",
+    ]
+    if public_relevance < 0.38 and engineering_relevance < 0.38:
+        status.append(
+            "Both retrieval channels are weak. Lean on general reasoning while avoiding unsupported Yenkasa-specific claims."
+        )
+    elif public_relevance < 0.38:
+        status.append(
+            "Yenkasa retrieval is weak. Use engineering reasoning where needed and be explicit when advice is not grounded in Yenkasa docs."
+        )
+    elif engineering_relevance < 0.38:
+        status.append(
+            "Engineering retrieval is weak. Prioritize Yenkasa context, then general best practices if extra implementation advice is needed."
+        )
+    else:
+        status.append("Both retrieval channels have usable signal. Combine them thoughtfully.")
+    return "\n".join(status)
+
+
+def build_hybrid_follow_ups(
+    question: str,
+    public_results: list[tuple],
+    engineering_results: list[tuple],
+    audience: str,
+) -> list[str]:
+    if (
+        audience == "engineering"
+        or best_relevance(engineering_results) >= 0.38
+        or is_engineering_question(question)
+    ):
+        return ENGINEERING_FOLLOW_UPS
+
+    public_suggestions = build_follow_ups(public_results, "public")
+    merged: list[str] = []
+    for suggestion in [*public_suggestions, *HYBRID_GENERAL_FOLLOW_UPS]:
+        if suggestion not in merged:
+            merged.append(suggestion)
+    return merged[:3]
 
 
 def is_public_unsafe(question: str) -> bool:
@@ -261,7 +546,8 @@ def safe_public_response(model_name: str) -> ChatResponse:
 def chat_with_rag(
     *,
     payload: ChatRequest,
-    vector_store: Any,
+    public_vector_store: Any,
+    engineering_vector_store: Any,
     llm: Any,
     prompt: Any,
     model_name: str,
@@ -272,16 +558,39 @@ def chat_with_rag(
         return safe_public_response(model_name)
 
     total_started = time.perf_counter()
-    results, retrieval_elapsed = search_chunks(vector_store, payload.question.strip(), retrieval_k)
+    public_results, public_retrieval_elapsed = search_chunks_with_queries(
+        public_vector_store,
+        build_public_search_queries(payload.question.strip()),
+        retrieval_k,
+    )
+    engineering_results, engineering_retrieval_elapsed = search_chunks_with_queries(
+        engineering_vector_store,
+        build_engineering_search_queries(payload.question.strip()),
+        retrieval_k,
+    )
+    public_results = filter_results_for_context(public_results)
+    engineering_results = filter_results_for_context(engineering_results)
+    results = merge_results_by_priority(
+        public_results,
+        engineering_results,
+        limit=max(retrieval_k * 2, 8),
+    )
     history = format_history(history_to_pairs(payload.history), max_history_turns)
-    context = format_context(results)
+    context = build_combined_context(public_results, engineering_results)
+    retrieval_status = build_retrieval_status(public_results, engineering_results)
 
     generation_started = time.perf_counter()
     response = llm.invoke(
         prompt.format_messages(
+            audience_mode=(
+                "Engineering advisor mode: be technically rigorous, concrete, and comparison-friendly."
+                if payload.audience == "engineering"
+                else "Product assistant mode: stay clear and accessible, but still answer engineering questions when asked."
+            ),
             history=history,
             question=payload.question.strip(),
             context=context,
+            retrieval_status=retrieval_status,
         )
     )
     generation_elapsed = time.perf_counter() - generation_started
@@ -291,7 +600,24 @@ def chat_with_rag(
     debug = None
     if payload.include_debug:
         debug = {
-            "retrievedChunks": [
+            "retrievalMode": "hybrid_reasoning",
+            "publicRetrievedChunks": [
+                {
+                    "label": f"P{index}",
+                    "score": float(score) if score is not None else 0.0,
+                    "metadata": dict(getattr(document, "metadata", {}) or {}),
+                }
+                for index, (document, score) in enumerate(public_results, start=1)
+            ],
+            "engineeringRetrievedChunks": [
+                {
+                    "label": f"E{index}",
+                    "score": float(score) if score is not None else 0.0,
+                    "metadata": dict(getattr(document, "metadata", {}) or {}),
+                }
+                for index, (document, score) in enumerate(engineering_results, start=1)
+            ],
+            "mergedRetrievedChunks": [
                 {
                     "label": f"S{index}",
                     "score": float(score) if score is not None else 0.0,
@@ -307,10 +633,17 @@ def chat_with_rag(
         audience=payload.audience,
         answer=answer,
         answer_cards=build_answer_cards(results),
-        suggested_follow_ups=build_follow_ups(results, payload.audience),
+        suggested_follow_ups=build_hybrid_follow_ups(
+            payload.question.strip(),
+            public_results,
+            engineering_results,
+            payload.audience,
+        ),
         sources=format_sources(results),
         timings={
-            "retrievalMs": round(retrieval_elapsed * 1000),
+            "retrievalMs": round((public_retrieval_elapsed + engineering_retrieval_elapsed) * 1000),
+            "publicRetrievalMs": round(public_retrieval_elapsed * 1000),
+            "engineeringRetrievalMs": round(engineering_retrieval_elapsed * 1000),
             "generationMs": round(generation_elapsed * 1000),
             "totalMs": round(total_elapsed * 1000),
         },
@@ -319,5 +652,10 @@ def chat_with_rag(
 
 
 def search_only(payload: SearchRequest, vector_store: Any) -> SearchResponse:
-    results, _elapsed = search_chunks(vector_store, payload.question.strip(), payload.top_k or 5)
+    queries = (
+        build_engineering_search_queries(payload.question.strip())
+        if payload.audience == "engineering"
+        else build_public_search_queries(payload.question.strip())
+    )
+    results, _elapsed = search_chunks_with_queries(vector_store, queries, payload.top_k or 5)
     return SearchResponse(audience=payload.audience, count=len(results), sources=format_sources(results))

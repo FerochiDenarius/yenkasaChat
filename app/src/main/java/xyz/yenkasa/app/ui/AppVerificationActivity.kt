@@ -29,6 +29,7 @@ import xyz.yenkasa.app.model.VerificationMetrics
 import xyz.yenkasa.app.model.VerificationProgressResponse
 import xyz.yenkasa.app.model.VerificationRequirements
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.TokenManager
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -199,7 +200,7 @@ class AppVerificationActivity : AppCompatActivity() {
     private fun loadDashboard() {
         showLoading(true)
 
-        TokenManager.getDashboardCache(this)?.takeIf { it.isNotBlank() }?.let { cachedJson ->
+        AppLocalStore.getDashboardCache(this)?.takeIf { it.isNotBlank() }?.let { cachedJson ->
             try {
                 val cached = com.google.gson.Gson().fromJson(cachedJson, VerificationDashboard::class.java)
                 if (cached != null) {
@@ -211,7 +212,7 @@ class AppVerificationActivity : AppCompatActivity() {
                 }
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                TokenManager.saveDashboardCache(this, "")
+                AppLocalStore.saveDashboardCache(this, "")
             }
         }
 
@@ -241,7 +242,7 @@ class AppVerificationActivity : AppCompatActivity() {
                         return
                     }
 
-                    TokenManager.saveDashboardCache(
+                    AppLocalStore.saveDashboardCache(
                         this@AppVerificationActivity,
                         com.google.gson.Gson().toJson(body)
                     )

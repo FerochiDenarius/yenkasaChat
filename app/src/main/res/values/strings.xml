@@ -1348,6 +1348,10 @@
         <item quantity="one">%d comment</item>
         <item quantity="other">%d comments</item>
     </plurals>
+    <plurals name="shares_count">
+        <item quantity="one">%d share</item>
+        <item quantity="other">%d shares</item>
+    </plurals>
     <plurals name="coins_earned_count">
         <item quantity="one">🪙 %d coin</item>
         <item quantity="other">🪙 %d coins</item>

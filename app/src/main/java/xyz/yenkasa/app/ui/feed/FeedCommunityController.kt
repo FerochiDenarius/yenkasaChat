@@ -29,6 +29,7 @@ import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.CommunityPrefsStore
 import xyz.yenkasa.app.util.TokenManager
 
 class FeedCommunityController(
@@ -448,7 +449,7 @@ class FeedCommunityController(
     }
 
     fun sortCommunitiesForStoryRow(): List<Community> {
-        val recentIds = TokenManager.getRecentPostedCommunityIds(context)
+        val recentIds = CommunityPrefsStore.getRecentPostedCommunityIds(context)
         if (recentIds.isEmpty()) return allCommunities
 
         val recentOrder = recentIds.withIndex().associate { it.value to it.index }
@@ -599,7 +600,7 @@ class FeedCommunityController(
     }
 
     private fun saveSelectedCommunities() {
-        TokenManager.saveSelectedCommunityIds(context, userIdProvider(), selectedIds())
+        CommunityPrefsStore.saveSelectedCommunityIds(context, userIdProvider(), selectedIds())
     }
 
     private fun formatCompact(value: Int): String {
@@ -613,7 +614,7 @@ class FeedCommunityController(
     private fun dp(value: Int): Int = (value * context.resources.displayMetrics.density).toInt()
 
     private fun getSavedSelectedCommunityIds(): Set<String>? {
-        return TokenManager.getSelectedCommunityIds(context, userIdProvider())
+        return CommunityPrefsStore.getSelectedCommunityIds(context, userIdProvider())
     }
 
     private fun buildCommunityStoryPreviewMap(sourcePosts: List<Post>): Map<String, CommunityStoryPreview> {

@@ -43,8 +43,8 @@ class StatusChip extends StatelessWidget {
     };
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 10 : 12,
-        vertical: compact ? 6 : 8,
+        horizontal: compact ? 8 : 12,
+        vertical: compact ? 4 : 8,
       ),
       decoration: BoxDecoration(
         color: colors.$2,
@@ -54,10 +54,11 @@ class StatusChip extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: colors.$1,
-          fontWeight: FontWeight.w700,
-        ),
+        style:
+            (compact
+                    ? Theme.of(context).textTheme.labelSmall
+                    : Theme.of(context).textTheme.labelMedium)
+                ?.copyWith(color: colors.$1, fontWeight: FontWeight.w700),
       ),
     );
   }

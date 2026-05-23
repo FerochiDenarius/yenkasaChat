@@ -135,6 +135,10 @@ class ChatController extends StateNotifier<ChatState> {
           (message) => message.id == placeholder.id,
         );
         if (lastIndex != -1) {
+          final currentText = updatedMessages[lastIndex].content;
+          if (currentText == frame.partialAnswer && !frame.done) {
+            continue;
+          }
           updatedMessages[lastIndex] = updatedMessages[lastIndex].copyWith(
             content: frame.partialAnswer,
             isStreaming: !frame.done,

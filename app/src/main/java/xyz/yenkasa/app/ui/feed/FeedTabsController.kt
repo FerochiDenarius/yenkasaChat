@@ -42,21 +42,7 @@ class FeedTabsController(
     }
 
     fun applyFeedMode(sourcePosts: List<Post>, followingUserIds: Set<String>?): List<Post> {
-        return when (selectedMode) {
-            FeedMode.FOR_YOU -> sourcePosts.sortedByDescending { personalizedScore(it) }
-            FeedMode.FOLLOWING -> {
-                val ids = followingUserIds.orEmpty()
-                sourcePosts
-                    .filter { ids.contains(it.userId.id) }
-                    .sortedByDescending { FeedTimeUtils.parsePostTimestampMillis(it.createdAt) ?: 0L }
-            }
-            FeedMode.TRENDING -> sourcePosts.sortedByDescending { trendingScore(it) }
-            FeedMode.TOP -> sourcePosts.sortedByDescending { topScore(it) }
-            FeedMode.LATEST -> sourcePosts.sortedByDescending {
-                FeedTimeUtils.parsePostTimestampMillis(it.createdAt) ?: 0L
-            }
-            FeedMode.POPULAR -> sourcePosts.sortedByDescending { popularScore(it) }
-        }
+        return sourcePosts
     }
 
     private fun updateTabVisualState(tabs: List<TextView>) {
@@ -95,46 +81,4 @@ class FeedTabsController(
         }
     }
 
-    private fun personalizedScore(post: Post): Double {
-        val recencyHours = ageHours(post)
-        val engagement = post.likeCount +
-            (post.commentCount * 2) +
-            (post.shareCount * 3) +
-            (post.viewCount / 12.0) +
-            (post.coinsEarned * 2)
-        return engagement + (12.0 / recencyHours)
-    }
-
-    private fun trendingScore(post: Post): Double {
-        val recencyHours = ageHours(post)
-        val momentum = post.likeCount +
-            (post.commentCount * 2.5) +
-            (post.shareCount * 4) +
-            (post.viewCount / 8.0) +
-            (post.coinsEarned * 3)
-        return momentum / recencyHours
-    }
-
-    private fun topScore(post: Post): Double {
-        return post.likeCount +
-            (post.commentCount * 2.0) +
-            (post.shareCount * 4.0) +
-            (post.viewCount / 6.0) +
-            (post.coinsEarned * 3.5)
-    }
-
-    private fun popularScore(post: Post): Double {
-        return post.likeCount +
-            (post.commentCount * 2.0) +
-            (post.shareCount * 3.0) +
-            (post.viewCount / 10.0) +
-            post.saveCount +
-            (post.coinsEarned * 2.0)
-    }
-
-    private fun ageHours(post: Post): Double {
-        val createdAt = FeedTimeUtils.parsePostTimestampMillis(post.createdAt) ?: return 24.0
-        val diffMs = (System.currentTimeMillis() - createdAt).coerceAtLeast(1L)
-        return (diffMs / 3_600_000.0).coerceAtLeast(1.0)
-    }
 }

@@ -31,6 +31,7 @@ import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
+import xyz.yenkasa.app.util.CommunityPrefsStore
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UploadMediaOptimizer
@@ -723,7 +724,7 @@ class PostActivity : AppCompatActivity() {
     }
 
     private fun completeUploadSuccess(message: String, requiresReview: Boolean) {
-        TokenManager.saveRecentPostedCommunity(this, selectedCommunityId)
+        CommunityPrefsStore.saveRecentPostedCommunity(this, selectedCommunityId)
         setResult(Activity.RESULT_OK, Intent().putExtra("postCreated", true))
         setUploadInteractionEnabled(false)
 

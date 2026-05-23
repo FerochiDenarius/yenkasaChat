@@ -8,6 +8,7 @@ import com.google.gson.Gson
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.feed.FeedCacheController
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.TokenManager
 
 class FeedSyncWorker(
@@ -18,7 +19,7 @@ class FeedSyncWorker(
     override suspend fun doWork(): Result {
         return try {
             val token = TokenManager.getToken(applicationContext).orEmpty()
-            val communityNames = TokenManager.getFeedCacheCommunityNames(applicationContext).orEmpty()
+            val communityNames = AppLocalStore.getFeedCacheCommunityNames(applicationContext).orEmpty()
 
             if (token.isBlank() || communityNames.isBlank()) {
                 return Result.success()
@@ -48,7 +49,7 @@ class FeedSyncWorker(
                 appVersionCode = 0L
             )
 
-            TokenManager.saveFeedCache(
+            AppLocalStore.saveFeedCache(
                 applicationContext,
                 cacheKey,
                 gson.toJson(payload)

@@ -6,8 +6,8 @@ import com.bumptech.glide.Glide
 import com.google.gson.Gson
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.CloudinaryMedia
-import xyz.yenkasa.app.util.TokenManager
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -53,8 +53,8 @@ class FeedCacheController(
         allowGlobalFallback: Boolean = true,
         onLoaded: (CachedFeedPayload) -> Unit
     ): Boolean {
-        val raw = TokenManager.getFeedCache(context, cacheKey)
-            ?: if (allowGlobalFallback) TokenManager.getFeedCache(context) else null
+        val raw = AppLocalStore.getFeedCache(context, cacheKey)
+            ?: if (allowGlobalFallback) AppLocalStore.getFeedCache(context) else null
             ?: run {
                 Log.d("FeedCacheController", "cache_miss key=$cacheKey")
                 return false
@@ -103,7 +103,7 @@ class FeedCacheController(
                 rendererVersion = PLAYER_RENDERER_VERSION,
                 appVersionCode = currentAppVersionCode()
             )
-            TokenManager.saveFeedCache(context, cacheKey, gson.toJson(payload))
+            AppLocalStore.saveFeedCache(context, cacheKey, gson.toJson(payload))
             saveCommunitySlices(payload.posts)
             Log.d("FeedCacheController", "cache_saved key=$cacheKey posts=${payload.posts.size}")
         }.onFailure {
@@ -147,7 +147,7 @@ class FeedCacheController(
                 rendererVersion = PLAYER_RENDERER_VERSION,
                 appVersionCode = currentAppVersionCode()
             )
-            TokenManager.saveFeedCache(context, key, gson.toJson(payload), updateLegacy = false)
+            AppLocalStore.saveFeedCache(context, key, gson.toJson(payload), updateLegacy = false)
         }
     }
 

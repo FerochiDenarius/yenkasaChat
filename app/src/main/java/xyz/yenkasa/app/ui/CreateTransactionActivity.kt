@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.*
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.TokenManager
 import retrofit2.Call
 import retrofit2.Callback
@@ -225,9 +226,9 @@ class CreateTransactionActivity : AppCompatActivity() {
                             activityId = tx?.activityId ?: activityId
                         )
 
-                        val existing = TokenManager.getTransactionHistory(this@CreateTransactionActivity).toMutableList()
+                        val existing = AppLocalStore.getTransactionHistory(this@CreateTransactionActivity).toMutableList()
                         existing.add(0, newTransaction)
-                        TokenManager.saveTransactionHistory(this@CreateTransactionActivity, existing)
+                        AppLocalStore.saveTransactionHistory(this@CreateTransactionActivity, existing)
 
                         openReceipt(newTransaction)
                         finish()

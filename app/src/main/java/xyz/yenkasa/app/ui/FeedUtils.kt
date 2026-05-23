@@ -77,17 +77,17 @@ object FeedUtils {
         try {
             TokenManager.getToken(context)?.takeIf { it.isNotBlank() }?.let { token ->
                 ApiClient.apiService.recordPostShare(post._id, "Bearer $token")
-                    .enqueue(object : Callback<GenericResponse> {
+                    .enqueue(object : Callback<SharePostResponse> {
                         override fun onResponse(
-                            call: Call<GenericResponse>,
-                            response: Response<GenericResponse>
+                            call: Call<SharePostResponse>,
+                            response: Response<SharePostResponse>
                         ) {
                             if (!response.isSuccessful) {
                                 Log.w("FeedUtils", "Failed to record share for ${post._id}: ${response.code()}")
                             }
                         }
 
-                        override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                        override fun onFailure(call: Call<SharePostResponse>, t: Throwable) {
                             Log.w("FeedUtils", "Failed to record share for ${post._id}: ${t.message}")
                         }
                     })

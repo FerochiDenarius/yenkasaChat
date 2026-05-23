@@ -423,7 +423,7 @@
             app:tint="@color/feed_secondary_text" />
 
         <TextView
-            android:id="@+id/textViewCount"
+            android:id="@+id/textShareCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
@@ -431,6 +431,16 @@
             android:textColor="@color/feed_secondary_text"
             android:textSize="12sp"
             tools:text="7 shares" />
+
+        <TextView
+            android:id="@+id/textViewCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="center_vertical"
+            android:textColor="@color/feed_secondary_text"
+            android:textSize="12sp"
+            tools:text="120 views" />
 
         <View
             android:layout_width="0dp"

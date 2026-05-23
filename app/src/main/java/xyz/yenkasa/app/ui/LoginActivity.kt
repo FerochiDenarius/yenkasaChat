@@ -20,6 +20,7 @@ import xyz.yenkasa.app.model.TrackLoginResponse
 import com.google.android.material.textfield.TextInputEditText
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.AppLinkManager
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.OneSignalHelper
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UpdateManager
@@ -50,7 +51,7 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (TokenManager.isFirstLaunch(this)) {
+        if (AppLocalStore.isFirstLaunch(this)) {
             startActivity(Intent(this, IntroActivity::class.java))
             finish()
             return
@@ -276,7 +277,7 @@ class LoginActivity : AppCompatActivity() {
 
                     SocketManager.connect(user._id)
 
-                    if (!TokenManager.hasAcceptedPolicies(this@LoginActivity)) {
+                    if (!AppLocalStore.hasAcceptedPolicies(this@LoginActivity)) {
                         val policyIntent = Intent(this@LoginActivity, PolicyDisclosureActivity::class.java)
                         AppLinkManager.copyPendingDeepLink(intent, policyIntent)
                         startActivity(policyIntent)

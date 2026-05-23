@@ -1,25 +1,13 @@
 package xyz.yenkasa.app.util
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import xyz.yenkasa.app.network.SocketManager
-import xyz.yenkasa.app.model.TransactionUiModel
 import org.json.JSONObject
-import android.os.Build
-
-
+import xyz.yenkasa.app.network.SocketManager
 
 object TokenManager {
-
-    // === Preference Keys ===
-    private const val PREF_NAME = "secure_auth_prefs"
     private const val TOKEN_KEY = "auth_token"
     private const val REFRESH_KEY = "refresh_token"
-    // === Admin Flag ===
-    private const val ADMIN_KEY = "is_admin"
     private const val USER_ID_KEY = "userId"
     private const val PROFILE_PIC_KEY = "profile_pic_url"
     private const val USERNAME_KEY = "username"
@@ -27,88 +15,19 @@ object TokenManager {
     private const val PHONE_KEY = "phone"
     private const val LOCATION_KEY = "location"
     private const val VERIFIED_KEY = "is_verified"
-    // 👇 NEW KEY FOR ONESIGNAL PLAYER ID
     private const val ONE_SIGNAL_PLAYER_ID_KEY = "one_signal_player_id"
-    // === Role Flags ===
     private const val IS_ADMIN_KEY = "is_admin"
     private const val IS_MODERATOR_KEY = "is_moderator"
     private const val IS_DEVELOPER_KEY = "is_developer"
     private const val COMMUNITY_ID_KEY = "community_id"
-    private const val SELECTED_COMMUNITY_IDS_KEY_PREFIX = "selected_community_ids_"
-    private const val RECENT_POSTED_COMMUNITY_IDS_KEY = "recent_posted_community_ids"
-    // Logging Tag
     private const val TAG = "TokenManager"
     private const val GENDER_KEY = "user_gender"
     private const val DOB_KEY = "user_dob"
-    private const val DASHBOARD_CACHE_KEY = "verification_dashboard_json"
-    private const val FEED_CACHE_PREF_NAME = "yenkasa_cache"
-    private const val FEED_CACHE_KEY = "feed_cache"
-    private const val FEED_CACHE_KEY_PREFIX = "feed_cache_v2_"
-    private const val FEED_SCROLL_KEY_PREFIX = "feed_scroll_v2_"
-    private const val FEED_CACHE_COMMUNITY_NAMES_KEY = "feed_cache_community_names"
-    private const val FIRST_LAUNCH_KEY = "first_launch_completed"
-    private const val POLICIES_ACCEPTED_KEY = "policies_accepted"
     private const val EMAIL_VERIFIED_KEY = "email_verified"
     private const val PHONE_VERIFIED_KEY = "phone_verified"
-    private const val MAX_RECENT_POSTED_COMMUNITIES = 12
 
+    private fun getEncryptedPrefs(context: Context) = SecurePrefsStore.encryptedPrefs(context)
 
-
-
-
-    // === EncryptedSharedPreferences Access ===
-    @Volatile
-    private var cachedEncryptedPrefs: SharedPreferences? = null
-    private val prefsLock = Any()
-
-    private fun getEncryptedPrefs(context: Context): SharedPreferences {
-        cachedEncryptedPrefs?.let { return it }
-        return synchronized(prefsLock) {
-            cachedEncryptedPrefs ?: createEncryptedPrefs(context.applicationContext).also {
-                cachedEncryptedPrefs = it
-            }
-        }
-    }
-
-    private fun createEncryptedPrefs(context: Context): SharedPreferences {
-        return try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-
-            EncryptedSharedPreferences.create(
-                context,
-                PREF_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            cachedEncryptedPrefs = null
-            Log.e(
-                TAG,
-                "EncryptedSharedPreferences corrupted. Clearing and falling back safely.",
-                e
-            )
-
-            // 🔥 CRITICAL FIX: remove corrupted encrypted storage
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                context.deleteSharedPreferences(PREF_NAME)
-            } else {
-                context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                    .edit()
-                    .clear()
-                    .commit()
-            }
-
-
-            // ✅ Fallback remains EXACTLY as before (login safe)
-            context.getSharedPreferences(
-                "${PREF_NAME}_unencrypted_fallback_token_manager",
-                Context.MODE_PRIVATE
-            )
-        }
-    }
     fun saveUserDetails(
         context: Context,
         userId: String?,
@@ -315,73 +234,6 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting User ID from EncryptedSharedPreferences", e)
             null
-        }
-    }
-
-    fun saveSelectedCommunityIds(context: Context, userId: String?, communityIds: Set<String>) {
-        if (userId.isNullOrBlank()) {
-            Log.w(TAG, "Tried to save selected communities without a user ID. Skipping save.")
-            return
-        }
-
-        try {
-            getEncryptedPrefs(context)
-                .edit()
-                .putStringSet("$SELECTED_COMMUNITY_IDS_KEY_PREFIX$userId", communityIds.toSet())
-                .apply()
-            Log.i(TAG, "Selected communities saved for user: $userId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving selected communities to EncryptedSharedPreferences", e)
-        }
-    }
-
-    fun getSelectedCommunityIds(context: Context, userId: String?): Set<String>? {
-        if (userId.isNullOrBlank()) return null
-
-        return try {
-            val key = "$SELECTED_COMMUNITY_IDS_KEY_PREFIX$userId"
-            val prefs = getEncryptedPrefs(context)
-            if (!prefs.contains(key)) return null
-
-            prefs.getStringSet(key, emptySet())?.toSet() ?: emptySet()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting selected communities from EncryptedSharedPreferences", e)
-            null
-        }
-    }
-
-    fun saveRecentPostedCommunity(context: Context, communityId: String?) {
-        val cleanCommunityId = communityId?.trim().orEmpty()
-        if (cleanCommunityId.isBlank()) return
-
-        try {
-            val nextIds = buildList {
-                add(cleanCommunityId)
-                addAll(getRecentPostedCommunityIds(context).filterNot { it == cleanCommunityId })
-            }.take(MAX_RECENT_POSTED_COMMUNITIES)
-
-            getEncryptedPrefs(context)
-                .edit()
-                .putString(RECENT_POSTED_COMMUNITY_IDS_KEY, nextIds.joinToString(","))
-                .apply()
-            Log.i(TAG, "Recent posted community saved: $cleanCommunityId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving recent posted community", e)
-        }
-    }
-
-    fun getRecentPostedCommunityIds(context: Context): List<String> {
-        return try {
-            getEncryptedPrefs(context)
-                .getString(RECENT_POSTED_COMMUNITY_IDS_KEY, null)
-                ?.split(",")
-                ?.map { it.trim() }
-                ?.filter { it.isNotBlank() }
-                ?.distinct()
-                ?: emptyList()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting recent posted communities", e)
-            emptyList()
         }
     }
 
@@ -913,104 +765,6 @@ object TokenManager {
         }
     }
 
-
-    // === 🔒 BLOCKED USERS MANAGEMENT ===
-    private const val BLOCKED_USERS_KEY = "blocked_users_list"
-
-    /**
-     * Save the full set of blocked user IDs.
-     */
-    fun saveBlockedUsers(context: Context, blockedUsers: Set<String>) {
-        try {
-            getEncryptedPrefs(context).edit()
-                .putStringSet(BLOCKED_USERS_KEY, blockedUsers)
-                .apply()
-            Log.i(TAG, "🔒 Blocked users list saved (${blockedUsers.size} total).")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving blocked users list", e)
-        }
-    }
-
-    /**
-     * Retrieve the full list of blocked user IDs.
-     */
-    fun getBlockedUsers(context: Context): Set<String> {
-        return try {
-            getEncryptedPrefs(context).getStringSet(BLOCKED_USERS_KEY, emptySet()) ?: emptySet()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting blocked users list", e)
-            emptySet()
-        }
-    }
-
-    /**
-     * Add one user to the blocked list.
-     */
-    fun addBlockedUser(context: Context, userId: String) {
-        try {
-            val current = getBlockedUsers(context).toMutableSet()
-            current.add(userId)
-            saveBlockedUsers(context, current)
-            Log.i(TAG, "🚫 Added user $userId to blocked list.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error adding blocked user", e)
-        }
-    }
-
-    // 🔥 Returns user's primary (registration) community ID
-    fun getPrimaryCommunityId(context: Context): String? {
-        return try {
-            val id = getEncryptedPrefs(context).getString("primary_community_id", null)
-            Log.d("TokenManager", "Primary community ID: $id")
-            id
-        } catch (e: Exception) {
-            Log.e("TokenManager", "Error getting primary community ID", e)
-            null
-        }
-    }
-
-    // 🔥 Save it when loading user data (you will call this manually in Activities)
-    fun savePrimaryCommunityId(context: Context, communityId: String?) {
-        try {
-            getEncryptedPrefs(context).edit().putString("primary_community_id", communityId).apply()
-            Log.d("TokenManager", "Primary community saved: $communityId")
-        } catch (e: Exception) {
-            Log.e("TokenManager", "Error saving primary community", e)
-        }
-    }
-
-    /**
-     * Remove one user from the blocked list.
-     */
-    fun removeBlockedUser(context: Context, userId: String) {
-        try {
-            val current = getBlockedUsers(context).toMutableSet()
-            if (current.remove(userId)) {
-                saveBlockedUsers(context, current)
-                Log.i(TAG, "✅ Unblocked user $userId successfully.")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error removing blocked user", e)
-        }
-    }
-
-    /**
-     * Check if a user is currently blocked.
-     */
-    fun isUserBlocked(context: Context, userId: String): Boolean {
-        return try {
-            getBlockedUsers(context).contains(userId)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking blocked user", e)
-            false
-        }
-    }
-
-
-
-    /**
-     * Clears the OneSignal Player ID from EncryptedSharedPreferences.
-     */
     fun clearOneSignalPlayerId(context: Context) {
         try {
             // Check if it exists before trying to remove, to make the log more accurate
@@ -1024,77 +778,6 @@ object TokenManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error clearing OneSignal Player ID from EncryptedSharedPreferences", e)
         }
-    }
-
-    // === 🪙 Transaction History Cache ===
-    private const val TRANSACTION_HISTORY_KEY = "transaction_history_json"
-
-    /**
-     * Save transactions locally (as JSON string)
-     */
-    fun saveTransactionHistory(context: Context, transactions: List<TransactionUiModel>) {
-        try {
-            val jsonArray = org.json.JSONArray()
-            for (t in transactions) {
-                val obj = org.json.JSONObject().apply {
-                    put("transactionId", t.transactionId)
-                    put("amount", t.amount)
-                    put("from", t.from)
-                    put("to", t.to)
-                    put("newBalance", t.newBalance)
-                    put("senderUsername", t.senderUsername)
-                    put("recipientUsername", t.recipientUsername)
-                    put("description", t.description)
-                    put("type", t.type)
-                    put("createdAt", t.createdAt)
-                    put("activityId", t.activityId)
-                }
-                jsonArray.put(obj)
-            }
-
-            getEncryptedPrefs(context).edit()
-                .putString(TRANSACTION_HISTORY_KEY, jsonArray.toString())
-                .apply()
-
-            Log.i(TAG, "🪙 Cached ${transactions.size} transactions locally")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving transaction history", e)
-        }
-    }
-
-    /**
-     * Retrieve locally cached transactions
-     */
-    fun getTransactionHistory(context: Context): List<TransactionUiModel> {
-        val transactions = mutableListOf<TransactionUiModel>() // 👈 FIXED LINE
-        try {
-            val jsonString = getEncryptedPrefs(context).getString(TRANSACTION_HISTORY_KEY, null)
-            if (jsonString.isNullOrEmpty()) return transactions
-
-            val jsonArray = org.json.JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
-                val obj = jsonArray.getJSONObject(i)
-                transactions.add(
-                    TransactionUiModel(
-                        transactionId = obj.optString("transactionId"),
-                        amount = obj.optDouble("amount"),
-                        from = obj.optString("from"),
-                        to = obj.optString("to"),
-                        newBalance = obj.optDouble("newBalance"),
-                        senderUsername = obj.optString("senderUsername"),
-                        recipientUsername = obj.optString("recipientUsername"),
-                        description = obj.optString("description"),
-                        type = obj.optString("type"),
-                        createdAt = obj.optString("createdAt"),
-                        activityId = obj.optString("activityId").takeIf { it.isNotBlank() }
-                    )
-                )
-            }
-            Log.i(TAG, "✅ Loaded ${transactions.size} cached transactions")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error reading cached transactions", e)
-        }
-        return transactions
     }
 
     // === 🌐 COMMUNITY SELECTION HELPERS ===
@@ -1147,168 +830,4 @@ object TokenManager {
             null
         }
     }
-
-
-    fun saveDashboardCache(context: Context, json: String) {
-        try {
-            getEncryptedPrefs(context).edit()
-                .putString(DASHBOARD_CACHE_KEY, json)
-                .apply()
-            Log.i("TokenManager", "📦 Dashboard cached.")
-        } catch (e: Exception) {
-            Log.e("TokenManager", "Error saving dashboard cache", e)
-        }
-    }
-
-    fun getDashboardCache(context: Context): String? {
-        return try {
-            getEncryptedPrefs(context).getString(DASHBOARD_CACHE_KEY, null)
-        } catch (e: Exception) {
-            Log.e("TokenManager", "Error reading dashboard cache", e)
-            null
-        }
-    }
-
-    fun clearDashboardCache(context: Context) {
-        try {
-            getEncryptedPrefs(context).edit().remove(DASHBOARD_CACHE_KEY).apply()
-            Log.i("TokenManager", "🧹 Dashboard cache cleared.")
-        } catch (e: Exception) {
-            Log.e("TokenManager", "Error clearing dashboard cache", e)
-        }
-    }
-
-    fun saveFeedCache(context: Context, json: String) {
-        try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            val saved = prefs.edit().putString(FEED_CACHE_KEY, json).commit()
-            Log.i(TAG, "📦 Feed cache saved. committed=$saved")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving feed cache", e)
-        }
-    }
-
-    fun saveFeedCache(context: Context, cacheKey: String, json: String, updateLegacy: Boolean = true) {
-        try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            val editor = prefs.edit().putString(FEED_CACHE_KEY_PREFIX + cacheKey, json)
-            if (updateLegacy) editor.putString(FEED_CACHE_KEY, json)
-            val saved = editor.commit()
-            Log.i(TAG, "📦 Feed cache saved. key=$cacheKey committed=$saved")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving keyed feed cache", e)
-        }
-    }
-
-    fun getFeedCache(context: Context): String? {
-        return try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.getString(FEED_CACHE_KEY, null)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error reading feed cache", e)
-            null
-        }
-    }
-
-    fun getFeedCache(context: Context, cacheKey: String): String? {
-        return try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.getString(FEED_CACHE_KEY_PREFIX + cacheKey, null)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error reading keyed feed cache", e)
-            null
-        }
-    }
-
-    fun saveFeedScrollPosition(context: Context, cacheKey: String, position: Int) {
-        try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.edit().putInt(FEED_SCROLL_KEY_PREFIX + cacheKey, position.coerceAtLeast(0)).apply()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving feed scroll position", e)
-        }
-    }
-
-    fun getFeedScrollPosition(context: Context, cacheKey: String): Int {
-        return try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.getInt(FEED_SCROLL_KEY_PREFIX + cacheKey, 0)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error reading feed scroll position", e)
-            0
-        }
-    }
-
-    fun saveFeedCacheCommunityNames(context: Context, names: String) {
-        try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.edit().putString(FEED_CACHE_COMMUNITY_NAMES_KEY, names).apply()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving feed cache community names", e)
-        }
-    }
-
-    fun getFeedCacheCommunityNames(context: Context): String? {
-        return try {
-            val prefs = context.applicationContext.getSharedPreferences(FEED_CACHE_PREF_NAME, Context.MODE_PRIVATE)
-            prefs.getString(FEED_CACHE_COMMUNITY_NAMES_KEY, null)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error reading feed cache community names", e)
-            null
-        }
-    }
-
-
-    // ===============================
-// FIRST LAUNCH (INTRO / GET STARTED)
-// ===============================
-    fun isFirstLaunch(context: Context): Boolean {
-        return try {
-            !getEncryptedPrefs(context)
-                .getBoolean(FIRST_LAUNCH_KEY, false)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking first launch", e)
-            true
-        }
-    }
-
-    fun markFirstLaunchCompleted(context: Context) {
-        try {
-            getEncryptedPrefs(context)
-                .edit()
-                .putBoolean(FIRST_LAUNCH_KEY, true)
-                .apply()
-            Log.i(TAG, "🚀 First launch marked as completed")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error marking first launch completed", e)
-        }
-    }
-
-    // ===============================
-// POLICIES ACCEPTANCE
-// ===============================
-    fun hasAcceptedPolicies(context: Context): Boolean {
-        return try {
-            getEncryptedPrefs(context)
-                .getBoolean(POLICIES_ACCEPTED_KEY, false)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error reading policies accepted flag", e)
-            false
-        }
-    }
-
-    fun setPoliciesAccepted(context: Context) {
-        try {
-            getEncryptedPrefs(context)
-                .edit()
-                .putBoolean(POLICIES_ACCEPTED_KEY, true)
-                .apply()
-            Log.i(TAG, "📜 Policies accepted and recorded")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving policies accepted flag", e)
-        }
-    }
-
-
-    // === Clear All ===
 }

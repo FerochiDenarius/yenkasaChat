@@ -39,6 +39,7 @@ object PostBinder {
         val postText = root.findViewById<TextView>(R.id.textPostContent)
         val likeCount = root.findViewById<TextView>(R.id.textLikeCount)
         val commentCount = root.findViewById<TextView>(R.id.textCommentCount)
+        val shareCount = root.findViewById<TextView>(R.id.textShareCount)
         val viewCount = root.findViewById<TextView>(R.id.textViewCount)
         val likeButton = root.findViewById<ImageButton>(R.id.btnLike)
 
@@ -112,6 +113,11 @@ object PostBinder {
             R.plurals.comments_count,
             resolvedCommentCount,
             resolvedCommentCount
+        )
+        shareCount.text = context.resources.getQuantityString(
+            R.plurals.shares_count,
+            post.shareCount,
+            post.shareCount
         )
         viewCount.text = context.getString(R.string.views_count, post.viewCount)
         likeButton.setImageResource(if (post.likedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline)

@@ -15,7 +15,8 @@ class FeedSocketController(
     private val onCacheChanged: () -> Unit,
     private val onScrollToTop: () -> Unit,
     private val onViewCountUpdated: (String, Int) -> Unit,
-    private val onCommentCountUpdated: (String, Int) -> Unit
+    private val onCommentCountUpdated: (String, Int) -> Unit,
+    private val onShareCountUpdated: (String, Int) -> Unit
 ) {
     private var listenersAttached = false
 
@@ -29,6 +30,7 @@ class FeedSocketController(
         SocketManager.off("likeUpdate")
         SocketManager.off("viewUpdate")
         SocketManager.off("commentCountUpdate")
+        SocketManager.off("feedUpdate")
         listenersAttached = false
     }
 
@@ -38,6 +40,7 @@ class FeedSocketController(
         SocketManager.off("likeUpdate")
         SocketManager.off("viewUpdate")
         SocketManager.off("commentCountUpdate")
+        SocketManager.off("feedUpdate")
         listenersAttached = true
 
         SocketManager.on("newPost") { data ->
@@ -89,6 +92,25 @@ class FeedSocketController(
                 }
             } catch (e: Exception) {
                 Log.e("FeedSocketController", "Error parsing commentCountUpdate: ${e.message}")
+            }
+        }
+
+        SocketManager.on("feedUpdate") { data ->
+            try {
+                val json = data as JSONObject
+                val eventType = json.optString("type", json.optString("action"))
+                if (eventType == "post_shared") {
+                    val postId = json.getString("postId")
+                    val shareCount = maxOf(
+                        json.optInt("shareCount", 0),
+                        json.optInt("sharesCount", 0)
+                    )
+                    lifecycleScope.launch {
+                        onShareCountUpdated(postId, shareCount)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FeedSocketController", "Error parsing feedUpdate: ${e.message}")
             }
         }
 

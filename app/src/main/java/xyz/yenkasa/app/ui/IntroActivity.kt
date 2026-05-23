@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import xyz.yenkasa.app.R
 import android.widget.Button
-import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.util.AppLocalStore
 
 class IntroActivity : AppCompatActivity() {
 
@@ -15,7 +15,7 @@ class IntroActivity : AppCompatActivity() {
 
         val buttonGetStarted = findViewById<Button>(R.id.btnGetStarted)
         buttonGetStarted.setOnClickListener {
-            TokenManager.markFirstLaunchCompleted(this)
+            AppLocalStore.markFirstLaunchCompleted(this)
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }

@@ -34,13 +34,7 @@ class AiApiService {
 
   Future<BackendHealth> fetchHealth() async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/health',
-        options: Options(
-          sendTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 5),
-        ),
-      );
+      final response = await _dio.get<Map<String, dynamic>>('/health');
       return BackendHealth.fromJson(response.data ?? const {});
     } on DioException catch (error) {
       throw _mapDioError(error);

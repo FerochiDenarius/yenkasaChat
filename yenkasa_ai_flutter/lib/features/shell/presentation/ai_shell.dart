@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/yenkasa_ai_app.dart';
+import '../../../core/config/app_config.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../health/presentation/health_controller.dart';
 import '../../health/presentation/health_indicator.dart';
 
 class NavDestinationItem {
@@ -61,6 +64,7 @@ class AiShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 1100;
     final themeMode = ref.watch(themeModeProvider);
+    final isChatRoute = currentLocation.startsWith('/chat');
 
     final scaffold = Scaffold(
       backgroundColor: Colors.transparent,
@@ -98,19 +102,119 @@ class AiShell extends ConsumerWidget {
                       ),
                       child: Column(
                         children: [
-                          GlassCard(
-                            strong: true,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
+                          if (compactTopBar && isChatRoute) ...[
+                            _CompactChatTopBar(
+                              onOpenDrawer: isDesktop
+                                  ? null
+                                  : () => Scaffold.of(context).openDrawer(),
+                              onOpenSettings: () {
+                                ref
+                                    .read(themeModeProvider.notifier)
+                                    .state = themeMode == ThemeMode.dark
+                                    ? ThemeMode.light
+                                    : ThemeMode.dark;
+                              },
                             ),
-                            child: compactTopBar
-                                ? Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
+                            const SizedBox(height: 14),
+                            Container(
+                              height: 1,
+                              color: Colors.white.withValues(alpha: 0.08),
+                            ),
+                          ] else
+                            GlassCard(
+                              strong: true,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compactTopBar ? 14 : 20,
+                                vertical: compactTopBar ? 12 : 16,
+                              ),
+                              child: compactTopBar
+                                  ? Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            if (!isDesktop)
+                                              Builder(
+                                                builder: (context) =>
+                                                    IconButton(
+                                                      visualDensity:
+                                                          VisualDensity.compact,
+                                                      onPressed: () =>
+                                                          Scaffold.of(
+                                                            context,
+                                                          ).openDrawer(),
+                                                      icon: const Icon(
+                                                        Icons.menu_rounded,
+                                                      ),
+                                                    ),
+                                              ),
+                                            Expanded(
+                                              child: Text(
+                                                isChatRoute
+                                                    ? 'AI Chat'
+                                                    : 'YenkasaAI',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleSmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                              ),
+                                            ),
+                                            const HealthIndicator(
+                                              compact: true,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            IconButton(
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              onPressed: () {
+                                                ref
+                                                        .read(
+                                                          themeModeProvider
+                                                              .notifier,
+                                                        )
+                                                        .state =
+                                                    themeMode == ThemeMode.dark
+                                                    ? ThemeMode.light
+                                                    : ThemeMode.dark;
+                                              },
+                                              icon: Icon(
+                                                themeMode == ThemeMode.dark
+                                                    ? Icons.light_mode_rounded
+                                                    : Icons.dark_mode_rounded,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (!isChatRoute) ...[
+                                          const SizedBox(height: 10),
+                                          TextField(
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  'Search prompts or docs',
+                                              prefixIcon: const Icon(
+                                                Icons.search_rounded,
+                                              ),
+                                              suffixIcon: IconButton(
+                                                onPressed: () =>
+                                                    context.go('/knowledge'),
+                                                icon: const Icon(
+                                                  Icons.arrow_forward_rounded,
+                                                ),
+                                              ),
+                                            ),
+                                            onSubmitted: (_) =>
+                                                context.go('/knowledge'),
+                                          ),
+                                        ],
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        if (isChatRoute) ...[
                                           if (!isDesktop)
                                             Builder(
                                               builder: (context) => IconButton(
@@ -122,17 +226,75 @@ class AiShell extends ConsumerWidget {
                                                 ),
                                               ),
                                             ),
-                                          Expanded(
-                                            child: Text(
-                                              'YenkasaAI Workspace',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
+                                          if (!isDesktop)
+                                            const SizedBox(width: 8),
+                                          Text(
+                                            'AI Chat',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                          const Spacer(),
+                                          const HealthIndicator(),
+                                          const SizedBox(width: 12),
+                                          IconButton(
+                                            onPressed: () {
+                                              ref
+                                                      .read(
+                                                        themeModeProvider
+                                                            .notifier,
+                                                      )
+                                                      .state =
+                                                  themeMode == ThemeMode.dark
+                                                  ? ThemeMode.light
+                                                  : ThemeMode.dark;
+                                            },
+                                            icon: Icon(
+                                              themeMode == ThemeMode.dark
+                                                  ? Icons.light_mode_rounded
+                                                  : Icons.dark_mode_rounded,
                                             ),
                                           ),
+                                        ] else ...[
+                                          if (!isDesktop)
+                                            Builder(
+                                              builder: (context) => IconButton(
+                                                onPressed: () => Scaffold.of(
+                                                  context,
+                                                ).openDrawer(),
+                                                icon: const Icon(
+                                                  Icons.menu_rounded,
+                                                ),
+                                              ),
+                                            ),
+                                          if (!isDesktop)
+                                            const SizedBox(width: 8),
+                                          Expanded(
+                                            child: TextField(
+                                              decoration: InputDecoration(
+                                                hintText:
+                                                    'Search prompts, architecture, moderation, or rewards',
+                                                prefixIcon: const Icon(
+                                                  Icons.search_rounded,
+                                                ),
+                                                suffixIcon: IconButton(
+                                                  onPressed: () =>
+                                                      context.go('/knowledge'),
+                                                  icon: const Icon(
+                                                    Icons.arrow_forward_rounded,
+                                                  ),
+                                                ),
+                                              ),
+                                              onSubmitted: (_) =>
+                                                  context.go('/knowledge'),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          const HealthIndicator(),
+                                          const SizedBox(width: 12),
                                           IconButton(
                                             onPressed: () {
                                               ref
@@ -152,89 +314,15 @@ class AiShell extends ConsumerWidget {
                                             ),
                                           ),
                                         ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextField(
-                                        decoration: InputDecoration(
-                                          hintText:
-                                              'Search prompts, architecture, moderation, or rewards',
-                                          prefixIcon: const Icon(
-                                            Icons.search_rounded,
-                                          ),
-                                          suffixIcon: IconButton(
-                                            onPressed: () =>
-                                                context.go('/knowledge'),
-                                            icon: const Icon(
-                                              Icons.arrow_forward_rounded,
-                                            ),
-                                          ),
-                                        ),
-                                        onSubmitted: (_) =>
-                                            context.go('/knowledge'),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const HealthIndicator(compact: true),
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      if (!isDesktop)
-                                        Builder(
-                                          builder: (context) => IconButton(
-                                            onPressed: () => Scaffold.of(
-                                              context,
-                                            ).openDrawer(),
-                                            icon: const Icon(
-                                              Icons.menu_rounded,
-                                            ),
-                                          ),
-                                        ),
-                                      if (!isDesktop) const SizedBox(width: 8),
-                                      Expanded(
-                                        child: TextField(
-                                          decoration: InputDecoration(
-                                            hintText:
-                                                'Search prompts, architecture, moderation, or rewards',
-                                            prefixIcon: const Icon(
-                                              Icons.search_rounded,
-                                            ),
-                                            suffixIcon: IconButton(
-                                              onPressed: () =>
-                                                  context.go('/knowledge'),
-                                              icon: const Icon(
-                                                Icons.arrow_forward_rounded,
-                                              ),
-                                            ),
-                                          ),
-                                          onSubmitted: (_) =>
-                                              context.go('/knowledge'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      const HealthIndicator(),
-                                      const SizedBox(width: 12),
-                                      IconButton(
-                                        onPressed: () {
-                                          ref
-                                                  .read(
-                                                    themeModeProvider.notifier,
-                                                  )
-                                                  .state =
-                                              themeMode == ThemeMode.dark
-                                              ? ThemeMode.light
-                                              : ThemeMode.dark;
-                                        },
-                                        icon: Icon(
-                                          themeMode == ThemeMode.dark
-                                              ? Icons.light_mode_rounded
-                                              : Icons.dark_mode_rounded,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
+                                      ],
+                                    ),
+                            ),
                           const SizedBox(height: 16),
-                          Expanded(child: SingleChildScrollView(child: child)),
+                          Expanded(
+                            child: isChatRoute
+                                ? child
+                                : SingleChildScrollView(child: child),
+                          ),
                         ],
                       ),
                     ),
@@ -431,6 +519,145 @@ class _NavButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CompactChatTopBar extends StatelessWidget {
+  const _CompactChatTopBar({
+    required this.onOpenDrawer,
+    required this.onOpenSettings,
+  });
+
+  final VoidCallback? onOpenDrawer;
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onOpenDrawer,
+          icon: const Icon(Icons.menu_rounded, size: 28),
+        ),
+        const SizedBox(width: 8),
+        const _CompactBrandLockup(),
+        const Spacer(),
+        const _HeaderPresencePill(),
+        const SizedBox(width: 12),
+        _HeaderCircleButton(icon: Icons.tune_rounded, onTap: onOpenSettings),
+      ],
+    );
+  }
+}
+
+class _CompactBrandLockup extends StatelessWidget {
+  const _CompactBrandLockup();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AiPalette.violet.withValues(alpha: 0.4)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.asset(AppConfig.logoAsset, fit: BoxFit.cover),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Yenkasa AI',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderPresencePill extends ConsumerWidget {
+  const _HeaderPresencePill();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final healthAsync = ref.watch(backendHealthProvider);
+    final online = healthAsync.maybeWhen(
+      data: (_) => true,
+      orElse: () => false,
+    );
+    final label = healthAsync.when(
+      data: (_) => 'Online',
+      loading: () => 'Checking',
+      error: (_, __) => 'Offline',
+    );
+    final dotColor = online
+        ? AiPalette.mint
+        : Colors.white.withValues(alpha: 0.5);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+              boxShadow: online
+                  ? [
+                      BoxShadow(
+                        color: dotColor.withValues(alpha: 0.5),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: online
+                  ? AiPalette.mint
+                  : Colors.white.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderCircleButton extends StatelessWidget {
+  const _HeaderCircleButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: IconButton(onPressed: onTap, icon: Icon(icon, size: 22)),
     );
   }
 }

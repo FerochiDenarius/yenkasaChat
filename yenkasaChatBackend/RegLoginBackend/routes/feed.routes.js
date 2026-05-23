@@ -6,8 +6,8 @@ const Post = require("../models/post.model");
 const Community = require("../models/community.model");
 const Follow = require("../models/follow.model");
 const Ad = require("../models/Ad.model"); // ⭐ ADD THIS
-const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
+const { getRankedFeed } = require("../services/feedRanking.service");
 
 function attachLikedByUser(posts, viewerId) {
   if (!viewerId) return posts;
@@ -31,17 +31,6 @@ function normalizeFeedMode(value = "") {
     return mode;
   }
   return "for-you";
-}
-
-function feedSort(mode) {
-  if (mode === "latest" || mode === "following" || mode === "for-you") return { createdAt: -1 };
-  if (mode === "popular" || mode === "top") {
-    return { shareCount: -1, commentCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
-  }
-  if (mode === "trending") {
-    return { commentCount: -1, shareCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
-  }
-  return { createdAt: -1 };
 }
 
 function escapeRegex(value) {
@@ -147,19 +136,22 @@ async function fetchFeed(req, explicitMode) {
   const skip = (page - 1) * limit;
   const feedMode = normalizeFeedMode(explicitMode || req.query.feedType || req.query.tab || req.query.sort);
   const postFilter = await buildPostFilter(req, feedMode);
+  const viewerContext = {
+    joinedCommunityIds: new Set(userJoinedCommunityIds(req.user).map((id) => id.toString())),
+    followingIds: new Set(
+      feedMode === "for-you" ? (await followingIdsForUser(req.user.id)).map((id) => id.toString()) : []
+    )
+  };
 
-  const [posts, totalPosts] = await Promise.all([
-    Post.find(postFilter)
-      .populate("userId", "username profileImage verified roleName")
-      .populate("communityId", "name displayName")
-      .sort(feedSort(feedMode))
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Post.countDocuments(postFilter)
-  ]);
+  console.log(`[feed] request mode=${feedMode} page=${page} limit=${limit}`);
 
-  await attachAccurateViewCounts(posts);
+  const { posts, totalPosts, rankingSummary } = await getRankedFeed({
+    feedMode,
+    postFilter,
+    page,
+    limit,
+    viewerContext
+  });
   const postsWithLikedState = attachLikedByUser(posts, req.user.id);
 
   const ads = await Ad.find({
@@ -183,6 +175,10 @@ async function fetchFeed(req, explicitMode) {
   while (adIndex < ads.length) {
     feed.push({ __isAd: true, ad: ads[adIndex++] });
   }
+
+  console.log(
+    `[feed] response mode=${feedMode} page=${page} total=${totalPosts} returned=${posts.length} top=${JSON.stringify(rankingSummary)}`
+  );
 
   return {
     success: true,

@@ -14,6 +14,7 @@ const API_ROUTE_MOUNTS = [
   ['/api/users', 'routes/user.routes'],
   ['/api/user', 'routes/conversationStreak.routes'],
   ['/api/contacts', 'routes/contacts.routes'],
+  ['/api/ai', 'src/ai/routes'],
   ['/api/messages', 'routes/messages.routes'],
   ['/api/chatrooms', 'routes/chatroom.routes'],
   ['/api/groups', 'routes/group.routes'],

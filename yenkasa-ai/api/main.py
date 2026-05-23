@@ -72,29 +72,62 @@ DEFAULT_MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "6"))
 PUBLIC_CHUNK_SIZE = int(os.getenv("PUBLIC_DOC_CHUNK_SIZE", "950"))
 PUBLIC_CHUNK_OVERLAP = int(os.getenv("PUBLIC_DOC_CHUNK_OVERLAP", "140"))
 
-PUBLIC_SYSTEM_PROMPT = """You are YenkasaAI, a public-facing assistant for the Yenkasa platform.
+HYBRID_SYSTEM_PROMPT = """You are Yenkasa-AI.
 
-Your job is to explain Yenkasa clearly to ordinary users.
+You are the intelligent ecosystem assistant for Yenkasa.
 
-Primary topics:
-- what Yenkasa is
-- Yenkasa Coin (YKC)
-- rewards and milestones
-- verification and ranks
-- Live Arena and livestream competitions
-- communities
-- creator growth tools
-- moderation and user safety
+You deeply understand:
+- Yenkasa history
+- founder biography
+- ecosystem philosophy
+- social architecture
+- creator economy
+- technical infrastructure
+- reward systems
+- livestream systems
+- AI systems
+- engineering evolution
+- roadmap and vision
 
-Rules:
-1. Base your answer on the retrieved Yenkasa platform context.
-2. Use simple, beginner-friendly language before technical language.
-3. Give a direct answer first, then short supporting points if useful.
-4. Cite source labels like [S1], [S2] when the context supports a claim.
-5. Do not expose internal moderation thresholds, abuse tactics, exploit paths, or security-sensitive details.
-6. If a question asks how to cheat, bypass, game, spam, exploit, or evade, refuse briefly and redirect to safe guidance.
-7. If the context is incomplete, say so plainly instead of guessing.
-8. Keep the tone helpful, clear, and product-focused.
+Founder:
+Bright Kofi Ofosu Menya
+
+Developer identity:
+Ferochi Denarius
+
+Company:
+Yenkasa Soft-O-Tech
+
+You are both:
+- the official Yenkasa assistant
+- a technical ecosystem advisor
+- a project historian
+- a senior software engineering advisor
+
+You answer:
+- Yenkasa ecosystem questions
+- software engineering questions
+- backend architecture questions
+- scalability questions
+- Flutter, Kotlin, Node.js, API, and cloud questions
+- AI engineering questions
+- startup architecture questions
+- product design questions
+- investor and roadmap questions
+
+Response policy:
+1. Prioritize retrieved Yenkasa knowledge when it directly answers the question.
+2. Use retrieved engineering knowledge and uploaded documents next.
+3. When the knowledge base is incomplete or silent, use general engineering reasoning and modern best practices.
+4. Never refuse a normal engineering, architecture, product, or ecosystem question simply because retrieval is thin.
+5. Be explicit when guidance is based on general engineering best practice rather than retrieved Yenkasa evidence.
+6. Distinguish clearly between current implementation, legacy design documentation, and roadmap aspirations when they differ.
+7. Preserve project history, founder context, and ecosystem philosophy when they are relevant to the answer.
+8. Cite source labels like [S1], [S2] when retrieved context supports a claim.
+9. Keep answers practical, modern, and concrete.
+10. Do not invent Yenkasa-specific facts that are not supported by retrieved context.
+11. Do not expose internal moderation thresholds, abuse tactics, exploit paths, or security-sensitive details.
+12. If a question asks how to cheat, bypass, game, spam, exploit, or evade, refuse briefly and redirect to safe guidance.
 """
 
 PUBLIC_UNSAFE_PATTERNS = [
@@ -143,6 +176,44 @@ PUBLIC_FOLLOW_UPS = {
     ],
 }
 
+ENGINEERING_FOLLOW_UPS = [
+    "How does this compare with standard social platform architecture?",
+    "What should be refactored first to reduce scaling risk?",
+    "Which parts should stay monolithic and which should split out?",
+]
+
+HYBRID_GENERAL_FOLLOW_UPS = [
+    "How does this compare with engineering best practice?",
+    "What are the biggest scaling risks here?",
+    "What would you improve first if this had to grow fast?",
+]
+
+ENGINEERING_INTENT_TERMS = (
+    "api",
+    "architecture",
+    "backend",
+    "cache",
+    "cloud run",
+    "code",
+    "database",
+    "deploy",
+    "engineering",
+    "feed",
+    "flutter",
+    "infrastructure",
+    "kotlin",
+    "latency",
+    "microservice",
+    "mobile",
+    "node",
+    "performance",
+    "queue",
+    "redis",
+    "scal",
+    "socket",
+    "system design",
+)
+
 
 class ChatTurn(BaseModel):
     role: str
@@ -176,6 +247,7 @@ class AppState:
         self.engineering_vector_store: Any | None = None
         self.public_vector_store: Any | None = None
         self.llm: Any | None = None
+        self.hybrid_prompt: Any | None = None
         self.engineering_prompt: Any | None = None
         self.public_prompt: Any | None = None
         self.ready = False
@@ -212,19 +284,25 @@ def load_ask_module():
     return module
 
 
-def build_public_prompt() -> ChatPromptTemplate:
+def build_hybrid_prompt() -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages(
         [
-            ("system", PUBLIC_SYSTEM_PROMPT),
+            ("system", HYBRID_SYSTEM_PROMPT),
             (
                 "human",
+                "Requested response mode:\n{audience_mode}\n\n"
                 "Conversation history:\n{history}\n\n"
                 "User question:\n{question}\n\n"
-                "Retrieved Yenkasa platform context:\n{context}\n\n"
-                "Write a clear answer for a normal Yenkasa user. "
-                "Start with a direct answer, then use short bullets if that helps. "
-                "Cite source labels like [S1] where useful. "
-                "Do not reveal exploit guidance or moderation bypass details.",
+                "Combined retrieval context:\n{context}\n\n"
+                "Retrieval status:\n{retrieval_status}\n\n"
+                "Write the best possible answer.\n"
+                "- Prioritize retrieved Yenkasa facts when they directly apply.\n"
+                "- Use retrieved engineering context when it helps with architecture or implementation advice.\n"
+                "- If the retrieved knowledge is partial or missing, still answer using general engineering and product best practices.\n"
+                "- Preserve founder, ecosystem, and historical context when relevant to the question.\n"
+                "- Make it clear when something is current production behavior, legacy documentation, or roadmap direction.\n"
+                "- When you rely on general reasoning instead of retrieved Yenkasa evidence, say so plainly.\n"
+                "- Cite [S1] style labels when a retrieved source supports a claim.",
             ),
         ]
     )
@@ -283,8 +361,9 @@ def startup_rag() -> None:
     state.engineering_vector_store = engineering_vector_store
     state.public_vector_store = public_vector_store
     state.llm = llm
+    state.hybrid_prompt = build_hybrid_prompt()
     state.engineering_prompt = ask_module.build_prompt()
-    state.public_prompt = build_public_prompt()
+    state.public_prompt = build_hybrid_prompt()
 
     if PUBLIC_KNOWLEDGE_DIR.exists() and collection_count(public_vector_store) == 0:
         sync_public_knowledge(force=False, skip_ready_check=True)
@@ -565,11 +644,7 @@ def build_answer_cards(results: list[tuple]) -> list[dict[str, Any]]:
 
 def build_suggested_follow_ups(results: list[tuple], audience: str) -> list[str]:
     if audience == "engineering":
-        return [
-            "What are the main scaling risks in this subsystem?",
-            "Which routes or sockets own this behavior today?",
-            "What should be refactored first to reduce operational risk?",
-        ]
+        return ENGINEERING_FOLLOW_UPS
 
     categories: list[str] = []
     for document, _score in results:
@@ -590,9 +665,31 @@ def build_suggested_follow_ups(results: list[tuple], audience: str) -> list[str]
     return suggestions[:3]
 
 
-def format_public_context(results: list[tuple]) -> str:
+def is_engineering_question(question: str) -> bool:
+    lowered = question.lower()
+    return any(term in lowered for term in ENGINEERING_INTENT_TERMS)
+
+
+def merge_results_by_priority(*result_groups: list[tuple], limit: int) -> list[tuple]:
+    merged: list[tuple] = []
+    seen: set[str] = set()
+    for results in result_groups:
+        for document, score in results:
+            metadata = dict(getattr(document, "metadata", {}) or {})
+            chunk_id = metadata.get("chunk_id") or metadata.get("source_relative_path")
+            dedupe_key = f"{chunk_id}:{hash((document.page_content or '').strip())}"
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            merged.append((document, score))
+            if len(merged) >= limit:
+                return merged
+    return merged
+
+
+def format_context_block(results: list[tuple], empty_message: str) -> str:
     if not results:
-        return "No relevant Yenkasa platform context retrieved."
+        return empty_message
 
     blocks = []
     for index, (document, score) in enumerate(results, start=1):
@@ -610,26 +707,133 @@ def format_public_context(results: list[tuple]) -> str:
     return "\n\n".join(blocks)
 
 
-def answer_public_query(question: str, history_pairs: list[tuple[str, str]]) -> dict[str, Any]:
-    if public_query_is_unsafe(question):
+def best_relevance(results: list[tuple]) -> float:
+    if not results:
+        return 0.0
+    return max(1 / (1 + max(0.0, float(score or 0.0))) for _document, score in results)
+
+
+def filter_results_for_context(results: list[tuple], min_relevance: float = 0.34) -> list[tuple]:
+    filtered = [
+        (document, score)
+        for document, score in results
+        if (1 / (1 + max(0.0, float(score or 0.0)))) >= min_relevance
+    ]
+    return filtered
+
+
+def build_combined_context(public_results: list[tuple], engineering_results: list[tuple]) -> str:
+    public_context = format_context_block(
+        public_results,
+        "No direct Yenkasa platform passages were retrieved for this question.",
+    )
+    engineering_context = format_context_block(
+        engineering_results,
+        "No direct engineering or uploaded-document passages were retrieved for this question.",
+    )
+    return (
+        "YENKASA KNOWLEDGE:\n"
+        f"{public_context}\n\n"
+        "ENGINEERING KNOWLEDGE:\n"
+        f"{engineering_context}"
+    )
+
+
+def build_retrieval_status(public_results: list[tuple], engineering_results: list[tuple]) -> str:
+    public_relevance = best_relevance(public_results)
+    engineering_relevance = best_relevance(engineering_results)
+
+    if not public_results and not engineering_results:
+        return (
+            "No high-confidence knowledge-base matches were retrieved. "
+            "Answer using general engineering and product reasoning, and clearly mark that the answer is best-practice guidance."
+        )
+
+    status = [
+        f"Yenkasa retrieval relevance: {public_relevance:.2f}",
+        f"Engineering retrieval relevance: {engineering_relevance:.2f}",
+    ]
+    if public_relevance < 0.38 and engineering_relevance < 0.38:
+        status.append(
+            "Both retrieval channels are weak. Lean on general reasoning while avoiding unsupported Yenkasa-specific claims."
+        )
+    elif public_relevance < 0.38:
+        status.append(
+            "Yenkasa retrieval is weak. Use engineering reasoning where needed and be explicit when advice is not grounded in Yenkasa docs."
+        )
+    elif engineering_relevance < 0.38:
+        status.append(
+            "Engineering retrieval is weak. Prioritize Yenkasa context, then general best practices if extra implementation advice is needed."
+        )
+    else:
+        status.append("Both retrieval channels have usable signal. Combine them thoughtfully.")
+    return "\n".join(status)
+
+
+def build_hybrid_follow_ups(
+    question: str,
+    public_results: list[tuple],
+    engineering_results: list[tuple],
+    audience: str,
+) -> list[str]:
+    if (
+        audience == "engineering"
+        or best_relevance(engineering_results) >= 0.38
+        or is_engineering_question(question)
+    ):
+        return ENGINEERING_FOLLOW_UPS
+
+    public_suggestions = build_suggested_follow_ups(public_results, "public")
+    merged: list[str] = []
+    for suggestion in [*public_suggestions, *HYBRID_GENERAL_FOLLOW_UPS]:
+        if suggestion not in merged:
+            merged.append(suggestion)
+    return merged[:3]
+
+
+def answer_hybrid_query(
+    question: str,
+    history_pairs: list[tuple[str, str]],
+    audience: Literal["public", "engineering"],
+) -> dict[str, Any]:
+    if audience == "public" and public_query_is_unsafe(question):
         return safe_public_refusal()
 
     total_started = time.perf_counter()
-    results, retrieval_elapsed = state.ask_module.retrieve_chunks(
+    public_results, public_retrieval_elapsed = state.ask_module.retrieve_chunks(
         state.public_vector_store,
         question,
         DEFAULT_RETRIEVAL_K,
     )
-    context = format_public_context(results)
+    engineering_results, engineering_retrieval_elapsed = state.ask_module.retrieve_chunks(
+        state.engineering_vector_store,
+        question,
+        DEFAULT_RETRIEVAL_K,
+    )
+    public_results = filter_results_for_context(public_results)
+    engineering_results = filter_results_for_context(engineering_results)
+    combined_results = merge_results_by_priority(
+        public_results,
+        engineering_results,
+        limit=max(DEFAULT_RETRIEVAL_K * 2, 8),
+    )
+    context = build_combined_context(public_results, engineering_results)
+    retrieval_status = build_retrieval_status(public_results, engineering_results)
     history = state.ask_module.format_history(history_pairs, DEFAULT_MAX_HISTORY_TURNS)
 
     generation_started = time.perf_counter()
     try:
         response = state.llm.invoke(
-            state.public_prompt.format_messages(
+            state.hybrid_prompt.format_messages(
+                audience_mode=(
+                    "Engineering advisor mode: be technically rigorous, concrete, and comparison-friendly."
+                    if audience == "engineering"
+                    else "Product assistant mode: stay clear and accessible, but still answer engineering questions when asked."
+                ),
                 history=history,
                 question=question,
                 context=context,
+                retrieval_status=retrieval_status,
             )
         )
     except Exception as exc:
@@ -640,52 +844,41 @@ def answer_public_query(question: str, history_pairs: list[tuple[str, str]]) -> 
     answer = state.ask_module.extract_answer_text(response)
     if not answer:
         answer = (
-            "I found relevant Yenkasa platform knowledge, but the final answer came back empty. "
-            "Please ask again or try a more specific question."
+            "I could not turn the retrieved context into a final answer, but I should still be able to help. "
+            "Please ask again and I will answer using both Yenkasa context and general engineering reasoning."
         )
 
     return {
         "provider": "vertex_ai",
         "model": DEFAULT_MODEL,
-        "audience": "public",
+        "audience": audience,
         "answer": answer,
-        "answerCards": build_answer_cards(results),
-        "suggestedFollowUps": build_suggested_follow_ups(results, "public"),
-        "sources": format_api_sources(results),
+        "answerCards": build_answer_cards(combined_results),
+        "suggestedFollowUps": build_hybrid_follow_ups(
+            question,
+            public_results,
+            engineering_results,
+            audience,
+        ),
+        "sources": format_api_sources(combined_results),
         "timings": {
-            "retrievalMs": round(retrieval_elapsed * 1000),
+            "retrievalMs": round((public_retrieval_elapsed + engineering_retrieval_elapsed) * 1000),
+            "publicRetrievalMs": round(public_retrieval_elapsed * 1000),
+            "engineeringRetrievalMs": round(engineering_retrieval_elapsed * 1000),
             "generationMs": round(generation_elapsed * 1000),
             "totalMs": round(total_elapsed * 1000),
         },
-        "safetyMode": "public",
+        "safetyMode": audience,
+        "retrievalMode": "hybrid_reasoning",
     }
+
+
+def answer_public_query(question: str, history_pairs: list[tuple[str, str]]) -> dict[str, Any]:
+    return answer_hybrid_query(question, history_pairs, "public")
 
 
 def answer_engineering_query(question: str, history_pairs: list[tuple[str, str]]) -> dict[str, Any]:
-    answer, results, timings = state.ask_module.answer_query(
-        query=question,
-        vector_store=state.engineering_vector_store,
-        llm=state.llm,
-        prompt=state.engineering_prompt,
-        conversation_history=history_pairs,
-        retrieval_k=DEFAULT_RETRIEVAL_K,
-        max_history_turns=DEFAULT_MAX_HISTORY_TURNS,
-    )
-    return {
-        "provider": "vertex_ai",
-        "model": DEFAULT_MODEL,
-        "audience": "engineering",
-        "answer": answer,
-        "answerCards": build_answer_cards(results),
-        "suggestedFollowUps": build_suggested_follow_ups(results, "engineering"),
-        "sources": format_api_sources(results),
-        "timings": {
-            "retrievalMs": round(timings["retrieval_elapsed"] * 1000),
-            "generationMs": round(timings["generation_elapsed"] * 1000),
-            "totalMs": round(timings["total_elapsed"] * 1000),
-        },
-        "safetyMode": "engineering",
-    }
+    return answer_hybrid_query(question, history_pairs, "engineering")
 
 
 def run_ingestion_job(job_id: str, upload_dir: Path) -> None:

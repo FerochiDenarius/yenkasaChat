@@ -10,7 +10,7 @@ from app.models import HealthResponse
 from app.models import SearchRequest
 from app.models import SearchResponse
 from rag.loaders import load_markdown_documents
-from rag.prompts import build_engineering_prompt
+from rag.prompts import build_hybrid_prompt
 from rag.prompts import build_public_prompt
 from rag.vector_store import build_embedding_function
 from rag.vector_store import build_vector_store
@@ -38,7 +38,7 @@ class RagRuntime:
         self.engineering_vector_store = None
         self.public_vector_store = None
         self.llm = None
-        self.engineering_prompt = build_engineering_prompt()
+        self.hybrid_prompt = build_hybrid_prompt()
         self.public_prompt = build_public_prompt()
         self.startup_timings: dict[str, float] = {}
         self.collection_stats: dict[str, dict[str, object]] = {}
@@ -176,13 +176,12 @@ class RagRuntime:
         )
 
     def chat(self, payload: ChatRequest) -> ChatResponse:
-        vector_store = self.engineering_vector_store if payload.audience == "engineering" else self.public_vector_store
-        prompt = self.engineering_prompt if payload.audience == "engineering" else self.public_prompt
         return chat_with_rag(
             payload=payload,
-            vector_store=vector_store,
+            public_vector_store=self.public_vector_store,
+            engineering_vector_store=self.engineering_vector_store,
             llm=self.llm,
-            prompt=prompt,
+            prompt=self.hybrid_prompt,
             model_name=self.settings.vertex_model,
             max_history_turns=self.settings.max_history_turns,
             retrieval_k=self.settings.retrieval_k,

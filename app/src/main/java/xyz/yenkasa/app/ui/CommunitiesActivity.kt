@@ -20,6 +20,7 @@ import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.AppLinkManager
+import xyz.yenkasa.app.util.CommunityPrefsStore
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -78,7 +79,7 @@ class CommunitiesActivity : AppCompatActivity() {
             return
         }
 
-        primaryCommunityId = TokenManager.getPrimaryCommunityId(this)
+        primaryCommunityId = CommunityPrefsStore.getPrimaryCommunityId(this)
         pendingDeepLinkCommunityIdentifier = intent
             .getStringExtra(AppLinkManager.EXTRA_COMMUNITY_IDENTIFIER)
             ?.trim()
@@ -260,14 +261,14 @@ class CommunitiesActivity : AppCompatActivity() {
                     val primary = response.body()?.community
                     if (primary == null) {
                         primaryCommunityId = null
-                        TokenManager.savePrimaryCommunityId(this@CommunitiesActivity, null)
+                        CommunityPrefsStore.savePrimaryCommunityId(this@CommunitiesActivity, null)
                         Log.d("PRIMARY_COMMUNITY", "No primary community in response; using joined communities only")
                         return
                     }
 
                     Log.d("PRIMARY_COMMUNITY", "Primary community received: ID=${primary.id}, Name=${primary.displayName}")
                     primaryCommunityId = primary.id
-                    TokenManager.savePrimaryCommunityId(this@CommunitiesActivity, primary.id)
+                    CommunityPrefsStore.savePrimaryCommunityId(this@CommunitiesActivity, primary.id)
 
                     // Check if primary already exists
                     val alreadyExists = joinedCommunities.any { it.id == primary.id }

@@ -29,6 +29,7 @@ import xyz.yenkasa.app.model.TransactionUiModel
 import xyz.yenkasa.app.model.CoinTransactionResponse
 import xyz.yenkasa.app.model.CoinBalanceResponse
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.AppLocalStore
 import xyz.yenkasa.app.util.NotificationSoundManager
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -258,7 +259,7 @@ class CoinWalletActivity : AppCompatActivity() {
             })
 
         // Load cached transactions
-        val cached = sortTransactions(TokenManager.getTransactionHistory(this))
+        val cached = sortTransactions(AppLocalStore.getTransactionHistory(this))
 
         if (cached.isNotEmpty()) {
             allTransactions.clear()
@@ -306,7 +307,7 @@ class CoinWalletActivity : AppCompatActivity() {
 
                     val mergedHistory = mergeTransactions(
                         serverTransactions = latest,
-                        cachedTransactions = TokenManager.getTransactionHistory(this@CoinWalletActivity)
+                        cachedTransactions = AppLocalStore.getTransactionHistory(this@CoinWalletActivity)
                     )
 
                     // Update UI
@@ -316,7 +317,7 @@ class CoinWalletActivity : AppCompatActivity() {
                     refreshWalletHero()
 
                     // Save to local cache
-                    TokenManager.saveTransactionHistory(this@CoinWalletActivity, mergedHistory)
+                    AppLocalStore.saveTransactionHistory(this@CoinWalletActivity, mergedHistory)
 
                     // Update previous list
                     previousList = mergedHistory

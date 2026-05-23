@@ -97,6 +97,7 @@ class PostAdapter(
         val btnShare: ImageButton = itemRoot.findViewById(R.id.btnShare)
         val likeCount: TextView = itemRoot.findViewById(R.id.textLikeCount)
         val commentCount: TextView = itemRoot.findViewById(R.id.textCommentCount)
+        val shareCount: TextView = itemRoot.findViewById(R.id.textShareCount)
         val coinsEarned: TextView = itemRoot.findViewById(R.id.textCoinsEarned)
         val viewCount: TextView = itemRoot.findViewById(R.id.textViewCount)
         val fabFollow: FloatingActionButton = itemRoot.findViewById(R.id.fabFollow)
@@ -344,6 +345,11 @@ class PostAdapter(
             resolvedCommentCount,
             resolvedCommentCount
         )
+        holder.shareCount.text = context.resources.getQuantityString(
+            R.plurals.shares_count,
+            post.shareCount,
+            post.shareCount
+        )
         holder.viewCount.text = context.getString(R.string.views_count, post.viewCount)
 
         holder.coinsEarned.visibility = if (post.coinsEarned > 0) {
@@ -370,7 +376,7 @@ class PostAdapter(
             throttleTap(view)
             onShareClick(post)
         }
-        holder.viewCount.setOnClickListener { holder.btnShare.performClick() }
+        holder.shareCount.setOnClickListener { holder.btnShare.performClick() }
 
         val currentUserId = TokenManager.getUserId(context)
         holder.fabFollow.setImageResource(R.drawable.ic_person_add)

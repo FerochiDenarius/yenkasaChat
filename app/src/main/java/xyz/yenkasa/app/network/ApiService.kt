@@ -929,7 +929,7 @@ interface ApiService {
     fun recordPostShare(
         @Path("postId") postId: String,
         @Header("Authorization") token: String
-    ): Call<GenericResponse>
+    ): Call<SharePostResponse>
 
 
     @POST("posts/{postId}/flag")

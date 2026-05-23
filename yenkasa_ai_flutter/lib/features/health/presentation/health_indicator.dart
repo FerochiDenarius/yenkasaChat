@@ -13,27 +13,31 @@ class HealthIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final healthAsync = ref.watch(backendHealthProvider);
 
-    return healthAsync.when(
-      data: (health) => Tooltip(
-        message: '${health.provider} · ${health.model} · ${health.location}',
-        child: StatusChip(
-          label: compact ? 'Online' : 'Backend healthy',
-          tone: StatusTone.success,
+    return GestureDetector(
+      onTap: () => ref.invalidate(backendHealthProvider),
+      child: healthAsync.when(
+        data: (health) => Tooltip(
+          message:
+              '${health.provider} · ${health.model} · ${health.location} · tap to refresh',
+          child: StatusChip(
+            label: compact ? 'Online' : 'Backend healthy',
+            tone: StatusTone.success,
+            compact: compact,
+          ),
+        ),
+        error: (error, _) => Tooltip(
+          message: '${error.toString()} · tap to retry',
+          child: StatusChip(
+            label: compact ? 'Offline' : 'Backend unreachable',
+            tone: StatusTone.danger,
+            compact: compact,
+          ),
+        ),
+        loading: () => StatusChip(
+          label: compact ? 'Checking' : 'Checking backend',
+          tone: StatusTone.info,
           compact: compact,
         ),
-      ),
-      error: (error, _) => Tooltip(
-        message: error.toString(),
-        child: StatusChip(
-          label: compact ? 'Offline' : 'Backend unreachable',
-          tone: StatusTone.danger,
-          compact: compact,
-        ),
-      ),
-      loading: () => StatusChip(
-        label: compact ? 'Checking' : 'Checking backend',
-        tone: StatusTone.info,
-        compact: compact,
       ),
     );
   }

@@ -17,6 +17,7 @@ import xyz.yenkasa.app.model.FlagRequest
 import xyz.yenkasa.app.model.GenericResponse
 import xyz.yenkasa.app.model.MediaResponse
 import xyz.yenkasa.app.model.Post
+import xyz.yenkasa.app.model.SharePostResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.CommentsActivity
 import xyz.yenkasa.app.ui.FeedUtils
@@ -100,13 +101,16 @@ class FeedPostActionsController(
 
         tokenProvider()?.takeIf { it.isNotBlank() }?.let { authToken ->
             ApiClient.apiService.recordPostShare(post._id, "Bearer $authToken")
-                .enqueue(object : Callback<GenericResponse> {
+                .enqueue(object : Callback<SharePostResponse> {
                     override fun onResponse(
-                        call: Call<GenericResponse>,
-                        response: Response<GenericResponse>
-                    ) = Unit
+                        call: Call<SharePostResponse>,
+                        response: Response<SharePostResponse>
+                    ) {
+                        val shareCount = response.body()?.shareCount ?: return
+                        updatePostShareCount(post._id, shareCount)
+                    }
 
-                    override fun onFailure(call: Call<GenericResponse>, t: Throwable) = Unit
+                    override fun onFailure(call: Call<SharePostResponse>, t: Throwable) = Unit
                 })
         }
 
@@ -120,6 +124,16 @@ class FeedPostActionsController(
                 fragment.getString(R.string.share_via)
             )
         )
+    }
+
+    private fun updatePostShareCount(postId: String, shareCount: Int) {
+        val posts = postsProvider()
+        val index = posts.indexOfFirst { it._id == postId }
+        if (index < 0) return
+        val current = posts[index]
+        posts[index] = current.copy(shareCount = shareCount.coerceAtLeast(0))
+        onPostsChanged()
+        onCacheChanged()
     }
 
     fun showPostOptionsBottomSheet(post: Post) {

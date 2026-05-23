@@ -24,6 +24,7 @@ const upload = multer({
 router.get('/modes', auth, aiController.getModes);
 router.get('/suggestions', auth, aiRateLimiter, aiController.getSuggestions);
 router.get('/conversations/:conversationId/history', auth, aiRateLimiter, aiController.getConversationHistory);
+router.post('/moderate', auth, aiRateLimiter, aiController.moderate);
 router.post('/chat', auth, aiRateLimiter, aiController.chat);
 router.post('/chat/stream', auth, aiRateLimiter, aiController.streamChat);
 router.post('/knowledge/ingest', auth, aiRateLimiter, upload.array('files', 10), aiController.ingestKnowledge);

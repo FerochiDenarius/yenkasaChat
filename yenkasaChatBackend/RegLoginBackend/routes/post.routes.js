@@ -12,12 +12,14 @@ const { uploadFiles } = require('../utils/upload');
 const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
 const PostApproval = require("../models/postapproval.model");
+const ModerationItem = require("../models/ModerationItem.model");
 const { sendNotification } = require("../services/notification.service");
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendPushNotification } = require("../utils/onesignal");
 const { logUploadAudit } = require("../utils/cloudinaryMedia");
 const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
 const { auditSecurityEvent } = require("../utils/securityAudit");
+const moderationService = require('../src/ai/services/moderation.service');
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -377,11 +379,20 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       }
     }
 
-    const postStatus = isAutoPublished ? "approved" : "pending";
     const hasUploadedMedia = imageUrls.length > 0 || videoUrl || audioUrl;
     const textOnlyBackgroundColor = !hasUploadedMedia && text?.trim()
       ? normalizeTextBackgroundColor(textBackgroundColor)
       : "";
+    const aiModeration = await moderationService.moderatePostContent({
+      text: text?.trim() || "",
+      imageUrls,
+      videoUrl,
+      audioUrl,
+      userId,
+      source: "post_create"
+    });
+    const requiresHumanReview = aiModeration.requiresHumanReview || !aiModeration.approved;
+    const postStatus = requiresHumanReview ? "pending" : "approved";
 
     const post = await Post.create({
       userId,
@@ -399,13 +410,14 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       location: location || "",
       visibility: visibility || "public",
       communityName: selectedCommunity.displayName || selectedCommunity.name,
-      status: postStatus
+      status: postStatus,
+      aiModeration
     });
 
     /* ------------------------------------
      * PENDING POST → APPROVAL WORKFLOW
      * ------------------------------------ */
-    if (!isAutoPublished) {
+    if (requiresHumanReview) {
 
       await PostApproval.create({
         post: post._id,
@@ -417,7 +429,27 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
         videoUrl: post.videoUrl,
         audioUrl: post.audioUrl,
         submittedAt: new Date(),
-        status: "pending"
+        status: "pending",
+        aiModeration
+      });
+
+      await ModerationItem.create({
+        type: "system_flag",
+        targetUserId: userId,
+        targetPostId: post._id,
+        reportedBy: userId,
+        reason: aiModeration.reason || "Flagged by Yenkasa-AI moderation",
+        status: "pending",
+        metadata: {
+          source: "yenkasa_ai",
+          moderation: aiModeration,
+          communityId: selectedCommunity._id,
+          communityName: selectedCommunity.displayName || selectedCommunity.name,
+          visibility: visibility || "public",
+          postType: detectedPostType
+        },
+        createdBy: "system",
+        ipAddress: req.ip
       });
 
       // 🔔 Notify creator their post is pending review
@@ -493,6 +525,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       message: postStatus === "approved"
         ? "Post published successfully."
         : "Post submitted for approval.",
+      moderation: aiModeration,
       postingAccess: {
         verified: isVerifiedUser,
         privileged: isAutoPublished,
@@ -500,7 +533,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
         postingLimit: isAutoPublished || isVerifiedUser ? null : UNVERIFIED_POST_LIMIT,
         postsUsed: isAutoPublished || isVerifiedUser ? null : recentPostsCount + 1,
         remainingPosts: isAutoPublished || isVerifiedUser ? null : remainingPosts,
-        requiresReview: !isAutoPublished
+        requiresReview: requiresHumanReview
       }
     });
 
@@ -1014,8 +1047,6 @@ router.get("/:postId/download", authMiddleware, async (req, res) => {
 // -----------------------------------------------
 // FLAG / REPORT POST
 // -----------------------------------------------
-const ModerationItem = require("../models/ModerationItem.model");
-
 router.post("/:postId/flag", authMiddleware, async (req, res) => {
   try {
     const { postId } = req.params;

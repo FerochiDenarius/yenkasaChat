@@ -2,6 +2,7 @@ const fs = require('node:fs/promises');
 
 const aiService = require('../services/ai.service');
 const knowledgeService = require('../services/knowledge.service');
+const moderationService = require('../services/moderation.service');
 const { getProvider } = require('../providers');
 const { resolveMode } = require('../utils/mode-config');
 
@@ -102,6 +103,26 @@ async function getSuggestions(req, res, next) {
   }
 }
 
+async function moderate(req, res, next) {
+  try {
+    if (!enforceUserScope(req, res)) return;
+
+    const response = await moderationService.moderatePostContent({
+      text: req.body?.text,
+      imageUrls: req.body?.imageUrls,
+      videoUrl: req.body?.videoUrl,
+      audioUrl: req.body?.audioUrl,
+      userId: normalizeRequestedUserId(req) || String(req.user?._id || req.user?.id || ''),
+      includeDebug: Boolean(req.body?.includeDebug),
+      source: 'http_api',
+    });
+
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getConversationHistory(req, res, next) {
   try {
     const response = await aiService.getConversationHistory({
@@ -167,6 +188,7 @@ async function ingestKnowledge(req, res, next) {
 module.exports = {
   chat,
   streamChat,
+  moderate,
   getSuggestions,
   getConversationHistory,
   getModes,

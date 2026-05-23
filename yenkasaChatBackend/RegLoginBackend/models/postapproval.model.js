@@ -30,6 +30,11 @@ const PostApprovalSchema = new mongoose.Schema({
     default: "pending"
   },
 
+  aiModeration: {
+    type: Object,
+    default: null
+  },
+
   notifiedAdmins: { type: Boolean, default: false }
 });
 

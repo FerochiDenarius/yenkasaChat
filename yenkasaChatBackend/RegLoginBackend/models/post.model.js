@@ -91,6 +91,11 @@ const postSchema = new Schema({
     default: 'pending'
   },
 
+  aiModeration: {
+    type: Object,
+    default: null
+  },
+
   isReported: { type: Boolean, default: false },
   reportCount: { type: Number, default: 0 },
 

@@ -5,8 +5,10 @@ const { v4: uuidv4 } = require("uuid");
 const PostApproval = require("../models/postapproval.model");
 const Post = require("../models/post.model");
 const User = require("../models/user.model");
+const AiModeration = require("../models/aiModeration.model");
 const authMiddleware = require("../middleware/auth");
 const { sendNotification } = require("../services/notification.service");
+const { emitApprovedPostCreated } = require("../services/postEventPublisher.service");
 const rewardService = require("../services/reward.service");
 const { getPermissions, canApproveContent, REVIEWER_RANKS } = require("../middleware/permissions");
 const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
@@ -24,46 +26,6 @@ function canApprove(userOrRole) {
   return canApproveContent(userOrRole);
 }
 
-async function emitApprovedPostCreated(postId, source, requestId = "") {
-  if (!global.io) return;
-
-  const post = await Post.findById(postId)
-    .populate("userId", "username profileImage verified roleName")
-    .populate("communityId", "name displayName")
-    .lean();
-  if (!post) return;
-
-  const timestamp = new Date().toISOString();
-  const eventId = `post_created:${post._id}`;
-  const logicalPostKey = post.clientRequestId
-    ? `client:${post.userId?._id || post.userId}:${post.clientRequestId}`
-    : `post:${post._id}`;
-  const socketPost = {
-    ...post,
-    eventId,
-    requestId,
-    logicalPostKey,
-    eventSource: source,
-    eventTimestamp: timestamp
-  };
-
-  global.io.emit("newPost", socketPost);
-  global.io.emit("feedUpdate", {
-    eventId,
-    requestId,
-    logicalPostKey,
-    type: "newPost",
-    action: "new_post",
-    source,
-    postId: post._id,
-    userId: post.userId?._id || post.userId,
-    community: post.communityName || post.communityId?.displayName || post.communityId?.name || "",
-    createdAt: post.createdAt,
-    timestamp,
-    post: socketPost
-  });
-}
-
 // Helper: fetch all approvers
 async function getApprovers() {
   return User.find({
@@ -72,6 +34,50 @@ async function getApprovers() {
       { accessRole: { $in: ALLOWED_ACCESS_ROLES } }
     ]
   }).select("_id username playerId");
+}
+
+async function syncAiModerationDecision(postId, reviewerId, decision, reason = "") {
+  const record = await AiModeration.findOne({ postId });
+  if (!record) return null;
+
+  const previousAction = record.sourceResults?.aggregate?.finalAction || record.finalAction;
+
+  record.lifecycleStatus = "reviewed";
+  record.finalAction = decision;
+  record.reviewedBy = reviewerId;
+  record.reviewedAt = new Date();
+  record.moderatorDecision = decision;
+  record.moderatorReason = String(reason || "").trim();
+  record.metrics.accuracyOutcome =
+    previousAction === decision ? "ai_confirmed" : "human_overrode_ai";
+
+  if (record.sourceResults?.aggregate) {
+    record.sourceResults.aggregate = {
+      ...record.sourceResults.aggregate,
+      finalAction: decision,
+      finalStatus: decision === "approve" ? "approved" : "rejected",
+      approved: decision === "approve",
+      requiresHumanReview: false,
+      reasons: decision === "reject" && reason
+        ? [...new Set([...(record.sourceResults.aggregate.reasons || []), reason])]
+        : record.sourceResults.aggregate.reasons || [],
+    };
+  }
+
+  if (record.metadata?.legacySummary) {
+    record.metadata.legacySummary = {
+      ...record.metadata.legacySummary,
+      approved: decision === "approve",
+      finalAction: decision,
+      finalStatus: decision === "approve" ? "approved" : "rejected",
+      requiresHumanReview: false,
+      moderatorDecision: decision,
+      moderatorReason: reason,
+    };
+  }
+
+  await record.save();
+  return record;
 }
 
 // ================================
@@ -97,7 +103,7 @@ router.get("/pending", authMiddleware, pendingBackfillLimiter, async (req, res) 
 
   const existingApprovalPostIds = await PostApproval.distinct("post");
   const missingApprovalPosts = await Post.find({
-    status: "pending",
+    status: { $in: ["pending", "pending_review"] },
     _id: { $nin: existingApprovalPostIds }
   }).select("_id userId text caption textBackgroundColor imageUrl imageUrls videoUrl audioUrl createdAt");
 
@@ -230,13 +236,26 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
 
     const post = await Post.findByIdAndUpdate(
       approvalEntry.post,
-      { $set: { status: "approved" } },
+      {
+        $set: {
+          status: "approved",
+          "aiModeration.approved": true,
+          "aiModeration.requiresHumanReview": false,
+          "aiModeration.finalAction": "approve",
+          "aiModeration.finalStatus": "approved",
+          "aiModeration.moderatorDecision": "approve",
+        }
+      },
       { new: true }
     );
     if (!post)
       return res.status(404).json({ error: "Post not found" });
 
     approvalEntry.status = "approved";
+    const approvedModerationRecord = await syncAiModerationDecision(post._id, approver._id, "approve");
+    if (approvedModerationRecord?.metadata?.legacySummary) {
+      approvalEntry.aiModeration = approvedModerationRecord.metadata.legacySummary;
+    }
     await approvalEntry.save();
 
     const owner = await User.findById(post.userId);
@@ -316,13 +335,32 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
 
     const post = await Post.findByIdAndUpdate(
       approvalEntry.post,
-      { status: "rejected" },
+      {
+        $set: {
+          status: "rejected",
+          "aiModeration.approved": false,
+          "aiModeration.requiresHumanReview": false,
+          "aiModeration.finalAction": "reject",
+          "aiModeration.finalStatus": "rejected",
+          "aiModeration.moderatorDecision": "reject",
+          "aiModeration.moderatorReason": req.body?.reason || "",
+        }
+      },
       { new: true }
     );
     if (!post)
       return res.status(404).json({ error: "Post not found" });
 
     approvalEntry.status = "rejected";
+    const rejectedModerationRecord = await syncAiModerationDecision(
+      post._id,
+      approver._id,
+      "reject",
+      req.body?.reason || "",
+    );
+    if (rejectedModerationRecord?.metadata?.legacySummary) {
+      approvalEntry.aiModeration = rejectedModerationRecord.metadata.legacySummary;
+    }
     await approvalEntry.save();
 
     const owner = await User.findById(post.userId);

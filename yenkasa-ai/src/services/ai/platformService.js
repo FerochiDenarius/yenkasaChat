@@ -1,5 +1,5 @@
 const DEFAULT_API_BASE = import.meta.env.PROD
-  ? "https://yenkasa-ai-496173204476.europe-west1.run.app"
+  ? "/api/yenkasa-ai"
   : "http://localhost:8008/api/ai";
 
 const API_BASE = (import.meta.env.VITE_AI_API_BASE || DEFAULT_API_BASE).replace(/\/$/, "");
@@ -51,6 +51,11 @@ export async function enqueueKnowledgeFiles(files = []) {
     body: formData,
   });
 
+  return parseResponse(response);
+}
+
+export async function fetchIngestionJobs() {
+  const response = await fetch(buildUrl("/ingest/jobs"));
   return parseResponse(response);
 }
 

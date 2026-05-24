@@ -4,6 +4,7 @@ const http = require('http');
 const app = require('./app');
 const connectDB = require('./config/database');
 const initSocket = require('./config/socket');
+const { startModerationWorkers } = require('./ai/workers/moderation.worker');
 
 const Permission = require('../models/permissions.model');
 
@@ -24,6 +25,14 @@ async function startServer() {
   require('../services/verificationScheduler');
   require('../services/ykcMonthlyReset');
   console.log('🕒 Verification scheduler initialized and running daily checks.');
+
+  if (process.env.YENKASA_ENABLE_INLINE_MODERATION_WORKERS !== 'false') {
+    const workerResult = await startModerationWorkers().catch((error) => {
+      console.error('❌ Moderation workers failed to start:', error.message);
+      return { started: false, reason: error.message };
+    });
+    console.log('🤖 Moderation worker bootstrap:', workerResult);
+  }
 
   const PORT = process.env.PORT || 8080;
   server.listen(PORT, '0.0.0.0', () => {

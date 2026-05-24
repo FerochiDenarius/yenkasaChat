@@ -1,33 +1,66 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CloudUpload, Database, Layers3, Workflow } from "lucide-react";
 import GlassCard from "../../components/ai/GlassCard";
 import SectionHeading from "../../components/ai/SectionHeading";
 import StatusPill from "../../components/ai/StatusPill";
 import UploadDropzone from "../../components/ai/UploadDropzone";
-import { apiEndpoints, ingestionJobs, ingestionStages } from "../../services/ai/mockData";
-import { enqueueKnowledgeFiles } from "../../services/ai/platformService";
+import { apiEndpoints, ingestionJobs as mockIngestionJobs, ingestionStages } from "../../services/ai/mockData";
+import { enqueueKnowledgeFiles, fetchIngestionJobs } from "../../services/ai/platformService";
 
 export default function AiUploadIngestionPage() {
   const [lastSubmission, setLastSubmission] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [liveJobs, setLiveJobs] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let intervalId = null;
+
+    async function refreshJobs() {
+      try {
+        const response = await fetchIngestionJobs();
+        if (!cancelled) {
+          setLiveJobs(Array.isArray(response?.jobs) ? response.jobs : []);
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setLiveJobs([]);
+        }
+      }
+    }
+
+    refreshJobs();
+    intervalId = window.setInterval(refreshJobs, 5000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
 
   async function handleFiles(files) {
     setErrorMessage("");
     try {
       const response = await enqueueKnowledgeFiles(files);
       setLastSubmission(response);
+      const jobsResponse = await fetchIngestionJobs();
+      setLiveJobs(Array.isArray(jobsResponse?.jobs) ? jobsResponse.jobs : []);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Upload failed.");
     }
   }
 
+  const renderedJobs = liveJobs.length ? liveJobs : mockIngestionJobs;
+
   const queueStats = useMemo(
     () => ({
-      running: ingestionJobs.filter((job) => job.status === "Running").length,
-      queued: ingestionJobs.filter((job) => job.status === "Queued").length,
-      completed: ingestionJobs.filter((job) => job.status === "Completed").length,
+      running: renderedJobs.filter((job) => job.status === "Running").length,
+      queued: renderedJobs.filter((job) => job.status === "Queued").length,
+      completed: renderedJobs.filter((job) => job.status === "Completed").length,
     }),
-    []
+    [renderedJobs]
   );
 
   return (
@@ -119,7 +152,7 @@ export default function AiUploadIngestionPage() {
             </div>
 
             <div className="mt-5 space-y-4">
-              {ingestionJobs.map((job) => (
+              {renderedJobs.map((job) => (
                 <div key={job.id} className="rounded-[24px] border border-white/50 bg-white/75 p-4 dark:border-white/10 dark:bg-white/5">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -166,7 +199,7 @@ export default function AiUploadIngestionPage() {
                 Live FastAPI service boundary
               </div>
               <p className="mt-2 text-sm leading-7 text-white/80">
-                This UI now posts to a real FastAPI bridge that forwards retrieval and ingestion into the existing YenkasaAI RAG stack.
+                This UI now posts through the backend YenkasaAI bridge, which forwards retrieval and ingestion into the existing RAG stack.
               </p>
             </div>
           </GlassCard>

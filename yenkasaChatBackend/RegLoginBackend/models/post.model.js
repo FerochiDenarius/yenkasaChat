@@ -87,13 +87,20 @@ const postSchema = new Schema({
   // Moderation
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'pending_review', 'pending_scan', 'rejected'],
     default: 'pending'
   },
 
   aiModeration: {
     type: Object,
     default: null
+  },
+
+  aiModerationRef: {
+    type: Schema.Types.ObjectId,
+    ref: 'AiModeration',
+    default: null,
+    index: true
   },
 
   isReported: { type: Boolean, default: false },
@@ -183,7 +190,7 @@ postSchema.statics.findApproved = function (filter = {}) {
 };
 
 postSchema.statics.findPending = function () {
-  return this.find({ status: 'pending' });
+  return this.find({ status: { $in: ['pending', 'pending_review', 'pending_scan'] } });
 };
 
 // Static helper: record a view

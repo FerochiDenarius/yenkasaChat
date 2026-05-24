@@ -22,8 +22,8 @@ export default function UploadDropzone({ onFiles }) {
         <div>
           <h3 className="text-xl font-semibold tracking-tight text-[var(--ai-text)]">Upload knowledge into YenkasaAI</h3>
           <p className="ai-muted mt-2 max-w-2xl text-sm leading-6">
-            Drag architecture PDFs, moderation docs, or research notes into the ingestion queue. The current
-            mock layer preserves the exact API shape planned for FastAPI-backed ingestion.
+            Drag architecture PDFs, moderation docs, or research notes into the ingestion queue. Files are
+            sent through the live YenkasaAI bridge and written into the knowledge collection.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -36,13 +36,13 @@ export default function UploadDropzone({ onFiles }) {
             Select files
           </button>
           <span className="inline-flex items-center rounded-2xl border border-white/50 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-            PDF, Markdown, DOCX, JSON
+            PDF, Markdown
           </span>
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.md,.docx,.json"
+          accept=".pdf,.md"
           className="hidden"
           multiple
           onChange={handleChange}

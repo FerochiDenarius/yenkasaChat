@@ -267,8 +267,8 @@ export const ingestionJobs = [
 ];
 
 export const apiEndpoints = [
-  { name: "POST /api/ai/chat", purpose: "RAG response generation with citations" },
-  { name: "POST /api/ai/ingest", purpose: "Knowledge ingestion queue submission" },
-  { name: "GET /api/ai/analytics", purpose: "Latency, volume, and corpus health metrics" },
-  { name: "GET /api/ai/moderation/alerts", purpose: "Realtime moderation insights and stream alerts" },
+  { name: "POST /api/yenkasa-ai/chat", purpose: "RAG response generation with citations" },
+  { name: "POST /api/yenkasa-ai/ingest", purpose: "Knowledge ingestion queue submission" },
+  { name: "GET /api/yenkasa-ai/health", purpose: "Bridge health and corpus readiness" },
+  { name: "GET /api/yenkasa-ai/ingest/jobs", purpose: "Live ingestion queue state" },
 ];

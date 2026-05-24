@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const crypto = require('crypto');
 const { v2: cloudinary } = require('cloudinary');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
@@ -11,15 +10,23 @@ const ShareActivity = require('../models/shareActivity.model');
 const { uploadFiles } = require('../utils/upload');
 const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
-const PostApproval = require("../models/postapproval.model");
 const ModerationItem = require("../models/ModerationItem.model");
-const { sendNotification } = require("../services/notification.service");
-const { SYSTEM_USER_ID } = require('../config/system');
-const { sendPushNotification } = require("../utils/onesignal");
 const { logUploadAudit } = require("../utils/cloudinaryMedia");
 const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
 const { auditSecurityEvent } = require("../utils/securityAudit");
-const moderationService = require('../src/ai/services/moderation.service');
+const { emitApprovedPostCreated } = require('../services/postEventPublisher.service');
+const {
+  enqueueImageModerationJob,
+  enqueueVideoModerationJob,
+  isQueueEnabled,
+} = require('../src/ai/services/moderationQueue.service');
+const {
+  initializePostModeration,
+  preparePostModeration,
+} = require('../src/ai/services/moderationWorkflow.service');
+const {
+  POST_STATUSES,
+} = require('../src/ai/services/moderationThresholds');
 
 // 🧩 import your centralized rewardService
 const rewardService = require('../services/reward.service');
@@ -81,69 +88,6 @@ function normalizeClientRequestId(req) {
     .slice(0, 120);
 }
 
-function stableHash(value) {
-  return crypto.createHash("sha256").update(value).digest("hex").slice(0, 24);
-}
-
-function postLogicalKey(post) {
-  if (!post) return "";
-  if (post.clientRequestId) return `client:${post.userId}:${post.clientRequestId}`;
-  const communityId = post.communityId?._id || post.communityId || "";
-  const mediaKey = [
-    post.imageUrl || "",
-    ...(post.imageUrls || []),
-    post.videoUrl || "",
-    post.audioUrl || ""
-  ].filter(Boolean).join("|");
-  const textKey = (post.text || "").trim().toLowerCase();
-  return `post:${stableHash([post.userId, communityId, textKey, mediaKey].join("|"))}`;
-}
-
-async function populateFeedPost(postId, viewerId = null) {
-  const post = await Post.findById(postId)
-    .populate("userId", "username profileImage verified roleName")
-    .populate("communityId", "name displayName")
-    .lean();
-  if (!post) return null;
-  await attachAccurateViewCounts(post);
-  return attachLikedByUser(post, viewerId);
-}
-
-async function emitApprovedPostCreated(postId, source, requestId = "") {
-  if (!global.io) return;
-
-  const post = await populateFeedPost(postId);
-  if (!post) return;
-
-  const timestamp = new Date().toISOString();
-  const eventId = `post_created:${post._id}`;
-  const logicalPostKey = postLogicalKey(post);
-  const socketPost = {
-    ...post,
-    eventId,
-    requestId,
-    logicalPostKey,
-    eventSource: source,
-    eventTimestamp: timestamp
-  };
-
-  global.io.emit("newPost", socketPost);
-  global.io.emit("feedUpdate", {
-    eventId,
-    requestId,
-    logicalPostKey,
-    type: "newPost",
-    action: "new_post",
-    source,
-    postId: post._id,
-    userId: post.userId?._id || post.userId,
-    community: post.communityName || post.communityId?.displayName || post.communityId?.name || "",
-    createdAt: post.createdAt,
-    timestamp,
-    post: socketPost
-  });
-}
-
 /* ---------------------------------------------------
  * ONE-WAY BLOCK CHECK (Instagram style)
  * userA = viewer or actor
@@ -168,6 +112,21 @@ async function isBlocked(userA, userB) {
  * 💰 REWARD CONFIGURATION
  * ------------------------------------ */
 const REWARDS = { CREATE_POST: 20, GET_LIKE: 1, GET_COMMENT: 1 };
+
+function messageForPostStatus(status) {
+  switch (status) {
+    case POST_STATUSES.APPROVED:
+      return "Post published successfully.";
+    case POST_STATUSES.PENDING_SCAN:
+      return "Post uploaded and queued for AI scan.";
+    case POST_STATUSES.REJECTED:
+      return "Post rejected by moderation.";
+    case POST_STATUSES.PENDING_REVIEW:
+    case POST_STATUSES.LEGACY_PENDING:
+    default:
+      return "Post submitted for approval.";
+  }
+}
 
 /* ------------------------------------
  * POSTING ACCESS CONFIGURATION
@@ -245,9 +204,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
           eventId: `post_created:${existingPost._id}`,
           requestId,
           post: existingPost,
-          message: existingPost.status === "approved"
-            ? "Post published successfully."
-            : "Post submitted for approval."
+          message: messageForPostStatus(existingPost.status)
         });
       }
     }
@@ -383,16 +340,31 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     const textOnlyBackgroundColor = !hasUploadedMedia && text?.trim()
       ? normalizeTextBackgroundColor(textBackgroundColor)
       : "";
-    const aiModeration = await moderationService.moderatePostContent({
+    const moderationPlan = await preparePostModeration({
       text: text?.trim() || "",
       imageUrls,
       videoUrl,
       audioUrl,
       userId,
-      source: "post_create"
+      queueEnabled: !isAutoPublished && isQueueEnabled(),
     });
-    const requiresHumanReview = aiModeration.requiresHumanReview || !aiModeration.approved;
-    const postStatus = requiresHumanReview ? "pending" : "approved";
+
+    if (isAutoPublished) {
+      moderationPlan.shouldQueueImage = false;
+      moderationPlan.shouldQueueVideo = false;
+      moderationPlan.aggregate = {
+        ...moderationPlan.aggregate,
+        finalAction: 'approve',
+        finalStatus: POST_STATUSES.APPROVED,
+        approved: true,
+        requiresHumanReview: false,
+        requiresAsyncScan: false,
+        reasons: [
+          ...(moderationPlan.aggregate.reasons || []),
+          'Privileged role bypassed moderation hold.',
+        ],
+      };
+    }
 
     const post = await Post.create({
       userId,
@@ -410,98 +382,91 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       location: location || "",
       visibility: visibility || "public",
       communityName: selectedCommunity.displayName || selectedCommunity.name,
-      status: postStatus,
-      aiModeration
+      status: moderationPlan.aggregate.finalStatus,
+      aiModeration: null
     });
 
-    /* ------------------------------------
-     * PENDING POST → APPROVAL WORKFLOW
-     * ------------------------------------ */
-    if (requiresHumanReview) {
-
-      await PostApproval.create({
-        post: post._id,
-        user: userId,
-        caption: post.text,
-        textBackgroundColor: post.textBackgroundColor,
-        imageUrl: post.imageUrl,
-        imageUrls: post.imageUrls || [],
-        videoUrl: post.videoUrl,
-        audioUrl: post.audioUrl,
-        submittedAt: new Date(),
-        status: "pending",
-        aiModeration
-      });
-
-      await ModerationItem.create({
-        type: "system_flag",
-        targetUserId: userId,
-        targetPostId: post._id,
-        reportedBy: userId,
-        reason: aiModeration.reason || "Flagged by Yenkasa-AI moderation",
-        status: "pending",
-        metadata: {
-          source: "yenkasa_ai",
-          moderation: aiModeration,
-          communityId: selectedCommunity._id,
-          communityName: selectedCommunity.displayName || selectedCommunity.name,
-          visibility: visibility || "public",
-          postType: detectedPostType
-        },
-        createdBy: "system",
-        ipAddress: req.ip
-      });
-
-      // 🔔 Notify creator their post is pending review
-      await sendNotification({
-        type: "post_under_review",
-        senderId: SYSTEM_USER_ID,
-        receiverId: userId,
-        activityId: post._id.toString(),
-        targetType: "post",
-        targetId: post._id.toString(),
-        message: "Your post is under review and will be approved shortly."
-      });
-
-      // Load approvers ONCE
-      const approvers = await User.find({
-        roleName: { $in: ["admin", "moderator", "senior_developer", "junior_developer"] }
-      }).select("_id playerId username");
-
-      // 🔔 Notify approvers — ONLY ONE LOOP
-      for (const mod of approvers) {
-
-        await sendNotification({
-          type: "post_pending",
-          senderId: userId,
-          receiverId: mod._id,
-          activityId: post._id.toString(),   // ✔ VALID postId
-          targetType: "post",                // ✔ Android navigation
-          targetId: post._id.toString(),
-          message: "A new post is awaiting approval."
+    let queueImageResult = null;
+    if (moderationPlan.shouldQueueImage) {
+      try {
+        queueImageResult = await enqueueImageModerationJob({
+          postId: post._id.toString(),
+          userId: userId.toString(),
+          imageUrls,
+          source: 'post_create',
         });
-
-        if (mod.playerId) {
-          await sendPushNotification({
-            playerId: mod.playerId,
-            title: "Pending Post",
-            body: "A new post requires your approval.",
-            data: {
-              type: "post_pending",
-              targetType: "post",
-              targetId: post._id.toString(),
-              activityId: post._id.toString(),
-              postId: post._id.toString()
-            }
-          });
-        }
+      } catch (queueError) {
+        console.error('Failed to enqueue image moderation job:', queueError);
+        queueImageResult = {
+          queued: false,
+          queueName: 'imageModerationQueue',
+          reason: queueError.message,
+        };
       }
     }
+
+    let queueVideoResult = null;
+    if (moderationPlan.shouldQueueVideo) {
+      try {
+        queueVideoResult = await enqueueVideoModerationJob({
+          postId: post._id.toString(),
+          userId: userId.toString(),
+          videoUrl,
+          audioUrl,
+          source: 'post_create',
+        });
+      } catch (queueError) {
+        console.error('Failed to enqueue video moderation job:', queueError);
+        queueVideoResult = {
+          queued: false,
+          queueName: 'videoModerationQueue',
+          reason: queueError.message,
+        };
+      }
+    }
+
+    if (moderationPlan.aggregate.finalStatus === POST_STATUSES.PENDING_SCAN) {
+      const queueFailed =
+        (moderationPlan.shouldQueueImage && !queueImageResult?.queued) ||
+        (moderationPlan.shouldQueueVideo && !queueVideoResult?.queued);
+
+      if (queueFailed) {
+        moderationPlan.aggregate = {
+          ...moderationPlan.aggregate,
+          finalAction: 'review',
+          finalStatus: POST_STATUSES.PENDING_REVIEW,
+          approved: false,
+          requiresHumanReview: true,
+          requiresAsyncScan: false,
+          pendingSources: [],
+          reasons: [
+            ...(moderationPlan.aggregate.reasons || []),
+            'Moderation queue unavailable, routed to human review.',
+          ],
+        };
+      }
+    }
+
+    const { legacySummary } = await initializePostModeration({
+      post,
+      moderationPlan,
+      reqContext: {
+        ipAddress: req.ip,
+        requestId,
+        clientRequestId,
+      },
+      queueImageResult,
+      queueVideoResult,
+    });
+
+    const requiresHumanReview =
+      post.status === POST_STATUSES.PENDING_REVIEW ||
+      post.status === POST_STATUSES.LEGACY_PENDING;
 
     /* ------------------------------------
      * APPROVED POST → REWARDS + FEED SOCKET
      * ------------------------------------ */
-    if (postStatus === "approved") {
+    if (post.status === POST_STATUSES.APPROVED) {
       await rewardService.reward(userId, REWARDS.CREATE_POST, {
         type: 'REWARD_POST',
         description: `Earned ${REWARDS.CREATE_POST} YKC for creating a post`,
@@ -522,10 +487,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       eventId: `post_created:${post._id}`,
       requestId,
       post,
-      message: postStatus === "approved"
-        ? "Post published successfully."
-        : "Post submitted for approval.",
-      moderation: aiModeration,
+      message: messageForPostStatus(post.status),
+      moderation: legacySummary,
       postingAccess: {
         verified: isVerifiedUser,
         privileged: isAutoPublished,
@@ -555,9 +518,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
             eventId: `post_created:${existingPost._id}`,
             requestId: clientRequestId,
             post: existingPost,
-            message: existingPost.status === "approved"
-              ? "Post published successfully."
-              : "Post submitted for approval."
+            message: messageForPostStatus(existingPost.status)
           });
         }
       }

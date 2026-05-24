@@ -1,0 +1,48 @@
+### Register
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "country": "Ghana",
+  "full_name": "Dev User",
+  "username": "devuser",
+  "email": "devuser@yenkasa.com",
+  "phone_number": "+233241234567",
+  "signup_type": "developer",
+  "password": "StrongPass123!",
+  "agree_to_terms": true
+}
+
+### Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "devuser@yenkasa.com",
+  "password": "StrongPass123!"
+}
+
+### Repository ingestion
+POST http://localhost:8080/api/repo/ingestions
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "repo_path": "/workspace/samples/repositories/dev_intelligence_sample",
+  "repo_name": "dev-intelligence-sample",
+  "force_reingest": true
+}
+
+### Repository search
+GET http://localhost:8080/api/repo/search?q=Where%20is%20wallet%20balance%20handled%3F&repo_name=dev-intelligence-sample
+Authorization: Bearer {{access_token}}
+
+### Repository chat
+POST http://localhost:8080/api/repo/chat
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "repo_name": "dev-intelligence-sample",
+  "question": "Explain how wallet balance retrieval and notifications are split across this repository."
+}

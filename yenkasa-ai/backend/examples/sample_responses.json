@@ -1,0 +1,71 @@
+{
+  "auth_login": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "access_token_expires_in": 1800,
+    "refresh_token_expires_in": 2592000,
+    "session_id": "8d0f7ac0-33a6-4e5c-b3d4-1ec99d8d2b86",
+    "user": {
+      "user_id": "2fbb6b33-6a58-4d10-ab58-90d2d6fd05c1",
+      "username": "devuser",
+      "email": "devuser@yenkasa.com",
+      "full_name": "Dev User",
+      "country": "Ghana",
+      "phone_number": "+233241234567",
+      "signup_type": "developer",
+      "role": "user",
+      "account_status": "active",
+      "ai_usage_count": 0,
+      "total_tokens_used": 0,
+      "preferences": {},
+      "metadata": {}
+    }
+  },
+  "repo_search": {
+    "query": "Where is wallet balance handled?",
+    "repo_name": "dev-intelligence-sample",
+    "mode": "implementation_trace",
+    "count": 2,
+    "took_ms": 143,
+    "results": [
+      {
+        "repo_name": "dev-intelligence-sample",
+        "file_path": "app.py",
+        "language": "python",
+        "chunk_index": 0,
+        "total_chunks": 1,
+        "start_line": 1,
+        "end_line": 12,
+        "score": 0.812341,
+        "excerpt": "balance = wallet_service.fetch_balance(user_id)",
+        "symbols": [
+          "read_wallet",
+          "WalletService"
+        ],
+        "metadata": {
+          "mode": "implementation_trace"
+        }
+      }
+    ]
+  },
+  "repo_chat": {
+    "repo_name": "dev-intelligence-sample",
+    "question": "Explain how wallet balance retrieval and notifications are split across this repository.",
+    "answer": "Wallet balance retrieval lives in `wallet.py`, while API exposure happens in `app.py` and notification composition lives in `notifications.ts`.",
+    "sources": [
+      {
+        "file_path": "wallet.py",
+        "language": "python",
+        "start_line": 1,
+        "end_line": 7,
+        "score": 0.841231,
+        "excerpt": "class WalletService: ..."
+      }
+    ],
+    "timings": {
+      "search_ms": 121,
+      "total_ms": 614
+    }
+  }
+}

@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 
-const DEFAULT_ENGINE_URL = process.env.YENKASA_AI_ENGINE_URL || 'https://yenkasa-ai-3vx2nvls4a-ew.a.run.app';
+const DEFAULT_ENGINE_URL = process.env.YENKASA_AI_ENGINE_URL || 'https://yenkasa-ai-496173204476.europe-west1.run.app';
 const DEFAULT_ENGINE_API_PREFIX = process.env.YENKASA_AI_ENGINE_API_PREFIX || '/api/ai';
 
 function buildEngineUrl(path) {

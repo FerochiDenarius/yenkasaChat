@@ -8,6 +8,7 @@ import { apiEndpoints } from "../../services/ai/mockData";
 import {
   enqueueKnowledgeFiles,
   fetchIngestionJobs,
+  supportsIngestionJobs,
   subscribeToIngestionJobs,
 } from "../../services/ai/platformService";
 
@@ -149,6 +150,9 @@ function getStageStatus(stageKey, job) {
 }
 
 function getStreamTone(streamMode) {
+  if (streamMode === "direct") {
+    return "success";
+  }
   if (streamMode === "live") {
     return "success";
   }
@@ -159,6 +163,9 @@ function getStreamTone(streamMode) {
 }
 
 function getStreamLabel(streamMode) {
+  if (streamMode === "direct") {
+    return "Production backend";
+  }
   if (streamMode === "live") {
     return "Realtime stream";
   }
@@ -172,9 +179,16 @@ export default function AiUploadIngestionPage() {
   const [lastSubmission, setLastSubmission] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [liveJobs, setLiveJobs] = useState([]);
-  const [streamMode, setStreamMode] = useState("polling");
+  const [streamMode, setStreamMode] = useState(supportsIngestionJobs() ? "polling" : "direct");
+  const ingestionJobsSupported = supportsIngestionJobs();
 
   useEffect(() => {
+    if (!ingestionJobsSupported) {
+      setLiveJobs([]);
+      setStreamMode("direct");
+      return undefined;
+    }
+
     let cancelled = false;
     let pollId = null;
 
@@ -228,15 +242,17 @@ export default function AiUploadIngestionPage() {
       }
       eventSource?.close();
     };
-  }, []);
+  }, [ingestionJobsSupported]);
 
   async function handleFiles(files) {
     setErrorMessage("");
     try {
       const response = await enqueueKnowledgeFiles(files);
       setLastSubmission(response);
-      const jobsResponse = await fetchIngestionJobs();
-      setLiveJobs(Array.isArray(jobsResponse?.jobs) ? jobsResponse.jobs : []);
+      if (ingestionJobsSupported) {
+        const jobsResponse = await fetchIngestionJobs();
+        setLiveJobs(Array.isArray(jobsResponse?.jobs) ? jobsResponse.jobs : []);
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Upload failed.");
     }
@@ -284,7 +300,11 @@ export default function AiUploadIngestionPage() {
         <GlassCard className="rounded-[28px] p-5">
           <p className="text-sm text-[var(--ai-text)]">
             Accepted <strong>{lastSubmission.accepted}</strong> file(s) into <strong>{lastSubmission.targetCollection}</strong>.
-            The live panels below update as the worker validates, chunks, writes, and confirms the upload.
+            {ingestionJobsSupported
+              ? " The live panels below update as the worker validates, chunks, writes, and confirms the upload."
+              : ` Cloud Run reported ${lastSubmission.chunksInserted ?? "pending"} inserted chunk(s)${
+                  lastSubmission.uploadedToGcs === true ? " and synced the snapshot to GCS." : "."
+                }`}
           </p>
         </GlassCard>
       ) : null}
@@ -444,7 +464,9 @@ export default function AiUploadIngestionPage() {
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-white/50 bg-white/60 p-5 text-sm text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                The queue is empty. Submit files above to create a live ingest job.
+                {ingestionJobsSupported
+                  ? "The queue is empty. Submit files above to create a live ingest job."
+                  : "This web client now talks directly to the production Cloud Run backend, so there is no local ingest queue to poll here."}
               </div>
             )}
           </div>
@@ -535,6 +557,28 @@ export default function AiUploadIngestionPage() {
                 </div>
               ) : null}
             </>
+          ) : !ingestionJobsSupported && lastSubmission ? (
+            <div className="mt-5 rounded-[24px] border border-white/50 bg-white/75 p-5 dark:border-white/10 dark:bg-white/5">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-[24px] border border-white/50 bg-white/80 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="ai-muted text-sm">Accepted files</p>
+                  <p className="mt-2 text-3xl font-semibold text-[var(--ai-text)]">{lastSubmission.accepted}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/50 bg-white/80 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="ai-muted text-sm">Inserted chunks</p>
+                  <p className="mt-2 text-3xl font-semibold text-[var(--ai-text)]">{lastSubmission.chunksInserted ?? "Pending"}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/50 bg-white/80 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="ai-muted text-sm">Snapshot sync</p>
+                  <p className="mt-2 text-3xl font-semibold text-[var(--ai-text)]">
+                    {lastSubmission.uploadedToGcs === true ? "GCS" : "Pending"}
+                  </p>
+                </div>
+              </div>
+              <p className="ai-muted mt-4 text-sm">
+                Direct-production mode is active. Uploads are sent straight to the Cloud Run engineering collection.
+              </p>
+            </div>
           ) : (
             <div className="mt-5 rounded-[24px] border border-dashed border-white/50 bg-white/60 p-5 text-sm text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
               Once a job starts, this section will show each selected file, its chunk counts, and whether it is present in the Chroma collection.
@@ -556,7 +600,11 @@ export default function AiUploadIngestionPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-slate-400">Worker logs will stream here once ingestion begins.</p>
+                <p className="text-slate-400">
+                  {ingestionJobsSupported
+                    ? "Worker logs will stream here once ingestion begins."
+                    : "Direct-production mode does not expose local worker logs. Upload results are returned by the Cloud Run backend when the request completes."}
+                </p>
               )}
             </div>
           </GlassCard>

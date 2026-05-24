@@ -1,8 +1,7 @@
-const DEFAULT_API_BASE = import.meta.env.PROD
-  ? "/api/yenkasa-ai"
-  : "http://localhost:8008/api/ai";
+const DEFAULT_API_BASE = "https://yenkasa-ai-496173204476.europe-west1.run.app";
 
 const API_BASE = (import.meta.env.VITE_AI_API_BASE || DEFAULT_API_BASE).replace(/\/$/, "");
+const SUPPORTS_INGEST_JOBS = /\/api\/ai$/i.test(API_BASE);
 
 function buildUrl(path) {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
@@ -51,16 +50,26 @@ export async function enqueueKnowledgeFiles(files = []) {
     body: formData,
   });
 
-  return parseResponse(response);
+  const payload = await parseResponse(response);
+  return {
+    ...payload,
+    accepted: payload?.accepted ?? payload?.accepted_files ?? 0,
+    targetCollection: payload?.targetCollection ?? payload?.target_collection ?? "yenkasa_research",
+    chunksInserted: payload?.chunksInserted ?? payload?.chunks_inserted ?? null,
+    uploadedToGcs: payload?.uploadedToGcs ?? payload?.uploaded_to_gcs ?? null,
+  };
 }
 
 export async function fetchIngestionJobs() {
+  if (!SUPPORTS_INGEST_JOBS) {
+    return { jobs: [], version: 0 };
+  }
   const response = await fetch(buildUrl("/ingest/jobs"));
   return parseResponse(response);
 }
 
 export function subscribeToIngestionJobs({ onMessage, onError } = {}) {
-  if (typeof window === "undefined" || typeof window.EventSource === "undefined") {
+  if (!SUPPORTS_INGEST_JOBS || typeof window === "undefined" || typeof window.EventSource === "undefined") {
     return null;
   }
 
@@ -85,4 +94,8 @@ export function subscribeToIngestionJobs({ onMessage, onError } = {}) {
 export async function fetchAiSystemStatus() {
   const response = await fetch(buildUrl("/health"));
   return parseResponse(response);
+}
+
+export function supportsIngestionJobs() {
+  return SUPPORTS_INGEST_JOBS;
 }

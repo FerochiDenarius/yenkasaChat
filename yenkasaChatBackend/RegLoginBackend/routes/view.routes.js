@@ -10,6 +10,7 @@ const rewardService = require('../services/reward.service');
 const { sendNotification } = require("../services/notification.service");
 const { toObjectId } = require("../utils/postViewCounts");
 const { sendPushNotification } = require("../utils/onesignal");
+const { publishYmeEvent } = require("../src/yme/services/eventPublisher.service");
 const {
   REPEATED_VIEW_WINDOW_MS,
   REWARD_VALUES,
@@ -326,6 +327,26 @@ const ownerActivityId = `owner_${activityId}`;
         timestamp: new Date()
       });
     }
+
+    publishYmeEvent({
+      userId: viewerIdStr,
+      sourceApp: "social_app",
+      eventType: "watch",
+      postId,
+      creatorId: post.userId,
+      communityId: post.communityId,
+      contentId: `post:${postId}`,
+      caption: post.text || "",
+      categories: post.tags || [],
+      watchTimeMs: Math.round(safeWatchDuration * 1000),
+      payload: {
+        mediaType: mediaType || post.postType || "unknown",
+        qualifiedView,
+        monetizableOpportunity,
+        rewardType: rewardCandidate.type,
+        rewardAmount,
+      },
+    });
 
     // ---------------------------------------------------------------------
     // FINAL RESPONSE

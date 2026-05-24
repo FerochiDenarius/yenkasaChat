@@ -49,7 +49,12 @@ class RegisterActivity : AppCompatActivity() {
 
     private var selectedCommunityId: String? = null
     private var communityList: List<Community> = emptyList()
-    private val registrationCountryValues = listOf("Ghana", "Nigeria")
+    private val registrationCountryValues: List<String> by lazy(LazyThreadSafetyMode.NONE) {
+        listOf(
+            getString(R.string.country_value_ghana),
+            getString(R.string.country_value_nigeria)
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -505,7 +510,8 @@ class RegisterActivity : AppCompatActivity() {
 
     private fun selectedCountry(): String {
         val selectedIndex = spinnerCountry.selectedItemPosition
-        return registrationCountryValues.getOrNull(selectedIndex) ?: "Ghana"
+        return registrationCountryValues.getOrNull(selectedIndex)
+            ?: getString(R.string.country_value_ghana)
     }
 
     private fun formatCommunityOption(community: Community): String {
@@ -517,7 +523,15 @@ class RegisterActivity : AppCompatActivity() {
             community.country?.takeIf { it.isNotBlank() }
         ).distinct()
 
-        return if (details.isEmpty()) name else "$name - ${details.joinToString(", ")}"
+        return if (details.isEmpty()) {
+            name
+        } else {
+            getString(
+                R.string.community_option_with_details,
+                name,
+                details.joinToString(", ")
+            )
+        }
     }
 
     private fun localizedRegistrationCountries(): List<String> {

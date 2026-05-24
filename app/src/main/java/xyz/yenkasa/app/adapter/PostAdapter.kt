@@ -165,8 +165,8 @@ class PostAdapter(
             }
             audioPlayer = null
             audioSeekbar.progress = 0
-            audioCurrent.text = "0:00"
-            audioTotal.text = "0:00"
+            audioCurrent.text = context.getString(R.string.time_zero)
+            audioTotal.text = context.getString(R.string.time_zero)
             btnAudioPlayPause.setImageResource(R.drawable.ic_play_circle)
         }
 
@@ -182,10 +182,18 @@ class PostAdapter(
 
             if (imageUrls.size > 1) {
                 imageCarouselCounter.visibility = View.VISIBLE
-                imageCarouselCounter.text = "1/${imageUrls.size}"
+                imageCarouselCounter.text = context.getString(
+                    R.string.image_carousel_counter_format,
+                    1,
+                    imageUrls.size
+                )
                 imagePageCallback = object : ViewPager2.OnPageChangeCallback() {
                     override fun onPageSelected(position: Int) {
-                        imageCarouselCounter.text = "${position + 1}/${imageUrls.size}"
+                        imageCarouselCounter.text = context.getString(
+                            R.string.image_carousel_counter_format,
+                            position + 1,
+                            imageUrls.size
+                        )
                     }
                 }
                 imageCarousel.registerOnPageChangeCallback(imagePageCallback!!)
@@ -720,7 +728,11 @@ class PostAdapter(
 
     private fun formatTime(ms: Long): String {
         val totalSec = ms / 1000
-        return String.format("%d:%02d", totalSec / 60, totalSec % 60)
+        return context.getString(
+            R.string.time_minutes_seconds_format,
+            totalSec / 60,
+            totalSec % 60
+        )
     }
 
     private fun formatTimestamp(rawTimestamp: String?): String {

@@ -29,6 +29,7 @@ async function markUserOnline({ io, User, socket, userId }) {
   onlineUsers.set(normalizedUserId, socketIds);
   socket.data.userId = normalizedUserId;
   socket.join(normalizedUserId);
+  socket.join(`user:${normalizedUserId}`);
 
   console.log(`🟢 User ${normalizedUserId} is online (${socketIds.size} active socket(s))`);
 

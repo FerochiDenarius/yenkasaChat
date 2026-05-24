@@ -5,6 +5,10 @@ const { getProvider } = require('../providers');
 const { buildSystemPrompt } = require('../prompts/systemPrompt');
 const { resolveMode, listModes } = require('../utils/mode-config');
 const { estimateUsage } = require('../utils/token-usage');
+const {
+  buildAiMemoryContext,
+  recordAiChatTurn,
+} = require('../../yme/services/chatMemoryBridge.service');
 
 function mergeSuggestions(modeConfig, providerSuggestions = []) {
   const merged = [...providerSuggestions, ...(modeConfig.suggestions || [])];
@@ -20,6 +24,28 @@ async function safeLogUsage(payload) {
     await AIUsageLog.create(payload);
   } catch (error) {
     console.warn('[AIPlatform] Failed to write usage log:', error.message);
+  }
+}
+
+async function safeBuildAiMemoryContext(payload) {
+  try {
+    return await buildAiMemoryContext(payload);
+  } catch (error) {
+    console.warn('[AIPlatform] Failed to load YME memory context:', error.message);
+    return {
+      profile: null,
+      chatSummaries: [],
+      matches: [],
+      contextSummary: '',
+    };
+  }
+}
+
+async function safeRecordAiChatTurn(payload) {
+  try {
+    await recordAiChatTurn(payload);
+  } catch (error) {
+    console.warn('[AIPlatform] Failed to persist YME chat memory:', error.message);
   }
 }
 
@@ -45,18 +71,30 @@ async function chat({ message, conversationId, user, mode = 'hybrid', includeDeb
 
   const priorMessages = await memoryService.getConversationMessages(conversation.conversationId, userId, 12);
   const providerHistory = memoryService.buildProviderHistory(priorMessages, 10);
-  const retrievalContext = await knowledgeService.buildRetrievalContext({
+  const knowledgeRetrievalContext = await knowledgeService.buildRetrievalContext({
     message: trimmedMessage,
     mode: modeConfig.mode,
     provider
   });
+  const aiMemoryContext = await safeBuildAiMemoryContext({
+    userId,
+    conversationId: conversation.conversationId,
+    query: trimmedMessage,
+    recentMessages: priorMessages,
+  });
+  const combinedRetrievalContext = [
+    knowledgeRetrievalContext.contextSummary,
+    aiMemoryContext.contextSummary,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const systemPrompt = buildSystemPrompt({
     mode: modeConfig.mode,
     user,
     conversation,
     memorySummary: conversation.summary,
-    retrievalContext: retrievalContext.contextSummary
+    retrievalContext: combinedRetrievalContext
   });
 
   const providerQuestion = `${systemPrompt}\n\nUser message:\n${trimmedMessage}`;
@@ -72,7 +110,7 @@ async function chat({ message, conversationId, user, mode = 'hybrid', includeDeb
 
     const latencyMs = Date.now() - startedAt;
     const answer = String(providerResponse?.answer || '').trim();
-    const sources = providerResponse?.sources || retrievalContext.sources || [];
+    const sources = providerResponse?.sources || knowledgeRetrievalContext.sources || [];
     const suggestions = mergeSuggestions(modeConfig, providerResponse?.suggested_follow_ups || []);
     const usage = estimateUsage({
       prompt: providerQuestion,
@@ -129,9 +167,19 @@ async function chat({ message, conversationId, user, mode = 'hybrid', includeDeb
       ...usage,
       metadata: {
         engineAudience: modeConfig.audience,
-        retrievalAudiences: retrievalContext.audiences,
-        engineTimings: providerResponse?.timings || {}
+        retrievalAudiences: knowledgeRetrievalContext.audiences,
+        engineTimings: providerResponse?.timings || {},
+        ymeMatchCount: aiMemoryContext.matches?.length || 0
       }
+    });
+
+    await safeRecordAiChatTurn({
+      userId,
+      conversationId: conversation.conversationId,
+      userMessage: trimmedMessage,
+      assistantMessage: answer,
+      mode: modeConfig.mode,
+      sources,
     });
 
     return {
@@ -146,8 +194,9 @@ async function chat({ message, conversationId, user, mode = 'hybrid', includeDeb
       memorySummary,
       debug: includeDebug
         ? {
-            retrievalAudiences: retrievalContext.audiences,
-            retrievalHints: retrievalContext.contextSummary,
+            retrievalAudiences: knowledgeRetrievalContext.audiences,
+            retrievalHints: knowledgeRetrievalContext.contextSummary,
+            memoryContext: aiMemoryContext.contextSummary,
             engineDebug: providerResponse?.debug || null
           }
         : undefined

@@ -10,6 +10,7 @@ const UserPrivacy = require("../models/userPrivacy.model");
 const authMiddleware = require('../middleware/auth');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require('../services/notification.service');
+const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 
 const REWARD_FOLLOW = 10;
 const REWARD_FOLLOW_RECEIVED = 2;
@@ -162,6 +163,19 @@ const rewardReceivedTx = await rewardService.reward(targetId, REWARD_FOLLOW_RECE
         timestamp: new Date(),
       });
     }
+
+    publishYmeEvent({
+      userId: followerId,
+      sourceApp: "social_app",
+      eventType: "follow",
+      creatorId: targetUser._id,
+      relatedUserId: targetUser._id,
+      contentId: `user:${targetId}`,
+      payload: {
+        targetUsername: targetUser.username,
+        followerUsername: followerUser?.username || req.user.username || "",
+      },
+    });
 
     return res.json({
       success: true,

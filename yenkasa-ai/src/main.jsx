@@ -4,7 +4,9 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./styles/ai.css";
 
-const baseName = import.meta.env.BASE_URL === "/" ? "/" : import.meta.env.BASE_URL.replace(/\/$/, "");
+const pathName = window.location.pathname || "/";
+const baseName = pathName.startsWith("/yme") ? "/yme" : pathName.startsWith("/ai") ? "/ai" : "/";
+window.__YENKASA_WORKSPACE__ = baseName === "/yme" ? "yme" : "ai";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

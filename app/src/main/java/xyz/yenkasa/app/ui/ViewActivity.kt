@@ -25,6 +25,7 @@ import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -198,6 +199,12 @@ class ViewActivity : AppCompatActivity() {
                     val body = response.body()
                     if (response.isSuccessful && body != null) {
                         WalletBalanceManager.refreshAfterReward(this@ViewActivity, body.coinsRewarded)
+                        YmeAnalyticsManager.trackRewardClaim(
+                            source = "follow_reward",
+                            rewardType = "follow",
+                            amount = body.coinsRewarded?.toDouble(),
+                            targetId = author.id
+                        )
                         fabFollow.setImageResource(R.drawable.ic_check)
                         fabFollow.backgroundTintList =
                             ColorStateList.valueOf(ContextCompat.getColor(this@ViewActivity, R.color.yenkasa_black))
@@ -282,6 +289,12 @@ class ViewActivity : AppCompatActivity() {
                             this@ViewActivity,
                             body.rewardAmount ?: body.rewardTransaction?.amount
                         )
+                        YmeAnalyticsManager.trackRewardClaim(
+                            source = "post_view_reward",
+                            rewardType = body.rewardType,
+                            amount = body.rewardAmount ?: body.rewardTransaction?.amount,
+                            postId = currentPostId
+                        )
 
                         Log.d(
                             "ViewActivity",
@@ -341,6 +354,12 @@ class ViewActivity : AppCompatActivity() {
     private fun showRewardedAd() {
         rewardedAd?.show(this) { rewardItem: RewardItem ->
             Log.d("Ads", "User earned reward: ${rewardItem.amount}")
+            YmeAnalyticsManager.trackRewardClaim(
+                source = "rewarded_ad",
+                rewardType = rewardItem.type,
+                amount = rewardItem.amount.toDouble(),
+                postId = post?._id
+            )
 
             // 🔥 Track the ad view in your backend
             trackAdView()

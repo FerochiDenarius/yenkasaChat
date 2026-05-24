@@ -18,6 +18,7 @@ import xyz.yenkasa.app.model.MonetizationEventRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 
 data class MonetizationAdOutcome(
     val completed: Boolean,
@@ -221,12 +222,21 @@ object MonetizationAdDialog {
                 ApiClient.apiService.trackAdView(auth).execute()
             }
             if (adViewId.isNotBlank()) {
-                runCatching {
+                val rewardResponse = runCatching {
                     ApiClient.apiService.rewardAd(
                         request.ad._id,
                         auth,
                         mapOf("adViewId" to adViewId)
                     ).execute()
+                }.getOrNull()
+                if (rewardResponse?.isSuccessful == true) {
+                    YmeAnalyticsManager.trackRewardClaim(
+                        source = "monetization_ad",
+                        rewardType = request.placement.name.lowercase(),
+                        amount = request.ad.rewardYKC.toDouble(),
+                        targetId = request.ad._id,
+                        postId = request.postId
+                    )
                 }
             }
         }

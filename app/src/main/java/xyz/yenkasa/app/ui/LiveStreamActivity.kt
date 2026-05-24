@@ -49,6 +49,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.SocketManager
 import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -175,6 +176,7 @@ class LiveStreamActivity : AppCompatActivity() {
                     finish()
                     return@runOnUiThread
                 }
+                YmeAnalyticsManager.trackLiveStreamJoin(streamId = streamId)
                 if (isHost) {
                     emitHostReady()
                     emitLiveJoin()

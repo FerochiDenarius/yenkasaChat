@@ -16,6 +16,7 @@ const API_ROUTE_MOUNTS = [
   ['/api/contacts', 'routes/contacts.routes'],
   ['/api/yenkasa-ai', 'src/ai/routes/web'],
   ['/api/ai', 'src/ai/routes'],
+  ['/api/yme', 'src/yme/routes'],
   ['/api/messages', 'routes/messages.routes'],
   ['/api/chatrooms', 'routes/chatroom.routes'],
   ['/api/groups', 'routes/group.routes'],

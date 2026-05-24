@@ -5,12 +5,34 @@
     <string name="call_status_connected">Connected</string>
     <string name="call_status_state">State: %1$s</string>
     <string name="call_status_calling">Calling %1$s...</string>
+    <string name="call_status_calling_generic">Calling...</string>
     <string name="call_status_incoming">Incoming call...</string>
     <string name="call_status_answered">Call answered</string>
     <string name="call_status_ended_by_peer">Call ended by peer</string>
     <string name="call_status_user_busy">User is busy</string>
     <string name="call_status_error">Error: %1$s</string>
     <string name="call_status_ended">Call Ended</string>
+    <string name="call_missing_info">Missing call info.</string>
+    <string name="call_rejected_short">Call rejected.</string>
+    <string name="call_permissions_required">Camera and microphone permissions are required for this call.</string>
+    <string name="call_failed_create_room">Failed to create room.</string>
+    <string name="call_failed_generate_token">Failed to generate call token.</string>
+    <string name="call_invalid_room_info">Invalid room information.</string>
+    <string name="call_connecting_to_call">Connecting to call...</string>
+    <string name="call_error_with_message">Call error: %1$s</string>
+    <string name="call_error_creating_room">Error creating room: %1$s</string>
+    <string name="call_default_participant_name">Participant</string>
+    <string name="call_default_caller_name">Caller</string>
+    <string name="call_default_receiver_name">Receiver</string>
+    <string name="call_default_user_name">User</string>
+    <string name="call_default_caller_push_name">Yenkasa caller</string>
+    <string name="toggle_microphone">Toggle microphone</string>
+    <string name="end_call">End call</string>
+    <string name="toggle_camera">Toggle camera</string>
+    <string name="switch_camera">Switch camera</string>
+    <string name="incoming_call_from_placeholder">Incoming call from...</string>
+    <string name="accept_call">Accept call</string>
+    <string name="reject_call">Reject call</string>
     <string name="add_post">add post\n</string>
     <string name="create_post">create post\n</string>
     <string name="profile_image">profile image\n</string>
@@ -279,6 +301,12 @@
     <string name="error_phone_registered">Phone may already be registered</string>
     <string name="country_ghana">Ghana</string>
     <string name="country_nigeria">Nigeria</string>
+    <string name="country_value_ghana" translatable="false">Ghana</string>
+    <string name="country_value_nigeria" translatable="false">Nigeria</string>
+    <string name="community_option_with_details">%1$s - %2$s</string>
+    <string name="community_category_separator" translatable="false"> • </string>
+    <string name="community_uncategorized">Uncategorized</string>
+    <string name="community_interest_based">Interest-based Community</string>
     <string name="unnamed">Unnamed</string>
     <string name="password_reset_link_sent">If your email is registered, a password reset link has been sent.</string>
     <string name="unknown_error_occurred">Unknown error occurred</string>
@@ -567,6 +595,8 @@
     <string name="more_post_options">More post options</string>
     <string name="time_zero_double">00:00</string>
     <string name="time_zero">0:00</string>
+    <string name="time_minutes_seconds_double_format">%1$02d:%2$02d</string>
+    <string name="time_minutes_seconds_format">%1$d:%2$02d</string>
     <string name="previous_post">Previous post</string>
     <string name="play_or_pause">Play or pause</string>
     <string name="next_post">Next post</string>
@@ -920,6 +950,9 @@
     <string name="group_details_still_loading">Group details still loading</string>
     <string name="save_settings">Save Settings</string>
     <string name="community_name">Community Name</string>
+    <string name="community_icon_content_description">Community icon</string>
+    <string name="community_members_placeholder">0 members</string>
+    <string name="community_category_new">New</string>
     <string name="can_see_your_posts">Can see your posts</string>
     <string name="blocked_community_posts_none">Blocked - nobody in this community can see your posts</string>
     <string name="blocked_community_posts_followers">Only your followers in this community can see your posts</string>
@@ -936,6 +969,10 @@
     <string name="learn_more">Learn More</string>
     <string name="sponsored_ad">Sponsored Ad</string>
     <string name="get_started">Get Started</string>
+    <string name="intro_title">Yenkasa Africa</string>
+    <string name="intro_tagline">See what\'s happening in your community.</string>
+    <string name="splash_app_name">YenkasaChat</string>
+    <string name="media_time_with_total">%1$s / %2$s</string>
     <string name="watch_earn_default_ykc">Watch &amp; Earn 5 YKC</string>
     <string name="watch_earn_ykc">Watch &amp; Earn %1$d YKC</string>
     <string name="skip_ad">Skip ad</string>
@@ -947,6 +984,7 @@
     <string name="time_minutes_short">%1$dm</string>
     <string name="time_hours_short">%1$dh</string>
     <string name="time_days_short">%1$dd</string>
+    <string name="image_carousel_counter_format">%1$d/%2$d</string>
     <string name="made_for_africa">Made for Africa</string>
     <string name="chat_room_options_coming">Chat room options are coming soon</string>
     <string name="camera">Camera</string>
@@ -1017,6 +1055,24 @@
     <string name="filter_black_white">B&amp;W</string>
     <string name="delete_audio">Delete Audio</string>
     <string name="send_audio">Send Audio</string>
+    <string name="start_recording">Start recording</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="audio_already_recording">Already recording.</string>
+    <string name="audio_recording_start_failed_with_error">Failed to start recording: %1$s</string>
+    <string name="audio_recording_started">Recording started.</string>
+    <string name="audio_recording_stopped">Recording stopped.</string>
+    <string name="audio_recorded_file_not_found">Recorded file not found.</string>
+    <string name="audio_prepare_player_failed_with_error">Failed to prepare player: %1$s</string>
+    <string name="audio_stop_recording_before_playback">Stop recording before playback.</string>
+    <string name="audio_no_audio_to_play">No audio to play.</string>
+    <string name="audio_playback_error_with_message">Playback error: %1$s</string>
+    <string name="audio_no_audio_to_send">No audio to send.</string>
+    <string name="audio_file_not_found">Audio file not found.</string>
+    <string name="audio_send_failed_with_error">Failed to send audio: %1$s</string>
+    <string name="audio_deleted">Audio deleted.</string>
+    <string name="audio_delete_failed">Failed to delete audio.</string>
+    <string name="audio_file_not_present">Audio file not present.</string>
+    <string name="comment_reply_prefix">@%1$s </string>
     <string name="close_preview">Close Preview</string>
     <string name="video_failed_tap_retry">Video failed. Tap to retry.</string>
     <string name="document">Document</string>
@@ -1090,6 +1146,7 @@
     <string name="next">Next</string>
     <string name="verification">Verification</string>
     <string name="verification_subtitle">Secure your account in a few simple steps</string>
+    <string name="verification_default_country_code" translatable="false">+233</string>
     <string name="email_verify_step">Email\nVerify</string>
     <string name="phone_verify_step">Phone\nVerify</string>
     <string name="confirm_code_step">Confirm\nCode</string>
@@ -1158,6 +1215,7 @@
     <string name="rejection_failed">Rejection failed.</string>
     <string name="no_pending_posts_available">No pending posts available.</string>
     <string name="community_name_placeholder">Community Name</string>
+    <string name="overflow_ellipsis" translatable="false">…</string>
     <string name="time_2h_placeholder">2h</string>
     <string name="pending_post_stats_placeholder">Approved: 0 • Followers: 0 • Comments: 0</string>
     <string name="error_showing_menu_options">Error showing menu options.</string>
@@ -1367,6 +1425,10 @@
     <plurals name="members_count">
         <item quantity="one">%d member</item>
         <item quantity="other">%d members</item>
+    </plurals>
+    <plurals name="posts_count">
+        <item quantity="one">%1$d post</item>
+        <item quantity="other">%1$d posts</item>
     </plurals>
     <plurals name="chat_media_selected_count">
         <item quantity="one">%d selected</item>
@@ -1586,6 +1648,8 @@
     <string name="verification_member_since_format">Member since %1$s</string>
     <string name="verification_member_since_first_login">Member since your first login</string>
     <string name="verification_member_since_with_period_format">%1$s • %2$s</string>
+    <string name="community_status_active">Active</string>
+    <string name="community_status_inactive">Inactive</string>
     <string name="ranking_prelaunch_copy_dynamic">Pre-launch ranking period. Official Phase 1 begins on %1$s. You can still earn ranks now.</string>
     <string name="ranking_default_launch_date">25 May 2026</string>
     <string name="balance_label">Balance</string>

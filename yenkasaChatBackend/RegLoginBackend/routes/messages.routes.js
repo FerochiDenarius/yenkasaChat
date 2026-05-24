@@ -17,6 +17,7 @@ const { syncChatParticipantsAsContacts } = require('../services/contact.service'
 const { cloudinary } = require('../config/cloudinary');
 const { updateConversationStreak } = require('../utils/conversationStreak');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 
 const chatMediaUpload = multer({
   storage: multer.memoryStorage(),
@@ -264,6 +265,32 @@ router.post('/', auth, async (req, res) => {
 
     await newMessage.save();
     console.log(`[MessagesRoute] ✅ Message saved with ID: ${newMessage._id}`);
+
+    publishYmeEvent(
+      {
+        userId: senderAppUserId,
+        sourceApp: 'social_app',
+        eventType: 'chat_message',
+        conversationId: roomId,
+        messageId: newMessage._id.toString(),
+        relatedUserId: recipientAppUserIds[0] || '',
+        text: normalizedText || '',
+        payload: {
+          roomType: chatRoom.roomType || 'direct',
+          hasImage: Boolean(imageUrl),
+          hasAudio: Boolean(audioUrl),
+          hasVideo: Boolean(videoUrl),
+          hasFile: Boolean(fileUrl),
+          messageType: normalizedMessageType,
+        },
+      },
+      {
+        defaults: {
+          userId: senderAppUserId,
+          sourceApp: 'social_app',
+        },
+      },
+    );
 
     if (chatRoom.roomType !== 'group' && recipientAppUserIds.length === 1) {
       const recipientUser = await User.findById(recipientAppUserIds[0])

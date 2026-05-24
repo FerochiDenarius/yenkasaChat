@@ -15,6 +15,7 @@ import xyz.yenkasa.app.model.CreateCommunityRequest
 import xyz.yenkasa.app.model.CreateCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -248,6 +249,11 @@ class CreateCommunityActivity : AppCompatActivity() {
     }
 
     private fun handleCommunitySubmitSuccess(message: String) {
+        YmeAnalyticsManager.trackCreatorToolUse(
+            toolName = if (editMode) "edit_community" else "create_community",
+            targetId = editingCommunityId,
+            communityId = editingCommunityId
+        )
         resetCreateButton()
         Toast.makeText(
             this@CreateCommunityActivity,

@@ -58,15 +58,17 @@ class IncomingCallActivity : AppCompatActivity() {
             return
         }
 
-        findViewById<TextView>(R.id.textCallerName).text = callerName ?: "Unknown"
+        findViewById<TextView>(R.id.textCallerName).text =
+            callerName ?: getString(R.string.unknown_user)
         findViewById<TextView>(R.id.textCallType).text =
-            if (isVideo) "Video Call" else "Audio Call"
+            if (isVideo) getString(R.string.incoming_video_call)
+            else getString(R.string.incoming_audio_call)
 
         playIncomingTone()
 
         findViewById<ImageButton>(R.id.btnAcceptCall).setOnClickListener {
             if (callerId == null || roomUrl.isNullOrEmpty() || roomToken.isNullOrEmpty()) {
-                Toast.makeText(this, "Missing call info", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.call_missing_info, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             acceptCall()
@@ -102,14 +104,15 @@ class IncomingCallActivity : AppCompatActivity() {
         val caller = callerId ?: return
         val url = roomUrl ?: return
         val token = roomToken ?: return
-        val userName = TokenManager.getUsername(this) ?: "Receiver"
+        val userName = TokenManager.getUsername(this)
+            ?: getString(R.string.call_default_receiver_name)
 
         Log.i(TAG, "✅ Accepting call from $caller — joining room $url")
 
         // Notify caller that receiver accepted
         webSocketManager.sendCallAccept(caller)
 
-        Toast.makeText(this, "Connecting to call...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.call_connecting_to_call, Toast.LENGTH_SHORT).show()
 
         // Launch VideoCallActivity safely even if backgrounded
         val intent = Intent(this, VideoCallActivity::class.java).apply {

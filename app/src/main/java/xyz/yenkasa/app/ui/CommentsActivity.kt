@@ -129,7 +129,12 @@ class CommentsActivity : AppCompatActivity() {
 
             // 🗨️ Reply to a comment
             override fun onReply(comment: Comment) {
-                editComment.setText("@${comment.user?.username ?: ""} ")
+                editComment.setText(
+                    getString(
+                        R.string.comment_reply_prefix,
+                        comment.user?.username.orEmpty()
+                    )
+                )
                 editComment.requestFocus()
 
                 val parentCommentId = comment._id

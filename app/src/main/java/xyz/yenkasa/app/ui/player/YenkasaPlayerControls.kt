@@ -8,6 +8,7 @@ import androidx.core.view.isVisible
 import xyz.yenkasa.app.R
 
 class YenkasaPlayerControls(root: View) {
+    private val context = root.context
     private val seekBar: SeekBar = root.findViewById(R.id.playerSeekBar)
     private val currentTime: TextView = root.findViewById(R.id.textPlayerCurrentTime)
     private val durationTime: TextView = root.findViewById(R.id.textPlayerDuration)
@@ -65,8 +66,8 @@ class YenkasaPlayerControls(root: View) {
     fun setProgress(currentMs: Long, durationMs: Long) {
         if (durationMs <= 0) {
             seekBar.progress = 0
-            currentTime.text = "00:00"
-            durationTime.text = "00:00"
+            currentTime.text = context.getString(R.string.time_zero_double)
+            durationTime.text = context.getString(R.string.time_zero_double)
             return
         }
         seekBar.progress = ((currentMs * 1000L) / durationMs).toInt().coerceIn(0, 1000)
@@ -78,6 +79,6 @@ class YenkasaPlayerControls(root: View) {
         val totalSeconds = (ms / 1000L).coerceAtLeast(0L)
         val minutes = totalSeconds / 60L
         val seconds = totalSeconds % 60L
-        return String.format("%02d:%02d", minutes, seconds)
+        return context.getString(R.string.time_minutes_seconds_double_format, minutes, seconds)
     }
 }

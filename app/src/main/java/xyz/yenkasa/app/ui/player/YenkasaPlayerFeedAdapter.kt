@@ -21,6 +21,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.ui.feed.FeedTabsController
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 
 class YenkasaPlayerFeedAdapter(
     private val context: Context,
@@ -36,6 +37,8 @@ class YenkasaPlayerFeedAdapter(
     private val savedPostIds = mutableSetOf<String>()
     private val lastViewTime = mutableMapOf<String, Long>()
     private var activePosition = RecyclerView.NO_POSITION
+    private var activePostId: String? = null
+    private var activePostStartedAtMs: Long = 0L
     private var muted = true
     private var viewportHeight = 0
 
@@ -184,6 +187,8 @@ class YenkasaPlayerFeedAdapter(
     }
 
     fun resetTransientState() {
+        activePostId = null
+        activePostStartedAtMs = 0L
         activePosition = RecyclerView.NO_POSITION
         lastViewTime.clear()
     }
@@ -207,6 +212,7 @@ class YenkasaPlayerFeedAdapter(
         }
 
         val previous = activePosition
+        flushActivePostAnalytics(items.getOrNull(previous) as? Post)
         activePosition = position
 
         (recyclerView.findViewHolderForAdapterPosition(previous) as? PlayerViewHolder)
@@ -223,6 +229,7 @@ class YenkasaPlayerFeedAdapter(
     }
 
     fun pauseActive(recyclerView: RecyclerView) {
+        flushActivePostAnalytics(items.getOrNull(activePosition) as? Post)
         (recyclerView.findViewHolderForAdapterPosition(activePosition) as? PlayerViewHolder)
             ?.playerView
             ?.onHostPause()
@@ -235,6 +242,7 @@ class YenkasaPlayerFeedAdapter(
     }
 
     fun releaseAll(recyclerView: RecyclerView) {
+        flushActivePostAnalytics(items.getOrNull(activePosition) as? Post)
         if (itemCount == 0) return
         for (i in 0 until itemCount) {
             (recyclerView.findViewHolderForAdapterPosition(i) as? PlayerViewHolder)
@@ -245,9 +253,12 @@ class YenkasaPlayerFeedAdapter(
 
     private fun recordVisibleView(post: Post) {
         val now = System.currentTimeMillis()
+        activePostId = post._id
+        activePostStartedAtMs = now
         if (now - (lastViewTime[post._id] ?: 0L) < 8_000L) return
         lastViewTime[post._id] = now
         sendView(post, 3)
+        YmeAnalyticsManager.trackPostView(post, mediaTypeFor(post))
     }
 
     private fun sendRewardView(post: Post, seconds: Int) {
@@ -285,12 +296,45 @@ class YenkasaPlayerFeedAdapter(
                             } else {
                                 WalletBalanceManager.refreshAfterReward(context, rewardAmount)
                             }
+                            if (rewardAmount != null && rewardAmount > 0.0) {
+                                YmeAnalyticsManager.trackRewardClaim(
+                                    source = "feed_post_view",
+                                    rewardType = body.rewardType,
+                                    amount = rewardAmount,
+                                    postId = post._id,
+                                    communityId = post.communityId?.id
+                                )
+                            }
                         }
                     }
                 }
             } catch (error: Exception) {
                 Log.e("YenkasaPlayerFeed", "Failed to record view: ${error.message}")
             }
+        }
+    }
+
+    private fun flushActivePostAnalytics(post: Post?) {
+        val trackedPost = post ?: return
+        if (activePostId != trackedPost._id || activePostStartedAtMs <= 0L) return
+        val dwellMs = System.currentTimeMillis() - activePostStartedAtMs
+        val skipSpeed = if (dwellMs in 1..1_999L) 2.0 else 0.0
+        YmeAnalyticsManager.trackWatchDuration(
+            trackedPost,
+            watchMs = dwellMs,
+            feedDwellMs = dwellMs,
+            skipSpeed = skipSpeed,
+        )
+        activePostId = null
+        activePostStartedAtMs = 0L
+    }
+
+    private fun mediaTypeFor(post: Post): String {
+        return when {
+            !post.videoUrl.isNullOrBlank() -> "video"
+            !post.audioUrl.isNullOrBlank() -> "audio"
+            post.effectiveImageUrls().isNotEmpty() -> "image"
+            else -> "text"
         }
     }
 

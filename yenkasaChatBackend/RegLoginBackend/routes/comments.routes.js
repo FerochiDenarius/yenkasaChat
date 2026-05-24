@@ -8,6 +8,7 @@ const UserPrivacy = require('../models/userPrivacy.model');
 const rewardService = require('../services/reward.service');
 const { sendNotification } = require('../services/notification.service');
 const { areUsersBlocked, getBlockedRelationshipUserIds } = require('../services/privacy.service');
+const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 
 
 
@@ -234,6 +235,25 @@ if (global.io) {
 if (!parentCommentId && updatedCommentCount != null) {
   emitCommentCountUpdate(postId, updatedCommentCount);
 }
+
+publishYmeEvent({
+  userId,
+  sourceApp: "social_app",
+  eventType: "comment",
+  postId,
+  creatorId: post.userId?._id,
+  relatedUserId: parentComment?.userId?._id || post.userId?._id,
+  contentId: parentCommentId ? `comment:${parentCommentId}` : `post:${postId}`,
+  communityId: post.communityId,
+  message: text.trim(),
+  categories: post.tags || [],
+  payload: {
+    isReply: Boolean(parentCommentId),
+    parentCommentId: parentCommentId || null,
+    commentId: comment._id.toString(),
+    communityName: post.communityName || "",
+  },
+});
 
 return res.status(201).json({
   success: true,

@@ -25,6 +25,7 @@ import xyz.yenkasa.app.util.ChatNotificationState
 import xyz.yenkasa.app.util.LocaleManager
 import xyz.yenkasa.app.util.NotificationNavigation
 import xyz.yenkasa.app.util.NotificationSoundManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 
 
 class MyApplication : Application(), OSSubscriptionObserver {
@@ -68,6 +69,7 @@ class MyApplication : Application(), OSSubscriptionObserver {
         // Initialize ApiClient
         ApiClient.init(this)
         Log.d("MyApplication", "ApiClient initialized")
+        YmeAnalyticsManager.initialize(this)
 
 
         // Initialize Firebase
@@ -154,6 +156,14 @@ class MyApplication : Application(), OSSubscriptionObserver {
                 CallNotificationHandler.handleNotificationOpened(this, notification.additionalData ?: JSONObject())
                 return@setNotificationOpenedHandler
             }
+            YmeAnalyticsManager.trackNotificationOpen(
+                notification.additionalData?.optString("type"),
+                firstNonBlank(
+                    notification.additionalData?.optString("targetId"),
+                    notification.additionalData?.optString("roomId"),
+                    notification.additionalData?.optString("chatId"),
+                ),
+            )
             startActivity(NotificationNavigation.buildIntent(this, notification.additionalData))
         }
 

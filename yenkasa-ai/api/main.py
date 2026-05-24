@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import importlib.util
+import json
 import logging
 import os
 import re
@@ -10,9 +12,11 @@ import subprocess
 import sys
 import threading
 import time
+from copy import deepcopy
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any
+from typing import AsyncIterator
 from typing import Literal
 from uuid import uuid4
 
@@ -20,8 +24,10 @@ from fastapi import BackgroundTasks
 from fastapi import FastAPI
 from fastapi import File
 from fastapi import HTTPException
+from fastapi import Request
 from fastapi import UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import MarkdownHeaderTextSplitter
@@ -71,6 +77,10 @@ DEFAULT_RETRIEVAL_K = int(os.getenv("RETRIEVAL_K", "5"))
 DEFAULT_MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "6"))
 PUBLIC_CHUNK_SIZE = int(os.getenv("PUBLIC_DOC_CHUNK_SIZE", "950"))
 PUBLIC_CHUNK_OVERLAP = int(os.getenv("PUBLIC_DOC_CHUNK_OVERLAP", "140"))
+CLOUD_RUN_BACKEND_URL = os.getenv(
+    "YENKASA_AI_CLOUD_BACKEND_URL",
+    "https://yenkasa-ai-496173204476.europe-west1.run.app",
+).rstrip("/")
 
 HYBRID_SYSTEM_PROMPT = """You are Yenkasa-AI.
 
@@ -214,6 +224,35 @@ ENGINEERING_INTENT_TERMS = (
     "system design",
 )
 
+JOB_LOG_LIMIT = 120
+INGEST_STAGE_ORDER = {
+    "queued": 0,
+    "validating": 1,
+    "chunking": 2,
+    "embedding": 3,
+    "persisting": 4,
+    "refreshing": 5,
+    "confirming": 6,
+    "completed": 7,
+    "failed": 7,
+}
+INGEST_START_RE = re.compile(r"Starting ingestion pdf_root=.* total_candidate_pdfs=(\d+)")
+INGEST_INSPECT_RE = re.compile(r"\[(\d+)/(\d+)\] Inspecting PDF (.+)$")
+INGEST_LOADED_RE = re.compile(
+    r"\[(\d+)/(\d+)\] Loaded PDF (.+?) pages=(\d+) raw_pages=(\d+) chunks=(\d+) inserted=(\d+) skipped_existing=(\d+) chunk_failures=(\d+)"
+)
+INGEST_DUPLICATE_RE = re.compile(r"\[(\d+)/(\d+)\] Skipping duplicate PDF (.+?) duplicate_of=(.+)$")
+INGEST_EMPTY_RE = re.compile(
+    r"\[(\d+)/(\d+)\] Skipping (?:empty PDF file|PDF with no extractable text|PDF with no chunks after splitting) (.+?)(?:\s|$)"
+)
+INGEST_FAILED_FILE_RE = re.compile(r"\[(\d+)/(\d+)\] Failed to process PDF (.+)$")
+INGEST_SUMMARY_RE = re.compile(
+    r"Ingestion summary candidate=(\d+) successful=(\d+) failed=(\d+) duplicates=(\d+) empty=(\d+) "
+    r"pages=(\d+) chunks_created=(\d+) chunks_inserted=(\d+) chunks_skipped_existing=(\d+) chunk_failures=(\d+)"
+)
+INGEST_PERSIST_RE = re.compile(r"Chroma persistence elapsed=([0-9.]+)s files=(\d+)")
+INGEST_VECTOR_DB_RE = re.compile(r"Vector database path: (.+)$")
+
 
 class ChatTurn(BaseModel):
     role: str
@@ -254,7 +293,8 @@ class AppState:
         self.startup_error: str | None = None
         self.startup_timings: dict[str, float] = {}
         self.jobs: dict[str, dict[str, Any]] = {}
-        self.lock = threading.Lock()
+        self.jobs_version = 0
+        self.lock = threading.Condition()
 
 
 state = AppState()
@@ -410,12 +450,398 @@ def sanitize_filename(name: str) -> str:
     return safe or f"upload-{uuid4().hex}.pdf"
 
 
-def write_job(job_id: str, **updates: Any) -> dict[str, Any]:
+def clone_job(job: dict[str, Any]) -> dict[str, Any]:
+    return deepcopy(job)
+
+
+def list_jobs_snapshot() -> tuple[list[dict[str, Any]], int]:
     with state.lock:
-        current = state.jobs.get(job_id, {})
-        current.update(updates)
+        jobs = sorted(
+            (clone_job(job) for job in state.jobs.values()),
+            key=lambda item: (item.get("createdAt", 0), item.get("updatedAt", 0)),
+            reverse=True,
+        )
+        return jobs, state.jobs_version
+
+
+def get_job_snapshot(job_id: str) -> dict[str, Any]:
+    with state.lock:
+        return clone_job(state.jobs.get(job_id, {}))
+
+
+def wait_for_job_update(previous_version: int, timeout: float = 15.0) -> int:
+    with state.lock:
+        if state.jobs_version != previous_version:
+            return state.jobs_version
+        state.lock.wait(timeout=timeout)
+        return state.jobs_version
+
+
+def mutate_job(job_id: str, mutator) -> dict[str, Any]:
+    with state.lock:
+        current = clone_job(state.jobs.get(job_id, {}))
+        mutator(current)
+        current.setdefault("id", job_id)
+        current["updatedAt"] = int(time.time())
         state.jobs[job_id] = current
-        return dict(current)
+        state.jobs_version += 1
+        state.lock.notify_all()
+        return clone_job(current)
+
+
+def write_job(job_id: str, **updates: Any) -> dict[str, Any]:
+    return mutate_job(job_id, lambda current: current.update(updates))
+
+
+def append_job_log(job: dict[str, Any], line: str) -> None:
+    log_tail = list(job.get("logTail") or [])
+    log_tail.append(line)
+    job["logTail"] = log_tail[-JOB_LOG_LIMIT:]
+
+
+def upsert_selected_file(job: dict[str, Any], storage_name: str, **updates: Any) -> dict[str, Any]:
+    selected_files = list(job.get("selectedFiles") or [])
+    for selected in selected_files:
+        if selected.get("storageName") == storage_name:
+            selected.update(updates)
+            job["selectedFiles"] = selected_files
+            return selected
+
+    created = {"name": storage_name, "storageName": storage_name}
+    created.update(updates)
+    selected_files.append(created)
+    job["selectedFiles"] = selected_files
+    return created
+
+
+def set_stage(job: dict[str, Any], stage_key: str, label: str, progress: int | None = None, eta: str | None = None) -> None:
+    current_stage_key = str(job.get("stageKey") or "queued")
+    if INGEST_STAGE_ORDER.get(stage_key, 0) >= INGEST_STAGE_ORDER.get(current_stage_key, 0):
+        job["stageKey"] = stage_key
+        job["currentStage"] = label
+
+    if progress is not None:
+        job["progress"] = max(int(job.get("progress", 0)), progress)
+    if eta is not None:
+        job["eta"] = eta
+
+
+def file_progress(file_index: int, total_files: int, start: int, end: int) -> int:
+    if total_files <= 0:
+        return start
+    ratio = max(0.0, min(file_index / total_files, 1.0))
+    return start + round((end - start) * ratio)
+
+
+def build_unique_upload_path(upload_dir: Path, filename: str) -> Path:
+    safe_name = sanitize_filename(filename)
+    candidate = upload_dir / safe_name
+    if not candidate.exists():
+        return candidate
+
+    stem = candidate.stem or f"upload-{uuid4().hex[:8]}"
+    suffix = candidate.suffix
+    counter = 2
+    while True:
+        candidate = upload_dir / f"{stem}_{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
+def build_cloud_backend_url(path: str) -> str:
+    normalized = path if path.startswith("/") else f"/{path}"
+    return f"{CLOUD_RUN_BACKEND_URL}{normalized}"
+
+
+def run_curl_json(command: list[str]) -> dict[str, Any]:
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(f"curl failed rc={completed.returncode} stderr={completed.stderr.strip()[:800]}")
+
+    payload = (completed.stdout or "").strip()
+    if not payload:
+        raise RuntimeError("curl returned an empty response body.")
+
+    try:
+        body, http_status = payload.rsplit("\n", 1)
+    except ValueError as exc:
+        raise RuntimeError(f"curl response did not include an HTTP status: {payload[:800]}") from exc
+
+    if http_status.strip() != "200":
+        raise RuntimeError(f"Cloud backend request failed http={http_status.strip()} body={body[:1200]}")
+
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Cloud backend returned invalid JSON: {body[:1200]}") from exc
+
+
+def fetch_cloud_backend_health() -> dict[str, Any]:
+    return run_curl_json(
+        [
+            "curl",
+            "-sS",
+            "-w",
+            "\n%{http_code}",
+            build_cloud_backend_url("/health"),
+        ]
+    )
+
+
+def ingest_files_via_cloud_backend(upload_dir: Path) -> dict[str, Any]:
+    pdf_files = sorted(path for path in upload_dir.iterdir() if path.is_file() and path.suffix.lower() == ".pdf")
+    if not pdf_files:
+        raise RuntimeError("No PDF files were staged for the Cloud Run ingest request.")
+
+    command = [
+        "curl",
+        "-sS",
+        "-w",
+        "\n%{http_code}",
+        "-X",
+        "POST",
+        build_cloud_backend_url("/ingest?audience=engineering"),
+    ]
+    for pdf_file in pdf_files:
+        command.extend(["-F", f"files=@{pdf_file}"])
+
+    return run_curl_json(command)
+
+
+def build_engineering_vector_store_snapshot():
+    if state.ask_module is None or state.embedding_function is None:
+        raise RuntimeError("Engineering vector store cannot be refreshed before startup completes.")
+    return state.ask_module.build_vector_store(
+        persist_dir=DEFAULT_PERSIST_DIR,
+        collection_name=ENGINEERING_COLLECTION_NAME,
+        embedding_function=state.embedding_function,
+    )
+
+
+def refresh_engineering_vector_store() -> tuple[Any, int]:
+    vector_store = build_engineering_vector_store_snapshot()
+    total_chunks = collection_count(vector_store)
+    with state.lock:
+        state.engineering_vector_store = vector_store
+    return vector_store, total_chunks
+
+
+def confirm_selected_files_in_db(vector_store: Any, selected_files: list[dict[str, Any]]) -> dict[str, Any]:
+    collection = vector_store._collection  # noqa: SLF001
+    confirmed_files = 0
+    total_confirmed_chunks = 0
+    files: list[dict[str, Any]] = []
+
+    for selected in selected_files:
+        storage_name = str(selected.get("storageName") or selected.get("name") or "")
+        result = collection.get(where={"source_file": storage_name}, include=[])
+        chunk_ids = result.get("ids") or []
+        chunk_count = len(chunk_ids)
+        present = chunk_count > 0
+        if present:
+            confirmed_files += 1
+            total_confirmed_chunks += chunk_count
+        files.append(
+            {
+                "storageName": storage_name,
+                "present": present,
+                "dbChunkCount": chunk_count,
+            }
+        )
+
+    return {
+        "confirmedFiles": confirmed_files,
+        "totalFiles": len(selected_files),
+        "totalConfirmedChunks": total_confirmed_chunks,
+        "files": files,
+        "collectionName": ENGINEERING_COLLECTION_NAME,
+        "vectorDbPath": str(DEFAULT_PERSIST_DIR),
+        "collectionCount": collection_count(vector_store),
+    }
+
+
+def attach_db_confirmation(job_id: str, db_confirmation: dict[str, Any]) -> None:
+    confirmation_by_storage = {
+        item["storageName"]: item for item in db_confirmation.get("files", []) if item.get("storageName")
+    }
+
+    def _mutate(current: dict[str, Any]) -> None:
+        current["dbConfirmation"] = db_confirmation
+        for selected in list(current.get("selectedFiles") or []):
+            storage_name = selected.get("storageName")
+            confirmation = confirmation_by_storage.get(storage_name)
+            if not confirmation:
+                continue
+            selected["dbChunkCount"] = confirmation["dbChunkCount"]
+            selected["inVectorDb"] = confirmation["present"]
+
+    mutate_job(job_id, _mutate)
+
+
+def parse_ingest_summary(line: str) -> dict[str, int] | None:
+    match = INGEST_SUMMARY_RE.search(line)
+    if not match:
+        return None
+    keys = (
+        "candidate",
+        "successful",
+        "failed",
+        "duplicates",
+        "empty",
+        "pages",
+        "chunksCreated",
+        "chunksInserted",
+        "chunksSkippedExisting",
+        "chunkFailures",
+    )
+    return {key: int(value) for key, value in zip(keys, match.groups())}
+
+
+def update_job_from_ingest_log(job_id: str, raw_line: str) -> None:
+    line = raw_line.strip()
+    if not line:
+        return
+
+    def _mutate(current: dict[str, Any]) -> None:
+        append_job_log(current, line)
+
+        if "Embedding provider ready" in line:
+            set_stage(current, "embedding", "Generating embeddings", progress=24, eta="Embedding backend ready")
+
+        if "Embedded batch" in line or "Skipped already-ingested batch" in line:
+            set_stage(current, "embedding", "Generating embeddings", progress=38, eta="Writing batches to Chroma")
+
+        start_match = INGEST_START_RE.search(line)
+        if start_match:
+            total_files = int(start_match.group(1))
+            current["totalFiles"] = total_files
+            set_stage(current, "validating", "Validating files", progress=8, eta=f"Scanning {total_files} file(s)")
+            return
+
+        inspect_match = INGEST_INSPECT_RE.search(line)
+        if inspect_match:
+            file_index = int(inspect_match.group(1))
+            total_files = int(inspect_match.group(2))
+            file_name = inspect_match.group(3).strip()
+            current["currentFile"] = file_name
+            current["totalFiles"] = total_files
+            upsert_selected_file(current, file_name, status="Processing")
+            set_stage(
+                current,
+                "chunking",
+                "Chunking documents",
+                progress=file_progress(max(file_index - 1, 0), total_files, 12, 48),
+                eta=f"Processing {file_index} of {total_files}",
+            )
+            return
+
+        loaded_match = INGEST_LOADED_RE.search(line)
+        if loaded_match:
+            file_index = int(loaded_match.group(1))
+            total_files = int(loaded_match.group(2))
+            file_name = loaded_match.group(3).strip()
+            pages = int(loaded_match.group(4))
+            raw_pages = int(loaded_match.group(5))
+            chunks_created = int(loaded_match.group(6))
+            chunks_inserted = int(loaded_match.group(7))
+            chunks_skipped_existing = int(loaded_match.group(8))
+            chunk_failures = int(loaded_match.group(9))
+            current["processedFiles"] = max(int(current.get("processedFiles", 0)), file_index)
+            upsert_selected_file(
+                current,
+                file_name,
+                status="Indexed",
+                pages=pages,
+                rawPages=raw_pages,
+                chunksCreated=chunks_created,
+                chunksInserted=chunks_inserted,
+                chunksSkippedExisting=chunks_skipped_existing,
+                chunkFailures=chunk_failures,
+            )
+            set_stage(
+                current,
+                "embedding",
+                "Generating embeddings",
+                progress=file_progress(file_index, total_files, 18, 78),
+                eta=f"Indexed {file_index} of {total_files}",
+            )
+            return
+
+        duplicate_match = INGEST_DUPLICATE_RE.search(line)
+        if duplicate_match:
+            file_index = int(duplicate_match.group(1))
+            total_files = int(duplicate_match.group(2))
+            file_name = duplicate_match.group(3).strip()
+            duplicate_of = duplicate_match.group(4).strip()
+            current["processedFiles"] = max(int(current.get("processedFiles", 0)), file_index)
+            upsert_selected_file(current, file_name, status="Duplicate", duplicateOf=duplicate_of, inVectorDb=True)
+            set_stage(
+                current,
+                "validating",
+                "Validating files",
+                progress=file_progress(file_index, total_files, 12, 40),
+                eta=f"Validated {file_index} of {total_files}",
+            )
+            return
+
+        empty_match = INGEST_EMPTY_RE.search(line)
+        if empty_match:
+            file_index = int(empty_match.group(1))
+            total_files = int(empty_match.group(2))
+            file_name = empty_match.group(3).strip()
+            current["processedFiles"] = max(int(current.get("processedFiles", 0)), file_index)
+            upsert_selected_file(current, file_name, status="Skipped")
+            set_stage(
+                current,
+                "validating",
+                "Validating files",
+                progress=file_progress(file_index, total_files, 12, 40),
+                eta=f"Validated {file_index} of {total_files}",
+            )
+            return
+
+        failed_match = INGEST_FAILED_FILE_RE.search(line)
+        if failed_match:
+            file_index = int(failed_match.group(1))
+            total_files = int(failed_match.group(2))
+            file_name = failed_match.group(3).strip()
+            current["processedFiles"] = max(int(current.get("processedFiles", 0)), file_index)
+            upsert_selected_file(current, file_name, status="Failed")
+            set_stage(
+                current,
+                "chunking",
+                "Chunking documents",
+                progress=file_progress(file_index, total_files, 18, 70),
+                eta=f"Processed {file_index} of {total_files}",
+            )
+            return
+
+        summary = parse_ingest_summary(line)
+        if summary:
+            current["summary"] = summary
+            set_stage(current, "persisting", "Persisting to Chroma", progress=84, eta="Writing Chroma snapshot")
+            return
+
+        persist_match = INGEST_PERSIST_RE.search(line)
+        if persist_match:
+            current["persistSeconds"] = float(persist_match.group(1))
+            current["persistedFiles"] = int(persist_match.group(2))
+            set_stage(current, "persisting", "Persisting to Chroma", progress=90, eta="Chroma snapshot persisted")
+            return
+
+        vector_db_match = INGEST_VECTOR_DB_RE.search(line)
+        if vector_db_match:
+            current["vectorDbPath"] = vector_db_match.group(1).strip()
+            set_stage(current, "refreshing", "Refreshing runtime", progress=94, eta="Reloading vector store")
+
+    mutate_job(job_id, _mutate)
 
 
 def build_section_path(metadata: dict[str, Any]) -> str:
@@ -882,53 +1308,163 @@ def answer_engineering_query(question: str, history_pairs: list[tuple[str, str]]
 
 
 def run_ingestion_job(job_id: str, upload_dir: Path) -> None:
-    write_job(job_id, status="Running", progress=18, eta="Embedding in progress")
+    write_job(
+        job_id,
+        status="Running",
+        progress=4,
+        stageKey="validating",
+        currentStage="Validating files",
+        eta="Starting worker",
+        startedAt=int(time.time()),
+    )
 
     try:
-        command = [
-            str(RAG_VENV_PYTHON),
-            str(INGEST_SCRIPT),
-            "--pdf-folder",
-            str(upload_dir),
-            "--persist-dir",
-            str(DEFAULT_PERSIST_DIR),
-            "--collection-name",
-            ENGINEERING_COLLECTION_NAME,
-            "--embedding-provider",
-            "huggingface",
-            "--tag-metadata",
-            "--log-level",
-            "INFO",
-        ]
-        LOGGER.info("Starting ingestion job job_id=%s command=%s", job_id, command)
-        started = time.perf_counter()
-        completed = subprocess.run(
-            command,
-            cwd=str(RAG_DIR),
-            capture_output=True,
-            text=True,
-            env=os.environ.copy(),
-            check=False,
-        )
-        elapsed = time.perf_counter() - started
+        upload_paths = sorted(path for path in upload_dir.iterdir() if path.is_file() and path.suffix.lower() == ".pdf")
+        if not upload_paths:
+            raise RuntimeError("No PDF files were staged for ingestion.")
 
-        if completed.returncode != 0:
-            raise RuntimeError(
-                f"Ingestion failed rc={completed.returncode} stderr={completed.stderr.strip()[:600]}"
-            )
+        def _mark_processing(current: dict[str, Any]) -> None:
+            current["workerMode"] = "cloud_run"
+            current["backendUrl"] = CLOUD_RUN_BACKEND_URL
+            for selected in list(current.get("selectedFiles") or []):
+                selected["status"] = "Processing"
+
+        mutate_job(job_id, _mark_processing)
+        write_job(
+            job_id,
+            progress=18,
+            stageKey="chunking",
+            currentStage="Uploading to production backend",
+            eta=f"Sending {len(upload_paths)} PDFs to Cloud Run",
+        )
+        write_job(
+            job_id,
+            progress=48,
+            stageKey="embedding",
+            currentStage="Production backend is chunking and embedding",
+            eta="Waiting for Cloud Run ingest",
+        )
+
+        started = time.perf_counter()
+        LOGGER.info(
+            "Starting Cloud Run ingestion job job_id=%s backend=%s files=%d",
+            job_id,
+            CLOUD_RUN_BACKEND_URL,
+            len(upload_paths),
+        )
+        ingest_response = ingest_files_via_cloud_backend(upload_dir)
+        elapsed = time.perf_counter() - started
+        accepted_files = int(ingest_response.get("accepted_files") or 0)
+        chunks_inserted = int(ingest_response.get("chunks_inserted") or 0)
+        target_collection = str(ingest_response.get("target_collection") or ENGINEERING_COLLECTION_NAME)
+        write_job(
+            job_id,
+            progress=86,
+            stageKey="persisting",
+            currentStage="Persisting production snapshot",
+            eta="Waiting for backend storage sync",
+            durationSeconds=round(elapsed, 2),
+        )
 
         write_job(
             job_id,
-            status="Completed",
-            progress=100,
-            eta="Done",
+            progress=96,
+            stageKey="confirming",
+            currentStage="Refreshing production health",
+            eta="Checking engineering collection stats",
             durationSeconds=round(elapsed, 2),
-            stdout=completed.stdout[-4000:],
         )
-        LOGGER.info("Ingestion job completed job_id=%s elapsed=%.2fs", job_id, elapsed)
+
+        health_warning: str | None = None
+        collection_count_after_refresh: int | None = None
+        health_payload: dict[str, Any] | None = None
+        try:
+            health_payload = fetch_cloud_backend_health()
+            engineering_stats = ((health_payload.get("collection_stats") or {}).get("engineering") or {})
+            vector_count = engineering_stats.get("vectorCount")
+            collection_count_after_refresh = int(vector_count) if vector_count is not None else None
+        except Exception as exc:
+            LOGGER.exception("Cloud backend health confirmation failed job_id=%s", job_id)
+            health_warning = (
+                "Upload completed, but the post-ingest production health check failed. "
+                f"Details: {exc}"
+            )
+
+        selected_files = list(get_job_snapshot(job_id).get("selectedFiles") or [])
+        all_confirmed = accepted_files == len(selected_files)
+        warning_parts = []
+        if accepted_files != len(upload_paths):
+            warning_parts.append(
+                f"Cloud Run accepted {accepted_files} of {len(upload_paths)} uploaded files."
+            )
+        if health_warning:
+            warning_parts.append(health_warning)
+        combined_warning = " ".join(warning_parts) if warning_parts else None
+
+        db_confirmation = {
+            "confirmedFiles": accepted_files if all_confirmed else 0,
+            "totalFiles": len(selected_files),
+            "totalConfirmedChunks": chunks_inserted,
+            "files": [
+                {
+                    "storageName": str(selected.get("storageName") or selected.get("name") or ""),
+                    "present": all_confirmed,
+                    "dbChunkCount": None,
+                }
+                for selected in selected_files
+            ],
+            "collectionName": target_collection,
+            "vectorDbPath": str(
+                (health_payload or {}).get("vector_db_path")
+                or ingest_response.get("vector_db_path")
+                or DEFAULT_PERSIST_DIR
+            ),
+            "collectionCount": collection_count_after_refresh,
+            "uploadedToGcs": bool(ingest_response.get("uploaded_to_gcs")),
+        }
+
+        def _mark_completed(current: dict[str, Any]) -> None:
+            current["status"] = "Completed"
+            current["progress"] = 100
+            current["stageKey"] = "completed"
+            current["currentStage"] = (
+                "Confirmed in production backend" if not combined_warning else "Completed with warning"
+            )
+            current["eta"] = "Done" if not combined_warning else "Done with warning"
+            current["durationSeconds"] = round(elapsed, 2)
+            current["collectionCount"] = collection_count_after_refresh
+            current["dbConfirmation"] = db_confirmation
+            current["backendResponse"] = ingest_response
+            current["warning"] = combined_warning
+            current["completedAt"] = int(time.time())
+            append_job_log(
+                current,
+                f"Cloud Run accepted {accepted_files} files and inserted {chunks_inserted} chunks into {target_collection}.",
+            )
+            for selected in list(current.get("selectedFiles") or []):
+                selected["status"] = "Indexed" if all_confirmed else "Uploaded"
+                selected["inVectorDb"] = all_confirmed
+                selected["dbChunkCount"] = None
+
+        mutate_job(job_id, _mark_completed)
+        LOGGER.info(
+            "Ingestion job completed via cloud backend job_id=%s elapsed=%.2fs accepted=%d chunks=%d",
+            job_id,
+            elapsed,
+            accepted_files,
+            chunks_inserted,
+        )
     except Exception as exc:
         LOGGER.exception("Ingestion job failed job_id=%s", job_id)
-        write_job(job_id, status="Failed", progress=100, eta="Failed", error=str(exc))
+        def _mark_failed(current: dict[str, Any]) -> None:
+            current["status"] = "Failed"
+            current["progress"] = 100
+            current["eta"] = "Failed"
+            current["error"] = str(exc)
+            current["completedAt"] = int(time.time())
+            current["currentStage"] = f"{current.get('currentStage') or 'Ingestion'} failed"
+
+        mutate_job(job_id, _mark_failed)
     finally:
         shutil.rmtree(upload_dir, ignore_errors=True)
 
@@ -1028,18 +1564,29 @@ async def ingest(background_tasks: BackgroundTasks, files: list[UploadFile] = Fi
     job_id = f"job-{uuid4().hex[:8]}"
     upload_dir = Path(mkdtemp(prefix=f"{job_id}-", dir=str(ROOT_DIR / "yenkasa-ai" / "api")))
     accepted_files = 0
+    selected_files: list[dict[str, Any]] = []
 
     for upload in files:
         if not upload.filename:
             continue
-        target = upload_dir / sanitize_filename(upload.filename)
+        if not upload.filename.lower().endswith(".pdf"):
+            continue
+        target = build_unique_upload_path(upload_dir, upload.filename)
         with target.open("wb") as handle:
             shutil.copyfileobj(upload.file, handle)
+        selected_files.append(
+            {
+                "name": upload.filename,
+                "storageName": target.name,
+                "sizeBytes": target.stat().st_size,
+                "status": "Queued",
+            }
+        )
         accepted_files += 1
 
     if accepted_files == 0:
         shutil.rmtree(upload_dir, ignore_errors=True)
-        raise HTTPException(status_code=400, detail="No valid files were uploaded.")
+        raise HTTPException(status_code=400, detail="Only PDF files are currently supported for ingestion.")
 
     job = write_job(
         job_id,
@@ -1047,9 +1594,13 @@ async def ingest(background_tasks: BackgroundTasks, files: list[UploadFile] = Fi
         name=f"ingest_{job_id}",
         status="Queued",
         progress=0,
+        stageKey="queued",
+        currentStage="Queued",
         eta="Queued",
         target=ENGINEERING_COLLECTION_NAME,
         acceptedFiles=accepted_files,
+        selectedFiles=selected_files,
+        totalFiles=accepted_files,
         createdAt=int(time.time()),
     )
     background_tasks.add_task(run_ingestion_job, job_id, upload_dir)
@@ -1065,4 +1616,40 @@ async def ingest(background_tasks: BackgroundTasks, files: list[UploadFile] = Fi
 
 @app.get("/api/ai/ingest/jobs")
 def ingest_jobs() -> dict[str, Any]:
-    return {"jobs": list(state.jobs.values())}
+    jobs, version = list_jobs_snapshot()
+    return {"jobs": jobs, "version": version}
+
+
+async def ingest_job_event_stream(request: Request) -> AsyncIterator[str]:
+    jobs, version = list_jobs_snapshot()
+    yield f"data: {json.dumps({'jobs': jobs, 'version': version})}\n\n"
+    current_version = version
+
+    while True:
+        if await request.is_disconnected():
+            break
+
+        new_version = await asyncio.to_thread(wait_for_job_update, current_version, 15.0)
+        if await request.is_disconnected():
+            break
+
+        jobs, snapshot_version = list_jobs_snapshot()
+        if snapshot_version == current_version:
+            yield ": keep-alive\n\n"
+            continue
+
+        current_version = snapshot_version
+        yield f"data: {json.dumps({'jobs': jobs, 'version': snapshot_version})}\n\n"
+
+
+@app.get("/api/ai/ingest/jobs/stream")
+async def ingest_jobs_stream(request: Request) -> StreamingResponse:
+    return StreamingResponse(
+        ingest_job_event_stream(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

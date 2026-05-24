@@ -24,7 +24,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_gravity="center"
-                android:contentDescription="Community icon"
+                android:contentDescription="@string/community_icon_content_description"
                 android:padding="6dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_community_placeholder" />
@@ -42,7 +42,7 @@
                 android:maxLines="1"
                 android:paddingStart="6dp"
                 android:paddingEnd="6dp"
-                android:text="New"
+                android:text="@string/community_category_new"
                 android:textColor="@color/account_primary_text"
                 android:textSize="9sp"
                 android:textStyle="bold" />
@@ -55,7 +55,7 @@
             android:layout_marginTop="6dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="Community Name"
+            android:text="@string/community_name_placeholder"
             android:textColor="@color/account_primary_text"
             android:textSize="10sp"
             android:textStyle="bold" />
@@ -79,7 +79,7 @@
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="0 members"
+            android:text="@string/community_members_placeholder"
             android:textColor="@color/account_secondary_text"
             android:textSize="9sp" />
 
@@ -101,7 +101,7 @@
                 android:minHeight="0dp"
                 android:minWidth="0dp"
                 android:padding="0dp"
-                android:text="Join"
+                android:text="@string/join"
                 android:textAllCaps="false"
                 android:textColor="@color/account_accent_green"
                 android:textSize="9sp"
@@ -118,7 +118,7 @@
                 android:minHeight="0dp"
                 android:minWidth="0dp"
                 android:padding="0dp"
-                android:text="Leave"
+                android:text="@string/leave"
                 android:textAllCaps="false"
                 android:textColor="@color/account_danger"
                 android:textSize="9sp"
@@ -135,7 +135,8 @@
                 android:minHeight="0dp"
                 android:minWidth="0dp"
                 android:padding="0dp"
-                android:text="…"
+                android:contentDescription="@string/view"
+                android:text="@string/overflow_ellipsis"
                 android:textAllCaps="false"
                 android:textColor="@color/account_secondary_text"
                 android:textSize="16sp"

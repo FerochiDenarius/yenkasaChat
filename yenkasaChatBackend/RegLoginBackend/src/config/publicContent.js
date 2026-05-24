@@ -32,6 +32,13 @@ function registerPolicyPages(app, rootDir) {
 function registerPublicContent(app, rootDir) {
   registerPolicyPages(app, rootDir);
 
+  app.get('/yme-inspector', (req, res) => {
+    res.redirect(302, '/yme');
+  });
+  app.get('/yme-inspector/', (req, res) => {
+    res.redirect(302, '/yme');
+  });
+
   app.get('/app-ads.txt', (req, res) => {
     res.sendFile(path.join(rootDir, 'public', 'app-ads.txt'));
   });

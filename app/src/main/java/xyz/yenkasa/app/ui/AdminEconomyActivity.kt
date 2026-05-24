@@ -23,6 +23,7 @@ import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -62,6 +63,11 @@ class AdminEconomyActivity : AppCompatActivity() {
             statusText.text = "Access denied. Admin, Moderator, Junior Developer, and Senior Developer can view this page."
             return
         }
+
+        YmeAnalyticsManager.trackAnalyticsInteraction(
+            action = "view_admin_economy",
+            targetId = "admin_economy"
+        )
 
         loadEconomy()
     }

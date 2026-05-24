@@ -84,7 +84,7 @@ class AudioRecActivity : AppCompatActivity() {
 
     private fun startRecording() {
         if (isRecording) {
-            Toast.makeText(this, "Already recording", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.audio_already_recording, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -114,7 +114,14 @@ class AudioRecActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "Failed to start recording: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                getString(
+                    R.string.audio_recording_start_failed_with_error,
+                    e.message ?: getString(R.string.unknown_error)
+                ),
+                Toast.LENGTH_LONG
+            ).show()
             mediaRecorder?.release()
             mediaRecorder = null
             return
@@ -136,7 +143,7 @@ class AudioRecActivity : AppCompatActivity() {
         btnPlayPause.isEnabled = false // playback disabled while recording
         btnDelete.isEnabled = false
 
-        Toast.makeText(this, "🎙️ Recording started", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.audio_recording_started, Toast.LENGTH_SHORT).show()
     }
 
     private fun stopRecording() {
@@ -167,7 +174,7 @@ class AudioRecActivity : AppCompatActivity() {
         btnPlayPause.isEnabled = true
         btnDelete.isEnabled = true
 
-        Toast.makeText(this, "✅ Recording stopped", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.audio_recording_stopped, Toast.LENGTH_SHORT).show()
 
         // Prepare MediaPlayer for immediate preview
         prepareMediaPlayerForPreview()
@@ -188,7 +195,7 @@ class AudioRecActivity : AppCompatActivity() {
         try {
             val audioFile = File(audioFilePath)
             if (!audioFile.exists()) {
-                Toast.makeText(this, "Recorded file not found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.audio_recorded_file_not_found, Toast.LENGTH_SHORT).show()
                 return
             }
 
@@ -202,7 +209,14 @@ class AudioRecActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "Failed to prepare player: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                getString(
+                    R.string.audio_prepare_player_failed_with_error,
+                    e.message ?: getString(R.string.unknown_error)
+                ),
+                Toast.LENGTH_LONG
+            ).show()
             mediaPlayer?.release()
             mediaPlayer = null
         }
@@ -211,12 +225,16 @@ class AudioRecActivity : AppCompatActivity() {
     private fun playPauseAudio() {
 
         if (isRecording) {
-            Toast.makeText(this, "Stop recording before playback", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                R.string.audio_stop_recording_before_playback,
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
         if (audioFilePath.isEmpty()) {
-            Toast.makeText(this, "No audio to play", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.audio_no_audio_to_play, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -239,7 +257,14 @@ class AudioRecActivity : AppCompatActivity() {
                     btnPlayPause.setImageResource(R.drawable.ic_pause)
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(this, "Playback error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this,
+                        getString(
+                            R.string.audio_playback_error_with_message,
+                            e.message ?: getString(R.string.unknown_error)
+                        ),
+                        Toast.LENGTH_SHORT
+                    ).show()
                     // attempt re-prep
                     prepareMediaPlayerForPreview()
                 }
@@ -249,13 +274,13 @@ class AudioRecActivity : AppCompatActivity() {
 
     private fun sendAudio() {
         if (audioFilePath.isEmpty()) {
-            Toast.makeText(this, "No audio to send", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.audio_no_audio_to_send, Toast.LENGTH_SHORT).show()
             return
         }
 
         val audioFile = File(audioFilePath)
         if (!audioFile.exists()) {
-            Toast.makeText(this, "Audio file not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.audio_file_not_found, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -280,7 +305,14 @@ class AudioRecActivity : AppCompatActivity() {
             finish()
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "Failed to send audio: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                getString(
+                    R.string.audio_send_failed_with_error,
+                    e.message ?: getString(R.string.unknown_error)
+                ),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -289,10 +321,13 @@ class AudioRecActivity : AppCompatActivity() {
             val file = File(audioFilePath)
             if (file.exists()) {
                 val deleted = file.delete()
-                if (deleted) Toast.makeText(this, "🗑️ Audio deleted", Toast.LENGTH_SHORT).show()
-                else Toast.makeText(this, "Failed to delete audio", Toast.LENGTH_SHORT).show()
+                if (deleted) {
+                    Toast.makeText(this, R.string.audio_deleted, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, R.string.audio_delete_failed, Toast.LENGTH_SHORT).show()
+                }
             } else {
-                Toast.makeText(this, "Audio file not present", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.audio_file_not_present, Toast.LENGTH_SHORT).show()
             }
             audioFilePath = ""
         }
@@ -305,7 +340,7 @@ class AudioRecActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startRecording()
             } else {
-                Toast.makeText(this, "Microphone permission required", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.microphone_permission_required, Toast.LENGTH_SHORT).show()
             }
         }
     }

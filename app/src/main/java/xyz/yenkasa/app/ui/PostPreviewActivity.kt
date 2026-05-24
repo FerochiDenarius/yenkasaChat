@@ -105,7 +105,11 @@ class PostPreviewActivity : AppCompatActivity() {
                         val pos = it.currentPosition.toInt()
                         val dur = it.duration.toInt().coerceAtLeast(1)
                         seekBar.progress = pos
-                        txtTimer.text = "${formatTime(pos)} / ${formatTime(dur)}"
+                        txtTimer.text = getString(
+                            R.string.media_time_with_total,
+                            formatTime(pos),
+                            formatTime(dur)
+                        )
                         handler.postDelayed(this, 1000)
                     }
                 }
@@ -117,7 +121,11 @@ class PostPreviewActivity : AppCompatActivity() {
                 if (state == androidx.media3.common.Player.STATE_READY && !isAudioPrepared) {
                     isAudioPrepared = true
                     seekBar.max = player?.duration?.toInt() ?: 0
-                    txtTimer.text = "0:00 / ${formatTime(player?.duration?.toInt() ?: 0)}"
+                    txtTimer.text = getString(
+                        R.string.media_time_with_total,
+                        getString(R.string.time_zero),
+                        formatTime(player?.duration?.toInt() ?: 0)
+                    )
                 }
             }
         })
@@ -148,7 +156,7 @@ class PostPreviewActivity : AppCompatActivity() {
     private fun formatTime(ms: Int): String {
         val seconds = (ms / 1000) % 60
         val minutes = (ms / 1000) / 60
-        return String.format("%d:%02d", minutes, seconds)
+        return getString(R.string.time_minutes_seconds_format, minutes, seconds)
     }
 
     override fun onStop() {

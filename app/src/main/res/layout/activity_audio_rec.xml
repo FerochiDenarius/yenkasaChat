@@ -13,7 +13,7 @@
         android:id="@+id/recordingTimer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="00:00"
+        android:text="@string/time_zero_double"
         android:textSize="32sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
@@ -34,7 +34,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_mic"
             app:tint="@android:color/black"
-            android:contentDescription="Start Recording" />
+            android:contentDescription="@string/start_recording" />
 
         <ImageButton
             android:id="@+id/btnStopRecording"
@@ -44,7 +44,7 @@
             android:src="@drawable/ic_stop"
             app:tint="@android:color/black"
             android:visibility="gone"
-            android:contentDescription="Stop Recording" />
+            android:contentDescription="@string/stop_recording" />
     </LinearLayout>
 
     <!-- Preview Controls -->
@@ -64,7 +64,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_play"
             app:tint="@android:color/black"
-            android:contentDescription="Play/Pause" />
+            android:contentDescription="@string/play_pause" />
 
         <ImageButton
             android:id="@+id/btnDeleteAudio"
@@ -73,7 +73,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_delete"
             app:tint="@android:color/black"
-            android:contentDescription="Delete" />
+            android:contentDescription="@string/delete_audio" />
 
         <ImageButton
             android:id="@+id/btnSendAudioFile"
@@ -82,7 +82,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_send"
             app:tint="@android:color/black"
-            android:contentDescription="Send" />
+            android:contentDescription="@string/send_audio" />
     </LinearLayout>
 
 </LinearLayout>

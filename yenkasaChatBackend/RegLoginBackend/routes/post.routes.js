@@ -34,6 +34,7 @@ const rewardService = require('../services/reward.service');
 const UserPrivacy = require("../models/userPrivacy.model");
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
+const { publishYmeEvent } = require("../src/yme/services/eventPublisher.service");
 
 function normalizeCountry(value) {
   return (value ?? "").toString().trim().toLowerCase();
@@ -479,6 +480,23 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       queueCommunityPostNotifications({ postId: post._id });
     }
 
+    publishYmeEvent({
+      userId,
+      sourceApp: "social_app",
+      eventType: "caption",
+      postId: post._id,
+      creatorId: post.userId,
+      communityId: post.communityId,
+      contentId: `post:${post._id}`,
+      caption: post.text || "",
+      categories: post.tags || [],
+      payload: {
+        communityName: post.communityName || "",
+        postType: post.postType || detectedPostType || "text",
+        moderationStatus: post.status,
+      },
+    });
+
     /* ------------------------------------
      * FINAL RESPONSE
      * ------------------------------------ */
@@ -895,7 +913,7 @@ router.post("/:postId/share", authMiddleware, async (req, res) => {
     const { postId } = req.params;
     const userId = req.user.id;
 
-    const post = await Post.findById(postId).select("userId shareCount");
+    const post = await Post.findById(postId).select("userId shareCount text tags communityName communityId postType");
     if (!post) return res.status(404).json({ success: false, message: "Post not found" });
 
     const ownerId = post.userId.toString();
@@ -963,6 +981,23 @@ router.post("/:postId/share", authMiddleware, async (req, res) => {
         timestamp: new Date()
       });
     }
+
+    publishYmeEvent({
+      userId,
+      sourceApp: "social_app",
+      eventType: "share",
+      postId,
+      creatorId: post.userId,
+      communityId: post.communityId,
+      contentId: `post:${postId}`,
+      caption: post.text || "",
+      categories: post.tags || [],
+      payload: {
+        communityName: post.communityName || "",
+        postType: post.postType || "text",
+        shareCount: updatedPost?.shareCount || 0,
+      },
+    });
 
     return res.json({
       success: true,

@@ -59,6 +59,29 @@ export async function fetchIngestionJobs() {
   return parseResponse(response);
 }
 
+export function subscribeToIngestionJobs({ onMessage, onError } = {}) {
+  if (typeof window === "undefined" || typeof window.EventSource === "undefined") {
+    return null;
+  }
+
+  const eventSource = new window.EventSource(buildUrl("/ingest/jobs/stream"));
+
+  eventSource.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      onMessage?.(payload);
+    } catch (error) {
+      onError?.(error);
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    onError?.(error);
+  };
+
+  return eventSource;
+}
+
 export async function fetchAiSystemStatus() {
   const response = await fetch(buildUrl("/health"));
   return parseResponse(response);

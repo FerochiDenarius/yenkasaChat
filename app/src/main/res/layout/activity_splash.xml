@@ -11,14 +11,14 @@
         android:layout_height="200dp"
         android:src="@drawable/ic_yenkasa_foreground"
         android:layout_centerInParent="true"
-        android:contentDescription="App Logo" />
+        android:contentDescription="@string/yenkasa_logo" />
 
     <TextView
         android:id="@+id/appName"
         android:layout_below="@id/splashLogo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="YenkasaChat"
+        android:text="@string/splash_app_name"
         android:textSize="24sp"
         android:textColor="@color/black"
         android:layout_centerHorizontal="true"

@@ -6,6 +6,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "worker:moderation": "node src/ai/workers/moderation.worker.js",
+    "worker:yme": "node src/yme/workers/yme.worker.js",
     "upload:static-assets": "node scripts/uploadStaticAssetsToCloudinary.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

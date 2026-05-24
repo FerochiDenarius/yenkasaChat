@@ -5,6 +5,7 @@ const app = require('./app');
 const connectDB = require('./config/database');
 const initSocket = require('./config/socket');
 const { startModerationWorkers } = require('./ai/workers/moderation.worker');
+const { startYmeWorkers } = require('./yme/workers/yme.worker');
 
 const Permission = require('../models/permissions.model');
 
@@ -32,6 +33,14 @@ async function startServer() {
       return { started: false, reason: error.message };
     });
     console.log('🤖 Moderation worker bootstrap:', workerResult);
+  }
+
+  if (process.env.YENKASA_ENABLE_INLINE_YME_WORKERS !== 'false') {
+    const workerResult = await startYmeWorkers().catch((error) => {
+      console.error('❌ YME workers failed to start:', error.message);
+      return { started: false, reason: error.message };
+    });
+    console.log('🧠 YME worker bootstrap:', workerResult);
   }
 
   const PORT = process.env.PORT || 8080;

@@ -23,6 +23,8 @@ import xyz.yenkasa.app.util.AppLinkManager
 import xyz.yenkasa.app.util.CommunityPrefsStore
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
+import java.util.ArrayList
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
@@ -631,6 +633,12 @@ class CommunitiesActivity : AppCompatActivity() {
             return
         }
 
+        YmeAnalyticsManager.trackCreatorToolUse(
+            toolName = "edit_community",
+            targetId = communityId,
+            communityId = communityId
+        )
+
         startActivity(Intent(this, CreateCommunityActivity::class.java).apply {
             putExtra("communityId", communityId)
             putExtra("communityDisplayName", community.displayName ?: community.name.orEmpty())
@@ -695,10 +703,15 @@ class CommunitiesActivity : AppCompatActivity() {
                                 Toast.LENGTH_SHORT
                             ).show()
 
+                            YmeAnalyticsManager.trackCommunityJoin(
+                                communityId = communityId,
+                                communityName = community.displayName ?: getString(R.string.community)
+                            )
+
                             // Save locally
                             TokenManager.saveSelectedCommunity(
                                 context = this@CommunitiesActivity,
-                            communityId = communityId,
+                                communityId = communityId,
                                 communityName = community.displayName ?: getString(R.string.community)
                             )
 
@@ -757,6 +770,9 @@ class CommunitiesActivity : AppCompatActivity() {
             val hasRolePrivilege = UserPermissions.canCreateCommunity(userRole)
 
             if (hasRolePrivilege || isVerified) {
+                YmeAnalyticsManager.trackCreatorToolUse(
+                    toolName = "create_community"
+                )
                 startActivity(Intent(this, CreateCommunityActivity::class.java))
             } else {
                 Toast.makeText(

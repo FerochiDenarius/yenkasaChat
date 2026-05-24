@@ -11,6 +11,7 @@ const UserPrivacy = require("../models/userPrivacy.model");
 const { sendNotification } = require("../services/notification.service");
 const AppVerification = require("../models/appverification.model");
 const LikeActivity = require("../models/likeActivity.model");
+const { publishYmeEvent } = require("../src/yme/services/eventPublisher.service");
 
 
 async function isBlocked(userA, userB) {
@@ -123,7 +124,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
     const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .select("likes likeCount userId")
+      .select("likes likeCount userId text tags communityName communityId postType")
       .populate("userId", "username playerId");
     
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -249,6 +250,23 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
           }
         });
       }
+
+      publishYmeEvent({
+        userId,
+        sourceApp: "social_app",
+        eventType: "like",
+        postId,
+        creatorId: post.userId?._id,
+        communityId: post.communityId,
+        contentId: `post:${postId}`,
+        caption: post.text || "",
+        categories: post.tags || [],
+        payload: {
+          postType: post.postType || "text",
+          communityName: post.communityName || "",
+          likedByUser,
+        },
+      });
     }
 
     return res.json({

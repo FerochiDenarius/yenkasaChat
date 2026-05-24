@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YME Inspector</title>
+  <link rel="stylesheet" href="/yme-inspector/inspector.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Internal YME control plane</p>
+        <h1>Memory Inspector</h1>
+        <p class="lede">Inspect memory quality, signal strength, retrieval quality, queue health, and production readiness without changing the data path.</p>
+      </div>
+      <div class="hero-meta">
+        <span id="connectionState" class="pill">Waiting for auth token</span>
+        <span id="scopeState" class="pill secondary">System scope</span>
+      </div>
+    </header>
+
+    <section class="panel search-panel">
+      <div class="search-row">
+        <label>
+          User ID
+          <input id="userIdInput" type="text" placeholder="Paste a Mongo ObjectId">
+        </label>
+        <label>
+          Retrieval query
+          <input id="queryInput" type="text" placeholder="Optional retrieval probe">
+        </label>
+        <label>
+          Sample limit
+          <input id="limitInput" type="number" min="10" max="100" value="30">
+        </label>
+      </div>
+      <div class="actions">
+        <button id="loadButton" class="primary">Load inspector</button>
+        <button id="systemButton" class="ghost">Load system view</button>
+      </div>
+      <p id="statusLine" class="status-line">Ready.</p>
+    </section>
+
+    <section class="grid cards" id="summaryCards"></section>
+
+    <section class="grid wide-grid">
+      <article class="panel">
+        <div class="panel-title">
+          <h2>User memory</h2>
+          <span class="pill secondary" id="userLabel">No user selected</span>
+        </div>
+        <div id="memoryProfile" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Signal calibration</h2>
+          <span id="signalBadge" class="pill secondary">No data yet</span>
+        </div>
+        <div id="signalCalibration" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Retrieval quality</h2>
+          <span id="retrievalBadge" class="pill secondary">No query yet</span>
+        </div>
+        <div id="retrievalQuality" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Event quality</h2>
+          <span id="eventBadge" class="pill secondary">Inspecting sample</span>
+        </div>
+        <div id="eventQuality" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Production readiness</h2>
+          <span id="productionBadge" class="pill secondary">Review needed</span>
+        </div>
+        <div id="productionReadiness" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Cost protection</h2>
+          <span id="costBadge" class="pill secondary">Guardrails</span>
+        </div>
+        <div id="costProtection" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Memory optimization</h2>
+          <span id="memoryBadge" class="pill secondary">Retention</span>
+        </div>
+        <div id="memoryOptimization" class="stack"></div>
+      </article>
+    </section>
+
+    <section class="grid wide-grid">
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Recent events</h2>
+          <span class="pill secondary">Importance and signal scores</span>
+        </div>
+        <div id="recentEvents" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Retrieval matches</h2>
+          <span class="pill secondary">Query response</span>
+        </div>
+        <div id="retrievalMatches" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Recent logs</h2>
+          <span class="pill secondary">Memory pipeline</span>
+        </div>
+        <div id="recentLogs" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Embeddings</h2>
+          <span class="pill secondary">Status and cache</span>
+        </div>
+        <div id="recentEmbeddings" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Failed embeddings</h2>
+          <span class="pill secondary">Needs inspection</span>
+        </div>
+        <div id="failedEmbeddings" class="stack"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Chat summaries</h2>
+          <span class="pill secondary">Rolling context</span>
+        </div>
+        <div id="recentChatSummaries" class="stack"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/yme-inspector/inspector.js"></script>
+</body>
+</html>

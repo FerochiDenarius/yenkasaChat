@@ -13,6 +13,8 @@ import xyz.yenkasa.app.model.FeedResponse
 import xyz.yenkasa.app.model.LikeResponse
 import xyz.yenkasa.app.model.UnreadCountRequest
 import xyz.yenkasa.app.model.RoomUnreadCountResponse
+import xyz.yenkasa.app.yme.YmeBatchRequest
+import xyz.yenkasa.app.yme.YmeBatchResponse
 
 
 
@@ -21,6 +23,11 @@ import xyz.yenkasa.app.model.RoomUnreadCountResponse
 // ===========================================================
 
 interface ApiService {
+
+    @POST("yme/events/batch")
+    suspend fun postYmeEventBatch(
+        @Body request: YmeBatchRequest
+    ): Response<YmeBatchResponse>
 
     // ==================== AUTH ====================
 

@@ -348,7 +348,7 @@
                     android:layout_height="match_parent"
                     android:background="@drawable/bg_verify_input"
                     android:gravity="center"
-                    android:text="+233"
+                    android:text="@string/verification_default_country_code"
                     android:textColor="@color/post_create_primary_text"
                     android:textSize="14sp" />
 

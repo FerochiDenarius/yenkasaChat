@@ -21,6 +21,7 @@ import xyz.yenkasa.app.model.AdModel
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
@@ -209,6 +210,11 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                 val response = ApiClient.apiService.rewardAdClick(ad._id, "Bearer $token")
                 if (response.success) {
                     WalletBalanceManager.applyKnownBalance(context, response.newBalance)
+                    YmeAnalyticsManager.trackRewardClaim(
+                        source = "ad_cta_click",
+                        rewardType = "ad_click",
+                        targetId = ad._id
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("AdBinder", "Click reward failed: ${e.message}")
@@ -269,6 +275,14 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                     WalletBalanceManager.applyKnownBalance(context, newBalance, rewardAmount = amount)
                 } else {
                     WalletBalanceManager.refreshBalance(context)
+                }
+                if (amount != null && amount > 0.0) {
+                    YmeAnalyticsManager.trackRewardClaim(
+                        source = "ad_video_reward",
+                        rewardType = "video_reward",
+                        amount = amount,
+                        targetId = ad._id
+                    )
                 }
             }
         } catch (e: Exception) {

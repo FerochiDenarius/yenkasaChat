@@ -22,9 +22,19 @@ class JoinedCommunityAdapter(
         private val textStatus: TextView = itemView.findViewById(R.id.textCommunityStatus)
 
         fun bind(community: Community) {
-            textName.text = community.displayName ?: community.name ?: "Community"
-            textMembers.text = "${community.memberCount} members"
-            textStatus.text = if (community.isActive) "Active" else "Inactive"
+            textName.text = community.displayName
+                ?: community.name
+                ?: itemView.context.getString(R.string.unnamed_community)
+            textMembers.text = itemView.resources.getQuantityString(
+                R.plurals.members_count,
+                community.memberCount,
+                community.memberCount
+            )
+            textStatus.text = if (community.isActive) {
+                itemView.context.getString(R.string.community_status_active)
+            } else {
+                itemView.context.getString(R.string.community_status_inactive)
+            }
 
             val imageUrl = community.icon?.takeIf { it.isNotBlank() }
                 ?: community.coverImage?.takeIf { it.isNotBlank() }

@@ -157,16 +157,17 @@ class VideoCallActivity : AppCompatActivity() {
         isVideoCall = intent.getBooleanExtra("IS_VIDEO_CALL", true)
 
         if (currentUserId.isNullOrBlank() || receiverId.isNullOrBlank()) {
-            Toast.makeText(this, "Missing user IDs", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.missing_user_ids, Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
         tvCallStatus.text = when {
-            isCaller && !receiverName.isNullOrBlank() -> "Calling $receiverName..."
-            isCaller -> "Calling..."
-            isVideoCall -> "Incoming video call..."
-            else -> "Incoming audio call..."
+            isCaller && !receiverName.isNullOrBlank() ->
+                getString(R.string.call_status_calling, receiverName)
+            isCaller -> getString(R.string.call_status_calling_generic)
+            isVideoCall -> getString(R.string.incoming_video_call)
+            else -> getString(R.string.incoming_audio_call)
         }
 
         btnEndCall.setOnClickListener {
@@ -195,7 +196,9 @@ class VideoCallActivity : AppCompatActivity() {
         // Auto-join if room data already present
         intent.getStringExtra("ROOM_URL")?.let { url ->
             intent.getStringExtra("ROOM_TOKEN")?.let { token ->
-                val userName = TokenManager.getUsername(this) ?: currentUserId ?: "Participant"
+                val userName = TokenManager.getUsername(this)
+                    ?: currentUserId
+                    ?: getString(R.string.call_default_participant_name)
                 requestJoin(url, token, userName)
             }
         }
@@ -239,7 +242,7 @@ class VideoCallActivity : AppCompatActivity() {
             fun onDailyError(message: String) {
                 runOnUiThread {
                     Log.e(TAG, "JS → onDailyError: $message")
-                    showToast("Call error: $message")
+                    showToast(getString(R.string.call_error_with_message, message))
                 }
             }
         }, "AndroidBridge")
@@ -280,7 +283,7 @@ class VideoCallActivity : AppCompatActivity() {
             listenForSignalingMessages()
             if (isCaller) startOutgoingCall()
         } else {
-            Toast.makeText(this, "Camera & Mic permissions required", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.call_permissions_required, Toast.LENGTH_LONG).show()
             finish()
         }
     }
@@ -301,7 +304,7 @@ class VideoCallActivity : AppCompatActivity() {
 
                 val createRes = DailyApiClient.service.createRoom(CreateRoomRequest(roomName)).execute()
                 val room = createRes.body() ?: run {
-                    showToast("Failed to create room")
+                    showToast(getString(R.string.call_failed_create_room))
                     return@launch
                 }
 
@@ -309,7 +312,7 @@ class VideoCallActivity : AppCompatActivity() {
                     GenerateTokenRequest(room.roomName, currentUserId!!)
                 ).execute()
                 val token = tokenRes.body()?.token ?: run {
-                    showToast("Failed to generate token")
+                    showToast(getString(R.string.call_failed_generate_token))
                     return@launch
                 }
 
@@ -317,13 +320,20 @@ class VideoCallActivity : AppCompatActivity() {
                 webSocketManager.sendCallRequest(receiverId!!, isVideoCall, room.roomUrl, token)
                 sendCallInvitePush(room.roomUrl, token)
 
-                val userName = TokenManager.getUsername(this@VideoCallActivity) ?: currentUserId ?: "Caller"
+                val userName = TokenManager.getUsername(this@VideoCallActivity)
+                    ?: currentUserId
+                    ?: getString(R.string.call_default_caller_name)
                 withContext(Dispatchers.Main) {
                     requestJoin(room.roomUrl, token, userName)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error creating room in startOutgoingCall: ${e.message}", e)
-                showToast("Error creating room: ${e.message}")
+                showToast(
+                    getString(
+                        R.string.call_error_creating_room,
+                        e.message ?: getString(R.string.unknown_error)
+                    )
+                )
             }
         }
     }
@@ -339,7 +349,11 @@ class VideoCallActivity : AppCompatActivity() {
             val response = ApiClient.apiService.sendCallInvite(
                 mapOf(
                     "receiverId" to targetUserId,
-                    "callerName" to (TokenManager.getUsername(this@VideoCallActivity) ?: currentUserId ?: "Yenkasa caller"),
+                    "callerName" to (
+                        TokenManager.getUsername(this@VideoCallActivity)
+                            ?: currentUserId
+                            ?: getString(R.string.call_default_caller_push_name)
+                    ),
                     "callerPhoto" to (TokenManager.getProfilePicUrl(this@VideoCallActivity) ?: ""),
                     "isVideo" to isVideoCall,
                     "roomUrl" to roomUrl,
@@ -387,10 +401,11 @@ class VideoCallActivity : AppCompatActivity() {
                         val token = msg.token
                         if (!roomUrl.isNullOrEmpty() && !token.isNullOrEmpty()) {
                             val userName = TokenManager.getUsername(this@VideoCallActivity)
-                                ?: currentUserId ?: "Participant"
+                                ?: currentUserId
+                                ?: getString(R.string.call_default_participant_name)
                             requestJoin(roomUrl, token, userName)
                         } else {
-                            showToast("Invalid room info")
+                            showToast(getString(R.string.call_invalid_room_info))
                         }
                     }
 
@@ -417,7 +432,7 @@ class VideoCallActivity : AppCompatActivity() {
 
                 val createRes = DailyApiClient.service.createRoom(CreateRoomRequest(roomName)).execute()
                 val room = createRes.body() ?: run {
-                    showToast("Failed to create room")
+                    showToast(getString(R.string.call_failed_create_room))
                     return@launch
                 }
 
@@ -425,7 +440,7 @@ class VideoCallActivity : AppCompatActivity() {
                     GenerateTokenRequest(room.roomName, currentUserId!!)
                 ).execute()
                 val token = tokenRes.body()?.token ?: run {
-                    showToast("Failed to generate token")
+                    showToast(getString(R.string.call_failed_generate_token))
                     return@launch
                 }
 
@@ -433,7 +448,9 @@ class VideoCallActivity : AppCompatActivity() {
                 webSocketManager.sendCallAcceptWithRoom(receiverId!!, room.roomUrl, token)
 
                 // ✅ Caller auto-joins room
-                val userName = TokenManager.getUsername(this@VideoCallActivity) ?: currentUserId ?: "Caller"
+                val userName = TokenManager.getUsername(this@VideoCallActivity)
+                    ?: currentUserId
+                    ?: getString(R.string.call_default_caller_name)
                 withContext(Dispatchers.Main) {
                     runOnUiThread {
                         requestJoin(room.roomUrl, token, userName)
@@ -443,7 +460,12 @@ class VideoCallActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 Log.e(TAG, "handleCallAcceptForCaller failed: ${e.message}", e)
-                showToast("Error: ${e.message}")
+                showToast(
+                    getString(
+                        R.string.call_status_error,
+                        e.message ?: getString(R.string.unknown_error)
+                    )
+                )
             }
         }
     }
@@ -465,7 +487,11 @@ class VideoCallActivity : AppCompatActivity() {
 
         val url = pendingJoinUrl ?: return
         val tkn = pendingJoinToken ?: return
-        val user = pendingJoinUserName ?: (TokenManager.getUsername(this) ?: currentUserId ?: "User")
+        val user = pendingJoinUserName ?: (
+            TokenManager.getUsername(this)
+                ?: currentUserId
+                ?: getString(R.string.call_default_user_name)
+        )
 
         // Use JSONObject.quote to safely escape JS strings
         val jsRoom = JSONObject.quote(url)
@@ -515,7 +541,7 @@ class VideoCallActivity : AppCompatActivity() {
 
     private fun onCallRejected() {
         runOnUiThread {
-            Toast.makeText(this, "Call rejected.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.call_rejected_short, Toast.LENGTH_SHORT).show()
             endCall()
         }
     }

@@ -5,6 +5,7 @@ const Post = require("../models/post.model");
 const User = require("../models/user.model");
 const Community = require("../models/community.model");
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
+const { publishYmeEvent } = require("../src/yme/services/eventPublisher.service");
 
 function cleanQuery(value) {
   return (value || "").toString().trim().slice(0, 80);
@@ -124,6 +125,19 @@ router.get("/", auth, async (req, res) => {
       communities: communities.length
     });
 
+    publishYmeEvent({
+      userId: req.user.id,
+      sourceApp: "social_app",
+      eventType: "search",
+      query: q,
+      payload: {
+        postsCount: posts.length,
+        usersCount: users.length,
+        communitiesCount: communities.length,
+        scope: "all",
+      },
+    });
+
     res.json({ success: true, query: q, posts, users, communities });
   } catch (err) {
     console.error("Search failed:", err);
@@ -135,6 +149,18 @@ router.get("/posts", auth, async (req, res) => {
   try {
     const q = cleanQuery(req.query.q);
     const posts = q.length < 2 ? [] : await searchPosts(q, req.user.id);
+    if (q.length >= 2) {
+      publishYmeEvent({
+        userId: req.user.id,
+        sourceApp: "social_app",
+        eventType: "search",
+        query: q,
+        payload: {
+          postsCount: posts.length,
+          scope: "posts",
+        },
+      });
+    }
     res.json({ success: true, query: q, posts });
   } catch (err) {
     console.error("Post search failed:", err);
@@ -146,6 +172,18 @@ router.get("/users", auth, async (req, res) => {
   try {
     const q = cleanQuery(req.query.q);
     const users = q.length < 2 ? [] : await searchUsers(q);
+    if (q.length >= 2) {
+      publishYmeEvent({
+        userId: req.user.id,
+        sourceApp: "social_app",
+        eventType: "search",
+        query: q,
+        payload: {
+          usersCount: users.length,
+          scope: "users",
+        },
+      });
+    }
     res.json({ success: true, query: q, users });
   } catch (err) {
     console.error("User search failed:", err);
@@ -157,6 +195,18 @@ router.get("/communities", auth, async (req, res) => {
   try {
     const q = cleanQuery(req.query.q);
     const communities = q.length < 2 ? [] : await searchCommunities(q);
+    if (q.length >= 2) {
+      publishYmeEvent({
+        userId: req.user.id,
+        sourceApp: "social_app",
+        eventType: "search",
+        query: q,
+        payload: {
+          communitiesCount: communities.length,
+          scope: "communities",
+        },
+      });
+    }
     res.json({ success: true, query: q, communities });
   } catch (err) {
     console.error("Community search failed:", err);

@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/auth');
 const User = require('../models/user.model');
 const Message = require('../models/message.model');
 const Follow = require('../models/follow.model');
+const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 
 // ✅ Controllers
 const { getProfile, updateProfile } = require('../Controller/profileController');
@@ -54,6 +55,23 @@ router.get('/users/:userId/profile', authMiddleware, async (req, res) => {
 
     const followers = followersDocs.map(doc => doc.follower).filter(Boolean);
     const following = followingDocs.map(doc => doc.following).filter(Boolean);
+
+    if (viewerId.toString() !== profileUserId.toString()) {
+      publishYmeEvent({
+        userId: viewerId,
+        sourceApp: 'social_app',
+        eventType: 'profile_visit',
+        relatedUserId: profileUserId,
+        creatorId: profileUserId,
+        contentId: `user:${profileUserId}`,
+        payload: {
+          profileUsername: user.username,
+          followersCount,
+          followingCount,
+          isFollowing: !!isFollowingDoc,
+        },
+      });
+    }
 
     res.json({
       _id: user._id,
@@ -107,6 +125,22 @@ router.post('/follow/:targetUserId', authMiddleware, async (req, res) => {
 
     await currentUser.save();
     await targetUser.save();
+
+    if (!isFollowing) {
+      publishYmeEvent({
+        userId: currentUserId,
+        sourceApp: 'social_app',
+        eventType: 'follow',
+        creatorId: targetUser._id,
+        relatedUserId: targetUser._id,
+        contentId: `user:${targetUserId}`,
+        payload: {
+          targetUsername: targetUser.username,
+          followerUsername: currentUser.username,
+          route: 'profile_toggle_follow',
+        },
+      });
+    }
 
     res.json({
       success: true,

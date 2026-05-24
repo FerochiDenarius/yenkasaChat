@@ -40,17 +40,34 @@ class CommunityAdapter(
 
         fun bind(community: Community) {
             // Basic info
-            communityName.text = community.displayName ?: community.name ?: "Unnamed Community"
+            communityName.text = community.displayName
+                ?: community.name
+                ?: itemView.context.getString(R.string.unnamed_community)
             communityLocation.text =
-                if (community.location.isNullOrEmpty()) "Interest-based Community"
-                else community.location
+                if (community.location.isNullOrEmpty()) {
+                    itemView.context.getString(R.string.community_interest_based)
+                } else {
+                    community.location
+                }
 
-            memberCount.text = "${community.memberCount} members"
-            postCount.text = "${community.postCount} posts"
+            memberCount.text = itemView.resources.getQuantityString(
+                R.plurals.members_count,
+                community.memberCount,
+                community.memberCount
+            )
+            postCount.text = itemView.resources.getQuantityString(
+                R.plurals.posts_count,
+                community.postCount,
+                community.postCount
+            )
 
-            categories.text = if (community.categories.isNotEmpty())
-                community.categories.joinToString(" • ")
-            else "Uncategorized"
+            categories.text = if (community.categories.isNotEmpty()) {
+                community.categories.joinToString(
+                    separator = itemView.context.getString(R.string.community_category_separator)
+                )
+            } else {
+                itemView.context.getString(R.string.community_uncategorized)
+            }
 
             val isJoined = isCommunityJoined?.invoke(community) ?: community.isUserMember()
 

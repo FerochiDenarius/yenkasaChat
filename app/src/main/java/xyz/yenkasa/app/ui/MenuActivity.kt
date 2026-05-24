@@ -20,6 +20,7 @@ import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
 import xyz.yenkasa.app.util.WalletBalanceManager
+import xyz.yenkasa.app.yme.YmeAnalyticsManager
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -180,6 +181,10 @@ class MenuActivity : AppCompatActivity() {
 
         btnAdminEconomy.setOnClickListener {
             Log.d(TAG, "AdminEconomy clicked; launching AdminEconomyActivity")
+            YmeAnalyticsManager.trackAnalyticsInteraction(
+                action = "open_admin_economy",
+                targetId = "admin_economy"
+            )
             startActivity(Intent(this, AdminEconomyActivity::class.java))
         }
 

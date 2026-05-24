@@ -583,9 +583,9 @@ def chat_with_rag(
     response = llm.invoke(
         prompt.format_messages(
             audience_mode=(
-                "Engineering advisor mode: be technically rigorous, concrete, and comparison-friendly."
+                "Engineering code assistant mode: be technically rigorous, implementation-first, concise, and production-oriented."
                 if payload.audience == "engineering"
-                else "Product assistant mode: stay clear and accessible, but still answer engineering questions when asked."
+                else "Product and code assistant mode: stay clear and accessible, but still provide implementation-ready engineering answers when asked."
             ),
             history=history,
             question=payload.question.strip(),

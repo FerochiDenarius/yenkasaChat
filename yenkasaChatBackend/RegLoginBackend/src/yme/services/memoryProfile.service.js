@@ -4,7 +4,7 @@ const SocialGraph = require('../models/socialGraph.model');
 const UserMemory = require('../models/userMemory.model');
 const { getYmeConfig } = require('../config/yme.config');
 const { emitMemoryProfileUpdated } = require('./realtime.service');
-const { clamp } = require('../utils/yme.utils');
+const { clamp, normalizeText } = require('../utils/yme.utils');
 
 function mergeScoredEntries(existing = [], incoming = [], { key = 'label', limit = 10 } = {}) {
   const merged = new Map();

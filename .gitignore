@@ -1,24 +1,116 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# OS / IDE
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+.idea/
+*.iml
+.kotlin/
+.aider*
 
-# Env
+# Local Android / Gradle
+.gradle/
+local.properties
+.externalNativeBuild/
+.cxx/
+captures/
+
+# Node
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/venv/
+**/.venv/
+
+# Environment / secrets
+.env
+.env.*
 *.env
-*deploy.sh
-# Firebase and Secrets
+*.env.*
+!.env.example
+!**/.env.example
 app/google-services.json
 config/firebase-service-account.json
 yenkasaChatBackend/RegLoginBackend/config/*.json
-.aider*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+
+# AI / ML generated data
+/embeddings/
+/vector_store/
+/vectordb/
+/faiss_index/
+/repo_cache/
+yenkasa-ai/backend/embeddings/
+yenkasa-ai/backend/repo_cache/
+yenkasa-ai/chroma_db/
+yenkasa-ai/backend/chroma_db/
+**/vector_store/
+**/vectordb/
+**/vector_db/
+**/faiss_index/
+*.faiss
+*.index
+*.bin
+*.pt
+*.onnx
+*.pkl
+*.h5
+
+# YenkasaAI memory / cache
+**/yme_cache/
+**/memory_cache/
+**/ai_cache/
+**/analytics_cache/
+**/.cache/
+**/.dart_tool/
+.aider.tags.cache.v4
+
+# Uploads / media / temp
+**/uploads/
+**/media/
+**/temp/
+**/tmp/
+**/tmp-*/
+**/.tmp_*.py
+
+# Logs
+**/logs/
+*.log
+
+# Build outputs
+**/dist/
+**/build/
+coverage/
+
+# Android / mobile artifacts
+*.apk
+*.aab
+
+# Databases
+*.sqlite
+*.db
+
+# Large generated assets
+*.mp4
+*.zip
+*.tar
+*.pdf
+
+# Keep architecture and knowledge PDFs under source control
+!yenkasa_knowledge/*.pdf
+
+# Protect source-code module directories with names that overlap data terms
+!yenkasa-ai/backend/app/modules/embeddings/
+!yenkasa-ai/backend/app/modules/embeddings/**

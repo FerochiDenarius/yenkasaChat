@@ -483,7 +483,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     publishYmeEvent({
       userId,
       sourceApp: "social_app",
-      eventType: "caption",
+      eventType: "post_created",
       postId: post._id,
       creatorId: post.userId,
       communityId: post.communityId,

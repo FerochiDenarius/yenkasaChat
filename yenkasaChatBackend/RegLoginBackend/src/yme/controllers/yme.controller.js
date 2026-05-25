@@ -44,6 +44,12 @@ async function postEvent(req, res) {
       dispatch: result.dispatch,
     });
   } catch (error) {
+    console.error('[YME] Event ingest request failed:', {
+      message: error.message,
+      stack: error.stack,
+      userId: getAuthenticatedUserId(req),
+      payload: req.body || {},
+    });
     return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to ingest event.',
@@ -70,9 +76,18 @@ async function postEventBatch(req, res) {
 
     return res.status(202).json({
       success: true,
+      partialFailure: result.failedCount > 0,
+      acceptedCount: result.count,
       ...result,
     });
   } catch (error) {
+    console.error('[YME] Event batch request failed:', {
+      message: error.message,
+      stack: error.stack,
+      userId: getAuthenticatedUserId(req),
+      eventCount: Array.isArray(req.body?.events) ? req.body.events.length : 0,
+      payload: req.body || {},
+    });
     return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to ingest event batch.',

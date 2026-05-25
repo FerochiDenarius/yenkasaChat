@@ -18,6 +18,7 @@ const {
 const EVENT_TYPE_ALIASES = new Map([
   ['post_like', 'like'],
   ['comment_created', 'comment'],
+  ['post_created', 'caption'],
   ['video_watch', 'watch'],
   ['watch_duration', 'watch_duration'],
   ['post_view', 'post_view'],
@@ -36,6 +37,16 @@ const EVENT_TYPE_ALIASES = new Map([
   ['reward_claim', 'reward_claim'],
   ['community_join', 'community_join'],
 ]);
+
+const LOCAL_BACKGROUND_QUEUE = 'ymeLocalBackgroundQueue';
+
+function safeJsonPreview(value, limit = 4096) {
+  try {
+    return JSON.stringify(value).slice(0, limit);
+  } catch (_error) {
+    return '[unserializable_payload]';
+  }
+}
 
 function normalizeEventType(eventType) {
   const normalized = String(eventType || '')
@@ -131,10 +142,156 @@ function validateEvent(normalizedEvent = {}) {
   }
 }
 
+function shouldSkipRecursiveEvent(rawEvent = {}, normalizedEvent = {}) {
+  const payload = rawEvent.payload || rawEvent.data || {};
+  const metadata = rawEvent.metadata || rawEvent.eventMetadata || {};
+  const skipYme = [
+    rawEvent.skipYME,
+    rawEvent.skipYme,
+    payload.skipYME,
+    payload.skipYme,
+    metadata.skipYME,
+    metadata.skipYme,
+  ].some(Boolean);
+
+  return skipYme || normalizedEvent.sourceApp === 'yme';
+}
+
+function buildEventLogContext(rawEvent = {}, normalizedEvent = {}) {
+  return {
+    sourceApp: normalizedEvent.sourceApp || null,
+    eventType: normalizedEvent.eventType || null,
+    sessionId: normalizedEvent.sessionId || null,
+    clientEventId: normalizedEvent.clientEventId || null,
+    conversationId: normalizedEvent.conversationId || null,
+    contentId: normalizedEvent.contentId || null,
+    occurredAt: normalizedEvent.occurredAt || null,
+    eventMetadata: normalizedEvent.eventMetadata || {},
+    payloadPreview: safeJsonPreview(normalizedEvent.payload || rawEvent.payload || rawEvent),
+  };
+}
+
+async function dispatchEventProcessing(event) {
+  if (isQueueEnabled()) {
+    const dispatch = await enqueueEventProcessingJob({
+      eventId: event._id.toString(),
+      userId: event.userId.toString(),
+    });
+    event.processingStatus = 'queued';
+    event.queueJobId = String(dispatch.jobId || '');
+    event.processingNotes = uniqueStrings([
+      ...(event.processingNotes || []),
+      'dispatch:bullmq',
+    ], 10);
+    await event.save();
+    return dispatch;
+  }
+
+  if (getYmeConfig().features.inlineWorkers) {
+    event.processingStatus = 'queued';
+    event.queueJobId = `local:${event._id.toString()}`;
+    event.processingNotes = uniqueStrings([
+      ...(event.processingNotes || []),
+      'dispatch:local_background',
+    ], 10);
+    await event.save();
+
+    setImmediate(async () => {
+      try {
+        const { processEventPipeline } = require('./consolidation.service');
+        await processEventPipeline({
+          eventId: event._id.toString(),
+          trigger: 'local_background',
+        });
+      } catch (error) {
+        await writeMemoryLog({
+          userId: event.userId,
+          eventId: event._id,
+          jobName: 'yme_process_event',
+          queueName: LOCAL_BACKGROUND_QUEUE,
+          stage: 'event_dispatch',
+          level: 'error',
+          status: 'failed',
+          message: 'Local background YME event processing failed.',
+          error,
+          metadata: {
+            trigger: 'local_background',
+            eventType: event.eventType,
+            sourceApp: event.sourceApp,
+          },
+        });
+      }
+    });
+
+    return {
+      queued: true,
+      mode: 'local_background',
+      queueName: LOCAL_BACKGROUND_QUEUE,
+      reason: 'queue_not_configured_local_background',
+      jobId: event.queueJobId,
+    };
+  }
+
+  event.processingStatus = 'pending';
+  event.processingNotes = uniqueStrings([
+    ...(event.processingNotes || []),
+    'dispatch:deferred_queue_unavailable',
+  ], 10);
+  await event.save();
+
+  await writeMemoryLog({
+    userId: event.userId,
+    eventId: event._id,
+    jobName: 'yme_process_event',
+    queueName: LOCAL_BACKGROUND_QUEUE,
+    stage: 'event_dispatch',
+    level: 'warn',
+    status: 'queued',
+    message: 'YME event stored without background worker dispatch.',
+    metadata: {
+      trigger: 'deferred',
+      eventType: event.eventType,
+      sourceApp: event.sourceApp,
+      reason: 'queue_not_configured',
+    },
+  });
+
+  return {
+    queued: false,
+    mode: 'deferred',
+    queueName: LOCAL_BACKGROUND_QUEUE,
+    reason: 'queue_not_configured',
+  };
+}
+
 async function ingestEvent(rawEvent, options = {}) {
   const startedAt = Date.now();
   const normalizedEvent = normalizeIncomingEvent(rawEvent, options.defaults);
   validateEvent(normalizedEvent);
+
+  if (shouldSkipRecursiveEvent(rawEvent, normalizedEvent)) {
+    await writeMemoryLog({
+      userId: normalizedEvent.userId,
+      stage: 'event_guard',
+      status: 'skipped',
+      message: 'Skipped recursive YME event.',
+      metadata: {
+        ...buildEventLogContext(rawEvent, normalizedEvent),
+        reason: 'recursive_event',
+      },
+    });
+
+    return {
+      event: null,
+      skipped: true,
+      dispatch: {
+        queued: false,
+        mode: 'guard',
+        reason: 'recursive_event',
+      },
+    };
+  }
+
   const guard = await applyEventGuards(normalizedEvent);
 
   if (guard.duplicateEvent) {
@@ -210,27 +367,7 @@ async function ingestEvent(rawEvent, options = {}) {
   });
   incrementCounter('eventsIngested');
 
-  let dispatch = {
-    queued: false,
-    mode: 'inline',
-    reason: 'inline_fallback',
-  };
-
-  if (isQueueEnabled()) {
-    dispatch = await enqueueEventProcessingJob({
-      eventId: event._id.toString(),
-      userId: event.userId.toString(),
-    });
-    event.processingStatus = 'queued';
-    event.queueJobId = String(dispatch.jobId || '');
-    await event.save();
-  } else {
-    const { processEventPipeline } = require('./consolidation.service');
-    await processEventPipeline({
-      eventId: event._id.toString(),
-      trigger: 'inline_ingest',
-    });
-  }
+  const dispatch = await dispatchEventProcessing(event);
 
   recordDuration('eventIngestRequest', Date.now() - startedAt);
   await writeMemoryLog({
@@ -245,6 +382,10 @@ async function ingestEvent(rawEvent, options = {}) {
       eventType: event.eventType,
       sourceApp: event.sourceApp,
       queued: dispatch.queued === true,
+      dispatchMode: dispatch.mode || '',
+      dispatchReason: dispatch.reason || '',
+      queueName: dispatch.queueName || '',
+      queueJobId: dispatch.jobId || event.queueJobId || '',
       importanceScore: event.importanceScore,
       shouldEmbed: event.shouldEmbed,
     },
@@ -265,13 +406,30 @@ async function ingestEventBatch(events = [], options = {}) {
   }
 
   const results = [];
+  const failures = [];
   for (const event of events) {
-    results.push(await ingestEvent(event, options));
+    try {
+      results.push(await ingestEvent(event, options));
+    } catch (error) {
+      failures.push({
+        eventType: event?.eventType || event?.type || '',
+        userId: String(event?.userId || options?.defaults?.userId || ''),
+        message: error.message || 'Failed to ingest event.',
+      });
+
+      console.error('[YME] Batch ingest item failed:', {
+        message: error.message,
+        stack: error.stack,
+        ...buildEventLogContext(event, normalizeIncomingEvent(event, options.defaults)),
+      });
+    }
   }
 
   return {
     count: results.length,
     results,
+    failedCount: failures.length,
+    failures,
   };
 }
 

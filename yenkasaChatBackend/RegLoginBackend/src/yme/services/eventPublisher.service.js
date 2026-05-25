@@ -1,10 +1,23 @@
 const { ingestEvent, ingestEventBatch } = require('./eventIngestion.service');
 
+function buildPublishLogContext(event = {}, options = {}) {
+  return {
+    eventType: event?.eventType || event?.type || null,
+    userId: event?.userId || options?.defaults?.userId || null,
+    sourceApp: event?.sourceApp || event?.source || options?.defaults?.sourceApp || null,
+    sessionId: event?.sessionId || event?.session || null,
+    conversationId: event?.conversationId || event?.chatId || null,
+    contentId: event?.contentId || event?.postId || event?.videoId || null,
+    payload: event,
+  };
+}
+
 function publishYmeEvent(event, options = {}) {
   const task = ingestEvent(event, options).catch((error) => {
-    console.warn('[YME] Failed to publish event:', error.message, {
-      eventType: event?.eventType || event?.type,
-      userId: event?.userId || options?.defaults?.userId || null,
+    console.warn('[YME] Failed to publish event:', {
+      message: error.message,
+      stack: error.stack,
+      ...buildPublishLogContext(event, options),
     });
     return null;
   });
@@ -14,8 +27,11 @@ function publishYmeEvent(event, options = {}) {
 
 function publishYmeEventBatch(events, options = {}) {
   const task = ingestEventBatch(events, options).catch((error) => {
-    console.warn('[YME] Failed to publish event batch:', error.message, {
+    console.warn('[YME] Failed to publish event batch:', {
+      message: error.message,
+      stack: error.stack,
       count: Array.isArray(events) ? events.length : 0,
+      payload: Array.isArray(events) ? events : [],
     });
     return null;
   });

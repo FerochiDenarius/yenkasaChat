@@ -1,4 +1,5 @@
 const livestreamService = require('./livestream.service');
+const { publishEvent } = require('../../yme/core/eventBus');
 
 function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
   async function resolveLiveActor(payload = {}) {
@@ -134,6 +135,22 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       io.emit('live_started', { stream: livestreamService.serializeLiveStream(stream) });
       livestreamService.emitLiveRoomMemberCount(streamId);
       console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
+      publishEvent({
+        category: 'engagement',
+        eventName: 'live_stream_started',
+        eventType: 'live_stream_join',
+        ymeEligible: Boolean(actor.userId),
+        userId: actor.userId,
+        contentId: streamId,
+        sourceApp: 'social_app',
+        sourceModule: 'socket.live_host_ready',
+        sessionId: socket.id,
+        metadata: {
+          streamId,
+          liveRole: 'broadcaster',
+          agoraUid: payload.agoraUid || '',
+        },
+      });
     } catch (err) {
       console.error('❌ livestream_host_ready failed:', err.message);
     }
@@ -241,6 +258,22 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         liveRole: payload.liveRole || 'audience',
         viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
       });
+      publishEvent({
+        category: 'engagement',
+        eventName: 'live_stream_joined',
+        eventType: 'live_stream_join',
+        ymeEligible: Boolean(actor.userId),
+        userId: actor.userId,
+        contentId: streamId,
+        sourceApp: 'social_app',
+        sourceModule: 'socket.live_join',
+        sessionId: socket.id,
+        metadata: {
+          streamId,
+          liveRole: payload.liveRole || 'audience',
+          viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
+        },
+      });
     } catch (err) {
       console.error('❌ live_join failed:', err.message);
     }
@@ -287,6 +320,20 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         await updateLiveViewerCount(streamId);
       }
       livestreamService.emitLiveRoomMemberCount(streamId);
+      publishEvent({
+        category: 'analytics_event',
+        eventName: 'live_stream_left',
+        severity: 'info',
+        userId: actor.userId,
+        contentId: streamId,
+        sourceApp: 'social_app',
+        sourceModule: 'socket.live_leave',
+        sessionId: socket.id,
+        metadata: {
+          streamId,
+          liveRole: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
+        },
+      });
     } catch (err) {
       console.error('❌ live_leave failed:', err.message);
     }
@@ -310,6 +357,26 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
       });
+      publishEvent({
+        category: 'engagement',
+        eventName: 'live_comment',
+        eventType: 'live_interaction',
+        ymeEligible: Boolean(actor.userId),
+        userId: actor.userId,
+        contentId: streamId,
+        sourceApp: 'social_app',
+        sourceModule: 'socket.live_comment',
+        sessionId: socket.id,
+        metadata: {
+          streamId,
+          liveRole: payload.liveRole || '',
+          clientEventId: payload.clientEventId || '',
+          message,
+        },
+        payload: {
+          message,
+        },
+      });
     } catch (err) {
       console.error('❌ live_comment failed:', err.message);
     }
@@ -331,6 +398,23 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         type: payload.type || payload.reaction || '🔥',
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
+      });
+      publishEvent({
+        category: 'engagement',
+        eventName: 'live_reaction',
+        eventType: 'live_interaction',
+        ymeEligible: Boolean(actor.userId),
+        userId: actor.userId,
+        contentId: streamId,
+        sourceApp: 'social_app',
+        sourceModule: 'socket.live_reaction',
+        sessionId: socket.id,
+        metadata: {
+          streamId,
+          liveRole: payload.liveRole || '',
+          reaction: payload.reaction || '🔥',
+          clientEventId: payload.clientEventId || '',
+        },
       });
     } catch (err) {
       console.error('❌ live_reaction failed:', err.message);

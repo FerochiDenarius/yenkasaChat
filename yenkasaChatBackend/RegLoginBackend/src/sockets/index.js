@@ -5,6 +5,7 @@ const ChatRoom = require('../../models/chatroom.model');
 const LiveStream = require('../../models/LiveStream');
 const onlineService = require('../services/online/online.service');
 const registerLivestreamEvents = require('../services/livestream/livestream.socket');
+const { publishEvent } = require('../yme/core/eventBus');
 
 const chatLaughReactionCooldowns = new Map();
 const CHAT_LAUGH_REACTION_COOLDOWN_MS = Number(
@@ -14,8 +15,20 @@ const CHAT_LAUGH_REACTION_COOLDOWN_MS = Number(
 function registerSocketHandlers(io) {
   io.on('connection', (socket) => {
     console.log(`💡 Client connected: ${socket.id}`);
+    socket.data.connectedAt = Date.now();
     socket.data.liveStreams = new Set();
     socket.data.hostLiveStreams = new Set();
+    publishEvent({
+      category: 'analytics_event',
+      eventName: 'socket_connected',
+      severity: 'info',
+      sourceApp: 'social_app',
+      sourceModule: 'socket.connection',
+      sessionId: socket.id,
+      metadata: {
+        transport: socket.conn?.transport?.name || '',
+      },
+    });
 
     socket.on('userConnected', async (data) => {
       try {
@@ -25,6 +38,19 @@ function registerSocketHandlers(io) {
           socket,
           userId: data?.userId || data,
         });
+        publishEvent({
+          category: 'user_activity',
+          eventName: 'app_open',
+          severity: 'info',
+          userId: socket.data.userId || data?.userId || data,
+          sourceApp: 'social_app',
+          sourceModule: 'socket.userConnected',
+          sessionId: socket.id,
+          metadata: {
+            transport: socket.conn?.transport?.name || '',
+            sourceEvent: 'userConnected',
+          },
+        });
       } catch (err) {
         console.error('❌ Error setting user online:', err.message);
       }
@@ -33,6 +59,19 @@ function registerSocketHandlers(io) {
     socket.on('userOnline', async (userId) => {
       try {
         await onlineService.markUserOnline({ io, User, socket, userId });
+        publishEvent({
+          category: 'user_activity',
+          eventName: 'app_open',
+          severity: 'info',
+          userId: socket.data.userId || userId,
+          sourceApp: 'social_app',
+          sourceModule: 'socket.userOnline',
+          sessionId: socket.id,
+          metadata: {
+            transport: socket.conn?.transport?.name || '',
+            sourceEvent: 'userOnline',
+          },
+        });
       } catch (err) {
         console.error('❌ Error setting user online:', err.message);
       }
@@ -75,6 +114,19 @@ function registerSocketHandlers(io) {
         if (!room) return;
         socket.join(normalizedRoomId);
         console.log(`💬 Socket ${socket.id} joined chat room ${normalizedRoomId}`);
+        publishEvent({
+          category: 'analytics_event',
+          eventName: 'chat_room_joined',
+          severity: 'info',
+          userId: normalizedUserId,
+          sourceApp: 'social_app',
+          sourceModule: 'socket.joinChatRoom',
+          sessionId: socket.id,
+          conversationId: normalizedRoomId,
+          metadata: {
+            roomId: normalizedRoomId,
+          },
+        });
       } catch (err) {
         console.error('❌ Error joining chat room:', err.message);
       }
@@ -133,6 +185,42 @@ function registerSocketHandlers(io) {
     socket.on('disconnect', async (reason) => {
       try {
         console.log(`🔥 Client disconnected: ${socket.id}. reason=${reason}`);
+        const sessionDurationMs = Math.max(
+          0,
+          Date.now() - Number(socket.data.connectedAt || Date.now()),
+        );
+
+        publishEvent({
+          category: 'user_activity',
+          eventName: 'session_ended',
+          severity: 'info',
+          userId: socket.data.userId || '',
+          sourceApp: 'social_app',
+          sourceModule: 'socket.disconnect',
+          sessionId: socket.id,
+          latencyMs: sessionDurationMs,
+          metadata: {
+            reason,
+            sessionDurationMs,
+            transport: socket.conn?.transport?.name || '',
+          },
+        });
+        if (reason === 'ping timeout') {
+          publishEvent({
+            category: 'infrastructure_event',
+            eventName: 'socket_ping_timeout',
+            severity: 'warn',
+            userId: socket.data.userId || '',
+            sourceApp: 'social_app',
+            sourceModule: 'socket.disconnect',
+            sessionId: socket.id,
+            latencyMs: sessionDurationMs,
+            metadata: {
+              reason,
+              sessionDurationMs,
+            },
+          });
+        }
 
         await livestreamHandlers.cleanupDisconnectedSocket(reason);
 

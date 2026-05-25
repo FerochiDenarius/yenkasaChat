@@ -54,5 +54,8 @@ router.get('/admin/embeddings', authMiddleware, requirePermission('analyticsAcce
 router.get('/admin/failed-embeddings', authMiddleware, requirePermission('analyticsAccess'), controller.getFailedEmbeddings);
 router.post('/admin/retrieve-inspect', authMiddleware, requirePermission('analyticsAccess'), controller.inspectRetrieval);
 router.get('/admin/inspector', authMiddleware, requirePermission('analyticsAccess'), controller.getInspectorOverview);
+router.get('/admin/observability', authMiddleware, requirePermission('analyticsAccess'), controller.getObservability);
+router.get('/admin/observability/live-errors', authMiddleware, requirePermission('analyticsAccess'), controller.getLiveErrors);
+router.get('/admin/observability/dashboard', authMiddleware, requirePermission('analyticsAccess'), controller.getObservabilityDashboard);
 
 module.exports = router;

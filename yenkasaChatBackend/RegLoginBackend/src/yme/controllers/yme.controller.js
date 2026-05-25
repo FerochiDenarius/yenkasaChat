@@ -7,10 +7,16 @@ const { getYmeConfig } = require('../config/yme.config');
 const { getUnifiedMemoryProfile } = require('../services/memoryProfile.service');
 const { getMetricsSnapshot } = require('../services/metrics.service');
 const { buildInspectorOverview } = require('../services/inspector.service');
+const { getIntelligenceBridgeHealth } = require('../services/intelligenceBridge.service');
 const { getQueueHealth, getQueueState } = require('../services/queue.service');
 const { ingestEvent, ingestEventBatch } = require('../services/eventIngestion.service');
 const { retrieveUserMemoryContext } = require('../services/retrieval.service');
 const { runMemoryConsolidation } = require('../services/consolidation.service');
+const {
+  getDashboardFoundation,
+  getObservabilityOverview,
+  listLiveErrors,
+} = require('../observability/observability.service');
 
 function getAuthenticatedUserId(req) {
   return String(req.user?._id || req.user?.id || '');
@@ -327,6 +333,7 @@ function getHealth(_req, res) {
       sourceApps: getYmeConfig().sourceApps,
       queue: getQueueState(),
       vectorIndexes: getRequiredVectorIndexes(),
+      intelligenceBridge: getIntelligenceBridgeHealth(),
     },
   });
 }
@@ -336,6 +343,7 @@ function getMetrics(_req, res) {
     success: true,
     metrics: getMetricsSnapshot(),
     queue: getQueueState(),
+    intelligenceBridge: getIntelligenceBridgeHealth(),
   });
 }
 
@@ -480,6 +488,61 @@ async function getInspectorOverview(req, res) {
   }
 }
 
+async function getObservability(req, res) {
+  try {
+    const overview = await getObservabilityOverview({
+      windowMinutes: Number(req.query.windowMinutes || req.body?.windowMinutes || 60),
+    });
+
+    return res.json({
+      success: true,
+      ...overview,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch observability overview.',
+    });
+  }
+}
+
+async function getObservabilityDashboard(req, res) {
+  try {
+    const dashboard = await getDashboardFoundation({
+      windowHours: Number(req.query.windowHours || req.body?.windowHours || 24),
+    });
+
+    return res.json({
+      success: true,
+      ...dashboard,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch observability dashboard.',
+    });
+  }
+}
+
+async function getLiveErrors(req, res) {
+  try {
+    const items = await listLiveErrors({
+      limit: Number(req.query.limit || 25),
+      windowMinutes: Number(req.query.windowMinutes || 180),
+    });
+
+    return res.json({
+      success: true,
+      items,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch live errors.',
+    });
+  }
+}
+
 module.exports = {
   postEvent,
   postEventBatch,
@@ -497,4 +560,7 @@ module.exports = {
   getFailedEmbeddings,
   inspectRetrieval,
   getInspectorOverview,
+  getObservability,
+  getObservabilityDashboard,
+  getLiveErrors,
 };

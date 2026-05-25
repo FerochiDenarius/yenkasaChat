@@ -10,6 +10,8 @@ const StoreProfile = require('../models/storeProfile.model');
 const { cloudinaryMediaResponseOptimizer } = require('../utils/cloudinaryMedia');
 const redirectMiddleware = require('./middleware/redirectMiddleware');
 const mp4Headers = require('./middleware/mp4Headers');
+const requestContext = require('./middleware/requestContext');
+const observabilityMiddleware = require('./middleware/observability');
 const multerError = require('./middleware/multerError');
 const errorHandler = require('./middleware/errorHandler');
 const registerApiRoutes = require('./config/apiRoutes');
@@ -22,6 +24,7 @@ const rootDir = path.resolve(__dirname, '..');
 
 app.set('trust proxy', true);
 app.use(redirectMiddleware);
+app.use(requestContext);
 
 const corsOptions = {
   origin(origin, callback) {
@@ -46,6 +49,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cloudinaryMediaResponseOptimizer);
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+app.use(observabilityMiddleware);
 
 require('../store/yenkasa-store-server')(app);
 require('../web/yenkasa-web-server')(app);

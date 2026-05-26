@@ -7,11 +7,31 @@ const adsController = require(
   path.join(__dirname, '..', 'Controller', 'Ads.controller')
 );
 const { uploadAdFiles } = require('../utils/upload');
+const { createLogger } = require('../src/yme/observability/logger');
+
+const logger = createLogger('ads.route', {
+  sourceModule: 'http.ads',
+});
 
 function parseAdUpload(req, res, next) {
   uploadAdFiles()(req, res, (err) => {
     if (err) {
-      console.error('❌ Ad upload parse error:', err);
+      logger.track({
+        message: 'Ad upload parsing failed.',
+        severity: 'ERROR',
+        req,
+        userId: req.user?.id || '',
+        error: err,
+        data: {
+          statusCode: 400,
+        },
+        event: {
+          category: 'upload_failure',
+          eventName: 'ad_upload_parse_failed',
+          severity: 'error',
+          statusCode: 400,
+        },
+      });
       return res.status(400).json({
         success: false,
         message: err.message || 'Invalid ad upload'

@@ -5,6 +5,11 @@ const {
   resolveRewardCountry,
   recordRegionalRewardDaily
 } = require('./regionalRewards.service');
+const { createLogger } = require('../src/yme/observability/logger');
+
+const logger = createLogger('monetization.analytics', {
+  sourceModule: 'service.monetization.analytics',
+});
 
 function todayUtc() {
   return new Date().toISOString().slice(0, 10);
@@ -152,7 +157,16 @@ async function upsertMonetizationDailyMetrics(input = {}, user = null) {
       }
     });
   } catch (eventErr) {
-    console.warn('[MonetizationAnalytics] event insert failed:', eventErr.message);
+    logger.error('Monetization event insert failed.', {
+      userId: user?._id?.toString?.() || '',
+      error: eventErr,
+      data: {
+        eventType: metric.eventType,
+        placement: metric.placement,
+        postId: metric.postId || '',
+        adId: metric.adId || '',
+      },
+    });
   }
 
   await recordRegionalRewardDaily({

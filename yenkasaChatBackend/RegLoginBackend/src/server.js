@@ -6,52 +6,74 @@ const connectDB = require('./config/database');
 const initSocket = require('./config/socket');
 const { startModerationWorkers } = require('./ai/workers/moderation.worker');
 const { startYmeWorkers } = require('./yme/workers/yme.worker');
+const { createLogger } = require('./yme/observability/logger');
 
 const Permission = require('../models/permissions.model');
 
 const server = http.createServer(app);
 initSocket(server);
+const logger = createLogger('app.server', {
+  sourceModule: 'server.bootstrap',
+});
 
 async function startServer() {
-  console.log('server.js: Connecting to MongoDB...');
+  logger.info('Connecting to MongoDB.');
   await connectDB();
-  console.log('✅ MongoDB connected successfully.');
+  logger.info('MongoDB connected successfully.');
 
   await Permission.seedDefaults()
     .then(() => {
-      console.log('✅ Permissions seeded');
+      logger.info('Permissions seeded.');
     })
-    .catch(console.error);
+    .catch((error) => {
+      logger.error('Permission seeding failed.', {
+        error,
+      });
+    });
 
   require('../services/verificationScheduler');
   require('../services/ykcMonthlyReset');
-  console.log('🕒 Verification scheduler initialized and running daily checks.');
+  logger.info('Verification scheduler initialized.');
 
   if (process.env.YENKASA_ENABLE_INLINE_MODERATION_WORKERS !== 'false') {
     const workerResult = await startModerationWorkers().catch((error) => {
-      console.error('❌ Moderation workers failed to start:', error.message);
+      logger.error('Moderation workers failed to start.', {
+        error,
+      });
       return { started: false, reason: error.message };
     });
-    console.log('🤖 Moderation worker bootstrap:', workerResult);
+    logger.info('Moderation worker bootstrap completed.', {
+      data: workerResult,
+    });
   }
 
   if (process.env.YENKASA_ENABLE_INLINE_YME_WORKERS !== 'false') {
     const workerResult = await startYmeWorkers().catch((error) => {
-      console.error('❌ YME workers failed to start:', error.message);
+      logger.error('YME workers failed to start.', {
+        error,
+      });
       return { started: false, reason: error.message };
     });
-    console.log('🧠 YME worker bootstrap:', workerResult);
+    logger.info('YME worker bootstrap completed.', {
+      data: workerResult,
+    });
   }
 
   const PORT = process.env.PORT || 8080;
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    console.log('🔌 Socket.IO is attached and listening.');
+    logger.info('HTTP server listening.', {
+      data: {
+        env: process.env.NODE_ENV,
+        port: Number(PORT),
+      },
+    });
   });
 }
 
 startServer().catch((err) => {
-  console.error('❌ MongoDB connection error:', err.message);
+  logger.error('Server bootstrap failed.', {
+    error: err,
+  });
   process.exit(1);
 });
 

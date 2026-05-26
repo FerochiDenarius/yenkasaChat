@@ -8,6 +8,11 @@ const {
   processImageModerationJob,
   processVideoModerationJob,
 } = require('../services/moderationWorkflow.service');
+const { createLogger } = require('../../yme/observability/logger');
+
+const logger = createLogger('moderation.worker', {
+  sourceModule: 'ai.moderation.worker',
+});
 
 async function startModerationWorkers() {
   const result = await registerModerationWorkers({
@@ -15,13 +20,17 @@ async function startModerationWorkers() {
     videoProcessor: processVideoModerationJob,
   });
 
-  console.log('[ModerationWorker] startup result', result);
+  logger.info('Moderation worker bootstrap completed.', {
+    data: result,
+  });
   return result;
 }
 
 if (require.main === module) {
   startModerationWorkers().catch((error) => {
-    console.error('[ModerationWorker] failed to start:', error);
+    logger.error('Moderation worker bootstrap failed.', {
+      error,
+    });
     process.exit(1);
   });
 

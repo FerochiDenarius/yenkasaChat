@@ -2,15 +2,22 @@ const {
   closeYmeQueueResources,
   registerYmeWorkers,
 } = require('../services/queue.service');
+const { closeBridgeQueueResources } = require('../bridge/bridgeQueue');
+const { startBridgeWorkers } = require('../bridge/bridgeWorker');
 const {
   processChatSummaryJob,
   processEmbeddingRefreshJob,
   processEventPipeline,
   runMemoryConsolidation,
 } = require('../services/consolidation.service');
+const { createLogger } = require('../observability/logger');
+
+const logger = createLogger('yme.worker', {
+  sourceModule: 'yme.worker',
+});
 
 async function startYmeWorkers() {
-  return registerYmeWorkers({
+  const ymeResult = await registerYmeWorkers({
     eventProcessor: async (job) =>
       processEventPipeline({
         eventId: job.data?.eventId,
@@ -20,20 +27,35 @@ async function startYmeWorkers() {
     consolidationProcessor: async (job) => runMemoryConsolidation(job.data || {}),
     chatSummaryProcessor: async (job) => processChatSummaryJob(job.data || {}),
   });
+
+  const bridgeResult = await startBridgeWorkers().catch((error) => ({
+    started: false,
+    reason: error.message,
+  }));
+
+  return {
+    yme: ymeResult,
+    bridge: bridgeResult,
+  };
 }
 
 if (require.main === module) {
   startYmeWorkers()
     .then((result) => {
-      console.log('[YME] Worker bootstrap result:', result);
+      logger.info('YME worker bootstrap completed.', {
+        data: result,
+      });
     })
     .catch((error) => {
-      console.error('[YME] Worker bootstrap failed:', error);
+      logger.error('YME worker bootstrap failed.', {
+        error,
+      });
       process.exit(1);
     });
 
   const shutdown = async () => {
     await closeYmeQueueResources();
+    await closeBridgeQueueResources();
     process.exit(0);
   };
 

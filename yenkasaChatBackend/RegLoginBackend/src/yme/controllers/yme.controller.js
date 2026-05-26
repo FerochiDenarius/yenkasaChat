@@ -17,6 +17,12 @@ const {
   getObservabilityOverview,
   listLiveErrors,
 } = require('../observability/observability.service');
+const { createLogger } = require('../observability/logger');
+const { listDeadLetters, replayDeadLetterJob } = require('../bridge/deadLetterHandler');
+
+const logger = createLogger('yme.controller', {
+  sourceModule: 'yme.controller',
+});
 
 function getAuthenticatedUserId(req) {
   return String(req.user?._id || req.user?.id || '');
@@ -50,11 +56,13 @@ async function postEvent(req, res) {
       dispatch: result.dispatch,
     });
   } catch (error) {
-    console.error('[YME] Event ingest request failed:', {
-      message: error.message,
-      stack: error.stack,
+    logger.error('YME event ingest request failed.', {
+      req,
       userId: getAuthenticatedUserId(req),
-      payload: req.body || {},
+      error,
+      data: {
+        payload: req.body || {},
+      },
     });
     return res.status(error.status || 500).json({
       success: false,
@@ -87,12 +95,14 @@ async function postEventBatch(req, res) {
       ...result,
     });
   } catch (error) {
-    console.error('[YME] Event batch request failed:', {
-      message: error.message,
-      stack: error.stack,
+    logger.error('YME event batch request failed.', {
+      req,
       userId: getAuthenticatedUserId(req),
-      eventCount: Array.isArray(req.body?.events) ? req.body.events.length : 0,
-      payload: req.body || {},
+      error,
+      data: {
+        eventCount: Array.isArray(req.body?.events) ? req.body.events.length : 0,
+        payload: req.body || {},
+      },
     });
     return res.status(error.status || 500).json({
       success: false,
@@ -325,7 +335,7 @@ async function getLogs(req, res) {
   }
 }
 
-function getHealth(_req, res) {
+async function getHealth(_req, res) {
   return res.json({
     success: true,
     status: 'ok',
@@ -333,17 +343,17 @@ function getHealth(_req, res) {
       sourceApps: getYmeConfig().sourceApps,
       queue: getQueueState(),
       vectorIndexes: getRequiredVectorIndexes(),
-      intelligenceBridge: getIntelligenceBridgeHealth(),
+      intelligenceBridge: await getIntelligenceBridgeHealth(),
     },
   });
 }
 
-function getMetrics(_req, res) {
+async function getMetrics(_req, res) {
   return res.json({
     success: true,
     metrics: getMetricsSnapshot(),
     queue: getQueueState(),
-    intelligenceBridge: getIntelligenceBridgeHealth(),
+    intelligenceBridge: await getIntelligenceBridgeHealth(),
   });
 }
 
@@ -365,6 +375,44 @@ async function getQueueHealthSnapshot(_req, res) {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch queue health.',
+    });
+  }
+}
+
+async function getBridgeDeadLetters(req, res) {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 25)));
+    const items = await listDeadLetters(limit);
+    return res.json({
+      success: true,
+      items,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch bridge dead letters.',
+    });
+  }
+}
+
+async function replayBridgeDeadLetter(req, res) {
+  try {
+    const result = await replayDeadLetterJob(req.params.jobId);
+    if (!result.replayed) {
+      return res.status(404).json({
+        success: false,
+        message: result.reason || 'Bridge dead letter not found.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to replay bridge dead letter.',
     });
   }
 }
@@ -556,6 +604,8 @@ module.exports = {
   getMetrics,
   getIndexes,
   getQueueHealthSnapshot,
+  getBridgeDeadLetters,
+  replayBridgeDeadLetter,
   getEmbeddings,
   getFailedEmbeddings,
   inspectRetrieval,

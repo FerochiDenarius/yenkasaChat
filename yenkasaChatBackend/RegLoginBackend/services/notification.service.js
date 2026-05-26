@@ -1,6 +1,11 @@
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
 const { sendPushNotification } = require("../utils/onesignal");
+const { createLogger } = require("../src/yme/observability/logger");
+
+const logger = createLogger("notification.service", {
+    sourceModule: "service.notification",
+});
 
 function computeTarget(notification) {
     const { targetType, targetId, targetUrl, type, activityId } = notification;
@@ -100,30 +105,88 @@ async function sendNotification({
     pushTtl = null,
     pushPriority = null,
     excludePlayerIds = [],
-    allowSelfNotification = false
+    allowSelfNotification = false,
+    traceId = ""
 }) {
     try {
         if (!type || !senderId || !receiverId || !message) {
-            console.error("Missing fields for sendNotification()");
+            logger.track({
+                message: "Notification send aborted because required fields were missing.",
+                severity: "WARN",
+                traceId,
+                userId: senderId,
+                data: {
+                    receiverId: receiverId || "",
+                    type: type || "",
+                },
+                event: {
+                    category: "analytics_event",
+                    eventName: "notification_send_invalid_payload",
+                    severity: "warn",
+                    relatedUserId: receiverId || "",
+                },
+            });
             return false;
         }
 
         if (!allowSelfNotification && senderId.toString() === receiverId.toString()) {
-            console.warn("[NotificationService] Skipping self notification", {
-                type,
-                senderId: senderId.toString(),
-                receiverId: receiverId.toString()
+            logger.track({
+                message: "Self notification skipped.",
+                severity: "INFO",
+                traceId,
+                userId: senderId.toString(),
+                data: {
+                    type,
+                    receiverId: receiverId.toString()
+                },
+                event: {
+                    category: "analytics_event",
+                    eventName: "notification_self_skipped",
+                    severity: "info",
+                    relatedUserId: receiverId.toString(),
+                },
             });
             return null;
         }
 
         const receiver = await User.findById(receiverId).select("playerId notificationPreferences");
         if (!receiver) {
-            console.warn(`Notification receiver ${receiverId} not found`);
+            logger.track({
+                message: "Notification receiver was not found during delivery.",
+                severity: "WARN",
+                traceId,
+                userId: senderId.toString(),
+                data: {
+                    type,
+                    receiverId: receiverId.toString()
+                },
+                event: {
+                    category: "analytics_event",
+                    eventName: "notification_delivery_receiver_not_found",
+                    severity: "warn",
+                    relatedUserId: receiverId.toString(),
+                },
+            });
             return false;
         }
 
         if (!shouldDeliverNotification(receiver, type, targetType)) {
+            logger.track({
+                message: "Notification delivery skipped by receiver preferences.",
+                severity: "INFO",
+                traceId,
+                userId: senderId.toString(),
+                data: {
+                    type,
+                    receiverId: receiverId.toString()
+                },
+                event: {
+                    category: "analytics_event",
+                    eventName: "notification_delivery_muted",
+                    severity: "info",
+                    relatedUserId: receiverId.toString(),
+                },
+            });
             return null;
         }
 
@@ -176,32 +239,104 @@ async function sendNotification({
                         ttl: Number.isInteger(pushTtl) ? pushTtl : undefined,
                         priority: Number.isInteger(pushPriority) ? pushPriority : undefined
                     });
-                    console.log("[NotificationService] Push notification sent", {
-                        notificationId: formatted.id,
-                        type,
-                        receiverId: receiverId.toString(),
-                        playerIdSelected: true,
-                        excludedPlayerCount: excluded.size
+                    logger.track({
+                        message: "Push notification sent.",
+                        severity: "INFO",
+                        traceId,
+                        userId: senderId.toString(),
+                        data: {
+                            notificationId: formatted.id,
+                            type,
+                            receiverId: receiverId.toString(),
+                            excludedPlayerCount: excluded.size
+                        },
+                        event: {
+                            category: "analytics_event",
+                            eventName: "notification_push_sent",
+                            severity: "info",
+                            relatedUserId: receiverId.toString(),
+                        }
                     });
                 } else if (receiverPlayerId && excluded.has(receiverPlayerId)) {
-                    console.warn("[NotificationService] Push target excluded because it matches sender device", {
-                        notificationId: formatted.id,
-                        type,
-                        receiverId: receiverId.toString(),
-                        excludedPlayerCount: excluded.size
+                    logger.track({
+                        message: "Push notification skipped because the player device was excluded.",
+                        severity: "INFO",
+                        traceId,
+                        userId: senderId.toString(),
+                        data: {
+                            notificationId: formatted.id,
+                            type,
+                            receiverId: receiverId.toString(),
+                            excludedPlayerCount: excluded.size
+                        },
+                        event: {
+                            category: "analytics_event",
+                            eventName: "notification_push_excluded",
+                            severity: "info",
+                            relatedUserId: receiverId.toString(),
+                        }
                     });
                 } else {
-                    console.warn(`No OneSignal playerId found for notification receiver ${receiverId}`);
+                    logger.track({
+                        message: "Push notification skipped because no playerId was available.",
+                        severity: "WARN",
+                        traceId,
+                        userId: senderId.toString(),
+                        data: {
+                            notificationId: formatted.id,
+                            type,
+                            receiverId: receiverId.toString()
+                        },
+                        event: {
+                            category: "analytics_event",
+                            eventName: "notification_push_missing_player_id",
+                            severity: "warn",
+                            relatedUserId: receiverId.toString(),
+                        }
+                    });
                 }
             } catch (pushErr) {
-                console.error("PUSH NOTIFICATION ERROR →", pushErr.message);
+                logger.track({
+                    message: "Push notification delivery failed.",
+                    severity: "ERROR",
+                    traceId,
+                    userId: senderId.toString(),
+                    error: pushErr,
+                    data: {
+                        type,
+                        receiverId: receiverId.toString(),
+                        notificationId: formatted.id
+                    },
+                    event: {
+                        category: "infrastructure_event",
+                        eventName: "notification_push_failed",
+                        severity: "error",
+                        relatedUserId: receiverId.toString(),
+                    }
+                });
             }
         }
 
         return formatted;
         
     } catch (err) {
-        console.error("SEND NOTIFICATION ERROR →", err);
+        logger.track({
+            message: "Notification send failed.",
+            severity: "ERROR",
+            traceId,
+            userId: senderId?.toString?.() || "",
+            error: err,
+            data: {
+                type: type || "",
+                receiverId: receiverId?.toString?.() || ""
+            },
+            event: {
+                category: "infrastructure_event",
+                eventName: "notification_send_failed",
+                severity: "error",
+                relatedUserId: receiverId?.toString?.() || "",
+            }
+        });
         return false;
     }
 }

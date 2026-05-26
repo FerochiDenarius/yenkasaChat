@@ -1,4 +1,9 @@
 const { publishEvent, publishEventBatch } = require('../core/eventBus');
+const { createLogger } = require('../observability/logger');
+
+const logger = createLogger('yme.publisher', {
+  sourceModule: 'yme.publisher',
+});
 
 const CATEGORY_BY_EVENT_TYPE = Object.freeze({
   like: 'engagement',
@@ -60,10 +65,17 @@ function publishYmeEvent(event, options = {}) {
     awaitPublish: true,
     defaults: options.defaults,
   }).catch((error) => {
-    console.warn('[YME] Failed to publish event:', {
-      message: error.message,
-      stack: error.stack,
-      ...buildPublishLogContext(event, options),
+    logger.track({
+      message: 'YME publish event failed.',
+      severity: 'ERROR',
+      userId: event?.userId || options?.defaults?.userId || '',
+      error,
+      data: buildPublishLogContext(event, options),
+      event: {
+        category: 'ai_event',
+        eventName: 'yme_publish_event_failed',
+        severity: 'error',
+      },
     });
     return null;
   });
@@ -80,11 +92,20 @@ function publishYmeEventBatch(events, options = {}) {
     awaitPublish: true,
     defaults: options.defaults,
   }).catch((error) => {
-    console.warn('[YME] Failed to publish event batch:', {
-      message: error.message,
-      stack: error.stack,
-      count: Array.isArray(events) ? events.length : 0,
-      payload: Array.isArray(events) ? events : [],
+    logger.track({
+      message: 'YME publish event batch failed.',
+      severity: 'ERROR',
+      userId: options?.defaults?.userId || '',
+      error,
+      data: {
+        count: Array.isArray(events) ? events.length : 0,
+        payload: Array.isArray(events) ? events : [],
+      },
+      event: {
+        category: 'ai_event',
+        eventName: 'yme_publish_event_batch_failed',
+        severity: 'error',
+      },
     });
     return null;
   });

@@ -1,11 +1,22 @@
 const AIUsageLog = require('../models/aiUsageLog.model');
 const { buildLegacyModerationSummary, preparePostModeration } = require('./moderationWorkflow.service');
+const { createLogger } = require('../../yme/observability/logger');
+
+const logger = createLogger('ai.moderation.service', {
+  sourceModule: 'ai.moderation.service',
+});
 
 async function safeLogUsage(payload) {
   try {
     await AIUsageLog.create(payload);
   } catch (error) {
-    console.warn('[AIModeration] Failed to write usage log:', error.message);
+    logger.error('Failed to write moderation usage log.', {
+      userId: payload?.userId || '',
+      error,
+      data: {
+        endpoint: payload?.endpoint || '',
+      },
+    });
   }
 }
 

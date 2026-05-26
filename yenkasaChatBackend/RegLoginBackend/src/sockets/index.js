@@ -6,15 +6,25 @@ const LiveStream = require('../../models/LiveStream');
 const onlineService = require('../services/online/online.service');
 const registerLivestreamEvents = require('../services/livestream/livestream.socket');
 const { publishEvent } = require('../yme/core/eventBus');
+const { createLogger } = require('../yme/observability/logger');
 
 const chatLaughReactionCooldowns = new Map();
 const CHAT_LAUGH_REACTION_COOLDOWN_MS = Number(
   process.env.CHAT_LAUGH_REACTION_COOLDOWN_MS || 2500,
 );
+const logger = createLogger('socket.gateway', {
+  sourceModule: 'socket.gateway',
+});
 
 function registerSocketHandlers(io) {
   io.on('connection', (socket) => {
-    console.log(`💡 Client connected: ${socket.id}`);
+    logger.info('Socket client connected.', {
+      userId: socket.data?.userId || '',
+      data: {
+        sessionId: socket.id,
+        transport: socket.conn?.transport?.name || '',
+      },
+    });
     socket.data.connectedAt = Date.now();
     socket.data.liveStreams = new Set();
     socket.data.hostLiveStreams = new Set();
@@ -52,7 +62,13 @@ function registerSocketHandlers(io) {
           },
         });
       } catch (err) {
-        console.error('❌ Error setting user online:', err.message);
+        logger.error('Failed to mark user online from userConnected.', {
+          userId: data?.userId || data || '',
+          error: err,
+          data: {
+            sessionId: socket.id,
+          },
+        });
       }
     });
 
@@ -73,7 +89,13 @@ function registerSocketHandlers(io) {
           },
         });
       } catch (err) {
-        console.error('❌ Error setting user online:', err.message);
+        logger.error('Failed to mark user online from userOnline.', {
+          userId,
+          error: err,
+          data: {
+            sessionId: socket.id,
+          },
+        });
       }
     });
 
@@ -88,7 +110,13 @@ function registerSocketHandlers(io) {
           reason: 'explicit_userOffline',
         });
       } catch (err) {
-        console.error('❌ Error setting user offline:', err.message);
+        logger.error('Failed to mark user offline.', {
+          userId,
+          error: err,
+          data: {
+            sessionId: socket.id,
+          },
+        });
       }
     });
 
@@ -113,7 +141,13 @@ function registerSocketHandlers(io) {
 
         if (!room) return;
         socket.join(normalizedRoomId);
-        console.log(`💬 Socket ${socket.id} joined chat room ${normalizedRoomId}`);
+        logger.info('Socket joined chat room.', {
+          userId: normalizedUserId,
+          data: {
+            sessionId: socket.id,
+            roomId: normalizedRoomId,
+          },
+        });
         publishEvent({
           category: 'analytics_event',
           eventName: 'chat_room_joined',
@@ -128,7 +162,13 @@ function registerSocketHandlers(io) {
           },
         });
       } catch (err) {
-        console.error('❌ Error joining chat room:', err.message);
+        logger.error('Failed to join chat room.', {
+          userId: socket.data?.userId || payload?.userId || '',
+          error: err,
+          data: {
+            sessionId: socket.id,
+          },
+        });
       }
     });
 
@@ -172,7 +212,13 @@ function registerSocketHandlers(io) {
           timestamp: now,
         });
       } catch (err) {
-        console.error('❌ chat_laugh_reaction failed:', err.message);
+        logger.error('chat_laugh_reaction failed.', {
+          userId: socket.data?.userId || '',
+          error: err,
+          data: {
+            sessionId: socket.id,
+          },
+        });
       }
     });
 
@@ -184,7 +230,13 @@ function registerSocketHandlers(io) {
 
     socket.on('disconnect', async (reason) => {
       try {
-        console.log(`🔥 Client disconnected: ${socket.id}. reason=${reason}`);
+        logger.info('Socket client disconnected.', {
+          userId: socket.data.userId || '',
+          data: {
+            sessionId: socket.id,
+            reason,
+          },
+        });
         const sessionDurationMs = Math.max(
           0,
           Date.now() - Number(socket.data.connectedAt || Date.now()),
@@ -248,7 +300,14 @@ function registerSocketHandlers(io) {
           }
         }
       } catch (err) {
-        console.error('❌ Error handling disconnect:', err.message);
+        logger.error('Socket disconnect handling failed.', {
+          userId: socket.data.userId || '',
+          error: err,
+          data: {
+            sessionId: socket.id,
+            reason,
+          },
+        });
       }
     });
   });

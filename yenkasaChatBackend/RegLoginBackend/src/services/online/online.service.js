@@ -1,6 +1,11 @@
 const onlineUsers = new Map();
 const pendingOfflineTimers = new Map();
 const SOCKET_OFFLINE_GRACE_MS = Number(process.env.SOCKET_OFFLINE_GRACE_MS || 600000);
+const { createLogger } = require('../../yme/observability/logger');
+
+const logger = createLogger('socket.online', {
+  sourceModule: 'socket.online',
+});
 
 function getOnlineUserIds() {
   return Array.from(onlineUsers.keys());
@@ -14,7 +19,9 @@ function clearPendingOfflineTimer(userId) {
   if (pendingTimer) {
     clearTimeout(pendingTimer);
     pendingOfflineTimers.delete(normalizedUserId);
-    console.log(`🟢 Cleared pending offline timer for ${normalizedUserId}`);
+    logger.info('Cleared pending offline timer.', {
+      userId: normalizedUserId,
+    });
   }
 }
 
@@ -31,7 +38,13 @@ async function markUserOnline({ io, User, socket, userId }) {
   socket.join(normalizedUserId);
   socket.join(`user:${normalizedUserId}`);
 
-  console.log(`🟢 User ${normalizedUserId} is online (${socketIds.size} active socket(s))`);
+  logger.info('User marked online.', {
+    userId: normalizedUserId,
+    data: {
+      socketId: socket.id,
+      activeSocketCount: socketIds.size,
+    },
+  });
 
   await User.findByIdAndUpdate(normalizedUserId, { online: true, lastSeen: new Date() }, { new: true });
   io.emit('getOnlineUsers', getOnlineUserIds());
@@ -59,9 +72,13 @@ async function markUserOffline({
     socketIds.delete(socket.id);
     if (socketIds.size > 0) {
       onlineUsers.set(normalizedUserId, socketIds);
-      console.log(
-        `🟡 Socket ${socket.id} left user ${normalizedUserId}; ${socketIds.size} socket(s) still active.`,
-      );
+      logger.info('Socket disconnected but user remains online on other sockets.', {
+        userId: normalizedUserId,
+        data: {
+          socketId: socket.id,
+          activeSocketCount: socketIds.size,
+        },
+      });
       io.emit('getOnlineUsers', getOnlineUserIds());
       return;
     }
@@ -74,11 +91,18 @@ async function markUserOffline({
   const finalizeOffline = async () => {
     const latestSocketIds = onlineUsers.get(normalizedUserId);
     if (latestSocketIds && latestSocketIds.size > 0) {
-      console.log(`🟢 Offline skipped for ${normalizedUserId}; user reconnected.`);
+      logger.info('Offline transition skipped because the user reconnected.', {
+        userId: normalizedUserId,
+      });
       return;
     }
 
-    console.log(`🔴 User ${normalizedUserId} went offline. reason=${reason}`);
+    logger.info('User marked offline.', {
+      userId: normalizedUserId,
+      data: {
+        reason,
+      },
+    });
     pendingOfflineTimers.delete(normalizedUserId);
     onlineUsers.delete(normalizedUserId);
 
@@ -97,12 +121,22 @@ async function markUserOffline({
     return;
   }
 
-  console.log(
-    `🟡 User ${normalizedUserId} has no active sockets. Waiting ${SOCKET_OFFLINE_GRACE_MS}ms before marking offline. reason=${reason}`,
-  );
+  logger.info('Scheduling offline transition after grace period.', {
+    userId: normalizedUserId,
+    data: {
+      reason,
+      graceMs: SOCKET_OFFLINE_GRACE_MS,
+    },
+  });
   const timer = setTimeout(() => {
     finalizeOffline().catch((err) => {
-      console.error(`❌ Error finalizing offline for ${normalizedUserId}:`, err.message);
+      logger.error('Failed to finalize offline transition.', {
+        userId: normalizedUserId,
+        error: err,
+        data: {
+          reason,
+        },
+      });
     });
   }, SOCKET_OFFLINE_GRACE_MS);
   pendingOfflineTimers.set(normalizedUserId, timer);

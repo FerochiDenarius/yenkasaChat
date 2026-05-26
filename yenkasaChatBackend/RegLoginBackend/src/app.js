@@ -18,9 +18,13 @@ const registerApiRoutes = require('./config/apiRoutes');
 const registerPublicContent = require('./config/publicContent');
 const createStoreService = require('./services/store/store.service');
 const createBlogService = require('./services/blog/blog.service');
+const { createLogger } = require('./yme/observability/logger');
 
 const app = express();
 const rootDir = path.resolve(__dirname, '..');
+const logger = createLogger('app.bootstrap', {
+  sourceModule: 'app.bootstrap',
+});
 
 app.set('trust proxy', true);
 app.use(redirectMiddleware);
@@ -80,9 +84,11 @@ app.use(compression());
 if (process.env.NODE_ENV !== 'test') app.use(morgan('combined'));
 
 registerApiRoutes(app, rootDir);
-console.log('=== Registered endpoints ===');
-console.log(listEndpoints(app));
-console.log('=== End registered endpoints ===');
+logger.info('API routes registered.', {
+  data: {
+    endpointCount: listEndpoints(app).length,
+  },
+});
 
 app.use(multerError);
 
@@ -91,6 +97,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     uptime: process.uptime(),
     env: process.env.NODE_ENV,
+    traceId: req.traceId || '',
   });
 });
 

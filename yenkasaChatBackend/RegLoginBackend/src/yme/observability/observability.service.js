@@ -253,9 +253,117 @@ async function getAiMemoryStats({ windowHours = 24 } = {}) {
   };
 }
 
+async function getCrashDetections({ windowMinutes = 60 } = {}) {
+  const since = buildSince(windowMinutes);
+  return ObservabilityEvent.aggregate([
+    {
+      $match: {
+        occurredAt: { $gte: since },
+        severity: { $in: ['error', 'critical'] },
+        $or: [
+          { category: 'system_error' },
+          { eventName: { $regex: /(crash|failed|timeout|disconnect)/i } },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: {
+          eventName: '$eventName',
+          sourceModule: '$sourceModule',
+          stack: '$metadata.error.stack',
+        },
+        count: { $sum: 1 },
+        latestAt: { $max: '$occurredAt' },
+      },
+    },
+    { $sort: { count: -1, latestAt: -1 } },
+    { $limit: 10 },
+  ]);
+}
+
+async function getApiFailureSpikes({ windowMinutes = 60 } = {}) {
+  const since = buildSince(windowMinutes);
+  return ObservabilityEvent.aggregate([
+    {
+      $match: {
+        occurredAt: { $gte: since },
+        category: 'api_failure',
+      },
+    },
+    {
+      $group: {
+        _id: '$routePath',
+        count: { $sum: 1 },
+        latestAt: { $max: '$occurredAt' },
+        statusCodes: { $addToSet: '$statusCode' },
+        avgLatencyMs: { $avg: '$latencyMs' },
+      },
+    },
+    { $sort: { count: -1, latestAt: -1 } },
+    { $limit: 10 },
+  ]);
+}
+
+async function getSuspiciousActivitySignals({ windowMinutes = 60 } = {}) {
+  const since = buildSince(windowMinutes);
+  return ObservabilityEvent.aggregate([
+    {
+      $match: {
+        occurredAt: { $gte: since },
+        category: { $in: ['auth_event', 'engagement', 'payment_event', 'moderation_event'] },
+        userId: { $nin: ['', null] },
+      },
+    },
+    {
+      $group: {
+        _id: '$userId',
+        totalEvents: { $sum: 1 },
+        uniqueEventNames: { $addToSet: '$eventName' },
+        authFailures: {
+          $sum: {
+            $cond: [{ $regexMatch: { input: '$eventName', regex: /auth_.*failure|invalid|expired/i } }, 1, 0],
+          },
+        },
+        rewardEvents: {
+          $sum: {
+            $cond: [{ $regexMatch: { input: '$eventName', regex: /reward|monetization/i } }, 1, 0],
+          },
+        },
+        lastSeenAt: { $max: '$occurredAt' },
+      },
+    },
+    {
+      $addFields: {
+        suspicionScore: {
+          $add: [
+            '$authFailures',
+            { $multiply: ['$rewardEvents', 1.5] },
+            { $divide: ['$totalEvents', 25] },
+            { $divide: [{ $size: '$uniqueEventNames' }, 10] },
+          ],
+        },
+      },
+    },
+    { $sort: { suspicionScore: -1, lastSeenAt: -1 } },
+    { $limit: 10 },
+  ]);
+}
+
 async function getObservabilityOverview({ windowMinutes = 60 } = {}) {
   const since = buildSince(windowMinutes);
-  const [liveErrors, authAnomalies, uploadFailures, errorSpikes, aiMemoryStats, infrastructureHealth] =
+  const [
+    liveErrors,
+    authAnomalies,
+    uploadFailures,
+    errorSpikes,
+    aiMemoryStats,
+    infrastructureHealth,
+    bridgeHealth,
+    repeatedCrashes,
+    apiFailureSpikes,
+    suspiciousActivity,
+  ] =
     await Promise.all([
       listLiveErrors({ limit: 12, windowMinutes }),
       ObservabilityEvent.aggregate([
@@ -312,25 +420,44 @@ async function getObservabilityOverview({ windowMinutes = 60 } = {}) {
       ]),
       getAiMemoryStats({ windowHours: Math.ceil(windowMinutes / 60) }),
       getInfrastructureHealth({ windowMinutes }),
+      getIntelligenceBridgeHealth(),
+      getCrashDetections({ windowMinutes }),
+      getApiFailureSpikes({ windowMinutes }),
+      getSuspiciousActivitySignals({ windowMinutes }),
     ]);
 
   return {
     windowMinutes: Math.max(1, Number(windowMinutes || 60)),
     liveErrors,
     errorSpikes,
+    repeatedCrashes,
+    apiFailureSpikes,
     uploadFailures,
     authAnomalies,
+    suspiciousActivity,
     aiHealth: {
       memory: aiMemoryStats,
       metrics: getMetricsSnapshot(),
-      bridge: getIntelligenceBridgeHealth(),
+      bridge: bridgeHealth,
     },
     infrastructure: infrastructureHealth,
   };
 }
 
 async function getDashboardFoundation({ windowHours = 24 } = {}) {
-  const [liveErrors, topActiveUsers, trendingCommunities, engagementHeatmap, aiMemoryStats, queue, moderationAnalytics, creatorAnalytics, infrastructureHealth] =
+  const [
+    liveErrors,
+    topActiveUsers,
+    trendingCommunities,
+    engagementHeatmap,
+    aiMemoryStats,
+    queue,
+    moderationAnalytics,
+    creatorAnalytics,
+    infrastructureHealth,
+    bridgeHealth,
+    suspiciousActivity,
+  ] =
     await Promise.all([
       listLiveErrors({ limit: 20, windowMinutes: windowHours * 60 }),
       getTopActiveUsers({ limit: 10, windowHours }),
@@ -341,6 +468,8 @@ async function getDashboardFoundation({ windowHours = 24 } = {}) {
       getModerationAnalytics({ windowHours }),
       getCreatorAnalytics({ limit: 10, windowHours }),
       getInfrastructureHealth({ windowMinutes: windowHours * 60 }),
+      getIntelligenceBridgeHealth(),
+      getSuspiciousActivitySignals({ windowMinutes: windowHours * 60 }),
     ]);
 
   return {
@@ -351,10 +480,11 @@ async function getDashboardFoundation({ windowHours = 24 } = {}) {
     engagementHeatmap,
     aiMemoryStats,
     queueHealth: queue,
-    bridgeHealth: getIntelligenceBridgeHealth(),
+    bridgeHealth,
     moderationAnalytics,
     creatorAnalytics,
     infrastructureHealth,
+    suspiciousActivity,
   };
 }
 

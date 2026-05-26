@@ -1,5 +1,10 @@
 const livestreamService = require('./livestream.service');
 const { publishEvent } = require('../../yme/core/eventBus');
+const { createLogger } = require('../../yme/observability/logger');
+
+const logger = createLogger('socket.livestream', {
+  sourceModule: 'socket.livestream',
+});
 
 function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
   async function resolveLiveActor(payload = {}) {
@@ -83,7 +88,12 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
     livestreamService.emitToLiveRoom(streamId, 'live_ended', endedEvent);
     io.emit('live_removed', endedEvent);
     livestreamService.clearLiveParticipants(streamId);
-    console.log(`📺 Livestream ${streamId} ended after host socket ${socketId} disconnected.`);
+    logger.info('Livestream ended after host disconnect.', {
+      data: {
+        streamId,
+        socketId,
+      },
+    });
   }
 
   const handleLiveHostReady = async (payload = {}) => {
@@ -134,7 +144,13 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
 
       io.emit('live_started', { stream: livestreamService.serializeLiveStream(stream) });
       livestreamService.emitLiveRoomMemberCount(streamId);
-      console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
+      logger.info('Livestream host ready.', {
+        userId: actor.userId,
+        data: {
+          streamId,
+          socketId: socket.id,
+        },
+      });
       publishEvent({
         category: 'engagement',
         eventName: 'live_stream_started',
@@ -152,7 +168,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         },
       });
     } catch (err) {
-      console.error('❌ livestream_host_ready failed:', err.message);
+      logger.error('livestream_host_ready failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -179,7 +202,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         socketId: socket.id,
       });
     } catch (err) {
-      console.error('❌ livestream_host_heartbeat failed:', err.message);
+      logger.error('livestream_host_heartbeat failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -275,7 +305,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         },
       });
     } catch (err) {
-      console.error('❌ live_join failed:', err.message);
+      logger.error('live_join failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -335,7 +372,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         },
       });
     } catch (err) {
-      console.error('❌ live_leave failed:', err.message);
+      logger.error('live_leave failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -378,7 +422,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         },
       });
     } catch (err) {
-      console.error('❌ live_comment failed:', err.message);
+      logger.error('live_comment failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -417,7 +468,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         },
       });
     } catch (err) {
-      console.error('❌ live_reaction failed:', err.message);
+      logger.error('live_reaction failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -443,13 +501,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       const payloadUid = livestreamService.normalizeAgoraUid(payload.agoraUid);
       if (!expectedUid) return;
       if (payloadUid && payloadUid !== expectedUid) {
-        console.warn('[YenkasaLiveSocket][guest_uid_mismatch]', {
-          event: 'live_request_guest_seat',
-          streamId,
+        logger.warn('Guest seat request UID mismatch detected.', {
           userId: actor.userId,
-          payloadAgoraUid: payloadUid,
-          expectedAgoraUid: expectedUid,
-          socketId: socket.id,
+          data: {
+            event: 'live_request_guest_seat',
+            streamId,
+            payloadAgoraUid: payloadUid,
+            expectedAgoraUid: expectedUid,
+            socketId: socket.id,
+          },
         });
       }
 
@@ -462,7 +522,14 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         createdAt: new Date().toISOString(),
       });
     } catch (err) {
-      console.error('❌ live_request_guest_seat failed:', err.message);
+      logger.error('live_request_guest_seat failed.', {
+        userId: socket.data.userId || payload.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -495,13 +562,16 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       const payloadGuestUid = livestreamService.normalizeAgoraUid(payload.guestAgoraUid);
       if (!expectedGuestUid) return;
       if (payloadGuestUid && payloadGuestUid !== expectedGuestUid) {
-        console.warn('[YenkasaLiveSocket][guest_uid_mismatch]', {
-          event: 'live_approve_guest_seat',
-          streamId,
-          guestUserId,
-          payloadAgoraUid: payloadGuestUid,
-          expectedAgoraUid: expectedGuestUid,
-          socketId: socket.id,
+        logger.warn('Guest seat approval UID mismatch detected.', {
+          userId: socket.data.userId || '',
+          data: {
+            event: 'live_approve_guest_seat',
+            streamId,
+            guestUserId,
+            payloadAgoraUid: payloadGuestUid,
+            expectedAgoraUid: expectedGuestUid,
+            socketId: socket.id,
+          },
         });
       }
 
@@ -524,7 +594,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         approvedBy: socket.data.userId,
       });
     } catch (err) {
-      console.error('❌ live_approve_guest_seat failed:', err.message);
+      logger.error('live_approve_guest_seat failed.', {
+        userId: socket.data.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          guestUserId: payload.guestUserId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -550,7 +628,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
 
       io.to(guestUserId).emit('live_guest_seat_declined', { streamId });
     } catch (err) {
-      console.error('❌ live_decline_guest_seat failed:', err.message);
+      logger.error('live_decline_guest_seat failed.', {
+        userId: socket.data.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          guestUserId: payload.guestUserId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -582,7 +668,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
 
       livestreamService.emitToLiveRoom(streamId, 'live_guest_muted', { streamId, guestUserId, muted });
     } catch (err) {
-      console.error('❌ live_mute_guest failed:', err.message);
+      logger.error('live_mute_guest failed.', {
+        userId: socket.data.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          guestUserId: payload.guestUserId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -609,7 +703,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       await LiveStream.updateOne({ _id: streamId }, { $pull: { guests: { userId: guestUserId } } });
       livestreamService.emitToLiveRoom(streamId, 'live_guest_kicked', { streamId, guestUserId });
     } catch (err) {
-      console.error('❌ live_kick_guest failed:', err.message);
+      logger.error('live_kick_guest failed.', {
+        userId: socket.data.userId || '',
+        error: err,
+        data: {
+          streamId: payload.streamId?.toString?.() || '',
+          guestUserId: payload.guestUserId?.toString?.() || '',
+          socketId: socket.id,
+        },
+      });
     }
   };
 
@@ -633,7 +735,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         const timer = setTimeout(() => {
           livestreamService.liveHostDisconnectTimers.delete(streamId);
           endLiveStreamForHostDrop(streamId, socket.id).catch((err) => {
-            console.error('❌ Error ending livestream after host disconnect:', err.message);
+            logger.error('Failed to end livestream after host disconnect.', {
+              userId: socket.data.userId || '',
+              error: err,
+              data: {
+                streamId,
+                socketId: socket.id,
+                reason,
+              },
+            });
           });
         }, livestreamService.LIVE_HOST_DISCONNECT_GRACE_MS);
         livestreamService.liveHostDisconnectTimers.set(streamId, timer);

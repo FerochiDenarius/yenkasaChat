@@ -7,6 +7,11 @@ const User = require("../models/user.model");
 const Comment = require("../models/comment.model");
 const { areUsersBlocked } = require("../services/privacy.service");
 const { sendNotification } = require("../services/notification.service");
+const { createLogger } = require("../src/yme/observability/logger");
+
+const logger = createLogger("notifications.route", {
+  sourceModule: "http.notifications",
+});
 
 // helper - compute targetUrl from type/activityId (update to match your app routes)
 function computeTarget(notification) {
@@ -55,10 +60,44 @@ router.post("/create", auth, async (req, res) => {
     const senderId = req.user.id;
 
     if (!type || !senderId || !receiverId || !message) {
+      logger.track({
+        message: "Notification create payload is missing required fields.",
+        severity: "WARN",
+        req,
+        userId: senderId,
+        data: {
+          statusCode: 400,
+          receiverId: receiverId || "",
+        },
+        event: {
+          category: "analytics_event",
+          eventName: "notification_create_invalid_payload",
+          severity: "warn",
+          statusCode: 400,
+          relatedUserId: receiverId || "",
+        },
+      });
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     if (req.body.senderId && req.body.senderId.toString() !== senderId.toString()) {
+      logger.track({
+        message: "Notification create attempt spoofed senderId.",
+        severity: "WARN",
+        req,
+        userId: senderId,
+        data: {
+          statusCode: 403,
+          receiverId: receiverId || "",
+        },
+        event: {
+          category: "auth_event",
+          eventName: "notification_sender_spoof_blocked",
+          severity: "warn",
+          statusCode: 403,
+          relatedUserId: receiverId || "",
+        },
+      });
       return res.status(403).json({ message: "Cannot create notification as another user" });
     }
 
@@ -143,14 +182,66 @@ router.post("/create", auth, async (req, res) => {
 
     const receiver = await User.findById(receiverId).select("notificationPreferences");
     if (!receiver) {
+      logger.track({
+        message: "Notification receiver was not found.",
+        severity: "WARN",
+        req,
+        userId: senderId,
+        data: {
+          statusCode: 404,
+          receiverId: receiverId || "",
+        },
+        event: {
+          category: "analytics_event",
+          eventName: "notification_receiver_not_found",
+          severity: "warn",
+          statusCode: 404,
+          relatedUserId: receiverId || "",
+        },
+      });
       return res.status(404).json({ message: "Receiver not found" });
     }
 
     if (await areUsersBlocked(senderId, receiverId)) {
+      logger.track({
+        message: "Notification blocked by privacy settings.",
+        severity: "WARN",
+        req,
+        userId: senderId,
+        data: {
+          statusCode: 403,
+          receiverId: receiverId || "",
+        },
+        event: {
+          category: "moderation_event",
+          eventName: "notification_blocked_by_privacy",
+          severity: "warn",
+          statusCode: 403,
+          relatedUserId: receiverId || "",
+        },
+      });
       return res.status(403).json({ message: "Notification blocked by privacy settings" });
     }
 
     if (!shouldDeliverNotification(receiver, type, targetType)) {
+      logger.track({
+        message: "Notification muted by receiver preferences.",
+        severity: "INFO",
+        req,
+        userId: senderId,
+        data: {
+          statusCode: 200,
+          receiverId: receiverId || "",
+          type,
+        },
+        event: {
+          category: "analytics_event",
+          eventName: "notification_muted",
+          severity: "info",
+          statusCode: 200,
+          relatedUserId: receiverId || "",
+        },
+      });
       return res.status(200).json({ success: true, muted: true });
     }
 
@@ -213,13 +304,64 @@ router.post("/create", auth, async (req, res) => {
     });
 
     if (!formatted) {
+      logger.track({
+        message: "Notification was skipped by downstream delivery logic.",
+        severity: "INFO",
+        req,
+        userId: senderId,
+        data: {
+          statusCode: 200,
+          receiverId: receiverId || "",
+          type,
+        },
+        event: {
+          category: "analytics_event",
+          eventName: "notification_skipped",
+          severity: "info",
+          statusCode: 200,
+          relatedUserId: receiverId || "",
+        },
+      });
       return res.status(200).json({ success: true, skipped: true });
     }
 
+    logger.track({
+      message: "Notification created successfully.",
+      severity: "INFO",
+      req,
+      userId: senderId,
+      data: {
+        statusCode: 201,
+        receiverId: receiverId || "",
+        type,
+      },
+      event: {
+        category: "analytics_event",
+        eventName: "notification_created",
+        severity: "info",
+        statusCode: 201,
+        relatedUserId: receiverId || "",
+      },
+    });
     return res.status(201).json(formatted);
 
   } catch (err) {
-    console.error("NOTIFICATION CREATE ERROR:", err);
+    logger.track({
+      message: "Notification create request failed.",
+      severity: "ERROR",
+      req,
+      userId: req.user?.id || "",
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+      event: {
+        category: "infrastructure_event",
+        eventName: "notification_create_error",
+        severity: "error",
+        statusCode: 500,
+      },
+    });
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -302,7 +444,14 @@ router.get("/all", auth, async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
-    console.error("NOTIFICATIONS ERROR:", err);
+    logger.error("Notification list request failed.", {
+      req,
+      userId: req.user?.id || "",
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+    });
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -341,7 +490,22 @@ router.put("/preferences", auth, async (req, res) => {
       preferences: getNotificationPreferences(updatedUser)
     });
   } catch (err) {
-    console.error("NOTIFICATION PREFERENCES ERROR:", err);
+    logger.track({
+      message: "Notification preferences update failed.",
+      severity: "ERROR",
+      req,
+      userId: req.user?.id || "",
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+      event: {
+        category: "infrastructure_event",
+        eventName: "notification_preferences_update_error",
+        severity: "error",
+        statusCode: 500,
+      },
+    });
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -374,10 +538,44 @@ router.put("/:id/read", auth, async (req, res) => {
       global.io.to(req.user.id).emit("notificationRead", formatted);
     }
 
+    logger.track({
+      message: "Notification marked as read.",
+      severity: "INFO",
+      req,
+      userId: req.user?.id || "",
+      data: {
+        statusCode: 200,
+        notificationId: id,
+      },
+      event: {
+        category: "engagement",
+        eventName: "notification_read",
+        eventType: "notification_open",
+        severity: "info",
+        statusCode: 200,
+        contentId: id,
+        ymeEligible: true,
+      },
+    });
     return res.json(formatted);
 
   } catch (err) {
-    console.error("NOTIFICATION READ ERROR:", err);
+    logger.track({
+      message: "Notification read request failed.",
+      severity: "ERROR",
+      req,
+      userId: req.user?.id || "",
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+      event: {
+        category: "infrastructure_event",
+        eventName: "notification_read_error",
+        severity: "error",
+        statusCode: 500,
+      },
+    });
     return res.status(500).json({ message: "Server error" });
   }
 });
@@ -395,9 +593,40 @@ router.put("/read-all", auth, async (req, res) => {
       global.io.to(userId).emit("allNotificationsRead", { readAt: now.toISOString() });
     }
 
+    logger.track({
+      message: "All notifications marked as read.",
+      severity: "INFO",
+      req,
+      userId,
+      data: {
+        statusCode: 200,
+      },
+      event: {
+        category: "engagement",
+        eventName: "notification_read_all",
+        severity: "info",
+        statusCode: 200,
+        ymeEligible: true,
+      },
+    });
     return res.json({ message: "All notifications marked as read", readAt: now.toISOString() });
   } catch (err) {
-    console.error("NOTIFICATION READ ALL ERROR:", err);
+    logger.track({
+      message: "Read-all notifications request failed.",
+      severity: "ERROR",
+      req,
+      userId: req.user?.id || "",
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+      event: {
+        category: "infrastructure_event",
+        eventName: "notification_read_all_error",
+        severity: "error",
+        statusCode: 500,
+      },
+    });
     res.status(500).json({ message: "Server error" });
   }
 });

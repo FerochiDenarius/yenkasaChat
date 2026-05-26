@@ -50,6 +50,8 @@ router.get('/admin/logs', authMiddleware, requirePermission('analyticsAccess'), 
 router.get('/admin/metrics', authMiddleware, requirePermission('analyticsAccess'), controller.getMetrics);
 router.get('/admin/indexes', authMiddleware, requirePermission('analyticsAccess'), controller.getIndexes);
 router.get('/admin/queue-health', authMiddleware, requirePermission('analyticsAccess'), controller.getQueueHealthSnapshot);
+router.get('/admin/bridge-dead-letters', authMiddleware, requirePermission('analyticsAccess'), controller.getBridgeDeadLetters);
+router.post('/admin/bridge-dead-letters/:jobId/replay', authMiddleware, requirePermission('analyticsAccess'), controller.replayBridgeDeadLetter);
 router.get('/admin/embeddings', authMiddleware, requirePermission('analyticsAccess'), controller.getEmbeddings);
 router.get('/admin/failed-embeddings', authMiddleware, requirePermission('analyticsAccess'), controller.getFailedEmbeddings);
 router.post('/admin/retrieve-inspect', authMiddleware, requirePermission('analyticsAccess'), controller.inspectRetrieval);

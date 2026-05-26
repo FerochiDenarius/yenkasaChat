@@ -17,10 +17,14 @@ const {
 const {
   upsertMonetizationDailyMetrics
 } = require('../services/monetizationAnalytics.service');
+const { createLogger } = require('../src/yme/observability/logger');
 
 const AD_REVIEWER_ROLES = new Set(REVIEWER_RANKS.map((rank) => rank.toLowerCase()));
 const AD_REVIEWER_ACCESS_ROLES = [...REVIEWER_RANKS];
 const UPLOADS_DIR = path.resolve(__dirname, '..', 'uploads');
+const logger = createLogger('ads.controller', {
+  sourceModule: 'http.ads',
+});
 
 function canReviewAds(user) {
   return canApproveContent(user);
@@ -188,7 +192,27 @@ exports.recordAdView = async (req, res) => {
     await ad.save();
 
     return res.json({ success:true, adViewId: adView._id, fullyWatched });
-  } catch(err){ console.error(err); res.status(500).json({ success:false }); }
+  } catch (err) {
+    logger.track({
+      message: 'Ad view recording failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+        adId: req.params?.adId || '',
+      },
+      event: {
+        category: 'api_failure',
+        eventName: 'ad_view_record_failed',
+        severity: 'error',
+        statusCode: 500,
+        contentId: req.params?.adId || '',
+      },
+    });
+    res.status(500).json({ success: false });
+  }
 };
 
 exports.rewardAdClick = async (req, res) => {
@@ -212,6 +236,23 @@ exports.rewardAdClick = async (req, res) => {
     });
 
     if (existing) {
+      logger.track({
+        message: 'Ad click reward skipped because it was already claimed.',
+        severity: 'WARN',
+        req,
+        userId,
+        data: {
+          statusCode: 200,
+          adId,
+        },
+        event: {
+          category: 'payment_event',
+          eventName: 'ad_click_reward_duplicate',
+          severity: 'warn',
+          statusCode: 200,
+          contentId: adId,
+        },
+      });
       return res.json({
         success: false,
         message: "Already rewarded for clicking this ad"
@@ -253,7 +294,8 @@ exports.rewardAdClick = async (req, res) => {
         transactionId: tx._id.toString(),
         rewardType: tx.type,
         amount: rewardAmount
-      }
+      },
+      traceId: req.traceId
     });
 
     // Emit socket update
@@ -266,6 +308,25 @@ exports.rewardAdClick = async (req, res) => {
       });
     }
 
+    logger.track({
+      message: 'Ad click reward processed.',
+      severity: 'INFO',
+      req,
+      userId,
+      data: {
+        statusCode: 200,
+        adId,
+        rewardAmount,
+      },
+      event: {
+        category: 'payment_event',
+        eventName: 'ad_click_reward_processed',
+        severity: 'info',
+        statusCode: 200,
+        contentId: adId,
+        ymeEligible: true,
+      },
+    });
     return res.json({
       success: true,
       rewarded: true,
@@ -275,7 +336,24 @@ exports.rewardAdClick = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Error rewarding ad click:", err);
+    logger.track({
+      message: 'Ad click reward processing failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+        adId: req.params?.adId || '',
+      },
+      event: {
+        category: 'payment_event',
+        eventName: 'ad_click_reward_failed',
+        severity: 'error',
+        statusCode: 500,
+        contentId: req.params?.adId || '',
+      },
+    });
     return res.status(500).json({
       success: false,
       error: "Server error rewarding ad click"
@@ -304,13 +382,52 @@ exports.trackMonetizationEvent = async (req, res) => {
 
     const saved = await upsertMonetizationDailyMetrics(payload, user);
 
+    logger.track({
+      message: 'Monetization event tracked.',
+      severity: 'INFO',
+      req,
+      userId,
+      data: {
+        statusCode: 200,
+        postId: postId || '',
+        creatorUserId,
+        platform: payload.platform,
+        placement: payload.placement || '',
+      },
+      event: {
+        category: 'payment_event',
+        eventName: 'ad_monetization_event_tracked',
+        severity: 'info',
+        statusCode: 200,
+        contentId: postId || '',
+        creatorId: creatorUserId || '',
+        ymeEligible: true,
+      },
+    });
     return res.json({
       success: true,
       metrics: saved,
       message: 'Monetization event tracked.'
     });
   } catch (err) {
-    console.error('❌ Failed to track monetization event:', err);
+    logger.track({
+      message: 'Monetization event tracking failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: err.statusCode || 500,
+        postId: req.body?.postId?.toString?.() || '',
+      },
+      event: {
+        category: 'payment_event',
+        eventName: 'ad_monetization_event_failed',
+        severity: 'error',
+        statusCode: err.statusCode || 500,
+        contentId: req.body?.postId?.toString?.() || '',
+      },
+    });
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'Failed to track monetization event'
@@ -336,10 +453,23 @@ exports.createAd = async (req, res) => {
     }
 
     if (!req.body) {
-      console.warn("⚠️ createAd missing parsed body", {
-        contentType: req.headers["content-type"],
-        hasFiles: Boolean(req.files),
-        fileFields: req.files ? Object.keys(req.files) : []
+      logger.track({
+        message: 'Ad creation request body was not parsed.',
+        severity: 'WARN',
+        req,
+        userId,
+        data: {
+          statusCode: 400,
+          contentType: req.headers["content-type"],
+          hasFiles: Boolean(req.files),
+          fileFields: req.files ? Object.keys(req.files) : []
+        },
+        event: {
+          category: 'upload_failure',
+          eventName: 'ad_create_missing_body',
+          severity: 'warn',
+          statusCode: 400,
+        }
       });
 
       return res.status(400).json({
@@ -441,13 +571,33 @@ if (!adData.imageUrl && !adData.videoUrl) {
           push: true,
           pushTitle: "Pending Sponsored Ad",
           pushBody: "A new sponsored ad is waiting for approval.",
-          pushData: { adId: ad._id.toString() }
+          pushData: { adId: ad._id.toString() },
+          traceId: req.traceId
         });
       }
     }
 
     const hydratedAd = await loadAdForClient(ad._id);
 
+    logger.track({
+      message: autoApprove ? 'Ad created and auto-approved.' : 'Ad created and queued for review.',
+      severity: 'INFO',
+      req,
+      userId,
+      data: {
+        statusCode: 200,
+        adId: ad._id.toString(),
+        adType: finalAdType,
+        approvalStatus: ad.approvalStatus,
+      },
+      event: {
+        category: autoApprove ? 'payment_event' : 'moderation_event',
+        eventName: autoApprove ? 'ad_created_live' : 'ad_created_pending_review',
+        severity: 'info',
+        statusCode: 200,
+        contentId: ad._id.toString(),
+      },
+    });
     return res.json({
       success: true,
       message: autoApprove ? "Ad created and approved successfully." : "Ad submitted for approval.",
@@ -456,7 +606,22 @@ if (!adData.imageUrl && !adData.videoUrl) {
     });
 
   } catch (err) {
-    console.error('❌ createAd error:', err);
+    logger.track({
+      message: 'Ad creation failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+      event: {
+        category: 'upload_failure',
+        eventName: 'ad_create_failed',
+        severity: 'error',
+        statusCode: 500,
+      },
+    });
     return res.status(500).json({
       success: false,
       message: 'Failed to create ad'
@@ -522,7 +687,8 @@ exports.rewardAd = async (req, res) => {
         transactionId: tx._id.toString(),
         rewardType: tx.type,
         amount: tx.amount
-      }
+      },
+      traceId: req.traceId
     });
 
     // Verification adsViewed is incremented once by rewardService for REWARD_VIEWS.
@@ -531,13 +697,53 @@ exports.rewardAd = async (req, res) => {
       await adView.save();
     }
 
+    logger.track({
+      message: 'Ad watch reward processed.',
+      severity: 'INFO',
+      req,
+      userId,
+      data: {
+        statusCode: 200,
+        adId,
+        adViewId: adViewId || '',
+        rewardAmount: tx.amount,
+      },
+      event: {
+        category: 'payment_event',
+        eventName: 'ad_watch_reward_processed',
+        severity: 'info',
+        statusCode: 200,
+        contentId: adId,
+        ymeEligible: true,
+      },
+    });
     return res.json({
       success: true,
       rewarded: true,
       amount: tx.amount,
       newBalance: coinTx?.toUserBalanceAfter ?? null
     });
-  } catch(err){ console.error(err); res.status(500).json({ success:false }); }
+  } catch (err) {
+    logger.track({
+      message: 'Ad watch reward processing failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+        adId: req.params?.adId || '',
+      },
+      event: {
+        category: 'payment_event',
+        eventName: 'ad_watch_reward_failed',
+        severity: 'error',
+        statusCode: 500,
+        contentId: req.params?.adId || '',
+      },
+    });
+    res.status(500).json({ success: false });
+  }
   
 };
 
@@ -554,7 +760,14 @@ exports.getPendingAds = async (req, res) => {
 
     return res.json({ success: true, ads: ads.map(normalizeAdForClient) });
   } catch (err) {
-    console.error("❌ Failed to fetch pending ads:", err);
+    logger.error('Failed to fetch pending ads.', {
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+    });
     return res.status(500).json({ success: false, message: "Failed to fetch pending ads" });
   }
 };
@@ -596,14 +809,51 @@ exports.approveAd = async (req, res) => {
         push: true,
         pushTitle: "Ad Approved",
         pushBody: "Your sponsored ad is now live.",
-        pushData: { adId: ad._id.toString() }
+        pushData: { adId: ad._id.toString() },
+        traceId: req.traceId
       });
     }
 
     const hydratedAd = await loadAdForClient(ad._id);
+    logger.track({
+      message: 'Ad approved.',
+      severity: 'INFO',
+      req,
+      userId: req.user?.id || '',
+      data: {
+        statusCode: 200,
+        adId: ad._id.toString(),
+        ownerId: ad.submittedBy?.toString?.() || '',
+      },
+      event: {
+        category: 'moderation_event',
+        eventName: 'ad_approved',
+        severity: 'info',
+        statusCode: 200,
+        contentId: ad._id.toString(),
+        relatedUserId: ad.submittedBy?.toString?.() || '',
+      },
+    });
     return res.json({ success: true, ad: normalizeAdForClient(hydratedAd || ad.toObject()) });
   } catch (err) {
-    console.error("❌ Failed to approve ad:", err);
+    logger.track({
+      message: 'Ad approval failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+        adId: req.params?.adId || '',
+      },
+      event: {
+        category: 'moderation_event',
+        eventName: 'ad_approval_failed',
+        severity: 'error',
+        statusCode: 500,
+        contentId: req.params?.adId || '',
+      },
+    });
     return res.status(500).json({ success: false, message: "Failed to approve ad" });
   }
 };
@@ -649,14 +899,51 @@ exports.rejectAd = async (req, res) => {
         pushBody: ad.rejectionReason
           ? `Reason: ${ad.rejectionReason}`
           : "Your sponsored ad was rejected.",
-        pushData: { adId: ad._id.toString() }
+        pushData: { adId: ad._id.toString() },
+        traceId: req.traceId
       });
     }
 
     const hydratedAd = await loadAdForClient(ad._id);
+    logger.track({
+      message: 'Ad rejected.',
+      severity: 'WARN',
+      req,
+      userId: req.user?.id || '',
+      data: {
+        statusCode: 200,
+        adId: ad._id.toString(),
+        ownerId: ad.submittedBy?.toString?.() || '',
+      },
+      event: {
+        category: 'moderation_event',
+        eventName: 'ad_rejected',
+        severity: 'warn',
+        statusCode: 200,
+        contentId: ad._id.toString(),
+        relatedUserId: ad.submittedBy?.toString?.() || '',
+      },
+    });
     return res.json({ success: true, ad: normalizeAdForClient(hydratedAd || ad.toObject()) });
   } catch (err) {
-    console.error("❌ Failed to reject ad:", err);
+    logger.track({
+      message: 'Ad rejection failed.',
+      severity: 'ERROR',
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+        adId: req.params?.adId || '',
+      },
+      event: {
+        category: 'moderation_event',
+        eventName: 'ad_rejection_failed',
+        severity: 'error',
+        statusCode: 500,
+        contentId: req.params?.adId || '',
+      },
+    });
     return res.status(500).json({ success: false, message: "Failed to reject ad" });
   }
 };
@@ -670,7 +957,14 @@ exports.getMyAds = async (req, res) => {
 
     return res.json({ success: true, ads: ads.map(normalizeAdForClient) });
   } catch (err) {
-    console.error("❌ Failed to fetch my ads:", err);
+    logger.error('Failed to fetch my ads.', {
+      req,
+      userId: req.user?.id || '',
+      error: err,
+      data: {
+        statusCode: 500,
+      },
+    });
     return res.status(500).json({ success: false, message: "Failed to fetch my ads" });
   }
 };

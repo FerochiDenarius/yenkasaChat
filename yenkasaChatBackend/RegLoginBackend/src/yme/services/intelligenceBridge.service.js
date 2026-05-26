@@ -1,8 +1,8 @@
-const { incrementCounter, setGauge } = require('./metrics.service');
-const {
-  emitStructuredAppLog,
-  parseBoolean,
-} = require('../observability/observability.utils');
+const { enqueueBridgeEventJob, enqueueBridgeLogJob, getBridgeQueueHealth } = require('../bridge/bridgeQueue');
+const { moveBridgeJobToDeadLetter } = require('../bridge/deadLetterHandler');
+const { getBridgeConfig, shouldDeadLetter } = require('../bridge/retryPolicy');
+const { incrementCounter, recordDuration, setGauge } = require('./metrics.service');
+const { emitStructuredAppLog, parseBoolean } = require('../observability/observability.utils');
 
 const DEFAULT_BACKEND_URL =
   process.env.YENKASA_AI_INTELLIGENCE_URL ||
@@ -11,34 +11,24 @@ const DEFAULT_BACKEND_URL =
 const INTERNAL_API_KEY =
   process.env.YENKASA_AI_INTERNAL_API_KEY ||
   process.env.INTERNAL_PLATFORM_API_KEY ||
+  process.env.LOG_INGEST_API_KEY ||
   '';
-const ENABLED = parseBoolean(process.env.YENKASA_AI_INTELLIGENCE_ENABLED, Boolean(INTERNAL_API_KEY));
-const FLUSH_INTERVAL_MS = Math.max(
-  1000,
-  Number(process.env.YENKASA_AI_BRIDGE_FLUSH_INTERVAL_MS || 5000),
-);
-const BATCH_SIZE = Math.max(1, Number(process.env.YENKASA_AI_BRIDGE_BATCH_SIZE || 25));
 const REQUEST_TIMEOUT_MS = Math.max(
   1000,
   Number(process.env.YENKASA_AI_BRIDGE_TIMEOUT_MS || 8000),
 );
-const MAX_ATTEMPTS = Math.max(1, Number(process.env.YENKASA_AI_BRIDGE_MAX_ATTEMPTS || 4));
 
-const queues = {
-  events: [],
-  logs: [],
-};
-const timers = {
-  events: null,
-  logs: null,
-};
 const state = {
-  enabled: ENABLED,
+  enabled: parseBoolean(process.env.YENKASA_AI_INTELLIGENCE_ENABLED, Boolean(INTERNAL_API_KEY)),
   endpoint: DEFAULT_BACKEND_URL,
   lastEventFlushAt: null,
   lastLogFlushAt: null,
   lastError: '',
   lastErrorAt: null,
+  lastEventStatus: 'idle',
+  lastLogStatus: 'idle',
+  lastEventBatchSize: 0,
+  lastLogBatchSize: 0,
 };
 
 function isBridgeReady() {
@@ -49,35 +39,19 @@ function buildUrl(path) {
   return `${String(state.endpoint || '').replace(/\/$/, '')}${path}`;
 }
 
-function queueSize(kind) {
-  return Array.isArray(queues[kind]) ? queues[kind].length : 0;
+function getBatchSize(kind, items = []) {
+  if (!Array.isArray(items)) return 0;
+  if (kind === 'events' || kind === 'logs') {
+    return items.length;
+  }
+  return 0;
 }
 
-function updateQueueMetrics() {
-  setGauge('intelligenceBridgeEventQueueDepth', queueSize('events'));
-  setGauge('intelligenceBridgeLogQueueDepth', queueSize('logs'));
-}
-
-function scheduleFlush(kind) {
-  if (!isBridgeReady()) return;
-  if (timers[kind]) return;
-
-  timers[kind] = setTimeout(() => {
-    timers[kind] = null;
-    flushQueue(kind).catch((error) => {
-      state.lastError = error.message;
-      state.lastErrorAt = new Date();
-      emitStructuredAppLog({
-        severity: 'ERROR',
-        component: 'yme.intelligence_bridge',
-        message: 'Intelligence bridge flush failed.',
-        data: {
-          kind,
-          error: error.message,
-        },
-      });
-    });
-  }, FLUSH_INTERVAL_MS);
+function updateConfiguredMetrics() {
+  const config = getBridgeConfig();
+  setGauge('intelligenceBridgeConfiguredBatchSize', config.batchSize);
+  setGauge('intelligenceBridgeConfiguredConcurrency', config.concurrency);
+  setGauge('intelligenceBridgeConfiguredTimeoutMs', REQUEST_TIMEOUT_MS);
 }
 
 async function postBatch(path, body) {
@@ -113,43 +87,47 @@ async function postBatch(path, body) {
           `Bridge request failed with status ${response.status}.`,
       );
       error.status = response.status;
+      error.nonRetryable = response.status >= 400 && response.status < 500;
       throw error;
     }
 
     return payload;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('Bridge request timed out.');
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-function requeue(kind, items) {
-  const retryable = [];
-  const now = Date.now();
+async function deliverBridgeBatch(kind, job) {
+  const items = Array.isArray(job?.data?.items) ? job.data.items : [];
+  const batchSize = getBatchSize(kind, items);
+  const startedAt = Date.now();
 
-  for (const item of items) {
-    const attempts = Number(item.attempts || 0) + 1;
-    if (attempts >= MAX_ATTEMPTS) continue;
-    retryable.push({
-      payload: item.payload,
-      attempts,
-      queuedAt: item.queuedAt || new Date(now),
-    });
+  if (!batchSize) {
+    return {
+      delivered: false,
+      reason: 'empty_batch',
+    };
   }
 
-  if (retryable.length) {
-    queues[kind].unshift(...retryable);
-    updateQueueMetrics();
-    scheduleFlush(kind);
+  if (!isBridgeReady()) {
+    const error = new Error('Intelligence bridge is not configured.');
+    error.nonRetryable = true;
+    await moveBridgeJobToDeadLetter({ kind, job, items, error });
+    incrementCounter('intelligenceBridgeSkippedBatches');
+    return {
+      delivered: false,
+      deadLettered: true,
+      reason: 'bridge_not_ready',
+    };
   }
-}
 
-async function flushQueue(kind) {
-  if (!isBridgeReady()) return { flushed: false, reason: 'bridge_not_ready' };
-  const queue = queues[kind];
-  if (!queue.length) return { flushed: false, reason: 'empty' };
-
-  const items = queue.splice(0, BATCH_SIZE);
-  updateQueueMetrics();
   const payloadKey = kind === 'events' ? 'events' : 'logs';
   const path =
     kind === 'events'
@@ -157,98 +135,148 @@ async function flushQueue(kind) {
       : '/api/internal/platform/logs/batch';
 
   try {
-    await postBatch(path, {
+    const response = await postBatch(path, {
       source: 'yenkasa_app_backend',
       sentAt: new Date().toISOString(),
-      [payloadKey]: items.map((item) => item.payload),
+      [payloadKey]: items,
     });
+
+    const durationMs = Date.now() - startedAt;
+    recordDuration(
+      kind === 'events' ? 'intelligenceBridgeEventLatency' : 'intelligenceBridgeLogLatency',
+      durationMs,
+    );
+    incrementCounter(
+      kind === 'events' ? 'intelligenceBridgeEventsDelivered' : 'intelligenceBridgeLogsDelivered',
+      batchSize,
+    );
+    setGauge(
+      kind === 'events' ? 'intelligenceBridgeLastEventBatchSize' : 'intelligenceBridgeLastLogBatchSize',
+      batchSize,
+    );
 
     if (kind === 'events') {
       state.lastEventFlushAt = new Date();
-      incrementCounter('intelligenceBridgeEventsFlushed', items.length);
+      state.lastEventStatus = 'success';
+      state.lastEventBatchSize = batchSize;
     } else {
       state.lastLogFlushAt = new Date();
-      incrementCounter('intelligenceBridgeLogsFlushed', items.length);
+      state.lastLogStatus = 'success';
+      state.lastLogBatchSize = batchSize;
     }
+    state.lastError = '';
 
     emitStructuredAppLog({
       severity: 'INFO',
       component: 'yme.intelligence_bridge',
-      message: 'Intelligence bridge batch flushed.',
+      message: 'Intelligence bridge batch delivered.',
       data: {
         kind,
-        count: items.length,
+        batchSize,
+        durationMs,
+        traceId: job?.data?.traceId || '',
+        acceptedCount: Number(response?.accepted_count || batchSize),
       },
     });
 
-    if (queue.length) scheduleFlush(kind);
-    return { flushed: true, count: items.length };
+    return {
+      delivered: true,
+      count: batchSize,
+      metrics: {
+        durationMs,
+      },
+    };
   } catch (error) {
+    state.lastError = error.message;
+    state.lastErrorAt = new Date();
+    if (kind === 'events') {
+      state.lastEventStatus = 'failed';
+    } else {
+      state.lastLogStatus = 'failed';
+    }
+
     incrementCounter('intelligenceBridgeFlushFailures');
-    requeue(kind, items);
+    if (shouldDeadLetter(job, error)) {
+      await moveBridgeJobToDeadLetter({ kind, job, items, error });
+      if (error.nonRetryable === true) {
+        await job.discard();
+        return {
+          delivered: false,
+          deadLettered: true,
+          reason: error.message,
+        };
+      }
+    }
+
     throw error;
   }
 }
 
-function enqueueBridgeEvent(payload) {
+async function enqueueBridgeEvent(payload) {
+  updateConfiguredMetrics();
+
   if (!isBridgeReady()) {
     return { queued: false, reason: 'bridge_not_ready' };
   }
 
-  queues.events.push({
-    payload,
-    attempts: 0,
-    queuedAt: new Date(),
+  return enqueueBridgeEventJob(payload, {
+    traceId: payload?.trace_id || payload?.traceId || '',
+    sourceModule: payload?.source_module || payload?.sourceModule || 'yme.event_bus',
   });
-  incrementCounter('intelligenceBridgeEventsQueued');
-  updateQueueMetrics();
-  if (queueSize('events') >= BATCH_SIZE) {
-    flushQueue('events').catch(() => {});
-  } else {
-    scheduleFlush('events');
-  }
-  return { queued: true, kind: 'events' };
 }
 
-function enqueueBridgeLog(payload) {
+async function enqueueBridgeLog(payload) {
+  updateConfiguredMetrics();
+
   if (!isBridgeReady()) {
     return { queued: false, reason: 'bridge_not_ready' };
   }
 
-  queues.logs.push({
-    payload,
-    attempts: 0,
-    queuedAt: new Date(),
+  return enqueueBridgeLogJob(payload, {
+    traceId: payload?.metadata?.trace_id || payload?.traceId || '',
+    sourceModule: payload?.service || 'yme.event_bus',
   });
-  incrementCounter('intelligenceBridgeLogsQueued');
-  updateQueueMetrics();
-  if (queueSize('logs') >= BATCH_SIZE) {
-    flushQueue('logs').catch(() => {});
-  } else {
-    scheduleFlush('logs');
-  }
-  return { queued: true, kind: 'logs' };
 }
 
-function getIntelligenceBridgeHealth() {
+async function getIntelligenceBridgeHealth() {
+  updateConfiguredMetrics();
+
+  let queueHealth = {
+    enabled: false,
+    queues: {},
+    error: '',
+  };
+  try {
+    queueHealth = await getBridgeQueueHealth();
+  } catch (error) {
+    queueHealth = {
+      enabled: false,
+      queues: {},
+      error: error.message,
+    };
+  }
+
   return {
     enabled: state.enabled,
     ready: isBridgeReady(),
     endpoint: state.endpoint,
-    queueDepths: {
-      events: queueSize('events'),
-      logs: queueSize('logs'),
-    },
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    batchSize: getBridgeConfig().batchSize,
+    queue: queueHealth,
     lastEventFlushAt: state.lastEventFlushAt,
     lastLogFlushAt: state.lastLogFlushAt,
+    lastEventStatus: state.lastEventStatus,
+    lastLogStatus: state.lastLogStatus,
+    lastEventBatchSize: state.lastEventBatchSize,
+    lastLogBatchSize: state.lastLogBatchSize,
     lastError: state.lastError,
     lastErrorAt: state.lastErrorAt,
   };
 }
 
 module.exports = {
+  deliverBridgeBatch,
   enqueueBridgeEvent,
   enqueueBridgeLog,
-  flushQueue,
   getIntelligenceBridgeHealth,
 };

@@ -365,7 +365,7 @@ async function processEvent(normalizedEvent = {}) {
   }
 
   try {
-    const bridgeResult = enqueueBridgeEvent(buildBridgeEventPayload(normalizedEvent));
+    const bridgeResult = await enqueueBridgeEvent(buildBridgeEventPayload(normalizedEvent));
     sinkStatus.intelligence = {
       status: bridgeResult.queued ? 'queued' : 'skipped',
       attempts: bridgeResult.queued ? 1 : 0,
@@ -386,7 +386,7 @@ async function processEvent(normalizedEvent = {}) {
 
   if (shouldMirrorToLogs(normalizedEvent)) {
     try {
-      const logResult = enqueueBridgeLog(buildBridgeLogPayload(normalizedEvent));
+      const logResult = await enqueueBridgeLog(buildBridgeLogPayload(normalizedEvent));
       sinkStatus.logs = {
         status: logResult.queued ? 'queued' : 'skipped',
         attempts: logResult.queued ? 1 : 0,

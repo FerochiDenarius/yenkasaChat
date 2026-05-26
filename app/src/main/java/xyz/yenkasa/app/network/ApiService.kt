@@ -849,6 +849,7 @@ interface ApiService {
     @GET("updates")
     fun getUpdates(): Call<List<NotificationModel>>
 
+<<<<<<< HEAD
     @GET("announcements/feed")
     fun getAnnouncementsFeed(
         @Query("page") page: Int = 1,
@@ -891,6 +892,8 @@ interface ApiService {
         @Body request: CreateYenkasaUpdateRequest
     ): Call<CreateYenkasaUpdateResponse>
 
+=======
+>>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     @GET("notifications/preferences")
     fun getNotificationPreferences(): Call<NotificationPreferencesResponse>
 

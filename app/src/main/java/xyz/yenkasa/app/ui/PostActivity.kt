@@ -724,7 +724,11 @@ class PostActivity : AppCompatActivity() {
     }
 
     private fun completeUploadSuccess(message: String, requiresReview: Boolean) {
+<<<<<<< HEAD
         CommunityPrefsStore.saveRecentPostedCommunity(this, selectedCommunityId)
+=======
+        TokenManager.saveRecentPostedCommunity(this, selectedCommunityId)
+>>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
         setResult(Activity.RESULT_OK, Intent().putExtra("postCreated", true))
         setUploadInteractionEnabled(false)
 

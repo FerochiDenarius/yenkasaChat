@@ -21,7 +21,10 @@ This folder contains internal backend and Android frontend architecture notes pr
 12. [API_STRUCTURE.md](/Users/kofibright/yenkasaChat/yenkasa_knowledge/API_STRUCTURE.md)
 13. [DATABASE_STRUCTURE.md](/Users/kofibright/yenkasaChat/yenkasa_knowledge/DATABASE_STRUCTURE.md)
 14. domain-specific docs such as livestream, feed, moderation, rewards, notifications, localization, web, and store
+<<<<<<< HEAD
 15. public-facing product docs under `public/` for YenkasaAI in-app assistance
+=======
+>>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
 
 ## Source of truth
 
@@ -42,5 +45,8 @@ They summarize actual route mounts, activities, controllers, views, socket flows
 - PDF: generated
 
 The Markdown files remain the authoritative source for AI ingestion. The `.docx` and `.pdf` copies are convenience exports for internal sharing.
+<<<<<<< HEAD
 
 The `public/` subfolder is the user-facing knowledge corpus. It is intended for platform-help answers such as YKC, ranks, verification, communities, Live Arena, creator growth, and moderation-safe explanations.
+=======
+>>>>>>> 5c23bfa7d (Introducing Yenkasa Live)

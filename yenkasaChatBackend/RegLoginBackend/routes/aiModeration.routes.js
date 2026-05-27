@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/auth');
 const AiModeration = require('../models/aiModeration.model');
 const Post = require('../models/post.model');
 const { canApproveContent } = require('../middleware/permissions');
+const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 const {
   applyModeratorDecision,
 } = require('../src/ai/services/moderationWorkflow.service');
@@ -15,6 +16,16 @@ const {
 } = require('../src/ai/services/moderationQueue.service');
 
 const router = express.Router();
+
+function logModerationAudit({ moderatorId, action, targetId, status }) {
+  console.info('[ModerationAudit]', {
+    moderatorId: moderatorId ? moderatorId.toString() : null,
+    action,
+    targetId: targetId ? targetId.toString() : null,
+    status,
+    timestamp: new Date().toISOString(),
+  });
+}
 
 function requireModerator(req, res, next) {
   if (!canApproveContent(req.user)) {
@@ -141,6 +152,25 @@ router.post('/:id/decision', authMiddleware, requireModerator, async (req, res) 
       decision,
       reason,
       source: 'ai_moderation_api',
+    });
+    publishYmeEvent({
+      userId: req.user.id,
+      sourceApp: 'social_app',
+      eventType: 'moderation_post_reviewed',
+      postId: result.record?.postId?.toString?.() || result.post?._id?.toString?.() || '',
+      relatedUserId: result.post?.userId?.toString?.() || '',
+      payload: {
+        moderationItemId: req.params.id,
+        action: decision,
+        reason,
+        status: result.record?.lifecycleStatus || result.record?.finalAction || '',
+      },
+    });
+    logModerationAudit({
+      moderatorId: req.user.id,
+      action: decision,
+      targetId: result.record?.postId || result.post?._id || req.params.id,
+      status: result.record?.lifecycleStatus || result.record?.finalAction || '',
     });
 
     res.json({

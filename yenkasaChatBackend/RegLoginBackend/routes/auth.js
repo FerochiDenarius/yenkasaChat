@@ -13,6 +13,7 @@ const {
   normalizeCountryLabel,
   recordCountrySecuritySignal
 } = require('../services/regionalRewards.service');
+const { publishIntelligenceEvent } = require('../src/intelligence/services/eventPublisher.service');
 
 
 // ✅ Sanitize helper
@@ -61,6 +62,52 @@ function getEffectiveRoleName(user) {
 
 function utcStartOfDay(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function resolveIdentifierType(identifier = '') {
+  const value = String(identifier || '').trim();
+  if (!value) return 'unknown';
+  if (value.includes('@')) return 'email';
+  if (/^\+?\d[\d\s-]{5,}$/.test(value)) return 'phone';
+  return 'username';
+}
+
+function publishLoginAttemptEvent(req, details = {}) {
+  publishIntelligenceEvent({
+    eventType: 'login_attempt',
+    source: 'yenkasa_app',
+    userId: details.userId || null,
+    metadata: {
+      status: details.status || 'failed',
+      reason: details.reason || '',
+      identifierType: details.identifierType || 'unknown',
+      roleName: details.roleName || '',
+      ip: req.ip || req.socket?.remoteAddress || '',
+      userAgent: (req.get('user-agent') || '').slice(0, 240),
+      country: details.country || '',
+      detectedCountry: details.detectedCountry || '',
+      countryMismatch: Boolean(details.countryMismatch),
+      countrySwitchSuspected: Boolean(details.countrySwitchSuspected),
+    },
+  });
+}
+
+function publishSuspiciousActivityEvent(req, details = {}) {
+  publishIntelligenceEvent({
+    eventType: 'suspicious_activity',
+    source: 'yenkasa_app',
+    userId: details.userId || null,
+    metadata: {
+      activity: details.activity || 'auth_anomaly',
+      reason: details.reason || '',
+      ip: req.ip || req.socket?.remoteAddress || '',
+      userAgent: (req.get('user-agent') || '').slice(0, 240),
+      country: details.country || '',
+      detectedCountry: details.detectedCountry || '',
+      countryMismatch: Boolean(details.countryMismatch),
+      countrySwitchSuspected: Boolean(details.countrySwitchSuspected),
+    },
+  });
 }
 
 router.post('/register', async (req, res) => {
@@ -259,6 +306,11 @@ router.post('/login', async (req, res) => {
 
   try {
     if (!identifier || !password) {
+      publishLoginAttemptEvent(req, {
+        status: 'failed',
+        reason: 'missing_credentials',
+        identifierType: resolveIdentifierType(identifier),
+      });
       return res.status(400).json({ message: 'Missing credentials' });
     }
 
@@ -277,12 +329,25 @@ router.post('/login', async (req, res) => {
       .populate('role'); // ✅ populate Permission reference if valid
 
     if (!user) {
+      publishLoginAttemptEvent(req, {
+        status: 'failed',
+        reason: 'user_not_found',
+        identifierType: resolveIdentifierType(trimmedIdentifier),
+      });
       return res.status(404).json({ message: 'User not found' });
     }
 
     // ✅ Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      publishLoginAttemptEvent(req, {
+        userId: user._id.toString(),
+        status: 'failed',
+        reason: 'invalid_credentials',
+        identifierType: resolveIdentifierType(trimmedIdentifier),
+        roleName: getEffectiveRoleName(user),
+        country: user.country || '',
+      });
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -371,6 +436,30 @@ router.post('/login', async (req, res) => {
       await user.save();
     }
 
+    publishLoginAttemptEvent(req, {
+      userId: user._id.toString(),
+      status: 'success',
+      reason: '',
+      identifierType: resolveIdentifierType(trimmedIdentifier),
+      roleName: effectiveRoleName,
+      country: user.country || '',
+      detectedCountry,
+      countryMismatch,
+      countrySwitchSuspected: Boolean(countryContext.countrySwitchSuspected),
+    });
+
+    if (countryMismatch || countryContext.countrySwitchSuspected) {
+      publishSuspiciousActivityEvent(req, {
+        userId: user._id.toString(),
+        activity: 'login_country_anomaly',
+        reason: countryMismatch ? 'country_mismatch' : 'country_switch_suspected',
+        country: user.country || '',
+        detectedCountry,
+        countryMismatch,
+        countrySwitchSuspected: Boolean(countryContext.countrySwitchSuspected),
+      });
+    }
+
     // ✅ Return clean JSON with role details
    res.json({
   user: {
@@ -401,6 +490,11 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error('❌ Login error:', err);
+    publishLoginAttemptEvent(req, {
+      status: 'failed',
+      reason: 'server_error',
+      identifierType: resolveIdentifierType(identifier),
+    });
     res.status(500).json({ message: 'Server error during login' });
   }
 });

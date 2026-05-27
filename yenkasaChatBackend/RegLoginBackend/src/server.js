@@ -5,6 +5,7 @@ const app = require('./app');
 const connectDB = require('./config/database');
 const initSocket = require('./config/socket');
 const { startModerationWorkers } = require('./ai/workers/moderation.worker');
+const { startIntelligenceEventRelay } = require('./intelligence/services/eventPublisher.service');
 const { startYmeWorkers } = require('./yme/workers/yme.worker');
 
 const Permission = require('../models/permissions.model');
@@ -26,6 +27,9 @@ async function startServer() {
   require('../services/verificationScheduler');
   require('../services/ykcMonthlyReset');
   console.log('🕒 Verification scheduler initialized and running daily checks.');
+
+  const relayStatus = startIntelligenceEventRelay();
+  console.log('🛰️ Intelligence relay bootstrap:', relayStatus);
 
   if (process.env.YENKASA_ENABLE_INLINE_MODERATION_WORKERS !== 'false') {
     const workerResult = await startModerationWorkers().catch((error) => {

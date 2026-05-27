@@ -1,4 +1,8 @@
 const { ingestEvent, ingestEventBatch } = require('./eventIngestion.service');
+const {
+  mapYmeEventToIntelligenceEvent,
+  publishIntelligenceEvent,
+} = require('../../intelligence/services/eventPublisher.service');
 
 function buildPublishLogContext(event = {}, options = {}) {
   return {
@@ -22,6 +26,11 @@ function publishYmeEvent(event, options = {}) {
     return null;
   });
 
+  const intelligenceEvent = mapYmeEventToIntelligenceEvent(event);
+  if (intelligenceEvent) {
+    publishIntelligenceEvent(intelligenceEvent);
+  }
+
   return options.awaitIngest === true ? task : undefined;
 }
 
@@ -35,6 +44,15 @@ function publishYmeEventBatch(events, options = {}) {
     });
     return null;
   });
+
+  if (Array.isArray(events)) {
+    events.forEach((event) => {
+      const intelligenceEvent = mapYmeEventToIntelligenceEvent(event);
+      if (intelligenceEvent) {
+        publishIntelligenceEvent(intelligenceEvent);
+      }
+    });
+  }
 
   return options.awaitIngest === true ? task : undefined;
 }

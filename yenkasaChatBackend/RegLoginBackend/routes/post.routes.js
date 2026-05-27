@@ -1054,12 +1054,31 @@ router.post("/:postId/flag", authMiddleware, async (req, res) => {
     }
 
     // Create moderation queue item
-    await ModerationItem.create({
+    const moderationItem = await ModerationItem.create({
       type: "post_report",
       targetPostId: postId,
       targetUserId: post.userId,
       reportedBy: req.user.id,
       reason: reason || "inappropriate"
+    });
+    publishYmeEvent({
+      userId: req.user.id,
+      sourceApp: "social_app",
+      eventType: "moderation_report_created",
+      postId,
+      relatedUserId: post.userId?.toString() || "",
+      payload: {
+        moderationItemId: moderationItem._id.toString(),
+        reason: moderationItem.reason || "",
+        status: moderationItem.status || "pending",
+      },
+    });
+    console.info("[ModerationAudit]", {
+      moderatorId: req.user.id?.toString?.() || null,
+      action: "report_post",
+      targetId: postId,
+      status: moderationItem.status || "pending",
+      timestamp: new Date().toISOString(),
     });
 
     res.json({
@@ -1078,7 +1097,7 @@ const { hasMinimumRole } = require("../utils/authority");
 router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
   const role = req.user;
 
-  if (!hasMinimumRole(role, "admin")) {
+  if (!hasMinimumRole(role, "moderator")) {
     return res.status(403).json({ error: "Insufficient privileges" });
   }
 
@@ -1086,6 +1105,24 @@ router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
   if (!post) return res.status(404).json({ error: "Post not found" });
 
   await post.deleteOne();
+  publishYmeEvent({
+    userId: req.user.id,
+    sourceApp: "social_app",
+    eventType: "moderation_post_hidden",
+    postId: post._id.toString(),
+    relatedUserId: post.userId?.toString() || "",
+    payload: {
+      action: "delete_post",
+      status: "resolved",
+    },
+  });
+  console.info("[ModerationAudit]", {
+    moderatorId: req.user.id?.toString?.() || null,
+    action: "delete_post",
+    targetId: post._id.toString(),
+    status: "resolved",
+    timestamp: new Date().toISOString(),
+  });
 
   res.json({ success: true, message: "Post deleted by moderator action" });
 });

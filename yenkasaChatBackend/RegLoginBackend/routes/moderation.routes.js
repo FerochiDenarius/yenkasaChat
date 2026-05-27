@@ -5,8 +5,19 @@ const authMiddleware = require("../middleware/auth");
 const ModerationItem = require("../models/ModerationItem.model");
 const Post = require("../models/post.model");
 const User = require("../models/user.model");
+const { publishYmeEvent } = require("../src/yme/services/eventPublisher.service");
 
 const { hasMinimumRole } = require("../utils/authority");
+
+function logModerationAudit({ moderatorId, action, targetId, status }) {
+  console.info("[ModerationAudit]", {
+    moderatorId: moderatorId ? moderatorId.toString() : null,
+    action,
+    targetId: targetId ? targetId.toString() : null,
+    status,
+    timestamp: new Date().toISOString(),
+  });
+}
 
 /* --------------------------------------------------
  * GET ALL PENDING MODERATION ITEMS
@@ -35,8 +46,8 @@ router.get("/moderation/pending", authMiddleware, async (req, res) => {
 router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
   const role = req.user;
 
-  if (!hasMinimumRole(role, "admin")) {
-    return res.status(403).json({ error: "Approval requires admin or higher" });
+  if (!hasMinimumRole(role, "moderator")) {
+    return res.status(403).json({ error: "Approval requires moderator or higher" });
   }
 
   const item = await ModerationItem.findById(req.params.id);
@@ -47,6 +58,25 @@ router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
   item.handledAt = new Date();
 
   await item.save();
+  publishYmeEvent({
+    userId: req.user.id,
+    sourceApp: "social_app",
+    eventType: "moderation_post_reviewed",
+    postId: item.targetPostId?.toString() || "",
+    relatedUserId: item.targetUserId?.toString() || "",
+    payload: {
+      moderationItemId: item._id.toString(),
+      action: "approve",
+      targetType: item.type,
+      status: item.status,
+    },
+  });
+  logModerationAudit({
+    moderatorId: req.user.id,
+    action: "approve",
+    targetId: item.targetPostId || item.targetUserId || item._id,
+    status: item.status,
+  });
 
   res.json({ success: true, message: "Moderation item approved" });
 });
@@ -58,8 +88,8 @@ router.post("/moderation/:id/approve", authMiddleware, async (req, res) => {
 router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
   const role = req.user;
 
-  if (!hasMinimumRole(role, "admin")) {
-    return res.status(403).json({ error: "Rejection requires admin or higher" });
+  if (!hasMinimumRole(role, "moderator")) {
+    return res.status(403).json({ error: "Rejection requires moderator or higher" });
   }
 
   const item = await ModerationItem.findById(req.params.id);
@@ -70,6 +100,25 @@ router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
   item.handledAt = new Date();
 
   await item.save();
+  publishYmeEvent({
+    userId: req.user.id,
+    sourceApp: "social_app",
+    eventType: "moderation_post_reviewed",
+    postId: item.targetPostId?.toString() || "",
+    relatedUserId: item.targetUserId?.toString() || "",
+    payload: {
+      moderationItemId: item._id.toString(),
+      action: "reject",
+      targetType: item.type,
+      status: item.status,
+    },
+  });
+  logModerationAudit({
+    moderatorId: req.user.id,
+    action: "reject",
+    targetId: item.targetPostId || item.targetUserId || item._id,
+    status: item.status,
+  });
 
   res.json({ success: true, message: "Moderation item rejected" });
 });
@@ -80,8 +129,8 @@ router.post("/moderation/:id/reject", authMiddleware, async (req, res) => {
 router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
   const role = req.user;
 
-  if (!hasMinimumRole(role, "admin")) {
-    return res.status(403).json({ error: "Only admin or higher can delete posts" });
+  if (!hasMinimumRole(role, "moderator")) {
+    return res.status(403).json({ error: "Only moderators or higher can delete posts" });
   }
 
   const post = await Post.findById(req.params.postId);
@@ -94,6 +143,23 @@ router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
     { targetPostId: post._id, status: "pending" },
     { status: "resolved", handledBy: req.user.id, handledAt: new Date() }
   );
+  publishYmeEvent({
+    userId: req.user.id,
+    sourceApp: "social_app",
+    eventType: "moderation_post_hidden",
+    postId: post._id.toString(),
+    relatedUserId: post.userId?.toString() || "",
+    payload: {
+      action: "delete_post",
+      status: "resolved",
+    },
+  });
+  logModerationAudit({
+    moderatorId: req.user.id,
+    action: "delete_post",
+    targetId: post._id,
+    status: "resolved",
+  });
 
   res.json({ success: true, message: "Post deleted by moderation action" });
 });
@@ -104,8 +170,8 @@ router.delete("/moderation/post/:postId", authMiddleware, async (req, res) => {
 router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res) => {
   const role = req.user;
 
-  if (!hasMinimumRole(role, "junior_developer")) {
-    return res.status(403).json({ error: "Only developers can suspend users" });
+  if (!hasMinimumRole(role, "moderator")) {
+    return res.status(403).json({ error: "Only moderators or higher can suspend users" });
   }
 
   const user = await User.findById(req.params.userId);
@@ -119,6 +185,12 @@ router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res)
     { targetUserId: user._id, status: "pending" },
     { status: "resolved", handledBy: req.user.id, handledAt: new Date() }
   );
+  logModerationAudit({
+    moderatorId: req.user.id,
+    action: "suspend_user",
+    targetId: user._id,
+    status: "resolved",
+  });
 
   res.json({ success: true, message: "User suspended successfully" });
 });
@@ -129,8 +201,8 @@ router.post("/moderation/user/:userId/suspend", authMiddleware, async (req, res)
 router.post("/moderation/user/:userId/block", authMiddleware, async (req, res) => {
   const role = req.user;
 
-  if (!hasMinimumRole(role, "junior_developer")) {
-    return res.status(403).json({ error: "Only developers can block users" });
+  if (!hasMinimumRole(role, "moderator")) {
+    return res.status(403).json({ error: "Only moderators or higher can block users" });
   }
 
   const user = await User.findById(req.params.userId);
@@ -138,6 +210,12 @@ router.post("/moderation/user/:userId/block", authMiddleware, async (req, res) =
 
   user.isBlocked = true;
   await user.save();
+  logModerationAudit({
+    moderatorId: req.user.id,
+    action: "block_user",
+    targetId: user._id,
+    status: "blocked",
+  });
 
   res.json({ success: true, message: "User globally blocked" });
 });
@@ -167,12 +245,29 @@ router.post("/moderation/report/user/:userId", authMiddleware, async (req, res) 
       });
     }
 
-    await ModerationItem.create({
+    const report = await ModerationItem.create({
       type: "user_report",
       targetUserId: targetUser._id,
       reportedBy: req.user.id,
       reason: req.body?.reason || "User reported from profile",
       ipAddress: req.ip
+    });
+    publishYmeEvent({
+      userId: req.user.id,
+      sourceApp: "social_app",
+      eventType: "moderation_user_reported",
+      relatedUserId: targetUser._id.toString(),
+      payload: {
+        moderationItemId: report._id.toString(),
+        reason: report.reason || "",
+        status: report.status || "pending",
+      },
+    });
+    logModerationAudit({
+      moderatorId: req.user.id,
+      action: "report_user",
+      targetId: targetUser._id,
+      status: report.status || "pending",
     });
 
     return res.json({

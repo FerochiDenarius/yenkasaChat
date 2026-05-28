@@ -1,4 +1,5 @@
 const { getYmeConfig } = require('../config/yme.config');
+const { normalizeText } = require('../utils/textNormalizer');
 const { ingestEventBatch } = require('./eventIngestion.service');
 const { retrieveUserMemoryContext } = require('./retrieval.service');
 
@@ -39,7 +40,7 @@ async function recordAiChatTurn({
         sourceCount: Array.isArray(sources) ? sources.length : 0,
       },
     },
-  ].filter((item) => String(item.message || '').trim());
+  ].filter((item) => normalizeText(item?.message || ''));
 
   if (!events.length) {
     return {

@@ -1,6 +1,7 @@
 const { GoogleAuth } = require('google-auth-library');
 
 const { getYmeConfig } = require('../config/yme.config');
+const { normalizeText } = require('../utils/textNormalizer');
 const { incrementCounter, recordDuration } = require('./metrics.service');
 
 let authClientPromise = null;
@@ -36,14 +37,14 @@ function chunkItems(items = [], size = 1) {
 }
 
 function buildEmbeddingInstance(item = {}) {
-  const normalizedText = String(item.text || '').trim();
+  const normalizedText = normalizeText(item?.text || '');
   if (!normalizedText) {
     throw new Error('Text is required to generate embeddings.');
   }
   return {
     content: normalizedText,
     task_type: item.taskType || 'RETRIEVAL_DOCUMENT',
-    ...(item.title ? { title: item.title } : {}),
+    ...(item.title ? { title: normalizeText(item.title || '') } : {}),
   };
 }
 
@@ -90,12 +91,13 @@ function parseEmbeddingPrediction(prediction = {}, model = '') {
 }
 
 async function embedTexts(items = [], options = {}) {
+  const config = getYmeConfig();
   const normalizedItems = Array.isArray(items)
     ? items.map((item) => ({
-        text: String(item?.text || '').trim(),
+        text: normalizeText(item?.text || ''),
         taskType: item?.taskType || options.taskType || 'RETRIEVAL_DOCUMENT',
-        title: String(item?.title || options.title || '').trim(),
-      }))
+        title: normalizeText(item?.title || options.title || ''),
+      })).filter((item) => item.text)
     : [];
 
   if (!normalizedItems.length) return [];

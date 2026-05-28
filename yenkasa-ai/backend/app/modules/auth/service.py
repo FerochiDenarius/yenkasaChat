@@ -54,14 +54,32 @@ class AuthService:
             window_s=self.settings.auth_window_seconds,
             error_message="Too many login attempts. Please try again later.",
         )
-        user = await self.users.get_by_email(payload.email)
-        if user is None or not self.security.passwords.verify_password(payload.password, user.hashed_password):
+        email = payload.email.strip().lower()
+        user = await self.users.get_by_email(email)
+
+        verified_locally = bool(
+            user and self.security.passwords.verify_password(payload.password, user.hashed_password)
+        )
+
+        if not verified_locally:
+            operational_user = await self.users.get_operational_user_by_email(email)
+            operational_hash = str(operational_user.get("password") or "") if operational_user else ""
+            verified_operationally = bool(
+                operational_user and self.security.passwords.verify_password(payload.password, operational_hash)
+            )
+
+            if verified_operationally:
+                user = await self.users.sync_operational_user(operational_user, payload.password)
+            else:
+                user = None
+
+        if user is None:
             await self.security.record_alert(
                 alert_type="failed_login",
                 severity="medium",
-                user_id=user.user_id if user else None,
+                user_id=None,
                 ip_address=ip_address,
-                metadata={"email": payload.email.strip().lower()},
+                metadata={"email": email},
             )
             raise ValueError("Invalid email or password.")
         if user.account_status != "active":

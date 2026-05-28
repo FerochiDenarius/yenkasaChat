@@ -7,9 +7,9 @@ const { buildEmbeddingPolicy } = require('./embeddingPolicy.service');
 const { applyEventGuards } = require('./eventGuard.service');
 const { scoreEventImportance } = require('./importanceScoring.service');
 const { validateEventContract } = require('../contracts/event.contract');
+const { normalizeText } = require('../utils/textNormalizer');
 const {
   ensureArray,
-  normalizeText,
   pickFirstNumber,
   toDate,
   toObjectId,
@@ -63,6 +63,13 @@ const EVENT_TYPE_ALIASES = new Map([
 
 const LOCAL_BACKGROUND_QUEUE = 'ymeLocalBackgroundQueue';
 
+function logNormalizationError(error) {
+  console.error('[YME_NORMALIZATION_ERROR]', {
+    message: error.message,
+    stack: error.stack,
+  });
+}
+
 function safeJsonPreview(value, limit = 4096) {
   try {
     return JSON.stringify(value).slice(0, limit);
@@ -97,7 +104,7 @@ function resolveTraceId(rawEvent = {}, defaults = {}) {
 }
 
 function buildNormalizedText(rawEvent = {}) {
-  return normalizeText(
+  const safeText = normalizeText(
     [
       rawEvent.text,
       rawEvent.message,
@@ -115,16 +122,18 @@ function buildNormalizedText(rawEvent = {}) {
     ]
       .filter(Boolean)
       .join(' '),
-  ).slice(0, getYmeConfig().api.eventTextLimit);
+  );
+  return safeText.slice(0, getYmeConfig().api.eventTextLimit);
 }
 
 function buildInterestCandidates(rawEvent = {}, normalizedText = '') {
+  const safeText = normalizeText(normalizedText || '');
   return uniqueStrings([
     ...ensureArray(rawEvent.category),
     ...ensureArray(rawEvent.categories),
     ...ensureArray(rawEvent.tags),
     ...ensureArray(rawEvent.hashtags),
-    ...normalizedText.split(/\s+/).filter((token) => token.startsWith('#')),
+    ...safeText.split(/\s+/).filter((token) => token.startsWith('#')),
   ]);
 }
 
@@ -323,145 +332,150 @@ async function dispatchEventProcessing(event, { req = null } = {}) {
 }
 
 async function ingestEvent(rawEvent, options = {}) {
-  const startedAt = Date.now();
-  const normalizedEvent = normalizeIncomingEvent(rawEvent, options.defaults);
-  validateEvent(normalizedEvent, rawEvent, options.defaults);
+  try {
+    const startedAt = Date.now();
+    const normalizedEvent = normalizeIncomingEvent(rawEvent, options.defaults);
+    validateEvent(normalizedEvent, rawEvent, options.defaults);
 
-  if (shouldSkipRecursiveEvent(rawEvent, normalizedEvent)) {
+    if (shouldSkipRecursiveEvent(rawEvent, normalizedEvent)) {
+      await writeMemoryLog({
+        userId: normalizedEvent.userId,
+        stage: 'event_guard',
+        status: 'skipped',
+        message: 'Skipped recursive YME event.',
+        metadata: {
+          ...buildEventLogContext(rawEvent, normalizedEvent),
+          reason: 'recursive_event',
+        },
+        req: options.req || null,
+      });
+
+      return {
+        event: null,
+        skipped: true,
+        dispatch: {
+          queued: false,
+          mode: 'guard',
+          reason: 'recursive_event',
+        },
+      };
+    }
+
+    const guard = await applyEventGuards(normalizedEvent);
+
+    if (guard.duplicateEvent) {
+      guard.duplicateEvent.duplicateCount = Number(guard.duplicateEvent.duplicateCount || 0) + 1;
+      guard.duplicateEvent.lastDuplicateAt = new Date();
+      guard.duplicateEvent.processingNotes = uniqueStrings([
+        ...(guard.duplicateEvent.processingNotes || []),
+        'duplicate_event',
+      ], 10);
+      await guard.duplicateEvent.save();
+
+      incrementCounter('eventsDeduped');
+      await writeMemoryLog({
+        userId: normalizedEvent.userId,
+        eventId: guard.duplicateEvent._id,
+        stage: 'event_guard',
+        status: 'skipped',
+        message: 'Skipped duplicate YME event.',
+        metadata: {
+          eventType: normalizedEvent.eventType,
+          dedupeKey: guard.dedupeKey,
+          traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || '',
+        },
+        req: options.req || null,
+      });
+
+      return {
+        event: guard.duplicateEvent,
+        skipped: true,
+        dispatch: {
+          queued: false,
+          mode: 'guard',
+          reason: 'duplicate_event',
+        },
+      };
+    }
+
+    if (guard.throttled) {
+      incrementCounter('eventsThrottled');
+      await writeMemoryLog({
+        userId: normalizedEvent.userId,
+        stage: 'event_guard',
+        status: 'skipped',
+        message: 'Skipped throttled low-value YME event.',
+        metadata: {
+          eventType: normalizedEvent.eventType,
+          dedupeKey: guard.dedupeKey,
+          traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || '',
+        },
+        req: options.req || null,
+      });
+
+      return {
+        event: null,
+        skipped: true,
+        dispatch: {
+          queued: false,
+          mode: 'guard',
+          reason: 'low_value_throttled',
+        },
+      };
+    }
+
+    const scoring = scoreEventImportance(normalizedEvent);
+    const embeddingPolicy = buildEmbeddingPolicy(normalizedEvent, scoring);
+
+    const event = await UserEvent.create({
+      ...normalizedEvent,
+      fingerprint: guard.fingerprint,
+      dedupeKey: guard.dedupeKey,
+      importanceScore: scoring.importanceScore,
+      importanceReason: scoring.importanceReason,
+      shouldEmbed: embeddingPolicy.shouldEmbed,
+      embeddingPriority: embeddingPolicy.embeddingPriority,
+      summaryEligible: embeddingPolicy.summaryEligible,
+      processingNotes: [embeddingPolicy.reason, `importance:${scoring.importanceBand}`],
+    });
+    incrementCounter('eventsIngested');
+
+    const dispatch = await dispatchEventProcessing(event, {
+      req: options.req || null,
+    });
+
+    recordDuration('eventIngestRequest', Date.now() - startedAt);
     await writeMemoryLog({
-      userId: normalizedEvent.userId,
-      stage: 'event_guard',
-      status: 'skipped',
-      message: 'Skipped recursive YME event.',
+      userId: event.userId,
+      eventId: event._id,
+      stage: 'event_ingest',
+      message: 'Accepted YME event.',
+      metrics: {
+        durationMs: Date.now() - startedAt,
+      },
       metadata: {
-        ...buildEventLogContext(rawEvent, normalizedEvent),
-        reason: 'recursive_event',
+        eventType: event.eventType,
+        sourceApp: event.sourceApp,
+        queued: dispatch.queued === true,
+        dispatchMode: dispatch.mode || '',
+        dispatchReason: dispatch.reason || '',
+        queueName: dispatch.queueName || '',
+        queueJobId: dispatch.jobId || event.queueJobId || '',
+        importanceScore: event.importanceScore,
+        shouldEmbed: event.shouldEmbed,
+        traceId: event.traceId || event.eventMetadata?.traceId || '',
       },
       req: options.req || null,
     });
 
     return {
-      event: null,
-      skipped: true,
-      dispatch: {
-        queued: false,
-        mode: 'guard',
-        reason: 'recursive_event',
-      },
+      event,
+      dispatch,
     };
+  } catch (error) {
+    logNormalizationError(error);
+    throw error;
   }
-
-  const guard = await applyEventGuards(normalizedEvent);
-
-  if (guard.duplicateEvent) {
-    guard.duplicateEvent.duplicateCount = Number(guard.duplicateEvent.duplicateCount || 0) + 1;
-    guard.duplicateEvent.lastDuplicateAt = new Date();
-    guard.duplicateEvent.processingNotes = uniqueStrings([
-      ...(guard.duplicateEvent.processingNotes || []),
-      'duplicate_event',
-    ], 10);
-    await guard.duplicateEvent.save();
-
-    incrementCounter('eventsDeduped');
-    await writeMemoryLog({
-      userId: normalizedEvent.userId,
-      eventId: guard.duplicateEvent._id,
-      stage: 'event_guard',
-      status: 'skipped',
-      message: 'Skipped duplicate YME event.',
-      metadata: {
-        eventType: normalizedEvent.eventType,
-        dedupeKey: guard.dedupeKey,
-        traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || '',
-      },
-      req: options.req || null,
-    });
-
-    return {
-      event: guard.duplicateEvent,
-      skipped: true,
-      dispatch: {
-        queued: false,
-        mode: 'guard',
-        reason: 'duplicate_event',
-      },
-    };
-  }
-
-  if (guard.throttled) {
-    incrementCounter('eventsThrottled');
-    await writeMemoryLog({
-      userId: normalizedEvent.userId,
-      stage: 'event_guard',
-      status: 'skipped',
-      message: 'Skipped throttled low-value YME event.',
-      metadata: {
-        eventType: normalizedEvent.eventType,
-        dedupeKey: guard.dedupeKey,
-        traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || '',
-      },
-      req: options.req || null,
-    });
-
-    return {
-      event: null,
-      skipped: true,
-      dispatch: {
-        queued: false,
-        mode: 'guard',
-        reason: 'low_value_throttled',
-      },
-    };
-  }
-
-  const scoring = scoreEventImportance(normalizedEvent);
-  const embeddingPolicy = buildEmbeddingPolicy(normalizedEvent, scoring);
-
-  const event = await UserEvent.create({
-    ...normalizedEvent,
-    fingerprint: guard.fingerprint,
-    dedupeKey: guard.dedupeKey,
-    importanceScore: scoring.importanceScore,
-    importanceReason: scoring.importanceReason,
-    shouldEmbed: embeddingPolicy.shouldEmbed,
-    embeddingPriority: embeddingPolicy.embeddingPriority,
-    summaryEligible: embeddingPolicy.summaryEligible,
-    processingNotes: [embeddingPolicy.reason, `importance:${scoring.importanceBand}`],
-  });
-  incrementCounter('eventsIngested');
-
-  const dispatch = await dispatchEventProcessing(event, {
-    req: options.req || null,
-  });
-
-  recordDuration('eventIngestRequest', Date.now() - startedAt);
-  await writeMemoryLog({
-    userId: event.userId,
-    eventId: event._id,
-    stage: 'event_ingest',
-    message: 'Accepted YME event.',
-    metrics: {
-      durationMs: Date.now() - startedAt,
-    },
-    metadata: {
-      eventType: event.eventType,
-      sourceApp: event.sourceApp,
-      queued: dispatch.queued === true,
-      dispatchMode: dispatch.mode || '',
-      dispatchReason: dispatch.reason || '',
-      queueName: dispatch.queueName || '',
-      queueJobId: dispatch.jobId || event.queueJobId || '',
-      importanceScore: event.importanceScore,
-      shouldEmbed: event.shouldEmbed,
-      traceId: event.traceId || event.eventMetadata?.traceId || '',
-    },
-    req: options.req || null,
-  });
-
-  return {
-    event,
-    dispatch,
-  };
 }
 
 async function ingestEventBatch(events = [], options = {}) {
@@ -478,6 +492,12 @@ async function ingestEventBatch(events = [], options = {}) {
     try {
       results.push(await ingestEvent(event, options));
     } catch (error) {
+      let normalizedContext = {};
+
+      try {
+        normalizedContext = buildEventLogContext(event, normalizeIncomingEvent(event, options.defaults));
+      } catch (_nestedError) {}
+
       failures.push({
         eventType: event?.eventType || event?.type || '',
         userId: String(event?.userId || options?.defaults?.userId || ''),
@@ -487,7 +507,7 @@ async function ingestEventBatch(events = [], options = {}) {
       console.error('[YME] Batch ingest item failed:', {
         message: error.message,
         stack: error.stack,
-        ...buildEventLogContext(event, normalizeIncomingEvent(event, options.defaults)),
+        ...normalizedContext,
       });
     }
   }

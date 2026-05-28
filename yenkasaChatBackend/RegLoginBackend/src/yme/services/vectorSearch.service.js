@@ -3,15 +3,18 @@ const crypto = require('crypto');
 const { getYmeConfig } = require('../config/yme.config');
 const { getVectorIndexDefinitions } = require('../config/vectorIndexes');
 const MemoryEmbedding = require('../models/memoryEmbedding.model');
+const { normalizeText } = require('../utils/textNormalizer');
 const { isEmbeddingEnabled, embedQuery, embedText } = require('./embedding.service');
 const { incrementCounter, recordDuration } = require('./metrics.service');
 const { writeMemoryLog } = require('./log.service');
 const { toObjectId } = require('../utils/yme.utils');
 
 function buildContentHash({ taskType = 'RETRIEVAL_DOCUMENT', title = '', text = '' } = {}) {
+  const normalizedTitle = normalizeText(title || '');
+  const normalizedText = normalizeText(text || '');
   return crypto
     .createHash('sha1')
-    .update(JSON.stringify({ taskType, title, text }))
+    .update(JSON.stringify({ taskType, title: normalizedTitle, text: normalizedText }))
     .digest('hex');
 }
 
@@ -27,12 +30,13 @@ async function upsertMemoryEmbedding({
   importance = 0.5,
   metadata = {},
 }) {
-  const normalizedText = String(text || '').trim();
+  const normalizedText = normalizeText(text || '');
+  const normalizedTitle = normalizeText(title || '');
   if (!normalizedText) return null;
   const config = getYmeConfig();
   const contentHash = buildContentHash({
     taskType,
-    title,
+    title: normalizedTitle,
     text: normalizedText,
   });
 
@@ -70,7 +74,7 @@ async function upsertMemoryEmbedding({
           memoryTier,
           taskType,
           model: '',
-          title,
+          title: normalizedTitle,
           text: normalizedText,
           contentHash,
           dimensions: 0,
@@ -110,7 +114,7 @@ async function upsertMemoryEmbedding({
       : await embedText({
           text: normalizedText,
           taskType,
-          title,
+          title: normalizedTitle,
         });
 
     if (cachedEmbedding) {
@@ -128,7 +132,7 @@ async function upsertMemoryEmbedding({
           memoryTier,
           taskType,
           model: embedding.model,
-          title,
+          title: normalizedTitle,
           text: normalizedText,
           contentHash,
           embedding: embedding.values,
@@ -162,7 +166,7 @@ async function upsertMemoryEmbedding({
           sourceApp,
           memoryTier,
           taskType,
-          title,
+          title: normalizedTitle,
           text: normalizedText,
           contentHash,
           importance,
@@ -216,7 +220,7 @@ async function searchUserMemory({
   const config = getYmeConfig();
   if (!config.vector.enabled || !isEmbeddingEnabled()) return [];
 
-  const normalizedQuery = String(query || '').trim();
+  const normalizedQuery = normalizeText(query || '');
   if (!normalizedQuery) return [];
 
   const queryEmbedding = await embedQuery(normalizedQuery);

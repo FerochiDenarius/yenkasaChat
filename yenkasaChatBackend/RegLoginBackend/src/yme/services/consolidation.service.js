@@ -3,6 +3,7 @@ const { randomUUID } = require('node:crypto');
 const ChatSummary = require('../models/chatSummary.model');
 const UserEvent = require('../models/userEvent.model');
 const { getYmeConfig } = require('../config/yme.config');
+const { normalizeText } = require('../utils/textNormalizer');
 const { buildEventNarrative, summarizeBehaviorEvents, summarizeChatEvents } = require('./activitySummarizer.service');
 const { recordDeadLetterEvent, resolveDeadLetterEvent } = require('./deadLetterQueue.service');
 const { extractInterestSignals } = require('./interestExtraction.service');
@@ -12,6 +13,13 @@ const { incrementCounter, recordDuration } = require('./metrics.service');
 const { enqueueChatSummaryJob, enqueueConsolidationJob, enqueueEmbeddingJob, isQueueEnabled } = require('./queue.service');
 const { applyRecommendationSignals } = require('./recommendationSignals.service');
 const { upsertMemoryEmbedding } = require('./vectorSearch.service');
+
+function logNormalizationError(error) {
+  console.error('[YME_NORMALIZATION_ERROR]', {
+    message: error.message,
+    stack: error.stack,
+  });
+}
 
 function isChatEvent(eventType) {
   return ['chat_message', 'ai_chat_message', 'chat_response'].includes(eventType);
@@ -168,7 +176,13 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
     });
 
     currentStage = 'build_event_narrative';
-    const narrative = buildEventNarrative(event, derivedSignals);
+    let narrative = '';
+    try {
+      narrative = normalizeText(buildEventNarrative(event, derivedSignals) || '');
+    } catch (error) {
+      logNormalizationError(error);
+      throw error;
+    }
     if (event.shouldEmbed && narrative) {
       currentStage = 'enqueue_embedding_refresh';
       await maybeHandleEmbeddingJob({
@@ -299,7 +313,30 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
 
 async function processEmbeddingRefreshJob(payload = {}) {
   const startedAt = Date.now();
-  const document = await upsertMemoryEmbedding(payload);
+  let normalizedPayload;
+
+  try {
+    normalizedPayload = {
+      ...payload,
+      text: normalizeText(payload?.text || ''),
+      title: normalizeText(payload?.title || ''),
+    };
+  } catch (error) {
+    logNormalizationError(error);
+    throw error;
+  }
+
+  if (!normalizedPayload.text) {
+    return {
+      skipped: true,
+      reason: 'empty_text',
+      metrics: {
+        processDurationMs: Date.now() - startedAt,
+      },
+    };
+  }
+
+  const document = await upsertMemoryEmbedding(normalizedPayload);
   recordDuration('embeddingRefreshJob', Date.now() - startedAt);
   return {
     documentId: document?._id?.toString?.() || null,
@@ -329,7 +366,16 @@ async function processChatSummaryJob({ userId, conversationId, sourceApp = 'yenk
 
   const orderedEvents = [...events].reverse();
   const summaryResult = summarizeChatEvents(orderedEvents);
-  if (!summaryResult.summary) {
+  let normalizedSummary = '';
+
+  try {
+    normalizedSummary = normalizeText(summaryResult.summary || '');
+  } catch (error) {
+    logNormalizationError(error);
+    throw error;
+  }
+
+  if (!normalizedSummary) {
     return {
       skipped: true,
       reason: 'empty_summary',
@@ -354,7 +400,7 @@ async function processChatSummaryJob({ userId, conversationId, sourceApp = 'yenk
         topics: [],
         entities: [],
         sentiment: summaryResult.sentiment,
-        summary: summaryResult.summary,
+        summary: normalizedSummary,
         embeddingStatus: 'pending',
       },
     },
@@ -368,7 +414,7 @@ async function processChatSummaryJob({ userId, conversationId, sourceApp = 'yenk
     sourceApp,
     memoryTier: 'mid_term',
     title: `Chat summary ${conversationId}`,
-    text: summaryResult.summary,
+    text: normalizedSummary,
     importance: 0.85,
     metadata: {
       conversationId,
@@ -398,17 +444,29 @@ async function runMemoryConsolidation({ userId, reason = 'scheduled' } = {}) {
       .lean(),
   ]);
 
-  const behaviorSummary = summarizeBehaviorEvents(recentEvents, {
-    interests: recentEvents.flatMap((event) => (event.interestCandidates || []).map((label) => ({ label, score: 0.4 }))),
-  }).summary;
-  const chatSummary = recentChatSummaries.map((entry) => entry.summary).filter(Boolean)[0] || '';
+  let behaviorSummary = '';
+  let chatSummary = '';
+
+  try {
+    behaviorSummary = normalizeText(
+      summarizeBehaviorEvents(recentEvents, {
+        interests: recentEvents.flatMap((event) => (event.interestCandidates || []).map((label) => ({ label, score: 0.4 }))),
+      }).summary || '',
+    );
+    chatSummary = normalizeText(recentChatSummaries.map((entry) => entry.summary).filter(Boolean)[0] || '');
+  } catch (error) {
+    logNormalizationError(error);
+    throw error;
+  }
+
   const summary = await refreshMemorySummary(userId, {
     reason,
     behaviorSummary,
     chatSummary,
   });
+  const normalizedSummary = normalizeText(summary || '');
 
-  if (summary) {
+  if (normalizedSummary) {
     await maybeHandleEmbeddingJob({
       userId: userId.toString(),
       sourceType: 'memory_summary',
@@ -416,7 +474,7 @@ async function runMemoryConsolidation({ userId, reason = 'scheduled' } = {}) {
       sourceApp: 'system',
       memoryTier: 'long_term',
       title: 'Unified long-term memory summary',
-      text: summary,
+      text: normalizedSummary,
       importance: 0.95,
       metadata: {
         reason,
@@ -426,7 +484,7 @@ async function runMemoryConsolidation({ userId, reason = 'scheduled' } = {}) {
 
   incrementCounter('memoryConsolidationsCompleted');
   return {
-    summary,
+    summary: normalizedSummary,
   };
 }
 

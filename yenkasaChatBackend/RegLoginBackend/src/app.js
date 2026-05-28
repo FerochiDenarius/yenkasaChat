@@ -16,6 +16,7 @@ const registerApiRoutes = require('./config/apiRoutes');
 const registerPublicContent = require('./config/publicContent');
 const createStoreService = require('./services/store/store.service');
 const createBlogService = require('./services/blog/blog.service');
+const { validateYmeRuntime } = require('./yme/bootstrap/validateYmeRuntime');
 
 const app = express();
 const rootDir = path.resolve(__dirname, '..');
@@ -46,6 +47,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cloudinaryMediaResponseOptimizer);
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+
+validateYmeRuntime();
+console.log('[YME] normalizeText loaded successfully');
 
 require('../store/yenkasa-store-server')(app);
 require('../web/yenkasa-web-server')(app);

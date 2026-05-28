@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const { normalizeText } = require('./textNormalizer');
+
 function toObjectId(value) {
   if (!value) return null;
   if (value instanceof mongoose.Types.ObjectId) return value;
@@ -19,18 +21,12 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, Number(value) || 0));
 }
 
-function normalizeText(value) {
-  return String(value || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function uniqueStrings(values, limit = 20) {
   const seen = new Set();
   const items = [];
 
   for (const value of values || []) {
-    const normalized = normalizeText(value).toLowerCase();
+    const normalized = normalizeText(value);
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     items.push(normalized);

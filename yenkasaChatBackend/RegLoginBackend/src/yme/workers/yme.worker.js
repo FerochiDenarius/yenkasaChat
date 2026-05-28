@@ -2,6 +2,7 @@ const {
   closeYmeQueueResources,
   registerYmeWorkers,
 } = require('../services/queue.service');
+const { validateYmeRuntime } = require('../bootstrap/validateYmeRuntime');
 const {
   processChatSummaryJob,
   processEmbeddingRefreshJob,
@@ -10,6 +11,8 @@ const {
 } = require('../services/consolidation.service');
 
 async function startYmeWorkers() {
+  validateYmeRuntime();
+  console.log('[YME] normalizeText loaded successfully');
   return registerYmeWorkers({
     eventProcessor: async (job) =>
       processEventPipeline({

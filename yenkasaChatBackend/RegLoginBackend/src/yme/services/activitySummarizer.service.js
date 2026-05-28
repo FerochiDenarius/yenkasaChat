@@ -1,4 +1,5 @@
-const { normalizeText, summarizeTopScored } = require('../utils/yme.utils');
+const { normalizeText } = require('../utils/textNormalizer');
+const { summarizeTopScored } = require('../utils/yme.utils');
 
 function summarizeBehaviorEvents(events = [], derivedSignals = {}) {
   const eventCounts = {};
@@ -46,7 +47,7 @@ function summarizeChatEvents(events = []) {
         String(event?.eventType || '').includes('response') || event?.sourceApp === 'system'
           ? 'assistant'
           : 'user';
-      const text = normalizeText(event?.normalizedText);
+      const text = normalizeText(event?.normalizedText || '');
       return text ? `${role}: ${text}` : '';
     })
     .filter(Boolean)
@@ -72,9 +73,10 @@ function summarizeChatEvents(events = []) {
 }
 
 function buildEventNarrative(event, derivedSignals = {}) {
+  const safeText = normalizeText(event?.normalizedText || '');
   const parts = [
     `Event ${event.eventType} from ${event.sourceApp}`,
-    event.normalizedText ? `Text: ${normalizeText(event.normalizedText)}` : '',
+    safeText ? `Text: ${safeText}` : '',
     derivedSignals.interests?.length
       ? `Interests: ${summarizeTopScored(derivedSignals.interests, 'label', 5).join(', ')}`
       : '',

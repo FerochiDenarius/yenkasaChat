@@ -1,4 +1,5 @@
 const { getYmeConfig } = require('../config/yme.config');
+const { normalizeText } = require('../utils/textNormalizer');
 const { clamp } = require('../utils/yme.utils');
 
 const DIRECT_EMBEDDABLE_TYPES = new Set([
@@ -30,7 +31,7 @@ const SUMMARY_ELIGIBLE_TYPES = new Set([
 const LOW_SIGNAL_MESSAGES = new Set(['hi', 'hello', 'hey', 'ok', 'thanks', 'yes', 'no']);
 
 function isMeaningfulText(text = '', minLength = 24) {
-  const normalized = String(text || '').trim().toLowerCase();
+  const normalized = normalizeText(text || '');
   if (!normalized) return false;
   if (normalized.length < minLength) return false;
   if (LOW_SIGNAL_MESSAGES.has(normalized)) return false;
@@ -39,7 +40,7 @@ function isMeaningfulText(text = '', minLength = 24) {
 
 function buildEmbeddingPolicy(event = {}, scoring = {}) {
   const config = getYmeConfig();
-  const text = String(event.normalizedText || '').trim();
+  const text = normalizeText(event?.normalizedText || '');
   const importanceScore = Number(scoring.importanceScore || event.importanceScore || 0);
   const shouldConsiderDirectEmbedding = DIRECT_EMBEDDABLE_TYPES.has(event.eventType);
   const summaryEligible = SUMMARY_ELIGIBLE_TYPES.has(event.eventType);

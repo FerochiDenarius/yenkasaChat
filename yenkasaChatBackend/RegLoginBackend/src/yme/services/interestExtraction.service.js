@@ -1,4 +1,12 @@
-const { clamp, ensureArray, normalizeText, uniqueStrings } = require('../utils/yme.utils');
+const { normalizeText } = require('../utils/textNormalizer');
+const { clamp, ensureArray, uniqueStrings } = require('../utils/yme.utils');
+
+function logNormalizationError(error) {
+  console.error('[YME_NORMALIZATION_ERROR]', {
+    message: error.message,
+    stack: error.stack,
+  });
+}
 
 const STOPWORDS = new Set([
   'the',
@@ -57,15 +65,15 @@ const EVENT_WEIGHTS = Object.freeze({
 });
 
 function tokenize(text) {
-  return normalizeText(text)
-    .toLowerCase()
+  const safeText = normalizeText(text || '');
+  return safeText
     .split(/[^a-z0-9#@]+/)
     .map((token) => token.trim())
     .filter((token) => token.length > 2 && !STOPWORDS.has(token));
 }
 
 function detectCommerceSignals(text) {
-  const lowered = normalizeText(text).toLowerCase();
+  const lowered = normalizeText(text || '');
   const keywords = [
     'buy',
     'sell',
@@ -91,7 +99,7 @@ function detectCommerceSignals(text) {
 }
 
 function detectEmotionalSignals(text) {
-  const lowered = normalizeText(text).toLowerCase();
+  const lowered = normalizeText(text || '');
   const patterns = [
     ['excited', /(excited|happy|celebrate|amazing)/],
     ['frustrated', /(frustrated|annoyed|problem|issue)/],
@@ -110,56 +118,61 @@ function detectEmotionalSignals(text) {
 }
 
 function extractInterestSignals(event = {}) {
-  const weight = EVENT_WEIGHTS[event.eventType] || 1;
-  const metadata = event.payload || {};
-  const textSources = [
-    event.normalizedText,
-    metadata.caption,
-    metadata.message,
-    metadata.query,
-    metadata.searchQuery,
-    metadata.title,
-  ];
-  const tokenPool = uniqueStrings(
-    textSources.flatMap((text) => tokenize(text)),
-    16,
-  );
-  const explicitLabels = uniqueStrings([
-    ...ensureArray(metadata.category),
-    ...ensureArray(metadata.categories),
-    ...ensureArray(metadata.tags),
-    ...ensureArray(metadata.hashtags),
-    ...ensureArray(event.interestCandidates),
-  ]);
+  try {
+    const weight = EVENT_WEIGHTS[event.eventType] || 1;
+    const metadata = event.payload || {};
+    const textSources = [
+      event.normalizedText,
+      metadata.caption,
+      metadata.message,
+      metadata.query,
+      metadata.searchQuery,
+      metadata.title,
+    ];
+    const tokenPool = uniqueStrings(
+      textSources.flatMap((text) => tokenize(text)),
+      16,
+    );
+    const explicitLabels = uniqueStrings([
+      ...ensureArray(metadata.category),
+      ...ensureArray(metadata.categories),
+      ...ensureArray(metadata.tags),
+      ...ensureArray(metadata.hashtags),
+      ...ensureArray(event.interestCandidates),
+    ]);
 
-  const interestLabels = uniqueStrings([...explicitLabels, ...tokenPool], 12);
-  const interests = interestLabels.map((label, index) => ({
-    label,
-    score: clamp(weight - index * 0.05, 0.25, 1),
-    sourceCount: 1,
-    lastSeenAt: new Date(),
-  }));
+    const interestLabels = uniqueStrings([...explicitLabels, ...tokenPool], 12);
+    const interests = interestLabels.map((label, index) => ({
+      label,
+      score: clamp(weight - index * 0.05, 0.25, 1),
+      sourceCount: 1,
+      lastSeenAt: new Date(),
+    }));
 
-  const contentCategories = uniqueStrings(
-    explicitLabels.filter((label) => !label.startsWith('#')),
-    8,
-  );
+    const contentCategories = uniqueStrings(
+      explicitLabels.filter((label) => !label.startsWith('#')),
+      8,
+    );
 
-  return {
-    interests,
-    contentCategories,
-    commerceSignals: detectCommerceSignals(textSources.join(' ')),
-    emotionalPatterns: detectEmotionalSignals(textSources.join(' ')),
-    creatorSignals: event.creatorId
-      ? [
-          {
-            creatorId: event.creatorId,
-            score: weight,
-            lastEngagedAt: new Date(event.occurredAt || Date.now()),
-          },
-        ]
-      : [],
-  };
+    return {
+      interests,
+      contentCategories,
+      commerceSignals: detectCommerceSignals(textSources.join(' ')),
+      emotionalPatterns: detectEmotionalSignals(textSources.join(' ')),
+      creatorSignals: event.creatorId
+        ? [
+            {
+              creatorId: event.creatorId,
+              score: weight,
+              lastEngagedAt: new Date(event.occurredAt || Date.now()),
+            },
+          ]
+        : [],
+    };
+  } catch (error) {
+    logNormalizationError(error);
+    throw error;
+  }
 }
 
 module.exports = {

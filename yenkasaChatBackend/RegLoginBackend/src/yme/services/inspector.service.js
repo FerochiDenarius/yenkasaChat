@@ -10,10 +10,11 @@ const SocialGraph = require('../models/socialGraph.model');
 const UserEvent = require('../models/userEvent.model');
 const UserMemory = require('../models/userMemory.model');
 const { getYmeConfig } = require('../config/yme.config');
+const { normalizeText } = require('../utils/textNormalizer');
 const { retrieveUserMemoryContext } = require('./retrieval.service');
 const { getMetricsSnapshot } = require('./metrics.service');
 const { getQueueHealth, getQueueState } = require('./queue.service');
-const { clamp, normalizeText, toObjectId } = require('../utils/yme.utils');
+const { clamp, toObjectId } = require('../utils/yme.utils');
 
 const EVENT_SIGNAL_BASE = {
   like: 0.28,
@@ -99,7 +100,7 @@ function buildEventSignalScore(event = {}) {
   const duplicateCount = finiteNumber(event.duplicateCount, 0);
   const shouldEmbedBoost = event.shouldEmbed ? 0.08 : 0;
   const summaryBoost = event.summaryEligible ? 0.04 : 0;
-  const textBoost = String(event.normalizedText || '').trim().length >= 40 ? 0.05 : 0;
+  const textBoost = normalizeText(event?.normalizedText || '').length >= 40 ? 0.05 : 0;
 
   let score = base * 0.5 + importance * 0.3 + shouldEmbedBoost + summaryBoost + textBoost;
 
@@ -228,6 +229,7 @@ function buildRetrievalQuality({
   query = '',
   latencyMs = 0,
 } = {}) {
+  const normalizedQuery = normalizeText(query || '');
   const scoredMatches = matches.map((match) => {
     const score = finiteNumber(match.blendedScore ?? match.score, 0);
     const normalizedScore = clamp(score, 0, 1);
@@ -266,7 +268,7 @@ function buildRetrievalQuality({
   const freshnessScore = clamp(1 - staleRate, 0, 1);
   const diversityScore = clamp(1 - duplicateRate, 0, 1);
   const latencyScore = clamp(1 - Math.min(1, latencyMs / 1500), 0, 1);
-  const querySupport = query.trim() ? 1 : 0.5;
+  const querySupport = normalizedQuery ? 1 : 0.5;
 
   const retrievalQualityScore = clamp(
     avgRelevance * 0.48 +
@@ -289,7 +291,7 @@ function buildRetrievalQuality({
     staleRetrievalRate: Number(staleRate.toFixed(3)),
     lowQualityRetrievalCount: lowQualityCount,
     lowQualityRetrievalRate: Number(lowQualityRate.toFixed(3)),
-    queryLength: query.trim().length,
+    queryLength: normalizedQuery.length,
     matches: scoredMatches.slice(0, 12),
   };
 }
@@ -378,7 +380,7 @@ function buildInterestProfile({
     }
 
     (event.interestCandidates || []).forEach((label) => {
-      const normalized = normalizeText(label).toLowerCase();
+      const normalized = normalizeText(label || '');
       if (!normalized) return;
       interestLabels.push({
         label: normalized,

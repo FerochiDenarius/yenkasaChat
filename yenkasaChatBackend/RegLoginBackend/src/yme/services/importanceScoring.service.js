@@ -1,4 +1,5 @@
 const { getYmeConfig } = require('../config/yme.config');
+const { normalizeText } = require('../utils/textNormalizer');
 const { clamp } = require('../utils/yme.utils');
 
 const BASE_SCORES = Object.freeze({
@@ -42,14 +43,14 @@ const LOW_SIGNAL_TEXT = [
 const COMMERCE_HINTS = /\b(buy|sell|price|budget|invoice|payment|shipping|customer|order|vendor|deal)\b/i;
 
 function isLowSignalText(text = '') {
-  const normalized = String(text || '').trim();
+  const normalized = normalizeText(text || '');
   if (!normalized) return true;
   return LOW_SIGNAL_TEXT.some((pattern) => pattern.test(normalized));
 }
 
 function scoreEventImportance(event = {}) {
   const config = getYmeConfig();
-  const text = String(event.normalizedText || '').trim();
+  const text = normalizeText(event?.normalizedText || '');
   const metadata = event.eventMetadata || {};
   const baseScore = BASE_SCORES[event.eventType] ?? 0.2;
   let score = baseScore;

@@ -1,5 +1,6 @@
 const ChatSummary = require('../models/chatSummary.model');
 const UserMemory = require('../models/userMemory.model');
+const { normalizeText } = require('../utils/textNormalizer');
 const { incrementCounter } = require('./metrics.service');
 const { searchUserMemory } = require('./vectorSearch.service');
 
@@ -38,7 +39,11 @@ function buildContextSummary({ profile, chatSummaries, matches, recentMessages =
   if (recentMessages.length) {
     const lastTwoMessages = [...recentMessages]
       .slice(-2)
-      .map((message) => `${message.role}: ${String(message.content || '').trim()}`)
+      .map((message) => {
+        const safeText = normalizeText(message?.content || '');
+        return safeText ? `${message.role}: ${safeText}` : '';
+      })
+      .filter(Boolean)
       .join(' | ');
     if (lastTwoMessages) {
       lines.push(`Immediate context: ${lastTwoMessages}`);

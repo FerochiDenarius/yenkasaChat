@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  buildRelayRequestPayload,
   computeRetryDelayMs,
   mapYmeEventToIntelligenceEvent,
   normalizeIntelligenceEvent,
@@ -64,4 +65,29 @@ test('computeRetryDelayMs applies bounded exponential backoff', () => {
   assert.equal(computeRetryDelayMs(1), 15000);
   assert.equal(computeRetryDelayMs(2), 30000);
   assert.equal(computeRetryDelayMs(8), 300000);
+});
+
+test('buildRelayRequestPayload maps internal events to ai backend schema', () => {
+  const payload = buildRelayRequestPayload({
+    eventId: 'evt-1',
+    eventType: 'post_view',
+    source: 'yenkasa_app',
+    userId: 'user-1',
+    timestamp: '2026-05-28T14:00:00Z',
+    metadata: {
+      postId: 'post-1',
+    },
+  });
+
+  assert.deepEqual(payload, {
+    event_type: 'post_view',
+    user_id: 'user-1',
+    app_source: 'yenkasa_app',
+    timestamp: '2026-05-28T14:00:00.000Z',
+    metadata: {
+      postId: 'post-1',
+      eventId: 'evt-1',
+      sourceEventType: 'post_view',
+    },
+  });
 });

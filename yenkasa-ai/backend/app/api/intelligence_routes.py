@@ -13,6 +13,7 @@ from app.core.ai_pipeline import invoke_ai_callable
 from app.core.dependencies import get_intelligence_runtime
 from app.modules.security import require_admin_user
 from app.modules.security import require_current_user
+from app.modules.security import require_event_ingest_access
 from app.modules.security import require_roles
 from app.schemas import EventIngestResponse
 from app.schemas import EventRequest
@@ -179,10 +180,19 @@ async def repo_chat(
 @router.post("/events", response_model=EventIngestResponse)
 async def ingest_event(
     payload: EventRequest,
-    current_user=Depends(require_current_user),
+    request: Request,
+    principal=Depends(require_event_ingest_access),
     runtime=Depends(get_intelligence_runtime),
 ) -> EventIngestResponse:
-    _ = current_user
+    request_id = getattr(request.state, "request_id", None)
+    LOGGER.info(
+        "event ingest accepted request_id=%s route=%s auth_mode=%s event_type=%s user_id=%s",
+        request_id,
+        request.url.path,
+        principal.get("mode"),
+        payload.event_type,
+        payload.user_id,
+    )
     event = await runtime.events.record_event(payload)
     return EventIngestResponse(status="accepted", event_type=event.event_type, stored_at=event.timestamp)
 

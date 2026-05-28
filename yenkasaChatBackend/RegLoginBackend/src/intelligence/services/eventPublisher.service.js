@@ -5,16 +5,20 @@ const AIOutboundEvent = require('../../../models/aiOutboundEvent.model');
 const DEFAULT_ENGINE_URL =
   process.env.YENKASA_AI_ENGINE_URL ||
   'https://yenkasa-ai-496173204476.europe-west1.run.app';
-const DEFAULT_EVENT_PATH = process.env.YENKASA_AI_EVENT_INGEST_PATH || '/api/events/ingest';
-const REQUEST_TIMEOUT_MS = Number(process.env.YENKASA_AI_EVENT_TIMEOUT_MS || 5000);
+const DEFAULT_EVENT_PATH = process.env.YENKASA_AI_EVENT_INGEST_PATH || '/api/events';
+const DEFAULT_HEALTH_PATH = process.env.YENKASA_AI_EVENT_HEALTH_PATH || '/health';
+const REQUEST_TIMEOUT_MS = Number(process.env.YENKASA_AI_EVENT_TIMEOUT_MS || 65000);
+const HEALTH_TIMEOUT_MS = Number(
+  process.env.YENKASA_AI_EVENT_HEALTH_TIMEOUT_MS || Math.min(REQUEST_TIMEOUT_MS, 10000),
+);
 const INITIAL_RETRY_DELAY_MS = Number(process.env.YENKASA_AI_EVENT_RETRY_DELAY_MS || 15000);
 const MAX_RETRY_DELAY_MS = Number(process.env.YENKASA_AI_EVENT_MAX_RETRY_DELAY_MS || 300000);
 const FLUSH_BATCH_SIZE = Number(process.env.YENKASA_AI_EVENT_FLUSH_BATCH_SIZE || 25);
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = Number(
-  process.env.YENKASA_AI_EVENT_CIRCUIT_BREAKER_FAILURE_THRESHOLD || 5,
+  process.env.YENKASA_AI_EVENT_CIRCUIT_BREAKER_FAILURE_THRESHOLD || 8,
 );
 const CIRCUIT_BREAKER_COOLDOWN_MS = Number(
-  process.env.YENKASA_AI_EVENT_CIRCUIT_BREAKER_COOLDOWN_MS || 60000,
+  process.env.YENKASA_AI_EVENT_CIRCUIT_BREAKER_COOLDOWN_MS || 120000,
 );
 
 // TODO(kafka-migration): Replace the Mongo-backed local retry queue with a durable producer/consumer transport
@@ -65,8 +69,18 @@ let flushTimer = null;
 let flushInFlight = false;
 let relayStarted = false;
 const relayCircuit = {
+  state: 'closed',
   consecutiveFailures: 0,
   openUntil: 0,
+  halfOpenProbeInFlight: false,
+  lastOpenedAt: 0,
+  lastHalfOpenAt: 0,
+  lastSuccessAt: 0,
+  lastFailureAt: 0,
+  lastFailureStatus: null,
+  lastFailureMessage: null,
+  lastTargetUrl: '',
+  lastRequestDurationMs: 0,
 };
 
 function relayEnabled() {
@@ -78,9 +92,21 @@ function buildEventIngestUrl() {
   if (explicitUrl) return explicitUrl;
 
   const base = String(DEFAULT_ENGINE_URL || '').trim().replace(/\/$/, '');
-  const path = String(DEFAULT_EVENT_PATH || '/api/events/ingest').startsWith('/')
-    ? String(DEFAULT_EVENT_PATH || '/api/events/ingest')
-    : `/${String(DEFAULT_EVENT_PATH || 'api/events/ingest')}`;
+  const path = String(DEFAULT_EVENT_PATH || '/api/events').startsWith('/')
+    ? String(DEFAULT_EVENT_PATH || '/api/events')
+    : `/${String(DEFAULT_EVENT_PATH || 'api/events')}`;
+
+  return `${base}${path}`;
+}
+
+function buildRelayHealthUrl() {
+  const explicitUrl = String(process.env.YENKASA_AI_EVENT_HEALTH_URL || '').trim();
+  if (explicitUrl) return explicitUrl;
+
+  const base = String(DEFAULT_ENGINE_URL || '').trim().replace(/\/$/, '');
+  const path = String(DEFAULT_HEALTH_PATH || '/health').startsWith('/')
+    ? String(DEFAULT_HEALTH_PATH || '/health')
+    : `/${String(DEFAULT_HEALTH_PATH || 'health')}`;
 
   return `${base}${path}`;
 }
@@ -127,23 +153,150 @@ function computeRetryDelayMs(attemptCount = 1) {
   return Math.min(MAX_RETRY_DELAY_MS, INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1));
 }
 
+function isoTimestamp(value) {
+  if (!value) return null;
+  return new Date(value).toISOString();
+}
+
+function getRelayStatus() {
+  return {
+    enabled: relayEnabled(),
+    targetUrl: buildEventIngestUrl(),
+    targetHealthUrl: buildRelayHealthUrl(),
+    apiKeyConfigured: Boolean(getEventApiKey()),
+    requestTimeoutMs: REQUEST_TIMEOUT_MS,
+    healthTimeoutMs: HEALTH_TIMEOUT_MS,
+    retryDelayMs: {
+      initial: INITIAL_RETRY_DELAY_MS,
+      max: MAX_RETRY_DELAY_MS,
+    },
+    circuit: {
+      state: relayCircuit.state,
+      consecutiveFailures: relayCircuit.consecutiveFailures,
+      failureThreshold: CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+      cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS,
+      openUntil: isoTimestamp(relayCircuit.openUntil),
+      halfOpenProbeInFlight: relayCircuit.halfOpenProbeInFlight,
+      lastOpenedAt: isoTimestamp(relayCircuit.lastOpenedAt),
+      lastHalfOpenAt: isoTimestamp(relayCircuit.lastHalfOpenAt),
+      lastSuccessAt: isoTimestamp(relayCircuit.lastSuccessAt),
+      lastFailureAt: isoTimestamp(relayCircuit.lastFailureAt),
+      lastFailureStatus: relayCircuit.lastFailureStatus,
+      lastFailureMessage: relayCircuit.lastFailureMessage,
+      lastTargetUrl: relayCircuit.lastTargetUrl || null,
+      lastRequestDurationMs: relayCircuit.lastRequestDurationMs || 0,
+    },
+  };
+}
+
 function isRelayCircuitOpen() {
+  if (relayCircuit.state !== 'open') return false;
+  if (relayCircuit.openUntil <= Date.now()) {
+    relayCircuit.state = 'half_open';
+    relayCircuit.halfOpenProbeInFlight = false;
+    relayCircuit.lastHalfOpenAt = Date.now();
+    logRelay('info', 'AI event relay circuit moved to half-open.', getRelayStatus());
+    return false;
+  }
   return relayCircuit.openUntil > Date.now();
 }
 
 function resetRelayCircuit() {
+  const previousState = relayCircuit.state;
+  const previousFailures = relayCircuit.consecutiveFailures;
+  relayCircuit.state = 'closed';
   relayCircuit.consecutiveFailures = 0;
   relayCircuit.openUntil = 0;
+  relayCircuit.halfOpenProbeInFlight = false;
+  relayCircuit.lastSuccessAt = Date.now();
+  relayCircuit.lastFailureStatus = null;
+  relayCircuit.lastFailureMessage = null;
+
+  if (previousState !== 'closed') {
+    logRelay('info', 'AI event relay circuit recovered.', getRelayStatus());
+    return;
+  }
+
+  if (previousFailures > 0) {
+    logRelay('info', 'AI event relay failure streak cleared after successful delivery.', {
+      consecutiveFailuresCleared: previousFailures,
+      targetUrl: relayCircuit.lastTargetUrl || buildEventIngestUrl(),
+      durationMs: relayCircuit.lastRequestDurationMs || 0,
+    });
+  }
 }
 
-function registerRelayFailure(error) {
-  relayCircuit.consecutiveFailures += 1;
+function buildRelayRequestPayload(payload = {}) {
+  const metadata = safeObject(payload.metadata);
 
-  if (relayCircuit.consecutiveFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
-    relayCircuit.openUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+  if (payload.eventId && !metadata.eventId) metadata.eventId = String(payload.eventId);
+  if (payload.sessionId && !metadata.sessionId) metadata.sessionId = String(payload.sessionId);
+  if (payload.requestId && !metadata.requestId) metadata.requestId = String(payload.requestId);
+  if (payload.traceId && !metadata.traceId) metadata.traceId = String(payload.traceId);
+  if (payload.eventType && !metadata.sourceEventType) metadata.sourceEventType = String(payload.eventType);
+
+  return {
+    event_type: String(payload.eventType || '').trim(),
+    user_id: String(payload.userId || metadata.userId || 'anonymous').trim() || 'anonymous',
+    app_source: String(payload.source || 'yenkasa_app').trim() || 'yenkasa_app',
+    timestamp: normalizeTimestamp(payload.timestamp),
+    metadata,
+  };
+}
+
+function markRelayAttempt(targetUrl, durationMs) {
+  relayCircuit.lastTargetUrl = targetUrl;
+  relayCircuit.lastRequestDurationMs = durationMs;
+}
+
+function allowRelayAttempt() {
+  if (isRelayCircuitOpen()) {
+    const error = new Error('AI event relay circuit is open.');
+    error.code = 'relay_circuit_open';
+    error.status = 503;
+    throw error;
+  }
+
+  if (relayCircuit.state === 'half_open') {
+    if (relayCircuit.halfOpenProbeInFlight) {
+      const error = new Error('AI event relay half-open probe is already in flight.');
+      error.code = 'relay_circuit_half_open';
+      error.status = 503;
+      throw error;
+    }
+    relayCircuit.halfOpenProbeInFlight = true;
+  }
+}
+
+function shouldCountRelayFailure(error) {
+  return !['relay_circuit_open', 'relay_circuit_half_open'].includes(String(error?.code || ''));
+}
+
+function registerRelayFailure(error, diagnostics = {}) {
+  relayCircuit.consecutiveFailures += 1;
+  relayCircuit.lastFailureAt = Date.now();
+  relayCircuit.lastFailureStatus = Number(error?.status || 0) || null;
+  relayCircuit.lastFailureMessage = error?.message || 'relay_failure';
+  relayCircuit.halfOpenProbeInFlight = false;
+
+  if (diagnostics.targetUrl) relayCircuit.lastTargetUrl = diagnostics.targetUrl;
+  if (diagnostics.durationMs != null) {
+    relayCircuit.lastRequestDurationMs = Number(diagnostics.durationMs) || 0;
+  }
+
+  if (
+    relayCircuit.state === 'half_open' ||
+    relayCircuit.consecutiveFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD
+  ) {
+    relayCircuit.state = 'open';
+    relayCircuit.lastOpenedAt = Date.now();
+    relayCircuit.openUntil = relayCircuit.lastOpenedAt + CIRCUIT_BREAKER_COOLDOWN_MS;
     logRelay('warn', 'AI event relay circuit opened.', {
+      ...getRelayStatus(),
       consecutiveFailures: relayCircuit.consecutiveFailures,
       cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS,
+      durationMs: diagnostics.durationMs || 0,
+      status: error?.status || null,
       message: error?.message || 'relay_failure',
     });
   }
@@ -461,17 +614,51 @@ async function parseResponse(response) {
   }
 }
 
+async function probeRelayTargetHealth() {
+  const targetUrl = buildRelayHealthUrl();
+  const startedAt = Date.now();
+
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+    });
+    const durationMs = Date.now() - startedAt;
+    const body = await parseResponse(response);
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      targetUrl,
+      durationMs,
+      body,
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    const timeout = error?.name === 'TimeoutError' || error?.name === 'AbortError';
+
+    return {
+      ok: false,
+      status: timeout ? 504 : null,
+      targetUrl,
+      durationMs,
+      body: null,
+      message: timeout
+        ? `Relay target health probe timed out after ${HEALTH_TIMEOUT_MS}ms`
+        : error?.message || 'Relay target health probe failed.',
+    };
+  }
+}
+
 async function postEvent(payload) {
   if (!relayEnabled()) {
     return { skipped: true, reason: 'relay_disabled' };
   }
 
-  if (isRelayCircuitOpen()) {
-    const error = new Error('AI event relay circuit is open.');
-    error.code = 'relay_circuit_open';
-    error.status = 503;
-    throw error;
-  }
+  allowRelayAttempt();
 
   const headers = {
     'Content-Type': 'application/json',
@@ -481,22 +668,74 @@ async function postEvent(payload) {
     headers['X-Event-Api-Key'] = apiKey;
   }
 
-  const response = await fetch(buildEventIngestUrl(), {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  const body = await parseResponse(response);
+  const targetUrl = buildEventIngestUrl();
+  const relayPayload = buildRelayRequestPayload(payload);
+  const startedAt = Date.now();
 
-  if (!response.ok) {
-    const error = new Error(body?.detail || body?.message || `Event ingest failed with status ${response.status}`);
-    error.status = response.status;
-    error.body = body;
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(relayPayload),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const durationMs = Date.now() - startedAt;
+    markRelayAttempt(targetUrl, durationMs);
+    const body = await parseResponse(response);
+
+    if (!response.ok) {
+      logRelay('warn', 'AI event relay request failed.', {
+        targetUrl,
+        durationMs,
+        timeoutMs: REQUEST_TIMEOUT_MS,
+        authHeaderPresent: Boolean(apiKey),
+        status: response.status,
+        responseBody: body,
+      });
+      const error = new Error(
+        body?.detail || body?.message || `Event ingest failed with status ${response.status}`,
+      );
+      error.status = response.status;
+      error.body = body;
+      throw error;
+    }
+
+    logRelay('info', 'AI event relay request succeeded.', {
+      targetUrl,
+      durationMs,
+      authHeaderPresent: Boolean(apiKey),
+      status: response.status,
+    });
+
+    return {
+      ...body,
+      relayStatusCode: response.status,
+      relayDurationMs: durationMs,
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    markRelayAttempt(targetUrl, durationMs);
+    relayCircuit.halfOpenProbeInFlight = false;
+
+    const timeout = error?.name === 'TimeoutError' || error?.name === 'AbortError';
+    if (timeout) {
+      error.message = `Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`;
+      error.status = error.status || 504;
+    }
+
+    logRelay('error', 'AI event relay request errored.', {
+      targetUrl,
+      durationMs,
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      timeout,
+      authHeaderPresent: Boolean(apiKey),
+      status: error?.status || null,
+      reason: error?.code || error?.name || 'relay_error',
+      responseBody: error?.body || null,
+      message: error?.message || 'Unknown relay error',
+    });
     throw error;
   }
-
-  return body;
 }
 
 function logRelay(level, message, extra = {}) {
@@ -600,7 +839,12 @@ async function publishIntelligenceEvent(event, options = {}) {
     try {
       return await deliverIntelligenceEvent(payload);
     } catch (error) {
-      registerRelayFailure(error);
+      if (shouldCountRelayFailure(error)) {
+        registerRelayFailure(error, {
+          targetUrl: buildEventIngestUrl(),
+          durationMs: relayCircuit.lastRequestDurationMs,
+        });
+      }
       await queueFailedEvent(payload, error);
       return null;
     }
@@ -642,7 +886,12 @@ async function flushPendingIntelligenceEvents(limit = FLUSH_BATCH_SIZE) {
       try {
         await deliverIntelligenceEvent(record.payload || {});
       } catch (error) {
-        registerRelayFailure(error);
+        if (shouldCountRelayFailure(error)) {
+          registerRelayFailure(error, {
+            targetUrl: buildEventIngestUrl(),
+            durationMs: relayCircuit.lastRequestDurationMs,
+          });
+        }
         record.status = 'pending';
         record.attemptCount = Number(record.attemptCount || 0) + 1;
         record.lastAttemptAt = new Date();
@@ -681,18 +930,16 @@ async function flushPendingIntelligenceEvents(limit = FLUSH_BATCH_SIZE) {
 function startIntelligenceEventRelay() {
   if (relayStarted) {
     return {
+      ...getRelayStatus(),
       started: true,
-      url: buildEventIngestUrl(),
-      apiKeyConfigured: Boolean(getEventApiKey()),
       duplicateStart: true,
     };
   }
 
   relayStarted = true;
   const status = {
+    ...getRelayStatus(),
     started: relayEnabled(),
-    url: buildEventIngestUrl(),
-    apiKeyConfigured: Boolean(getEventApiKey()),
   };
 
   if (relayEnabled()) {
@@ -707,10 +954,14 @@ function startIntelligenceEventRelay() {
 
 module.exports = {
   buildEventIngestUrl,
+  buildRelayHealthUrl,
+  buildRelayRequestPayload,
   computeRetryDelayMs,
   flushPendingIntelligenceEvents,
+  getRelayStatus,
   mapYmeEventToIntelligenceEvent,
   normalizeIntelligenceEvent,
+  probeRelayTargetHealth,
   publishIntelligenceEvent,
   startIntelligenceEventRelay,
 };

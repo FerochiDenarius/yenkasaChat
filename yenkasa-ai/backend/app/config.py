@@ -103,6 +103,8 @@ class Settings:
     embedding_retry_attempts: int
     jwt_secret_key: str
     jwt_algorithm: str
+    internal_platform_api_key: str
+    log_ingest_api_key: str
     access_token_ttl_minutes: int
     refresh_token_ttl_days: int
     auth_window_seconds: int
@@ -178,6 +180,8 @@ def get_settings() -> Settings:
         embedding_retry_attempts=int(os.getenv("EMBEDDING_RETRY_ATTEMPTS", "3")),
         jwt_secret_key=os.getenv("JWT_SECRET_KEY", "change-me-in-production"),
         jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+        internal_platform_api_key=os.getenv("INTERNAL_PLATFORM_API_KEY", ""),
+        log_ingest_api_key=os.getenv("LOG_INGEST_API_KEY", ""),
         access_token_ttl_minutes=int(os.getenv("ACCESS_TOKEN_TTL_MINUTES", "30")),
         refresh_token_ttl_days=int(os.getenv("REFRESH_TOKEN_TTL_DAYS", "30")),
         auth_window_seconds=int(os.getenv("AUTH_WINDOW_SECONDS", "900")),

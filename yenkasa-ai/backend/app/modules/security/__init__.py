@@ -1,5 +1,6 @@
 from app.modules.security.dependencies import require_admin_user
 from app.modules.security.dependencies import require_current_user
+from app.modules.security.dependencies import require_event_ingest_access
 from app.modules.security.dependencies import require_roles
 from app.modules.security.passwords import PasswordService
 from app.modules.security.service import SecurityService
@@ -11,5 +12,6 @@ __all__ = [
     "TokenService",
     "require_admin_user",
     "require_current_user",
+    "require_event_ingest_access",
     "require_roles",
 ]

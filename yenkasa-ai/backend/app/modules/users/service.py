@@ -78,6 +78,13 @@ class UserService:
         document = await self.mongo.users_collection.find_one({"email": email.strip().lower()}, projection={"_id": 0})
         return UserDocument(**document) if document else None
 
+    async def get_by_username(self, username: str) -> UserDocument | None:
+        document = await self.mongo.users_collection.find_one(
+            {"username": username.strip()},
+            projection={"_id": 0},
+        )
+        return UserDocument(**document) if document else None
+
     async def get_by_id(self, user_id: str) -> UserDocument | None:
         document = await self.mongo.users_collection.find_one({"user_id": user_id}, projection={"_id": 0})
         return UserDocument(**document) if document else None

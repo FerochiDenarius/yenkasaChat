@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from pydantic import AliasChoices
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from typing import Literal
 
@@ -25,12 +27,23 @@ class AuthRegisterRequest(BaseModel):
 
 
 class AuthLoginRequest(BaseModel):
-    email: str = Field(min_length=5, max_length=255)
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    email: str = Field(
+        min_length=3,
+        max_length=255,
+        validation_alias=AliasChoices("email", "identifier"),
+    )
     password: str = Field(min_length=8, max_length=128)
 
 
 class AuthRefreshRequest(BaseModel):
-    refresh_token: str = Field(min_length=20)
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    refresh_token: str = Field(
+        min_length=20,
+        validation_alias=AliasChoices("refresh_token", "refreshToken"),
+    )
 
 
 class CurrentUserResponse(BaseModel):

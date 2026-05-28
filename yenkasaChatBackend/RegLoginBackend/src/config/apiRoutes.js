@@ -8,6 +8,8 @@ const deleteAccountPage = require('../../routes/deleteAccount.page');
 
 const API_ROUTE_MOUNTS = [
   ['/api/auth', 'routes/auth'],
+  ['/api/auth/refresh', 'routes/verify.js'],
+  ['/api/auth/token/refresh', 'routes/verify.js'],
   ['/api/reset-password', 'routes/changepwd.routes.js'],
   ['/api/verify', 'routes/verify'],
   ['/api/account', 'routes/account.routes'],

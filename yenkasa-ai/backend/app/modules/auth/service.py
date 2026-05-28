@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from uuid import uuid4
 
 from app.schemas import AuthTokenResponse
 from app.schemas import CurrentUserResponse
+
+
+LOGGER = logging.getLogger("yenkasa_ai_cloud.auth")
 
 
 def user_to_response(user) -> CurrentUserResponse:
@@ -48,14 +52,19 @@ class AuthService:
         return await self._issue_session_tokens(user, ip_address=ip_address, user_agent=user_agent)
 
     async def login(self, payload, ip_address: str | None, user_agent: str | None) -> AuthTokenResponse:
+        identifier = payload.email.strip()
         await self.security.enforce_rate_limit(
-            key=f"auth:login:{ip_address or 'unknown'}:{payload.email.strip().lower()}",
+            key=f"auth:login:{ip_address or 'unknown'}:{identifier.lower()}",
             limit=self.settings.auth_login_rate_limit,
             window_s=self.settings.auth_window_seconds,
             error_message="Too many login attempts. Please try again later.",
         )
-        email = payload.email.strip().lower()
+        email = identifier.lower()
         user = await self.users.get_by_email(email)
+        if user is None and "@" not in identifier:
+            user = await self.users.get_by_username(identifier)
+            if user is not None:
+                email = user.email.strip().lower()
 
         verified_locally = bool(
             user and self.security.passwords.verify_password(payload.password, user.hashed_password)
@@ -90,25 +99,53 @@ class AuthService:
         await self.sessions.invalidate_session(session_id)
 
     async def refresh(self, refresh_token: str) -> AuthTokenResponse:
-        payload = self.security.tokens.decode_token(refresh_token, expected_type="refresh")
-        user = await self.users.get_by_id(payload["sub"])
-        if user is None:
-            raise ValueError("User not found.")
-        refresh_token_value, refresh_jti, refresh_expires = self.security.tokens.create_refresh_token(user.user_id, payload["sid"])
-        session = await self.sessions.rotate_refresh_jti(
-            session_id=payload["sid"],
-            old_jti=payload["jti"],
-            new_jti=refresh_jti,
+        token_preview = refresh_token[:16] if refresh_token else ""
+        LOGGER.info(
+            "refresh requested token_len=%s token_prefix=%s",
+            len(refresh_token or ""),
+            token_preview,
         )
-        access_token, access_expires = self.security.tokens.create_access_token(user.user_id, session.session_id, user.role)
-        return AuthTokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token_value,
-            access_token_expires_in=access_expires,
-            refresh_token_expires_in=refresh_expires,
-            session_id=session.session_id,
-            user=user_to_response(user),
-        )
+        try:
+            payload = self.security.tokens.decode_token(refresh_token, expected_type="refresh")
+            LOGGER.info(
+                "refresh token decoded user_id=%s session_id=%s jti=%s",
+                payload.get("sub"),
+                payload.get("sid"),
+                payload.get("jti"),
+            )
+            user = await self.users.get_by_id(payload["sub"])
+            if user is None:
+                raise ValueError("User not found.")
+            refresh_token_value, refresh_jti, refresh_expires = self.security.tokens.create_refresh_token(
+                user.user_id,
+                payload["sid"],
+            )
+            session = await self.sessions.rotate_refresh_jti(
+                session_id=payload["sid"],
+                old_jti=payload["jti"],
+                new_jti=refresh_jti,
+            )
+            access_token, access_expires = self.security.tokens.create_access_token(
+                user.user_id,
+                session.session_id,
+                user.role,
+            )
+            LOGGER.info(
+                "refresh succeeded user_id=%s session_id=%s",
+                user.user_id,
+                session.session_id,
+            )
+            return AuthTokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token_value,
+                access_token_expires_in=access_expires,
+                refresh_token_expires_in=refresh_expires,
+                session_id=session.session_id,
+                user=user_to_response(user),
+            )
+        except ValueError as exc:
+            LOGGER.warning("refresh rejected reason=%s", str(exc))
+            raise
 
     async def resolve_access_token(self, token: str):
         payload = self.security.tokens.decode_token(token, expected_type="access")

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
@@ -19,6 +21,7 @@ from app.utils import get_user_agent
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+LOGGER = logging.getLogger("yenkasa_ai_cloud.auth_routes")
 
 
 @router.post("/register", response_model=AuthTokenResponse)
@@ -53,12 +56,48 @@ async def logout(
     return LogoutResponse(status="logged_out")
 
 
-@router.post("/refresh", response_model=AuthTokenResponse)
-async def refresh(payload: AuthRefreshRequest, runtime=Depends(get_intelligence_runtime)) -> AuthTokenResponse:
+async def _refresh_impl(
+    payload: AuthRefreshRequest,
+    request: Request,
+    runtime,
+) -> AuthTokenResponse:
+    request_id = getattr(request.state, "request_id", None)
+    refresh_token = payload.refresh_token
+    LOGGER.info(
+        "refresh route hit request_id=%s path=%s token_len=%s token_prefix=%s",
+        request_id,
+        request.url.path,
+        len(refresh_token or ""),
+        (refresh_token or "")[:16],
+    )
     try:
-        return await runtime.auth.refresh(payload.refresh_token)
+        return await runtime.auth.refresh(refresh_token)
     except ValueError as exc:
+        LOGGER.warning(
+            "refresh rejected request_id=%s path=%s reason=%s",
+            request_id,
+            request.url.path,
+            str(exc),
+        )
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@router.post("/refresh", response_model=AuthTokenResponse)
+async def refresh(
+    payload: AuthRefreshRequest,
+    request: Request,
+    runtime=Depends(get_intelligence_runtime),
+) -> AuthTokenResponse:
+    return await _refresh_impl(payload, request, runtime)
+
+
+@router.post("/token/refresh", response_model=AuthTokenResponse)
+async def refresh_token_alias(
+    payload: AuthRefreshRequest,
+    request: Request,
+    runtime=Depends(get_intelligence_runtime),
+) -> AuthTokenResponse:
+    return await _refresh_impl(payload, request, runtime)
 
 
 @router.get("/me", response_model=CurrentUserResponse)

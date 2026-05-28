@@ -1,5 +1,6 @@
 const { createSlidingWindowLimiter } = require('../../ai/utils/rateLimit');
 const { getYmeConfig } = require('../config/yme.config');
+const { validateEventContract } = require('../contracts/event.contract');
 
 function selectRateLimitKey(req) {
   return req.user?.id || req.user?._id || req.ip;
@@ -43,6 +44,20 @@ function validateSingleEventRequest(req, res, next) {
     });
   }
 
+  const validation = validateEventContract(req.body, {
+    defaults: {
+      userId: req.user?._id || req.user?.id || '',
+      sourceApp: req.body?.sourceApp || req.body?.source || '',
+    },
+  });
+  if (!validation.valid) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid YME event payload.',
+      errors: validation.errors,
+    });
+  }
+
   return next();
 }
 
@@ -59,6 +74,29 @@ function validateBatchEventRequest(req, res, next) {
     return res.status(400).json({
       success: false,
       message: `YME batch exceeds limit of ${getYmeConfig().api.batchLimit} events.`,
+    });
+  }
+
+  const errors = [];
+  events.forEach((event, index) => {
+    const validation = validateEventContract(event, {
+      defaults: {
+        userId: req.user?._id || req.user?.id || '',
+        sourceApp: event?.sourceApp || event?.source || '',
+      },
+    });
+    if (!validation.valid) {
+      errors.push({
+        index,
+        errors: validation.errors,
+      });
+    }
+  });
+  if (errors.length) {
+    return res.status(400).json({
+      success: false,
+      message: 'YME batch contains malformed events.',
+      errors,
     });
   }
 

@@ -39,6 +39,9 @@ async function writeMemoryLog({
       : null,
   };
 
+  const traceId = String(payload.metadata?.traceId || '').trim();
+  const requestId = String(payload.metadata?.requestId || '').trim();
+
   const line = JSON.stringify({
     severity: level.toUpperCase(),
     component: 'yme',
@@ -47,6 +50,8 @@ async function writeMemoryLog({
     message,
     userId: payload.userId?.toString?.() || null,
     eventId: payload.eventId?.toString?.() || null,
+    traceId: traceId || null,
+    requestId: requestId || null,
     ...payload.metadata,
   });
 

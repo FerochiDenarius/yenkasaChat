@@ -74,6 +74,7 @@ class Settings:
     dev_intelligence_enabled: bool
     mongodb_uri: str
     mongodb_database: str
+    mongodb_operational_database: str
     mongodb_server_selection_timeout_ms: int
     mongodb_chunks_collection: str
     mongodb_jobs_collection: str
@@ -148,6 +149,7 @@ def get_settings() -> Settings:
         dev_intelligence_enabled=parse_bool(os.getenv("DEV_INTELLIGENCE_ENABLED"), True),
         mongodb_uri=os.getenv("MONGODB_URI", ""),
         mongodb_database=os.getenv("MONGODB_DATABASE", "yenkasa_ai"),
+        mongodb_operational_database=os.getenv("MONGODB_OPERATIONAL_DATABASE", "yenkasaChat"),
         mongodb_server_selection_timeout_ms=int(os.getenv("MONGODB_SERVER_SELECTION_TIMEOUT_MS", "3000")),
         mongodb_chunks_collection=os.getenv("MONGODB_CHUNKS_COLLECTION", "repo_chunks"),
         mongodb_jobs_collection=os.getenv("MONGODB_JOBS_COLLECTION", "repo_ingestion_jobs"),

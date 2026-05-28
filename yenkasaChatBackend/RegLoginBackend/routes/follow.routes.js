@@ -167,7 +167,7 @@ const rewardReceivedTx = await rewardService.reward(targetId, REWARD_FOLLOW_RECE
     publishYmeEvent({
       userId: followerId,
       sourceApp: "social_app",
-      eventType: "follow",
+      eventType: "follow_user",
       creatorId: targetUser._id,
       relatedUserId: targetUser._id,
       contentId: `user:${targetId}`,
@@ -241,6 +241,18 @@ router.post('/:userId/unfollow', authMiddleware, async (req, res) => {
         $pull: { following: targetId }
       })
     ]);
+
+    publishYmeEvent({
+      userId: followerId,
+      sourceApp: "social_app",
+      eventType: "unfollow_user",
+      creatorId: targetId,
+      relatedUserId: targetId,
+      contentId: `user:${targetId}`,
+      payload: {
+        targetUserId: targetId,
+      },
+    });
 
     return res.json({
       success: true,

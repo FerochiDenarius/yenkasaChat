@@ -1,6 +1,30 @@
 const livestreamService = require('./livestream.service');
+const { publishYmeEvent } = require('../../yme/services/eventPublisher.service');
 
 function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
+  function emitYmeLiveEvent(eventType, actorUserId, payload = {}) {
+    const userId = String(actorUserId || socket.data.userId || payload.userId || '').trim();
+    if (!userId) return;
+
+    publishYmeEvent({
+      eventType,
+      userId,
+      relatedUserId: payload.relatedUserId || payload.guestUserId || payload.targetUserId || '',
+      sourceApp: 'live_arena',
+      platform: 'socket',
+      sessionId: socket.id,
+      contentId: payload.streamId || '',
+      postId: payload.streamId || '',
+      clientEventId: payload.clientEventId || '',
+      occurredAt: payload.createdAt || new Date().toISOString(),
+      text: payload.message || payload.reaction || payload.reason || '',
+      payload: {
+        ...payload,
+        socketEventSource: 'livestream.socket',
+      },
+    });
+  }
+
   async function resolveLiveActor(payload = {}) {
     const userId = (socket.data.userId || payload?.userId)?.toString();
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -47,6 +71,11 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       viewerCount: stream.viewerCount,
     };
     livestreamService.emitToLiveRoom(streamId, 'live_viewer_count', payload);
+    emitYmeLiveEvent('viewer_count_updated', stream.hostId?.toString?.(), {
+      streamId,
+      viewerCount: stream.viewerCount,
+      peakViewerCount: stream.peakViewerCount || stream.viewerCount,
+    });
     return stream;
   }
 
@@ -80,6 +109,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       reason: 'host_disconnected',
     };
     livestreamService.emitToLiveRoom(streamId, 'live_ended', endedEvent);
+    emitYmeLiveEvent('live_ended', stream.hostId?.toString?.(), endedEvent);
     io.emit('live_removed', endedEvent);
     livestreamService.clearLiveParticipants(streamId);
     console.log(`📺 Livestream ${streamId} ended after host socket ${socketId} disconnected.`);
@@ -126,6 +156,12 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         userId: actor.userId,
         username: actor.username,
         avatar: actor.avatar,
+        agoraUid: payload.agoraUid,
+        liveRole: 'broadcaster',
+        viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
+      });
+      emitYmeLiveEvent('live_started', actor.userId, {
+        streamId,
         agoraUid: payload.agoraUid,
         liveRole: 'broadcaster',
         viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
@@ -231,6 +267,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
       };
       livestreamService.emitToLiveRoom(streamId, 'live_join', event);
+      emitYmeLiveEvent('live_joined', actor.userId, event);
       livestreamService.emitLiveRoomMemberCount(streamId);
       livestreamService.emitLiveJoinAck(socket, {
         streamId,
@@ -269,6 +306,12 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         avatar: actor.avatar,
         createdAt: new Date().toISOString(),
       });
+      emitYmeLiveEvent('live_left', actor.userId, {
+        streamId,
+        agoraUid: livestreamService.normalizeAgoraUid(payload.agoraUid),
+        liveRole: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
+        createdAt: new Date().toISOString(),
+      });
       socket.data.liveStreams.delete(streamId);
       socket.data.hostLiveStreams.delete(streamId);
       livestreamService.removeLiveParticipant(streamId, actor.userId);
@@ -299,7 +342,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!streamId || !message) return;
       if (livestreamService.shouldSkipDuplicateLiveEvent('comment', payload)) return;
       const actor = await resolveLiveActor(payload);
-      livestreamService.emitToLiveRoom(streamId, 'live_comment', {
+      const commentEvent = {
         streamId,
         userId: actor.userId,
         agoraUid: livestreamService.normalizeAgoraUid(payload.agoraUid),
@@ -309,7 +352,9 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         message: message.slice(0, 240),
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
-      });
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_comment', commentEvent);
+      emitYmeLiveEvent('live_comment', actor.userId, commentEvent);
     } catch (err) {
       console.error('❌ live_comment failed:', err.message);
     }
@@ -321,7 +366,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!streamId) return;
       if (livestreamService.shouldSkipDuplicateLiveEvent('reaction', payload)) return;
       const actor = await resolveLiveActor(payload);
-      livestreamService.emitToLiveRoom(streamId, 'live_reaction', {
+      const reactionEvent = {
         streamId,
         userId: actor.userId,
         agoraUid: livestreamService.normalizeAgoraUid(payload.agoraUid),
@@ -331,7 +376,9 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         type: payload.type || payload.reaction || '🔥',
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
-      });
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
+      emitYmeLiveEvent('live_reaction', actor.userId, reactionEvent);
     } catch (err) {
       console.error('❌ live_reaction failed:', err.message);
     }
@@ -376,6 +423,11 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         avatar: actor.avatar,
         agoraUid: expectedUid,
         createdAt: new Date().toISOString(),
+      });
+      emitYmeLiveEvent('guest_request', actor.userId, {
+        streamId,
+        targetUserId: stream.hostId.toString(),
+        agoraUid: expectedUid,
       });
     } catch (err) {
       console.error('❌ live_request_guest_seat failed:', err.message);
@@ -439,6 +491,11 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         guest: guestData,
         approvedBy: socket.data.userId,
       });
+      emitYmeLiveEvent('guest_approved', socket.data.userId, {
+        streamId,
+        guestUserId,
+        guestAgoraUid: expectedGuestUid,
+      });
     } catch (err) {
       console.error('❌ live_approve_guest_seat failed:', err.message);
     }
@@ -465,6 +522,10 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!stream) return;
 
       io.to(guestUserId).emit('live_guest_seat_declined', { streamId });
+      emitYmeLiveEvent('guest_declined', socket.data.userId, {
+        streamId,
+        guestUserId,
+      });
     } catch (err) {
       console.error('❌ live_decline_guest_seat failed:', err.message);
     }

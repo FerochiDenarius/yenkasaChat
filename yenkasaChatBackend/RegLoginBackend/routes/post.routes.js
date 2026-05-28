@@ -863,6 +863,19 @@ router.delete("/:postId", authMiddleware, async (req, res) => {
 
     await post.deleteOne();
 
+    publishYmeEvent({
+      userId: req.user.id,
+      sourceApp: "social_app",
+      eventType: "post_deleted",
+      postId,
+      creatorId: post.userId,
+      communityId: post.communityId,
+      contentId: `post:${postId}`,
+      payload: {
+        postType: post.postType || "text",
+      },
+    });
+
     res.json({
       success: true,
       message: "Post deleted successfully",
@@ -985,7 +998,7 @@ router.post("/:postId/share", authMiddleware, async (req, res) => {
     publishYmeEvent({
       userId,
       sourceApp: "social_app",
-      eventType: "share",
+      eventType: "post_shared",
       postId,
       creatorId: post.userId,
       communityId: post.communityId,

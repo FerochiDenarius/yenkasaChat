@@ -60,7 +60,7 @@ router.get('/users/:userId/profile', authMiddleware, async (req, res) => {
       publishYmeEvent({
         userId: viewerId,
         sourceApp: 'social_app',
-        eventType: 'profile_visit',
+        eventType: 'profile_viewed',
         relatedUserId: profileUserId,
         creatorId: profileUserId,
         contentId: `user:${profileUserId}`,
@@ -130,7 +130,7 @@ router.post('/follow/:targetUserId', authMiddleware, async (req, res) => {
       publishYmeEvent({
         userId: currentUserId,
         sourceApp: 'social_app',
-        eventType: 'follow',
+        eventType: 'follow_user',
         creatorId: targetUser._id,
         relatedUserId: targetUser._id,
         contentId: `user:${targetUserId}`,

@@ -553,6 +553,7 @@ def chat_with_rag(
     model_name: str,
     max_history_turns: int,
     retrieval_k: int,
+    extra_context: str | None = None,
 ) -> ChatResponse:
     if payload.audience == "public" and is_public_unsafe(payload.question):
         return safe_public_response(model_name)
@@ -577,6 +578,8 @@ def chat_with_rag(
     )
     history = format_history(history_to_pairs(payload.history), max_history_turns)
     context = build_combined_context(public_results, engineering_results)
+    if extra_context:
+        context = f"{context}\n\nLIVE OPERATIONS CONTEXT:\n{extra_context}"
     retrieval_status = build_retrieval_status(public_results, engineering_results)
 
     generation_started = time.perf_counter()
@@ -624,7 +627,8 @@ def chat_with_rag(
                     "metadata": dict(getattr(document, "metadata", {}) or {}),
                 }
                 for index, (document, score) in enumerate(results, start=1)
-            ]
+            ],
+            "liveContextIncluded": bool(extra_context),
         }
 
     return ChatResponse(

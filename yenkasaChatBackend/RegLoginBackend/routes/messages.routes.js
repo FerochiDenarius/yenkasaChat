@@ -270,7 +270,7 @@ router.post('/', auth, async (req, res) => {
       {
         userId: senderAppUserId,
         sourceApp: 'social_app',
-        eventType: 'chat_message',
+        eventType: 'chat_sent',
         conversationId: roomId,
         messageId: newMessage._id.toString(),
         relatedUserId: recipientAppUserIds[0] || '',
@@ -637,6 +637,22 @@ router.delete('/:messageId', auth, async (req, res) => {
       });
     }
 
+    publishYmeEvent({
+      userId,
+      sourceApp: 'social_app',
+      eventType: 'chat_deleted',
+      conversationId: message.roomId.toString(),
+      messageId: message._id.toString(),
+      relatedUserId: (deleteRoom?.participants || []).find(
+        (participantId) => participantId?.toString() !== userId,
+      )?.toString?.() || '',
+      text: message.text || '',
+      payload: {
+        messageType: message.messageType || 'message',
+        roomType: deleteRoom?.participants?.length > 2 ? 'group' : 'direct',
+      },
+    });
+
     res.status(204).send();
   } catch (err) {
     console.error('[MessagesRoute] ❌ Error deleting message:', err.message);
@@ -669,6 +685,21 @@ router.post('/:roomId/mark-as-read', auth, async (req, res) => {
         readAt: new Date().toISOString()
       });
     }
+
+    publishYmeEvent({
+      userId,
+      sourceApp: 'social_app',
+      eventType: 'chat_read',
+      conversationId: roomId,
+      relatedUserId: (chatRoom.participants || []).find(
+        (participantId) => participantId?.toString() !== userId.toString(),
+      )?.toString?.() || '',
+      payload: {
+        roomType: chatRoom.roomType || (chatRoom.participants?.length > 2 ? 'group' : 'direct'),
+        unreadCount: 0,
+      },
+    });
+
     res.status(200).json({ message: 'Room marked as read' });
   } catch (err) {
     console.error('Error marking as read:', err);

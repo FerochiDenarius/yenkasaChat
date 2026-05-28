@@ -17,6 +17,7 @@ class MongoService:
         self.async_client: AsyncIOMotorClient | None = None
         self.sync_client: MongoClient | None = None
         self.database = None
+        self.operational_database = None
         self.sync_database = None
 
     @property
@@ -83,6 +84,17 @@ class MongoService:
             raise RuntimeError("MongoDB sync client is not connected.")
         return self.sync_database[self.settings.mongodb_chunks_collection]
 
+    def get_database(self, name: str | None = None):
+        if self.async_client is None:
+            raise RuntimeError("MongoDB is not connected.")
+        return self.async_client[name or self.settings.mongodb_database]
+
+    def get_collection(self, name: str, *, operational: bool = False):
+        database = self.operational_database if operational else self.database
+        if database is None:
+            raise RuntimeError("MongoDB is not connected.")
+        return database[name]
+
     async def connect(self) -> None:
         if not self.configured:
             LOGGER.warning("MongoDB not configured; dev intelligence data APIs will stay degraded.")
@@ -97,10 +109,15 @@ class MongoService:
             serverSelectionTimeoutMS=self.settings.mongodb_server_selection_timeout_ms,
         )
         self.database = self.async_client[self.settings.mongodb_database]
+        self.operational_database = self.async_client[self.settings.mongodb_operational_database]
         self.sync_database = self.sync_client[self.settings.mongodb_database]
         await self.ping()
         await self.ensure_indexes()
-        LOGGER.info("MongoDB ready database=%s", self.settings.mongodb_database)
+        LOGGER.info(
+            "MongoDB ready database=%s operational_database=%s",
+            self.settings.mongodb_database,
+            self.settings.mongodb_operational_database,
+        )
 
     async def ensure_indexes(self) -> None:
         if self.database is None:

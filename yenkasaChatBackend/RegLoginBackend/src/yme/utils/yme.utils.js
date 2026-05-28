@@ -64,20 +64,39 @@ function summarizeTopScored(items, key = 'label', limit = 5) {
 }
 
 function buildRequestTrace(req) {
+  const requestId =
+    req?.header?.('X-Request-Id') ||
+    req?.header?.('X-Correlation-Id') ||
+    req?.header?.('X-Amzn-Trace-Id') ||
+    '';
   const traceHeader = req?.header?.('X-Cloud-Trace-Context');
-  if (!traceHeader) return {};
+  const traceIdHeader = req?.header?.('X-Trace-Id') || req?.header?.('X-Correlation-Id') || '';
+
+  if (!traceHeader) {
+    return {
+      traceId: String(traceIdHeader || requestId || '').trim(),
+      requestId: String(requestId || '').trim(),
+    };
+  }
 
   const projectId =
     process.env.YENKASA_GCP_PROJECT_ID ||
     process.env.GOOGLE_CLOUD_PROJECT ||
     process.env.GCLOUD_PROJECT ||
     '';
-
-  if (!projectId) return {};
   const [trace] = String(traceHeader).split('/');
-  if (!trace) return {};
+  const resolvedTraceId = String(traceIdHeader || trace || requestId || '').trim();
+
+  if (!projectId || !trace) {
+    return {
+      traceId: resolvedTraceId,
+      requestId: String(requestId || '').trim(),
+    };
+  }
 
   return {
+    traceId: resolvedTraceId,
+    requestId: String(requestId || '').trim(),
     'logging.googleapis.com/trace': `projects/${projectId}/traces/${trace}`,
   };
 }

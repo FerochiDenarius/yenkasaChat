@@ -1,7 +1,10 @@
+const { randomUUID } = require('node:crypto');
+
 const ChatSummary = require('../models/chatSummary.model');
 const UserEvent = require('../models/userEvent.model');
 const { getYmeConfig } = require('../config/yme.config');
 const { buildEventNarrative, summarizeBehaviorEvents, summarizeChatEvents } = require('./activitySummarizer.service');
+const { recordDeadLetterEvent, resolveDeadLetterEvent } = require('./deadLetterQueue.service');
 const { extractInterestSignals } = require('./interestExtraction.service');
 const { writeMemoryLog } = require('./log.service');
 const { applyEventToMemory, refreshMemorySummary } = require('./memoryProfile.service');
@@ -30,6 +33,14 @@ function shouldTriggerConsolidation(event) {
     'live_stream_join',
     'reward_claim',
     'community_join',
+    'gift_sent',
+    'wallet_transfer',
+    'live_started',
+    'live_ended',
+    'live_left',
+    'guest_request',
+    'guest_approved',
+    'guest_declined',
   ].includes(event.eventType);
 }
 
@@ -57,36 +68,109 @@ async function maybeHandleConsolidationJob(payload) {
   return { queued: false, mode: 'inline' };
 }
 
-async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
-  const startedAt = Date.now();
-  const event = await UserEvent.findById(eventId);
-  if (!event) {
+async function claimEventForProcessing(eventId) {
+  if (!eventId) {
+    throw new Error('Event id is required to process a YME event.');
+  }
+
+  const lockId = randomUUID();
+  const event = await UserEvent.findOneAndUpdate(
+    {
+      _id: eventId,
+      processingStatus: { $in: ['pending', 'queued', 'failed'] },
+    },
+    {
+      $set: {
+        processingStatus: 'processing',
+        processingLockId: lockId,
+        lastProcessingStartedAt: new Date(),
+      },
+      $inc: {
+        processingAttempts: 1,
+      },
+    },
+    { new: true },
+  );
+
+  if (event) {
+    return { event, lockId };
+  }
+
+  const existing = await UserEvent.findById(eventId);
+  if (!existing) {
     throw new Error(`YME event ${eventId} not found.`);
   }
 
-  if (event.processingStatus === 'processed') {
+  if (existing.processingStatus === 'processed') {
     return {
+      event: existing,
+      lockId: '',
       skipped: true,
       reason: 'already_processed',
     };
   }
 
+  if (existing.processingStatus === 'processing') {
+    return {
+      event: existing,
+      lockId: '',
+      skipped: true,
+      reason: 'already_processing',
+    };
+  }
+
+  if (existing.processingStatus === 'dead_lettered') {
+    return {
+      event: existing,
+      lockId: '',
+      skipped: true,
+      reason: 'dead_lettered',
+    };
+  }
+
+  return {
+    event: existing,
+    lockId: '',
+    skipped: true,
+    reason: `not_claimable:${existing.processingStatus || 'unknown'}`,
+  };
+}
+
+async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
+  const startedAt = Date.now();
+  const claim = await claimEventForProcessing(eventId);
+  if (claim.skipped) {
+    return {
+      skipped: true,
+      reason: claim.reason,
+    };
+  }
+
+  const event = claim.event;
+  const lockId = claim.lockId;
+  let currentStage = 'extract_interest_signals';
+
   try {
     const derivedSignals = extractInterestSignals(event.toObject());
+    currentStage = 'summarize_behavior';
     const behaviorSummary = summarizeBehaviorEvents([event.toObject()], derivedSignals);
 
+    currentStage = 'apply_memory';
     await applyEventToMemory({
       event,
       derivedSignals,
     });
 
+    currentStage = 'apply_recommendation_signals';
     await applyRecommendationSignals({
       event,
       derivedSignals,
     });
 
+    currentStage = 'build_event_narrative';
     const narrative = buildEventNarrative(event, derivedSignals);
     if (event.shouldEmbed && narrative) {
+      currentStage = 'enqueue_embedding_refresh';
       await maybeHandleEmbeddingJob({
         userId: event.userId.toString(),
         sourceType: 'user_event',
@@ -105,6 +189,7 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
     }
 
     if (event.conversationId && isChatEvent(event.eventType)) {
+      currentStage = 'enqueue_chat_summary';
       await maybeHandleChatSummaryJob({
         userId: event.userId.toString(),
         conversationId: event.conversationId,
@@ -113,6 +198,7 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
     }
 
     if (shouldTriggerConsolidation(event) && getYmeConfig().consolidation.enabled) {
+      currentStage = 'enqueue_memory_consolidation';
       await maybeHandleConsolidationJob({
         userId: event.userId.toString(),
         reason: `event:${event.eventType}`,
@@ -121,8 +207,12 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
 
     event.processingStatus = 'processed';
     event.processedAt = new Date();
+    event.processingLockId = '';
     event.processingError = '';
+    event.lastFailedAt = null;
+    event.lastDeadLetteredAt = null;
     await event.save();
+    await resolveDeadLetterEvent(event._id, 'processed_successfully');
 
     incrementCounter('eventsProcessed');
     recordDuration('eventProcessing', Date.now() - startedAt);
@@ -140,6 +230,8 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
       metadata: {
         trigger,
         eventType: event.eventType,
+        traceId: event.traceId || event.eventMetadata?.traceId || '',
+        processingAttempts: event.processingAttempts,
       },
     });
 
@@ -151,9 +243,35 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
       },
     };
   } catch (error) {
-    event.processingStatus = 'failed';
+    const maxAttempts = Math.max(1, Number(getYmeConfig().queue.eventAttempts || 1));
+    const isTerminalFailure = Number(event.processingAttempts || 0) >= maxAttempts;
+
+    event.processingStatus = isTerminalFailure ? 'dead_lettered' : 'failed';
+    event.processingLockId = event.processingLockId === lockId ? '' : event.processingLockId;
     event.processingError = error.message;
+    event.lastFailedAt = new Date();
+    if (isTerminalFailure) {
+      event.lastDeadLetteredAt = new Date();
+    }
+    event.processingNotes = [
+      ...(event.processingNotes || []).filter(Boolean),
+      `failed_stage:${currentStage}`,
+    ].slice(-12);
     await event.save();
+    await recordDeadLetterEvent({
+      event,
+      queueName: 'ymeEventIngestionQueue',
+      jobName: 'yme_process_event',
+      stage: currentStage,
+      error,
+      status: isTerminalFailure ? 'open' : 'retrying',
+      metadata: {
+        trigger,
+        traceId: event.traceId || event.eventMetadata?.traceId || '',
+        processingAttempts: event.processingAttempts,
+        maxAttempts,
+      },
+    });
 
     await writeMemoryLog({
       userId: event.userId,
@@ -168,8 +286,13 @@ async function processEventPipeline({ eventId, trigger = 'worker' } = {}) {
       metadata: {
         trigger,
         eventType: event.eventType,
+        stage: currentStage,
+        traceId: event.traceId || event.eventMetadata?.traceId || '',
+        processingAttempts: event.processingAttempts,
+        deadLettered: isTerminalFailure,
       },
     });
+    incrementCounter(isTerminalFailure ? 'eventsDeadLettered' : 'eventsProcessingFailed');
     throw error;
   }
 }

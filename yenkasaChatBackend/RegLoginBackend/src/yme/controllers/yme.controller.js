@@ -1,10 +1,12 @@
 const User = require('../../../models/user.model');
+const DeadLetterEvent = require('../models/deadLetterEvent.model');
 const UserEvent = require('../models/userEvent.model');
 const MemoryEmbedding = require('../models/memoryEmbedding.model');
 const MemoryLog = require('../models/memoryLog.model');
 const { getRequiredVectorIndexes } = require('../services/vectorSearch.service');
 const { getYmeConfig } = require('../config/yme.config');
 const { getUnifiedMemoryProfile } = require('../services/memoryProfile.service');
+const { getDeadLetterStats } = require('../services/deadLetterQueue.service');
 const { getMetricsSnapshot } = require('../services/metrics.service');
 const { buildInspectorOverview } = require('../services/inspector.service');
 const { getQueueHealth, getQueueState } = require('../services/queue.service');
@@ -21,6 +23,25 @@ function canAccessUser(req, userId) {
   return authenticatedUserId === String(userId) || req.user?.permissions?.analyticsAccess === true;
 }
 
+function buildIngestDefaults(req) {
+  return {
+    userId: getAuthenticatedUserId(req),
+    traceId:
+      String(
+        req.header?.('X-Trace-Id') ||
+          req.header?.('X-Request-Id') ||
+          req.header?.('X-Correlation-Id') ||
+          '',
+      )
+        .trim()
+        .slice(0, 160),
+    requestId:
+      String(req.header?.('X-Request-Id') || req.header?.('X-Correlation-Id') || '')
+        .trim()
+        .slice(0, 160),
+  };
+}
+
 async function postEvent(req, res) {
   try {
     const requestedUserId = String(req.body?.userId || '');
@@ -32,9 +53,8 @@ async function postEvent(req, res) {
     }
 
     const result = await ingestEvent(req.body, {
-      defaults: {
-        userId: getAuthenticatedUserId(req),
-      },
+      defaults: buildIngestDefaults(req),
+      req,
     });
 
     return res.status(202).json({
@@ -69,9 +89,8 @@ async function postEventBatch(req, res) {
     }
 
     const result = await ingestEventBatch(events, {
-      defaults: {
-        userId: getAuthenticatedUserId(req),
-      },
+      defaults: buildIngestDefaults(req),
+      req,
     });
 
     return res.status(202).json({
@@ -319,7 +338,13 @@ async function getLogs(req, res) {
   }
 }
 
-function getHealth(_req, res) {
+async function getHealth(_req, res) {
+  const deadLetter = await getDeadLetterStats(24).catch(() => ({
+    windowHours: 24,
+    openCount: 0,
+    recentCount: 0,
+    byEventType: [],
+  }));
   return res.json({
     success: true,
     status: 'ok',
@@ -327,16 +352,132 @@ function getHealth(_req, res) {
       sourceApps: getYmeConfig().sourceApps,
       queue: getQueueState(),
       vectorIndexes: getRequiredVectorIndexes(),
+      deadLetter,
     },
   });
 }
 
-function getMetrics(_req, res) {
+async function getMetrics(_req, res) {
+  const deadLetter = await getDeadLetterStats(24).catch(() => ({
+    windowHours: 24,
+    openCount: 0,
+    recentCount: 0,
+    byEventType: [],
+  }));
   return res.json({
     success: true,
     metrics: getMetricsSnapshot(),
     queue: getQueueState(),
+    deadLetter,
   });
+}
+
+async function getEventStats(req, res) {
+  try {
+    const windowHours = Math.min(168, Math.max(1, Number(req.query.windowHours || 24)));
+    const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+
+    const [eventCounts, failedCount, queuedCount, processingStatusCounts, deadLetter] = await Promise.all([
+      UserEvent.aggregate([
+        {
+          $match: {
+            occurredAt: { $gte: since },
+          },
+        },
+        {
+          $group: {
+            _id: '$eventType',
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      UserEvent.countDocuments({
+        occurredAt: { $gte: since },
+        $or: [
+          { processingStatus: 'failed' },
+          { processingError: { $exists: true, $ne: '' } },
+        ],
+      }),
+      UserEvent.countDocuments({
+        occurredAt: { $gte: since },
+        processingStatus: 'queued',
+      }),
+      UserEvent.aggregate([
+        {
+          $match: {
+            occurredAt: { $gte: since },
+          },
+        },
+        {
+          $group: {
+            _id: '$processingStatus',
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      getDeadLetterStats(windowHours),
+    ]);
+
+    return res.json({
+      success: true,
+      windowHours,
+      failedCount,
+      queuedCount,
+      deadLetter,
+      byEventType: eventCounts.map((item) => ({
+        eventType: item._id || 'unknown',
+        count: item.count,
+      })),
+      byProcessingStatus: processingStatusCounts.map((item) => ({
+        processingStatus: item._id || 'unknown',
+        count: item.count,
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch YME event stats.',
+    });
+  }
+}
+
+async function getDeadLetters(req, res) {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20)));
+    const skip = (page - 1) * limit;
+    const filter = {};
+
+    if (req.query.status) filter.status = String(req.query.status).trim();
+    if (req.query.eventType) filter.eventType = String(req.query.eventType).trim();
+    if (req.query.traceId) filter.traceId = String(req.query.traceId).trim();
+    if (req.query.userId) filter.userId = req.query.userId;
+
+    const [items, total, summary] = await Promise.all([
+      DeadLetterEvent.find(filter).sort({ lastFailedAt: -1 }).skip(skip).limit(limit).lean(),
+      DeadLetterEvent.countDocuments(filter),
+      getDeadLetterStats(Number(req.query.windowHours || 24)),
+    ]);
+
+    return res.json({
+      success: true,
+      summary,
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch dead-letter events.',
+    });
+  }
 }
 
 function getIndexes(_req, res) {
@@ -491,6 +632,8 @@ module.exports = {
   getLogs,
   getHealth,
   getMetrics,
+  getEventStats,
+  getDeadLetters,
   getIndexes,
   getQueueHealthSnapshot,
   getEmbeddings,

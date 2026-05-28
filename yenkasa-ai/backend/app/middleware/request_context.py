@@ -15,6 +15,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("x-request-id") or str(uuid4())
         request.state.request_id = request_id
         started = time.perf_counter()
+        LOGGER.info(
+            "request received request_id=%s method=%s path=%s",
+            request_id,
+            request.method,
+            request.url.path,
+        )
         response = await call_next(request)
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         current_user = getattr(request.state, "current_user", None)

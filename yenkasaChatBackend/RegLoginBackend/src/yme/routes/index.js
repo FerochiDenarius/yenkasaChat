@@ -16,6 +16,8 @@ const {
 const router = express.Router();
 
 router.get('/health', controller.getHealth);
+router.get('/metrics', authMiddleware, requirePermission('analyticsAccess'), controller.getMetrics);
+router.get('/event-stats', authMiddleware, requirePermission('analyticsAccess'), controller.getEventStats);
 
 router.post(
   '/events',
@@ -48,6 +50,7 @@ router.get('/admin/events', authMiddleware, requirePermission('analyticsAccess')
 router.get('/admin/users/search', authMiddleware, requirePermission('analyticsAccess'), controller.searchUsers);
 router.get('/admin/logs', authMiddleware, requirePermission('analyticsAccess'), controller.getLogs);
 router.get('/admin/metrics', authMiddleware, requirePermission('analyticsAccess'), controller.getMetrics);
+router.get('/admin/dead-letters', authMiddleware, requirePermission('analyticsAccess'), controller.getDeadLetters);
 router.get('/admin/indexes', authMiddleware, requirePermission('analyticsAccess'), controller.getIndexes);
 router.get('/admin/queue-health', authMiddleware, requirePermission('analyticsAccess'), controller.getQueueHealthSnapshot);
 router.get('/admin/embeddings', authMiddleware, requirePermission('analyticsAccess'), controller.getEmbeddings);

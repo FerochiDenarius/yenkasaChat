@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Query
 from fastapi import Request
 
+from app.core.ai_pipeline import ensure_response_shape
+from app.core.ai_pipeline import invoke_ai_callable
 from app.core.dependencies import get_intelligence_runtime
 from app.modules.security import require_admin_user
 from app.modules.security import require_current_user
@@ -24,6 +28,7 @@ from app.schemas import SystemHealthResponse
 
 
 router = APIRouter(prefix="/api", tags=["dev-intelligence"])
+LOGGER = logging.getLogger("yenkasa_ai_cloud.intelligence_routes")
 
 
 @router.post("/repo/ingestions", response_model=RepoIngestionJobResponse)
@@ -109,11 +114,46 @@ async def repo_chat(
         )
     except ValueError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
-    response = await runtime.repo_chat.answer(
-        question=payload.question,
-        repo_name=payload.repo_name,
-        top_k=payload.top_k,
-        include_sources=payload.include_sources,
+    request_id = getattr(request.state, "request_id", None)
+    LOGGER.info(
+        "provider selected request_id=%s route=%s provider=gemini model=%s",
+        request_id,
+        request.url.path,
+        runtime.settings.gemini_reasoning_model,
+    )
+    LOGGER.info(
+        "AI generation started request_id=%s route=%s user_id=%s repo_name=%s",
+        request_id,
+        request.url.path,
+        current_user.user_id,
+        payload.repo_name,
+    )
+    try:
+        response = await invoke_ai_callable(
+            runtime.repo_chat.answer,
+            question=payload.question,
+            repo_name=payload.repo_name,
+            top_k=payload.top_k,
+            include_sources=payload.include_sources,
+            label="repo_chat",
+        )
+        response = await ensure_response_shape(
+            response,
+            label="repo_chat",
+            required_attr="answer",
+            expected_type=str,
+        )
+    except HTTPException:
+        LOGGER.exception("AI generation failed request_id=%s route=%s", request_id, request.url.path)
+        raise
+    except Exception:
+        LOGGER.exception("AI generation failed request_id=%s route=%s", request_id, request.url.path)
+        raise
+    LOGGER.info(
+        "AI generation completed request_id=%s route=%s duration_ms=%s",
+        request_id,
+        request.url.path,
+        response.timings.get("total_ms", 0),
     )
     await runtime.tracking.track_interaction(
         user=current_user,
@@ -125,6 +165,13 @@ async def repo_chat(
         response_time_ms=response.timings.get("total_ms", 0),
         model_used=runtime.settings.gemini_reasoning_model,
         metadata={"repo_name": payload.repo_name},
+    )
+    LOGGER.info(
+        "response serialization completed request_id=%s route=%s answer_chars=%s source_count=%s",
+        request_id,
+        request.url.path,
+        len(response.answer),
+        len(response.sources),
     )
     return response
 

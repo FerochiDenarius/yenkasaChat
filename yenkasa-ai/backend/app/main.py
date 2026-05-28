@@ -4,6 +4,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.admin_routes import router as admin_router
@@ -11,6 +13,9 @@ from app.api.auth_routes import router as auth_router
 from api.routes import router
 from app.config import get_settings
 from app.api.intelligence_routes import router as intelligence_router
+from app.core.exception_handlers import http_exception_handler
+from app.core.exception_handlers import unhandled_exception_handler
+from app.core.exception_handlers import validation_exception_handler
 from app.core.logging import configure_logging
 from app.core.runtime import IntelligenceRuntime
 from app.middleware import AuthContextMiddleware
@@ -48,6 +53,9 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version="2.0.0", lifespan=lifespan)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_allow_origins,

@@ -331,7 +331,7 @@ const ownerActivityId = `owner_${activityId}`;
     publishYmeEvent({
       userId: viewerIdStr,
       sourceApp: "social_app",
-      eventType: "watch",
+      eventType: mediaType === "video" || post.postType === "video" ? "video_watch" : "post_viewed",
       postId,
       creatorId: post.userId,
       communityId: post.communityId,

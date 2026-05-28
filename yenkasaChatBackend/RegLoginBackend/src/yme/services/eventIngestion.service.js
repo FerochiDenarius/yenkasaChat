@@ -6,6 +6,7 @@ const { enqueueEventProcessingJob, isQueueEnabled } = require('./queue.service')
 const { buildEmbeddingPolicy } = require('./embeddingPolicy.service');
 const { applyEventGuards } = require('./eventGuard.service');
 const { scoreEventImportance } = require('./importanceScoring.service');
+const { validateEventContract } = require('../contracts/event.contract');
 const {
   ensureArray,
   normalizeText,
@@ -17,15 +18,24 @@ const {
 
 const EVENT_TYPE_ALIASES = new Map([
   ['post_like', 'like'],
+  ['post_liked', 'like'],
   ['comment_created', 'comment'],
+  ['comment_deleted', 'comment_deleted'],
   ['post_created', 'caption'],
+  ['post_deleted', 'post_deleted'],
   ['video_watch', 'watch'],
   ['watch_duration', 'watch_duration'],
   ['post_view', 'post_view'],
+  ['post_viewed', 'post_view'],
+  ['post_shared', 'share'],
   ['creator_profile_view', 'creator_interaction'],
+  ['profile_viewed', 'profile_visit'],
   ['chat_message_sent', 'chat_message'],
+  ['chat_sent', 'chat_message'],
   ['chat_response_received', 'chat_response'],
   ['ai_chat_message', 'ai_chat_message'],
+  ['chat_read', 'chat_read'],
+  ['chat_deleted', 'chat_deleted'],
   ['caption_submit', 'caption'],
   ['save_post', 'save_post'],
   ['ad_interaction', 'ad_interaction'],
@@ -34,8 +44,21 @@ const EVENT_TYPE_ALIASES = new Map([
   ['live_comment', 'live_interaction'],
   ['live_stream_join', 'live_stream_join'],
   ['live_join', 'live_interaction'],
+  ['live_joined', 'live_stream_join'],
+  ['live_started', 'live_started'],
+  ['live_left', 'live_left'],
+  ['live_reaction', 'live_interaction'],
+  ['live_ended', 'live_ended'],
+  ['viewer_count_updated', 'viewer_count_updated'],
+  ['guest_request', 'guest_request'],
+  ['guest_approved', 'guest_approved'],
+  ['guest_declined', 'guest_declined'],
   ['reward_claim', 'reward_claim'],
   ['community_join', 'community_join'],
+  ['follow_user', 'follow'],
+  ['unfollow_user', 'unfollow'],
+  ['gift_sent', 'gift_sent'],
+  ['wallet_transfer', 'wallet_transfer'],
 ]);
 
 const LOCAL_BACKGROUND_QUEUE = 'ymeLocalBackgroundQueue';
@@ -55,6 +78,22 @@ function normalizeEventType(eventType) {
     .replace(/[\s-]+/g, '_');
 
   return EVENT_TYPE_ALIASES.get(normalized) || normalized;
+}
+
+function resolveTraceId(rawEvent = {}, defaults = {}) {
+  return String(
+    rawEvent.traceId ||
+      rawEvent.requestId ||
+      rawEvent.payload?.traceId ||
+      rawEvent.payload?.requestId ||
+      rawEvent.metadata?.traceId ||
+      rawEvent.metadata?.requestId ||
+      defaults.traceId ||
+      defaults.requestId ||
+      '',
+  )
+    .trim()
+    .slice(0, 160);
 }
 
 function buildNormalizedText(rawEvent = {}) {
@@ -91,6 +130,7 @@ function buildInterestCandidates(rawEvent = {}, normalizedText = '') {
 
 function normalizeIncomingEvent(rawEvent = {}, defaults = {}) {
   const normalizedText = buildNormalizedText(rawEvent);
+  const traceId = resolveTraceId(rawEvent, defaults);
   return {
     userId: toObjectId(rawEvent.userId || defaults.userId),
     sourceApp: String(rawEvent.sourceApp || rawEvent.source || defaults.sourceApp || 'social_app')
@@ -106,6 +146,7 @@ function normalizeIncomingEvent(rawEvent = {}, defaults = {}) {
     communityId: toObjectId(rawEvent.communityId),
     postId: toObjectId(rawEvent.postId),
     messageId: String(rawEvent.messageId || '').trim(),
+    traceId,
     normalizedText,
     interestCandidates: buildInterestCandidates(rawEvent, normalizedText),
     payload: rawEvent.payload || rawEvent.data || rawEvent.metadata || rawEvent,
@@ -121,23 +162,34 @@ function normalizeIncomingEvent(rawEvent = {}, defaults = {}) {
       impressionId: String(rawEvent.impressionId || rawEvent.payload?.impressionId || '').trim(),
       appVersion: String(rawEvent.appVersion || rawEvent.payload?.appVersion || '').trim(),
       clientPlatform: String(rawEvent.clientPlatform || rawEvent.platform || '').trim(),
-      traceId: String(rawEvent.traceId || '').trim(),
+      traceId,
     },
     processingStatus: 'pending',
     occurredAt: toDate(rawEvent.occurredAt || rawEvent.timestamp || rawEvent.createdAt, new Date()),
   };
 }
 
-function validateEvent(normalizedEvent = {}) {
+function validateEvent(normalizedEvent = {}, rawEvent = {}, defaults = {}) {
+  const contractValidation = validateEventContract(rawEvent, { defaults });
+  if (!contractValidation.valid) {
+    const error = new Error(`Invalid YME event contract: ${contractValidation.errors.join(' ')}`);
+    error.status = 400;
+    error.details = contractValidation.errors;
+    incrementCounter('eventsRejected');
+    throw error;
+  }
+
   if (!normalizedEvent.userId) {
     const error = new Error('YME event userId is required.');
     error.status = 400;
+    incrementCounter('eventsRejected');
     throw error;
   }
 
   if (!normalizedEvent.eventType) {
     const error = new Error('YME eventType is required.');
     error.status = 400;
+    incrementCounter('eventsRejected');
     throw error;
   }
 }
@@ -161,6 +213,7 @@ function buildEventLogContext(rawEvent = {}, normalizedEvent = {}) {
   return {
     sourceApp: normalizedEvent.sourceApp || null,
     eventType: normalizedEvent.eventType || null,
+    traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || null,
     sessionId: normalizedEvent.sessionId || null,
     clientEventId: normalizedEvent.clientEventId || null,
     conversationId: normalizedEvent.conversationId || null,
@@ -171,11 +224,12 @@ function buildEventLogContext(rawEvent = {}, normalizedEvent = {}) {
   };
 }
 
-async function dispatchEventProcessing(event) {
+async function dispatchEventProcessing(event, { req = null } = {}) {
   if (isQueueEnabled()) {
     const dispatch = await enqueueEventProcessingJob({
       eventId: event._id.toString(),
       userId: event.userId.toString(),
+      traceId: event.traceId || event.eventMetadata?.traceId || '',
     });
     event.processingStatus = 'queued';
     event.queueJobId = String(dispatch.jobId || '');
@@ -218,7 +272,9 @@ async function dispatchEventProcessing(event) {
             trigger: 'local_background',
             eventType: event.eventType,
             sourceApp: event.sourceApp,
+            traceId: event.traceId || event.eventMetadata?.traceId || '',
           },
+          req,
         });
       }
     });
@@ -253,7 +309,9 @@ async function dispatchEventProcessing(event) {
       eventType: event.eventType,
       sourceApp: event.sourceApp,
       reason: 'queue_not_configured',
+      traceId: event.traceId || event.eventMetadata?.traceId || '',
     },
+    req,
   });
 
   return {
@@ -267,7 +325,7 @@ async function dispatchEventProcessing(event) {
 async function ingestEvent(rawEvent, options = {}) {
   const startedAt = Date.now();
   const normalizedEvent = normalizeIncomingEvent(rawEvent, options.defaults);
-  validateEvent(normalizedEvent);
+  validateEvent(normalizedEvent, rawEvent, options.defaults);
 
   if (shouldSkipRecursiveEvent(rawEvent, normalizedEvent)) {
     await writeMemoryLog({
@@ -279,6 +337,7 @@ async function ingestEvent(rawEvent, options = {}) {
         ...buildEventLogContext(rawEvent, normalizedEvent),
         reason: 'recursive_event',
       },
+      req: options.req || null,
     });
 
     return {
@@ -313,7 +372,9 @@ async function ingestEvent(rawEvent, options = {}) {
       metadata: {
         eventType: normalizedEvent.eventType,
         dedupeKey: guard.dedupeKey,
+        traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || '',
       },
+      req: options.req || null,
     });
 
     return {
@@ -337,7 +398,9 @@ async function ingestEvent(rawEvent, options = {}) {
       metadata: {
         eventType: normalizedEvent.eventType,
         dedupeKey: guard.dedupeKey,
+        traceId: normalizedEvent.traceId || normalizedEvent.eventMetadata?.traceId || '',
       },
+      req: options.req || null,
     });
 
     return {
@@ -367,7 +430,9 @@ async function ingestEvent(rawEvent, options = {}) {
   });
   incrementCounter('eventsIngested');
 
-  const dispatch = await dispatchEventProcessing(event);
+  const dispatch = await dispatchEventProcessing(event, {
+    req: options.req || null,
+  });
 
   recordDuration('eventIngestRequest', Date.now() - startedAt);
   await writeMemoryLog({
@@ -388,7 +453,9 @@ async function ingestEvent(rawEvent, options = {}) {
       queueJobId: dispatch.jobId || event.queueJobId || '',
       importanceScore: event.importanceScore,
       shouldEmbed: event.shouldEmbed,
+      traceId: event.traceId || event.eventMetadata?.traceId || '',
     },
+    req: options.req || null,
   });
 
   return {

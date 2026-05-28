@@ -4,8 +4,10 @@ import logging
 
 from app.modules.analytics import AnalyticsService
 from app.modules.auth import AuthService
+from app.modules.crl import ConsciousReasoningLayer
 from app.modules.embeddings import EmbeddingsService
 from app.modules.events import EventService
+from app.modules.live_ops import LiveOpsService
 from app.modules.repo_chat import RepoChatService
 from app.modules.repo_ingestion import RepoIngestionService
 from app.modules.repo_ingestion import RepositoryScanner
@@ -57,6 +59,8 @@ class IntelligenceRuntime:
             insights_service=self.repo_insights,
         )
         self.events = EventService(self.mongo)
+        self.live_ops = LiveOpsService(self.mongo)
+        self.crl = ConsciousReasoningLayer(self.mongo)
 
     async def startup(self) -> None:
         if not self.settings.dev_intelligence_enabled:

@@ -254,7 +254,7 @@ router.post("/like/:postId", verifyToken, async (req, res) => {
       publishYmeEvent({
         userId,
         sourceApp: "social_app",
-        eventType: "like",
+        eventType: "post_liked",
         postId,
         creatorId: post.userId?._id,
         communityId: post.communityId,

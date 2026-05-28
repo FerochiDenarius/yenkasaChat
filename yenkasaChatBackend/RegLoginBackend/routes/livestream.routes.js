@@ -8,6 +8,7 @@ const User = require('../models/user.model');
 const CoinTransaction = require('../models/cointransaction.model');
 const { canStartLivestream } = require('../config/livestreamPermissions');
 const { agoraUidFromUserId, generateRtcToken } = require('../utils/agoraTokenGenerator');
+const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 
 const liveAutoEndTimers = new Map();
 const liveStartupTimers = new Map();
@@ -646,6 +647,36 @@ router.post('/gift', auth, async (req, res) => {
       createdAt: new Date().toISOString()
     };
     emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
+
+    publishYmeEvent({
+      userId: req.user._id.toString(),
+      sourceApp: 'live_arena',
+      eventType: 'gift_sent',
+      relatedUserId: stream.hostId.toString(),
+      contentId: streamId,
+      postId: streamId,
+      payload: {
+        giftKey,
+        giftLabel: gift.label,
+        emoji: gift.emoji,
+        amount: gift.amount,
+        transactionId: tx?.[0]?.transactionId || '',
+      },
+    });
+    publishYmeEvent({
+      userId: req.user._id.toString(),
+      sourceApp: 'live_arena',
+      eventType: 'wallet_transfer',
+      relatedUserId: stream.hostId.toString(),
+      contentId: streamId,
+      postId: streamId,
+      payload: {
+        transferType: 'live_gift',
+        amount: gift.amount,
+        transactionId: tx?.[0]?.transactionId || '',
+        giftKey,
+      },
+    });
 
     return res.json({
       success: true,

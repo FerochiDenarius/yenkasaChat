@@ -239,7 +239,7 @@ if (!parentCommentId && updatedCommentCount != null) {
 publishYmeEvent({
   userId,
   sourceApp: "social_app",
-  eventType: "comment",
+  eventType: "comment_created",
   postId,
   creatorId: post.userId?._id,
   relatedUserId: parentComment?.userId?._id || post.userId?._id,
@@ -510,6 +510,18 @@ router.delete('/:commentId', authMiddleware, async (req, res) => {
     if (updatedCommentCount != null) {
       emitCommentCountUpdate(comment.postId, updatedCommentCount);
     }
+
+    publishYmeEvent({
+      userId,
+      sourceApp: "social_app",
+      eventType: "comment_deleted",
+      postId: comment.postId,
+      contentId: comment.parentCommentId ? `comment:${comment.parentCommentId}` : `post:${comment.postId}`,
+      payload: {
+        commentId: comment._id.toString(),
+        parentCommentId: comment.parentCommentId?.toString?.() || null,
+      },
+    });
 
     res.json({ success: true, message: 'Comment deleted successfully' });
   } catch (err) {

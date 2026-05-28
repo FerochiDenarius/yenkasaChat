@@ -10,16 +10,43 @@ const REQUEST_TIMEOUT_MS = Number(process.env.YENKASA_AI_EVENT_TIMEOUT_MS || 500
 const INITIAL_RETRY_DELAY_MS = Number(process.env.YENKASA_AI_EVENT_RETRY_DELAY_MS || 15000);
 const MAX_RETRY_DELAY_MS = Number(process.env.YENKASA_AI_EVENT_MAX_RETRY_DELAY_MS || 300000);
 const FLUSH_BATCH_SIZE = Number(process.env.YENKASA_AI_EVENT_FLUSH_BATCH_SIZE || 25);
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = Number(
+  process.env.YENKASA_AI_EVENT_CIRCUIT_BREAKER_FAILURE_THRESHOLD || 5,
+);
+const CIRCUIT_BREAKER_COOLDOWN_MS = Number(
+  process.env.YENKASA_AI_EVENT_CIRCUIT_BREAKER_COOLDOWN_MS || 60000,
+);
 
 // TODO(kafka-migration): Replace the Mongo-backed local retry queue with a durable producer/consumer transport
 // once the event volume outgrows this startup-stage relay.
 
 const SUPPORTED_EVENT_TYPES = new Set([
   'post_created',
+  'post_deleted',
+  'post_liked',
+  'post_shared',
   'post_view',
   'video_watch',
   'comment_created',
+  'comment_deleted',
   'message_sent',
+  'message_read',
+  'message_deleted',
+  'follow_user',
+  'unfollow_user',
+  'profile_viewed',
+  'gift_sent',
+  'wallet_transfer',
+  'live_started',
+  'live_joined',
+  'live_left',
+  'live_comment',
+  'live_reaction',
+  'guest_request',
+  'guest_approved',
+  'guest_declined',
+  'live_ended',
+  'viewer_count_updated',
   'report_created',
   'suspicious_activity',
   'login_attempt',
@@ -37,6 +64,10 @@ const SUPPORTED_EVENT_TYPES = new Set([
 let flushTimer = null;
 let flushInFlight = false;
 let relayStarted = false;
+const relayCircuit = {
+  consecutiveFailures: 0,
+  openUntil: 0,
+};
 
 function relayEnabled() {
   return process.env.YENKASA_AI_EVENT_RELAY_ENABLED !== 'false';
@@ -94,6 +125,28 @@ function normalizeTimestamp(value) {
 function computeRetryDelayMs(attemptCount = 1) {
   const attempt = Math.max(1, Number(attemptCount) || 1);
   return Math.min(MAX_RETRY_DELAY_MS, INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1));
+}
+
+function isRelayCircuitOpen() {
+  return relayCircuit.openUntil > Date.now();
+}
+
+function resetRelayCircuit() {
+  relayCircuit.consecutiveFailures = 0;
+  relayCircuit.openUntil = 0;
+}
+
+function registerRelayFailure(error) {
+  relayCircuit.consecutiveFailures += 1;
+
+  if (relayCircuit.consecutiveFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    relayCircuit.openUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+    logRelay('warn', 'AI event relay circuit opened.', {
+      consecutiveFailures: relayCircuit.consecutiveFailures,
+      cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS,
+      message: error?.message || 'relay_failure',
+    });
+  }
 }
 
 function normalizeIntelligenceEvent(event = {}) {
@@ -160,7 +213,51 @@ function mapYmeEventToIntelligenceEvent(event = {}) {
     });
   }
 
-  if (type === 'watch' || type === 'post_view' || type === 'video_watch') {
+  if (type === 'post_deleted') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'post_deleted',
+      postId: event.postId,
+      communityId: event.communityId,
+      metadata: {
+        postId: event.postId || null,
+        communityId: event.communityId || null,
+        contentId: event.contentId || null,
+      },
+    });
+  }
+
+  if (type === 'like' || type === 'post_like' || type === 'post_liked') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'post_liked',
+      postId: event.postId,
+      communityId: event.communityId,
+      metadata: {
+        postId: event.postId || null,
+        communityId: event.communityId || null,
+        contentId: event.contentId || null,
+        creatorId: event.creatorId || null,
+      },
+    });
+  }
+
+  if (type === 'share' || type === 'post_shared') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'post_shared',
+      postId: event.postId,
+      communityId: event.communityId,
+      metadata: {
+        postId: event.postId || null,
+        communityId: event.communityId || null,
+        contentId: event.contentId || null,
+        shareCount: Number(event.payload?.shareCount || 0),
+      },
+    });
+  }
+
+  if (type === 'watch' || type === 'post_view' || type === 'post_viewed' || type === 'video_watch') {
     const mediaType = String(event.payload?.mediaType || '').toLowerCase();
     const eventType = type === 'video_watch' || mediaType === 'video' ? 'video_watch' : 'post_view';
     return normalizeIntelligenceEvent({
@@ -196,7 +293,22 @@ function mapYmeEventToIntelligenceEvent(event = {}) {
     });
   }
 
-  if (type === 'chat_message' || type === 'chat_message_sent' || type === 'message_sent') {
+  if (type === 'comment_deleted') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'comment_deleted',
+      postId: event.postId,
+      communityId: event.communityId,
+      metadata: {
+        postId: event.postId || null,
+        communityId: event.communityId || null,
+        commentId: event.payload?.commentId || null,
+        parentCommentId: event.payload?.parentCommentId || null,
+      },
+    });
+  }
+
+  if (type === 'chat_message' || type === 'chat_message_sent' || type === 'chat_sent' || type === 'message_sent') {
     return normalizeIntelligenceEvent({
       ...base,
       eventType: 'message_sent',
@@ -210,6 +322,102 @@ function mapYmeEventToIntelligenceEvent(event = {}) {
         hasAudio: Boolean(event.payload?.hasAudio),
         hasVideo: Boolean(event.payload?.hasVideo),
         hasFile: Boolean(event.payload?.hasFile),
+      },
+    });
+  }
+
+  if (type === 'chat_read') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'message_read',
+      metadata: {
+        roomId: event.conversationId || event.chatId || null,
+        relatedUserId: event.relatedUserId || null,
+      },
+    });
+  }
+
+  if (type === 'chat_deleted') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'message_deleted',
+      metadata: {
+        roomId: event.conversationId || event.chatId || null,
+        messageId: event.messageId || event.payload?.messageId || null,
+        relatedUserId: event.relatedUserId || null,
+      },
+    });
+  }
+
+  if (type === 'follow' || type === 'follow_user') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'follow_user',
+      metadata: {
+        relatedUserId: event.relatedUserId || event.creatorId || null,
+        contentId: event.contentId || null,
+      },
+    });
+  }
+
+  if (type === 'unfollow' || type === 'unfollow_user') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'unfollow_user',
+      metadata: {
+        relatedUserId: event.relatedUserId || event.creatorId || null,
+        contentId: event.contentId || null,
+      },
+    });
+  }
+
+  if (type === 'profile_visit' || type === 'profile_viewed') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'profile_viewed',
+      metadata: {
+        relatedUserId: event.relatedUserId || event.creatorId || null,
+        contentId: event.contentId || null,
+      },
+    });
+  }
+
+  if (type === 'gift_sent' || type === 'wallet_transfer') {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: type,
+      metadata: {
+        relatedUserId: event.relatedUserId || null,
+        roomId: event.payload?.roomId || null,
+        amount: Number(event.payload?.amount || 0),
+        giftType: event.payload?.giftType || '',
+      },
+    });
+  }
+
+  if (
+    [
+      'live_started',
+      'live_joined',
+      'live_left',
+      'live_comment',
+      'live_reaction',
+      'guest_request',
+      'guest_approved',
+      'guest_declined',
+      'live_ended',
+      'viewer_count_updated',
+    ].includes(type)
+  ) {
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: type,
+      metadata: {
+        roomId: event.payload?.roomId || event.payload?.streamId || null,
+        streamId: event.payload?.streamId || null,
+        relatedUserId: event.relatedUserId || null,
+        viewerCount: Number(event.payload?.viewerCount || 0),
+        text: event.payload?.text || '',
       },
     });
   }
@@ -256,6 +464,13 @@ async function parseResponse(response) {
 async function postEvent(payload) {
   if (!relayEnabled()) {
     return { skipped: true, reason: 'relay_disabled' };
+  }
+
+  if (isRelayCircuitOpen()) {
+    const error = new Error('AI event relay circuit is open.');
+    error.code = 'relay_circuit_open';
+    error.status = 503;
+    throw error;
   }
 
   const headers = {
@@ -358,6 +573,7 @@ async function markDelivered(eventId) {
 
 async function deliverIntelligenceEvent(payload) {
   const response = await postEvent(payload);
+  resetRelayCircuit();
   await markDelivered(payload.eventId);
   logRelay('info', 'Delivered intelligence event.', {
     eventId: payload.eventId,
@@ -384,6 +600,7 @@ async function publishIntelligenceEvent(event, options = {}) {
     try {
       return await deliverIntelligenceEvent(payload);
     } catch (error) {
+      registerRelayFailure(error);
       await queueFailedEvent(payload, error);
       return null;
     }
@@ -425,6 +642,7 @@ async function flushPendingIntelligenceEvents(limit = FLUSH_BATCH_SIZE) {
       try {
         await deliverIntelligenceEvent(record.payload || {});
       } catch (error) {
+        registerRelayFailure(error);
         record.status = 'pending';
         record.attemptCount = Number(record.attemptCount || 0) + 1;
         record.lastAttemptAt = new Date();

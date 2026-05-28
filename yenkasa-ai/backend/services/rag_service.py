@@ -175,7 +175,7 @@ class RagRuntime:
             startup_timings=self.startup_timings,
         )
 
-    def chat(self, payload: ChatRequest) -> ChatResponse:
+    def chat(self, payload: ChatRequest, extra_context: str | None = None) -> ChatResponse:
         return chat_with_rag(
             payload=payload,
             public_vector_store=self.public_vector_store,
@@ -185,6 +185,7 @@ class RagRuntime:
             model_name=self.settings.vertex_model,
             max_history_turns=self.settings.max_history_turns,
             retrieval_k=self.settings.retrieval_k,
+            extra_context=extra_context,
         )
 
     def search(self, payload: SearchRequest) -> SearchResponse:

@@ -108,6 +108,27 @@ function buildLegacyModerationSummary({
   };
 }
 
+function buildDeferredImageReviewResult(reason) {
+  return {
+    source: 'image',
+    models: [],
+    safe: 1,
+    nudity: 0,
+    violence: 0,
+    weapon: 0,
+    hate: 0,
+    scam: 0,
+    confidence: 0,
+    flagged: false,
+    recommendedAction: MODERATION_ACTIONS.REVIEW,
+    reasons: reason ? [reason] : [],
+    flaggedCategories: [],
+    evidence: [],
+    durationMs: 0,
+    items: [],
+  };
+}
+
 function recordActionMetrics(action) {
   incrementCounter('totalRequests');
 
@@ -420,15 +441,24 @@ async function preparePostModeration({
   const hasImage = normalizedImageUrls.length > 0 || normalizedImagePaths.length > 0;
   const hasVideoOrAudio = Boolean(normalizedVideoUrl || normalizedAudioUrl);
 
-  if (hasImage && queueEnabled && textResult.recommendedAction !== MODERATION_ACTIONS.REJECT) {
-    shouldQueueImage = true;
-    pendingSources.push('image');
-  } else if (hasImage) {
-    imageResult = await moderateImageBatch({
-      imageUrls: normalizedImageUrls,
-      filePaths: normalizedImagePaths,
-      includeDebug,
-    });
+  if (hasImage) {
+    if (textResult.recommendedAction === MODERATION_ACTIONS.REJECT) {
+      imageResult = buildDeferredImageReviewResult(
+        'Image moderation skipped because text content was already rejected.',
+      );
+    } else if (queueEnabled) {
+      shouldQueueImage = true;
+      pendingSources.push('image');
+    } else {
+      console.warn('[POST_MODERATION_FALLBACK]', {
+        source: 'image',
+        reason: 'queue_unavailable',
+        userId: userId ? String(userId) : '',
+      });
+      imageResult = buildDeferredImageReviewResult(
+        'Image moderation queue unavailable, routed to human review.',
+      );
+    }
   }
 
   if (hasVideoOrAudio) {

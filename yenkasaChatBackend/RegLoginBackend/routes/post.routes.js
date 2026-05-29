@@ -89,6 +89,33 @@ function normalizeClientRequestId(req) {
     .slice(0, 120);
 }
 
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) => String(item || "").trim())
+        .filter(Boolean);
+    }
+  } catch (_error) {
+    // Fall through to comma-separated parsing.
+  }
+
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 /* ---------------------------------------------------
  * ONE-WAY BLOCK CHECK (Instagram style)
  * userA = viewer or actor
@@ -180,6 +207,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       location,
       visibility,
       mentions,
+      communityId,
       communityName,
       postType,
       textBackgroundColor
@@ -227,19 +255,30 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     let recentPostsCount = 0;
     let remainingPosts = null;
 
-    if (!communityName || communityName.trim() === "") {
+    const normalizedCommunityId = String(communityId || "").trim();
+    const normalizedCommunityName = String(communityName || "").trim();
+
+    if (!normalizedCommunityId && !normalizedCommunityName) {
       return res.status(400).json({
         success: false,
         error: "Community selection is required to create a post."
       });
     }
 
-    const selectedCommunity = await Community.findOne({
-      $or: [
-        { name: communityName.trim() },
-        { displayName: communityName.trim() }
-      ]
-    });
+    const communityLookup = [];
+    if (normalizedCommunityId && mongoose.Types.ObjectId.isValid(normalizedCommunityId)) {
+      communityLookup.push({ _id: normalizedCommunityId });
+    }
+    if (normalizedCommunityName) {
+      communityLookup.push(
+        { name: normalizedCommunityName },
+        { displayName: normalizedCommunityName }
+      );
+    }
+
+    const selectedCommunity = await Community.findOne(
+      communityLookup.length === 1 ? communityLookup[0] : { $or: communityLookup }
+    );
 
     if (!selectedCommunity) {
       return res.status(404).json({
@@ -280,6 +319,10 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
 
       remainingPosts = UNVERIFIED_POST_LIMIT - (recentPostsCount + 1);
     }
+
+    const normalizedTags = normalizeStringList(tags);
+    const normalizedMentions = normalizeStringList(mentions)
+      .filter((value) => mongoose.Types.ObjectId.isValid(value));
 
     let imageUrl = '';
     let imageUrls = [];
@@ -378,8 +421,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       videoUrl,
       audioUrl,
       postType: detectedPostType,
-      tags: tags || [],
-      mentions: mentions || [],
+      tags: normalizedTags,
+      mentions: normalizedMentions,
       location: location || "",
       visibility: visibility || "public",
       communityName: selectedCommunity.displayName || selectedCommunity.name,

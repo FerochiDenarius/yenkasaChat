@@ -4,7 +4,7 @@ const AIOutboundEvent = require('../../../models/aiOutboundEvent.model');
 
 const DEFAULT_ENGINE_URL =
   process.env.YENKASA_AI_ENGINE_URL ||
-  'https://yenkasa-ai-496173204476.europe-west1.run.app';
+  'https://yenkasa-ai-backend-496173204476.europe-west1.run.app';
 const DEFAULT_EVENT_PATH = process.env.YENKASA_AI_EVENT_INGEST_PATH || '/api/events';
 const DEFAULT_HEALTH_PATH = process.env.YENKASA_AI_EVENT_HEALTH_PATH || '/health';
 const REQUEST_TIMEOUT_MS = Number(process.env.YENKASA_AI_EVENT_TIMEOUT_MS || 65000);

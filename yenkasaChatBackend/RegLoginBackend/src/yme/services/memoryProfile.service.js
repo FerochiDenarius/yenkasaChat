@@ -14,6 +14,14 @@ function logNormalizationError(error) {
   });
 }
 
+function isVersionConflict(error) {
+  return error?.name === 'VersionError';
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function mergeScoredEntries(existing = [], incoming = [], { key = 'label', limit = 10 } = {}) {
   const merged = new Map();
 
@@ -265,64 +273,47 @@ async function updateAiProfile(userId, derivedSignals, event) {
 }
 
 async function applyEventToMemory({ event, derivedSignals }) {
-  try {
-    const config = getYmeConfig();
-    const profile = await ensureUserMemory(event.userId);
-    const occurredAt = new Date(event.occurredAt || Date.now());
-    const hour = occurredAt.getUTCHours();
+  const config = getYmeConfig();
+  const occurredAt = new Date(event.occurredAt || Date.now());
+  const hour = occurredAt.getUTCHours();
+  const maxAttempts = 3;
 
-    profile.shortTerm.activeSessionIds = [
-      ...new Set([...(profile.shortTerm.activeSessionIds || []), event.sessionId].filter(Boolean)),
-    ].slice(-10);
-    profile.shortTerm.recentContext = [
-      ...(profile.shortTerm.recentContext || []),
-      buildRecentContextEntry(event),
-    ].slice(-config.consolidation.recentContextLimit);
-    profile.shortTerm.activeTopics = [
-      ...new Set([
-        ...(profile.shortTerm.activeTopics || []),
-        ...(derivedSignals.interests || []).map((entry) => entry.label),
-      ]),
-    ].slice(-12);
-    profile.shortTerm.activeInteractions = [
-      ...new Set([
-        ...(profile.shortTerm.activeInteractions || []),
-        event.contentId,
-        event.creatorId?.toString?.(),
-        event.relatedUserId?.toString?.(),
-      ].filter(Boolean)),
-    ].slice(-20);
-    profile.shortTerm.lastInteractionAt = occurredAt;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const profile = await ensureUserMemory(event.userId);
 
-    profile.midTerm.recentTopics = mergeScoredEntries(
-      profile.midTerm.recentTopics || [],
-      derivedSignals.interests || [],
-      { limit: config.consolidation.recentTopicLimit },
-    );
+      profile.shortTerm.activeSessionIds = [
+        ...new Set([...(profile.shortTerm.activeSessionIds || []), event.sessionId].filter(Boolean)),
+      ].slice(-10);
+      profile.shortTerm.recentContext = [
+        ...(profile.shortTerm.recentContext || []),
+        buildRecentContextEntry(event),
+      ].slice(-config.consolidation.recentContextLimit);
+      profile.shortTerm.activeTopics = [
+        ...new Set([
+          ...(profile.shortTerm.activeTopics || []),
+          ...(derivedSignals.interests || []).map((entry) => entry.label),
+        ]),
+      ].slice(-12);
+      profile.shortTerm.activeInteractions = [
+        ...new Set([
+          ...(profile.shortTerm.activeInteractions || []),
+          event.contentId,
+          event.creatorId?.toString?.(),
+          event.relatedUserId?.toString?.(),
+        ].filter(Boolean)),
+      ].slice(-20);
+      profile.shortTerm.lastInteractionAt = occurredAt;
 
-    if (event.creatorId) {
-      profile.midTerm.recentCreators = mergeScoredEntries(
-        profile.midTerm.recentCreators || [],
-        [
-          {
-            creatorId: event.creatorId,
-            score: 1,
-            lastEngagedAt: occurredAt,
-          },
-        ],
-        { key: 'creatorId', limit: config.consolidation.creatorAffinityLimit },
+      profile.midTerm.recentTopics = mergeScoredEntries(
+        profile.midTerm.recentTopics || [],
+        derivedSignals.interests || [],
+        { limit: config.consolidation.recentTopicLimit },
       );
-    }
 
-    profile.longTerm.stableInterests = mergeScoredEntries(
-      profile.longTerm.stableInterests || [],
-      derivedSignals.interests || [],
-      { limit: config.consolidation.stableInterestLimit },
-    );
-    profile.longTerm.activeHours = updateActiveHours(profile.longTerm.activeHours || [], hour);
-    profile.longTerm.creatorAffinity = event.creatorId
-      ? mergeScoredEntries(
-          profile.longTerm.creatorAffinity || [],
+      if (event.creatorId) {
+        profile.midTerm.recentCreators = mergeScoredEntries(
+          profile.midTerm.recentCreators || [],
           [
             {
               creatorId: event.creatorId,
@@ -331,65 +322,106 @@ async function applyEventToMemory({ event, derivedSignals }) {
             },
           ],
           { key: 'creatorId', limit: config.consolidation.creatorAffinityLimit },
-        )
-      : profile.longTerm.creatorAffinity || [];
-    profile.longTerm.commerceSignals = mergeScoredEntries(
-      profile.longTerm.commerceSignals || [],
-      derivedSignals.commerceSignals || [],
-      { limit: 12 },
-    );
-    profile.longTerm.emotionalPatterns = mergeScoredEntries(
-      profile.longTerm.emotionalPatterns || [],
-      derivedSignals.emotionalPatterns || [],
-      { limit: 12 },
-    );
-    profile.longTerm.engagementPatterns = {
-      ...(profile.longTerm.engagementPatterns || {}),
-      lastEventType: event.eventType,
-      lastSourceApp: event.sourceApp,
-    };
-    profile.lastEventAt = occurredAt;
-    profile.lastProcessedEventId = event._id;
+        );
+      }
 
-    pruneMemoryProfile(profile);
-    await profile.save();
-
-    const [engagementPattern, socialGraphEdge, aiProfile] = await Promise.all([
-      updateEngagementPatterns(event),
-      updateSocialGraph(event),
-      updateAiProfile(event.userId, derivedSignals, event),
-    ]);
-
-    profile.longTerm.aiProfile = {
-      preferredTones: aiProfile.preferredTones || [],
-      responseStyles: aiProfile.responseStyles || [],
-      topicPreferences: aiProfile.topicPreferences || [],
-    };
-    await profile.save();
-
-    if (socialGraphEdge) {
-      profile.longTerm.socialGraph = {
-        ...(profile.longTerm.socialGraph || {}),
-        lastRelatedUserId: socialGraphEdge.relatedUserId?.toString?.() || '',
-        lastWeight: socialGraphEdge.weight,
+      profile.longTerm.stableInterests = mergeScoredEntries(
+        profile.longTerm.stableInterests || [],
+        derivedSignals.interests || [],
+        { limit: config.consolidation.stableInterestLimit },
+      );
+      profile.longTerm.activeHours = updateActiveHours(profile.longTerm.activeHours || [], hour);
+      profile.longTerm.creatorAffinity = event.creatorId
+        ? mergeScoredEntries(
+            profile.longTerm.creatorAffinity || [],
+            [
+              {
+                creatorId: event.creatorId,
+                score: 1,
+                lastEngagedAt: occurredAt,
+              },
+            ],
+            { key: 'creatorId', limit: config.consolidation.creatorAffinityLimit },
+          )
+        : profile.longTerm.creatorAffinity || [];
+      profile.longTerm.commerceSignals = mergeScoredEntries(
+        profile.longTerm.commerceSignals || [],
+        derivedSignals.commerceSignals || [],
+        { limit: 12 },
+      );
+      profile.longTerm.emotionalPatterns = mergeScoredEntries(
+        profile.longTerm.emotionalPatterns || [],
+        derivedSignals.emotionalPatterns || [],
+        { limit: 12 },
+      );
+      profile.longTerm.engagementPatterns = {
+        ...(profile.longTerm.engagementPatterns || {}),
+        lastEventType: event.eventType,
+        lastSourceApp: event.sourceApp,
       };
+      profile.lastEventAt = occurredAt;
+      profile.lastProcessedEventId = event._id;
+
+      pruneMemoryProfile(profile);
       await profile.save();
+
+      const [engagementPattern, socialGraphEdge, aiProfile] = await Promise.all([
+        updateEngagementPatterns(event),
+        updateSocialGraph(event),
+        updateAiProfile(event.userId, derivedSignals, event),
+      ]);
+
+      const latestProfile = await UserMemory.findById(profile._id).lean();
+      const updatePayload = {
+        'longTerm.aiProfile': {
+          preferredTones: aiProfile.preferredTones || [],
+          responseStyles: aiProfile.responseStyles || [],
+          topicPreferences: aiProfile.topicPreferences || [],
+        },
+      };
+
+      if (socialGraphEdge) {
+        updatePayload['longTerm.socialGraph'] = {
+          ...(latestProfile?.longTerm?.socialGraph || {}),
+          lastRelatedUserId: socialGraphEdge.relatedUserId?.toString?.() || '',
+          lastWeight: socialGraphEdge.weight,
+        };
+      }
+
+      const updatedProfile = await UserMemory.findOneAndUpdate(
+        { _id: profile._id },
+        { $set: updatePayload },
+        { new: true },
+      );
+
+      const finalProfile = updatedProfile || profile;
+
+      emitMemoryProfileUpdated(event.userId, {
+        userId: event.userId.toString(),
+        lastEventType: event.eventType,
+        lastInteractionAt: finalProfile.shortTerm?.lastInteractionAt || occurredAt,
+      });
+
+      return {
+        profile: finalProfile,
+        engagementPattern,
+        aiProfile,
+      };
+    } catch (error) {
+      if (isVersionConflict(error) && attempt < maxAttempts) {
+        console.warn('[YME_MEMORY_RETRY]', {
+          userId: event.userId?.toString?.() || '',
+          eventId: event._id?.toString?.() || '',
+          attempt,
+          message: error.message,
+        });
+        await wait(attempt * 25);
+        continue;
+      }
+
+      logNormalizationError(error);
+      throw error;
     }
-
-    emitMemoryProfileUpdated(event.userId, {
-      userId: event.userId.toString(),
-      lastEventType: event.eventType,
-      lastInteractionAt: profile.shortTerm.lastInteractionAt,
-    });
-
-    return {
-      profile,
-      engagementPattern,
-      aiProfile,
-    };
-  } catch (error) {
-    logNormalizationError(error);
-    throw error;
   }
 }
 

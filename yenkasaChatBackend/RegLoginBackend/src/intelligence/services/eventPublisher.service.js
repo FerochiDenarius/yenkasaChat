@@ -5,7 +5,7 @@ const AIOutboundEvent = require('../../../models/aiOutboundEvent.model');
 const DEFAULT_ENGINE_URL =
   process.env.YENKASA_AI_ENGINE_URL ||
   'https://yenkasa-ai-backend-496173204476.europe-west1.run.app';
-const DEFAULT_EVENT_PATH = process.env.YENKASA_AI_EVENT_INGEST_PATH || '/api/events';
+const DEFAULT_EVENT_PATH = process.env.YENKASA_AI_EVENT_INGEST_PATH || '/api/events/ingest';
 const DEFAULT_HEALTH_PATH = process.env.YENKASA_AI_EVENT_HEALTH_PATH || '/health';
 const REQUEST_TIMEOUT_MS = Number(process.env.YENKASA_AI_EVENT_TIMEOUT_MS || 65000);
 const HEALTH_TIMEOUT_MS = Number(
@@ -51,6 +51,22 @@ const SUPPORTED_EVENT_TYPES = new Set([
   'guest_declined',
   'live_ended',
   'viewer_count_updated',
+  'stream_started',
+  'stream_ended',
+  'stream_joined',
+  'stream_left',
+  'stream_comment',
+  'stream_like',
+  'stream_gift',
+  'stream_share',
+  'stream_report',
+  'stream_follow_host',
+  'stream_pin_comment',
+  'stream_moderation_action',
+  'stream_ban_user',
+  'stream_warning',
+  'stream_view_duration',
+  'stream_peak_viewers',
   'report_created',
   'suspicious_activity',
   'login_attempt',
@@ -560,17 +576,52 @@ function mapYmeEventToIntelligenceEvent(event = {}) {
       'guest_declined',
       'live_ended',
       'viewer_count_updated',
+      'stream_started',
+      'stream_ended',
+      'stream_joined',
+      'stream_left',
+      'stream_comment',
+      'stream_like',
+      'stream_gift',
+      'stream_share',
+      'stream_report',
+      'stream_follow_host',
+      'stream_pin_comment',
+      'stream_moderation_action',
+      'stream_ban_user',
+      'stream_warning',
+      'stream_view_duration',
+      'stream_peak_viewers',
     ].includes(type)
   ) {
+    const metadata = event.payload || event.metadata || {};
     return normalizeIntelligenceEvent({
       ...base,
       eventType: type,
       metadata: {
-        roomId: event.payload?.roomId || event.payload?.streamId || null,
-        streamId: event.payload?.streamId || null,
+        roomId: metadata.roomId || metadata.streamId || event.contentId || null,
+        streamId: metadata.streamId || event.contentId || null,
+        hostId: metadata.hostId || event.relatedUserId || event.creatorId || null,
         relatedUserId: event.relatedUserId || null,
-        viewerCount: Number(event.payload?.viewerCount || 0),
-        text: event.payload?.text || '',
+        viewerCount: Number(metadata.viewerCount || 0),
+        peakViewerCount: Number(metadata.peakViewerCount || metadata.peakViewers || 0),
+        durationMs: Number(metadata.durationMs || metadata.watchTimeMs || 0),
+        amount: Number(metadata.amount || 0),
+        giftKey: metadata.giftKey || '',
+        action: metadata.action || '',
+        reason: metadata.reason || '',
+        metrics: metadata.metrics || {},
+        moderationSignals: metadata.moderationSignals || [],
+        recommendationSignals: metadata.recommendationSignals || [],
+        text: metadata.text || metadata.message || '',
+        operationalEvent: {
+          eventType: String(type || '').toUpperCase(),
+          streamId: metadata.streamId || event.contentId || null,
+          userId: event.userId || null,
+          hostId: metadata.hostId || event.relatedUserId || event.creatorId || null,
+          timestamp: base.timestamp,
+          metadata,
+        },
       },
     });
   }

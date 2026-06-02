@@ -9,6 +9,12 @@ const CoinTransaction = require('../models/cointransaction.model');
 const { canStartLivestream } = require('../config/livestreamPermissions');
 const { agoraUidFromUserId, generateRtcToken } = require('../utils/agoraTokenGenerator');
 const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
+const {
+  LIVESTREAM_EVENT_TYPES,
+  emitLivestreamOperationalEvent,
+  getLivestreamMetrics,
+  getTopStreams,
+} = require('../src/services/livestream/operationalEvents.service');
 
 const liveAutoEndTimers = new Map();
 const liveStartupTimers = new Map();
@@ -80,10 +86,14 @@ function serializeStream(stream) {
 }
 
 function liveRoom(streamId) {
-  return `livestream_${streamId}`;
+  return `stream:${streamId}`;
 }
 
 function legacyLiveRoom(streamId) {
+  return `livestream_${streamId}`;
+}
+
+function deprecatedLiveRoom(streamId) {
   return `live:${streamId}`;
 }
 
@@ -92,7 +102,7 @@ function emitToLiveRoom(streamId, eventName, payload) {
     global.emitToLiveRoomForStream(streamId, eventName, payload);
     return;
   }
-  global.io?.to(liveRoom(streamId)).to(legacyLiveRoom(streamId)).emit(eventName, payload);
+  global.io?.to(liveRoom(streamId)).to(legacyLiveRoom(streamId)).to(deprecatedLiveRoom(streamId)).emit(eventName, payload);
 }
 
 function emitLiveDirectory(eventName, payload) {
@@ -161,6 +171,40 @@ function logLiveToken(event, user, stream, agora, extra = {}) {
   });
 }
 
+function emitLiveRouteOperationalEvent(eventType, userId, stream, metadata = {}) {
+  const task = emitLivestreamOperationalEvent(
+    {
+      eventType,
+      streamId: stream?._id?.toString?.() || metadata.streamId || '',
+      userId: userId?.toString?.() || '',
+      hostId: stream?.hostId?.toString?.() || metadata.hostId || '',
+      timestamp: metadata.createdAt || new Date().toISOString(),
+      metadata: {
+        title: stream?.title || '',
+        community: stream?.community || '',
+        viewerCount: stream?.viewerCount || 0,
+        peakViewerCount: stream?.peakViewerCount || 0,
+        routeEventSource: 'livestream.routes',
+        ...metadata,
+      },
+    },
+    {
+      platform: 'http',
+      sessionId: metadata.sessionId || '',
+    },
+  );
+
+  return task.catch((error) => {
+    console.warn('[YenkasaLiveStream][route_operational_event_failed]', {
+      eventType,
+      streamId: stream?._id?.toString?.() || metadata.streamId || '',
+      userId: userId?.toString?.() || '',
+      message: error.message,
+    });
+    return null;
+  });
+}
+
 function scheduleAutoEnd(stream) {
   const streamId = stream._id.toString();
   if (liveAutoEndTimers.has(streamId)) {
@@ -197,6 +241,10 @@ function scheduleAutoEnd(stream) {
     emitToLiveRoom(streamId, 'live_ended', endedEvent);
     emitLiveDirectory('live_removed', { streamId, reason: 'time_limit' });
     global.clearLiveParticipantsForStream?.(streamId);
+    emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_ENDED, activeStream.hostId, activeStream, {
+      reason: 'time_limit',
+      message: endedEvent.message,
+    });
     logLiveEvent('auto_end', activeStream, { reason: 'time_limit' });
   }, delay);
 
@@ -240,6 +288,9 @@ async function failStartingStream(streamId, reason = 'startup_timeout') {
   const removedEvent = { streamId: stream._id.toString(), reason };
   emitLiveDirectory('live_removed', removedEvent);
   global.clearLiveParticipantsForStream?.(stream._id.toString());
+  emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_ENDED, stream.hostId, stream, {
+    reason,
+  });
   logLiveEvent('startup_failed', stream, { reason });
   return stream;
 }
@@ -395,6 +446,55 @@ router.get('/active', auth, async (req, res) => {
   }
 });
 
+router.get('/top-streams', auth, async (req, res) => {
+  const limit = Math.min(Number(req.query.limit || 20), 50);
+  return res.json({
+    success: true,
+    streams: getTopStreams(limit),
+  });
+});
+
+router.get('/:id/metrics', auth, async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid livestream id.' });
+  }
+
+  return res.json({
+    success: true,
+    metrics: getLivestreamMetrics(req.params.id),
+  });
+});
+
+router.get('/:id/creator-intelligence', auth, async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid livestream id.' });
+  }
+
+  const stream = await LiveStream.findById(req.params.id).select('hostId community viewerCount peakViewerCount').lean();
+  if (!stream) {
+    return res.status(404).json({ success: false, message: 'Livestream not found.' });
+  }
+  if (stream.hostId?.toString?.() !== req.user._id.toString()) {
+    return res.status(403).json({ success: false, message: 'Only the host can view creator intelligence.' });
+  }
+
+  const metrics = getLivestreamMetrics(req.params.id);
+  return res.json({
+    success: true,
+    creatorIntelligence: {
+      peakViewers: Math.max(metrics.peakViewers, stream.peakViewerCount || 0),
+      viewerRetention: metrics.retentionRate,
+      engagementRate: metrics.totalViewers
+        ? Number((metrics.engagementCount / metrics.totalViewers).toFixed(4))
+        : 0,
+      giftRevenue: metrics.giftRevenue,
+      topAudienceCommunities: stream.community ? [{ community: stream.community, viewers: metrics.totalViewers }] : [],
+      returningViewers: metrics.retentionRate,
+      metrics,
+    },
+  });
+});
+
 router.post('/join/:id', auth, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -455,6 +555,11 @@ router.post('/join/:id', auth, async (req, res) => {
       role
     });
     logLiveToken('join', req.user, stream, agora, { joinRole: role, joinResult: 'token_generated' });
+    emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_JOINED, req.user._id, stream, {
+      liveRole: role,
+      agoraUid: agora.uid,
+      tokenRole: agora.role,
+    });
 
     return res.json({
       success: true,
@@ -513,6 +618,9 @@ router.post('/end/:id', auth, async (req, res) => {
     emitToLiveRoom(stream._id, 'live_ended', endedEvent);
     emitLiveDirectory('live_removed', { streamId: stream._id.toString(), reason: 'host_ended' });
     global.clearLiveParticipantsForStream?.(stream._id.toString());
+    emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_ENDED, req.user._id, stream, {
+      reason: 'host_ended',
+    });
     logLiveEvent('end', stream, { reason: 'host_ended' });
 
     return res.json({ success: true, stream: serializeStream(stream) });
@@ -548,6 +656,17 @@ router.post('/leave/:id', auth, async (req, res) => {
         viewerCount: stream.viewerCount
       };
       emitToLiveRoom(stream._id, 'live_viewer_count', countEvent);
+      emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_LEFT, req.user._id, stream, {
+        viewerCount: stream.viewerCount,
+        concurrentViewers: stream.viewerCount,
+      });
+      const durationMs = Math.max(0, Number(req.body?.durationMs || req.body?.watchTimeMs || 0));
+      if (durationMs > 0) {
+        emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_VIEW_DURATION, req.user._id, stream, {
+          durationMs,
+          watchTimeMs: durationMs,
+        });
+      }
     }
 
     return res.json({ success: true });
@@ -638,6 +757,8 @@ router.post('/gift', auth, async (req, res) => {
       transactionId: tx?.[0]?.transactionId
     };
     emitToLiveRoom(streamId, 'live_gift', event);
+    emitToLiveRoom(streamId, 'new_gift', event);
+    emitToLiveRoom(streamId, 'gift_animation', event);
     const reactionEvent = {
       streamId,
       userId: req.user._id.toString(),
@@ -647,6 +768,18 @@ router.post('/gift', auth, async (req, res) => {
       createdAt: new Date().toISOString()
     };
     emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
+    emitToLiveRoom(streamId, 'new_like', reactionEvent);
+
+    emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_GIFT, req.user._id, stream, {
+      giftKey,
+      giftLabel: gift.label,
+      emoji: gift.emoji,
+      amount: gift.amount,
+      transactionId: tx?.[0]?.transactionId || '',
+      hostId: stream.hostId.toString(),
+      senderId: req.user._id.toString(),
+      senderUsername: req.user.username,
+    });
 
     publishYmeEvent({
       userId: req.user._id.toString(),

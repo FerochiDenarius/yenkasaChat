@@ -1,27 +1,56 @@
 const livestreamService = require('./livestream.service');
-const { publishYmeEvent } = require('../../yme/services/eventPublisher.service');
+const {
+  LIVESTREAM_EVENT_TYPES,
+  emitLivestreamOperationalEvent,
+} = require('./operationalEvents.service');
 
 function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
-  function emitYmeLiveEvent(eventType, actorUserId, payload = {}) {
+  socket.data.liveJoinTimes = socket.data.liveJoinTimes || new Map();
+
+  function emitLiveOperationalEvent(eventType, actorUserId, payload = {}) {
     const userId = String(actorUserId || socket.data.userId || payload.userId || '').trim();
     if (!userId) return;
 
-    publishYmeEvent({
-      eventType,
-      userId,
-      relatedUserId: payload.relatedUserId || payload.guestUserId || payload.targetUserId || '',
-      sourceApp: 'live_arena',
-      platform: 'socket',
-      sessionId: socket.id,
-      contentId: payload.streamId || '',
-      postId: payload.streamId || '',
-      clientEventId: payload.clientEventId || '',
-      occurredAt: payload.createdAt || new Date().toISOString(),
-      text: payload.message || payload.reaction || payload.reason || '',
-      payload: {
-        ...payload,
-        socketEventSource: 'livestream.socket',
-      },
+    const task = (async () => {
+      let streamContext = {};
+      const streamId = payload.streamId?.toString?.() || '';
+      if (streamId && mongoose.Types.ObjectId.isValid(streamId) && !payload.hostId) {
+        streamContext = await LiveStream.findById(streamId)
+          .select('hostId title community viewerCount peakViewerCount')
+          .lean() || {};
+      }
+
+      return emitLivestreamOperationalEvent(
+        {
+          eventType,
+          streamId,
+          userId,
+          hostId: payload.hostId || streamContext.hostId || payload.relatedUserId || payload.targetUserId || userId,
+          timestamp: payload.createdAt || new Date().toISOString(),
+          metadata: {
+            ...payload,
+            title: payload.title || streamContext.title || '',
+            community: payload.community || streamContext.community || '',
+            viewerCount: payload.viewerCount ?? streamContext.viewerCount ?? 0,
+            peakViewerCount: payload.peakViewerCount ?? streamContext.peakViewerCount ?? 0,
+            socketEventSource: 'livestream.socket',
+          },
+        },
+        {
+          platform: 'socket',
+          sessionId: socket.id,
+        },
+      );
+    })();
+
+    return task.catch((error) => {
+      console.warn('[YenkasaLiveStream][operational_event_failed]', {
+        eventType,
+        userId,
+        streamId: payload.streamId || '',
+        message: error.message,
+      });
+      return null;
     });
   }
 
@@ -71,10 +100,13 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       viewerCount: stream.viewerCount,
     };
     livestreamService.emitToLiveRoom(streamId, 'live_viewer_count', payload);
-    emitYmeLiveEvent('viewer_count_updated', stream.hostId?.toString?.(), {
+    emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_PEAK_VIEWERS, stream.hostId?.toString?.(), {
       streamId,
+      hostId: stream.hostId?.toString?.(),
       viewerCount: stream.viewerCount,
       peakViewerCount: stream.peakViewerCount || stream.viewerCount,
+      concurrentViewers: stream.viewerCount,
+      peakViewers: stream.peakViewerCount || stream.viewerCount,
     });
     return stream;
   }
@@ -109,7 +141,10 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       reason: 'host_disconnected',
     };
     livestreamService.emitToLiveRoom(streamId, 'live_ended', endedEvent);
-    emitYmeLiveEvent('live_ended', stream.hostId?.toString?.(), endedEvent);
+    emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_ENDED, stream.hostId?.toString?.(), {
+      ...endedEvent,
+      hostId: stream.hostId?.toString?.(),
+    });
     io.emit('live_removed', endedEvent);
     livestreamService.clearLiveParticipants(streamId);
     console.log(`📺 Livestream ${streamId} ended after host socket ${socketId} disconnected.`);
@@ -160,11 +195,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         liveRole: 'broadcaster',
         viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
       });
-      emitYmeLiveEvent('live_started', actor.userId, {
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_STARTED, actor.userId, {
         streamId,
+        hostId: stream.hostId?.toString?.(),
         agoraUid: payload.agoraUid,
         liveRole: 'broadcaster',
         viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
+        peakViewerCount: stream.peakViewerCount || livestreamService.getLiveRoomMemberCount(streamId),
+        title: stream.title || '',
+        community: stream.community || '',
       });
 
       io.emit('live_started', { stream: livestreamService.serializeLiveStream(stream) });
@@ -248,6 +287,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       });
       livestreamService.joinLiveRooms(socket, streamId);
       socket.data.liveStreams.add(streamId);
+      socket.data.liveJoinTimes.set(streamId, Date.now());
       livestreamService.addLiveParticipant(streamId, actor.userId, payload.agoraUid);
       const stream = await updateLiveViewerCount(streamId);
       if (!stream) {
@@ -265,9 +305,13 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         username: actor.username,
         avatar: actor.avatar,
         viewerCount: livestreamService.getLiveRoomMemberCount(streamId),
+        hostId: stream.hostId?.toString?.(),
+        title: stream.title || '',
+        community: stream.community || '',
       };
       livestreamService.emitToLiveRoom(streamId, 'live_join', event);
-      emitYmeLiveEvent('live_joined', actor.userId, event);
+      livestreamService.emitToLiveRoom(streamId, 'viewer_joined', event);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_JOINED, actor.userId, event);
       livestreamService.emitLiveRoomMemberCount(streamId);
       livestreamService.emitLiveJoinAck(socket, {
         streamId,
@@ -297,23 +341,35 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         role: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
         socketId: socket.id,
       });
-      livestreamService.emitToLiveRoom(streamId, 'live_leave', {
+      const durationMs = Math.max(0, Date.now() - Number(socket.data.liveJoinTimes.get(streamId) || Date.now()));
+      const leaveEvent = {
         streamId,
         userId: actor.userId,
         agoraUid: livestreamService.normalizeAgoraUid(payload.agoraUid),
         liveRole: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
         username: actor.username,
         avatar: actor.avatar,
+        durationMs,
         createdAt: new Date().toISOString(),
-      });
-      emitYmeLiveEvent('live_left', actor.userId, {
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_leave', leaveEvent);
+      livestreamService.emitToLiveRoom(streamId, 'viewer_left', leaveEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_LEFT, actor.userId, {
         streamId,
         agoraUid: livestreamService.normalizeAgoraUid(payload.agoraUid),
         liveRole: payload.liveRole || (isHostParticipant ? 'broadcaster' : 'audience'),
+        durationMs,
+        createdAt: new Date().toISOString(),
+      });
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_VIEW_DURATION, actor.userId, {
+        streamId,
+        durationMs,
+        watchTimeMs: durationMs,
         createdAt: new Date().toISOString(),
       });
       socket.data.liveStreams.delete(streamId);
       socket.data.hostLiveStreams.delete(streamId);
+      socket.data.liveJoinTimes.delete(streamId);
       livestreamService.removeLiveParticipant(streamId, actor.userId);
       const guestLeaveResult = await LiveStream.updateOne(
         { _id: streamId, 'guests.userId': actor.userId },
@@ -354,7 +410,8 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         createdAt: new Date().toISOString(),
       };
       livestreamService.emitToLiveRoom(streamId, 'live_comment', commentEvent);
-      emitYmeLiveEvent('live_comment', actor.userId, commentEvent);
+      livestreamService.emitToLiveRoom(streamId, 'new_comment', commentEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_COMMENT, actor.userId, commentEvent);
     } catch (err) {
       console.error('❌ live_comment failed:', err.message);
     }
@@ -378,9 +435,156 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         createdAt: new Date().toISOString(),
       };
       livestreamService.emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
-      emitYmeLiveEvent('live_reaction', actor.userId, reactionEvent);
+      livestreamService.emitToLiveRoom(streamId, 'new_like', reactionEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_LIKE, actor.userId, reactionEvent);
     } catch (err) {
       console.error('❌ live_reaction failed:', err.message);
+    }
+  };
+
+  const handleLiveShare = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId) return;
+      if (livestreamService.shouldSkipDuplicateLiveEvent('share', payload)) return;
+      const actor = await resolveLiveActor(payload);
+      const shareEvent = {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        target: payload.target || payload.shareTarget || '',
+        clientEventId: payload.clientEventId || '',
+        createdAt: new Date().toISOString(),
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_share', shareEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_SHARE, actor.userId, shareEvent);
+    } catch (err) {
+      console.error('❌ live_share failed:', err.message);
+    }
+  };
+
+  const handleLiveReport = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId) return;
+      if (livestreamService.shouldSkipDuplicateLiveEvent('report', payload)) return;
+      const actor = await resolveLiveActor(payload);
+      const reportEvent = {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        targetUserId: payload.targetUserId?.toString?.() || '',
+        reason: String(payload.reason || 'livestream_report').trim().slice(0, 240),
+        clientEventId: payload.clientEventId || '',
+        createdAt: new Date().toISOString(),
+      };
+      io.to(actor.userId).emit('live_report_received', reportEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_REPORT, actor.userId, reportEvent);
+    } catch (err) {
+      console.error('❌ live_report failed:', err.message);
+    }
+  };
+
+  const handleLiveFollowHost = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId) return;
+      if (livestreamService.shouldSkipDuplicateLiveEvent('follow_host', payload)) return;
+      const actor = await resolveLiveActor(payload);
+      const followEvent = {
+        streamId,
+        userId: actor.userId,
+        username: actor.username,
+        hostId: payload.hostId?.toString?.() || payload.targetUserId?.toString?.() || '',
+        clientEventId: payload.clientEventId || '',
+        createdAt: new Date().toISOString(),
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_follow_host', followEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_FOLLOW_HOST, actor.userId, followEvent);
+    } catch (err) {
+      console.error('❌ live_follow_host failed:', err.message);
+    }
+  };
+
+  const handleLivePinComment = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId)) return;
+      const stream = await LiveStream.findOne({
+        _id: streamId,
+        hostId: socket.data.userId,
+        isLive: true,
+      }).select('hostId').lean();
+      if (!stream) return;
+
+      const pinEvent = {
+        streamId,
+        hostId: stream.hostId.toString(),
+        commentId: payload.commentId?.toString?.() || payload.clientEventId || '',
+        message: String(payload.message || '').trim().slice(0, 240),
+        pinnedBy: socket.data.userId,
+        clientEventId: payload.clientEventId || '',
+        createdAt: new Date().toISOString(),
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_comment_pinned', pinEvent);
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_PIN_COMMENT, socket.data.userId, pinEvent);
+    } catch (err) {
+      console.error('❌ live_pin_comment failed:', err.message);
+    }
+  };
+
+  const handleLiveModerationAction = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId || !mongoose.Types.ObjectId.isValid(streamId)) return;
+      const stream = await LiveStream.findOne({
+        _id: streamId,
+        hostId: socket.data.userId,
+        isLive: true,
+      }).select('hostId').lean();
+      if (!stream) return;
+
+      const action = String(payload.action || 'moderation_action').trim().slice(0, 80);
+      const eventType =
+        action === 'ban_user'
+          ? LIVESTREAM_EVENT_TYPES.STREAM_BAN_USER
+          : action === 'warning'
+            ? LIVESTREAM_EVENT_TYPES.STREAM_WARNING
+            : LIVESTREAM_EVENT_TYPES.STREAM_MODERATION_ACTION;
+      const moderationEvent = {
+        streamId,
+        hostId: stream.hostId.toString(),
+        targetUserId: payload.targetUserId?.toString?.() || '',
+        action,
+        reason: String(payload.reason || '').trim().slice(0, 240),
+        createdAt: new Date().toISOString(),
+      };
+      livestreamService.emitToLiveRoom(streamId, 'live_moderation_action', moderationEvent);
+      emitLiveOperationalEvent(eventType, socket.data.userId, moderationEvent);
+    } catch (err) {
+      console.error('❌ live_moderation_action failed:', err.message);
+    }
+  };
+
+  const handleLiveViewDuration = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      if (!streamId) return;
+      const actor = await resolveLiveActor(payload);
+      const durationMs = Math.max(
+        0,
+        Number(payload.durationMs || payload.watchTimeMs || 0) ||
+          Date.now() - Number(socket.data.liveJoinTimes.get(streamId) || Date.now()),
+      );
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_VIEW_DURATION, actor.userId, {
+        streamId,
+        durationMs,
+        watchTimeMs: durationMs,
+        liveRole: payload.liveRole || '',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('❌ live_view_duration failed:', err.message);
     }
   };
 
@@ -424,9 +628,11 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         agoraUid: expectedUid,
         createdAt: new Date().toISOString(),
       });
-      emitYmeLiveEvent('guest_request', actor.userId, {
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_MODERATION_ACTION, actor.userId, {
         streamId,
         targetUserId: stream.hostId.toString(),
+        hostId: stream.hostId.toString(),
+        action: 'guest_request',
         agoraUid: expectedUid,
       });
     } catch (err) {
@@ -491,10 +697,12 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         guest: guestData,
         approvedBy: socket.data.userId,
       });
-      emitYmeLiveEvent('guest_approved', socket.data.userId, {
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_MODERATION_ACTION, socket.data.userId, {
         streamId,
+        hostId: stream.hostId?.toString?.(),
         guestUserId,
         guestAgoraUid: expectedGuestUid,
+        action: 'guest_approved',
       });
     } catch (err) {
       console.error('❌ live_approve_guest_seat failed:', err.message);
@@ -522,9 +730,11 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!stream) return;
 
       io.to(guestUserId).emit('live_guest_seat_declined', { streamId });
-      emitYmeLiveEvent('guest_declined', socket.data.userId, {
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_MODERATION_ACTION, socket.data.userId, {
         streamId,
+        hostId: stream.hostId?.toString?.(),
         guestUserId,
+        action: 'guest_declined',
       });
     } catch (err) {
       console.error('❌ live_decline_guest_seat failed:', err.message);
@@ -558,6 +768,13 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       );
 
       livestreamService.emitToLiveRoom(streamId, 'live_guest_muted', { streamId, guestUserId, muted });
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_MODERATION_ACTION, socket.data.userId, {
+        streamId,
+        hostId: stream.hostId?.toString?.(),
+        guestUserId,
+        action: muted ? 'guest_muted' : 'guest_unmuted',
+        muted,
+      });
     } catch (err) {
       console.error('❌ live_mute_guest failed:', err.message);
     }
@@ -585,6 +802,12 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
 
       await LiveStream.updateOne({ _id: streamId }, { $pull: { guests: { userId: guestUserId } } });
       livestreamService.emitToLiveRoom(streamId, 'live_guest_kicked', { streamId, guestUserId });
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_BAN_USER, socket.data.userId, {
+        streamId,
+        hostId: stream.hostId?.toString?.(),
+        targetUserId: guestUserId,
+        action: 'guest_kicked',
+      });
     } catch (err) {
       console.error('❌ live_kick_guest failed:', err.message);
     }
@@ -596,6 +819,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
   socket.on('live_leave', handleLiveLeave);
   socket.on('live_comment', handleLiveComment);
   socket.on('live_reaction', handleLiveReaction);
+  socket.on('live_like', handleLiveReaction);
+  socket.on('live_share', handleLiveShare);
+  socket.on('live_report', handleLiveReport);
+  socket.on('live_follow_host', handleLiveFollowHost);
+  socket.on('live_pin_comment', handleLivePinComment);
+  socket.on('live_moderation_action', handleLiveModerationAction);
+  socket.on('live_ban_user', (payload = {}) => handleLiveModerationAction({ ...payload, action: 'ban_user' }));
+  socket.on('live_warning', (payload = {}) => handleLiveModerationAction({ ...payload, action: 'warning' }));
+  socket.on('live_view_duration', handleLiveViewDuration);
   socket.on('live_request_guest_seat', handleLiveRequestGuestSeat);
   socket.on('live_approve_guest_seat', handleLiveApproveGuestSeat);
   socket.on('live_decline_guest_seat', handleLiveDeclineGuestSeat);
@@ -621,6 +853,20 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
     if (socket.data.liveStreams?.size) {
       await Promise.allSettled(
         Array.from(socket.data.liveStreams).map(async (streamId) => {
+          const durationMs = Math.max(0, Date.now() - Number(socket.data.liveJoinTimes.get(streamId) || Date.now()));
+          emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_LEFT, socket.data.userId, {
+            streamId,
+            durationMs,
+            disconnectReason: reason,
+            createdAt: new Date().toISOString(),
+          });
+          emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_VIEW_DURATION, socket.data.userId, {
+            streamId,
+            durationMs,
+            watchTimeMs: durationMs,
+            disconnectReason: reason,
+            createdAt: new Date().toISOString(),
+          });
           livestreamService.removeLiveParticipant(streamId, socket.data.userId);
           const guestLeaveResult = await LiveStream.updateOne(
             { _id: streamId, 'guests.userId': socket.data.userId },
@@ -636,6 +882,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         }),
       );
       socket.data.liveStreams.clear();
+      socket.data.liveJoinTimes.clear();
     }
   }
 

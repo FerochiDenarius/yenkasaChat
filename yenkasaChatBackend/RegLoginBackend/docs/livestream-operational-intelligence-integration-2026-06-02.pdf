@@ -1,0 +1,970 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3200 >>
+stream
+BT
+/F2 18 Tf
+50 760 Td (Livestream Operational Intelligence Integration) Tj
+-50 -760 Td
+/F1 10 Tf
+50 734 Td () Tj
+-50 -734 Td
+/F1 10 Tf
+50 720 Td () Tj
+-50 -720 Td
+/F1 10 Tf
+50 706 Td (Date: 2026-06-02) Tj
+-50 -706 Td
+/F1 10 Tf
+50 692 Td () Tj
+-50 -692 Td
+/F2 14 Tf
+50 678 Td (Objective) Tj
+-50 -678 Td
+/F1 10 Tf
+50 656 Td () Tj
+-50 -656 Td
+/F1 10 Tf
+50 642 Td () Tj
+-50 -642 Td
+/F1 10 Tf
+50 628 Td (Transform livestreaming from a Socket.IO-only feature into an Operational Intelligence data) Tj
+-50 -628 Td
+/F1 10 Tf
+50 614 Td (source for YenkasaAI.) Tj
+-50 -614 Td
+/F1 10 Tf
+50 600 Td () Tj
+-50 -600 Td
+/F1 10 Tf
+50 586 Td (Required architecture:) Tj
+-50 -586 Td
+/F1 10 Tf
+50 572 Td () Tj
+-50 -572 Td
+/F1 10 Tf
+50 558 Td (Livestream Client -> Socket Layer -> Livestream Event Service -> Operational Events Layer) Tj
+-50 -558 Td
+/F1 10 Tf
+50 544 Td (\(OIL\) -> YenkasaAI) Tj
+-50 -544 Td
+/F1 10 Tf
+50 530 Td () Tj
+-50 -530 Td
+/F2 14 Tf
+50 516 Td (Findings) Tj
+-50 -516 Td
+/F1 10 Tf
+50 494 Td () Tj
+-50 -494 Td
+/F1 10 Tf
+50 480 Td () Tj
+-50 -480 Td
+/F1 10 Tf
+50 466 Td (1. Livestream Socket.IO sync already existed, but events were emitted as older lowercase YME) Tj
+-50 -466 Td
+/F1 10 Tf
+50 452 Td (events such as `live_comment`, `live_reaction`, `live_joined`, and `gift_sent`.) Tj
+-50 -452 Td
+/F1 10 Tf
+50 438 Td (2. The current real-time path preserved UX but did not consistently expose canonical) Tj
+-50 -438 Td
+/F1 10 Tf
+50 424 Td (platform event types such as `STREAM_COMMENT`, `STREAM_GIFT`, `STREAM_REPORT`, or) Tj
+-50 -424 Td
+/F1 10 Tf
+50 410 Td (`STREAM_VIEW_DURATION`.) Tj
+-50 -410 Td
+/F1 10 Tf
+50 396 Td (3. HTTP livestream routes handled important actions outside the socket path, especially) Tj
+-50 -396 Td
+/F1 10 Tf
+50 382 Td (join-token requests, host end, auto-end, viewer leave, and gifts.) Tj
+-50 -382 Td
+/F1 10 Tf
+50 368 Td (4. The AI event relay was configured for `/api/events`, while the requested OIL ingestion) Tj
+-50 -368 Td
+/F1 10 Tf
+50 354 Td (target is `/api/events/ingest`.) Tj
+-50 -354 Td
+/F1 10 Tf
+50 340 Td (5. YME scoring, consolidation, interest extraction, and recommendation signals did not know) Tj
+-50 -340 Td
+/F1 10 Tf
+50 326 Td (the new stream event names.) Tj
+-50 -326 Td
+/F1 10 Tf
+50 312 Td () Tj
+-50 -312 Td
+/F2 14 Tf
+50 298 Td (Fixes Implemented) Tj
+-50 -298 Td
+/F1 10 Tf
+50 276 Td () Tj
+-50 -276 Td
+/F1 10 Tf
+50 262 Td () Tj
+-50 -262 Td
+/F2 12 Tf
+50 248 Td (1. Canonical Livestream Operational Event Service) Tj
+-50 -248 Td
+/F1 10 Tf
+50 230 Td () Tj
+-50 -230 Td
+/F1 10 Tf
+50 216 Td (Created `src/services/livestream/operationalEvents.service.js`.) Tj
+-50 -216 Td
+/F1 10 Tf
+50 202 Td () Tj
+-50 -202 Td
+/F1 10 Tf
+50 188 Td (This service defines all required event types:) Tj
+-50 -188 Td
+/F1 10 Tf
+50 174 Td () Tj
+-50 -174 Td
+/F1 10 Tf
+50 160 Td (* `STREAM_STARTED`) Tj
+-50 -160 Td
+/F1 10 Tf
+50 146 Td (* `STREAM_ENDED`) Tj
+-50 -146 Td
+/F1 10 Tf
+50 132 Td (* `STREAM_JOINED`) Tj
+-50 -132 Td
+/F1 10 Tf
+50 118 Td (* `STREAM_LEFT`) Tj
+-50 -118 Td
+/F1 10 Tf
+50 104 Td (* `STREAM_COMMENT`) Tj
+-50 -104 Td
+/F1 10 Tf
+50 90 Td (* `STREAM_LIKE`) Tj
+-50 -90 Td
+/F1 10 Tf
+50 76 Td (* `STREAM_GIFT`) Tj
+-50 -76 Td
+/F1 10 Tf
+50 62 Td (* `STREAM_SHARE`) Tj
+-50 -62 Td
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 15 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3122 >>
+stream
+BT
+/F1 10 Tf
+50 760 Td (* `STREAM_REPORT`) Tj
+-50 -760 Td
+/F1 10 Tf
+50 746 Td (* `STREAM_FOLLOW_HOST`) Tj
+-50 -746 Td
+/F1 10 Tf
+50 732 Td (* `STREAM_PIN_COMMENT`) Tj
+-50 -732 Td
+/F1 10 Tf
+50 718 Td (* `STREAM_MODERATION_ACTION`) Tj
+-50 -718 Td
+/F1 10 Tf
+50 704 Td (* `STREAM_BAN_USER`) Tj
+-50 -704 Td
+/F1 10 Tf
+50 690 Td (* `STREAM_WARNING`) Tj
+-50 -690 Td
+/F1 10 Tf
+50 676 Td (* `STREAM_VIEW_DURATION`) Tj
+-50 -676 Td
+/F1 10 Tf
+50 662 Td (* `STREAM_PEAK_VIEWERS`) Tj
+-50 -662 Td
+/F1 10 Tf
+50 648 Td () Tj
+-50 -648 Td
+/F1 10 Tf
+50 634 Td (It emits the canonical schema:) Tj
+-50 -634 Td
+/F1 10 Tf
+50 620 Td () Tj
+-50 -620 Td
+/F1 10 Tf
+50 606 Td ({) Tj
+-50 -606 Td
+/F1 10 Tf
+50 592 Td (  "eventType": "STREAM_COMMENT",) Tj
+-50 -592 Td
+/F1 10 Tf
+50 578 Td (  "streamId": "...",) Tj
+-50 -578 Td
+/F1 10 Tf
+50 564 Td (  "userId": "...",) Tj
+-50 -564 Td
+/F1 10 Tf
+50 550 Td (  "hostId": "...",) Tj
+-50 -550 Td
+/F1 10 Tf
+50 536 Td (  "timestamp": "...",) Tj
+-50 -536 Td
+/F1 10 Tf
+50 522 Td (  "metadata": {}) Tj
+-50 -522 Td
+/F1 10 Tf
+50 508 Td (}) Tj
+-50 -508 Td
+/F1 10 Tf
+50 494 Td () Tj
+-50 -494 Td
+/F1 10 Tf
+50 480 Td (Evidence:) Tj
+-50 -480 Td
+/F1 10 Tf
+50 466 Td () Tj
+-50 -466 Td
+/F1 10 Tf
+50 452 Td (* Event type constants: `src/services/livestream/operationalEvents.service.js:4`) Tj
+-50 -452 Td
+/F1 10 Tf
+50 438 Td (* Schema builder: `src/services/livestream/operationalEvents.service.js:163`) Tj
+-50 -438 Td
+/F1 10 Tf
+50 424 Td (* OIL/YME publishing path: `src/services/livestream/operationalEvents.service.js:284`) Tj
+-50 -424 Td
+/F1 10 Tf
+50 410 Td () Tj
+-50 -410 Td
+/F2 12 Tf
+50 396 Td (2. Analytics Metrics) Tj
+-50 -396 Td
+/F1 10 Tf
+50 378 Td () Tj
+-50 -378 Td
+/F1 10 Tf
+50 364 Td (The operational event service now populates livestream metrics:) Tj
+-50 -364 Td
+/F1 10 Tf
+50 350 Td () Tj
+-50 -350 Td
+/F1 10 Tf
+50 336 Td (* `totalViewers`) Tj
+-50 -336 Td
+/F1 10 Tf
+50 322 Td (* `concurrentViewers`) Tj
+-50 -322 Td
+/F1 10 Tf
+50 308 Td (* `peakViewers`) Tj
+-50 -308 Td
+/F1 10 Tf
+50 294 Td (* `commentsPerMinute`) Tj
+-50 -294 Td
+/F1 10 Tf
+50 280 Td (* `likesPerMinute`) Tj
+-50 -280 Td
+/F1 10 Tf
+50 266 Td (* `giftsPerMinute`) Tj
+-50 -266 Td
+/F1 10 Tf
+50 252 Td (* `watchTime`) Tj
+-50 -252 Td
+/F1 10 Tf
+50 238 Td (* `averageWatchTime`) Tj
+-50 -238 Td
+/F1 10 Tf
+50 224 Td (* `retentionRate`) Tj
+-50 -224 Td
+/F1 10 Tf
+50 210 Td (* `giftRevenue`) Tj
+-50 -210 Td
+/F1 10 Tf
+50 196 Td (* `topGifters`) Tj
+-50 -196 Td
+/F1 10 Tf
+50 182 Td (* `topStreams`) Tj
+-50 -182 Td
+/F1 10 Tf
+50 168 Td () Tj
+-50 -168 Td
+/F1 10 Tf
+50 154 Td (Evidence:) Tj
+-50 -154 Td
+/F1 10 Tf
+50 140 Td () Tj
+-50 -140 Td
+/F1 10 Tf
+50 126 Td (* Metrics state and public metrics:) Tj
+-50 -126 Td
+/F1 10 Tf
+50 112 Td (`src/services/livestream/operationalEvents.service.js:46`) Tj
+-50 -112 Td
+/F1 10 Tf
+50 98 Td (* Metrics update logic: `src/services/livestream/operationalEvents.service.js:98`) Tj
+-50 -98 Td
+/F1 10 Tf
+50 84 Td (* Top streams accessor: `src/services/livestream/operationalEvents.service.js:335`) Tj
+-50 -84 Td
+/F1 10 Tf
+50 70 Td (* API metrics endpoints: `routes/livestream.routes.js:449`) Tj
+-50 -70 Td
+/F1 10 Tf
+50 56 Td () Tj
+-50 -56 Td
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 15 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3177 >>
+stream
+BT
+/F2 12 Tf
+50 760 Td (3. Moderation Processing) Tj
+-50 -760 Td
+/F1 10 Tf
+50 742 Td () Tj
+-50 -742 Td
+/F1 10 Tf
+50 728 Td (Livestream events now generate moderation signals for:) Tj
+-50 -728 Td
+/F1 10 Tf
+50 714 Td () Tj
+-50 -714 Td
+/F1 10 Tf
+50 700 Td (* spam comments) Tj
+-50 -700 Td
+/F1 10 Tf
+50 686 Td (* gift fraud) Tj
+-50 -686 Td
+/F1 10 Tf
+50 672 Td (* bot viewers) Tj
+-50 -672 Td
+/F1 10 Tf
+50 658 Td (* abuse reports) Tj
+-50 -658 Td
+/F1 10 Tf
+50 644 Td (* suspicious engagement spikes) Tj
+-50 -644 Td
+/F1 10 Tf
+50 630 Td () Tj
+-50 -630 Td
+/F1 10 Tf
+50 616 Td (Detected signals create `ModerationItem` records with `source:) Tj
+-50 -616 Td
+/F1 10 Tf
+50 602 Td (livestream_operational_intelligence`.) Tj
+-50 -602 Td
+/F1 10 Tf
+50 588 Td () Tj
+-50 -588 Td
+/F1 10 Tf
+50 574 Td (Evidence:) Tj
+-50 -574 Td
+/F1 10 Tf
+50 560 Td () Tj
+-50 -560 Td
+/F1 10 Tf
+50 546 Td (* Moderation signal detection: `src/services/livestream/operationalEvents.service.js:185`) Tj
+-50 -546 Td
+/F1 10 Tf
+50 532 Td (* Moderation queue item creation: `src/services/livestream/operationalEvents.service.js:244`) Tj
+-50 -532 Td
+/F1 10 Tf
+50 518 Td () Tj
+-50 -518 Td
+/F2 12 Tf
+50 504 Td (4. Socket.IO Room Preservation and New Broadcasts) Tj
+-50 -504 Td
+/F1 10 Tf
+50 486 Td () Tj
+-50 -486 Td
+/F1 10 Tf
+50 472 Td (Socket.IO rooms now include the required room shape:) Tj
+-50 -472 Td
+/F1 10 Tf
+50 458 Td () Tj
+-50 -458 Td
+/F1 10 Tf
+50 444 Td (* `stream:{streamId}`) Tj
+-50 -444 Td
+/F1 10 Tf
+50 430 Td () Tj
+-50 -430 Td
+/F1 10 Tf
+50 416 Td (Compatibility rooms remain active:) Tj
+-50 -416 Td
+/F1 10 Tf
+50 402 Td () Tj
+-50 -402 Td
+/F1 10 Tf
+50 388 Td (* `livestream_{streamId}`) Tj
+-50 -388 Td
+/F1 10 Tf
+50 374 Td (* `live:{streamId}`) Tj
+-50 -374 Td
+/F1 10 Tf
+50 360 Td () Tj
+-50 -360 Td
+/F1 10 Tf
+50 346 Td (Real-time broadcasts now include the requested names:) Tj
+-50 -346 Td
+/F1 10 Tf
+50 332 Td () Tj
+-50 -332 Td
+/F1 10 Tf
+50 318 Td (* `new_comment`) Tj
+-50 -318 Td
+/F1 10 Tf
+50 304 Td (* `new_like`) Tj
+-50 -304 Td
+/F1 10 Tf
+50 290 Td (* `new_gift`) Tj
+-50 -290 Td
+/F1 10 Tf
+50 276 Td (* `viewer_joined`) Tj
+-50 -276 Td
+/F1 10 Tf
+50 262 Td (* `viewer_left`) Tj
+-50 -262 Td
+/F1 10 Tf
+50 248 Td (* `gift_animation`) Tj
+-50 -248 Td
+/F1 10 Tf
+50 234 Td () Tj
+-50 -234 Td
+/F1 10 Tf
+50 220 Td (Evidence:) Tj
+-50 -220 Td
+/F1 10 Tf
+50 206 Td () Tj
+-50 -206 Td
+/F1 10 Tf
+50 192 Td (* Room update: `src/services/livestream/livestream.service.js`) Tj
+-50 -192 Td
+/F1 10 Tf
+50 178 Td (* `new_comment`: `src/services/livestream/livestream.socket.js:412`) Tj
+-50 -178 Td
+/F1 10 Tf
+50 164 Td (* `new_like`: `src/services/livestream/livestream.socket.js:437`) Tj
+-50 -164 Td
+/F1 10 Tf
+50 150 Td (* `viewer_joined`: `src/services/livestream/livestream.socket.js:313`) Tj
+-50 -150 Td
+/F1 10 Tf
+50 136 Td (* `viewer_left`: `src/services/livestream/livestream.socket.js:356`) Tj
+-50 -136 Td
+/F1 10 Tf
+50 122 Td (* `new_gift` and `gift_animation`: `routes/livestream.routes.js:757`) Tj
+-50 -122 Td
+/F1 10 Tf
+50 108 Td () Tj
+-50 -108 Td
+/F2 12 Tf
+50 94 Td (5. Socket Layer Event Coverage) Tj
+-50 -94 Td
+/F1 10 Tf
+50 76 Td () Tj
+-50 -76 Td
+/F1 10 Tf
+50 62 Td (Socket handlers now emit operational events for:) Tj
+-50 -62 Td
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 15 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3015 >>
+stream
+BT
+/F1 10 Tf
+50 760 Td () Tj
+-50 -760 Td
+/F1 10 Tf
+50 746 Td (* start) Tj
+-50 -746 Td
+/F1 10 Tf
+50 732 Td (* join) Tj
+-50 -732 Td
+/F1 10 Tf
+50 718 Td (* leave) Tj
+-50 -718 Td
+/F1 10 Tf
+50 704 Td (* comment) Tj
+-50 -704 Td
+/F1 10 Tf
+50 690 Td (* like) Tj
+-50 -690 Td
+/F1 10 Tf
+50 676 Td (* share) Tj
+-50 -676 Td
+/F1 10 Tf
+50 662 Td (* report) Tj
+-50 -662 Td
+/F1 10 Tf
+50 648 Td (* follow host) Tj
+-50 -648 Td
+/F1 10 Tf
+50 634 Td (* pin comment) Tj
+-50 -634 Td
+/F1 10 Tf
+50 620 Td (* moderation action) Tj
+-50 -620 Td
+/F1 10 Tf
+50 606 Td (* ban user) Tj
+-50 -606 Td
+/F1 10 Tf
+50 592 Td (* warning) Tj
+-50 -592 Td
+/F1 10 Tf
+50 578 Td (* view duration) Tj
+-50 -578 Td
+/F1 10 Tf
+50 564 Td (* disconnect watch duration) Tj
+-50 -564 Td
+/F1 10 Tf
+50 550 Td () Tj
+-50 -550 Td
+/F1 10 Tf
+50 536 Td (Evidence:) Tj
+-50 -536 Td
+/F1 10 Tf
+50 522 Td () Tj
+-50 -522 Td
+/F1 10 Tf
+50 508 Td (* Shared socket operational emitter: `src/services/livestream/livestream.socket.js:10`) Tj
+-50 -508 Td
+/F1 10 Tf
+50 494 Td (* Comment and like mapping: `src/services/livestream/livestream.socket.js:394`) Tj
+-50 -494 Td
+/F1 10 Tf
+50 480 Td (* Share, report, follow-host, pin-comment, moderation actions:) Tj
+-50 -480 Td
+/F1 10 Tf
+50 466 Td (`src/services/livestream/livestream.socket.js:445`) Tj
+-50 -466 Td
+/F1 10 Tf
+50 452 Td (* Disconnect leave and view duration capture:) Tj
+-50 -452 Td
+/F1 10 Tf
+50 438 Td (`src/services/livestream/livestream.socket.js:853`) Tj
+-50 -438 Td
+/F1 10 Tf
+50 424 Td () Tj
+-50 -424 Td
+/F2 12 Tf
+50 410 Td (6. HTTP Route Event Coverage) Tj
+-50 -410 Td
+/F1 10 Tf
+50 392 Td () Tj
+-50 -392 Td
+/F1 10 Tf
+50 378 Td (HTTP routes now emit operational events for:) Tj
+-50 -378 Td
+/F1 10 Tf
+50 364 Td () Tj
+-50 -364 Td
+/F1 10 Tf
+50 350 Td (* livestream join token) Tj
+-50 -350 Td
+/F1 10 Tf
+50 336 Td (* host end) Tj
+-50 -336 Td
+/F1 10 Tf
+50 322 Td (* auto-end) Tj
+-50 -322 Td
+/F1 10 Tf
+50 308 Td (* startup failure) Tj
+-50 -308 Td
+/F1 10 Tf
+50 294 Td (* leave) Tj
+-50 -294 Td
+/F1 10 Tf
+50 280 Td (* watch duration) Tj
+-50 -280 Td
+/F1 10 Tf
+50 266 Td (* gift) Tj
+-50 -266 Td
+/F1 10 Tf
+50 252 Td () Tj
+-50 -252 Td
+/F1 10 Tf
+50 238 Td (Evidence:) Tj
+-50 -238 Td
+/F1 10 Tf
+50 224 Td () Tj
+-50 -224 Td
+/F1 10 Tf
+50 210 Td (* HTTP operational emitter: `routes/livestream.routes.js:171`) Tj
+-50 -210 Td
+/F1 10 Tf
+50 196 Td (* Join token event: `routes/livestream.routes.js:558`) Tj
+-50 -196 Td
+/F1 10 Tf
+50 182 Td (* End event: `routes/livestream.routes.js:621`) Tj
+-50 -182 Td
+/F1 10 Tf
+50 168 Td (* Leave and view-duration event: `routes/livestream.routes.js:659`) Tj
+-50 -168 Td
+/F1 10 Tf
+50 154 Td (* Gift event: `routes/livestream.routes.js:773`) Tj
+-50 -154 Td
+/F1 10 Tf
+50 140 Td () Tj
+-50 -140 Td
+/F2 12 Tf
+50 126 Td (7. OIL and YenkasaAI Relay) Tj
+-50 -126 Td
+/F1 10 Tf
+50 108 Td () Tj
+-50 -108 Td
+/F1 10 Tf
+50 94 Td (The intelligence relay default ingest path now targets:) Tj
+-50 -94 Td
+/F1 10 Tf
+50 80 Td () Tj
+-50 -80 Td
+/F1 10 Tf
+50 66 Td (`/api/events/ingest`) Tj
+-50 -66 Td
+/F1 10 Tf
+50 52 Td () Tj
+-50 -52 Td
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 15 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 3298 >>
+stream
+BT
+/F1 10 Tf
+50 760 Td (The relay supports all canonical livestream events as normalized `stream_*` operational) Tj
+-50 -760 Td
+/F1 10 Tf
+50 746 Td (events and forwards livestream metadata including stream ID, host ID, metrics, moderation) Tj
+-50 -746 Td
+/F1 10 Tf
+50 732 Td (signals, and recommendation signals.) Tj
+-50 -732 Td
+/F1 10 Tf
+50 718 Td () Tj
+-50 -718 Td
+/F1 10 Tf
+50 704 Td (Evidence:) Tj
+-50 -704 Td
+/F1 10 Tf
+50 690 Td () Tj
+-50 -690 Td
+/F1 10 Tf
+50 676 Td (* Default ingest path: `src/intelligence/services/eventPublisher.service.js:8`) Tj
+-50 -676 Td
+/F1 10 Tf
+50 662 Td (* Supported stream event types: `src/intelligence/services/eventPublisher.service.js:54`) Tj
+-50 -662 Td
+/F1 10 Tf
+50 648 Td (* Livestream relay metadata mapping:) Tj
+-50 -648 Td
+/F1 10 Tf
+50 634 Td (`src/intelligence/services/eventPublisher.service.js:576`) Tj
+-50 -634 Td
+/F1 10 Tf
+50 620 Td () Tj
+-50 -620 Td
+/F2 12 Tf
+50 606 Td (8. YME Memory and Recommendation Integration) Tj
+-50 -606 Td
+/F1 10 Tf
+50 588 Td () Tj
+-50 -588 Td
+/F1 10 Tf
+50 574 Td (YME now recognizes stream event types in:) Tj
+-50 -574 Td
+/F1 10 Tf
+50 560 Td () Tj
+-50 -560 Td
+/F1 10 Tf
+50 546 Td (* source app config) Tj
+-50 -546 Td
+/F1 10 Tf
+50 532 Td (* event ingestion aliases) Tj
+-50 -532 Td
+/F1 10 Tf
+50 518 Td (* importance scoring) Tj
+-50 -518 Td
+/F1 10 Tf
+50 504 Td (* interest extraction) Tj
+-50 -504 Td
+/F1 10 Tf
+50 490 Td (* recommendation scoring) Tj
+-50 -490 Td
+/F1 10 Tf
+50 476 Td (* consolidation trigger list) Tj
+-50 -476 Td
+/F1 10 Tf
+50 462 Td () Tj
+-50 -462 Td
+/F1 10 Tf
+50 448 Td (Evidence:) Tj
+-50 -448 Td
+/F1 10 Tf
+50 434 Td () Tj
+-50 -434 Td
+/F1 10 Tf
+50 420 Td (* Source apps and event types: `src/yme/config/yme.config.js`) Tj
+-50 -420 Td
+/F1 10 Tf
+50 406 Td (* Event aliases: `src/yme/services/eventIngestion.service.js`) Tj
+-50 -406 Td
+/F1 10 Tf
+50 392 Td (* Importance scoring: `src/yme/services/importanceScoring.service.js`) Tj
+-50 -392 Td
+/F1 10 Tf
+50 378 Td (* Interest weights: `src/yme/services/interestExtraction.service.js`) Tj
+-50 -378 Td
+/F1 10 Tf
+50 364 Td (* Recommendation weights: `src/yme/services/recommendationSignals.service.js`) Tj
+-50 -364 Td
+/F1 10 Tf
+50 350 Td (* Consolidation triggers: `src/yme/services/consolidation.service.js`) Tj
+-50 -350 Td
+/F1 10 Tf
+50 336 Td () Tj
+-50 -336 Td
+/F2 14 Tf
+50 322 Td (Verification Evidence) Tj
+-50 -322 Td
+/F1 10 Tf
+50 300 Td () Tj
+-50 -300 Td
+/F1 10 Tf
+50 286 Td () Tj
+-50 -286 Td
+/F1 10 Tf
+50 272 Td (Command:) Tj
+-50 -272 Td
+/F1 10 Tf
+50 258 Td () Tj
+-50 -258 Td
+/F1 10 Tf
+50 244 Td (npm test) Tj
+-50 -244 Td
+/F1 10 Tf
+50 230 Td () Tj
+-50 -230 Td
+/F1 10 Tf
+50 216 Td (Result:) Tj
+-50 -216 Td
+/F1 10 Tf
+50 202 Td () Tj
+-50 -202 Td
+/F1 10 Tf
+50 188 Td (tests 10) Tj
+-50 -188 Td
+/F1 10 Tf
+50 174 Td (pass 10) Tj
+-50 -174 Td
+/F1 10 Tf
+50 160 Td (fail 0) Tj
+-50 -160 Td
+/F1 10 Tf
+50 146 Td (duration_ms 10022.635969) Tj
+-50 -146 Td
+/F1 10 Tf
+50 132 Td () Tj
+-50 -132 Td
+/F1 10 Tf
+50 118 Td (Additional syntax checks passed:) Tj
+-50 -118 Td
+/F1 10 Tf
+50 104 Td () Tj
+-50 -104 Td
+/F1 10 Tf
+50 90 Td (node --check src/services/livestream/livestream.socket.js) Tj
+-50 -90 Td
+/F1 10 Tf
+50 76 Td (node --check routes/livestream.routes.js) Tj
+-50 -76 Td
+/F1 10 Tf
+50 62 Td (node --check src/services/livestream/operationalEvents.service.js) Tj
+-50 -62 Td
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 15 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 3159 >>
+stream
+BT
+/F1 10 Tf
+50 760 Td (node --check src/intelligence/services/eventPublisher.service.js) Tj
+-50 -760 Td
+/F1 10 Tf
+50 746 Td () Tj
+-50 -746 Td
+/F1 10 Tf
+50 732 Td (Focused test evidence:) Tj
+-50 -732 Td
+/F1 10 Tf
+50 718 Td () Tj
+-50 -718 Td
+/F1 10 Tf
+50 704 Td (* Canonical livestream schema test: `tests/livestreamOperationalEvents.test.js:11`) Tj
+-50 -704 Td
+/F1 10 Tf
+50 690 Td (* Metrics population test: `tests/livestreamOperationalEvents.test.js:33`) Tj
+-50 -690 Td
+/F1 10 Tf
+50 676 Td (* AI relay `STREAM_GIFT` mapping test: `tests/intelligenceEventPublisher.test.js`) Tj
+-50 -676 Td
+/F1 10 Tf
+50 662 Td () Tj
+-50 -662 Td
+/F2 14 Tf
+50 648 Td (Implementation Notes) Tj
+-50 -648 Td
+/F1 10 Tf
+50 626 Td () Tj
+-50 -626 Td
+/F1 10 Tf
+50 612 Td () Tj
+-50 -612 Td
+/F1 10 Tf
+50 598 Td (The new metrics store is in-process. It is suitable for immediate operational intelligence) Tj
+-50 -598 Td
+/F1 10 Tf
+50 584 Td (and creator dashboard snapshots, but production-grade historical analytics should later) Tj
+-50 -584 Td
+/F1 10 Tf
+50 570 Td (persist rollups into MongoDB or a streaming analytics store.) Tj
+-50 -570 Td
+/F1 10 Tf
+50 556 Td () Tj
+-50 -556 Td
+/F1 10 Tf
+50 542 Td (The implementation preserves current client compatibility by keeping existing `live_*`) Tj
+-50 -542 Td
+/F1 10 Tf
+50 528 Td (broadcasts while adding the requested event names.) Tj
+-50 -528 Td
+/F1 10 Tf
+50 514 Td () Tj
+-50 -514 Td
+/F2 14 Tf
+50 500 Td (Changed Files) Tj
+-50 -500 Td
+/F1 10 Tf
+50 478 Td () Tj
+-50 -478 Td
+/F1 10 Tf
+50 464 Td () Tj
+-50 -464 Td
+/F1 10 Tf
+50 450 Td (* `src/services/livestream/operationalEvents.service.js`) Tj
+-50 -450 Td
+/F1 10 Tf
+50 436 Td (* `src/services/livestream/livestream.socket.js`) Tj
+-50 -436 Td
+/F1 10 Tf
+50 422 Td (* `src/services/livestream/livestream.service.js`) Tj
+-50 -422 Td
+/F1 10 Tf
+50 408 Td (* `routes/livestream.routes.js`) Tj
+-50 -408 Td
+/F1 10 Tf
+50 394 Td (* `src/intelligence/services/eventPublisher.service.js`) Tj
+-50 -394 Td
+/F1 10 Tf
+50 380 Td (* `src/yme/config/yme.config.js`) Tj
+-50 -380 Td
+/F1 10 Tf
+50 366 Td (* `src/yme/services/eventIngestion.service.js`) Tj
+-50 -366 Td
+/F1 10 Tf
+50 352 Td (* `src/yme/services/importanceScoring.service.js`) Tj
+-50 -352 Td
+/F1 10 Tf
+50 338 Td (* `src/yme/services/interestExtraction.service.js`) Tj
+-50 -338 Td
+/F1 10 Tf
+50 324 Td (* `src/yme/services/recommendationSignals.service.js`) Tj
+-50 -324 Td
+/F1 10 Tf
+50 310 Td (* `src/yme/services/consolidation.service.js`) Tj
+-50 -310 Td
+/F1 10 Tf
+50 296 Td (* `tests/livestreamOperationalEvents.test.js`) Tj
+-50 -296 Td
+/F1 10 Tf
+50 282 Td (* `tests/intelligenceEventPublisher.test.js`) Tj
+-50 -282 Td
+/F1 10 Tf
+50 268 Td () Tj
+-50 -268 Td
+/F2 14 Tf
+50 254 Td (Conclusion) Tj
+-50 -254 Td
+/F1 10 Tf
+50 232 Td () Tj
+-50 -232 Td
+/F1 10 Tf
+50 218 Td () Tj
+-50 -218 Td
+/F1 10 Tf
+50 204 Td (Livestreaming is now wired as an Operational Intelligence source. Real-time synchronization) Tj
+-50 -204 Td
+/F1 10 Tf
+50 190 Td (remains intact, and every major livestream action can now feed analytics, moderation,) Tj
+-50 -190 Td
+/F1 10 Tf
+50 176 Td (recommendations, YME memory, security detection, and the YenkasaAI event relay.) Tj
+-50 -176 Td
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 15 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] /Count 6 >>
+endobj
+16 0 obj
+<< /Type /Catalog /Pages 15 0 R >>
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000154 00000 n 
+0000003406 00000 n 
+0000003543 00000 n 
+0000006717 00000 n 
+0000006854 00000 n 
+0000010083 00000 n 
+0000010220 00000 n 
+0000013287 00000 n 
+0000013425 00000 n 
+0000016776 00000 n 
+0000016915 00000 n 
+0000020127 00000 n 
+0000020266 00000 n 
+0000020357 00000 n 
+trailer
+<< /Size 17 /Root 16 0 R >>
+startxref
+20408
+%%EOF

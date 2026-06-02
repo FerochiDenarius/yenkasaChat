@@ -17,10 +17,14 @@ function configureLivestreamRealtime(io) {
 }
 
 function getLiveRoom(streamId) {
-  return `livestream_${streamId}`;
+  return `stream:${streamId}`;
 }
 
 function getLegacyLiveRoom(streamId) {
+  return `livestream_${streamId}`;
+}
+
+function getDeprecatedLiveRoom(streamId) {
   return `live:${streamId}`;
 }
 
@@ -133,6 +137,7 @@ function getLiveTargetRooms(streamId) {
   return [
     getLiveRoom(streamId),
     getLegacyLiveRoom(streamId),
+    getDeprecatedLiveRoom(streamId),
     ...Array.from(getLiveParticipantSet(streamId)),
   ];
 }
@@ -145,7 +150,9 @@ function emitToLiveRoom(streamId, eventName, payload) {
 function getLiveRoomMemberCount(streamId) {
   if (!ioRef) return liveParticipants.get(streamId?.toString())?.size || 0;
   const room = ioRef.sockets.adapter.rooms.get(getLiveRoom(streamId));
-  const roomCount = room?.size || 0;
+  const legacyRoom = ioRef.sockets.adapter.rooms.get(getLegacyLiveRoom(streamId));
+  const deprecatedRoom = ioRef.sockets.adapter.rooms.get(getDeprecatedLiveRoom(streamId));
+  const roomCount = Math.max(room?.size || 0, legacyRoom?.size || 0, deprecatedRoom?.size || 0);
   const participantCount = liveParticipants.get(streamId?.toString())?.size || 0;
   return Math.max(roomCount, participantCount);
 }
@@ -174,11 +181,13 @@ function shouldSkipDuplicateLiveEvent(eventName, payload = {}) {
 function joinLiveRooms(socket, streamId) {
   socket.join(getLiveRoom(streamId));
   socket.join(getLegacyLiveRoom(streamId));
+  socket.join(getDeprecatedLiveRoom(streamId));
 }
 
 function leaveLiveRooms(socket, streamId) {
   socket.leave(getLiveRoom(streamId));
   socket.leave(getLegacyLiveRoom(streamId));
+  socket.leave(getDeprecatedLiveRoom(streamId));
 }
 
 function emitLiveJoinAck(socket, payload = {}) {
@@ -257,6 +266,7 @@ module.exports = {
   configureLivestreamRealtime,
   getLiveRoom,
   getLegacyLiveRoom,
+  getDeprecatedLiveRoom,
   getLiveParticipantSet,
   normalizeAgoraUid,
   expectedAgoraUidForUser,

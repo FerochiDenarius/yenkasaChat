@@ -91,3 +91,32 @@ test('buildRelayRequestPayload maps internal events to ai backend schema', () =>
     },
   });
 });
+
+test('mapYmeEventToIntelligenceEvent converts STREAM_GIFT to livestream operational event', () => {
+  const payload = mapYmeEventToIntelligenceEvent({
+    eventType: 'STREAM_GIFT',
+    userId: 'viewer-1',
+    relatedUserId: 'host-1',
+    contentId: 'stream-1',
+    timestamp: '2026-06-02T12:00:00Z',
+    payload: {
+      streamId: 'stream-1',
+      hostId: 'host-1',
+      amount: 50,
+      giftKey: 'crown',
+      metrics: {
+        giftRevenue: 50,
+      },
+      moderationSignals: [],
+      recommendationSignals: ['creator_gifting'],
+    },
+  });
+
+  assert.equal(payload.eventType, 'stream_gift');
+  assert.equal(payload.userId, 'viewer-1');
+  assert.equal(payload.metadata.streamId, 'stream-1');
+  assert.equal(payload.metadata.hostId, 'host-1');
+  assert.equal(payload.metadata.amount, 50);
+  assert.deepEqual(payload.metadata.recommendationSignals, ['creator_gifting']);
+  assert.equal(payload.metadata.operationalEvent.eventType, 'STREAM_GIFT');
+});

@@ -25,17 +25,19 @@ export function resolveNotificationTarget(notification = {}) {
   if (targetType === "ad" || type === "ad_approved" || type === "ad_rejected") return "/ads";
   if (
     targetType === "community" ||
+    type === "community_post_created" ||
     type === "community_approved" ||
     type === "community_rejected"
   ) {
-    return "/communities";
+    return targetId ? `/communities?communityId=${encodeURIComponent(targetId)}` : "/communities";
   }
+  if (targetType === "live" || targetType === "livestream" || type === "stream_started") return "/";
   if (targetType === "approval" || type === "post_approved") return "/post-approvals";
 
   const resolvedPostId = firstNotBlank(
     postId,
     targetType === "post" ? targetId : null,
-    ["comment", "like", "post_liked", "post_comment", "post_reply", "community_post"].includes(type)
+    ["comment", "like", "post_liked", "post_comment", "post_reply", "community_post", "community_post_created"].includes(type)
       ? activityId
       : null
   );
@@ -79,6 +81,9 @@ function resolveTargetUrl(targetUrl) {
     if (path === "/ads/mine") return "/ads";
     if (path === "/communities/mine") return "/communities";
     if (path.startsWith("/post/")) return path + url.search;
+    if (path.startsWith("/community/")) return path.replace(/^\/community\//, "/communities?communityId=") + url.search;
+    if (path.startsWith("/communities")) return path + url.search;
+    if (path.startsWith("/live/")) return "/";
     if (path.startsWith("/profile/")) return path;
     if (path.startsWith("/chat/")) return path.replace(/^\/chat\//, "/chatrooms/");
     if (path.startsWith("/groups/")) return path.replace(/^\/groups\//, "/chatrooms/");

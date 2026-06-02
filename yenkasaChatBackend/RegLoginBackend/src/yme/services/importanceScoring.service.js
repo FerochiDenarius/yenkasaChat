@@ -43,6 +43,10 @@ const BASE_SCORES = Object.freeze({
   ad_interaction: 0.16,
   ad_engagement: 0.16,
   community_join: 0.48,
+  community_post_created: 0.58,
+  notification_sent: 0.12,
+  notification_opened: 0.22,
+  notification_dismissed: 0.1,
 });
 
 const LOW_SIGNAL_TEXT = [

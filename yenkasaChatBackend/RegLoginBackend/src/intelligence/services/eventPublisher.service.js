@@ -79,6 +79,10 @@ const SUPPORTED_EVENT_TYPES = new Set([
   'moderation_post_reviewed',
   'moderation_user_reported',
   'moderation_post_hidden',
+  'community_post_created',
+  'notification_sent',
+  'notification_opened',
+  'notification_dismissed',
 ]);
 
 let flushTimer = null;
@@ -619,6 +623,48 @@ function mapYmeEventToIntelligenceEvent(event = {}) {
           streamId: metadata.streamId || event.contentId || null,
           userId: event.userId || null,
           hostId: metadata.hostId || event.relatedUserId || event.creatorId || null,
+          timestamp: base.timestamp,
+          metadata,
+        },
+      },
+    });
+  }
+
+  if (
+    [
+      'community_post_created',
+      'notification_sent',
+      'notification_opened',
+      'notification_dismissed',
+    ].includes(type)
+  ) {
+    const metadata = event.payload || event.metadata || {};
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: type,
+      postId: metadata.postId || event.postId,
+      communityId: metadata.communityId || event.communityId,
+      metadata: {
+        notificationId: metadata.notificationId || event.contentId || null,
+        notificationType: metadata.notificationType || metadata.eventType || type,
+        postId: metadata.postId || event.postId || null,
+        streamId: metadata.streamId || null,
+        communityId: metadata.communityId || event.communityId || null,
+        communityName: metadata.communityName || '',
+        authorId: metadata.authorId || null,
+        authorName: metadata.authorName || '',
+        hostId: metadata.hostId || null,
+        hostName: metadata.hostName || '',
+        receiverId: metadata.receiverId || event.userId || null,
+        senderId: metadata.senderId || event.relatedUserId || event.creatorId || null,
+        targetType: metadata.targetType || '',
+        targetId: metadata.targetId || '',
+        targetUrl: metadata.targetUrl || '',
+        deliveryChannels: metadata.deliveryChannels || {},
+        text: metadata.message || metadata.title || event.text || '',
+        operationalEvent: {
+          eventType: String(type || '').toUpperCase(),
+          userId: event.userId || null,
           timestamp: base.timestamp,
           metadata,
         },

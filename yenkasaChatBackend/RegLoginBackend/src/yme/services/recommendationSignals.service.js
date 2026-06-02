@@ -31,6 +31,10 @@ function getBaseEventScore(eventType) {
     stream_view_duration: 1.8,
     reward_claim: 1.1,
     community_join: 1.0,
+    community_post_created: 1.25,
+    notification_sent: 0.12,
+    notification_opened: 0.45,
+    notification_dismissed: 0.08,
   };
 
   return scores[eventType] || 0.5;

@@ -7,6 +7,10 @@ const User = require("../models/user.model");
 const Comment = require("../models/comment.model");
 const { areUsersBlocked } = require("../services/privacy.service");
 const { sendNotification } = require("../services/notification.service");
+const {
+  NOTIFICATION_EVENT_TYPES,
+  emitNotificationOperationalEvent
+} = require("../services/notificationOperationalEvents.service");
 
 // helper - compute targetUrl from type/activityId (update to match your app routes)
 function computeTarget(notification) {
@@ -17,11 +21,13 @@ function computeTarget(notification) {
     if (targetType === "approval") return `/admin/post-approval/${targetId}`;
     if (targetType === "profile") return `/profile/${targetId}`;
     if (targetType === "comment") return notification.targetUrl || null;
+    if (targetType === "community") return targetId ? `/communities?communityId=${targetId}` : "/communities/mine";
+    if (targetType === "live" || targetType === "livestream") return `/live/${targetId}`;
   }
   // fallback by type
   if (type === "post_approved") return `/admin/post-approval/${activityId}`;
   if (type === "comment") return `/post/${activityId}?openComments=true`;
-  if (type === "like" || type === "post_liked" || String(type || "").toLowerCase() === "community_post") return `/post/${activityId}`;
+  if (type === "like" || type === "post_liked" || ["community_post", "community_post_created"].includes(String(type || "").toLowerCase())) return `/post/${activityId}`;
   return null;
 }
 
@@ -45,7 +51,7 @@ function shouldDeliverNotification(user, type, targetType) {
   const preferences = getNotificationPreferences(user);
   if (!preferences.inAppEnabled) return false;
   if (isRewardNotification(type, targetType) && !preferences.rewardEnabled) return false;
-  if (String(type || "").toLowerCase() === "community_post" && !preferences.communityPostEnabled) return false;
+  if (["community_post", "community_post_created"].includes(String(type || "").toLowerCase()) && !preferences.communityPostEnabled) return false;
   return true;
 }
 
@@ -84,6 +90,7 @@ router.post("/create", auth, async (req, res) => {
       case "view_milestone":
       case "community_post":
       case "COMMUNITY_POST":
+      case "COMMUNITY_POST_CREATED":
         targetType = "post";
         targetId = activityId;  // ALWAYS the postId
         break;
@@ -182,6 +189,8 @@ router.post("/create", auth, async (req, res) => {
       "comment_like",
       "comment_reply",
       "community_post",
+      "community_post_created",
+      "stream_started",
       "follow",
       "new_follower"
     ].includes(String(type || "").toLowerCase());
@@ -243,7 +252,7 @@ router.get("/all", auth, async (req, res) => {
 
     const preferenceFilteredNotifications = preferences.communityPostEnabled
       ? visibleNotifications
-      : visibleNotifications.filter(n => String(n.type || "").toLowerCase() !== "community_post");
+      : visibleNotifications.filter(n => !["community_post", "community_post_created"].includes(String(n.type || "").toLowerCase()));
 
     const nonAnnouncementNotifications = preferenceFilteredNotifications.filter(
       n => String(n.type || "").toLowerCase() !== "announcement"
@@ -373,6 +382,26 @@ router.put("/:id/read", auth, async (req, res) => {
     if (global.io) {
       global.io.to(req.user.id).emit("notificationRead", formatted);
     }
+
+    const interaction = String(req.query?.interaction || req.body?.interaction || "opened").toLowerCase();
+    emitNotificationOperationalEvent(
+      interaction === "dismissed"
+        ? NOTIFICATION_EVENT_TYPES.NOTIFICATION_DISMISSED
+        : NOTIFICATION_EVENT_TYPES.NOTIFICATION_OPENED,
+      {
+        notificationId: id,
+        notificationType: notification.type,
+        userId: req.user.id,
+        receiverId: req.user.id,
+        senderId: notification.senderId,
+        activityId: notification.activityId,
+        targetType: notification.targetType,
+        targetId: notification.targetId,
+        targetUrl: notification.targetUrl || computeTarget(notification),
+        message: notification.message,
+        timestamp: formatted.readAt
+      }
+    );
 
     return res.json(formatted);
 

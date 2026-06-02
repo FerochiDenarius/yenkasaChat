@@ -120,3 +120,54 @@ test('mapYmeEventToIntelligenceEvent converts STREAM_GIFT to livestream operatio
   assert.deepEqual(payload.metadata.recommendationSignals, ['creator_gifting']);
   assert.equal(payload.metadata.operationalEvent.eventType, 'STREAM_GIFT');
 });
+
+test('mapYmeEventToIntelligenceEvent converts community post notification events', () => {
+  const payload = mapYmeEventToIntelligenceEvent({
+    eventType: 'COMMUNITY_POST_CREATED',
+    userId: 'author-1',
+    communityId: 'community-1',
+    postId: 'post-1',
+    timestamp: '2026-06-02T12:00:00Z',
+    payload: {
+      communityId: 'community-1',
+      communityName: 'ATU Students',
+      postId: 'post-1',
+      authorId: 'author-1',
+      authorName: 'Bright Kofi',
+      message: 'Bright Kofi shared a new post.',
+    },
+  });
+
+  assert.equal(payload.eventType, 'community_post_created');
+  assert.equal(payload.userId, 'author-1');
+  assert.equal(payload.metadata.communityId, 'community-1');
+  assert.equal(payload.metadata.postId, 'post-1');
+  assert.equal(payload.metadata.authorName, 'Bright Kofi');
+  assert.equal(payload.metadata.operationalEvent.eventType, 'COMMUNITY_POST_CREATED');
+});
+
+test('mapYmeEventToIntelligenceEvent converts notification lifecycle events', () => {
+  const payload = mapYmeEventToIntelligenceEvent({
+    eventType: 'NOTIFICATION_OPENED',
+    userId: 'viewer-1',
+    relatedUserId: 'author-1',
+    contentId: 'notification-1',
+    timestamp: '2026-06-02T12:00:00Z',
+    payload: {
+      notificationId: 'notification-1',
+      notificationType: 'COMMUNITY_POST_CREATED',
+      receiverId: 'viewer-1',
+      senderId: 'author-1',
+      targetType: 'community',
+      targetId: 'community-1',
+      targetUrl: '/communities?communityId=community-1',
+    },
+  });
+
+  assert.equal(payload.eventType, 'notification_opened');
+  assert.equal(payload.userId, 'viewer-1');
+  assert.equal(payload.metadata.notificationId, 'notification-1');
+  assert.equal(payload.metadata.notificationType, 'COMMUNITY_POST_CREATED');
+  assert.equal(payload.metadata.receiverId, 'viewer-1');
+  assert.equal(payload.metadata.operationalEvent.eventType, 'NOTIFICATION_OPENED');
+});

@@ -9,6 +9,7 @@ const liveHostDisconnectTimers = new Map();
 const liveEventDedupe = new Map();
 const liveParticipants = new Map();
 const liveParticipantAgoraUids = new Map();
+const liveReactionCounts = new Map();
 
 let ioRef = null;
 
@@ -131,6 +132,19 @@ function clearLiveParticipants(streamId) {
   if (!normalizedStreamId) return;
   liveParticipants.delete(normalizedStreamId);
   liveParticipantAgoraUids.delete(normalizedStreamId);
+  liveReactionCounts.delete(normalizedStreamId);
+}
+
+function incrementLiveReactionCount(streamId) {
+  const normalizedStreamId = streamId?.toString();
+  if (!normalizedStreamId) return 0;
+  const nextCount = Number(liveReactionCounts.get(normalizedStreamId) || 0) + 1;
+  liveReactionCounts.set(normalizedStreamId, nextCount);
+  return nextCount;
+}
+
+function getLiveReactionCount(streamId) {
+  return Number(liveReactionCounts.get(streamId?.toString()) || 0);
 }
 
 function getLiveTargetRooms(streamId) {
@@ -273,6 +287,7 @@ module.exports = {
   logLiveSocketUid,
   emitToLiveRoom,
   emitLiveRoomMemberCount,
+  getLiveReactionCount,
   addLiveParticipant,
   removeLiveParticipant,
   clearLiveParticipants,
@@ -280,6 +295,7 @@ module.exports = {
   serializeLiveStream,
   getLiveRoomMemberCount,
   shouldSkipDuplicateLiveEvent,
+  incrementLiveReactionCount,
   joinLiveRooms,
   leaveLiveRooms,
   emitLiveJoinAck,

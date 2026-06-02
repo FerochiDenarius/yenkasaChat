@@ -235,7 +235,8 @@ class NotificationAdapter(
             "image", "reward_image" -> R.drawable.ic_image
             "comment", "post_comment", "comment_reply", "comment_like", "reward_comment" -> R.drawable.ic_comment
             "like", "post_liked", "post_like", "reward_post_like", "reward_comment_like" -> R.drawable.ic_heart_filled
-            "community_post" -> R.drawable.ic_communities
+            "community_post", "community_post_created" -> R.drawable.ic_communities
+            "stream_started" -> R.drawable.ic_play_arrow
             "post_approved" -> R.drawable.ic_check_circle
             "follow", "new_follower" -> R.drawable.ic_person_add
             else -> R.drawable.ic_bell
@@ -251,7 +252,8 @@ class NotificationAdapter(
             "reward_post_view", "reward_post_view_received", "post_view", "view_milestone" -> R.color.notification_view_bg
             "comment", "post_comment", "comment_reply", "comment_like", "reward_comment" -> R.color.notification_comment_bg
             "like", "post_liked", "post_like", "reward_post_like", "reward_comment_like" -> R.color.notification_like_bg
-            "community_post" -> R.color.notification_view_bg
+            "community_post", "community_post_created" -> R.color.notification_view_bg
+            "stream_started" -> R.color.notification_video_bg
             else -> R.color.notification_video_bg
         }
     }
@@ -305,8 +307,10 @@ class NotificationAdapter(
             "follow", "new_follower" -> context.getString(R.string.notification_new_follower)
             "post_approved" -> context.getString(R.string.notification_post_approved)
             "view_milestone" -> context.getString(R.string.notification_view_milestone)
-            "community_post" -> n.message?.takeIf { it.isNotBlank() }
+            "community_post", "community_post_created" -> n.message?.takeIf { it.isNotBlank() }
                 ?: context.getString(R.string.notification_community_post)
+            "stream_started" -> n.message?.takeIf { it.isNotBlank() }
+                ?: context.getString(R.string.notification_livestream_started)
             else -> n.message ?: n.type
         }
     }
@@ -316,7 +320,8 @@ class NotificationAdapter(
             "follow", "new_follower" -> context.getString(R.string.tap_to_view_profile)
             "post_comment", "comment", "comment_reply" -> context.getString(R.string.tap_to_open_conversation)
             "post_like", "post_liked", "like" -> context.getString(R.string.tap_to_view_post)
-            "community_post" -> context.getString(R.string.tap_to_view_post)
+            "community_post", "community_post_created" -> context.getString(R.string.open_community)
+            "stream_started" -> context.getString(R.string.watch_now)
             "ad_approved", "ad_rejected" -> context.getString(R.string.tap_to_view_ads)
             "community_approved", "community_rejected" -> context.getString(R.string.tap_to_view_communities)
             else -> context.getString(R.string.tap_to_view_activity)

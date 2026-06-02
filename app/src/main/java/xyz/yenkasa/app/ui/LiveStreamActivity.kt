@@ -72,6 +72,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private lateinit var muteButton: ImageButton
     private lateinit var endButton: ImageButton
     private lateinit var reactionButton: ImageButton
+    private lateinit var likeCountText: TextView
     private lateinit var giftButton: ImageButton
     private lateinit var shareButton: ImageButton
     private lateinit var commentsButton: ImageButton
@@ -101,6 +102,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private var scheduledEndAtMillis: Long = 0L
     private var liveIdentityUsername: String = ""
     private var liveIdentityAvatar: String = ""
+    private var liveLikeCount = 0
     private var lastReactionAt = 0L
     private val recentLiveEventKeys = linkedMapOf<String, Long>()
     private val liveJoinAckHandler = Handler(Looper.getMainLooper())
@@ -273,6 +275,7 @@ class LiveStreamActivity : AppCompatActivity() {
         muteButton = findViewById(R.id.buttonMuteLive)
         endButton = findViewById(R.id.buttonEndLive)
         reactionButton = findViewById(R.id.buttonLiveReaction)
+        likeCountText = findViewById(R.id.textLiveLikeCount)
         giftButton = findViewById(R.id.buttonLiveGift)
         shareButton = findViewById(R.id.buttonLiveShare)
         commentsButton = findViewById(R.id.buttonLiveComments)
@@ -531,6 +534,7 @@ class LiveStreamActivity : AppCompatActivity() {
         val reactionListener: (Any) -> Unit = reactionListener@{ data ->
             val json = data.asJson() ?: return@reactionListener
             if (json.optString("streamId") != streamId) return@reactionListener
+            runOnUiThread { updateLiveLikeCount(json.optInt("likeCount", json.optInt("totalLikes", json.optInt("reactionCount", liveLikeCount)))) }
             if (shouldSkipIncomingLiveEvent("reaction", json)) return@reactionListener
             runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
         }
@@ -1167,8 +1171,12 @@ class LiveStreamActivity : AppCompatActivity() {
         if (now - lastReactionAt < 300L) return
         lastReactionAt = now
 
+        val clientEventId = liveClientEventId("reaction")
+
         // Immediate local visual feedback
         animateReaction(reaction)
+        updateLiveLikeCount(liveLikeCount + 1)
+        recentLiveEventKeys["reaction:$clientEventId"] = now
 
         val payload = JSONObject()
             .put("streamId", streamId)
@@ -1178,7 +1186,7 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("agoraUid", agoraUid)
             .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("reaction", reaction)
-            .put("clientEventId", liveClientEventId("reaction"))
+            .put("clientEventId", clientEventId)
         SocketManager.emit("live_reaction", payload)
     }
 
@@ -1330,6 +1338,11 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun updateViewerCount(count: Int) {
         viewerText.text = getString(R.string.live_viewers_short, count.coerceAtLeast(0))
+    }
+
+    private fun updateLiveLikeCount(count: Int) {
+        liveLikeCount = count.coerceAtLeast(0)
+        likeCountText.text = if (liveLikeCount > 0) liveLikeCount.toString() else getString(R.string.like)
     }
 
     private fun animateReaction(reaction: String) {

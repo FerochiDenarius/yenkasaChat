@@ -295,6 +295,7 @@
                 android:tint="#EF233C" />
 
             <TextView
+                android:id="@+id/textLiveLikeCount"
                 style="@style/LiveActionRailLabel"
                 android:text="@string/like" />
         </LinearLayout>

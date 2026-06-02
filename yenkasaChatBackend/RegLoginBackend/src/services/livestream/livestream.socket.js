@@ -3,6 +3,9 @@ const {
   LIVESTREAM_EVENT_TYPES,
   emitLivestreamOperationalEvent,
 } = require('./operationalEvents.service');
+const {
+  queueLivestreamStartNotifications,
+} = require('../../../services/livestreamStartNotification.service');
 
 function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
   socket.data.liveJoinTimes = socket.data.liveJoinTimes || new Map();
@@ -207,6 +210,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       });
 
       io.emit('live_started', { stream: livestreamService.serializeLiveStream(stream) });
+      queueLivestreamStartNotifications({ streamId });
       livestreamService.emitLiveRoomMemberCount(streamId);
       console.log(`📺 Livestream host ready: ${streamId} socket=${socket.id}`);
     } catch (err) {
@@ -423,6 +427,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!streamId) return;
       if (livestreamService.shouldSkipDuplicateLiveEvent('reaction', payload)) return;
       const actor = await resolveLiveActor(payload);
+      const likeCount = livestreamService.incrementLiveReactionCount(streamId);
       const reactionEvent = {
         streamId,
         userId: actor.userId,
@@ -431,6 +436,9 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         username: actor.username,
         reaction: payload.reaction || '🔥',
         type: payload.type || payload.reaction || '🔥',
+        likeCount,
+        totalLikes: likeCount,
+        reactionCount: likeCount,
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
       };
@@ -820,6 +828,9 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
   socket.on('live_comment', handleLiveComment);
   socket.on('live_reaction', handleLiveReaction);
   socket.on('live_like', handleLiveReaction);
+  socket.on('send_like', handleLiveReaction);
+  socket.on('streamLike', handleLiveReaction);
+  socket.on('likeStream', handleLiveReaction);
   socket.on('live_share', handleLiveShare);
   socket.on('live_report', handleLiveReport);
   socket.on('live_follow_host', handleLiveFollowHost);

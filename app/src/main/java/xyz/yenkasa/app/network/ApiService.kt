@@ -902,7 +902,8 @@ interface ApiService {
     @PUT("notifications/{id}/read")
     fun markNotificationRead(
         @Path("id") id: String,
-        @Header("Authorization") auth: String
+        @Header("Authorization") auth: String,
+        @Query("interaction") interaction: String? = null
     ): Call<ApiResponse>
 
     @POST("notifications")

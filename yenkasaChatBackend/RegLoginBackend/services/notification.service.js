@@ -1,6 +1,10 @@
 const Notification = require("../models/notifications.model");
 const User = require("../models/user.model");
 const { sendPushNotification } = require("../utils/onesignal");
+const {
+    NOTIFICATION_EVENT_TYPES,
+    emitNotificationOperationalEvent
+} = require("./notificationOperationalEvents.service");
 
 function computeTarget(notification) {
     const { targetType, targetId, targetUrl, type, activityId } = notification;
@@ -14,7 +18,8 @@ function computeTarget(notification) {
             if (targetType === "comment") return null;
             if (targetType === "wallet") return `/wallet/${targetId}`;
             if (targetType === "ad") return `/ads/mine`;
-            if (targetType === "community") return `/communities/mine`;
+            if (targetType === "community") return targetId ? `/communities?communityId=${targetId}` : `/communities/mine`;
+            if (targetType === "live" || targetType === "livestream") return `/live/${targetId}`;
             if (targetType === "chat") return `/chat/${targetId}`;
             if (targetType === "group") return `/groups/${targetId}`;
         }
@@ -24,7 +29,7 @@ function computeTarget(notification) {
     if (type === "ad_approved" || type === "ad_rejected") return "/ads/mine";
     if (type === "community_approved" || type === "community_rejected") return "/communities/mine";
     if (type === "comment") return `/post/${activityId}?openComments=true`;
-    if (type === "like" || type === "post_liked" || String(type || "").toLowerCase() === "community_post") return `/post/${activityId}`;
+    if (type === "like" || type === "post_liked" || ["community_post", "community_post_created"].includes(String(type || "").toLowerCase())) return `/post/${activityId}`;
 
     return null;
 }
@@ -76,7 +81,7 @@ function shouldDeliverNotification(user, type, targetType) {
     const preferences = getNotificationPreferences(user);
     if (!preferences.inAppEnabled) return false;
     if (isRewardNotification(type, targetType) && !preferences.rewardEnabled) return false;
-    if (String(type || "").toLowerCase() === "community_post" && !preferences.communityPostEnabled) return false;
+    if (["community_post", "community_post_created"].includes(String(type || "").toLowerCase()) && !preferences.communityPostEnabled) return false;
     return true;
 }
 
@@ -146,6 +151,25 @@ async function sendNotification({
         if (emitSocket && global.io) {
             global.io.to(receiverId.toString()).emit("notificationCreated", formatted);
         }
+
+        emitNotificationOperationalEvent(NOTIFICATION_EVENT_TYPES.NOTIFICATION_SENT, {
+            notificationId: formatted.id,
+            notificationType: type,
+            userId: receiverId,
+            receiverId,
+            senderId,
+            activityId,
+            targetType,
+            targetId,
+            targetUrl: formatted.targetUrl,
+            message,
+            timestamp: formatted.createdAt,
+            deliveryChannels: {
+                inApp: true,
+                socket: Boolean(emitSocket && global.io),
+                push: Boolean(push)
+            }
+        });
 
         if (push) {
             try {

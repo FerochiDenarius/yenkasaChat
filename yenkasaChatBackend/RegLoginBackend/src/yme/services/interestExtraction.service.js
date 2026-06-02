@@ -70,6 +70,10 @@ const EVENT_WEIGHTS = Object.freeze({
   stream_view_duration: 1.7,
   reward_claim: 1.1,
   community_join: 1.05,
+  community_post_created: 1.3,
+  notification_sent: 0.15,
+  notification_opened: 0.45,
+  notification_dismissed: 0.08,
 });
 
 function tokenize(text) {

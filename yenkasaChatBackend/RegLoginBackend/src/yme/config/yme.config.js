@@ -46,9 +46,13 @@ const DEFAULT_EVENT_TYPES = Object.freeze([
   'stream_peak_viewers',
   'reward_claim',
   'community_join',
+  'community_post_created',
   'ad_interaction',
   'ad_engagement',
+  'notification_sent',
   'notification_open',
+  'notification_opened',
+  'notification_dismissed',
   'live_interaction',
 ]);
 

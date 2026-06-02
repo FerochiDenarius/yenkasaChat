@@ -15,8 +15,10 @@ export async function updateNotificationPreferences(payload) {
   return data?.preferences || {};
 }
 
-export async function markNotificationRead(notificationId) {
-  const { data } = await api.put(`/notifications/${notificationId}/read`);
+export async function markNotificationRead(notificationId, interaction = "opened") {
+  const { data } = await api.put(`/notifications/${notificationId}/read`, null, {
+    params: { interaction },
+  });
   return data;
 }
 

@@ -557,6 +557,9 @@
     <string name="notification_post_approved">Your post was approved</string>
     <string name="notification_view_milestone">Your post reached a new view milestone</string>
     <string name="notification_community_post">New post in your community</string>
+    <string name="notification_livestream_started">A livestream has started</string>
+    <string name="open_community">Open Community</string>
+    <string name="watch_now">Watch now</string>
     <string name="play_pause">Play or pause</string>
     <string name="tap_to_view_profile">Tap to view profile</string>
     <string name="tap_to_open_conversation">Tap to open the conversation</string>

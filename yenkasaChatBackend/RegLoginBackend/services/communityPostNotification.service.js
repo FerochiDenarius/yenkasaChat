@@ -5,8 +5,12 @@ const Post = require("../models/post.model");
 const User = require("../models/user.model");
 const UserPrivacy = require("../models/userPrivacy.model");
 const { sendNotification } = require("./notification.service");
+const {
+  NOTIFICATION_EVENT_TYPES,
+  emitNotificationOperationalEvent
+} = require("./notificationOperationalEvents.service");
 
-const COMMUNITY_POST_TYPE = "COMMUNITY_POST";
+const COMMUNITY_POST_TYPE = NOTIFICATION_EVENT_TYPES.COMMUNITY_POST_CREATED;
 const BATCH_SIZE = 25;
 const NOTIFICATION_COOLDOWN_MS = 2 * 60 * 1000;
 
@@ -29,7 +33,7 @@ function getPostThumbnail(post) {
 }
 
 function buildTargetUrl(postId, communityId) {
-  return `/post/${postId}?communityId=${communityId}`;
+  return `/communities?communityId=${communityId}&postId=${postId}`;
 }
 
 async function getSkippedRecipientIds({ creatorId, communityId }) {
@@ -116,31 +120,35 @@ async function notifyRecipient({ post, community, creator, recipient }) {
   const username = creator.username || "Someone";
   const thumbnail = getPostThumbnail(post);
   const targetUrl = buildTargetUrl(postId, communityId);
-  const message = `${username} posted in ${communityName}`;
+  const title = `New post in ${communityName}`;
+  const message = `${username} shared a new post.`;
 
   const delivered = await sendNotification({
     type: COMMUNITY_POST_TYPE,
     senderId: creator._id,
     receiverId: recipient._id,
     activityId: postId,
-    targetType: "post",
-    targetId: postId,
+    targetType: "community",
+    targetId: communityId,
     targetUrl,
     message,
     emitSocket: true,
     push: true,
-    pushTitle: communityName,
+    pushTitle: title,
     pushBody: message,
     pushData: {
       type: COMMUNITY_POST_TYPE,
       notificationType: COMMUNITY_POST_TYPE,
       activityId: postId,
       postId,
-      targetType: "post",
-      targetId: postId,
+      targetType: "community",
+      targetId: communityId,
       targetUrl,
       communityId,
       communityName,
+      authorId: normalizeId(creator._id),
+      authorName: username,
+      timestamp: new Date().toISOString(),
       username,
       thumbnail,
       mediaPreview: thumbnail
@@ -174,6 +182,17 @@ async function dispatchCommunityPostNotifications(postId) {
   const recipients = await fetchEligibleRecipients({
     community,
     creatorId: creator._id
+  });
+  const timestamp = new Date().toISOString();
+
+  emitNotificationOperationalEvent(NOTIFICATION_EVENT_TYPES.COMMUNITY_POST_CREATED, {
+    communityId: normalizeId(community._id),
+    communityName: getCommunityName(community),
+    postId: normalizeId(post._id),
+    authorId: normalizeId(creator._id),
+    authorName: creator.username || "Someone",
+    userId: normalizeId(creator._id),
+    timestamp
   });
 
   const stats = {

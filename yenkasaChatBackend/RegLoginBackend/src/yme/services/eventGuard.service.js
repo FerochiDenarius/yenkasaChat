@@ -10,6 +10,8 @@ const LOW_VALUE_EVENT_TYPES = new Set([
   'watch_duration',
   'profile_visit',
   'notification_open',
+  'notification_sent',
+  'notification_dismissed',
   'ad_interaction',
   'ad_engagement',
 ]);

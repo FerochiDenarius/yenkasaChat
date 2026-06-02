@@ -81,7 +81,7 @@ class UserNotificationsActivity : AppCompatActivity() {
             onItemClick = { item -> handleNotificationClick(item) },
             onSwipeDelete = { item ->
                 allNotifications = allNotifications.filterNot { it.id == item.id }
-                markAsRead(item.id)
+                markAsRead(item.id, "dismissed")
             }
         )
 
@@ -382,7 +382,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         // Remove visually & mark backend as read
         allNotifications = allNotifications.filterNot { it.id == item.id }
         adapter.removeById(item.id)
-        markAsRead(item.id)
+        markAsRead(item.id, "opened")
 
         // Navigate correctly
         navigateFromNotification(item)
@@ -411,7 +411,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         allNotifications = allNotifications.filterNot { it.id == item.id }
                         adapter.removeById(item.id)
-                        markAsRead(item.id)
+                        markAsRead(item.id, "opened")
                         Toast.makeText(
                             this@UserNotificationsActivity,
                             R.string.message_request_approved,
@@ -447,11 +447,11 @@ class UserNotificationsActivity : AppCompatActivity() {
     // ============================================================
     // MARK AS READ
     // ============================================================
-    private fun markAsRead(id: String) {
+    private fun markAsRead(id: String, interaction: String = "opened") {
         val token = TokenManager.getToken(applicationContext)
 
         ApiClient.apiService
-            .markNotificationRead(id, "Bearer $token")
+            .markNotificationRead(id, "Bearer $token", interaction)
             .enqueue(object : Callback<ApiResponse> {
 
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {

@@ -7,6 +7,7 @@ const {
   getLivestreamMetrics,
   updateLivestreamMetrics,
 } = require('../src/services/livestream/operationalEvents.service');
+const livestreamRealtimeService = require('../src/services/livestream/livestream.service');
 
 test('buildLivestreamOperationalEvent creates canonical stream event schema', () => {
   const event = buildLivestreamOperationalEvent({
@@ -73,4 +74,16 @@ test('updateLivestreamMetrics populates viewer, engagement, gift, and watch metr
   assert.equal(metrics.retentionRate, 1);
   assert.equal(metrics.giftRevenue, 50);
   assert.deepEqual(metrics.topGifters, [{ userId: 'viewer-1', amount: 50 }]);
+});
+
+test('livestream realtime service tracks aggregate reaction count per stream', () => {
+  const streamId = `reaction-stream-${Date.now()}`;
+
+  assert.equal(livestreamRealtimeService.getLiveReactionCount(streamId), 0);
+  assert.equal(livestreamRealtimeService.incrementLiveReactionCount(streamId), 1);
+  assert.equal(livestreamRealtimeService.incrementLiveReactionCount(streamId), 2);
+  assert.equal(livestreamRealtimeService.getLiveReactionCount(streamId), 2);
+
+  livestreamRealtimeService.clearLiveParticipants(streamId);
+  assert.equal(livestreamRealtimeService.getLiveReactionCount(streamId), 0);
 });

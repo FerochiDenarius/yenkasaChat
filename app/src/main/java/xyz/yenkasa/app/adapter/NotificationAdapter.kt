@@ -119,10 +119,7 @@ class NotificationAdapter(
 
     private fun bindUpdate(holder: UpdateViewHolder, item: NotificationModel) {
         val context = holder.itemView.context
-<<<<<<< HEAD
         val isAnnouncement = item.type.equals("announcement", ignoreCase = true)
-=======
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
         holder.channel.text = item.channelName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.yenkasa_updates)
         holder.verifiedIcon.visibility = if (item.verifiedBadge) View.VISIBLE else View.GONE
         val badgeText = item.badge?.takeIf { it.isNotBlank() }
@@ -153,7 +150,6 @@ class NotificationAdapter(
                 .into(holder.preview)
         }
 
-<<<<<<< HEAD
         holder.reactions.text = if (isAnnouncement) {
             context.getString(
                 R.string.announcements_metrics_format,
@@ -168,14 +164,6 @@ class NotificationAdapter(
                 item.reactionClapCount
             )
         }
-=======
-        holder.reactions.text = context.getString(
-            R.string.updates_reactions_format,
-            item.reactionFireCount,
-            item.reactionHeartCount,
-            item.reactionClapCount
-        )
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
 
         holder.itemView.setOnClickListener {
             holder.itemView.animate()
@@ -239,10 +227,7 @@ class NotificationAdapter(
 
     fun getNotificationIcon(type: String): Int {
         return when (type.lowercase()) {
-<<<<<<< HEAD
             "announcement" -> R.drawable.ic_bell
-=======
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
             "update_announcement", "update_livestream", "update_rewards", "update_ranking",
             "update_creator", "update_community", "update_feature", "update_app_update" -> R.drawable.ic_bell
             "reward_post_view", "reward_post_view_received", "post_view", "view_milestone" -> R.drawable.ic_eye
@@ -259,10 +244,7 @@ class NotificationAdapter(
 
     fun getNotificationColor(type: String): Int {
         return when (type.lowercase()) {
-<<<<<<< HEAD
             "announcement" -> R.color.notification_view_bg
-=======
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
             "update_announcement", "update_livestream", "update_rewards", "update_ranking",
             "update_creator", "update_community", "update_feature", "update_app_update" -> R.color.notification_view_bg
             "reward_image", "image" -> R.color.notification_image_bg
@@ -382,12 +364,8 @@ class NotificationAdapter(
     }
 
     private fun isUpdateItem(item: NotificationModel): Boolean {
-<<<<<<< HEAD
         val type = item.type.lowercase()
         return type.startsWith("update_") || type == "announcement"
-=======
-        return item.type.lowercase().startsWith("update_")
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     }
 
     class NotificationDiff(

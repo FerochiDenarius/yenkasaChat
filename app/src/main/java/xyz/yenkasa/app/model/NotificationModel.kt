@@ -26,13 +26,9 @@ data class NotificationModel(
     val verifiedBadge: Boolean = false,
     val reactionFireCount: Int = 0,
     val reactionHeartCount: Int = 0,
-<<<<<<< HEAD
     val reactionClapCount: Int = 0,
     val likesCount: Int = 0,
     val viewsCount: Int = 0
-=======
-    val reactionClapCount: Int = 0
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
 )
 
 data class Sender(

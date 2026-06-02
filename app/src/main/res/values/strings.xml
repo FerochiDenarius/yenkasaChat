@@ -372,15 +372,11 @@
     <string name="message_request_rejected">Message request rejected</string>
     <string name="just_now">Just now</string>
     <string name="updates">Updates</string>
-<<<<<<< HEAD
     <string name="announcements">Announcements</string>
-=======
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     <string name="yenkasa_updates">Yenkasa Updates</string>
     <string name="updates_pinned">PINNED</string>
     <string name="updates_reactions_default">🔥 0   ❤️ 0   👏 0</string>
     <string name="updates_reactions_format">🔥 %1$d   ❤️ %2$d   👏 %3$d</string>
-<<<<<<< HEAD
     <string name="announcements_metrics_format">%1$d views | %2$d likes</string>
     <string name="update_preview_image">Update preview image</string>
     <string name="yenkasa_updates_open_for_more">Tap to open this update.</string>
@@ -517,11 +513,6 @@
     <string name="announcement_schedule_none">Send now</string>
     <string name="announcement_audio_attachment">Audio attachment</string>
     <string name="announcement_file_attachment">File attachment</string>
-=======
-    <string name="update_preview_image">Update preview image</string>
-    <string name="yenkasa_updates_open_for_more">Tap to open this update.</string>
-    <string name="no_updates_yet">No Yenkasa updates yet.</string>
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     <string name="minutes_ago">%1$dm ago</string>
     <string name="hours_ago">%1$dh ago</string>
     <string name="days_ago">%1$dd ago</string>

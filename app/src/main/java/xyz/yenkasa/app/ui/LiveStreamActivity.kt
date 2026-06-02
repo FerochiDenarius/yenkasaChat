@@ -484,6 +484,7 @@ class LiveStreamActivity : AppCompatActivity() {
             runOnUiThread { addComment(getString(R.string.live_comment_format, username, message)) }
         }
         registerLiveSocketListener("live_comment", commentListener)
+        registerLiveSocketListener("new_comment", commentListener)
 
         val roomJoinedListener: (Any) -> Unit = roomJoinedListener@{ data ->
             val json = data.asJson() ?: return@roomJoinedListener
@@ -508,6 +509,7 @@ class LiveStreamActivity : AppCompatActivity() {
             runOnUiThread { addComment(getString(R.string.live_user_joined, username)) }
         }
         registerLiveSocketListener("live_join", joinListener)
+        registerLiveSocketListener("viewer_joined", joinListener)
 
         val leaveListener: (Any) -> Unit = leaveListener@{ data ->
             val json = data.asJson() ?: return@leaveListener
@@ -517,6 +519,7 @@ class LiveStreamActivity : AppCompatActivity() {
             runOnUiThread { addComment(getString(R.string.live_user_left, username)) }
         }
         registerLiveSocketListener("live_leave", leaveListener)
+        registerLiveSocketListener("viewer_left", leaveListener)
 
         val viewerCountListener: (Any) -> Unit = viewerCountListener@{ data ->
             val json = data.asJson() ?: return@viewerCountListener
@@ -532,6 +535,7 @@ class LiveStreamActivity : AppCompatActivity() {
             runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
         }
         registerLiveSocketListener("live_reaction", reactionListener)
+        registerLiveSocketListener("new_like", reactionListener)
 
         val giftListener: (Any) -> Unit = giftListener@{ data ->
             val json = data.asJson() ?: return@giftListener
@@ -545,6 +549,8 @@ class LiveStreamActivity : AppCompatActivity() {
             }
         }
         registerLiveSocketListener("live_gift", giftListener)
+        registerLiveSocketListener("new_gift", giftListener)
+        registerLiveSocketListener("gift_animation", giftListener)
 
         val endedListener: (Any) -> Unit = endedListener@{ data ->
             val json = data.asJson() ?: return@endedListener

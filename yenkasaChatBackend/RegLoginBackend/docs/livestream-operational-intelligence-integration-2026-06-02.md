@@ -214,6 +214,8 @@ Evidence:
 
 ## Verification Evidence
 
+### Backend Verification
+
 Command:
 
 ```bash
@@ -229,11 +231,31 @@ fail 0
 duration_ms 10022.635969
 ```
 
+Latest rerun after frontend blocker cleanup:
+
+```text
+tests 10
+pass 10
+fail 0
+duration_ms 1733.445269
+```
+
+Latest rerun after adding the OIL HTTP ingest route:
+
+```text
+tests 12
+pass 12
+fail 0
+duration_ms 1866.716462
+```
+
 Additional syntax checks passed:
 
 ```bash
 node --check src/services/livestream/livestream.socket.js
 node --check routes/livestream.routes.js
+node --check routes/events.routes.js
+node --check src/config/apiRoutes.js
 node --check src/services/livestream/operationalEvents.service.js
 node --check src/intelligence/services/eventPublisher.service.js
 ```
@@ -243,6 +265,158 @@ Focused test evidence:
 - Canonical livestream schema test: `tests/livestreamOperationalEvents.test.js:11`
 - Metrics population test: `tests/livestreamOperationalEvents.test.js:33`
 - AI relay `STREAM_GIFT` mapping test: `tests/intelligenceEventPublisher.test.js`
+- OIL HTTP ingest route mapping test: `tests/operationalEventsIngestRoute.test.js`
+
+### OIL Ingest Route Fix
+
+Verification found that the production API currently returns `404` for:
+
+```text
+POST /api/events/ingest
+{"error":"API route not found"}
+```
+
+The local backend has now been fixed to mount a real OIL ingest endpoint:
+
+```text
+POST /api/events/ingest
+```
+
+The endpoint accepts either a single event payload or `{ "events": [...] }`, maps the canonical livestream schema into YME ingest fields, and supports internal service authentication through `YENKASA_EVENTS_INGEST_API_KEY`, `INTERNAL_PLATFORM_API_KEY`, or `LOG_INGEST_API_KEY`. If no valid internal key is supplied, it falls back to the existing bearer-token auth middleware.
+
+### Frontend Wiring Verification
+
+The Android livestream screen was checked and patched against the backend socket API:
+
+- Frontend listens to `live_comment`, `live_join`, `live_leave`, `live_reaction`, `live_gift`, `live_room_joined`, and `live_ended`.
+- Frontend now also listens to required platform broadcast aliases: `new_comment`, `new_like`, `new_gift`, `viewer_joined`, `viewer_left`, and `gift_animation`.
+- Frontend emits `live_join`, `live_comment`, `live_reaction`, `live_leave`, `live_request_guest_seat`, `live_mute_guest`, `live_kick_guest`, `live_approve_guest_seat`, and `live_decline_guest_seat`.
+- Backend preserved the legacy event names and emits the requested new broadcasts, so existing client UX remains wired while OIL events are emitted in parallel.
+- The activity keeps `clientEventId` de-duplication, so listening to legacy and new aliases does not double-render mirrored events.
+
+Evidence:
+
+- Frontend listeners and emitters: `app/src/main/java/xyz/yenkasa/app/ui/LiveStreamActivity.kt`
+- Backend legacy + new broadcasts: `src/services/livestream/livestream.socket.js`
+- Gift broadcast compatibility: `routes/livestream.routes.js`
+
+Android build verification:
+
+```bash
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+```
+
+Results:
+
+```text
+:app:testDebugUnitTest BUILD SUCCESSFUL
+:app:assembleDebug BUILD SUCCESSFUL
+```
+
+Latest rerun after the new frontend alias wiring:
+
+```text
+./gradlew :app:testDebugUnitTest
+BUILD SUCCESSFUL in 3m 11s
+31 actionable tasks: 8 executed, 23 up-to-date
+```
+
+The debug APK was generated at:
+
+```text
+/Users/kofibright/yenkasaChat/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Device install/runtime evidence:
+
+```bash
+adb devices
+```
+
+returned:
+
+```text
+146353755V007782    device
+```
+
+The debug build was installed on the connected Android device:
+
+```text
+./gradlew :app:installDebug
+Installed on 1 device.
+BUILD SUCCESSFUL in 1m 14s
+```
+
+The installed package was verified:
+
+```text
+package: xyz.yenkasa.app
+launcher: xyz.yenkasa.app/.ui.SplashActivity
+device: TECNO BG6m - Android 14
+versionName: 0.5.2
+debuggable: true
+```
+
+ADB launch succeeded:
+
+```text
+Starting: Intent { cmp=xyz.yenkasa.app/.ui.SplashActivity }
+```
+
+Runtime logcat showed the app stayed alive and routed to `LoginActivity`, with no `FATAL EXCEPTION` or `AndroidRuntime` crash for the launched app. Required livestream runtime permissions were granted by ADB before launch:
+
+```text
+android.permission.CAMERA
+android.permission.RECORD_AUDIO
+android.permission.POST_NOTIFICATIONS
+```
+
+Endpoint auth check:
+
+```bash
+curl -i https://yenkasa-8rjea.ondigitalocean.app/api/livestream/active
+```
+
+returned:
+
+```text
+HTTP/2 401
+{"success":false,"message":"Access denied. Authorization header missing."}
+```
+
+Route verification confirms all livestream REST endpoints require `auth`:
+
+```text
+POST /api/livestream/create
+GET  /api/livestream/active
+GET  /api/livestream/top-streams
+GET  /api/livestream/:id/metrics
+GET  /api/livestream/:id/creator-intelligence
+POST /api/livestream/join/:id
+POST /api/livestream/end/:id
+POST /api/livestream/leave/:id
+POST /api/livestream/gift
+```
+
+The connected device was not logged into Yenkasa after installation, so authenticated create/join/end/leave/gift calls could not be completed from the app. Only one device was connected, so a true host-screen plus joined-screen synchronization test could not be proven end to end in this run. The frontend is now wired for both host and joined screens to receive all required socket event names, and the backend tests verify the OIL event pipeline and metrics behavior.
+
+### Frontend Build Blockers Fixed
+
+The Android app initially could not be tested because committed merge-conflict markers existed in resource and Kotlin files unrelated to the livestream backend integration. These blocked `mergeDebugResources` and Kotlin compilation.
+
+Fixed files:
+
+- `app/src/main/res/values/strings.xml`
+- `app/src/main/res/layout/activity_user_notifications.xml`
+- `app/src/main/java/xyz/yenkasa/app/adapter/NotificationAdapter.kt`
+- `app/src/main/java/xyz/yenkasa/app/model/NotificationModel.kt`
+- `app/src/main/java/xyz/yenkasa/app/network/ApiService.kt`
+- `app/src/main/java/xyz/yenkasa/app/ui/LiveStreamActivity.kt`
+- `app/src/main/java/xyz/yenkasa/app/ui/UserNotificationsActivity.kt`
+- `app/src/main/java/xyz/yenkasa/app/ui/PostActivity.kt`
+
+After cleanup, Android resources, Kotlin compilation, unit tests, and debug APK assembly passed.
 
 ## Implementation Notes
 
@@ -256,6 +430,9 @@ The implementation preserves current client compatibility by keeping existing `l
 - `src/services/livestream/livestream.socket.js`
 - `src/services/livestream/livestream.service.js`
 - `routes/livestream.routes.js`
+- `routes/events.routes.js`
+- `src/config/apiRoutes.js`
+- `app/src/main/java/xyz/yenkasa/app/ui/LiveStreamActivity.kt`
 - `src/intelligence/services/eventPublisher.service.js`
 - `src/yme/config/yme.config.js`
 - `src/yme/services/eventIngestion.service.js`
@@ -265,6 +442,7 @@ The implementation preserves current client compatibility by keeping existing `l
 - `src/yme/services/consolidation.service.js`
 - `tests/livestreamOperationalEvents.test.js`
 - `tests/intelligenceEventPublisher.test.js`
+- `tests/operationalEventsIngestRoute.test.js`
 
 ## Conclusion
 

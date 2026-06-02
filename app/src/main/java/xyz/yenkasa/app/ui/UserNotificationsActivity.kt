@@ -49,24 +49,15 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private var previousList: List<NotificationModel> = emptyList()
     private var allNotifications: List<NotificationModel> = emptyList()
-<<<<<<< HEAD
     private var allAnnouncements: List<NotificationModel> = emptyList()
-=======
-    private var allUpdates: List<NotificationModel> = emptyList()
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     private var activeFilter: NotificationFilter = NotificationFilter.ALL
 
     private companion object {
         const val PREFS_NAME = "settings"
         const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val KEY_REWARD_NOTIFICATIONS_ENABLED = "reward_notifications_enabled"
-<<<<<<< HEAD
         const val KEY_ANNOUNCEMENTS_CACHE = "announcements_cache"
         const val KEY_ANNOUNCEMENTS_READ_IDS = "announcements_read_ids"
-=======
-        const val KEY_UPDATES_CACHE = "updates_cache"
-        const val KEY_UPDATES_READ_IDS = "updates_read_ids"
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -136,11 +127,7 @@ class UserNotificationsActivity : AppCompatActivity() {
             showLoadingState()
         }
         loadNotifications()
-<<<<<<< HEAD
         loadAnnouncements()
-=======
-        loadUpdates()
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     }
 
     private fun loadNotifications() {
@@ -203,7 +190,6 @@ class UserNotificationsActivity : AppCompatActivity() {
         })
     }
 
-<<<<<<< HEAD
     private fun loadAnnouncements() {
         ApiClient.apiService.getAnnouncementsFeed().enqueue(object : Callback<List<Announcement>> {
             override fun onResponse(
@@ -213,46 +199,23 @@ class UserNotificationsActivity : AppCompatActivity() {
                 if (!response.isSuccessful) {
                     Log.e("NOTIF", "Failed to load announcements: ${response.code()}")
                     allAnnouncements = loadCachedAnnouncements()
-=======
-    private fun loadUpdates() {
-        ApiClient.apiService.getUpdates().enqueue(object : Callback<List<NotificationModel>> {
-            override fun onResponse(
-                call: Call<List<NotificationModel>>,
-                response: Response<List<NotificationModel>>
-            ) {
-                if (!response.isSuccessful) {
-                    Log.e("NOTIF", "Failed to load updates: ${response.code()}")
-                    allUpdates = loadCachedUpdates()
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                     renderFilteredNotifications()
                     swipeNotifications.isRefreshing = false
                     return
                 }
 
-<<<<<<< HEAD
                 val announcements = applyLocalAnnouncementReadState(
                     response.body().orEmpty().map { it.toNotificationModel() }
                 )
                 allAnnouncements = announcements
                 cacheAnnouncements(announcements)
-=======
-                val updates = applyLocalUpdateReadState(response.body().orEmpty())
-                allUpdates = updates
-                cacheUpdates(updates)
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                 renderFilteredNotifications()
                 swipeNotifications.isRefreshing = false
             }
 
-<<<<<<< HEAD
             override fun onFailure(call: Call<List<Announcement>>, t: Throwable) {
                 Log.e("NOTIF", "Network error loading announcements", t)
                 allAnnouncements = loadCachedAnnouncements()
-=======
-            override fun onFailure(call: Call<List<NotificationModel>>, t: Throwable) {
-                Log.e("NOTIF", "Network error loading updates", t)
-                allUpdates = loadCachedUpdates()
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                 renderFilteredNotifications()
                 swipeNotifications.isRefreshing = false
             }
@@ -338,11 +301,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         if (items.isEmpty()) {
             swipeNotifications.visibility = View.GONE
             textNotificationsState.text = when (activeFilter) {
-<<<<<<< HEAD
                 NotificationFilter.ANNOUNCEMENTS -> getString(R.string.no_announcements_yet)
-=======
-                NotificationFilter.UPDATES -> getString(R.string.no_updates_yet)
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                 else -> getString(R.string.notifications_all_caught_up)
             }
             textNotificationsState.visibility = View.VISIBLE
@@ -369,11 +328,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 R.id.chipFilterRewards -> NotificationFilter.REWARDS
                 R.id.chipFilterComments -> NotificationFilter.COMMENTS
                 R.id.chipFilterLikes -> NotificationFilter.LIKES
-<<<<<<< HEAD
                 R.id.chipFilterUpdates -> NotificationFilter.ANNOUNCEMENTS
-=======
-                R.id.chipFilterUpdates -> NotificationFilter.UPDATES
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                 R.id.chipFilterMentions -> NotificationFilter.MENTIONS
                 else -> NotificationFilter.ALL
             }
@@ -383,17 +338,10 @@ class UserNotificationsActivity : AppCompatActivity() {
 
     private fun renderFilteredNotifications() {
         val filtered = when (activeFilter) {
-<<<<<<< HEAD
             NotificationFilter.ANNOUNCEMENTS -> allAnnouncements
                 .sortedWith(compareByDescending<NotificationModel> { it.pinned }
                     .thenByDescending { it.createdAt.orEmpty() })
             NotificationFilter.ALL -> (allNotifications + allAnnouncements)
-=======
-            NotificationFilter.UPDATES -> allUpdates
-                .sortedWith(compareByDescending<NotificationModel> { it.pinned }
-                    .thenByDescending { it.createdAt.orEmpty() })
-            NotificationFilter.ALL -> (allNotifications + allUpdates)
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                 .sortedWith(compareByDescending<NotificationModel> { it.pinned }
                     .thenByDescending { it.createdAt.orEmpty() })
             else -> allNotifications.filter { activeFilter.matches(it) }
@@ -420,13 +368,8 @@ class UserNotificationsActivity : AppCompatActivity() {
     // WHEN USER TAPS A NOTIFICATION
     // ============================================================
     private fun handleNotificationClick(item: NotificationModel) {
-<<<<<<< HEAD
         if (isAnnouncementItem(item)) {
             markAnnouncementAsRead(item.id)
-=======
-        if (isUpdateItem(item)) {
-            markUpdateAsRead(item.id)
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
             navigateFromNotification(item)
             return
         }
@@ -495,11 +438,7 @@ class UserNotificationsActivity : AppCompatActivity() {
 
 
     private fun navigateFromNotification(item: NotificationModel) {
-<<<<<<< HEAD
         if (item.targetType.equals("system", ignoreCase = true) && !isAnnouncementItem(item)) {
-=======
-        if (item.targetType.equals("system", ignoreCase = true) && !isUpdateItem(item)) {
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
             Toast.makeText(this, item.message ?: getString(R.string.system_notification), Toast.LENGTH_SHORT).show()
         }
         startActivity(NotificationNavigation.buildIntent(this, item))
@@ -555,15 +494,9 @@ class UserNotificationsActivity : AppCompatActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
-<<<<<<< HEAD
     private fun applyLocalAnnouncementReadState(items: List<NotificationModel>): List<NotificationModel> {
         val readIds = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getStringSet(KEY_ANNOUNCEMENTS_READ_IDS, emptySet())
-=======
-    private fun applyLocalUpdateReadState(items: List<NotificationModel>): List<NotificationModel> {
-        val readIds = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getStringSet(KEY_UPDATES_READ_IDS, emptySet())
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
             .orEmpty()
 
         return items.map { item ->
@@ -571,7 +504,6 @@ class UserNotificationsActivity : AppCompatActivity() {
         }
     }
 
-<<<<<<< HEAD
     private fun markAnnouncementAsRead(id: String) {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val updatedReadIds = prefs.getStringSet(KEY_ANNOUNCEMENTS_READ_IDS, emptySet()).orEmpty().toMutableSet()
@@ -595,44 +527,14 @@ class UserNotificationsActivity : AppCompatActivity() {
         return runCatching {
             val type = object : TypeToken<List<NotificationModel>>() {}.type
             applyLocalAnnouncementReadState(Gson().fromJson(raw, type) ?: emptyList())
-=======
-    private fun markUpdateAsRead(id: String) {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val updatedReadIds = prefs.getStringSet(KEY_UPDATES_READ_IDS, emptySet()).orEmpty().toMutableSet()
-        if (updatedReadIds.add(id)) {
-            prefs.edit().putStringSet(KEY_UPDATES_READ_IDS, updatedReadIds).apply()
-        }
-        allUpdates = allUpdates.map { if (it.id == id) it.copy(status = "read") else it }
-        adapter.markItemAsRead(id)
-    }
-
-    private fun cacheUpdates(items: List<NotificationModel>) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit()
-            .putString(KEY_UPDATES_CACHE, Gson().toJson(items))
-            .apply()
-    }
-
-    private fun loadCachedUpdates(): List<NotificationModel> {
-        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_UPDATES_CACHE, null)
-            ?: return emptyList()
-        return runCatching {
-            val type = object : TypeToken<List<NotificationModel>>() {}.type
-            applyLocalUpdateReadState(Gson().fromJson(raw, type) ?: emptyList())
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
         }.getOrElse {
             emptyList()
         }
     }
 
-<<<<<<< HEAD
     private fun isAnnouncementItem(item: NotificationModel): Boolean {
         val type = item.type.lowercase()
         return type.startsWith("update_") || type == "announcement"
-=======
-    private fun isUpdateItem(item: NotificationModel): Boolean {
-        return item.type.lowercase().startsWith("update_")
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
     }
 
     private enum class NotificationFilter {
@@ -640,11 +542,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         REWARDS,
         COMMENTS,
         LIKES,
-<<<<<<< HEAD
         ANNOUNCEMENTS,
-=======
-        UPDATES,
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
         MENTIONS;
 
         fun matches(notification: NotificationModel): Boolean {
@@ -655,11 +553,7 @@ class UserNotificationsActivity : AppCompatActivity() {
                 REWARDS -> type == "reward" || type.startsWith("reward_") || notification.targetType?.lowercase() == "wallet"
                 COMMENTS -> "comment" in type || "reply" in type
                 LIKES -> "like" in type
-<<<<<<< HEAD
                 ANNOUNCEMENTS -> type.startsWith("update_") || type == "announcement"
-=======
-                UPDATES -> type.startsWith("update_")
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
                 MENTIONS -> "mention" in type || "mentioned" in message
             }
         }

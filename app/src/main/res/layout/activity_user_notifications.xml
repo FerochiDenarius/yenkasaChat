@@ -125,7 +125,6 @@
             app:chipStrokeColor="@color/transparent"
             app:chipStrokeWidth="0dp" />
 
-<<<<<<< HEAD
         <com.google.android.material.chip.Chip
             android:id="@+id/chipFilterMentions"
             style="@style/Widget.MaterialComponents.Chip.Choice"
@@ -141,39 +140,6 @@
             app:chipStrokeColor="@color/transparent"
             app:chipStrokeWidth="0dp" />
     </com.google.android.material.chip.ChipGroup>
-=======
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterUpdates"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/updates"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterMentions"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:checkable="true"
-                android:text="@string/mentions"
-                android:textColor="@color/selector_notification_chip_text"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_notification_chip_background"
-                app:chipCornerRadius="20dp"
-                app:chipMinHeight="40dp"
-                app:chipStrokeColor="@color/transparent"
-                app:chipStrokeWidth="0dp" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeNotifications"
@@ -183,11 +149,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-<<<<<<< HEAD
         app:layout_constraintTop_toBottomOf="@id/chipGroupNotificationFilters">
-=======
-        app:layout_constraintTop_toBottomOf="@id/filterScroll">
->>>>>>> 5c23bfa7d (Introducing Yenkasa Live)
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvNotifications"

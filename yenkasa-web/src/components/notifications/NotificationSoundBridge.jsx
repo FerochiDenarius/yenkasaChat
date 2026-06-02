@@ -9,6 +9,7 @@ import {
   NOTIFICATION_SOUND_CHANGED_EVENT,
   playNotificationSound,
 } from "../../utils/notificationSound";
+import { staticImage } from "../../utils/images";
 
 export default function NotificationSoundBridge() {
   const audioContextRef = useRef(null);
@@ -131,14 +132,15 @@ function showBrowserNotification(notification) {
     ? `Yenkasa - ${notification.sender.username}`
     : "Yenkasa";
   const body = notification?.message || "New activity on your account";
+  const icon = staticImage("logo.png");
 
   try {
     const alert = new window.Notification(title, {
       body,
       tag: id || undefined,
       renotify: Boolean(id),
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon,
+      badge: icon,
     });
 
     alert.onclick = () => {

@@ -1,0 +1,687 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+2 0 obj
+<< /Length 3501 >>
+stream
+BT
+/F1 9 Tf
+54 742 Td
+(Live Like Sync and Notification Verification) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Date: 2026-06-02) Tj
+0 -12 Td
+(Project: Yenkasa) Tj
+0 -12 Td
+(Release target: Android versionName 5.3, versionCode 60) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Scope) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(This report documents the livestream like synchronization audit, community post notification ) Tj
+0 -12 Td
+(work, livestream start notification work, notification operational intelligence events, and ) Tj
+0 -12 Td
+(verification evidence completed for the 2026-06-02 batch.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(The work was done carefully around the existing livestream operational intelligence integration ) Tj
+0 -12 Td
+(documented in /Users/kofibright/Desktop/YenkasaResearch/livestream-operational-intelligence-) Tj
+0 -12 Td
+(integration-2026-06-02.pdf. Existing livestream OIL events and socket behavior were preserved.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Deliverables Status) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Like sync bug fixed: Complete in code path. Backend accepts like aliases, broadcasts ) Tj
+0 -12 Td
+(new_like, and emits aggregate like counts. Android listener updates the UI immediately and ) Tj
+0 -12 Td
+(animates hearts.) Tj
+0 -12 Td
+(  - Community post notifications implemented: Complete in code path. Joined community members ) Tj
+0 -12 Td
+(receive COMMUNITY_POST_CREATED notifications; author, blocked users, suspended users, and ) Tj
+0 -12 Td
+(recently notified duplicates are excluded.) Tj
+0 -12 Td
+(  - Livestream start notifications implemented: Complete in code path. Community streams notify ) Tj
+0 -12 Td
+(community members; creator streams notify followers.) Tj
+0 -12 Td
+(  - Android frontend verified: Compile verification passed with ./gradlew ) Tj
+0 -12 Td
+(:app:compileDebugKotlin.) Tj
+0 -12 Td
+(  - Web frontend verified: Production build passed with npm run build.) Tj
+0 -12 Td
+(  - OIL events generated: Complete in code path for STREAM_STARTED, COMMUNITY_POST_CREATED, ) Tj
+0 -12 Td
+(NOTIFICATION_SENT, NOTIFICATION_OPENED, and NOTIFICATION_DISMISSED.) Tj
+0 -12 Td
+(  - End-to-end test evidence provided: Automated backend, Android compile, web build, and code-) Tj
+0 -12 Td
+(path evidence are included below. A physical three-device host/viewer push-delivery run was not ) Tj
+0 -12 Td
+(performed in this terminal session.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Priority 1: Livestream Like Sync) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Audited search terms:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - send_like) Tj
+0 -12 Td
+(  - new_like) Tj
+0 -12 Td
+(  - live_reaction) Tj
+0 -12 Td
+(  - likeStream) Tj
+0 -12 Td
+(  - streamLike) Tj
+0 -12 Td
+(  - reaction) Tj
+0 -12 Td
+(  - heart) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Verified flow:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(1. Frontend Like Button: Android LiveStreamActivity sends a live reaction from the heart button.) Tj
+0 -12 Td
+(2. Socket Emit: Android emits live_reaction with stream/user context and a client event id.) Tj
+0 -12 Td
+(3. Socket Handler: Backend handles live_reaction, live_like, send_like, streamLike, and ) Tj
+0 -12 Td
+(likeStream.) Tj
+0 -12 Td
+(4. Backend Event Processing: Backend deduplicates incoming reaction events, increments an in-) Tj
+0 -12 Td
+(memory stream reaction count, and emits livestream operational event STREAM_LIKE.) Tj
+0 -12 Td
+(5. Room Broadcast: Backend broadcasts both live_reaction and required compatibility event ) Tj
+0 -12 Td
+(new_like to the livestream room.) Tj
+0 -12 Td
+(6. Frontend Listener: Android listens for both live_reaction and new_like.) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 2942 >>
+stream
+BT
+/F1 9 Tf
+54 742 Td
+(7. UI Update: Android updates the like count from likeCount, totalLikes, or reactionCount ) Tj
+0 -12 Td
+(immediately.) Tj
+0 -12 Td
+(8. Heart Animations: Android runs the heart/reaction animation for incoming non-duplicate events) Tj
+0 -12 Td
+( and runs optimistic local animation for the sender.) Tj
+0 -12 Td
+(9. Simultaneous Likes: Backend aggregate counting is per stream and broadcasts the updated count) Tj
+0 -12 Td
+( with each accepted event, allowing multiple viewers to like concurrently.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Expected device behavior:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Viewer A likes: Host receives, Viewer A reconciles count, Viewer B receives.) Tj
+0 -12 Td
+(  - Viewer B likes: Host receives, Viewer A receives, Viewer B reconciles count.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Finding:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - The original weak point was compatibility and count propagation. Existing comments/live ) Tj
+0 -12 Td
+(events worked, but like listeners and emit names could miss each other and there was no reliable) Tj
+0 -12 Td
+( aggregate count in the broadcast. The backend now broadcasts new_like with aggregate count ) Tj
+0 -12 Td
+(data, and Android listens to both expected event names.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Priority 2: Community Post Notifications) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Implemented event:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+({) Tj
+0 -12 Td
+(  "type": "COMMUNITY_POST_CREATED",) Tj
+0 -12 Td
+(  "communityId": "...",) Tj
+0 -12 Td
+(  "communityName": "...",) Tj
+0 -12 Td
+(  "postId": "...",) Tj
+0 -12 Td
+(  "authorId": "...",) Tj
+0 -12 Td
+(  "authorName": "...",) Tj
+0 -12 Td
+(  "timestamp": "...") Tj
+0 -12 Td
+(}) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Notification rules:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Targets only users who joined the community.) Tj
+0 -12 Td
+(  - Excludes the post author.) Tj
+0 -12 Td
+(  - Excludes users blocked by or blocking the author.) Tj
+0 -12 Td
+(  - Excludes users with suspended accounts.) Tj
+0 -12 Td
+(  - Excludes users who blocked that community.) Tj
+0 -12 Td
+(  - Suppresses very recent duplicate notifications for the same author/community/recipient.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Notification copy:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Title: New post in ATU Students) Tj
+0 -12 Td
+(  - Body: Bright Kofi shared a new post.) Tj
+0 -12 Td
+(  - Action target: community route with community id and post id.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Implementation notes:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - communityPostNotification.service.js now exposes buildCommunityPostNotificationData so the ) Tj
+0 -12 Td
+(payload is unit tested without sending live notifications.) Tj
+0 -12 Td
+(  - dispatchCommunityPostNotifications now returns stats, making operational verification ) Tj
+0 -12 Td
+(easier.) Tj
+0 -12 Td
+(  - Payload includes the required event fields in push data and notification metadata.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Priority 3: Livestream Start Notifications) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 2702 >>
+stream
+BT
+/F1 9 Tf
+54 742 Td
+(Implemented event:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+({) Tj
+0 -12 Td
+(  "type": "STREAM_STARTED",) Tj
+0 -12 Td
+(  "streamId": "...",) Tj
+0 -12 Td
+(  "hostId": "...",) Tj
+0 -12 Td
+(  "hostName": "...",) Tj
+0 -12 Td
+(  "communityId": "...",) Tj
+0 -12 Td
+(  "communityName": "...",) Tj
+0 -12 Td
+(  "title": "...",) Tj
+0 -12 Td
+(  "timestamp": "...") Tj
+0 -12 Td
+(}) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Notification rules:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - If the stream belongs to a community, notify eligible community members.) Tj
+0 -12 Td
+(  - If the stream does not belong to a community, notify eligible followers of the creator.) Tj
+0 -12 Td
+(  - Excludes the host.) Tj
+0 -12 Td
+(  - Excludes blocked users.) Tj
+0 -12 Td
+(  - Excludes suspended users.) Tj
+0 -12 Td
+(  - Excludes users who blocked the community.) Tj
+0 -12 Td
+(  - Suppresses duplicate STREAM_STARTED notifications for the same stream/recipient.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Notification copy:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Creator stream title: Bright Kofi is now live.) Tj
+0 -12 Td
+(  - Creator stream body: Join livestream now.) Tj
+0 -12 Td
+(  - Community stream title: A livestream has started in ATU Students.) Tj
+0 -12 Td
+(  - Community stream body: Watch now.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Implementation notes:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - livestreamStartNotification.service.js resolves whether the stream belongs to a community.) Tj
+0 -12 Td
+(  - The livestream socket host-ready flow queues notifications after the stream is marked live ) Tj
+0 -12 Td
+(and broadcast as started.) Tj
+0 -12 Td
+(  - buildLivestreamStartNotificationData is exported for direct payload testing.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Priority 4: OIL Integration) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Implemented notification operational events:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - STREAM_STARTED) Tj
+0 -12 Td
+(  - COMMUNITY_POST_CREATED) Tj
+0 -12 Td
+(  - NOTIFICATION_SENT) Tj
+0 -12 Td
+(  - NOTIFICATION_OPENED) Tj
+0 -12 Td
+(  - NOTIFICATION_DISMISSED) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Verified routing:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Events publish through the existing YME publisher with notification operational schema ) Tj
+0 -12 Td
+(metadata.) Tj
+0 -12 Td
+(  - YME ingestion aliases include the new notification/community lifecycle events.) Tj
+0 -12 Td
+(  - Intelligence event publisher supports the new event types and maps metadata for downstream ) Tj
+0 -12 Td
+(analytics.) Tj
+0 -12 Td
+(  - Recommendation and interest services include weights/triggers for notification/community ) Tj
+0 -12 Td
+(engagement.) Tj
+0 -12 Td
+(  - Notification creation emits NOTIFICATION_SENT.) Tj
+0 -12 Td
+(  - Android/web mark-open flows emit NOTIFICATION_OPENED.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 2710 >>
+stream
+BT
+/F1 9 Tf
+54 742 Td
+(  - Android swipe-dismiss flow emits NOTIFICATION_DISMISSED.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Frontend Verification) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Android:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Version updated to versionName = "5.3" and versionCode = 60.) Tj
+0 -12 Td
+(  - Notification adapter recognizes community_post_created and stream_started.) Tj
+0 -12 Td
+(  - Notification open/dismiss calls include interaction intent.) Tj
+0 -12 Td
+(  - Livestream UI binds and updates the like count text.) Tj
+0 -12 Td
+(  - Livestream UI listens for live_reaction and new_like.) Tj
+0 -12 Td
+(  - Verification command passed: ./gradlew :app:compileDebugKotlin.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Web:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Notification routing recognizes community_post_created.) Tj
+0 -12 Td
+(  - Notification routing maps stream-start/live targets without breaking current web route ) Tj
+0 -12 Td
+(constraints.) Tj
+0 -12 Td
+(  - Notification read calls include interaction=opened.) Tj
+0 -12 Td
+(  - Verification command passed: npm run build.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Automated Test Evidence) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Backend command:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(npm test) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Result:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - 18 tests passed.) Tj
+0 -12 Td
+(  - 0 failed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Relevant tests:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Livestream realtime service tracks aggregate reaction count per stream.) Tj
+0 -12 Td
+(  - Intelligence publisher converts community post notification events.) Tj
+0 -12 Td
+(  - Intelligence publisher converts notification lifecycle events.) Tj
+0 -12 Td
+(  - Community post notification payload opens community and carries required event context.) Tj
+0 -12 Td
+(  - Livestream start notification payload uses community copy when stream belongs to community.) Tj
+0 -12 Td
+(  - Livestream start notification payload falls back to follower copy without community.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Syntax checks:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - node -c services/notificationOperationalEvents.service.js: passed.) Tj
+0 -12 Td
+(  - node -c services/communityPostNotification.service.js: passed.) Tj
+0 -12 Td
+(  - node -c services/livestreamStartNotification.service.js: passed.) Tj
+0 -12 Td
+(  - node -c src/services/livestream/livestream.socket.js: passed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Frontend commands:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - ./gradlew :app:compileDebugKotlin: passed.) Tj
+0 -12 Td
+(  - npm run build: passed.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Remaining Manual Verification) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(A real three-device live run should still be performed before release signoff:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Host Device) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 3190 >>
+stream
+BT
+/F1 9 Tf
+54 742 Td
+(  - Viewer A) Tj
+0 -12 Td
+(  - Viewer B) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Manual like matrix:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - Viewer A likes: Host OK, Viewer A OK, Viewer B OK.) Tj
+0 -12 Td
+(  - Viewer B likes: Host OK, Viewer A OK, Viewer B OK.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Manual notification matrix:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - User A posts in ATU Students: User B receives, User C receives, User A does not.) Tj
+0 -12 Td
+(  - Community livestream starts: eligible community members receive.) Tj
+0 -12 Td
+(  - Creator livestream starts outside a community: eligible followers receive.) Tj
+0 -12 Td
+(  - Tapping notification records NOTIFICATION_OPENED.) Tj
+0 -12 Td
+(  - Dismissing notification records NOTIFICATION_DISMISSED.) Tj
+0 -12 Td
+(  - Push delivery requires live FCM/OneSignal credentials and reachable devices.) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Key Files Implemented or Verified) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - app/build.gradle.kts) Tj
+0 -12 Td
+(  - app/src/main/java/xyz/yenkasa/app/adapter/NotificationAdapter.kt) Tj
+0 -12 Td
+(  - app/src/main/java/xyz/yenkasa/app/network/ApiService.kt) Tj
+0 -12 Td
+(  - app/src/main/java/xyz/yenkasa/app/ui/LiveStreamActivity.kt) Tj
+0 -12 Td
+(  - app/src/main/java/xyz/yenkasa/app/ui/UserNotificationsActivity.kt) Tj
+0 -12 Td
+(  - app/src/main/res/layout/activity_live_stream.xml) Tj
+0 -12 Td
+(  - app/src/main/res/values/strings.xml) Tj
+0 -12 Td
+(  - yenkasa-web/src/api/notifications.js) Tj
+0 -12 Td
+(  - yenkasa-web/src/utils/notificationRouting.js) Tj
+0 -12 Td
+(  - services/communityPostNotification.service.js) Tj
+0 -12 Td
+(  - services/livestreamStartNotification.service.js) Tj
+0 -12 Td
+(  - services/notification.service.js) Tj
+0 -12 Td
+(  - services/notificationOperationalEvents.service.js) Tj
+0 -12 Td
+(  - routes/notifications.routes.js) Tj
+0 -12 Td
+(  - src/intelligence/services/eventPublisher.service.js) Tj
+0 -12 Td
+(  - src/services/livestream/livestream.service.js) Tj
+0 -12 Td
+(  - src/services/livestream/livestream.socket.js) Tj
+0 -12 Td
+(  - src/yme/config/yme.config.js) Tj
+0 -12 Td
+(  - src/yme/services/consolidation.service.js) Tj
+0 -12 Td
+(  - src/yme/services/eventGuard.service.js) Tj
+0 -12 Td
+(  - src/yme/services/eventIngestion.service.js) Tj
+0 -12 Td
+(  - src/yme/services/importanceScoring.service.js) Tj
+0 -12 Td
+(  - src/yme/services/interestExtraction.service.js) Tj
+0 -12 Td
+(  - src/yme/services/recommendationSignals.service.js) Tj
+0 -12 Td
+(  - tests/intelligenceEventPublisher.test.js) Tj
+0 -12 Td
+(  - tests/livestreamOperationalEvents.test.js) Tj
+0 -12 Td
+(  - tests/notificationFanoutPayloads.test.js) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Current uncommitted files from this verification pass:) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(  - app/build.gradle.kts) Tj
+0 -12 Td
+(  - services/communityPostNotification.service.js) Tj
+0 -12 Td
+(  - services/livestreamStartNotification.service.js) Tj
+0 -12 Td
+(  - tests/notificationFanoutPayloads.test.js) Tj
+0 -12 Td
+(  - docs/live-like-community-stream-notification-verification-2026-06-02.md) Tj
+0 -12 Td
+(  - docs/live-like-community-stream-notification-verification-2026-06-02.pdf) Tj
+0 -12 Td
+() Tj
+0 -12 Td
+(Final Finding) Tj
+0 -12 Td
+() Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Length 408 >>
+stream
+BT
+/F1 9 Tf
+54 742 Td
+(The notification and livestream like sync paths are implemented and verified by automated tests,) Tj
+0 -12 Td
+( build checks, and code-path inspection. The only remaining release-risk item is physical device) Tj
+0 -12 Td
+( verification for real-time socket fanout and push delivery, because that requires live devices ) Tj
+0 -12 Td
+(and production-like notification credentials.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 14 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+9 0 obj
+<< /Type /Page /Parent 14 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+10 0 obj
+<< /Type /Page /Parent 14 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+11 0 obj
+<< /Type /Page /Parent 14 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+12 0 obj
+<< /Type /Page /Parent 14 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 6 0 R >>
+endobj
+13 0 obj
+<< /Type /Page /Parent 14 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+14 0 obj
+<< /Type /Pages /Kids [8 0 R 9 0 R 10 0 R 11 0 R 12 0 R 13 0 R] /Count 6 >>
+endobj
+15 0 obj
+<< /Type /Catalog /Pages 14 0 R >>
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000009 00000 n 
+0000000077 00000 n 
+0000003630 00000 n 
+0000006624 00000 n 
+0000009378 00000 n 
+0000012140 00000 n 
+0000015382 00000 n 
+0000015841 00000 n 
+0000015968 00000 n 
+0000016095 00000 n 
+0000016223 00000 n 
+0000016351 00000 n 
+0000016479 00000 n 
+0000016607 00000 n 
+0000016699 00000 n 
+trailer
+<< /Size 16 /Root 15 0 R >>
+startxref
+16750
+%%EOF

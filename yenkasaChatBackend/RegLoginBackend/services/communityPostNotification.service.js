@@ -104,18 +104,9 @@ async function alreadyNotifiedRecently({ senderId, receiverId, communityId }) {
   });
 }
 
-async function notifyRecipient({ post, community, creator, recipient }) {
+function buildCommunityPostNotificationData({ post, community, creator, recipient }) {
   const postId = normalizeId(post._id);
   const communityId = normalizeId(community._id);
-
-  if (await alreadyNotifiedRecently({
-    senderId: creator._id,
-    receiverId: recipient._id,
-    communityId
-  })) {
-    return { status: "skipped_recent" };
-  }
-
   const communityName = getCommunityName(community);
   const username = creator.username || "Someone";
   const thumbnail = getPostThumbnail(post);
@@ -123,7 +114,7 @@ async function notifyRecipient({ post, community, creator, recipient }) {
   const title = `New post in ${communityName}`;
   const message = `${username} shared a new post.`;
 
-  const delivered = await sendNotification({
+  return {
     type: COMMUNITY_POST_TYPE,
     senderId: creator._id,
     receiverId: recipient._id,
@@ -158,7 +149,23 @@ async function notifyRecipient({ post, community, creator, recipient }) {
     pushAndroidGroupMessage: `New posts in ${communityName}`,
     pushTtl: 60 * 60 * 24,
     pushPriority: 10
-  });
+  };
+}
+
+async function notifyRecipient({ post, community, creator, recipient }) {
+  const communityId = normalizeId(community._id);
+
+  if (await alreadyNotifiedRecently({
+    senderId: creator._id,
+    receiverId: recipient._id,
+    communityId
+  })) {
+    return { status: "skipped_recent" };
+  }
+
+  const delivered = await sendNotification(
+    buildCommunityPostNotificationData({ post, community, creator, recipient })
+  );
 
   return { status: delivered ? "sent" : "skipped" };
 }
@@ -223,6 +230,7 @@ async function dispatchCommunityPostNotifications(postId) {
   }
 
   console.log("[CommunityPostNotifications] completed", stats);
+  return stats;
 }
 
 function queueCommunityPostNotifications({ postId }) {
@@ -240,6 +248,7 @@ function queueCommunityPostNotifications({ postId }) {
 
 module.exports = {
   COMMUNITY_POST_TYPE,
+  buildCommunityPostNotificationData,
   queueCommunityPostNotifications,
   dispatchCommunityPostNotifications
 };

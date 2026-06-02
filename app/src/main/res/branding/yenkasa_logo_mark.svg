@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="blueA" x1="110" y1="100" x2="440" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#21DFFF"/>
+      <stop offset="0.5" stop-color="#13CDE5"/>
+      <stop offset="1" stop-color="#004BFF"/>
+    </linearGradient>
+    <linearGradient id="blueB" x1="260" y1="390" x2="420" y2="610" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C73F0"/>
+      <stop offset="1" stop-color="#001DCE"/>
+    </linearGradient>
+    <linearGradient id="pinkA" x1="650" y1="100" x2="900" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D848FF"/>
+      <stop offset="0.52" stop-color="#A618F0"/>
+      <stop offset="1" stop-color="#FF1293"/>
+    </linearGradient>
+    <linearGradient id="pinkB" x1="640" y1="360" x2="760" y2="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8E19D4"/>
+      <stop offset="1" stop-color="#EA079C"/>
+    </linearGradient>
+    <linearGradient id="greenA" x1="410" y1="390" x2="650" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22E6FF"/>
+      <stop offset="0.48" stop-color="#13C5B8"/>
+      <stop offset="1" stop-color="#00D35D"/>
+    </linearGradient>
+    <linearGradient id="greenB" x1="405" y1="665" x2="600" y2="910" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#007F7D"/>
+      <stop offset="1" stop-color="#00C653"/>
+    </linearGradient>
+    <filter id="cyanGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.00 0 0 0 0 0.75 0 0 0 0 1.00 0 0 0 .75 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="pinkGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 .95 0 0 0 0 .05 0 0 0 0 1.00 0 0 0 .75 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="greenGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 .00 0 0 0 0 1.00 0 0 0 0 .55 0 0 0 .75 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="leftClip"><polygon points="95,188 330,188 458,332 330,586"/></clipPath>
+    <clipPath id="rightClip"><polygon points="594,188 888,188 718,586 558,332"/></clipPath>
+    <clipPath id="centerClip"><polygon points="512,408 647,650 512,904 377,650"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="#000000"/>
+  <g filter="url(#cyanGlow)">
+    <polygon points="95,188 330,188 458,332 330,586" fill="url(#blueA)"/>
+    <polygon points="255,405 458,332 330,586" fill="url(#blueB)" clip-path="url(#leftClip)"/>
+    <polyline points="95,188 330,188 458,332 330,586 95,188" fill="none" stroke="#18DFFF" stroke-width="8" stroke-linejoin="round"/>
+    <polyline points="114,204 320,204 438,334 326,548 114,204" fill="none" stroke="#E3FEFF" stroke-width="3" stroke-linejoin="round" opacity=".56"/>
+  </g>
+  <g filter="url(#pinkGlow)">
+    <polygon points="594,188 888,188 718,586 558,332" fill="url(#pinkA)"/>
+    <polygon points="558,332 718,586 790,378 640,452" fill="url(#pinkB)" clip-path="url(#rightClip)"/>
+    <polyline points="594,188 888,188 718,586 558,332 594,188" fill="none" stroke="#C424FF" stroke-width="8" stroke-linejoin="round"/>
+    <polyline points="604,204 860,204 710,548 578,334 604,204" fill="none" stroke="#FFE5FF" stroke-width="3" stroke-linejoin="round" opacity=".56"/>
+  </g>
+  <g filter="url(#greenGlow)">
+    <polygon points="512,408 647,650 512,904 377,650" fill="url(#greenA)"/>
+    <polygon points="377,650 512,904 647,650 512,724" fill="url(#greenB)" clip-path="url(#centerClip)"/>
+    <polyline points="512,408 647,650 512,904 377,650 512,408" fill="none" stroke="#0DFFC6" stroke-width="8" stroke-linejoin="round"/>
+    <polyline points="512,445 624,652 512,858 400,652 512,445" fill="none" stroke="#E2FFF8" stroke-width="3" stroke-linejoin="round" opacity=".56"/>
+  </g>
+</svg>

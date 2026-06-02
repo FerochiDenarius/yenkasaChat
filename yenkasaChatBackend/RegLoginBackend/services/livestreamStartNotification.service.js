@@ -130,11 +130,7 @@ async function streamStartAlreadySent(streamId, receiverId) {
   });
 }
 
-async function notifyRecipient({ stream, host, recipient, community }) {
-  if (await streamStartAlreadySent(stream._id, recipient._id)) {
-    return { status: "skipped_recent" };
-  }
-
+function buildLivestreamStartNotificationData({ stream, host, recipient, community }) {
   const streamId = normalizeId(stream._id);
   const hostName = host.username || stream.hostUsername || "Someone";
   const resolvedCommunityName = communityName(community, stream.community);
@@ -146,7 +142,7 @@ async function notifyRecipient({ stream, host, recipient, community }) {
     : `${hostName} is now live.`;
   const message = inCommunity ? "Watch now." : "Join livestream now.";
 
-  const delivered = await sendNotification({
+  return {
     type: STREAM_STARTED_TYPE,
     senderId: host._id,
     receiverId: recipient._id,
@@ -180,7 +176,17 @@ async function notifyRecipient({ stream, host, recipient, community }) {
       : `${hostName} livestreams`,
     pushTtl: 60 * 60,
     pushPriority: 10
-  });
+  };
+}
+
+async function notifyRecipient({ stream, host, recipient, community }) {
+  if (await streamStartAlreadySent(stream._id, recipient._id)) {
+    return { status: "skipped_recent" };
+  }
+
+  const delivered = await sendNotification(
+    buildLivestreamStartNotificationData({ stream, host, recipient, community })
+  );
 
   return { status: delivered ? "sent" : "skipped" };
 }
@@ -255,6 +261,7 @@ function queueLivestreamStartNotifications({ streamId }) {
 
 module.exports = {
   STREAM_STARTED_TYPE,
+  buildLivestreamStartNotificationData,
   dispatchLivestreamStartNotifications,
   queueLivestreamStartNotifications
 };

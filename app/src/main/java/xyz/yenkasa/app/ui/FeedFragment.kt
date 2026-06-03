@@ -544,6 +544,7 @@ class FeedFragment : Fragment() {
     private fun loadFeed(page: Int = 1) {
         if (isLoading) {
             Log.d("FeedFragment", "feed_request_skipped loading=true page=$page")
+            if (::swipeRefreshFeed.isInitialized) swipeRefreshFeed.isRefreshing = false
             return
         }
 
@@ -867,11 +868,19 @@ class FeedFragment : Fragment() {
         isLastPage = false
         playerCoordinator?.resetRenderedState()
         val cacheKey = feedCacheKeyFor(selectedCommunityNames())
-        loadCachedFeed(
-            cacheKey = cacheKey,
-            replace = true,
-            allowGlobalFallback = posts.isEmpty()
-        )
+        if (isOnline()) {
+            posts.clear()
+            activeCacheKey = cacheKey
+            lastLoadedPostId = null
+            recyclerView.scrollToPosition(0)
+            renderPosts()
+        } else {
+            loadCachedFeed(
+                cacheKey = cacheKey,
+                replace = true,
+                allowGlobalFallback = posts.isEmpty()
+            )
+        }
         loadFeed()
     }
 

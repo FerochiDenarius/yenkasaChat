@@ -769,8 +769,11 @@ class AppVerificationActivity : AppCompatActivity() {
 
     private fun rankBadge(rankKey: String?): Int {
         return when (rankKey?.lowercase(Locale.getDefault())) {
+            null, "", "unverified", "user" -> R.drawable.badge_unverified
             "moderator" -> R.drawable.badge_moderator
-            "admin", "legend" -> R.drawable.badge_admin
+            "admin" -> R.drawable.badge_admin
+            "legend" -> R.drawable.badge_legend
+            "rising_star" -> R.drawable.badge_rising_star
             "senior_developer" -> R.drawable.senior_developer_banner
             "junior_developer" -> R.drawable.junior_developer_banner
             else -> R.drawable.badge_verified

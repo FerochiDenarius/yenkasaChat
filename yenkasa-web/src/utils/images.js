@@ -7,8 +7,13 @@ const STATIC_IMAGE_ALIASES = {
   "ykc-coin.png": "ykc.png",
   "verification-badge.png": "verified.png",
   "badge_verified.png": "verified.png",
+  "badge_unverified.png": "unverified.png",
   "badge_admin.png": "admin.png",
   "badge_moderator.png": "moderator.png",
+  "badge_legend.png": "legend.png",
+  "badge_rising_star.png": "risingStar.png",
+  "badge_junior_developer.png": "junior_developer_banner.png",
+  "badge_senior_developer.png": "senior_developer_banner.png",
 };
 
 function normalizeStaticImageName(name) {

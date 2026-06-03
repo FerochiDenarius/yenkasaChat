@@ -152,7 +152,24 @@ object UserPermissions {
 
     fun canStartLivestream(role: String?): Boolean {
         val r = normalize(role)
-        return r in listOf("senior_developer", "junior_developer", "admin", "moderator", "staff", "support", "analyst")
+        return r in listOf(
+            "unverified",
+            "verified",
+            "rising_star",
+            "legend",
+            "business_account",
+            "premium_seller",
+            "top_vendor",
+            "brand_ambassador",
+            "campus_influencer",
+            "senior_developer",
+            "junior_developer",
+            "admin",
+            "moderator",
+            "staff",
+            "support",
+            "analyst"
+        )
     }
 
     fun canGenerateStaffRole(role: String?, targetRole: String?): Boolean {

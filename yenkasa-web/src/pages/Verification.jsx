@@ -412,11 +412,15 @@ function rankEmblem(rankKey) {
       return "junior_developer_banner.png";
     case "senior_developer":
       return "senior_developer_banner.png";
-    case "verified":
-    case "rising_star":
     case "legend":
-    default:
+      return "legend.png";
+    case "rising_star":
+      return "risingStar.png";
+    case "verified":
       return "verified.png";
+    case "unverified":
+    default:
+      return "unverified.png";
   }
 }
 

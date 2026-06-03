@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">yenkasa</string>
+    <string name="app_name">Yenkasa</string>
     <string name="default_web_client_id">AIzaSyBm1FoiLEXHhPLVMT_2gPQXOnMyhBlsGyo.apps.googleusercontent.com</string>
     <string name="call_status_initializing">Initializing...</string>
     <string name="call_status_connected">Connected</string>
@@ -974,7 +974,7 @@
     <string name="get_started">Get Started</string>
     <string name="intro_title">Yenkasa Africa</string>
     <string name="intro_tagline">See what\'s happening in your community.</string>
-    <string name="splash_app_name">YenkasaChat</string>
+    <string name="splash_app_name">Yenkasa</string>
     <string name="media_time_with_total">%1$s / %2$s</string>
     <string name="watch_earn_default_ykc">Watch &amp; Earn 5 YKC</string>
     <string name="watch_earn_ykc">Watch &amp; Earn %1$d YKC</string>

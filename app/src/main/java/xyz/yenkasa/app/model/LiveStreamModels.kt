@@ -11,6 +11,7 @@ data class LiveStream(
     val title: String = "",
     val thumbnail: String = "",
     val community: String = "",
+    val communityId: String = "",
     val agoraChannel: String = "",
     val isLive: Boolean = false,
     val lifecycleStatus: String = "",
@@ -49,6 +50,7 @@ data class AgoraLiveToken(
 data class CreateLiveStreamRequest(
     val title: String,
     val community: String? = null,
+    val communityId: String? = null,
     val thumbnail: String? = null
 )
 

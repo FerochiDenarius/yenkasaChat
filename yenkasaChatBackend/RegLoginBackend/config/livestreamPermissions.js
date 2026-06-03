@@ -13,6 +13,8 @@ const STAFF_UNLIMITED_ROLES = new Set([
 ]);
 
 const RANK_DURATION_LIMITS_MINUTES = {
+  unverified: 15,
+  user: 15,
   verified_creator: 20,
   verified: 20,
   rising_star: 40,
@@ -63,19 +65,31 @@ function canStartLivestream(user) {
 
   const roles = getUserRoleSet(user);
   const staffRole = Array.from(roles).find(role => STAFF_UNLIMITED_ROLES.has(role));
-  if (!staffRole) {
+  if (staffRole) {
     return {
-      allowed: false,
-      code: 'INVALID_ROLE',
-      reason: 'Only Yenkasa staff can start livestreams. You can still watch active livestreams.'
+      allowed: true,
+      role: canonicalRole(staffRole),
+      maxDurationMinutes: null,
+      unlimited: true
+    };
+  }
+
+  const rankedRole = Array.from(roles).find(role => RANK_DURATION_LIMITS_MINUTES[canonicalRole(role)]);
+  if (rankedRole) {
+    const role = canonicalRole(rankedRole);
+    return {
+      allowed: true,
+      role,
+      maxDurationMinutes: RANK_DURATION_LIMITS_MINUTES[role],
+      unlimited: false
     };
   }
 
   return {
     allowed: true,
-    role: canonicalRole(staffRole),
-    maxDurationMinutes: null,
-    unlimited: true
+    role: 'unverified',
+    maxDurationMinutes: RANK_DURATION_LIMITS_MINUTES.unverified,
+    unlimited: false
   };
 }
 

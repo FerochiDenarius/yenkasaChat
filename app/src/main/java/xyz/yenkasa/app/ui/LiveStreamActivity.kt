@@ -300,6 +300,7 @@ class LiveStreamActivity : AppCompatActivity() {
             liveTitle.ifBlank { getString(R.string.live_from_yenkasa) }
         }
         hostControls.visibility = if (isHost) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.containerLiveRequestSeat).visibility = if (isHost) View.GONE else View.VISIBLE
         buttonRequestSeat.visibility = if (isHost) View.GONE else View.VISIBLE
         scheduledEndAtMillis = parseIsoMillis(intent.getStringExtra(EXTRA_SCHEDULED_END_AT))
         timerText.visibility = if (isHost && scheduledEndAtMillis > 0L) View.VISIBLE else View.GONE
@@ -534,7 +535,14 @@ class LiveStreamActivity : AppCompatActivity() {
         val reactionListener: (Any) -> Unit = reactionListener@{ data ->
             val json = data.asJson() ?: return@reactionListener
             if (json.optString("streamId") != streamId) return@reactionListener
-            runOnUiThread { updateLiveLikeCount(json.optInt("likeCount", json.optInt("totalLikes", json.optInt("reactionCount", liveLikeCount)))) }
+            runOnUiThread {
+                updateLiveLikeCount(
+                    json.optInt(
+                        "likeCount",
+                        json.optInt("totalLikes", json.optInt("reactionCount", liveLikeCount))
+                    )
+                )
+            }
             if (shouldSkipIncomingLiveEvent("reaction", json)) return@reactionListener
             runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
         }
@@ -1186,7 +1194,9 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("agoraUid", agoraUid)
             .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("reaction", reaction)
+            .put("type", reaction)
             .put("clientEventId", clientEventId)
+        SocketManager.emit("send_like", payload)
         SocketManager.emit("live_reaction", payload)
     }
 

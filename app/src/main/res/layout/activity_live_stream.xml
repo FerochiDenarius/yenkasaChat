@@ -390,7 +390,7 @@
         android:paddingStart="7dp"
         android:paddingEnd="7dp"
         app:layout_constraintBottom_toTopOf="@id/liveCommentComposer"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toStartOf="@id/liveAudienceActions">
 
         <ImageButton
             android:id="@+id/buttonFlipCamera"

@@ -32,9 +32,11 @@ object UserBadgeUtils {
             "senior_developer", "developer" -> R.drawable.senior_developer_banner
             "junior_developer" -> R.drawable.junior_developer_banner
             "moderator" -> R.drawable.badge_moderator
-            "legend" -> R.drawable.badge_admin
-            "rising_star", "verified" -> R.drawable.ic_verified
-            else -> null
+            "legend" -> R.drawable.badge_legend
+            "rising_star" -> R.drawable.badge_rising_star
+            "verified" -> R.drawable.badge_verified
+            "unverified", "user" -> R.drawable.badge_unverified
+            else -> if (verified) R.drawable.badge_verified else R.drawable.badge_unverified
         }
     }
 

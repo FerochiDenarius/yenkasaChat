@@ -6,9 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -17,8 +19,11 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.R
+import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.model.CreateLiveStreamRequest
+import xyz.yenkasa.app.model.JoinedCommunitiesResponse
 import xyz.yenkasa.app.model.LiveStreamResponse
+import xyz.yenkasa.app.model.UserPrimaryCommunityResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UserPermissions
@@ -31,10 +36,11 @@ class StartLiveActivity : AppCompatActivity() {
     private val tag = "StartLiveActivity"
 
     private lateinit var titleInput: EditText
-    private lateinit var communityInput: EditText
+    private lateinit var communitySpinner: Spinner
     private lateinit var startButton: Button
     private lateinit var browseButton: Button
     private lateinit var progress: ProgressBar
+    private val selectableCommunities = mutableListOf<Community?>()
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -51,7 +57,7 @@ class StartLiveActivity : AppCompatActivity() {
         setContentView(R.layout.activity_start_live)
 
         titleInput = findViewById(R.id.editLiveTitle)
-        communityInput = findViewById(R.id.editLiveCommunity)
+        communitySpinner = findViewById(R.id.spinnerLiveCommunity)
         startButton = findViewById(R.id.buttonStartLive)
         browseButton = findViewById(R.id.buttonBrowseLive)
         progress = findViewById(R.id.progressStartLive)
@@ -59,13 +65,102 @@ class StartLiveActivity : AppCompatActivity() {
         val canStart = UserPermissions.canStartLivestream(TokenManager.getUserRole(this))
         if (!canStart) {
             titleInput.visibility = View.GONE
-            communityInput.visibility = View.GONE
+            findViewById<View>(R.id.textLiveCommunityLabel).visibility = View.GONE
+            communitySpinner.visibility = View.GONE
             startButton.visibility = View.GONE
             Toast.makeText(this, R.string.livestream_staff_only_watch_allowed, Toast.LENGTH_LONG).show()
+        } else {
+            bindCommunityOptions(emptyList())
+            loadLiveCommunities()
         }
 
         startButton.setOnClickListener { validateAndStart() }
         browseButton.setOnClickListener { startActivity(Intent(this, LiveStreamsActivity::class.java)) }
+    }
+
+    private fun loadLiveCommunities() {
+        val token = TokenManager.getToken(this)
+        if (token.isNullOrBlank()) {
+            Log.w(tag, "Skipping livestream community load because auth token is blank.")
+            bindCommunityOptions(emptyList())
+            return
+        }
+
+        setCommunityLoading(true)
+        ApiClient.apiService.getUserPrimaryCommunity("Bearer $token")
+            .enqueue(object : Callback<UserPrimaryCommunityResponse> {
+                override fun onResponse(
+                    call: Call<UserPrimaryCommunityResponse>,
+                    response: Response<UserPrimaryCommunityResponse>
+                ) {
+                    val primary = if (response.isSuccessful) response.body()?.community else null
+                    loadJoinedLiveCommunities(token, primary)
+                }
+
+                override fun onFailure(call: Call<UserPrimaryCommunityResponse>, t: Throwable) {
+                    Log.w(tag, "Primary community fetch failed: ${t.message}")
+                    loadJoinedLiveCommunities(token, null)
+                }
+            })
+    }
+
+    private fun loadJoinedLiveCommunities(token: String, primary: Community?) {
+        ApiClient.apiService.getJoinedCommunities("Bearer $token")
+            .enqueue(object : Callback<JoinedCommunitiesResponse> {
+                override fun onResponse(
+                    call: Call<JoinedCommunitiesResponse>,
+                    response: Response<JoinedCommunitiesResponse>
+                ) {
+                    setCommunityLoading(false)
+                    if (!response.isSuccessful || response.body() == null) {
+                        Log.w(tag, "Joined communities fetch failed: ${response.code()}")
+                        bindCommunityOptions(primary?.let { listOf(it) }.orEmpty())
+                        return
+                    }
+
+                    val communities = linkedMapOf<String, Community>()
+                    primary?.id?.takeIf { it.isNotBlank() }?.let { communities[it] = primary }
+                    response.body()?.communities.orEmpty().forEach { community ->
+                        community.id?.takeIf { it.isNotBlank() }?.let { communities[it] = community }
+                    }
+                    bindCommunityOptions(communities.values.toList())
+                }
+
+                override fun onFailure(call: Call<JoinedCommunitiesResponse>, t: Throwable) {
+                    setCommunityLoading(false)
+                    Log.w(tag, "Joined communities fetch failed: ${t.message}")
+                    bindCommunityOptions(primary?.let { listOf(it) }.orEmpty())
+                }
+            })
+    }
+
+    private fun bindCommunityOptions(communities: List<Community>) {
+        selectableCommunities.clear()
+        selectableCommunities.add(null)
+        selectableCommunities.addAll(communities)
+
+        val labels = selectableCommunities.map { community ->
+            community?.displayName?.takeIf { it.isNotBlank() }
+                ?: community?.name?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.no_community)
+        }
+        val adapter = ArrayAdapter(
+            this,
+            R.layout.item_live_community_spinner,
+            labels
+        )
+        adapter.setDropDownViewResource(R.layout.item_live_community_spinner)
+        communitySpinner.adapter = adapter
+        communitySpinner.setSelection(0)
+    }
+
+    private fun selectedCommunity(): Community? {
+        val index = communitySpinner.selectedItemPosition
+        return selectableCommunities.getOrNull(index)
+    }
+
+    private fun setCommunityLoading(loading: Boolean) {
+        communitySpinner.isEnabled = !loading
     }
 
     private fun validateAndStart() {
@@ -97,7 +192,10 @@ class StartLiveActivity : AppCompatActivity() {
         setLoading(true)
         val request = CreateLiveStreamRequest(
             title = titleInput.text.toString().trim(),
-            community = communityInput.text.toString().trim().takeIf { it.isNotBlank() },
+            community = selectedCommunity()?.let { community ->
+                community.displayName?.takeIf { it.isNotBlank() } ?: community.name
+            }?.takeIf { it.isNotBlank() },
+            communityId = selectedCommunity()?.id?.takeIf { it.isNotBlank() },
             thumbnail = TokenManager.getProfilePicUrl(this)
         )
 

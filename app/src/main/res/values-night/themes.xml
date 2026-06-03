@@ -24,4 +24,12 @@
         <item name="alertDialogTheme">@style/YenkasaAlertDialog</item>
         <item name="materialAlertDialogTheme">@style/YenkasaAlertDialog</item>
     </style>
+
+    <style name="Theme.Yenkasa.Splash" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
 </resources>

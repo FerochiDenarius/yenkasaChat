@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
@@ -82,6 +83,7 @@ class FeedFragment : Fragment() {
     private lateinit var communitiesBar: View
     private lateinit var feedFilterBar: View
     private lateinit var communityStoryRecyclerView: RecyclerView
+    private lateinit var swipeRefreshFeed: SwipeRefreshLayout
     private lateinit var feedTabs: List<TextView>
     private lateinit var floatingWalletViews: FeedChromeController.FloatingWalletViews
 
@@ -296,6 +298,10 @@ class FeedFragment : Fragment() {
         feedFilterBar = view.findViewById(R.id.feedFilterBar)
         selectedCommunitiesText = view.findViewById(R.id.textSelectedCommunities)
         communityStoryRecyclerView = view.findViewById(R.id.recyclerViewFeedCommunities)
+        swipeRefreshFeed = view.findViewById(R.id.swipeRefreshFeed)
+        swipeRefreshFeed.setOnRefreshListener {
+            reloadFeedFromStart()
+        }
         floatingWalletViews = FeedChromeController.FloatingWalletViews(
             walletCard = view.findViewById(R.id.floatingWalletCard),
             coinContainer = view.findViewById(R.id.floatingWalletCoinContainer),
@@ -552,6 +558,7 @@ class FeedFragment : Fragment() {
                 false
             }
             Log.d("FeedFragment", "offline_recovery page=$page cacheKey=$cacheKey loaded=$loaded posts=${posts.size}")
+            swipeRefreshFeed.isRefreshing = false
             updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             return
         } else {
@@ -585,10 +592,12 @@ class FeedFragment : Fragment() {
             override fun onResponse(call: Call<FeedResponse>, response: Response<FeedResponse>) {
                 if (requestGeneration != feedRequestGeneration) {
                     Log.d("FeedFragment", "feed_fetch_ignored_stale page=$page cacheKey=$cacheKey")
+                    swipeRefreshFeed.isRefreshing = false
                     return
                 }
                 isLoading = false
                 isLoadingMore = false
+                swipeRefreshFeed.isRefreshing = false
                 showLoading(false, page <= 1)
 
                 if (response.isSuccessful && response.body() != null) {
@@ -632,10 +641,12 @@ class FeedFragment : Fragment() {
             override fun onFailure(call: Call<FeedResponse>, t: Throwable) {
                 if (requestGeneration != feedRequestGeneration) {
                     Log.d("FeedFragment", "feed_failure_ignored_stale page=$page cacheKey=$cacheKey")
+                    swipeRefreshFeed.isRefreshing = false
                     return
                 }
                 isLoading = false
                 isLoadingMore = false
+                swipeRefreshFeed.isRefreshing = false
                 showLoading(false, page <= 1)
                 Log.e("FeedFragment", "feed_fetch_failure page=$page cacheKey=$cacheKey message=${t.message}")
                 if (posts.isEmpty()) {

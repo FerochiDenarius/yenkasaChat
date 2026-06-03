@@ -35,6 +35,7 @@ const UserPrivacy = require("../models/userPrivacy.model");
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 const { getBlockedRelationshipUserIds } = require("../services/privacy.service");
 const { publishYmeEvent } = require("../src/yme/services/eventPublisher.service");
+const { getRankedFeed } = require("../services/feedRanking.service");
 
 function normalizeCountry(value) {
   return (value ?? "").toString().trim().toLowerCase();
@@ -54,12 +55,12 @@ function normalizePostFeedMode(value = "") {
 }
 
 function postFeedSort(mode) {
-  if (mode === "latest" || mode === "following" || mode === "for-you") return { createdAt: -1 };
+    if (mode === "latest" || mode === "following" || mode === "for-you") return { createdAt: -1 };
   if (mode === "popular" || mode === "top") {
-    return { likeCount: -1, commentCount: -1, shareCount: -1, viewCount: -1, createdAt: -1 };
+    return { viewCount: -1, commentCount: -1, shareCount: -1, saveCount: -1, likeCount: -1, createdAt: -1 };
   }
   if (mode === "trending") {
-    return { commentCount: -1, shareCount: -1, likeCount: -1, viewCount: -1, createdAt: -1 };
+    return { viewCount: -1, commentCount: -1, shareCount: -1, saveCount: -1, likeCount: -1, createdAt: -1 };
   }
   return { createdAt: -1 };
 }
@@ -770,29 +771,44 @@ router.get('/community/:communityId', authMiddleware, async (req, res) => {
     // People the viewer cannot see
     const blockedUserIds = [...new Set([...iBlocked, ...blockedMe])];
 
-    // Find posts for this community EXCEPT blocked users
-    const posts = await Post.find({
+    const postFilter = {
       communityId,
       isActive: true,
       status: 'approved',
       userId: { $nin: blockedUserIds } // 🔥 BLOCK ENFORCEMENT HERE
-    })
-      .sort(postFeedSort(feedMode))
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('userId', 'username profileImage verified roleName')
-      .populate('communityId', 'name displayName')
-      .lean();
+    };
 
-    await attachAccurateViewCounts(posts);
+    let posts;
+    let totalPosts;
+
+    if (["trending", "top", "popular"].includes(feedMode)) {
+      const ranked = await getRankedFeed({
+        feedMode,
+        postFilter,
+        page: parseInt(page, 10) || 1,
+        limit: parseInt(limit, 10) || 20,
+        viewerContext: {
+          joinedCommunityIds: new Set([communityId.toString()]),
+          followingIds: new Set()
+        }
+      });
+      posts = ranked.posts;
+      totalPosts = ranked.totalPosts;
+    } else {
+      // Find posts for this community EXCEPT blocked users
+      posts = await Post.find(postFilter)
+        .sort(postFeedSort(feedMode))
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate('userId', 'username profileImage verified roleName')
+        .populate('communityId', 'name displayName')
+        .lean();
+
+      await attachAccurateViewCounts(posts);
+      totalPosts = await Post.countDocuments(postFilter);
+    }
+
     const postsWithLikedState = attachLikedByUser(posts, viewerId);
-
-    const totalPosts = await Post.countDocuments({
-      communityId,
-      isActive: true,
-      status: 'approved',
-      userId: { $nin: blockedUserIds } // 🔥 Ensure pagination matches
-    });
 
     res.json({
       community: {

@@ -24,7 +24,9 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
     setPage(1);
     setHasMore(true);
 
-    loadFeed(selectedCommunity?._id || selectedCommunity?.id, 1)
+    const feedType = resolveFeedType(activeTab, activeSort);
+
+    loadFeed(selectedCommunity?._id || selectedCommunity?.id, 1, feedType)
       .then((feedItems) => {
         if (!mounted) return;
         setItems(feedItems);
@@ -43,7 +45,7 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
     return () => {
       mounted = false;
     };
-  }, [selectedCommunity]);
+  }, [activeSort, activeTab, selectedCommunity]);
 
   useEffect(() => {
     function handleScroll() {
@@ -55,14 +57,15 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [hasMore, loading, loadingMore, page, selectedCommunity]);
+  }, [activeSort, activeTab, hasMore, loading, loadingMore, page, selectedCommunity]);
 
   async function appendNextPage() {
     const nextPage = page + 1;
+    const feedType = resolveFeedType(activeTab, activeSort);
     setLoadingMore(true);
-    console.debug("[YenkasaAdsWeb] normal feed page append", { nextPage });
+    console.debug("[YenkasaAdsWeb] normal feed page append", { nextPage, feedType });
     try {
-      const nextItems = await loadFeed(selectedCommunity?._id || selectedCommunity?.id, nextPage);
+      const nextItems = await loadFeed(selectedCommunity?._id || selectedCommunity?.id, nextPage, feedType);
       setItems((current) => mergeUniqueFeedItems(current, nextItems));
       setPage(nextPage);
       setHasMore(countPosts(nextItems) >= PAGE_SIZE);
@@ -80,18 +83,8 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
 
     let filteredPosts = postsOnly;
 
-    if (activeTab === "Following") {
-      filteredPosts = postsOnly.filter((item) => item.post?.userId?.isFollowing === true || item.post?.isFollowing === true);
-    } else if (activeTab === "Trending") {
-      filteredPosts = [...postsOnly].sort((a, b) => engagementScore(b.post) - engagementScore(a.post));
-    }
-
     if (activeSort === "Latest") {
       filteredPosts = [...filteredPosts].sort((a, b) => new Date(b.post?.createdAt || 0) - new Date(a.post?.createdAt || 0));
-    } else if (activeSort === "Popular") {
-      filteredPosts = [...filteredPosts].sort((a, b) => engagementScore(b.post) - engagementScore(a.post));
-    } else if (activeSort === "Top") {
-      filteredPosts = [...filteredPosts].sort((a, b) => Number(b.post?.likeCount || 0) - Number(a.post?.likeCount || 0));
     }
 
     const combined = [];
@@ -176,8 +169,8 @@ export default function PostList({ activeTab, activeSort, selectedCommunity }) {
   );
 }
 
-async function loadFeed(communityId, page = 1) {
-  const params = { page, limit: PAGE_SIZE };
+async function loadFeed(communityId, page = 1, feedType = "for-you") {
+  const params = { page, limit: PAGE_SIZE, feedType };
   const feedRequest = communityId
     ? await api.get(`/posts/community/${communityId}`, { params })
     : await api.get("/feed", { params });
@@ -229,6 +222,15 @@ function mergeUniqueFeedItems(current, incoming) {
   return [...current, ...next];
 }
 
+function resolveFeedType(activeTab, activeSort) {
+  if (activeTab === "Trending") return "trending";
+  if (activeTab === "Following") return "following";
+  if (activeSort === "Latest") return "latest";
+  if (activeSort === "Popular") return "popular";
+  if (activeSort === "Top") return "top";
+  return "for-you";
+}
+
 function normalizeFeedData(data) {
   const rawItems = Array.isArray(data)
     ? data
@@ -272,8 +274,4 @@ function normalizeSponsoredAds(data) {
       type: "ad",
       ad
     }));
-}
-
-function engagementScore(post) {
-  return Number(post?.likeCount || 0) + Number(post?.commentCount || 0) + Number(post?.shareCount || 0);
 }

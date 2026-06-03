@@ -294,38 +294,5 @@ function rankPosts(posts, tab) {
     return items.sort((a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0));
   }
 
-  if (tab === "Popular") {
-    return items.sort((a, b) => activityScore(b) - activityScore(a));
-  }
-
-  if (tab === "Trending") {
-    return items.sort((a, b) => trendingScore(b) - trendingScore(a));
-  }
-
-  if (tab === "Following") {
-    const followed = items.filter(
-      (post) => post?.userId?.isFollowing === true || post?.isFollowing === true || post?.communityId?.isJoined === true
-    );
-    return followed.length ? followed : items.sort((a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0));
-  }
-
-  if (tab === "Top") {
-    return items.sort((a, b) => activityScore(b) - activityScore(a));
-  }
-
-  return items.sort((a, b) => trendingScore(b) - trendingScore(a));
-}
-
-function activityScore(post) {
-  return (
-    Number(post?.likeCount || 0) +
-    Number(post?.commentCount || 0) * 2 +
-    Number(post?.shareCount || 0) * 3 +
-    Number(post?.viewCount || post?.viewsCount || 0) * 0.2
-  );
-}
-
-function trendingScore(post) {
-  const ageHours = Math.max(1, (Date.now() - new Date(post?.createdAt || 0).getTime()) / 3600000);
-  return activityScore(post) / Math.pow(ageHours, 0.75);
+  return items;
 }

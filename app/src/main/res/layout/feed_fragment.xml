@@ -129,47 +129,52 @@
             android:textSize="13sp" />
     </LinearLayout>
 
-    <FrameLayout
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshFeed"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerViewFeed"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingTop="2dp"
-            android:paddingBottom="164dp"
-            android:scrollbars="vertical" />
+            android:layout_height="match_parent">
 
-        <ProgressBar
-            android:id="@+id/progressBarFeed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerViewFeed"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="2dp"
+                android:paddingBottom="164dp"
+                android:scrollbars="vertical" />
 
-        <TextView
-            android:id="@+id/textEmptyFeed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:background="@drawable/bg_feed_filter_bar"
-            android:paddingHorizontal="18dp"
-            android:paddingVertical="12dp"
-            android:text="@string/feed_empty_no_posts"
-            android:textColor="@color/feed_secondary_text"
-            android:textSize="13sp"
-            android:visibility="gone" />
+            <ProgressBar
+                android:id="@+id/progressBarFeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
 
-        <ProgressBar
-            android:id="@+id/progressBarFeedFooter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="28dp"
-            android:visibility="gone" />
+            <TextView
+                android:id="@+id/textEmptyFeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_feed_filter_bar"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="12dp"
+                android:text="@string/feed_empty_no_posts"
+                android:textColor="@color/feed_secondary_text"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/progressBarFeedFooter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="28dp"
+                android:visibility="gone" />
 
         <FrameLayout
             android:id="@+id/floatingWalletCard"
@@ -319,5 +324,6 @@
                 android:visibility="gone"
                 tools:text="+120 YKC" />
         </FrameLayout>
-    </FrameLayout>
+        </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </LinearLayout>

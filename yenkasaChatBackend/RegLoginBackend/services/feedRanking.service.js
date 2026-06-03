@@ -1,9 +1,14 @@
 const Post = require("../models/post.model");
 const { attachAccurateViewCounts } = require("../utils/postViewCounts");
 
-const MAX_CANDIDATE_POOL = 320;
+const MAX_CANDIDATE_POOL = 1000;
 const FOR_YOU_BASE_WINDOW = 14 * 24 * 60 * 60 * 1000;
-const TRENDING_WINDOW = 24 * 60 * 60 * 1000;
+const TRENDING_WINDOW = 30 * 24 * 60 * 60 * 1000;
+
+function safeNumber(value) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? number : 0;
+}
 
 function toDate(value) {
   if (!value) return null;
@@ -68,12 +73,24 @@ function calculateForYouScore(post, context) {
 
 function calculateTrendingScore(post) {
   const ageHours = hoursSince(post.createdAt);
+  const ageDecay = Math.pow(Math.max(ageHours, 1), 0.65);
+  const viewSignal = safeNumber(post.viewCount || post.viewsCount || post.totalViews) * 10;
+  const commentSignal = safeNumber(post.commentCount || post.commentsCount || post.totalComments) * 6;
+  const shareSignal = safeNumber(post.shareCount || post.sharesCount || post.totalShares) * 5;
+  const saveSignal = safeNumber(post.saveCount || post.savesCount || post.totalSaves) * 5;
+  const likeSignal = safeNumber(post.likeCount || post.likesCount || post.totalLikes) * 2;
+  const watchTimeSignal = safeNumber(post.watchTimeSeconds || post.watchTime || 0) * 0.05;
+  const profileVisitSignal = safeNumber(post.profileVisitCount || post.profileVisits || 0) * 3;
+
   return (
-    ((Number(post.likeCount || 0) * 2) +
-      (Number(post.commentCount || 0) * 4) +
-      (Number(post.shareCount || 0) * 6) +
-      (Number(post.viewCount || 0) * 0.1)) / Math.max(ageHours, 1)
-  );
+    viewSignal +
+    commentSignal +
+    shareSignal +
+    saveSignal +
+    likeSignal +
+    watchTimeSignal +
+    profileVisitSignal
+  ) / ageDecay;
 }
 
 function calculateTopScore(post) {
@@ -101,6 +118,12 @@ function rankCandidates(candidates, scoreFn, page, limit) {
 
   scored.sort((left, right) => {
     if (right.score !== left.score) return right.score - left.score;
+    const viewDelta = safeNumber(right.post.viewCount || right.post.viewsCount) - safeNumber(left.post.viewCount || left.post.viewsCount);
+    if (viewDelta !== 0) return viewDelta;
+    const commentDelta = safeNumber(right.post.commentCount || right.post.commentsCount) - safeNumber(left.post.commentCount || left.post.commentsCount);
+    if (commentDelta !== 0) return commentDelta;
+    const shareDelta = safeNumber(right.post.shareCount || right.post.sharesCount) - safeNumber(left.post.shareCount || left.post.sharesCount);
+    if (shareDelta !== 0) return shareDelta;
     return compareByDateDescending(left.post, right.post);
   });
 
@@ -181,7 +204,11 @@ async function getTrendingFeed({ postFilter, page, limit }) {
   };
 
   const [candidates, totalPosts] = await Promise.all([
-    loadPosts(trendingFilter, { createdAt: -1 }, candidateLimit(page, limit)),
+    loadPosts(
+      trendingFilter,
+      { viewCount: -1, commentCount: -1, shareCount: -1, saveCount: -1, likeCount: -1, createdAt: -1 },
+      candidateLimit(page, limit)
+    ),
     Post.countDocuments(trendingFilter)
   ]);
   await attachAccurateViewCounts(candidates);
@@ -251,5 +278,7 @@ async function getRankedFeed({ feedMode, postFilter, page, limit, viewerContext 
 }
 
 module.exports = {
-  getRankedFeed
+  getRankedFeed,
+  calculateTrendingScore,
+  compareByDateDescending
 };

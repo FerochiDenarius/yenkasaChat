@@ -156,9 +156,12 @@ function getLiveTargetRooms(streamId) {
   ];
 }
 
-function emitToLiveRoom(streamId, eventName, payload) {
+function emitToLiveRoom(streamId, eventName, payload, extraRooms = []) {
   if (!ioRef) return;
-  ioRef.to(getLiveTargetRooms(streamId)).emit(eventName, payload);
+  ioRef.to([
+    ...getLiveTargetRooms(streamId),
+    ...(extraRooms || []).filter(Boolean),
+  ]).emit(eventName, payload);
 }
 
 function getLiveRoomMemberCount(streamId) {

@@ -114,6 +114,32 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
     return stream;
   }
 
+  async function resolveLiveStreamContext(streamId) {
+    if (!streamId || !mongoose.Types.ObjectId.isValid(streamId)) return null;
+    return LiveStream.findById(streamId)
+      .select('hostId title community isLive lifecycleStatus hostConnected viewerCount peakViewerCount')
+      .lean();
+  }
+
+  function hostFallbackRooms(stream) {
+    const hostId = stream?.hostId?.toString?.() || '';
+    return hostId ? [hostId, `user:${hostId}`] : [];
+  }
+
+  function ensureLiveInteractionMembership(streamId, actor, payload = {}) {
+    if (!streamId || !actor?.userId) return;
+    livestreamService.joinLiveRooms(socket, streamId);
+    livestreamService.addLiveParticipant(streamId, actor.userId, payload.agoraUid);
+    if (payload.liveRole === 'broadcaster') {
+      socket.data.hostLiveStreams.add(streamId);
+    } else {
+      socket.data.liveStreams.add(streamId);
+    }
+    if (!socket.data.liveJoinTimes.has(streamId)) {
+      socket.data.liveJoinTimes.set(streamId, Date.now());
+    }
+  }
+
   async function endLiveStreamForHostDrop(streamId, socketId) {
     if (!mongoose.Types.ObjectId.isValid(streamId)) return;
     const stream = await LiveStream.findOneAndUpdate(
@@ -402,6 +428,8 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!streamId || !message) return;
       if (livestreamService.shouldSkipDuplicateLiveEvent('comment', payload)) return;
       const actor = await resolveLiveActor(payload);
+      const stream = await resolveLiveStreamContext(streamId);
+      ensureLiveInteractionMembership(streamId, actor, payload);
       const commentEvent = {
         streamId,
         userId: actor.userId,
@@ -413,8 +441,15 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
       };
-      livestreamService.emitToLiveRoom(streamId, 'live_comment', commentEvent);
-      livestreamService.emitToLiveRoom(streamId, 'new_comment', commentEvent);
+      const fallbackRooms = hostFallbackRooms(stream);
+      livestreamService.emitToLiveRoom(streamId, 'live_comment', commentEvent, fallbackRooms);
+      livestreamService.emitToLiveRoom(streamId, 'new_comment', commentEvent, fallbackRooms);
+      socket.emit('live_comment_ack', {
+        success: true,
+        streamId,
+        clientEventId: commentEvent.clientEventId,
+        createdAt: commentEvent.createdAt,
+      });
       emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_COMMENT, actor.userId, commentEvent);
     } catch (err) {
       console.error('❌ live_comment failed:', err.message);
@@ -427,6 +462,8 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       if (!streamId) return;
       if (livestreamService.shouldSkipDuplicateLiveEvent('reaction', payload)) return;
       const actor = await resolveLiveActor(payload);
+      const stream = await resolveLiveStreamContext(streamId);
+      ensureLiveInteractionMembership(streamId, actor, payload);
       const likeCount = livestreamService.incrementLiveReactionCount(streamId);
       const reactionEvent = {
         streamId,
@@ -442,8 +479,16 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
         clientEventId: payload.clientEventId || '',
         createdAt: new Date().toISOString(),
       };
-      livestreamService.emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
-      livestreamService.emitToLiveRoom(streamId, 'new_like', reactionEvent);
+      const fallbackRooms = hostFallbackRooms(stream);
+      livestreamService.emitToLiveRoom(streamId, 'live_reaction', reactionEvent, fallbackRooms);
+      livestreamService.emitToLiveRoom(streamId, 'new_like', reactionEvent, fallbackRooms);
+      socket.emit('live_like_ack', {
+        success: true,
+        streamId,
+        clientEventId: reactionEvent.clientEventId,
+        likeCount,
+        createdAt: reactionEvent.createdAt,
+      });
       emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_LIKE, actor.userId, reactionEvent);
     } catch (err) {
       console.error('❌ live_reaction failed:', err.message);

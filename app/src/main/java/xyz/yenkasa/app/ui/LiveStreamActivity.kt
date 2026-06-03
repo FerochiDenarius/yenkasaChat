@@ -11,6 +11,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.SurfaceView
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -234,6 +235,7 @@ class LiveStreamActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_live_stream)
 
         readExtras()
@@ -1162,6 +1164,12 @@ class LiveStreamActivity : AppCompatActivity() {
         val message = commentInput.text.toString().trim()
         if (message.isBlank()) return
         commentInput.text?.clear()
+        if (!joinedSocketRoom) {
+            emitLiveJoin(force = true)
+        }
+        val clientEventId = liveClientEventId("comment")
+        recentLiveEventKeys["comment:$clientEventId"] = System.currentTimeMillis()
+        addComment(getString(R.string.live_comment_format, getString(R.string.you), message))
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -1170,7 +1178,7 @@ class LiveStreamActivity : AppCompatActivity() {
             .put("agoraUid", agoraUid)
             .put("liveRole", if (isHost) "broadcaster" else "audience")
             .put("message", message)
-            .put("clientEventId", liveClientEventId("comment"))
+            .put("clientEventId", clientEventId)
         SocketManager.emit("live_comment", payload)
     }
 
@@ -1319,7 +1327,8 @@ class LiveStreamActivity : AppCompatActivity() {
             })
             addView(TextView(this@LiveStreamActivity).apply {
                 this.text = message ?: text
-                setTextColor(Color.rgb(56, 56, 56))
+                setTextColor(Color.WHITE)
+                alpha = 0.9f
                 textSize = 14f
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -1333,7 +1342,7 @@ class LiveStreamActivity : AppCompatActivity() {
             bottomMargin = dp(8)
         }
         commentsContainer.addView(comment, marginParams)
-        while (commentsContainer.childCount > 5) {
+        while (commentsContainer.childCount > 4) {
             commentsContainer.removeViewAt(0)
         }
     }
@@ -1422,6 +1431,7 @@ class LiveStreamActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         leaveLive()
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onDestroy()
     }
 

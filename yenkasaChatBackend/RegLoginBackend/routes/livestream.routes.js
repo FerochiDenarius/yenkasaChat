@@ -97,12 +97,17 @@ function deprecatedLiveRoom(streamId) {
   return `live:${streamId}`;
 }
 
-function emitToLiveRoom(streamId, eventName, payload) {
+function emitToLiveRoom(streamId, eventName, payload, extraRooms = []) {
   if (typeof global.emitToLiveRoomForStream === 'function') {
-    global.emitToLiveRoomForStream(streamId, eventName, payload);
+    global.emitToLiveRoomForStream(streamId, eventName, payload, extraRooms);
     return;
   }
-  global.io?.to(liveRoom(streamId)).to(legacyLiveRoom(streamId)).to(deprecatedLiveRoom(streamId)).emit(eventName, payload);
+  const hostRooms = (extraRooms || []).filter(Boolean);
+  let target = global.io?.to(liveRoom(streamId)).to(legacyLiveRoom(streamId)).to(deprecatedLiveRoom(streamId));
+  hostRooms.forEach((room) => {
+    target = target?.to(room);
+  });
+  target?.emit(eventName, payload);
 }
 
 function emitLiveDirectory(eventName, payload) {
@@ -756,9 +761,10 @@ router.post('/gift', auth, async (req, res) => {
       hostId: stream.hostId.toString(),
       transactionId: tx?.[0]?.transactionId
     };
-    emitToLiveRoom(streamId, 'live_gift', event);
-    emitToLiveRoom(streamId, 'new_gift', event);
-    emitToLiveRoom(streamId, 'gift_animation', event);
+    const fallbackRooms = [stream.hostId.toString(), `user:${stream.hostId.toString()}`];
+    emitToLiveRoom(streamId, 'live_gift', event, fallbackRooms);
+    emitToLiveRoom(streamId, 'new_gift', event, fallbackRooms);
+    emitToLiveRoom(streamId, 'gift_animation', event, fallbackRooms);
     const reactionEvent = {
       streamId,
       userId: req.user._id.toString(),
@@ -767,8 +773,8 @@ router.post('/gift', auth, async (req, res) => {
       type: gift.emoji,
       createdAt: new Date().toISOString()
     };
-    emitToLiveRoom(streamId, 'live_reaction', reactionEvent);
-    emitToLiveRoom(streamId, 'new_like', reactionEvent);
+    emitToLiveRoom(streamId, 'live_reaction', reactionEvent, fallbackRooms);
+    emitToLiveRoom(streamId, 'new_like', reactionEvent, fallbackRooms);
 
     emitLiveRouteOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_GIFT, req.user._id, stream, {
       giftKey,

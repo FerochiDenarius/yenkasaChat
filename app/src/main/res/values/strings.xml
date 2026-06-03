@@ -854,8 +854,13 @@
     <string name="live_you_were_muted_by_host">The host has muted your microphone</string>
     <string name="live_guest_kicked_by_host">Guest has been removed by host</string>
     <string name="live_you_were_kicked_by_host">The host has removed you from the broadcast</string>
+    <string name="live_guest_left_the_broadcast">%s left the broadcast</string>
+    <string name="live_you_left_guest_seat">You left the guest feed</string>
     <string name="remove_guest">Remove guest</string>
     <string name="remove_guest_confirm">Remove %s from the broadcast?</string>
+    <string name="mute_guest">Mute guest</string>
+    <string name="unmute_guest">Unmute guest</string>
+    <string name="leave_guest_seat">Leave guest feed</string>
     <string name="remove">Remove</string>
     <string name="live_audience_permissions_required">Camera and microphone permissions are required to watch live streams on this device.</string>
     <string name="live_agora_join_failed_with_code">Live video could not start. Agora join failed with code %1$d.</string>

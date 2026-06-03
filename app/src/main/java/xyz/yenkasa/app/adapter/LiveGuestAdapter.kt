@@ -5,7 +5,9 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -23,7 +25,7 @@ class LiveGuestAdapter(
     private val onGuestAction: (LiveGuest, Action) -> Unit
 ) : ListAdapter<LiveGuest, LiveGuestAdapter.GuestViewHolder>(DiffCallback) {
 
-    enum class Action { MUTE, UNMUTE, KICK }
+    enum class Action { MUTE, UNMUTE, KICK, LEAVE }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GuestViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_live_guest, parent, false)
@@ -39,12 +41,17 @@ class LiveGuestAdapter(
         private val avatarImage: ImageView = view.findViewById(R.id.imageGuestAvatar)
         private val nameText: TextView = view.findViewById(R.id.textGuestName)
         private val muteIcon: ImageView = view.findViewById(R.id.iconGuestMute)
+        private val hostActions: LinearLayout = view.findViewById(R.id.guestHostActions)
+        private val buttonGuestMute: ImageButton = view.findViewById(R.id.buttonGuestMute)
+        private val buttonGuestRemove: ImageButton = view.findViewById(R.id.buttonGuestRemove)
+        private val buttonGuestClose: ImageButton = view.findViewById(R.id.buttonGuestClose)
         private var videoView: SurfaceView? = null
 
         fun bind(guest: LiveGuest) {
+            val isLocalGuest = guest.agoraUid == localUidProvider()
             nameText.text = guest.username
             Glide.with(avatarImage).load(guest.avatar).placeholder(R.drawable.ic_default_avatar).into(avatarImage)
-            muteIcon.visibility = if (guest.isMuted) View.VISIBLE else View.GONE
+            muteIcon.visibility = if (guest.isMuted && !isHost) View.VISIBLE else View.GONE
 
             if (guest.isVideoStopped) {
                 videoContainer.visibility = View.GONE
@@ -55,15 +62,26 @@ class LiveGuestAdapter(
                 setupVideo(guest.agoraUid)
             }
 
+            hostActions.visibility = if (isHost) View.VISIBLE else View.GONE
+            buttonGuestClose.visibility = if (!isHost && isLocalGuest) View.VISIBLE else View.GONE
+
             if (isHost) {
-                itemView.setOnClickListener {
+                buttonGuestMute.setImageResource(if (guest.isMuted) R.drawable.ic_volume_up else R.drawable.ic_volume_off)
+                buttonGuestMute.contentDescription = itemView.context.getString(
+                    if (guest.isMuted) R.string.unmute_guest else R.string.mute_guest
+                )
+                buttonGuestMute.setOnClickListener {
                     onGuestAction(guest, if (guest.isMuted) Action.UNMUTE else Action.MUTE)
                 }
-                itemView.setOnLongClickListener {
-                    onGuestAction(guest, Action.KICK)
-                    true
-                }
+                buttonGuestRemove.setOnClickListener { onGuestAction(guest, Action.KICK) }
+                itemView.setOnClickListener(null)
+                itemView.setOnLongClickListener(null)
             } else {
+                buttonGuestMute.setOnClickListener(null)
+                buttonGuestRemove.setOnClickListener(null)
+                buttonGuestClose.setOnClickListener {
+                    if (isLocalGuest) onGuestAction(guest, Action.LEAVE)
+                }
                 itemView.setOnClickListener(null)
                 itemView.setOnLongClickListener(null)
             }

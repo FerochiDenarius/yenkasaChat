@@ -464,7 +464,13 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
       const actor = await resolveLiveActor(payload);
       const stream = await resolveLiveStreamContext(streamId);
       ensureLiveInteractionMembership(streamId, actor, payload);
-      const likeCount = livestreamService.incrementLiveReactionCount(streamId);
+      const updatedStream = await LiveStream.findOneAndUpdate(
+        { _id: streamId, isLive: true },
+        { $inc: { likeCount: 1 } },
+        { new: true, projection: { likeCount: 1 } },
+      ).lean();
+      const memoryLikeCount = livestreamService.incrementLiveReactionCount(streamId);
+      const likeCount = Number(updatedStream?.likeCount || memoryLikeCount || 0);
       const reactionEvent = {
         streamId,
         userId: actor.userId,
@@ -866,6 +872,47 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
     }
   };
 
+  const handleLiveLeaveGuestSeat = async (payload = {}) => {
+    try {
+      const streamId = payload.streamId?.toString();
+      const actor = await resolveLiveActor(payload);
+      if (
+        !streamId ||
+        !mongoose.Types.ObjectId.isValid(streamId) ||
+        !actor.userId ||
+        !mongoose.Types.ObjectId.isValid(actor.userId)
+      ) {
+        return;
+      }
+
+      const stream = await LiveStream.findOne({
+        _id: streamId,
+        isLive: true,
+        'guests.userId': actor.userId,
+      })
+        .select('hostId guests')
+        .lean();
+      if (!stream) return;
+
+      await LiveStream.updateOne({ _id: streamId }, { $pull: { guests: { userId: actor.userId } } });
+      livestreamService.emitToLiveRoom(streamId, 'live_guest_left', {
+        streamId,
+        guestUserId: actor.userId,
+        username: actor.username,
+        selfClosed: true,
+        createdAt: new Date().toISOString(),
+      });
+      emitLiveOperationalEvent(LIVESTREAM_EVENT_TYPES.STREAM_MODERATION_ACTION, actor.userId, {
+        streamId,
+        hostId: stream.hostId?.toString?.(),
+        guestUserId: actor.userId,
+        action: 'guest_left_seat',
+      });
+    } catch (err) {
+      console.error('❌ live_leave_guest_seat failed:', err.message);
+    }
+  };
+
   socket.on('live_host_ready', handleLiveHostReady);
   socket.on('live_host_heartbeat', handleLiveHostHeartbeat);
   socket.on('live_join', handleLiveJoin);
@@ -889,6 +936,7 @@ function registerLivestreamEvents(io, socket, { mongoose, User, LiveStream }) {
   socket.on('live_decline_guest_seat', handleLiveDeclineGuestSeat);
   socket.on('live_mute_guest', handleLiveMuteGuest);
   socket.on('live_kick_guest', handleLiveKickGuest);
+  socket.on('live_leave_guest_seat', handleLiveLeaveGuestSeat);
 
   async function cleanupDisconnectedSocket(reason) {
     if (socket.data.hostLiveStreams?.size) {

@@ -254,6 +254,7 @@ class LiveStreamActivity : AppCompatActivity() {
         agoraAppId = intent.getStringExtra(EXTRA_APP_ID).orEmpty()
         agoraUid = intent.getIntExtra(EXTRA_UID, INVALID_AGORA_UID)
         isHost = intent.getBooleanExtra(EXTRA_IS_HOST, false)
+        liveLikeCount = intent.getIntExtra(EXTRA_LIKE_COUNT, 0).coerceAtLeast(0)
         activeGuests.clear()
         activeGuests.addAll(parseGuestsExtra(intent.getStringExtra(EXTRA_GUESTS)))
         Log.i(
@@ -284,6 +285,7 @@ class LiveStreamActivity : AppCompatActivity() {
         reportButton = findViewById(R.id.buttonLiveReport)
         buttonRequestSeat = findViewById(R.id.buttonRequestLiveSeat)
         recyclerGuests = findViewById(R.id.recyclerLiveGuests)
+        updateLiveLikeCount(liveLikeCount)
 
         guestAdapter = xyz.yenkasa.app.adapter.LiveGuestAdapter({ rtcEngine }, { agoraUid }, isHost) { guest, action ->
             handleGuestAction(guest, action)
@@ -431,7 +433,27 @@ class LiveStreamActivity : AppCompatActivity() {
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()
             }
+            xyz.yenkasa.app.adapter.LiveGuestAdapter.Action.LEAVE -> leaveGuestSeat()
         }
+    }
+
+    private fun leaveGuestSeat() {
+        val userId = TokenManager.getUserId(this).orEmpty()
+        if (userId.isBlank()) return
+        SocketManager.emit(
+            "live_leave_guest_seat",
+            JSONObject()
+                .put("streamId", streamId)
+                .put("userId", userId)
+                .put("username", liveEventUsername())
+                .put("avatar", liveEventAvatar())
+                .put("agoraUid", agoraUid)
+                .put("clientEventId", liveClientEventId("guest_leave"))
+        )
+        activeGuests.removeAll { it.userId == userId || it.agoraUid == agoraUid }
+        guestAdapter?.submitList(activeGuests.toList())
+        switchRoleToAudience()
+        Toast.makeText(this, R.string.live_you_left_guest_seat, Toast.LENGTH_SHORT).show()
     }
 
     private fun parseGuestsExtra(raw: String?): List<LiveGuest> {
@@ -546,10 +568,18 @@ class LiveStreamActivity : AppCompatActivity() {
                 )
             }
             if (shouldSkipIncomingLiveEvent("reaction", json)) return@reactionListener
-            runOnUiThread { animateReaction(json.optString("reaction", json.optString("type", "❤️"))) }
+            runOnUiThread {
+                animateReaction(json.optString("reaction", json.optString("type", "❤️")))
+                pulseReactionButton()
+            }
         }
         registerLiveSocketListener("live_reaction", reactionListener)
         registerLiveSocketListener("new_like", reactionListener)
+        registerLiveSocketListener("live_like_ack") { data ->
+            val json = data.asJson() ?: return@registerLiveSocketListener
+            if (json.optString("streamId") != streamId) return@registerLiveSocketListener
+            runOnUiThread { updateLiveLikeCount(json.optInt("likeCount", liveLikeCount)) }
+        }
 
         val giftListener: (Any) -> Unit = giftListener@{ data ->
             val json = data.asJson() ?: return@giftListener
@@ -654,6 +684,14 @@ class LiveStreamActivity : AppCompatActivity() {
                 runOnUiThread {
                     activeGuests.removeAll { it.userId == guestUserId }
                     guestAdapter?.submitList(activeGuests.toList())
+                    if (guestUserId == TokenManager.getUserId(this)) {
+                        switchRoleToAudience()
+                    } else {
+                        val username = json.optString("username")
+                        if (username.isNotBlank()) {
+                            addComment(getString(R.string.live_guest_left_the_broadcast, username))
+                        }
+                    }
                 }
             }
         }
@@ -1191,6 +1229,7 @@ class LiveStreamActivity : AppCompatActivity() {
 
         // Immediate local visual feedback
         animateReaction(reaction)
+        pulseReactionButton()
         updateLiveLikeCount(liveLikeCount + 1)
         recentLiveEventKeys["reaction:$clientEventId"] = now
 
@@ -1361,14 +1400,15 @@ class LiveStreamActivity : AppCompatActivity() {
 
     private fun updateLiveLikeCount(count: Int) {
         liveLikeCount = count.coerceAtLeast(0)
-        likeCountText.text = if (liveLikeCount > 0) liveLikeCount.toString() else getString(R.string.like)
+        likeCountText.text = liveLikeCount.toString()
     }
 
     private fun animateReaction(reaction: String) {
         val view = TextView(this).apply {
             text = reaction
-            textSize = 30f
+            textSize = 38f
             alpha = 0f
+            setShadowLayer(dp(8).toFloat(), 0f, dp(2).toFloat(), Color.argb(180, 0, 0, 0))
         }
         val startX = (reactionsLayer.width - dp(86)).coerceAtLeast(dp(24)).toFloat()
         val startY = (reactionsLayer.height - dp(170)).coerceAtLeast(dp(120)).toFloat()
@@ -1381,6 +1421,24 @@ class LiveStreamActivity : AppCompatActivity() {
             .translationX(startX - dp((0..38).random()))
             .setDuration(1300L)
             .withEndAction { reactionsLayer.removeView(view) }
+            .start()
+    }
+
+    private fun pulseReactionButton() {
+        reactionButton.animate().cancel()
+        reactionButton.scaleX = 1f
+        reactionButton.scaleY = 1f
+        reactionButton.animate()
+            .scaleX(1.22f)
+            .scaleY(1.22f)
+            .setDuration(110L)
+            .withEndAction {
+                reactionButton.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(150L)
+                    .start()
+            }
             .start()
     }
 
@@ -1516,6 +1574,7 @@ class LiveStreamActivity : AppCompatActivity() {
         private const val EXTRA_SCHEDULED_END_AT = "scheduled_end_at"
         private const val EXTRA_EXPIRES_AT = "expires_at"
         private const val EXTRA_GUESTS = "guests"
+        private const val EXTRA_LIKE_COUNT = "like_count"
 
         fun intentForHost(context: Context, stream: LiveStream, agora: AgoraLiveToken): Intent {
             return baseIntent(context, stream, agora, true)
@@ -1539,6 +1598,7 @@ class LiveStreamActivity : AppCompatActivity() {
                 .putExtra(EXTRA_IS_HOST, isHost)
                 .putExtra(EXTRA_SCHEDULED_END_AT, stream.scheduledEndAt)
                 .putExtra(EXTRA_GUESTS, guestsJson(stream.guests))
+                .putExtra(EXTRA_LIKE_COUNT, stream.likeCount)
         }
 
         private fun guestsJson(guests: List<LiveGuest>): String {

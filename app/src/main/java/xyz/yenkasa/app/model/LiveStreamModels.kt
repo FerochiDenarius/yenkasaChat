@@ -18,6 +18,7 @@ data class LiveStream(
     val hostConnected: Boolean = false,
     val viewerCount: Int = 0,
     val peakViewerCount: Int = 0,
+    val likeCount: Int = 0,
     val guests: List<LiveGuest> = emptyList(),
     val hostRole: String = "",
     val maxDurationMinutes: Int? = null,

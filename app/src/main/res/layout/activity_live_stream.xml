@@ -287,17 +287,44 @@
             android:id="@+id/containerLiveReaction"
             style="@style/LiveActionRailItem">
 
-            <ImageButton
-                android:id="@+id/buttonLiveReaction"
-                style="@style/LiveActionRailButton"
-                android:contentDescription="@string/send_live_reaction"
-                android:src="@drawable/ic_heart_filled"
-                android:tint="#EF233C" />
+            <FrameLayout
+                android:id="@+id/liveReactionButtonFrame"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:background="@drawable/bg_live_action_circle"
+                android:elevation="9dp">
+
+                <ImageButton
+                    android:id="@+id/buttonLiveReaction"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="@string/send_live_reaction"
+                    android:padding="13dp"
+                    android:scaleType="center"
+                    android:src="@drawable/ic_heart_filled"
+                    android:tint="#EF233C" />
+
+                <TextView
+                    android:id="@+id/textLiveLikeCount"
+                    android:layout_width="match_parent"
+                    android:layout_height="18dp"
+                    android:layout_gravity="bottom"
+                    android:background="#99000000"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
+                    android:text="0"
+                    android:textColor="@android:color/white"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
 
             <TextView
-                android:id="@+id/textLiveLikeCount"
                 style="@style/LiveActionRailLabel"
-                android:text="@string/like" />
+                android:text="@string/likes" />
         </LinearLayout>
 
         <LinearLayout

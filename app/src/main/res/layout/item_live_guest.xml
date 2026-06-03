@@ -49,4 +49,51 @@
         android:tint="@android:color/white"
         android:visibility="gone" />
 
+    <LinearLayout
+        android:id="@+id/guestHostActions"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/bg_live_dark_glass_card"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="3dp"
+        android:paddingEnd="3dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/buttonGuestMute"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/mute_microphone"
+            android:padding="5dp"
+            android:src="@drawable/ic_volume_off"
+            android:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/buttonGuestRemove"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/remove_guest"
+            android:padding="5dp"
+            android:src="@drawable/ic_close"
+            android:tint="#FF6B6B" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/buttonGuestClose"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/bg_live_dark_glass_card"
+        android:contentDescription="@string/leave_guest_seat"
+        android:padding="7dp"
+        android:src="@drawable/ic_close"
+        android:tint="@android:color/white"
+        android:visibility="gone" />
+
 </androidx.cardview.widget.CardView>

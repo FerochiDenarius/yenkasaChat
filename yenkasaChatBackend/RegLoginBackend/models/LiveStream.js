@@ -81,6 +81,11 @@ const liveStreamSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
+    likeCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     guests: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

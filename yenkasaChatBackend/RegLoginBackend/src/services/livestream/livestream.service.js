@@ -258,6 +258,7 @@ function serializeLiveStream(stream) {
     hostConnected: Boolean(stream.hostConnected),
     viewerCount: stream.viewerCount || 0,
     peakViewerCount: stream.peakViewerCount || 0,
+    likeCount: stream.likeCount || 0,
     guests: serializeLiveGuests(stream.guests),
     hostRole: stream.hostRole || '',
     maxDurationMinutes: stream.maxDurationMinutes ?? null,

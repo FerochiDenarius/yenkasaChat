@@ -76,6 +76,7 @@ function serializeStream(stream) {
     startupExpiresAt: stream.startupExpiresAt || null,
     viewerCount: stream.viewerCount || 0,
     peakViewerCount: stream.peakViewerCount || 0,
+    likeCount: stream.likeCount || 0,
     guests: serializeLiveGuests(stream.guests),
     hostRole: stream.hostRole || '',
     maxDurationMinutes: stream.maxDurationMinutes ?? null,

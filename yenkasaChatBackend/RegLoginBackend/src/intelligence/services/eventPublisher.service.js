@@ -83,6 +83,7 @@ const SUPPORTED_EVENT_TYPES = new Set([
   'notification_sent',
   'notification_opened',
   'notification_dismissed',
+  'server_incident',
 ]);
 
 let flushTimer = null;
@@ -340,6 +341,26 @@ function normalizeIntelligenceEvent(event = {}) {
   if (event.creatorId && !metadata.creatorId) metadata.creatorId = String(event.creatorId);
   if (event.payload && typeof event.payload === 'object' && !Array.isArray(event.payload) && !metadata.payload) {
     metadata.payload = { ...event.payload };
+  }
+
+  if (eventType === 'server_incident') {
+    metadata.component = metadata.component || event.component || 'server';
+    metadata.severity = metadata.severity || event.severity || 'error';
+    metadata.incidentType = metadata.incidentType || event.incidentType || 'log';
+    metadata.message = metadata.message || event.message || '';
+    metadata.stack = metadata.stack || event.stack || '';
+    metadata.sourceFile = metadata.sourceFile || event.sourceFile || '';
+    metadata.operationalEvent = metadata.operationalEvent || {
+      eventType: 'SERVER_INCIDENT',
+      timestamp: normalizeTimestamp(event.timestamp || event.occurredAt || event.createdAt),
+      metadata: {
+        component: metadata.component,
+        severity: metadata.severity,
+        incidentType: metadata.incidentType,
+        message: metadata.message,
+        sourceFile: metadata.sourceFile,
+      },
+    };
   }
 
   return {
@@ -665,6 +686,31 @@ function mapYmeEventToIntelligenceEvent(event = {}) {
         operationalEvent: {
           eventType: String(type || '').toUpperCase(),
           userId: event.userId || null,
+          timestamp: base.timestamp,
+          metadata,
+        },
+      },
+    });
+  }
+
+  if (type === 'server_incident') {
+    const metadata = event.payload || event.metadata || {};
+    return normalizeIntelligenceEvent({
+      ...base,
+      eventType: 'server_incident',
+      metadata: {
+        component: metadata.component || event.component || 'server',
+        severity: metadata.severity || event.severity || 'error',
+        incidentType: metadata.incidentType || event.incidentType || 'log',
+        message: metadata.message || event.message || '',
+        logArguments: metadata.logArguments || [],
+        stack: metadata.stack || event.stack || '',
+        pid: Number(metadata.pid || process.pid || 0),
+        hostname: metadata.hostname || '',
+        nodeEnv: metadata.nodeEnv || process.env.NODE_ENV || '',
+        sourceFile: metadata.sourceFile || event.sourceFile || '',
+        operationalEvent: {
+          eventType: 'SERVER_INCIDENT',
           timestamp: base.timestamp,
           metadata,
         },

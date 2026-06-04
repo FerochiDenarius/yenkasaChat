@@ -6,14 +6,17 @@ const connectDB = require('./config/database');
 const initSocket = require('./config/socket');
 const { startModerationWorkers } = require('./ai/workers/moderation.worker');
 const { startIntelligenceEventRelay } = require('./intelligence/services/eventPublisher.service');
+const { installServerIncidentOilBridge, publishServerIncident } = require('./intelligence/services/serverIncidentOil.service');
 const { startYmeWorkers } = require('./yme/workers/yme.worker');
 
 const Permission = require('../models/permissions.model');
 
 const server = http.createServer(app);
 initSocket(server);
+const serverIncidentOilStatus = installServerIncidentOilBridge();
 
 async function startServer() {
+  console.log('🛢️ Server incident OIL bridge:', serverIncidentOilStatus);
   console.log('server.js: Connecting to MongoDB...');
   await connectDB();
   console.log('✅ MongoDB connected successfully.');
@@ -56,6 +59,11 @@ async function startServer() {
 
 startServer().catch((err) => {
   console.error('❌ MongoDB connection error:', err.message);
+  publishServerIncident({
+    level: 'error',
+    incidentType: 'startup_failure',
+    args: ['server.js startup failed.', err],
+  });
   process.exit(1);
 });
 

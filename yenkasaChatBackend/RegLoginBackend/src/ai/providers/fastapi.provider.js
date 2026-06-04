@@ -19,6 +19,15 @@ function buildEngineUrl(path) {
   return `${base}${normalizedPrefix}${normalizedPath}`;
 }
 
+function getInternalApiKey() {
+  return String(
+    process.env.INTERNAL_PLATFORM_API_KEY ||
+      process.env.LOG_INGEST_API_KEY ||
+      process.env.YENKASA_AI_EVENT_API_KEY ||
+      '',
+  ).trim();
+}
+
 async function parseJsonResponse(response) {
   const rawText = await response.text();
   if (!rawText) return {};
@@ -83,8 +92,15 @@ async function ingest({ files, audience = 'public' }) {
     formData.append('files', blob, file.originalname);
   }
 
+  const headers = {};
+  const apiKey = getInternalApiKey();
+  if (apiKey) {
+    headers['X-Event-Api-Key'] = apiKey;
+  }
+
   const response = await fetch(`${buildEngineUrl('/ingest')}?audience=${encodeURIComponent(audience)}`, {
     method: 'POST',
+    headers,
     body: formData
   });
 
@@ -98,6 +114,13 @@ async function health() {
 
 async function ingestJobs() {
   const response = await fetch(buildEngineUrl('/ingest/jobs'));
+  if (response.status === 404 || response.status === 405) {
+    return {
+      jobs: [],
+      version: 0,
+      unsupported: true,
+    };
+  }
   return handleResponse(response, 'AI ingest jobs');
 }
 

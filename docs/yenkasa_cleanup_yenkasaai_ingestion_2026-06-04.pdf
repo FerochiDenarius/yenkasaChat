@@ -1,0 +1,282 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 2245 >>
+stream
+BT
+/F1 10 Tf
+54 738 Td
+(YENKASA CLEANUP AND YENKASAAI INGESTION WORK LOG) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Date: 2026-06-04) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Scope) Tj
+0 -14 Td () Tj
+0 -14 Td (This document records the cleanup and verification work done after the YenkasaAI Flutter/backend) Tj
+0 -14 Td (files were found inside the Yenkasa Kotlin app repository.) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Correct Folder Boundaries) Tj
+0 -14 Td () Tj
+0 -14 Td (- /Users/kofibright/yenkasaChat) Tj
+0 -14 Td (  - Kept as the Yenkasa Kotlin app repository plus yenkasaChatBackend/RegLoginBackend.) Tj
+0 -14 Td (  - Kept OIL and YenkasaAI bridge backend code in yenkasaChatBackend/RegLoginBackend.) Tj
+0 -14 Td (  - Removed misplaced duplicated project folders from this repo.) Tj
+0 -14 Td () Tj
+0 -14 Td (- /Users/kofibright/StudioProjects/YenkasaAi) Tj
+0 -14 Td (  - Treated as the real YenkasaAI Flutter frontend repository.) Tj
+0 -14 Td (  - All Flutter PDF ingestion UI changes were applied here.) Tj
+0 -14 Td () Tj
+0 -14 Td (- /Users/kofibright/Desktop/YenkasaAi alias) Tj
+0 -14 Td (  - Confirmed as a macOS shortcut/alias, not the real working tree.) Tj
+0 -14 Td () Tj
+0 -14 Td (- /Users/kofibright/Desktop/yenkasa_ai_flutter) Tj
+0 -14 Td (  - Confirmed as a plain folder, not the real git repo.) Tj
+0 -14 Td (  - Not used as the target Flutter project after confirmation.) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (YenkasaChat Repository Cleanup) Tj
+0 -14 Td () Tj
+0 -14 Td (Removed these misplaced folders from /Users/kofibright/yenkasaChat:) Tj
+0 -14 Td () Tj
+0 -14 Td (- yenkasa-ai) Tj
+0 -14 Td (- yenkasa_ai_flutter) Tj
+0 -14 Td () Tj
+0 -14 Td (Removed the old static React/YenkasaAI web bundle from the backend because YenkasaAI web will be) Tj
+0 -14 Td (generated from Flutter instead:) Tj
+0 -14 Td () Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/public/yenkasa_ai) Tj
+0 -14 Td () Tj
+0 -14 Td (Kept the backend API/OIL bridge files under:) Tj
+0 -14 Td () Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/ai) Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/intelligence) Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/server.js) Tj
+0 -14 Td () Tj
+ET
+BT
+/F1 9 Tf
+502 32 Td (Page 1 of 4) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 2197 >>
+stream
+BT
+/F1 10 Tf
+54 738 Td
+() Tj
+0 -14 Td (Backend/OIL Bridge Work Kept) Tj
+0 -14 Td () Tj
+0 -14 Td (Files involved:) Tj
+0 -14 Td () Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/server.js) Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/ai/providers/fastapi.provider.js) Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/intelligence/services/eventPublisher.service.js) Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/src/intelligence/services/serverIncidentOil.service.js) Tj
+0 -14 Td (- yenkasaChatBackend/RegLoginBackend/tests/intelligenceEventPublisher.test.js) Tj
+0 -14 Td () Tj
+0 -14 Td (Purpose:) Tj
+0 -14 Td () Tj
+0 -14 Td (- Allow server incidents and operational logs from server.js to be normalized as) Tj
+0 -14 Td (  OIL/intelligence events.) Tj
+0 -14 Td (- Keep YenkasaAI relay behavior in the app backend.) Tj
+0 -14 Td (- Add test coverage for server incident log normalization.) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (YenkasaAI Flutter Work) Tj
+0 -14 Td () Tj
+0 -14 Td (Real Flutter repo:) Tj
+0 -14 Td () Tj
+0 -14 Td (- /Users/kofibright/StudioProjects/YenkasaAi) Tj
+0 -14 Td () Tj
+0 -14 Td (Files changed:) Tj
+0 -14 Td () Tj
+0 -14 Td (- pubspec.yaml) Tj
+0 -14 Td (- pubspec.lock) Tj
+0 -14 Td (- lib/features/chat/data/ai_api_service.dart) Tj
+0 -14 Td (- lib/features/ingestion/presentation/ingestion_page.dart) Tj
+0 -14 Td (- test/widget_test.dart) Tj
+0 -14 Td (- macos/Flutter/GeneratedPluginRegistrant.swift) Tj
+0 -14 Td (- macos/Podfile.lock) Tj
+0 -14 Td (- ios/Podfile.lock) Tj
+0 -14 Td () Tj
+0 -14 Td (Implemented:) Tj
+0 -14 Td () Tj
+0 -14 Td (- Added file_picker dependency.) Tj
+0 -14 Td (- Added IngestionUploadResult.) Tj
+0 -14 Td (- Added AiApiService.uploadKnowledgePdfs.) Tj
+0 -14 Td (- Wired the ingestion page button to select PDF files.) Tj
+0 -14 Td (- Uploads selected PDFs as multipart form data to /ingest.) Tj
+0 -14 Td (- Shows selected file names.) Tj
+0 -14 Td (- Shows upload success summary.) Tj
+0 -14 Td (- Shows upload errors.) Tj
+0 -14 Td (- Updated stale widget test so it renders GetStartedPage directly instead of waiting on) Tj
+0 -14 Td (  router/bootstrap animations.) Tj
+0 -14 Td () Tj
+ET
+BT
+/F1 9 Tf
+502 32 Td (Page 2 of 4) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 2011 >>
+stream
+BT
+/F1 10 Tf
+54 738 Td
+() Tj
+0 -14 Td (Clean Build Procedure) Tj
+0 -14 Td () Tj
+0 -14 Td (The first Android and macOS release builds were treated as stale because they were produced) Tj
+0 -14 Td (before flutter clean.) Tj
+0 -14 Td () Tj
+0 -14 Td (Then the clean procedure was run:) Tj
+0 -14 Td () Tj
+0 -14 Td (- flutter clean) Tj
+0 -14 Td (- flutter pub get) Tj
+0 -14 Td (- flutter analyze) Tj
+0 -14 Td (- flutter test) Tj
+0 -14 Td (- flutter build apk --release) Tj
+0 -14 Td (- flutter build macos --release) Tj
+0 -14 Td (- flutter build ios --release --no-codesign) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Verification Evidence) Tj
+0 -14 Td () Tj
+0 -14 Td (Backend syntax checks passed:) Tj
+0 -14 Td () Tj
+0 -14 Td (- node --check src/server.js) Tj
+0 -14 Td (- node --check src/intelligence/services/eventPublisher.service.js) Tj
+0 -14 Td (- node --check src/intelligence/services/serverIncidentOil.service.js) Tj
+0 -14 Td (- node --check src/ai/providers/fastapi.provider.js) Tj
+0 -14 Td () Tj
+0 -14 Td (Backend event publisher tests passed:) Tj
+0 -14 Td () Tj
+0 -14 Td (- Command: node --test tests/intelligenceEventPublisher.test.js) Tj
+0 -14 Td (- Result: 9 tests passed.) Tj
+0 -14 Td (- Covered: server incident logs, notification lifecycle events, community post notification) Tj
+0 -14 Td (  events, livestream operational events, retry delay, relay payload mapping, and event) Tj
+0 -14 Td (  normalization.) Tj
+0 -14 Td () Tj
+0 -14 Td (Flutter verification passed:) Tj
+0 -14 Td () Tj
+0 -14 Td (- flutter analyze) Tj
+0 -14 Td (  - Result: No issues found.) Tj
+0 -14 Td (- flutter test) Tj
+0 -14 Td (  - Result: All tests passed.) Tj
+0 -14 Td () Tj
+0 -14 Td (Clean release builds passed:) Tj
+0 -14 Td () Tj
+0 -14 Td (- Android release APK:) Tj
+0 -14 Td (  - build/app/outputs/flutter-apk/app-release.apk) Tj
+0 -14 Td (  - Size: 57.6 MB) Tj
+0 -14 Td () Tj
+0 -14 Td (- macOS release app:) Tj
+0 -14 Td (  - build/macos/Build/Products/Release/YenkasaAi.app) Tj
+ET
+BT
+/F1 9 Tf
+502 32 Td (Page 3 of 4) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 2001 >>
+stream
+BT
+/F1 10 Tf
+54 738 Td
+(  - Size: 51.5 MB) Tj
+0 -14 Td () Tj
+0 -14 Td (- iOS release app:) Tj
+0 -14 Td (  - build/ios/iphoneos/Runner.app) Tj
+0 -14 Td (  - Size: 25.4 MB) Tj
+0 -14 Td (  - Built with --no-codesign; manual signing is still required before physical device) Tj
+0 -14 Td (deployment.) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Build Warnings Observed) Tj
+0 -14 Td () Tj
+0 -14 Td (- Android build emitted Java source/target 8 obsolete warnings.) Tj
+0 -14 Td (- macOS build emitted flutter_tts Swift future-compatibility warnings for) Tj
+0 -14 Td (  AVSpeechSynthesisVoiceQuality and AVSpeechSynthesisVoiceGender.) Tj
+0 -14 Td (- iOS build warned that code signing was disabled, which is expected for --no-codesign.) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Current Expected Git Status Summary) Tj
+0 -14 Td () Tj
+0 -14 Td (In /Users/kofibright/yenkasaChat:) Tj
+0 -14 Td () Tj
+0 -14 Td (- Deleted misplaced duplicate folders:) Tj
+0 -14 Td (  - yenkasa-ai) Tj
+0 -14 Td (  - yenkasa_ai_flutter) Tj
+0 -14 Td (- Deleted old static YenkasaAI web bundle:) Tj
+0 -14 Td (  - yenkasaChatBackend/RegLoginBackend/public/yenkasa_ai) Tj
+0 -14 Td (- Kept backend/OIL bridge modifications under yenkasaChatBackend/RegLoginBackend/src.) Tj
+0 -14 Td () Tj
+0 -14 Td (In /Users/kofibright/StudioProjects/YenkasaAi:) Tj
+0 -14 Td () Tj
+0 -14 Td (- Flutter PDF ingestion wiring is present.) Tj
+0 -14 Td (- Dependencies are restored after clean.) Tj
+0 -14 Td (- Release artifacts were built from clean output.) Tj
+0 -14 Td () Tj
+0 -14 Td () Tj
+0 -14 Td (Notes) Tj
+0 -14 Td () Tj
+0 -14 Td (- The old React/YenkasaAI static web app inside RegLoginBackend/public/yenkasa_ai was) Tj
+0 -14 Td (  removed because the future YenkasaAI web app will be built from Flutter.) Tj
+0 -14 Td (- The backend /api/yenkasa-ai bridge code remains because it is not the old web frontend) Tj
+0 -14 Td (  bundle.) Tj
+0 -14 Td (- The iOS artifact is not device-installable until signed.) Tj
+ET
+BT
+/F1 9 Tf
+502 32 Td (Page 4 of 4) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 10 0 R >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000134 00000 n 
+0000000204 00000 n 
+0000002501 00000 n 
+0000002627 00000 n 
+0000004876 00000 n 
+0000005002 00000 n 
+0000007065 00000 n 
+0000007191 00000 n 
+0000009245 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+9373
+%%EOF

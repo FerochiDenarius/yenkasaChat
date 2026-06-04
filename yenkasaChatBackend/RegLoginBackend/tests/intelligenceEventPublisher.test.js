@@ -171,3 +171,27 @@ test('mapYmeEventToIntelligenceEvent converts notification lifecycle events', ()
   assert.equal(payload.metadata.receiverId, 'viewer-1');
   assert.equal(payload.metadata.operationalEvent.eventType, 'NOTIFICATION_OPENED');
 });
+
+test('normalizeIntelligenceEvent accepts server incident logs for OIL relay', () => {
+  const payload = normalizeIntelligenceEvent({
+    eventType: 'SERVER_INCIDENT',
+    source: 'Yenkasa Server',
+    timestamp: '2026-06-03T12:00:00Z',
+    metadata: {
+      component: 'server.js',
+      severity: 'error',
+      incidentType: 'startup_failure',
+      message: 'MongoDB connection failed',
+      stack: 'Error: MongoDB connection failed',
+      sourceFile: 'src/server.js',
+    },
+  });
+
+  assert.equal(payload.eventType, 'server_incident');
+  assert.equal(payload.source, 'yenkasa_server');
+  assert.equal(payload.userId, null);
+  assert.equal(payload.metadata.component, 'server.js');
+  assert.equal(payload.metadata.severity, 'error');
+  assert.equal(payload.metadata.incidentType, 'startup_failure');
+  assert.equal(payload.metadata.operationalEvent.eventType, 'SERVER_INCIDENT');
+});

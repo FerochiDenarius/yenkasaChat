@@ -962,7 +962,7 @@
             </article>
             <article class="card">
               <h3>Gallery</h3>
-              <p class="muted">Upload-ready path: /uploads/yenkasa-app/screenshots/</p>
+              <p class="muted">Cloudinary folder: yenkasa/portfolio/yenkasa-app/screenshots</p>
               <div class="carousel" data-carousel="app">
                 <div class="carousel-track"></div>
                 <div class="carousel-controls">
@@ -973,7 +973,7 @@
             </article>
             <article class="card">
               <h3>Video Showcase</h3>
-              <p class="muted">Upload-ready path: /uploads/yenkasa-app/videos/</p>
+              <p class="muted">Cloudinary folder: yenkasa/portfolio/yenkasa-app/videos</p>
               <div class="video-slot" data-video-slot="app"></div>
             </article>
           </div>
@@ -1009,8 +1009,8 @@
           </article>
           <article class="card">
             <h3>Media</h3>
-            <p class="muted">Gallery: /uploads/yenkasa-store/screenshots/</p>
-            <p class="muted">Videos: /uploads/yenkasa-store/videos/</p>
+            <p class="muted">Gallery: yenkasa/portfolio/yenkasa-store/screenshots</p>
+            <p class="muted">Videos: yenkasa/portfolio/yenkasa-store/videos</p>
             <div class="carousel" data-carousel="store">
               <div class="carousel-track"></div>
               <div class="carousel-controls">
@@ -1060,8 +1060,8 @@
               <span class="stack">Google Cloud</span>
               <span class="stack">Gemini</span>
             </div>
-            <p class="muted" style="margin-top:14px">Gallery: /uploads/yenkasa-ai/screenshots/</p>
-            <p class="muted">Videos: /uploads/yenkasa-ai/videos/</p>
+            <p class="muted" style="margin-top:14px">Gallery: yenkasa/portfolio/yenkasa-ai/screenshots</p>
+            <p class="muted">Videos: yenkasa/portfolio/yenkasa-ai/videos</p>
           </article>
         </div>
         <div class="grid grid-2" style="margin-top:18px">
@@ -1184,7 +1184,7 @@
             <p class="section-kicker" style="color:#f8d46a">Admin content management</p>
             <h2>JSON-powered content updates</h2>
           </div>
-          <p class="muted">A simple static admin page is available for uploading screenshot/video metadata, editing milestones, achievements and statistics, then exporting JSON.</p>
+          <p class="muted">A simple static admin page is available for uploading screenshots and videos to Cloudinary, editing milestones, achievements and statistics, then exporting JSON metadata.</p>
         </div>
         <div class="section-actions">
           <a class="btn btn-light" href="admin.html">Open Admin Page</a>
@@ -1365,7 +1365,7 @@
               </button>
             `).join("")}
           </div>
-          <div class="video-slot">${product.videos && product.videos.length ? "Video showcase ready" : "Video showcase area ready for /uploads/" + product.id + "/videos/"}</div>
+          <div class="video-slot">${product.videos && product.videos.length ? "Video showcase ready" : "Video showcase area ready for Cloudinary portfolio folder"}</div>
         </article>
       `).join("");
     }
@@ -1400,7 +1400,7 @@
         if (!slot || !product) return;
         const video = (product.videos || [])[0];
         if (!video) {
-          slot.textContent = `Video showcase ready for /uploads/yenkasa-${id}/videos/`;
+          slot.textContent = `Video showcase ready for Cloudinary folder yenkasa/portfolio/yenkasa-${id}/videos`;
           return;
         }
         slot.innerHTML = `<video controls src="${escapeAttr(video.src)}"></video>`;

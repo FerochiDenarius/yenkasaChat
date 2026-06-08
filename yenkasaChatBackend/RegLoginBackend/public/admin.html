@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yenkasa Portfolio Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root {
+      --ink: #121820;
+      --muted: #5d6875;
+      --line: #dfe5eb;
+      --soft: #f5f8fb;
+      --green: #148a56;
+      --red: #b42318;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--soft);
+      line-height: 1.5;
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 1.05;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-weight: 800;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    button, .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .secondary {
+      background: #111827;
+      color: #fff;
+    }
+
+    .danger {
+      background: #fff;
+      color: var(--red);
+      border-color: #f2b8b5;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .list-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .hint {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Yenkasa Portfolio Admin</h1>
+      <p>Edit portfolio metadata, add screenshot/video references, milestones, achievements and statistics, then export the JSON file for <code>uploads/portfolio-content.json</code>.</p>
+      <div class="actions">
+        <a class="button secondary" href="index.html">View Site</a>
+        <button class="primary" id="downloadJson">Download JSON</button>
+        <button class="danger" id="resetContent">Reset Draft</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <section class="card">
+        <h2>Product Content</h2>
+        <label for="productSelect">Product</label>
+        <select id="productSelect"></select>
+
+        <label for="productDescription">Description</label>
+        <textarea id="productDescription"></textarea>
+
+        <label for="productStatus">Current status</label>
+        <input id="productStatus" />
+
+        <label for="productStack">Technology stack, comma-separated</label>
+        <input id="productStack" />
+
+        <label for="productAchievements">Achievements, comma-separated</label>
+        <input id="productAchievements" />
+
+        <div class="actions">
+          <button class="primary" id="saveProduct">Save Product</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Add Media</h2>
+        <label for="authToken">Admin bearer token</label>
+        <input id="authToken" type="password" placeholder="Paste an active Yenkasa access token" />
+        <p class="hint">Cloudinary uploads use POST /api/portfolio/media and require the existing Yenkasa Authorization token.</p>
+
+        <label for="mediaProduct">Product</label>
+        <select id="mediaProduct"></select>
+
+        <label for="mediaType">Media type</label>
+        <select id="mediaType">
+          <option value="screenshots">Screenshot</option>
+          <option value="videos">Video</option>
+        </select>
+
+        <label for="mediaTitle">Title</label>
+        <input id="mediaTitle" placeholder="Dashboard screenshot" />
+
+        <label for="mediaPath">Path</label>
+        <input id="mediaPath" placeholder="uploads/yenkasa-ai/screenshots/dashboard.png" />
+        <p class="hint">Cloudinary upload will fill this field with the secure_url. You can still paste a manual URL if needed.</p>
+
+        <label for="mediaFile">Upload file to Cloudinary</label>
+        <input id="mediaFile" type="file" accept="image/*,video/*" />
+
+        <div class="actions">
+          <button class="secondary" id="uploadCloudinary">Upload to Cloudinary</button>
+          <button class="primary" id="addMedia">Add Media</button>
+        </div>
+        <p class="hint" id="uploadStatus"></p>
+        <div class="list" id="mediaList"></div>
+      </section>
+
+      <section class="card">
+        <h2>Milestones</h2>
+        <label for="milestoneDate">Date or label</label>
+        <input id="milestoneDate" placeholder="Cloud" />
+        <label for="milestoneTitle">Title</label>
+        <input id="milestoneTitle" placeholder="Cloud Run migration" />
+        <label for="milestoneDescription">Description</label>
+        <textarea id="milestoneDescription"></textarea>
+        <div class="actions">
+          <button class="primary" id="addMilestone">Add Milestone</button>
+        </div>
+        <div class="list" id="milestoneList"></div>
+      </section>
+
+      <section class="card">
+        <h2>Raw JSON</h2>
+        <textarea id="rawJson"></textarea>
+        <div class="actions">
+          <button class="primary" id="applyRawJson">Apply Raw JSON</button>
+          <button class="secondary" id="copyJson">Copy JSON</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const defaultContent = {
+      products: [
+        {id: "app", name: "Yenkasa App", description: "Social networking, communities, livestreaming, chat, wallet, rewards and YKC economy.", status: "Live product", stack: ["Kotlin", "Node.js", "MongoDB", "Socket.IO", "Cloudinary", "Agora"], achievements: ["Communities", "Livestreaming", "Wallet"], screenshots: [], videos: []},
+        {id: "store", name: "Yenkasa Store", description: "Seller onboarding, product catalog, orders, payments and commission-based commerce.", status: "Launched commerce pillar", stack: ["Web", "Node.js", "Paystack"], achievements: ["Seller onboarding", "Catalog", "Payments"], screenshots: [], videos: []},
+        {id: "ai", name: "YenkasaAI", description: "Operational Intelligence Platform for monitoring, analysis, memory, insights and anomaly detection.", status: "Cloud Run deployed", stack: ["FastAPI", "Python", "PostgreSQL", "Chroma", "Google Cloud", "Gemini"], achievements: ["Cloud Run", "Memory Engine", "OCR", "AI Insights"], screenshots: [], videos: []},
+        {id: "web", name: "Yenkasa Web", description: "Public web, validation, policy, product pages and web-based ecosystem surfaces.", status: "Public web presence", stack: ["HTML", "CSS", "JavaScript"], achievements: ["Official website", "Policy pages", "SEO"], screenshots: [], videos: []},
+        {id: "future", name: "Future Products", description: "Upcoming tools for organizations, intelligence, commerce and creator growth.", status: "Roadmap direction", stack: ["AI", "Cloud", "Mobile", "Web"], achievements: ["Ecosystem foundation"], screenshots: [], videos: []}
+      ],
+      milestones: []
+    };
+
+    const productUploadMap = {
+      app: "yenkasa-app",
+      store: "yenkasa-store",
+      ai: "yenkasa-ai",
+      web: "yenkasa-web",
+      future: "future-products"
+    };
+
+    let content = loadDraft();
+
+    function loadDraft() {
+      const stored = localStorage.getItem("yenkasaPortfolioContent");
+      if (!stored) return structuredClone(defaultContent);
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        return structuredClone(defaultContent);
+      }
+    }
+
+    function saveDraft() {
+      localStorage.setItem("yenkasaPortfolioContent", JSON.stringify(content, null, 2));
+      render();
+    }
+
+    function selectedProduct(selectId) {
+      const id = document.getElementById(selectId).value;
+      return content.products.find((product) => product.id === id);
+    }
+
+    function render() {
+      const options = content.products.map((product) => `<option value="${product.id}">${product.name}</option>`).join("");
+      for (const id of ["productSelect", "mediaProduct"]) {
+        const select = document.getElementById(id);
+        const current = select.value;
+        select.innerHTML = options;
+        if (current) select.value = current;
+      }
+      renderProductForm();
+      renderMediaList();
+      renderMilestones();
+      document.getElementById("rawJson").value = JSON.stringify(content, null, 2);
+    }
+
+    function renderProductForm() {
+      const product = selectedProduct("productSelect") || content.products[0];
+      if (!product) return;
+      document.getElementById("productSelect").value = product.id;
+      document.getElementById("productDescription").value = product.description || "";
+      document.getElementById("productStatus").value = product.status || "";
+      document.getElementById("productStack").value = (product.stack || []).join(", ");
+      document.getElementById("productAchievements").value = (product.achievements || []).join(", ");
+    }
+
+    function renderMediaList() {
+      const host = document.getElementById("mediaList");
+      host.innerHTML = content.products.flatMap((product) => [
+        ...(product.screenshots || []).map((item, index) => ({...item, product, type: "screenshots", index})),
+        ...(product.videos || []).map((item, index) => ({...item, product, type: "videos", index}))
+      ]).map((item) => `
+        <div class="list-item">
+          <strong>${item.product.name}</strong> - ${item.type === "videos" ? "Video" : "Screenshot"}<br />
+          ${item.title}<br />
+          <code>${item.src}</code>
+          <div class="actions"><button class="danger" onclick="removeMedia('${item.product.id}', '${item.type}', ${item.index})">Remove</button></div>
+        </div>
+      `).join("");
+    }
+
+    function renderMilestones() {
+      const host = document.getElementById("milestoneList");
+      host.innerHTML = (content.milestones || []).map((item, index) => `
+        <div class="list-item">
+          <strong>${item.date}: ${item.title}</strong>
+          <p>${item.description}</p>
+          <div class="actions"><button class="danger" onclick="removeMilestone(${index})">Remove</button></div>
+        </div>
+      `).join("");
+    }
+
+    function csv(value) {
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
+    }
+
+    document.getElementById("productSelect").addEventListener("change", renderProductForm);
+    document.getElementById("saveProduct").addEventListener("click", () => {
+      const product = selectedProduct("productSelect");
+      product.description = document.getElementById("productDescription").value.trim();
+      product.status = document.getElementById("productStatus").value.trim();
+      product.stack = csv(document.getElementById("productStack").value);
+      product.achievements = csv(document.getElementById("productAchievements").value);
+      saveDraft();
+    });
+
+    document.getElementById("addMedia").addEventListener("click", () => {
+      const product = selectedProduct("mediaProduct");
+      const type = document.getElementById("mediaType").value;
+      const title = document.getElementById("mediaTitle").value.trim();
+      const src = document.getElementById("mediaPath").value.trim();
+      if (!product || !title || !src) return;
+      product[type] = product[type] || [];
+      product[type].push({title, src});
+      document.getElementById("mediaTitle").value = "";
+      document.getElementById("mediaPath").value = "";
+      saveDraft();
+    });
+
+    document.getElementById("uploadCloudinary").addEventListener("click", async () => {
+      const status = document.getElementById("uploadStatus");
+      const product = selectedProduct("mediaProduct");
+      const file = document.getElementById("mediaFile").files[0];
+      const token = document.getElementById("authToken").value.trim();
+      const type = document.getElementById("mediaType").value;
+      const title = document.getElementById("mediaTitle").value.trim() || (file && file.name) || "";
+
+      if (!product || !file || !token) {
+        status.textContent = "Choose a product, choose a file, and provide a bearer token.";
+        return;
+      }
+
+      const body = new FormData();
+      body.append("file", file);
+      body.append("product", productUploadMap[product.id] || product.id);
+      body.append("type", type);
+      body.append("title", title);
+
+      status.textContent = "Uploading to Cloudinary...";
+      try {
+        const response = await fetch("/api/portfolio/media", {
+          method: "POST",
+          headers: {Authorization: `Bearer ${token}`},
+          body
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Cloudinary upload failed.");
+        }
+        document.getElementById("mediaPath").value = result.url;
+        document.getElementById("mediaTitle").value = result.title || title;
+        status.textContent = `Uploaded to ${result.folder}`;
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+
+    document.getElementById("addMilestone").addEventListener("click", () => {
+      const date = document.getElementById("milestoneDate").value.trim();
+      const title = document.getElementById("milestoneTitle").value.trim();
+      const description = document.getElementById("milestoneDescription").value.trim();
+      if (!date || !title || !description) return;
+      content.milestones = content.milestones || [];
+      content.milestones.push({date, title, description});
+      document.getElementById("milestoneDate").value = "";
+      document.getElementById("milestoneTitle").value = "";
+      document.getElementById("milestoneDescription").value = "";
+      saveDraft();
+    });
+
+    document.getElementById("applyRawJson").addEventListener("click", () => {
+      try {
+        const parsed = JSON.parse(document.getElementById("rawJson").value);
+        if (!Array.isArray(parsed.products)) throw new Error("products must be an array");
+        content = parsed;
+        saveDraft();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    document.getElementById("downloadJson").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(content, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "portfolio-content.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("copyJson").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(JSON.stringify(content, null, 2));
+    });
+
+    document.getElementById("resetContent").addEventListener("click", () => {
+      content = structuredClone(defaultContent);
+      saveDraft();
+    });
+
+    function removeMedia(productId, type, index) {
+      const product = content.products.find((item) => item.id === productId);
+      product[type].splice(index, 1);
+      saveDraft();
+    }
+
+    function removeMilestone(index) {
+      content.milestones.splice(index, 1);
+      saveDraft();
+    }
+
+    render();
+  </script>
+</body>
+</html>

@@ -7,6 +7,7 @@
     "dev": "nodemon server.js",
     "worker:moderation": "node src/ai/workers/moderation.worker.js",
     "worker:yme": "node src/yme/workers/yme.worker.js",
+    "migrate-media": "node scripts/migrateMediaToGcs.js",
     "upload:static-assets": "node scripts/uploadStaticAssetsToCloudinary.js",
     "test": "node --test"
   },
@@ -36,6 +37,7 @@
     "multer-storage-cloudinary": "^2.2.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
+    "@google-cloud/storage": "^7.16.0",
     "socket.io": "^4.8.1",
     "twilio": "^5.7.3"
   },

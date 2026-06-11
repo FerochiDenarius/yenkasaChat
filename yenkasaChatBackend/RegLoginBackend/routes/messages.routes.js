@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const multer = require('multer');
-const { Readable } = require('stream');
 
 const auth = require('../middleware/auth');
 const Message = require('../models/message.model');
@@ -14,9 +13,9 @@ const unreadCountService = require('../services/unreadCount.service');
 const { sendNotification } = require('../services/notification.service');
 const { canMessageUser } = require('../services/privacy.service');
 const { syncChatParticipantsAsContacts } = require('../services/contact.service');
-const { cloudinary } = require('../config/cloudinary');
 const { updateConversationStreak } = require('../utils/conversationStreak');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const mediaStorage = require('../services/mediaStorage.service');
 const { publishYmeEvent } = require('../src/yme/services/eventPublisher.service');
 
 const chatMediaUpload = multer({
@@ -59,37 +58,7 @@ function resolveChatUploadType(file, requestedType = '') {
   return 'file';
 }
 
-function uploadChatMediaToCloudinary(file, type) {
-  const resourceType = type === 'video' || type === 'audio'
-    ? 'video'
-    : type === 'image'
-      ? 'image'
-      : 'auto';
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: process.env.CLOUDINARY_CHAT_MEDIA_FOLDER || 'yenkasa/chat/media',
-        resource_type: resourceType,
-        use_filename: true,
-        unique_filename: true,
-        quality: type === 'image' || type === 'video' ? 'auto:good' : undefined,
-        fetch_format: type === 'image' || type === 'video' ? 'auto' : undefined,
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(result);
-      }
-    );
-
-    Readable.from(file.buffer).pipe(uploadStream);
-  });
-}
-
-// ✅ POST: Upload web chat media to Cloudinary before sending a message URL
+// ✅ POST: Upload web chat media before sending a message URL
 router.post('/upload', auth, chatMediaUpload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No chat media file uploaded' });
@@ -97,7 +66,11 @@ router.post('/upload', auth, chatMediaUpload.single('file'), async (req, res) =>
 
   try {
     const type = resolveChatUploadType(req.file, req.body?.type);
-    const result = await uploadChatMediaToCloudinary(req.file, type);
+    const result = await mediaStorage.upload(req.file, {
+      folder: 'chat',
+      type,
+      area: `chat_${type}`,
+    });
     logUploadAudit({ area: `chat_${type}`, file: req.file, result });
     const messageKey = type === 'image'
       ? 'imageUrl'

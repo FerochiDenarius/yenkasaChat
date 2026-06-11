@@ -3,18 +3,10 @@ const ChatRoom = require("../models/chatroom.model"); // Note lowercase "r" if y
 const Message = require("../models/message.model");
 const User = require("../models/user.model");
 
-// ✅ Cloudinary & file handling
+// ✅ File handling
 const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const streamifier = require("streamifier");
+const mediaStorage = require("../services/mediaStorage.service");
 const { sendPushNotification } = require("../utils/onesignal");
-
-// ✅ Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 // ✅ Multer config (buffered memory storage)
 const storage = multer.memoryStorage();
@@ -38,17 +30,11 @@ const sendMessage = async (req, res) => {
 
     // ✅ Upload media if file is attached
     if (req.file) {
-      const streamUpload = () => {
-        return new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream((error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          });
-          streamifier.createReadStream(req.file.buffer).pipe(stream);
-        });
-      };
-
-      const result = await streamUpload();
+      const result = await mediaStorage.upload(req.file, {
+        folder: "chat",
+        type: messageType || "file",
+        area: "legacy_chat_media",
+      });
       mediaUrl = result.secure_url;
     }
 

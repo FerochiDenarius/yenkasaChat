@@ -1,7 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const multer = require('multer');
-const { Readable } = require('stream');
 
 const router = express.Router();
 const auth = require('../middleware/auth');
@@ -11,8 +10,8 @@ const Message = require('../models/message.model');
 const UnreadMessageCount = require('../models/unreadMessageCount.model');
 const User = require('../models/user.model');
 const { sendNotification } = require('../services/notification.service');
-const { cloudinary } = require('../config/cloudinary');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const mediaStorage = require('../services/mediaStorage.service');
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 const uniqueIds = (ids = []) => Array.from(new Set(ids.filter(Boolean).map(id => id.toString())));
@@ -52,33 +51,6 @@ const groupImageUpload = multer({
     cb(allowed ? null : new Error('Only image uploads are supported'), allowed);
   }
 });
-
-function uploadGroupImageToCloudinary(file) {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: process.env.CLOUDINARY_GROUP_IMAGE_FOLDER || 'yenkasa/chat/groups',
-        resource_type: 'image',
-        use_filename: true,
-        unique_filename: true,
-        quality: 'auto:good',
-        fetch_format: 'auto',
-        transformation: [
-          { width: 512, height: 512, crop: 'fill', gravity: 'auto' }
-        ]
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(result);
-      }
-    );
-
-    Readable.from(file.buffer).pipe(uploadStream);
-  });
-}
 
 async function assertGroupAccess(groupId, userId) {
   if (!isValidObjectId(groupId)) {
@@ -225,7 +197,16 @@ router.post('/upload-image', auth, handleGroupImageUpload, async (req, res) => {
   }
 
   try {
-    const result = await uploadGroupImageToCloudinary(req.file);
+    const result = await mediaStorage.upload(req.file, {
+      folder: 'communities',
+      type: 'image',
+      area: 'group_image',
+      cloudinary: {
+        transformation: [
+          { width: 512, height: 512, crop: 'fill', gravity: 'auto' }
+        ]
+      }
+    });
     logUploadAudit({ area: 'group_image', file: req.file, result });
     res.json({
       success: true,

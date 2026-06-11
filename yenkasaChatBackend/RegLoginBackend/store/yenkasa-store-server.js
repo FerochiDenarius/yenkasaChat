@@ -6,13 +6,11 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 const StoreProfile = require('../models/storeProfile.model');
-const cloudinaryConfig = require('../config/cloudinary');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const mediaStorage = require('../services/mediaStorage.service');
 
 const upload = multer();
 const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
-const PROJECT_ROOT = path.join(__dirname, '..');
-const LOCAL_STORE_UPLOAD_DIR = path.join(PROJECT_ROOT, 'uploads', 'store');
 const STORE_PROFILE_DEFAULTS = {
   key: 'default',
   storeName: 'Yenkasa Store',
@@ -129,41 +127,25 @@ async function assertSuperAdmin(req) {
   return user;
 }
 
-function hasCloudinaryConfig() {
-  return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  );
-}
-
 async function saveStoreLogo(file) {
   if (!file) {
     return '';
   }
 
-  if (hasCloudinaryConfig()) {
-    const dataUri = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-    const result = await cloudinaryConfig.cloudinary.uploader.upload(dataUri, {
-      folder: 'yenkasa/store',
-      resource_type: 'image',
+  const result = await mediaStorage.upload(file, {
+    folder: 'store',
+    type: 'image',
+    area: 'store_logo',
+    prefix: 'logo',
+    cloudinary: {
       overwrite: true,
       quality: 'auto:good',
       fetch_format: 'auto'
-    });
-    logUploadAudit({ area: 'store_logo', file, result });
+    }
+  });
+  logUploadAudit({ area: 'store_logo', file, result });
 
-    return result.secure_url;
-  }
-
-  await fs.promises.mkdir(LOCAL_STORE_UPLOAD_DIR, { recursive: true });
-
-  const extension = path.extname(file.originalname || '') || '.png';
-  const fileName = `logo-${Date.now()}${extension}`;
-  const filePath = path.join(LOCAL_STORE_UPLOAD_DIR, fileName);
-  await fs.promises.writeFile(filePath, file.buffer);
-
-  return `/uploads/store/${fileName}`;
+  return result.secure_url;
 }
 
 module.exports = function (app) {

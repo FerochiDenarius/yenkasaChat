@@ -187,7 +187,7 @@
         <h2>Add Media</h2>
         <label for="authToken">Admin bearer token</label>
         <input id="authToken" type="password" placeholder="Paste an active Yenkasa access token" />
-        <p class="hint">Cloudinary uploads use POST /api/portfolio/media and require the existing Yenkasa Authorization token.</p>
+        <p class="hint">Media uploads use POST /api/portfolio/media and require the existing Yenkasa Authorization token.</p>
 
         <label for="mediaProduct">Product</label>
         <select id="mediaProduct"></select>
@@ -203,13 +203,13 @@
 
         <label for="mediaPath">Path</label>
         <input id="mediaPath" placeholder="uploads/yenkasa-ai/screenshots/dashboard.png" />
-        <p class="hint">Cloudinary upload will fill this field with the secure_url. You can still paste a manual URL if needed.</p>
+        <p class="hint">Media upload will fill this field with the public URL. You can still paste a manual URL if needed.</p>
 
-        <label for="mediaFile">Upload file to Cloudinary</label>
+        <label for="mediaFile">Upload file to media storage</label>
         <input id="mediaFile" type="file" accept="image/*,video/*" />
 
         <div class="actions">
-          <button class="secondary" id="uploadCloudinary">Upload to Cloudinary</button>
+          <button class="secondary" id="uploadCloudinary">Upload to Media Storage</button>
           <button class="primary" id="addMedia">Add Media</button>
         </div>
         <p class="hint" id="uploadStatus"></p>
@@ -379,7 +379,7 @@
       body.append("type", type);
       body.append("title", title);
 
-      status.textContent = "Uploading to Cloudinary...";
+      status.textContent = "Uploading to media storage...";
       try {
         const response = await fetch("/api/portfolio/media", {
           method: "POST",
@@ -388,7 +388,7 @@
         });
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.error || "Cloudinary upload failed.");
+          throw new Error(result.error || "Media upload failed.");
         }
         document.getElementById("mediaPath").value = result.url;
         document.getElementById("mediaTitle").value = result.title || title;

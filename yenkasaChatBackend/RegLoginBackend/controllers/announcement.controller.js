@@ -3,6 +3,7 @@ const cron = require('node-cron');
 const Announcement = require('../models/announcement.model');
 const User = require('../models/user.model');
 const { cloudinary } = require('../config/cloudinary');
+const mediaStorage = require('../services/mediaStorage.service');
 const { getPermissions } = require('../middleware/permissions');
 const { sendNotification } = require('../services/notification.service');
 
@@ -183,7 +184,7 @@ function serializeAnnouncement(announcement) {
   };
 }
 
-async function uploadBufferToCloudinary(file, index) {
+async function uploadAnnouncementMedia(file, index) {
   const mimeType = normalizeString(file?.mimetype);
   const originalName = normalizeString(file?.originalname, `attachment-${index + 1}`);
   const mediaType = mimeType.startsWith('image/')
@@ -194,33 +195,18 @@ async function uploadBufferToCloudinary(file, index) {
         ? 'audio'
         : 'file';
 
-  const resourceType = mediaType === 'video'
-    ? 'video'
-    : mediaType === 'audio'
-      ? 'video'
-      : mediaType === 'file'
-        ? 'raw'
-        : 'image';
-
-  const folder = `yenkasa/announcements/${mediaType}`;
-
-  const uploadResult = await new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: resourceType,
-        public_id: `${Date.now()}-${index}-${originalName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        return resolve(result);
-      }
-    );
-    stream.end(file.buffer);
+  const uploadResult = await mediaStorage.upload(file, {
+    folder: mediaType === 'video' ? 'videos' : 'posts',
+    type: mediaType,
+    area: `announcement_${mediaType}`,
+    prefix: `announcement-${index}`,
+    cloudinary: {
+      public_id: `${Date.now()}-${index}-${originalName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    }
   });
 
   let thumbnail = '';
-  if (mediaType === 'video' && uploadResult?.public_id) {
+  if (mediaType === 'video' && uploadResult?.provider === 'cloudinary' && uploadResult?.public_id) {
     thumbnail = cloudinary.url(uploadResult.public_id, {
       resource_type: 'video',
       format: 'jpg',
@@ -244,7 +230,7 @@ async function buildMediaPayload(files) {
   const list = Array.isArray(files) ? files.slice(0, MAX_MEDIA_FILES) : [];
   const uploads = [];
   for (let index = 0; index < list.length; index += 1) {
-    uploads.push(await uploadBufferToCloudinary(list[index], index));
+    uploads.push(await uploadAnnouncementMedia(list[index], index));
   }
   return uploads.filter(item => item.url);
 }

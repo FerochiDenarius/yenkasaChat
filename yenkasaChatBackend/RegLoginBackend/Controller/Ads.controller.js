@@ -6,6 +6,7 @@ const RewardTx = require('../models/Rewards.Transaction.model');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const mediaStorage = require('../services/mediaStorage.service');
 const { SYSTEM_USER_ID } = require('../config/system');
 const { sendNotification } = require('../services/notification.service');
 const rewardService = require('../services/reward.service');
@@ -32,10 +33,6 @@ function canCreateAds(user) {
 
 function resolvePublicBaseUrl(req) {
   return (process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-}
-
-function toUploadUrl(req, filename) {
-  return `${resolvePublicBaseUrl(req)}/uploads/${filename}`;
 }
 
 function getLocalUploadInfo(value) {
@@ -397,15 +394,33 @@ const adData = {
     const thumbnailFile = req.files?.thumbnail?.[0] || req.files?.customThumbnail?.[0];
 
 if (imageFile) {
-  adData.imageUrl = toUploadUrl(req, imageFile.filename);
+  const result = await mediaStorage.upload(imageFile, {
+    folder: 'posts',
+    type: 'image',
+    area: 'ad_image',
+    prefix: 'ad-image',
+  });
+  adData.imageUrl = result.secure_url;
 }
 
 if (videoFile) {
-  adData.videoUrl = toUploadUrl(req, videoFile.filename);
+  const result = await mediaStorage.upload(videoFile, {
+    folder: 'videos',
+    type: 'video',
+    area: 'ad_video',
+    prefix: 'ad-video',
+  });
+  adData.videoUrl = result.secure_url;
 }
 
 if (thumbnailFile) {
-  adData.thumbnailUrl = toUploadUrl(req, thumbnailFile.filename);
+  const result = await mediaStorage.upload(thumbnailFile, {
+    folder: 'posts',
+    type: 'image',
+    area: 'ad_thumbnail',
+    prefix: 'ad-thumbnail',
+  });
+  adData.thumbnailUrl = result.secure_url;
   adData.meta.thumbnail = adData.thumbnailUrl;
 }
 

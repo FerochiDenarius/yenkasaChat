@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { v2: cloudinary } = require('cloudinary');
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const Community = require('../models/community.model');
@@ -12,6 +11,7 @@ const authMiddleware = require('../middleware/auth');
 const Permission = require('../models/permissions.model');
 const ModerationItem = require("../models/ModerationItem.model");
 const { logUploadAudit } = require("../utils/cloudinaryMedia");
+const mediaStorage = require('../services/mediaStorage.service');
 const { queueCommunityPostNotifications } = require("../services/communityPostNotification.service");
 const { auditSecurityEvent } = require("../utils/securityAudit");
 const { emitApprovedPostCreated } = require('../services/postEventPublisher.service');
@@ -331,7 +331,6 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     let audioUrl = '';
     let detectedPostType = postType || 'text';
 
-    const folder = "yenkasachat/posts";
     const imageFiles = req.files?.imageUrl || [];
     const legacyMediaFile = req.files?.media?.[0];
     const videoFile = req.files?.videoUrl?.[0] ||
@@ -345,11 +344,10 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
 
     if (uploadImageFiles.length > 0) {
       const uploadResults = await Promise.all(uploadImageFiles.map((file) =>
-        cloudinary.uploader.upload(file.path, {
-          folder,
-          resource_type: "image",
-          quality: "auto:good",
-          fetch_format: "auto"
+        mediaStorage.upload(file, {
+          folder: "posts",
+          type: "image",
+          area: "post_image",
         })
       ));
       uploadResults.forEach((result, index) => logUploadAudit({
@@ -364,11 +362,10 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     } else if (videoFile || audioFile) {
       const file = videoFile || audioFile;
       const isVideo = !!videoFile;
-      const uploadRes = await cloudinary.uploader.upload(file.path, {
-        folder,
-        resource_type: isVideo ? "video" : "video",
-        quality: "auto:good",
-        fetch_format: "auto"
+      const uploadRes = await mediaStorage.upload(file, {
+        folder: isVideo ? "videos" : "posts",
+        type: isVideo ? "video" : "audio",
+        area: isVideo ? "post_video" : "post_audio",
       });
       logUploadAudit({ area: isVideo ? "post_video" : "post_audio", file, result: uploadRes });
 

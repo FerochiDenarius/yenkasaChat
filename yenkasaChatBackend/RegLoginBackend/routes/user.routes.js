@@ -9,17 +9,14 @@ const mongoose = require("mongoose");
 // ⬇️ CORRECT upload imports (from utils/upload.js)
 const { profileImageUpload, uploadFiles } = require('../utils/upload');
 
-// ⬇️ Cloudinary import (required!)
-const cloudinaryConfig = require('../config/cloudinary');
-const cloudinary = cloudinaryConfig.cloudinary;
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const mediaStorage = require('../services/mediaStorage.service');
 const {
     auditSecurityEvent,
     createMemoryRateLimiter,
     normalizeRoleKey: normalizeSecurityRoleKey,
     requireRoles
 } = require('../utils/securityAudit');
-console.log("CLOUDINARY LOADED?", !!cloudinary);
 
 // --- Logger ---
 const logger = {
@@ -171,18 +168,22 @@ router.post('/profile-picture', authMiddleware, profileImageUpload, async (req, 
     const userId = req.user?.id || req.user?._id;
 
     try {
-        if (!req.file || !req.file.path) {
+        if (!req.file || (!req.file.path && !req.file.buffer)) {
             return res.status(400).json({ error: "No image uploaded" });
         }
 
-        const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: "yenkasa/profile",
-            width: 400,
-            height: 400,
-            crop: "fill",
-            gravity: "face",
-            quality: "auto:good",
-            fetch_format: "auto"
+        const result = await mediaStorage.upload(req.file, {
+            folder: "profiles",
+            type: "image",
+            area: "profile_image",
+            cloudinary: {
+                width: 400,
+                height: 400,
+                crop: "fill",
+                gravity: "face",
+                quality: "auto:good",
+                fetch_format: "auto"
+            }
         });
         logUploadAudit({ area: "profile_image", file: req.file, result });
 

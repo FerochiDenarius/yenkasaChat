@@ -1,10 +1,9 @@
 const express = require('express');
 const multer = require('multer');
-const { Readable } = require('stream');
 
 const auth = require('../middleware/auth');
-const { cloudinary } = require('../config/cloudinary');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
+const mediaStorage = require('../services/mediaStorage.service');
 
 const router = express.Router();
 
@@ -57,33 +56,10 @@ function resolveUploadTarget(req, file) {
   return {
     product,
     type,
-    folder: `${process.env.CLOUDINARY_PORTFOLIO_FOLDER || 'yenkasa/portfolio'}/${product}/${type}`,
+    folder: type === 'videos' ? 'videos' : 'posts',
+    prefix: `portfolio-${product}-${type}`,
     resourceType: type === 'videos' ? 'video' : 'image',
   };
-}
-
-function uploadPortfolioMedia(file, target) {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: target.folder,
-        resource_type: target.resourceType,
-        use_filename: true,
-        unique_filename: true,
-        quality: 'auto:good',
-        fetch_format: 'auto',
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(result);
-      },
-    );
-
-    Readable.from(file.buffer).pipe(uploadStream);
-  });
 }
 
 router.post('/media', auth, upload.single('file'), async (req, res) => {
@@ -93,7 +69,12 @@ router.post('/media', auth, upload.single('file'), async (req, res) => {
 
   try {
     const target = resolveUploadTarget(req, req.file);
-    const result = await uploadPortfolioMedia(req.file, target);
+    const result = await mediaStorage.upload(req.file, {
+      folder: target.folder,
+      type: target.resourceType,
+      prefix: target.prefix,
+      area: `portfolio_${target.product}_${target.type}`,
+    });
     logUploadAudit({ area: `portfolio_${target.product}_${target.type}`, file: req.file, result });
 
     res.json({
@@ -110,7 +91,7 @@ router.post('/media', auth, upload.single('file'), async (req, res) => {
     });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    console.error('[PortfolioMedia] Cloudinary upload failed:', err.message);
+    console.error('[PortfolioMedia] media upload failed:', err.message);
     res.status(statusCode).json({ error: statusCode === 500 ? 'Failed to upload portfolio media.' : err.message });
   }
 });

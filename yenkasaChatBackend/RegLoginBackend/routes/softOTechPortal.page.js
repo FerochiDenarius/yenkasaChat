@@ -127,7 +127,7 @@ function shell({ title, body }) {
 
 function publicBrand() {
   return `<aside class="public-brand">
-    <a class="brand-row" href="/web"><img src="/web/images/yenkasa-soft-o-tech-emblem.png" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
+    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
     <div class="public-copy">
       <h1>Build, manage, and track your project.</h1>
       <p>Client intake, requests, quotations, invoices, documents, and project communication in one professional workspace.</p>
@@ -172,7 +172,7 @@ function sidebar(active = 'dashboard', mode = 'client') {
   ];
   const items = mode === 'admin' ? adminItems : clientItems;
   return `<aside class="sidebar">
-    <a class="brand-row" href="/web"><img src="/web/images/yenkasa-soft-o-tech-emblem.png" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
+    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
     <nav class="side-nav">${items.map(([key, icon, label]) => `<button class="nav-item ${key === active ? 'active' : ''}" data-panel="${key}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}</nav>
     <div style="margin-top:28px;"><button class="nav-item" id="logoutBtn"><span class="nav-icon">EX</span>Logout</button></div>
   </aside>`;

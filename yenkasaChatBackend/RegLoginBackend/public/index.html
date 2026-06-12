@@ -166,6 +166,20 @@
       color: var(--green-dark);
     }
 
+    .navlinks .nav-cta {
+      min-height: 38px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
+    }
+
+    .navlinks .nav-cta:hover {
+      color: #fff;
+      background: #1d4ed8;
+    }
+
     .hero {
       position: relative;
       min-height: 92vh;
@@ -292,6 +306,13 @@
       background: rgba(255, 255, 255, 0.08);
     }
 
+    .btn-software {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      box-shadow: 0 18px 42px rgba(37, 99, 235, 0.26);
+    }
+
     .hero-panel {
       background: rgba(255, 255, 255, 0.12);
       border: 1px solid rgba(255, 255, 255, 0.24);
@@ -399,6 +420,57 @@
     .card h3 {
       font-size: 1.2rem;
       margin-bottom: 10px;
+    }
+
+    .software-band {
+      background:
+        linear-gradient(135deg, rgba(7, 27, 51, 0.96), rgba(13, 95, 59, 0.9)),
+        url("images/background.jpeg") center/cover no-repeat;
+      color: #fff;
+    }
+
+    .software-band .section-kicker,
+    .software-band .muted {
+      color: #d8e9ff;
+    }
+
+    .software-band h2 {
+      color: #fff;
+    }
+
+    .solution-card {
+      color: var(--ink);
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .solution-card p {
+      color: var(--muted);
+    }
+
+    .solution-card .btn {
+      margin-top: auto;
+      width: fit-content;
+    }
+
+    .contact-strip {
+      margin-top: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .contact-strip p {
+      color: #e9f4ff;
+      max-width: 720px;
     }
 
     .badge-row, .stack-row {
@@ -839,6 +911,7 @@
         <a href="#ai">YenkasaAI</a>
         <a href="#gallery">Gallery</a>
         <a href="#validation">Validation</a>
+        <a class="nav-cta" href="#software-solutions">Request Software Solution</a>
       </nav>
     </div>
   </header>
@@ -858,6 +931,7 @@
             <li>Yenkasa Soft-O-Tech</li>
           </ul>
           <div class="hero-actions">
+            <a class="btn btn-software" href="#software-solutions">Request a Software Solution</a>
             <a class="btn btn-primary" href="#ecosystem">Explore Ecosystem</a>
             <a class="btn btn-light" href="#gallery">View Product Gallery</a>
             <a class="btn btn-outline" href="#app">Download Yenkasa App</a>
@@ -904,6 +978,63 @@
         <div class="card dark" style="margin-top:18px">
           <h3>Vision</h3>
           <p>To become a leading African technology company providing social networking, commerce, operational intelligence, and AI-powered business solutions.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="software-solutions" class="software-band">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Software Solutions</p>
+            <h2>Need software built for your business?</h2>
+          </div>
+          <p class="muted">Yenkasa Soft-O-Tech builds professional websites, mobile apps, AI tools, business dashboards, e-commerce systems, cloud deployments and custom software for clients.</p>
+        </div>
+
+        <div class="grid grid-3">
+          <article class="card solution-card">
+            <h3>Request a Project</h3>
+            <p>Tell us what you want built, your budget range, timeline, requirements, and upload any documents or brand assets.</p>
+            <a class="btn btn-software" href="/request-project">Submit Software Request</a>
+          </article>
+          <article class="card solution-card">
+            <h3>Client Portal</h3>
+            <p>After approval, clients can track project status, requirements, files, invoices, payments, milestones, and messages.</p>
+            <a class="btn btn-primary" href="/client/register">Register as Client</a>
+          </article>
+          <article class="card solution-card">
+            <h3>Explore Services</h3>
+            <p>View website development, mobile apps, AI solutions, API development, cloud infrastructure, UI/UX design, and consulting.</p>
+            <a class="btn btn-dark" href="/services">View Services</a>
+          </article>
+          <article class="card solution-card">
+            <h3>Project Management Dashboard</h3>
+            <p>Soft-O-Tech team members can manage clients, requests, projects, proposals, invoices, files, milestones, payments and delivery status.</p>
+            <a class="btn btn-dark" href="/admin">Open Admin Portal</a>
+          </article>
+          <article class="card solution-card">
+            <h3>Client Dashboard</h3>
+            <p>Approved clients can log in to see project progress, requirements, documents, messages, invoices, payments and updates.</p>
+            <a class="btn btn-primary" href="/client/login">Client Login</a>
+          </article>
+          <article class="card solution-card">
+            <h3>Talk Before You Request</h3>
+            <p>Not sure what you need yet? Contact the founder directly and describe the software, website, app, AI or cloud problem.</p>
+            <a class="btn btn-software" href="mailto:info@yenkasa.xyz?subject=Software%20Solution%20Consultation">Contact Soft-O-Tech</a>
+          </article>
+        </div>
+
+        <div class="contact-strip">
+          <div>
+            <h3>Talk to Bright Kofi Ofosu Menya</h3>
+            <p>For websites, mobile apps, AI systems, dashboards, business software, cloud hosting, or technical consulting, send a request and the Soft-O-Tech team will follow up.</p>
+          </div>
+          <div class="section-actions">
+            <a class="btn btn-light" href="mailto:info@yenkasa.xyz?subject=Software%20Solution%20Request">Email About Software</a>
+            <a class="btn btn-outline" href="/software-solutions">Open Software Portal</a>
+            <a class="btn btn-outline" href="/client/login">Client Login</a>
+          </div>
         </div>
       </div>
     </section>

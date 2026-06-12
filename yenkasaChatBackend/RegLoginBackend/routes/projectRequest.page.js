@@ -169,9 +169,9 @@ function pageShell({ title, body, extraHead = '' }) {
 <body>
   <header class="topbar">
     <nav class="nav">
-      <a class="brand" href="/web"><img class="mark" src="/web/images/yenkasa-soft-o-tech-emblem.png" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
+      <a class="brand" href="/"><img class="mark" src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
       <div class="nav-actions">
-        <a class="btn ghost" href="/web">Home</a>
+        <a class="btn ghost" href="/">Portfolio</a>
         <a class="btn ghost" href="/software-solutions">Software Solutions</a>
         <a class="btn ghost" href="/services">Services</a>
         <a class="btn ghost" href="/client/login">Client Login</a>
@@ -278,7 +278,7 @@ router.get('/website-request/success', (req, res) => {
       <h1 style="font-size:clamp(2rem,5vw,3.4rem);">Request submitted</h1>
       <p class="lead">Your project request and client contact profile have been received. Keep this Request ID for follow-up.</p>
       <div class="summary" style="margin:22px 0;"><strong>${requestId || 'Request received'}</strong><span>Yenkasa Soft-O-Tech will review the details and contact you.</span></div>
-      <a class="btn" href="/web">Back to Home</a>
+      <a class="btn" href="/">Back to Portfolio</a>
     </section></main>`,
   }));
 });

@@ -147,7 +147,15 @@ Primary APIs:
   - Client login
   - Admin login
   - Services
-- Added a visible Software Solutions tab to the main portfolio page at `public/yenkasa_web/index.html`.
+- Added the Software Solutions request experience directly to the portfolio root page at `public/index.html`.
+- Removed Soft-O-Tech business CTAs from the Yenkasa app web shell at `public/yenkasa_web/index.html`; `/web` remains reserved for the Yenkasa app web version.
+- Added a portfolio-root Software Solutions section with:
+  - Submit Software Request
+  - Client Registration
+  - Client Login
+  - Admin Portal
+  - Services
+  - Contact Soft-O-Tech
 - Added professional client dashboard sections following the supplied reference:
   - Dashboard
   - Project Details

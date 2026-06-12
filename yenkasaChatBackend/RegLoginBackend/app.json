@@ -80,6 +80,12 @@
     "REDIS_URL": {
       "required": true
     },
+    "YENKASA_SOCKET_REDIS_ENABLED": {
+      "value": "true"
+    },
+    "YENKASA_PRESENCE_REDIS_ENABLED": {
+      "value": "true"
+    },
     "YENKASA_ENABLE_INLINE_MODERATION_WORKERS": {
       "value": "false"
     },

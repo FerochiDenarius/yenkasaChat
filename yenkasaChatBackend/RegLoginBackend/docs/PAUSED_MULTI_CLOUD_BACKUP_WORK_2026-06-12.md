@@ -4,6 +4,20 @@ Date: 2026-06-12
 
 Paused because the Website Project Request System task was prioritized.
 
+## Resumed Update
+
+Resumed after the Soft-O-Tech portal work.
+
+Completed after resume:
+
+- Added official Socket.IO Redis adapter support.
+- Added optional Redis-backed online presence sets.
+- Updated Cloud Run backup deployment script to enable Redis realtime flags.
+- Updated Heroku `app.json` to enable Redis realtime flags.
+- Updated backup deployment runbook with Redis adapter and presence configuration.
+- Installed `@socket.io/redis-adapter`.
+- Verified syntax and `npm test`.
+
 ## Completed Before Pause
 
 - Added backup deployment artifacts:
@@ -25,10 +39,9 @@ Paused because the Website Project Request System task was prioritized.
 
 - Cloud Run backup server has not been deployed.
 - Heroku backup app has not been created.
-- Redis Socket.IO adapter has not been implemented.
 - Cloudflare failover has not been configured.
 - Local upload cleanup is still pending.
 
 ## Next Step When Resumed
 
-Deploy and verify Cloud Run backup service, then continue Redis realtime hardening before enabling automatic failover.
+Deploy and verify Cloud Run backup service, then configure shared Redis across DigitalOcean, Cloud Run, and Heroku before enabling failover testing.

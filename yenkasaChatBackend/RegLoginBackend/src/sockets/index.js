@@ -53,8 +53,8 @@ function registerSocketHandlers(io) {
       }
     });
 
-    socket.on('requestOnlineUsers', () => {
-      socket.emit('getOnlineUsers', onlineService.getOnlineUserIds());
+    socket.on('requestOnlineUsers', async () => {
+      socket.emit('getOnlineUsers', await onlineService.getOnlineUserIdsAsync());
     });
 
     socket.on('joinChatRoom', async (payload) => {

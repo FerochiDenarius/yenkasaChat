@@ -95,6 +95,21 @@ router.get('/client/dashboard', portalAuth, async (req, res) => {
   }
 });
 
+router.post('/assistant', portalAuth, async (req, res) => {
+  try {
+    const result = await portal.projectAiAssistant({
+      ...req.body,
+      clientEmail: req.portalUser.is_admin ? req.body?.clientEmail : req.portalUser.email,
+    }, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, result });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 router.post('/client/messages', portalAuth, async (req, res) => {
   try {
     const message = await portal.createMessage({
@@ -143,8 +158,47 @@ router.get('/admin/dashboard', portalAuth, adminOnly, async (req, res) => {
 
 router.post('/admin/projects', portalAuth, adminOnly, async (req, res) => {
   try {
-    const project = await portal.createProject(req.body || {});
+    const project = await portal.createProject({
+      ...(req.body || {}),
+      actorEmail: req.portalUser.email,
+    });
     res.status(201).json({ success: true, project });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/projects/approve-request', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const project = await portal.approveProjectRequest(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, project });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch('/admin/projects/:projectId/milestones', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const project = await portal.updateProjectMilestones(req.params.projectId, req.body?.milestones || [], {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, project });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/proposals/generate', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const proposal = await portal.generateProposal(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, proposal });
   } catch (error) {
     sendError(res, error);
   }
@@ -152,7 +206,10 @@ router.post('/admin/projects', portalAuth, adminOnly, async (req, res) => {
 
 router.post('/admin/quotations', portalAuth, adminOnly, async (req, res) => {
   try {
-    const quotation = await portal.createQuotation(req.body || {});
+    const quotation = await portal.createQuotation({
+      ...(req.body || {}),
+      actorEmail: req.portalUser.email,
+    });
     res.status(201).json({ success: true, quotation });
   } catch (error) {
     sendError(res, error);
@@ -161,8 +218,23 @@ router.post('/admin/quotations', portalAuth, adminOnly, async (req, res) => {
 
 router.post('/admin/invoices', portalAuth, adminOnly, async (req, res) => {
   try {
-    const invoice = await portal.createInvoice(req.body || {});
+    const invoice = await portal.createInvoice({
+      ...(req.body || {}),
+      actorEmail: req.portalUser.email,
+    });
     res.status(201).json({ success: true, invoice });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/payments', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const payment = await portal.recordPayment(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, payment });
   } catch (error) {
     sendError(res, error);
   }
@@ -189,6 +261,18 @@ router.post('/admin/documents', portalAuth, adminOnly, upload.single('document')
       uploadedBy: 'admin',
     });
     res.status(201).json({ success: true, document });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/portfolio-projects', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const project = await portal.upsertPortfolioProject(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, project });
   } catch (error) {
     sendError(res, error);
   }

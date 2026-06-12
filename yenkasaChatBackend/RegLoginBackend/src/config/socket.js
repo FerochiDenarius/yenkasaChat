@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const registerSocketHandlers = require('../sockets');
 const livestreamService = require('../services/livestream/livestream.service');
+const { configureSocketRedisAdapter } = require('./socketRedisAdapter');
 
 function initSocket(server) {
   const io = new Server(server, {
@@ -11,6 +12,10 @@ function initSocket(server) {
     pingInterval: 25000,
     pingTimeout: 60000,
     transports: ['websocket', 'polling'],
+  });
+
+  configureSocketRedisAdapter(io).catch((error) => {
+    console.error('[Socket.IO] Redis adapter setup failed; continuing with in-memory adapter:', error.message);
   });
 
   global.io = io;

@@ -21,10 +21,10 @@
     <link rel="stylesheet" crossorigin href="/web/assets/index-WyPhIgz9.css">
     <style>
       .softotech-request-cta,
-      .softotech-portal-cta {
+      .softotech-portal-cta,
+      .softotech-solutions-tab {
         position: fixed;
         right: 18px;
-        bottom: 18px;
         z-index: 2147483000;
         display: inline-flex;
         align-items: center;
@@ -38,29 +38,40 @@
         text-decoration: none;
         box-shadow: 0 14px 32px rgba(19, 32, 26, 0.22);
       }
+      .softotech-request-cta { bottom: 18px; }
       .softotech-portal-cta {
         bottom: 74px;
         background: #10271b;
       }
+      .softotech-solutions-tab {
+        top: 18px;
+        bottom: auto;
+        background: #0b63ff;
+        box-shadow: 0 14px 32px rgba(11, 99, 255, 0.22);
+      }
       .softotech-request-cta:focus,
-      .softotech-portal-cta:focus {
+      .softotech-portal-cta:focus,
+      .softotech-solutions-tab:focus {
         outline: 3px solid rgba(27, 127, 77, 0.28);
         outline-offset: 3px;
       }
       @media (max-width: 640px) {
         .softotech-request-cta,
-        .softotech-portal-cta {
+        .softotech-portal-cta,
+        .softotech-solutions-tab {
           left: 14px;
           right: 14px;
           bottom: 14px;
         }
         .softotech-portal-cta { bottom: 72px; }
+        .softotech-solutions-tab { top: 14px; bottom: auto; }
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    <a class="softotech-portal-cta" href="/client/login">Client Portal</a>
-    <a class="softotech-request-cta" href="/website-request">Request a Website or App</a>
+    <a class="softotech-solutions-tab" href="/software-solutions">Software Solutions</a>
+    <a class="softotech-portal-cta" href="/services">Services</a>
+    <a class="softotech-request-cta" href="/request-project">Request a Project</a>
   </body>
   </html>

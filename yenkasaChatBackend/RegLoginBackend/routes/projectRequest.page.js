@@ -31,6 +31,78 @@ const PAGES = ['Home', 'About Us', 'Services', 'Products', 'Gallery', 'Blog', 'C
 const PLATFORMS = ['Website', 'Android App', 'iOS App', 'Web Dashboard', 'Admin Portal', 'Backend API', 'Desktop App', 'Not Sure'];
 const FEATURES = ['Contact Form', 'Online Payments', 'User Registration/Login', 'Booking System', 'Live Chat', 'E-commerce Store', 'Admin Dashboard', 'File Uploads', 'Newsletter', 'Push Notifications', 'In-app Chat', 'API Integration', 'AI Assistant', 'Reports/Analytics', 'Custom Feature'];
 const STATUSES = ['New', 'In Review', 'Proposal Sent', 'Approved', 'In Progress', 'Rejected', 'Completed'];
+const SERVICES = [
+  {
+    title: 'Website Development',
+    description: 'Professional business websites, landing pages, company profiles, blogs, and conversion-focused web presence.',
+    features: ['Responsive pages', 'SEO-ready structure', 'Contact and lead forms', 'Analytics setup'],
+    price: 'From GHS 2,000',
+    duration: '1-3 weeks',
+  },
+  {
+    title: 'Mobile App Development',
+    description: 'Android, iOS, and cross-platform mobile apps for communities, commerce, bookings, communication, and internal operations.',
+    features: ['Flutter apps', 'Authentication', 'Push notifications', 'API integration'],
+    price: 'From GHS 8,000',
+    duration: '4-10 weeks',
+  },
+  {
+    title: 'Web Applications',
+    description: 'Custom dashboards, portals, operational systems, SaaS tools, and workflow platforms.',
+    features: ['Admin dashboards', 'Role-based access', 'Database workflows', 'Reporting'],
+    price: 'From GHS 6,000',
+    duration: '3-8 weeks',
+  },
+  {
+    title: 'E-Commerce Systems',
+    description: 'Online stores, product catalogs, payment flows, inventory management, and seller tools.',
+    features: ['Product management', 'Payments', 'Order tracking', 'Customer accounts'],
+    price: 'From GHS 5,000',
+    duration: '3-6 weeks',
+  },
+  {
+    title: 'Custom Software Solutions',
+    description: 'Business-specific software for automation, internal teams, reporting, operations, and growth.',
+    features: ['Workflow design', 'Custom database', 'Team permissions', 'Business reports'],
+    price: 'From GHS 7,500',
+    duration: '4-12 weeks',
+  },
+  {
+    title: 'AI Solutions',
+    description: 'AI assistants, retrieval systems, analytics intelligence, automation, and operational copilots.',
+    features: ['AI chat flows', 'Data retrieval', 'Insight generation', 'Automation'],
+    price: 'From GHS 10,000',
+    duration: '4-12 weeks',
+  },
+  {
+    title: 'UI/UX Design',
+    description: 'Modern interface design for mobile apps, websites, portals, and internal platforms.',
+    features: ['Wireframes', 'High-fidelity screens', 'Design systems', 'Prototype flows'],
+    price: 'From GHS 2,500',
+    duration: '1-4 weeks',
+  },
+  {
+    title: 'API Development',
+    description: 'Secure backend APIs, integrations, webhooks, authentication, and scalable service architecture.',
+    features: ['REST APIs', 'Auth and roles', 'Webhook handling', 'Documentation'],
+    price: 'From GHS 4,000',
+    duration: '2-6 weeks',
+  },
+  {
+    title: 'Cloud Deployment',
+    description: 'Production deployment, backups, storage migration, server hardening, and failover readiness.',
+    features: ['Cloud Run', 'Heroku', 'GCS storage', 'Monitoring'],
+    price: 'From GHS 3,500',
+    duration: '1-3 weeks',
+  },
+  {
+    title: 'Technical Consulting',
+    description: 'Architecture review, debugging, product planning, infrastructure decisions, and delivery strategy.',
+    features: ['Architecture audit', 'Roadmap planning', 'Risk review', 'Implementation plan'],
+    price: 'From GHS 800',
+    duration: '1-5 days',
+  },
+];
 
 function options(values) {
   return values.map((value) => `<option>${value}</option>`).join('');
@@ -100,9 +172,11 @@ function pageShell({ title, body, extraHead = '' }) {
       <a class="brand" href="/web"><img class="mark" src="/web/images/yenkasa-soft-o-tech-emblem.png" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
       <div class="nav-actions">
         <a class="btn ghost" href="/web">Home</a>
+        <a class="btn ghost" href="/software-solutions">Software Solutions</a>
+        <a class="btn ghost" href="/services">Services</a>
         <a class="btn ghost" href="/client/login">Client Login</a>
         <a class="btn secondary" href="/admin">Admin</a>
-        <a class="btn" href="/website-request">Request a Project</a>
+        <a class="btn" href="/request-project">Request a Project</a>
       </div>
     </nav>
   </header>
@@ -313,6 +387,81 @@ panels.requestsPanel.addEventListener('change', async (event) => {
   try { await updateStatus(event.target.dataset.id, event.target.value); } catch (error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; }
 });
 </script>`,
+  }));
+});
+
+router.get('/request-project', (req, res) => {
+  res.redirect(302, '/website-request');
+});
+
+router.get('/services', (req, res) => {
+  res.send(pageShell({
+    title: 'Services | Yenkasa Soft-O-Tech',
+    extraHead: `<style>
+      .services-hero { min-height:420px; display:grid; align-items:end; padding:70px 0 32px; }
+      .service-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+      .service-card { background:white; border:1px solid var(--line); border-radius:8px; padding:22px; box-shadow:0 10px 28px rgba(20,33,26,.05); display:grid; gap:14px; }
+      .service-card h2 { margin:0; font-size:1.2rem; }
+      .service-card p { margin:0; color:var(--muted); line-height:1.6; }
+      .feature-list { margin:0; padding-left:18px; color:#314238; line-height:1.7; }
+      .service-meta { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .meta-box { background:#f6faf7; border:1px solid var(--line); border-radius:8px; padding:12px; }
+      .meta-box span { display:block; color:var(--muted); font-size:.82rem; font-weight:700; margin-bottom:4px; }
+      .portfolio-strip, .trust-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+      .mini-card { background:white; border:1px solid var(--line); border-radius:8px; padding:20px; box-shadow:0 10px 28px rgba(20,33,26,.05); }
+      .mini-card h3 { margin:0 0 8px; }
+      .mini-card p { margin:0; color:var(--muted); line-height:1.55; }
+      .process { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+      .process .mini-card strong { display:grid; place-items:center; width:34px; height:34px; border-radius:8px; background:#e9f5ed; color:var(--brand2); margin-bottom:12px; }
+      @media (max-width: 980px) { .service-grid, .portfolio-strip, .trust-grid, .process { grid-template-columns:1fr 1fr; } }
+      @media (max-width: 640px) { .service-grid, .portfolio-strip, .trust-grid, .process { grid-template-columns:1fr; } .services-hero { min-height:auto; padding-top:34px; } }
+    </style>`,
+    body: `<main class="wrap">
+      <section class="services-hero">
+        <div>
+          <h1>Software services for serious businesses.</h1>
+          <p class="lead">Yenkasa Soft-O-Tech builds websites, mobile apps, AI tools, cloud systems, and custom software with professional delivery workflows and client project tracking.</p>
+          <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;"><a class="btn" href="/request-project">Request a Project</a><a class="btn ghost" href="/software-solutions">Software Solutions Portal</a><a class="btn ghost" href="/client/login">Client Portal</a></div>
+        </div>
+      </section>
+
+      <section class="service-grid">${SERVICES.map((service) => `<article class="service-card">
+        <h2>${service.title}</h2>
+        <p>${service.description}</p>
+        <ul class="feature-list">${service.features.map((feature) => `<li>${feature}</li>`).join('')}</ul>
+        <div class="service-meta"><div class="meta-box"><span>Starting From</span><strong>${service.price}</strong></div><div class="meta-box"><span>Estimated Duration</span><strong>${service.duration}</strong></div></div>
+        <a class="btn" href="/request-project?service=${encodeURIComponent(service.title)}">Request Service</a>
+      </article>`).join('')}</section>
+
+      <section class="section" style="margin-top:26px;"><h2>Featured Platforms</h2><div class="portfolio-strip">
+        <article class="mini-card"><h3>Yenkasa App</h3><p>Community, chat, livestream, rewards, moderation, and operational intelligence platform.</p></article>
+        <article class="mini-card"><h3>Yenkasa Store</h3><p>Commerce tooling for products, vendors, payments, and customer acquisition.</p></article>
+        <article class="mini-card"><h3>YenkasaAI</h3><p>Operational intelligence, repository awareness, incident analysis, and executive insights.</p></article>
+        <article class="mini-card"><h3>Client Projects</h3><p>Custom websites, portals, dashboards, cloud deployments, and business automation systems.</p></article>
+      </div></section>
+
+      <section class="section"><h2>Development Process</h2><div class="process">
+        <article class="mini-card"><strong>1</strong><h3>Discovery</h3><p>Requirements, business goals, technical risks, and success criteria.</p></article>
+        <article class="mini-card"><strong>2</strong><h3>Design</h3><p>Wireframes, screens, information architecture, and delivery plan.</p></article>
+        <article class="mini-card"><strong>3</strong><h3>Build</h3><p>Frontend, backend, database, integrations, and admin workflows.</p></article>
+        <article class="mini-card"><strong>4</strong><h3>Test</h3><p>QA, security review, deployment checks, and performance verification.</p></article>
+        <article class="mini-card"><strong>5</strong><h3>Launch</h3><p>Cloud deployment, handoff, training, support, and growth planning.</p></article>
+      </div></section>
+
+      <section class="section"><h2>Team</h2><div class="trust-grid">
+        <article class="mini-card"><h3>Bright Kofi Ofosu Menya</h3><p>Founder & CEO</p></article>
+        <article class="mini-card"><h3>Arhinful Hudson</h3><p>Frontend Developer</p></article>
+        <article class="mini-card"><h3>Elorm Wisdom</h3><p>Backend Engineer</p></article>
+        <article class="mini-card"><h3>Ruth Awini</h3><p>Financial Director & Head of Marketing</p></article>
+      </div></section>
+
+      <section class="section"><h2>FAQ</h2><div class="grid">
+        <article class="mini-card"><h3>How do we start?</h3><p>Submit a project request. The team reviews it and follows up with questions, timeline, and quotation.</p></article>
+        <article class="mini-card"><h3>Can I track progress?</h3><p>Yes. Approved clients get portal access for updates, files, messages, invoices, and project status.</p></article>
+        <article class="mini-card"><h3>Do you handle deployment?</h3><p>Yes. We support Cloud Run, Heroku, DigitalOcean, storage, backups, and failover planning.</p></article>
+        <article class="mini-card"><h3>Do you build AI systems?</h3><p>Yes. We build AI assistants, retrieval systems, operational intelligence, and automation tools.</p></article>
+      </div></section>
+    </main>`,
   }));
 });
 

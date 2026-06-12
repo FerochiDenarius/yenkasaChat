@@ -44,6 +44,8 @@ const API_ROUTE_MOUNTS = [
   ['/api/portfolio', 'routes/portfolioMedia.routes'],
   ['/api/user-privacy', 'routes/userPrivacy.routes'],
   ['/api/metrics', 'routes/metrics.routes'],
+  ['/api/project-requests', 'routes/projectRequest.routes'],
+  ['/api/project-portal', 'routes/softOTechPortal.routes'],
   ['/api/events', 'routes/events.routes'],
   ['/api/live', 'routes/live.routes'],
   ['/api/livestream', 'routes/livestream.routes'],
@@ -52,6 +54,8 @@ const API_ROUTE_MOUNTS = [
   ['/api', 'routes/accountDeletion.routes'],
   ['/api', 'routes/moderation.routes'],
   ['/', 'routes/moderation.page'],
+  ['/', 'routes/projectRequest.page'],
+  ['/', 'routes/softOTechPortal.page'],
 ];
 
 function safeMount(app, rootDir, routePath, modulePath) {

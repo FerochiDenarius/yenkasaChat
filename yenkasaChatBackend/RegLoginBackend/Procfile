@@ -1,0 +1,3 @@
+web: npm start
+worker_moderation: npm run worker:moderation
+worker_yme: npm run worker:yme

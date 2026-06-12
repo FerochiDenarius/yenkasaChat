@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user.model'); 
 const Community = require('../models/community.model');
 const ActivityLog = require('../models/activityLog.model');
+const { applyPrivilegedRole } = require('../services/adminBootstrap.service');
 const {
   buildCountryVerification,
   normalizeCountryLabel,
@@ -237,6 +238,7 @@ router.post('/register', async (req, res) => {
       ...(phoneNumber && { phoneNumber }),
     });
 
+    await applyPrivilegedRole(newUser);
     await newUser.save();
     await Community.updateMany(
       { _id: { $in: selectedCommunityIds }, members: { $ne: newUser._id } },
@@ -430,18 +432,22 @@ router.post('/login', async (req, res) => {
     await user.save();
 
     const effectiveRoleName = getEffectiveRoleName(user);
-    if (STAFF_ROLES.has(effectiveRoleName) && (user.roleName !== effectiveRoleName || user.accessRole !== effectiveRoleName.toUpperCase())) {
-      user.roleName = effectiveRoleName;
-      user.accessRole = effectiveRoleName.toUpperCase();
+    const privilegedRoleApplied = await applyPrivilegedRole(user);
+    const roleNameAfterPrivilegeCheck = getEffectiveRoleName(user);
+    if (privilegedRoleApplied || (STAFF_ROLES.has(roleNameAfterPrivilegeCheck) && (user.roleName !== roleNameAfterPrivilegeCheck || user.accessRole !== roleNameAfterPrivilegeCheck.toUpperCase()))) {
+      user.roleName = roleNameAfterPrivilegeCheck;
+      user.accessRole = roleNameAfterPrivilegeCheck.toUpperCase();
       await user.save();
     }
+
+    const finalRoleName = getEffectiveRoleName(user);
 
     publishLoginAttemptEvent(req, {
       userId: user._id.toString(),
       status: 'success',
       reason: '',
       identifierType: resolveIdentifierType(trimmedIdentifier),
-      roleName: effectiveRoleName,
+      roleName: finalRoleName,
       country: user.country || '',
       detectedCountry,
       countryMismatch,
@@ -473,8 +479,8 @@ router.post('/login', async (req, res) => {
     playerId: user.playerId || null,
     role: user.role || {},               // 👈 send full Permission object
     // optional: send string separately if needed
-    roleName: effectiveRoleName,
-    accessRole: user.accessRole || effectiveRoleName.toUpperCase(),
+    roleName: finalRoleName,
+    accessRole: user.accessRole || finalRoleName.toUpperCase(),
     staffRole: user.staffRole || null,
     publicRoles: user.publicRoles || [],
     country: user.country,

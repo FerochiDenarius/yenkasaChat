@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/user.model'); // ✅ Correct
+const { applyPrivilegedRole } = require('../services/adminBootstrap.service');
 const {
   buildCountryVerification,
   normalizeCountryLabel,
@@ -89,6 +90,7 @@ router.post('/register', async (req, res) => {
       ...(phone && { phone })
     });
 
+    await applyPrivilegedRole(user);
     await user.save();
 
     await recordCountrySecuritySignal({
@@ -211,6 +213,9 @@ router.post('/login', async (req, res) => {
         }
       });
     }
+
+    await applyPrivilegedRole(user);
+    await user.save();
 
     // ✅ Issue new tokens
     const accessToken = jwt.sign(

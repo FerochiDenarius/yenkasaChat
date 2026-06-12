@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.env.*
+.git
+.gitignore
+node_modules
+npm-debug.log*
+logs
+coverage
+.nyc_output
+uploads
+public/uploads
+docs/*.pdf
+tmp
+*.local

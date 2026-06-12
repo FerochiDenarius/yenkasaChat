@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ID="${PROJECT_ID:-project-10405180-0afd-4ecc-9f8}"
+REGION="${REGION:-europe-west1}"
+SERVICE_NAME="${SERVICE_NAME:-yenkasa-chat-backend-backup}"
+
+gcloud run deploy "$SERVICE_NAME" \
+  --source . \
+  --project "$PROJECT_ID" \
+  --region "$REGION" \
+  --allow-unauthenticated \
+  --port 8080 \
+  --min-instances 0 \
+  --max-instances 2 \
+  --set-env-vars NODE_ENV=production,MEDIA_STORAGE_PROVIDER=gcs,GCS_MEDIA_BUCKET=yenkasa-media,GOOGLE_CLOUD_PROJECT="$PROJECT_ID",GCS_MAKE_PUBLIC=false,YENKASA_ENABLE_INLINE_MODERATION_WORKERS=false,YENKASA_ENABLE_INLINE_YME_WORKERS=false

@@ -19,8 +19,48 @@
     ></script>
     <script type="module" crossorigin src="/web/assets/index-Bg_T8YEM.js"></script>
     <link rel="stylesheet" crossorigin href="/web/assets/index-WyPhIgz9.css">
+    <style>
+      .softotech-request-cta,
+      .softotech-portal-cta {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 2147483000;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: #1b7f4d;
+        color: #ffffff;
+        font: 700 14px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        text-decoration: none;
+        box-shadow: 0 14px 32px rgba(19, 32, 26, 0.22);
+      }
+      .softotech-portal-cta {
+        bottom: 74px;
+        background: #10271b;
+      }
+      .softotech-request-cta:focus,
+      .softotech-portal-cta:focus {
+        outline: 3px solid rgba(27, 127, 77, 0.28);
+        outline-offset: 3px;
+      }
+      @media (max-width: 640px) {
+        .softotech-request-cta,
+        .softotech-portal-cta {
+          left: 14px;
+          right: 14px;
+          bottom: 14px;
+        }
+        .softotech-portal-cta { bottom: 72px; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <a class="softotech-portal-cta" href="/client/login">Client Portal</a>
+    <a class="softotech-request-cta" href="/website-request">Request a Website or App</a>
   </body>
   </html>

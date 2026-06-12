@@ -1,0 +1,93 @@
+{
+  "name": "yenkasa-backend-backup",
+  "description": "Yenkasa backend tertiary backup runtime for Heroku.",
+  "stack": "heroku-22",
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker_moderation": {
+      "quantity": 0,
+      "size": "basic"
+    },
+    "worker_yme": {
+      "quantity": 0,
+      "size": "basic"
+    }
+  },
+  "env": {
+    "NODE_ENV": {
+      "value": "production"
+    },
+    "PORT": {
+      "value": "8080"
+    },
+    "MONGODB_URI": {
+      "required": true
+    },
+    "ACCESS_TOKEN_SECRET": {
+      "required": true
+    },
+    "REFRESH_TOKEN_SECRET": {
+      "required": true
+    },
+    "MEDIA_STORAGE_PROVIDER": {
+      "value": "gcs"
+    },
+    "GCS_MEDIA_BUCKET": {
+      "value": "yenkasa-media"
+    },
+    "GOOGLE_CLOUD_PROJECT": {
+      "value": "project-10405180-0afd-4ecc-9f8"
+    },
+    "GCS_MAKE_PUBLIC": {
+      "value": "false"
+    },
+    "CLOUDINARY_CLOUD_NAME": {
+      "required": true
+    },
+    "CLOUDINARY_API_KEY": {
+      "required": true
+    },
+    "CLOUDINARY_API_SECRET": {
+      "required": true
+    },
+    "AGORA_APP_ID": {
+      "required": true
+    },
+    "AGORA_APP_CERTIFICATE": {
+      "required": true
+    },
+    "ONESIGNAL_APP_ID": {
+      "required": true
+    },
+    "ONESIGNAL_REST_API_KEY": {
+      "required": true
+    },
+    "SMTP_HOST": {
+      "required": true
+    },
+    "SMTP_PORT": {
+      "required": true
+    },
+    "EMAIL_USER": {
+      "required": true
+    },
+    "EMAIL_PASS": {
+      "required": true
+    },
+    "REDIS_URL": {
+      "required": true
+    },
+    "YENKASA_ENABLE_INLINE_MODERATION_WORKERS": {
+      "value": "false"
+    },
+    "YENKASA_ENABLE_INLINE_YME_WORKERS": {
+      "value": "false"
+    }
+  },
+  "addons": [
+    "heroku-redis:mini"
+  ]
+}

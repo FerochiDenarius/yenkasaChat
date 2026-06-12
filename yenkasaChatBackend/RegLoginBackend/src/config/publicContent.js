@@ -47,6 +47,22 @@ function registerPublicContent(app, rootDir) {
     res.sendFile(path.join(rootDir, 'public', 'images', 'yc.png'));
   });
 
+  app.get('/ecosystem', (req, res) => {
+    res.sendFile(path.join(rootDir, 'public', 'ecosystem.html'));
+  });
+  app.get('/yenkasa-app', (req, res) => {
+    res.sendFile(path.join(rootDir, 'public', 'yenkasa-app.html'));
+  });
+  app.get('/yenkasa-store', (req, res) => {
+    res.sendFile(path.join(rootDir, 'public', 'yenkasa-store.html'));
+  });
+  app.get('/yenkasa-ai', (req, res) => {
+    res.sendFile(path.join(rootDir, 'public', 'yenkasa-ai.html'));
+  });
+  app.get('/portfolio-admin', (req, res) => {
+    res.sendFile(path.join(rootDir, 'public', 'admin.html'));
+  });
+
   app.get('/.well-known/assetlinks.json', (req, res) => {
     const filePath = path.join(rootDir, 'public', '.well-known', 'assetlinks.json');
     fs.readFile(filePath, 'utf8', (err, data) => {

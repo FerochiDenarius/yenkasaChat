@@ -2,12 +2,22 @@ const express = require('express');
 const multer = require('multer');
 
 const auth = require('../middleware/auth');
+const { getPermissions } = require('../middleware/permissions');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
 const mediaStorage = require('../services/mediaStorage.service');
 
 const router = express.Router();
 
-const ALLOWED_PRODUCTS = new Set(['yenkasa-app', 'yenkasa-store', 'yenkasa-ai', 'yenkasa-web', 'future-products']);
+const ALLOWED_PRODUCTS = new Set([
+  'yenkasa-app',
+  'yenkasa-store',
+  'yenkasa-ai',
+  'yenkasa-web',
+  'ecosystem',
+  'softotech-services',
+  'client-projects',
+  'future-products',
+]);
 const ALLOWED_TYPES = new Set(['screenshots', 'videos']);
 
 const upload = multer({
@@ -27,6 +37,15 @@ function cleanSegment(value, fallback) {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return cleaned || fallback;
+}
+
+function portfolioAdminOnly(req, res, next) {
+  const permissions = getPermissions(req.user);
+  const allowed = ['ADMIN', 'SENIOR_DEVELOPER'].includes(permissions.rank);
+  if (!allowed) {
+    return res.status(403).json({ success: false, error: 'Portfolio admin access requires admin or senior developer role.' });
+  }
+  return next();
 }
 
 function resolveUploadTarget(req, file) {
@@ -62,7 +81,19 @@ function resolveUploadTarget(req, file) {
   };
 }
 
-router.post('/media', auth, upload.single('file'), async (req, res) => {
+router.get('/admin/verify', auth, portfolioAdminOnly, async (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user?._id?.toString?.() || req.user?.id,
+      username: req.user?.username,
+      email: req.user?.email,
+      rank: getPermissions(req.user).rank,
+    },
+  });
+});
+
+router.post('/media', auth, portfolioAdminOnly, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No portfolio media file uploaded.' });
   }

@@ -288,6 +288,30 @@ section:nth-of-type(even) {
   top: 8px;
 }
 
+.feature-card {
+  min-height: 100%;
+}
+
+.feature-card strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eaf1ff;
+  color: var(--blue);
+  margin-bottom: 14px;
+}
+
+.gallery-section {
+  background: var(--soft);
+}
+
+.gallery-intro {
+  margin-bottom: 22px;
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -139,6 +139,35 @@
       margin-top: 8px;
     }
 
+    .auth-success {
+      display: none;
+      margin-top: 14px;
+      border: 1px solid #bfe8d2;
+      background: #eefbf4;
+      border-radius: 8px;
+      padding: 14px;
+      grid-template-columns: 54px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .auth-success img {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .auth-success strong {
+      display: block;
+      color: #0d5f3b;
+    }
+
+    .auth-success span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
     @media (max-width: 860px) {
       .grid {
         grid-template-columns: 1fr;
@@ -187,7 +216,14 @@
         <h2>Add Media</h2>
         <label for="authToken">Admin bearer token</label>
         <input id="authToken" type="password" placeholder="Paste an active Yenkasa access token" />
-        <p class="hint">Media uploads use POST /api/portfolio/media and require the existing Yenkasa Authorization token.</p>
+        <p class="hint">Media uploads use POST /api/portfolio/media and require an admin/senior developer bearer token.</p>
+        <div class="actions">
+          <button class="primary" id="verifyAdmin">Verify Admin Login</button>
+        </div>
+        <div class="auth-success" id="authSuccess">
+          <img src="/images/logoYenkasaSoftOTechEmblem.png" alt="Admin verified" />
+          <div><strong>Admin verified successfully.</strong><span>You can upload media to all portfolio product pages.</span></div>
+        </div>
 
         <label for="mediaProduct">Product</label>
         <select id="mediaProduct"></select>
@@ -247,7 +283,10 @@
         {id: "app", name: "Yenkasa App", description: "Social networking, communities, livestreaming, chat, wallet, rewards and YKC economy.", status: "Live product", stack: ["Kotlin", "Node.js", "MongoDB", "Socket.IO", "Cloudinary", "Agora"], achievements: ["Communities", "Livestreaming", "Wallet"], screenshots: [], videos: []},
         {id: "store", name: "Yenkasa Store", description: "Seller onboarding, product catalog, orders, payments and commission-based commerce.", status: "Launched commerce pillar", stack: ["Web", "Node.js", "Paystack"], achievements: ["Seller onboarding", "Catalog", "Payments"], screenshots: [], videos: []},
         {id: "ai", name: "YenkasaAI", description: "Operational Intelligence Platform for monitoring, analysis, memory, insights and anomaly detection.", status: "Cloud Run deployed", stack: ["FastAPI", "Python", "PostgreSQL", "Chroma", "Google Cloud", "Gemini"], achievements: ["Cloud Run", "Memory Engine", "OCR", "AI Insights"], screenshots: [], videos: []},
+        {id: "ecosystem", name: "Yenkasa Ecosystem", description: "Current product system across Yenkasa App, Store, AI, Web and Soft-O-Tech services.", status: "Current product overview", stack: ["Mobile", "Web", "AI", "Cloud", "Commerce"], achievements: ["App", "Store", "AI", "Client operations"], screenshots: [], videos: []},
         {id: "web", name: "Yenkasa Web", description: "Public web, validation, policy, product pages and web-based ecosystem surfaces.", status: "Public web presence", stack: ["HTML", "CSS", "JavaScript"], achievements: ["Official website", "Policy pages", "SEO"], screenshots: [], videos: []},
+        {id: "services", name: "Soft-O-Tech Services", description: "Client websites, apps, AI solutions, cloud deployments and custom software projects.", status: "Client acquisition platform", stack: ["Firestore", "GCS", "Node.js", "Project Portal"], achievements: ["Project requests", "Client portal", "Admin dashboard"], screenshots: [], videos: []},
+        {id: "client-projects", name: "Client Projects", description: "Portfolio media and case studies for future client work.", status: "Ready for uploads", stack: ["Web", "Mobile", "AI", "Cloud"], achievements: ["Reusable case study structure"], screenshots: [], videos: []},
         {id: "future", name: "Future Products", description: "Upcoming tools for organizations, intelligence, commerce and creator growth.", status: "Roadmap direction", stack: ["AI", "Cloud", "Mobile", "Web"], achievements: ["Ecosystem foundation"], screenshots: [], videos: []}
       ],
       milestones: []
@@ -257,7 +296,10 @@
       app: "yenkasa-app",
       store: "yenkasa-store",
       ai: "yenkasa-ai",
+      ecosystem: "ecosystem",
       web: "yenkasa-web",
+      services: "softotech-services",
+      "client-projects": "client-projects",
       future: "future-products"
     };
 
@@ -276,6 +318,15 @@
     function saveDraft() {
       localStorage.setItem("yenkasaPortfolioContent", JSON.stringify(content, null, 2));
       render();
+    }
+
+    function setUploadAccess(isAllowed, message = "") {
+      const success = document.getElementById("authSuccess");
+      const uploadButton = document.getElementById("uploadCloudinary");
+      uploadButton.disabled = !isAllowed;
+      uploadButton.style.opacity = isAllowed ? "1" : ".55";
+      success.style.display = isAllowed ? "grid" : "none";
+      if (message) document.getElementById("uploadStatus").textContent = message;
     }
 
     function selectedProduct(selectId) {
@@ -338,6 +389,28 @@
     }
 
     document.getElementById("productSelect").addEventListener("change", renderProductForm);
+    document.getElementById("authToken").addEventListener("input", () => setUploadAccess(false));
+    document.getElementById("verifyAdmin").addEventListener("click", async () => {
+      const status = document.getElementById("uploadStatus");
+      const token = document.getElementById("authToken").value.trim();
+      if (!token) {
+        setUploadAccess(false, "Paste an admin or senior developer token first.");
+        return;
+      }
+      status.textContent = "Verifying admin access...";
+      try {
+        const response = await fetch("/api/portfolio/admin/verify", {
+          headers: {Authorization: `Bearer ${token}`}
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || result.message || "Admin verification failed.");
+        }
+        setUploadAccess(true, `Verified as ${result.user?.username || result.user?.email || result.user?.rank || "admin"}.`);
+      } catch (error) {
+        setUploadAccess(false, error.message);
+      }
+    });
     document.getElementById("saveProduct").addEventListener("click", () => {
       const product = selectedProduct("productSelect");
       product.description = document.getElementById("productDescription").value.trim();
@@ -452,6 +525,7 @@
       saveDraft();
     }
 
+    setUploadAccess(false);
     render();
   </script>
 </body>

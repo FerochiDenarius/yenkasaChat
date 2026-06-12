@@ -20,10 +20,19 @@ function isGcsUrl(value) {
 function parseArgs(argv) {
   const args = new Set(argv.slice(2));
   const limitArg = argv.find((item) => item.startsWith('--limit='));
+  const timeoutArg = argv.find((item) => item.startsWith('--timeout-ms='));
+  const onlyArg = argv.find((item) => item.startsWith('--only='));
+  const skipArg = argv.find((item) => item.startsWith('--skip='));
   return {
     write: args.has('--write'),
     dryRun: !args.has('--write'),
     limit: limitArg ? Math.max(1, Number(limitArg.split('=')[1]) || 100) : 100,
+    timeoutMs: timeoutArg
+      ? Math.max(1000, Number(timeoutArg.split('=')[1]) || 120000)
+      : Math.max(1000, Number(process.env.MEDIA_MIGRATION_FETCH_TIMEOUT_MS) || 120000),
+    onlyKinds: onlyArg ? new Set(onlyArg.split('=')[1].split(',').map((item) => item.trim()).filter(Boolean)) : null,
+    skipKinds: skipArg ? new Set(skipArg.split('=')[1].split(',').map((item) => item.trim()).filter(Boolean)) : new Set(),
+    urlCache: new Map(),
   };
 }
 
@@ -61,8 +70,20 @@ function filenameFor(url, fallback) {
   }
 }
 
-async function fetchAsUploadFile(url, fallbackName) {
-  const response = await fetch(url);
+async function fetchAsUploadFile(url, fallbackName, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Fetch timed out after ${timeoutMs}ms for ${url}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) {
     throw new Error(`Fetch failed ${response.status} for ${url}`);
   }
@@ -76,14 +97,18 @@ async function fetchAsUploadFile(url, fallbackName) {
   };
 }
 
-async function migrateUrl(url, context) {
-  const file = await fetchAsUploadFile(url, `${context.kind}-${context.id}-${context.field}.bin`);
+async function migrateUrl(url, context, options) {
+  if (options.urlCache.has(url)) {
+    return options.urlCache.get(url);
+  }
+  const file = await fetchAsUploadFile(url, `${context.kind}-${context.id}-${context.field}.bin`, options.timeoutMs);
   const result = await mediaStorage.upload(file, {
     folder: folderFor(context.kind, context.field),
     type: typeFor(url, context.field),
     area: `media_migration_${context.kind}`,
     prefix: `${context.kind}-${context.field}`,
   });
+  options.urlCache.set(url, result.secure_url);
   return result.secure_url;
 }
 
@@ -148,7 +173,7 @@ async function migrateCollection({ model, kind, fields, arrayFields, nestedArray
           migrated += 1;
           continue;
         }
-        const newUrl = await migrateUrl(item.value, { kind, id: doc._id, field: item.field });
+        const newUrl = await migrateUrl(item.value, { kind, id: doc._id, field: item.field }, options);
         setByPath(doc, item.field, newUrl);
         migrated += 1;
         console.log(`[migrated] ${kind}:${doc._id} ${item.field}`);
@@ -190,7 +215,12 @@ async function main() {
 
   const totals = { scanned: 0, migrated: 0, failed: 0 };
   console.log(`Media migration mode: ${options.dryRun ? 'dry-run' : 'write'}`);
-  for (const spec of specs) {
+  const selectedSpecs = specs.filter((spec) => {
+    if (options.onlyKinds && !options.onlyKinds.has(spec.kind)) return false;
+    return !options.skipKinds.has(spec.kind);
+  });
+
+  for (const spec of selectedSpecs) {
     const result = await migrateCollection(spec, options);
     totals.scanned += result.scanned;
     totals.migrated += result.migrated;

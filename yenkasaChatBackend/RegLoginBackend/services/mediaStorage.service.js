@@ -163,7 +163,7 @@ async function uploadToGcs(file, options = {}) {
     validation: 'crc32c',
   });
 
-  if (String(process.env.GCS_MAKE_PUBLIC || 'true').toLowerCase() !== 'false') {
+  if (String(process.env.GCS_MAKE_PUBLIC || 'false').toLowerCase() === 'true') {
     await object.makePublic().catch((error) => {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[MediaStorage] makePublic failed:', error.message);

@@ -48,6 +48,12 @@ function defaultContent() {
       { id: 'client-projects', name: 'Client Projects', description: 'Portfolio media and case studies for future client work.', status: 'Ready for uploads', stack: ['Web', 'Mobile', 'AI', 'Cloud'], achievements: ['Reusable case study structure'], screenshots: [], videos: [] },
       { id: 'future', name: 'Future Products', description: 'Upcoming tools for organizations, intelligence, commerce and creator growth.', status: 'Roadmap direction', stack: ['AI', 'Cloud', 'Mobile', 'Web'], achievements: ['Ecosystem foundation'], screenshots: [], videos: [] },
     ],
+    teamMembers: [
+      { id: 'bright-kofi-ofosu-menya', name: 'Bright Kofi Ofosu Menya', role: 'Founder & CEO', photo: '/images/default.png', background: 'Founder, product builder, and Yenkasa ecosystem lead.', fieldOfStudy: 'To be added.', major: 'Software leadership, product architecture, and AI systems.' },
+      { id: 'arhinful-hudson', name: 'Arhinful Hudson', role: 'Frontend Developer', photo: '/images/default.png', background: 'Frontend development team member.', fieldOfStudy: 'To be added.', major: 'Frontend engineering and user interface implementation.' },
+      { id: 'elorm-wisdom', name: 'Elorm Wisdom', role: 'Backend Engineer', photo: '/images/default.png', background: 'Backend engineering team member.', fieldOfStudy: 'To be added.', major: 'Backend systems, APIs, databases, and integrations.' },
+      { id: 'ruth-awini', name: 'Ruth Awini', role: 'Financial Director & Head of Marketing', photo: '/images/default.png', background: 'Finance and marketing leadership team member.', fieldOfStudy: 'To be added.', major: 'Finance, marketing strategy, and business operations.' },
+    ],
     milestones: [],
   };
 }
@@ -82,8 +88,19 @@ function cleanContent(content) {
   for (const product of products) {
     byId.set(product.id, { ...byId.get(product.id), ...product });
   }
+  const teamSource = normalizeArray(content?.teamMembers || content?.team);
+  const teamMembers = (teamSource.length ? teamSource : fallback.teamMembers).map((item) => ({
+    id: String(item?.id || item?.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+    name: String(item?.name || '').trim(),
+    role: String(item?.role || '').trim(),
+    photo: String(item?.photo || item?.image || '/images/default.png').trim(),
+    background: String(item?.background || '').trim(),
+    fieldOfStudy: String(item?.fieldOfStudy || item?.field || '').trim(),
+    major: String(item?.major || '').trim(),
+  })).filter((item) => item.id && item.name);
   return {
     products: Array.from(byId.values()),
+    teamMembers,
     milestones: normalizeArray(content?.milestones).map((item) => ({
       date: String(item?.date || '').trim(),
       title: String(item?.title || '').trim(),

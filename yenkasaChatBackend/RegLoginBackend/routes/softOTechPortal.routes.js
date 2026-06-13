@@ -2,6 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const portal = require('../services/softOTechPortal.service');
 const pricing = require('../services/softOTechPricing.service');
+const projectRequestStore = require('../services/projectRequestStore.service');
+const ProjectRequest = require('../models/projectRequest.model');
 
 const router = express.Router();
 
@@ -187,6 +189,87 @@ router.put('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
     res.json({ success: true, items });
   } catch (error) {
     sendError(res, error);
+  }
+});
+
+router.get('/admin/project-requests', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 50), 100);
+    const page = Math.max(Number(req.query.page || 1), 1);
+    const search = String(req.query.search || '').trim();
+    const status = String(req.query.status || '').trim();
+    const from = String(req.query.from || '').trim();
+    const to = String(req.query.to || '').trim();
+    const result = await projectRequestStore.list({ search, status, from, to, limit, page });
+
+    res.json({
+      success: true,
+      items: result.items,
+      total: result.total,
+      page,
+      limit,
+      statuses: ProjectRequest.PROJECT_REQUEST_STATUSES,
+      storageProvider: projectRequestStore.storageProvider(),
+      collection: projectRequestStore.collectionName(),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/project-request-clients', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 50), 100);
+    const page = Math.max(Number(req.query.page || 1), 1);
+    const search = String(req.query.search || '').trim();
+    const result = await projectRequestStore.listClients({ search, limit, page });
+
+    res.json({
+      success: true,
+      items: result.items,
+      total: result.total,
+      page,
+      limit,
+      storageProvider: projectRequestStore.storageProvider(),
+      collection: projectRequestStore.clientCollectionName(),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/project-request-analytics', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const analytics = await projectRequestStore.analytics();
+    res.json({
+      success: true,
+      total: analytics.total,
+      conversionRate: analytics.total ? Number(((analytics.converted / analytics.total) * 100).toFixed(2)) : 0,
+      byType: analytics.byType,
+      byCategory: analytics.byCategory,
+      byStatus: analytics.byStatus,
+      monthly: analytics.monthly,
+      storageProvider: projectRequestStore.storageProvider(),
+      collection: projectRequestStore.collectionName(),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch('/admin/project-requests/:requestId/status', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const status = String(req.body.status || '').trim();
+    if (!ProjectRequest.PROJECT_REQUEST_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status.' });
+    }
+
+    const request = await projectRequestStore.updateStatus(req.params.requestId, status, req.portalUser.email);
+    if (!request) return res.status(404).json({ success: false, message: 'Project request not found.' });
+
+    return res.json({ success: true, item: request });
+  } catch (error) {
+    return sendError(res, error);
   }
 });
 

@@ -162,19 +162,23 @@ function pageShell({ title, body, extraHead = '' }) {
     .tab.active { background:var(--brand); color:white; border-color:var(--brand); }
     .table-list article { border-bottom:1px solid var(--line); padding:18px 0; }
     .meta { color:var(--muted); line-height:1.6; }
+    .auth-gate { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px; align-items:center; margin-bottom:18px; }
+    .auth-gate strong { display:block; font-size:1.15rem; margin-bottom:6px; }
+    .hidden { display:none !important; }
     @media (max-width: 860px) { .hero, .grid { grid-template-columns:1fr; } .choices { grid-template-columns:1fr; } .wrap { padding-top:24px; } }
+    @media (max-width: 640px) { .auth-gate { grid-template-columns:1fr; } }
   </style>
   ${extraHead}
 </head>
 <body>
   <header class="topbar">
     <nav class="nav">
-      <a class="brand" href="/"><img class="mark" src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
+      <a class="brand" href="/"><img class="mark" src="/images/logoYenkasaSoftOTechEmblem.png" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
       <div class="nav-actions">
         <a class="btn ghost" href="/">Portfolio</a>
         <a class="btn ghost" href="/software-solutions">Software Solutions</a>
         <a class="btn ghost" href="/services">Services</a>
-        <a class="btn ghost" href="/client/login">Client Login</a>
+        <a class="btn ghost" href="/client/login?returnTo=/request-project">Client Login</a>
         <a class="btn secondary" href="/admin">Admin</a>
         <a class="btn" href="/request-project">Request a Project</a>
       </div>
@@ -197,7 +201,18 @@ router.get('/website-request', (req, res) => {
     <aside class="summary"><strong>Client intake</strong><span>Request ID, secure file uploads, client profile, email confirmation, and admin workflow tracking.</span></aside>
   </section>
 
-  <form id="requestForm" class="form" enctype="multipart/form-data" novalidate>
+  <section class="section auth-gate" id="authGate">
+    <div>
+      <strong>Client login required</strong>
+      <p class="lead" style="margin:0;">Create or login to your client account before the project details form becomes available. This keeps your request, invoice and files connected to your portal.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="/client/register?returnTo=/request-project">Register</a>
+      <a class="btn ghost" href="/client/login?returnTo=/request-project">Login</a>
+    </div>
+  </section>
+
+  <form id="requestForm" class="form hidden" enctype="multipart/form-data" novalidate>
     <section class="section"><h2>A. Client Registration</h2><div class="grid">
       <div class="field"><label for="fullName">Full Name</label><input id="fullName" name="fullName" autocomplete="name" required></div>
       <div class="field"><label for="companyName">Company/Organization Name</label><input id="companyName" name="companyName" autocomplete="organization"></div>
@@ -241,16 +256,50 @@ router.get('/website-request', (req, res) => {
       <div class="summary" id="estimateBox" style="margin-bottom:18px;align-items:flex-start;"><strong>Estimated Price</strong><span id="estimateText">Select project type, platforms, pages and features to see an automatic estimate.</span></div>
       <p class="error" id="errorBox"></p>
       <p class="success-note" id="successBox">Submitting request...</p>
-      <button class="btn" id="submitBtn" type="submit">Register Client & Submit Request</button>
+      <button class="btn" id="submitBtn" type="submit">Submit Project Request</button>
     </section>
   </form>
 </main>
 <script>
 const form = document.getElementById('requestForm');
+const authGate = document.getElementById('authGate');
 const button = document.getElementById('submitBtn');
 const errorBox = document.getElementById('errorBox');
 const successBox = document.getElementById('successBox');
 const estimateText = document.getElementById('estimateText');
+let portalClient = null;
+function portalToken() {
+  return localStorage.getItem('softOTechPortalToken') || '';
+}
+function setField(id, value) {
+  const field = document.getElementById(id);
+  if (field && value && !field.value) field.value = value;
+}
+async function requireClientLogin() {
+  const token = portalToken();
+  if (!token) return;
+  try {
+    const response = await fetch('/api/project-portal/me', {
+      headers: {Authorization: 'Bearer ' + token}
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.success || !payload.client || payload.client.is_admin) return;
+    portalClient = payload.client;
+    authGate.classList.add('hidden');
+    form.classList.remove('hidden');
+    setField('fullName', portalClient.fullName);
+    setField('companyName', portalClient.companyName);
+    setField('phoneNumber', portalClient.phoneNumber);
+    setField('whatsappNumber', portalClient.whatsappNumber);
+    setField('emailAddress', portalClient.email);
+    setField('businessLocation', portalClient.businessLocation);
+    setField('preferredContactMethod', portalClient.preferredContactMethod);
+    setField('bestTimeToContact', portalClient.bestTimeToContact);
+    updateEstimate();
+  } catch (error) {
+    localStorage.removeItem('softOTechPortalToken');
+  }
+}
 function formJson() {
   const data = new FormData(form);
   const payload = {};
@@ -295,7 +344,13 @@ form.addEventListener('submit', async (event) => {
   successBox.style.display = 'block';
   button.disabled = true;
   try {
-    const response = await fetch('/api/project-requests', { method: 'POST', body: new FormData(form) });
+    const token = portalToken();
+    if (!token || !portalClient) throw new Error('Please login as a client before submitting project details.');
+    const response = await fetch('/api/project-requests', {
+      method: 'POST',
+      headers: {Authorization: 'Bearer ' + token},
+      body: new FormData(form)
+    });
     const payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.message || 'Request failed.');
     const params = new URLSearchParams({ requestId: payload.requestId });
@@ -308,7 +363,7 @@ form.addEventListener('submit', async (event) => {
     button.disabled = false;
   }
 });
-updateEstimate();
+requireClientLogin();
 </script>`,
   }));
 });
@@ -333,12 +388,12 @@ router.get('/admin/project-requests', (req, res) => {
     body: `<main class="wrap">
   <section class="hero"><div><h1>Project Requests</h1><p class="lead">Manage website, app, software, AI, and UI/UX leads captured from www.yenkasa.xyz.</p></div><aside class="summary"><strong id="totalCount">--</strong><span>Total captured inquiries</span></aside></section>
   <section class="section"><div class="grid">
-    <div class="field full"><label for="token">Admin Bearer Token</label><input id="token" type="password" placeholder="Paste admin access token"></div>
+    <div class="field full"><label for="token">Soft-O-Tech Admin Login Token</label><input id="token" type="password" placeholder="Login as admin/senior developer or paste portal token"></div>
     <div class="field"><label for="search">Search</label><input id="search" placeholder="Request ID, client, company, email, phone"></div>
     <div class="field"><label for="status">Status</label><select id="status"><option value="">All statuses</option>${options(STATUSES)}</select></div>
     <div class="field"><label for="from">From</label><input id="from" type="date"></div>
     <div class="field"><label for="to">To</label><input id="to" type="date"></div>
-  </div><div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Requests</button><button class="btn secondary" id="clientsBtn">Load Clients</button><button class="btn secondary" id="analyticsBtn">Load Analytics</button></div><p class="error" id="adminError"></p></section>
+  </div><div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Requests</button><button class="btn secondary" id="clientsBtn">Load Clients</button><button class="btn secondary" id="analyticsBtn">Load Analytics</button><a class="btn ghost" href="/client/login?returnTo=/admin/project-requests">Admin Login</a></div><p class="error" id="adminError"></p></section>
   <div class="tabs"><button class="tab active" data-panel="requestsPanel">Requests</button><button class="tab" data-panel="clientsPanel">Clients</button><button class="tab" data-panel="analyticsPanel">Analytics</button></div>
   <section class="section table-list" id="requestsPanel"><p class="lead">Enter an admin token and load requests.</p></section>
   <section class="section table-list" id="clientsPanel" style="display:none;"><p class="lead">Load clients to view registered lead profiles.</p></section>
@@ -353,8 +408,8 @@ const panels = {
   analyticsPanel: document.getElementById('analyticsPanel')
 };
 const totalCount = document.getElementById('totalCount');
-token.value = localStorage.getItem('projectRequestAdminToken') || '';
-token.addEventListener('input', () => localStorage.setItem('projectRequestAdminToken', token.value.trim()));
+token.value = localStorage.getItem('softOTechPortalToken') || '';
+token.addEventListener('input', () => localStorage.setItem('softOTechPortalToken', token.value.trim()));
 function headers() { return { 'Authorization': 'Bearer ' + token.value.trim(), 'Content-Type': 'application/json' }; }
 function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
 function showPanel(id) {
@@ -366,7 +421,7 @@ async function loadRequests() {
   errorBox.style.display = 'none';
   const params = new URLSearchParams();
   ['search','status','from','to'].forEach(id => { const value = document.getElementById(id).value; if (value) params.set(id, value); });
-  const response = await fetch('/api/project-requests/admin?' + params.toString(), { headers: headers() });
+  const response = await fetch('/api/project-portal/admin/project-requests?' + params.toString(), { headers: headers() });
   const payload = await response.json();
   if (!response.ok || !payload.success) throw new Error(payload.message || 'Could not load requests.');
   showPanel('requestsPanel');
@@ -395,7 +450,7 @@ async function loadClients() {
   const params = new URLSearchParams();
   const search = document.getElementById('search').value;
   if (search) params.set('search', search);
-  const response = await fetch('/api/project-requests/admin/clients?' + params.toString(), { headers: headers() });
+  const response = await fetch('/api/project-portal/admin/project-request-clients?' + params.toString(), { headers: headers() });
   const payload = await response.json();
   if (!response.ok || !payload.success) throw new Error(payload.message || 'Could not load clients.');
   showPanel('clientsPanel');
@@ -410,7 +465,7 @@ async function loadClients() {
   '</article>').join('');
 }
 async function updateStatus(requestId, status) {
-  const response = await fetch('/api/project-requests/admin/' + encodeURIComponent(requestId) + '/status', {
+  const response = await fetch('/api/project-portal/admin/project-requests/' + encodeURIComponent(requestId) + '/status', {
     method: 'PATCH',
     headers: headers(),
     body: JSON.stringify({ status })
@@ -422,7 +477,7 @@ document.getElementById('loadBtn').addEventListener('click', async () => { try {
 document.getElementById('clientsBtn').addEventListener('click', async () => { try { await loadClients(); } catch (error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; } });
 document.getElementById('analyticsBtn').addEventListener('click', async () => {
   try {
-    const response = await fetch('/api/project-requests/admin/analytics', { headers: headers() });
+    const response = await fetch('/api/project-portal/admin/project-request-analytics', { headers: headers() });
     const payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.message || 'Could not load analytics.');
     showPanel('analyticsPanel');

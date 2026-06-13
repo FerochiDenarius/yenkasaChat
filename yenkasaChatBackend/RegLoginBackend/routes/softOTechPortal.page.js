@@ -127,7 +127,7 @@ function shell({ title, body }) {
 
 function publicBrand() {
   return `<aside class="public-brand">
-    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
+    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTechEmblem.png" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
     <div class="public-copy">
       <h1>Build, manage, and track your project.</h1>
       <p>Client intake, requests, quotations, invoices, documents, and project communication in one professional workspace.</p>
@@ -173,7 +173,7 @@ function sidebar(active = 'dashboard', mode = 'client') {
   ];
   const items = mode === 'admin' ? adminItems : clientItems;
   return `<aside class="sidebar">
-    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
+    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTechEmblem.png" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
     <nav class="side-nav">${items.map(([key, icon, label]) => `<button class="nav-item ${key === active ? 'active' : ''}" data-panel="${key}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}</nav>
     <div style="margin-top:28px;"><button class="nav-item" id="logoutBtn"><span class="nav-icon">EX</span>Logout</button></div>
   </aside>`;
@@ -212,7 +212,7 @@ router.get('/client/register', (req, res) => {
         <div class="field"><label>Location</label><input name="businessLocation"></div>
         <div class="field"><label>Preferred Contact</label><select name="preferredContactMethod"><option>Email</option><option>Phone Call</option><option>WhatsApp</option><option>SMS</option></select></div>
         <p class="error full" id="errorBox"></p>
-        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" type="submit">Create Account</button><a class="btn ghost" href="/client/login">Login Instead</a></div>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" type="submit">Create Account</button><a class="btn ghost" id="loginInstead" href="/client/login">Login Instead</a></div>
       </form>
     </section></main>
 <script>
@@ -225,9 +225,12 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     var payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.message || 'Registration failed.');
     localStorage.setItem('softOTechPortalToken', payload.token);
-    window.location.href = '/client/dashboard';
+    var returnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+    window.location.href = returnTo || '/client/dashboard';
   } catch (error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; }
 });
+var registerReturnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+if (registerReturnTo) document.getElementById('loginInstead').href = '/client/login?returnTo=' + encodeURIComponent(registerReturnTo);
 </script>`,
   }));
 });
@@ -242,7 +245,7 @@ router.get('/client/login', (req, res) => {
         <div class="field full"><label>Email</label><input name="email" type="email" autocomplete="email" required></div>
         <div class="field full"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>
         <p class="error full" id="errorBox"></p>
-        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" type="submit">Login</button><a class="btn ghost" href="/client/register">Create Account</a></div>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" type="submit">Login</button><a class="btn ghost" id="registerInstead" href="/client/register">Create Account</a></div>
       </form>
     </section></main>
 <script>
@@ -255,9 +258,12 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     var payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.message || 'Login failed.');
     localStorage.setItem('softOTechPortalToken', payload.token);
-    window.location.href = payload.client && payload.client.is_admin ? '/admin' : '/client/dashboard';
+    var returnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+    window.location.href = returnTo || (payload.client && payload.client.is_admin ? '/admin' : '/client/dashboard');
   } catch (error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; }
 });
+var loginReturnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+if (loginReturnTo) document.getElementById('registerInstead').href = '/client/register?returnTo=' + encodeURIComponent(loginReturnTo);
 </script>`,
   }));
 });
@@ -275,7 +281,7 @@ router.get('/client/dashboard', (req, res) => {
     </section></main>
 <script>
 var token = localStorage.getItem('softOTechPortalToken') || '';
-if (!token) window.location.href = '/client/login';
+if (!token) window.location.href = '/client/login?returnTo=/client/dashboard';
 var dashboard = null;
 var activePanel = 'dashboard';
 var mainPanel = document.getElementById('mainPanel');
@@ -365,7 +371,7 @@ function renderPanel(name) {
   if (name === 'duration') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Duration</h2></div>' + renderTimeline() + '<div class="info-table"><div class="info-row"><span>Expected Delivery</span><span>' + fmtDate(expectedDelivery()) + '</span></div><div class="info-row"><span>Current Progress</span><span>' + projectProgress(projectStatus()) + '%</span></div></div></section>';
   if (name === 'requirements') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Requirements</h2><a class="btn" href="/request-project">Submit New Requirement</a></div>' + recordList(dashboard.requests, 'No requirements have been submitted yet.', function(item) { var req = item.requirements || {}; return record(item.requestId || 'Requirement', item.status, esc(req.projectName || req.projectType || req.websiteType || 'Project') + '<br>' + esc(req.requirements || req.additionalNotes || req.businessDescription || 'No detailed requirement text saved.')); }) + '</section>';
   if (name === 'updates') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Updates</h2></div>' + renderUpdates() + '</section>';
-  if (name === 'messages') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Messages</h2></div><form id="messageForm" class="form-panel"><div class="grid"><div class="field"><label>Subject</label><input name="subject"></div><div class="field full"><label>Message</label><textarea name="body"></textarea></div></div><button class="btn" type="submit">Send Message</button></form><div style="height:16px"></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.body || '') + '<br>' + fmtDate(item.createdAt)); }) + '</section>';
+  if (name === 'messages' || name === 'support') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>' + (name === 'support' ? 'Support' : 'Messages') + '</h2></div><form id="messageForm" class="form-panel"><div class="grid"><div class="field"><label>Subject</label><input name="subject"></div><div class="field full"><label>Message</label><textarea name="body"></textarea></div></div><button class="btn" type="submit">Send Message</button></form><div style="height:16px"></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.body || '') + '<br>' + fmtDate(item.createdAt)); }) + '</section>';
   if (name === 'documents') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Files & Documents</h2></div><form id="docForm" enctype="multipart/form-data" class="form-panel"><div class="grid"><div class="field"><label>Document</label><input type="file" name="document" required></div><div class="field"><label>Request ID</label><input name="requestId"></div></div><button class="btn" type="submit">Upload Document</button></form><div style="height:16px"></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', '<a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a><br>' + fmtDate(item.createdAt)); }) + '</section>';
   if (name === 'invoices') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
   if (name === 'payments') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Payments</h2></div>' + recordList(dashboard.payments, 'No payments recorded yet.', function(item) { return record(item.paymentId || 'Payment', item.status, money(item.amount) + '<br>' + esc(item.milestoneTitle || item.method || 'Payment record')); }) + '</section>';
@@ -402,7 +408,7 @@ router.get('/admin', (req, res) => {
     body: `<main class="app-shell">${sidebar('dashboard', 'admin')}<section class="workspace">
       <header class="topbar"><div><h1>Soft-O-Tech Operations</h1><p>Clients, requests, projects, quotations, invoices, messages, and analytics.</p></div><div class="top-actions"><a class="btn ghost" href="/admin/project-requests">Request Admin</a><div class="avatar">AD</div></div></header>
       <section class="content">
-        <section class="panel" id="tokenPanel"><div class="grid"><div class="field full"><label>Portal Token</label><input id="token" type="password" placeholder="Login as admin first or paste token"></div></div><p class="error" id="errorBox"></p><div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Admin Dashboard</button><a class="btn ghost" href="/client/login">Admin Login</a></div></section>
+        <section class="panel" id="tokenPanel"><div class="grid"><div class="field full"><label>Portal Token</label><input id="token" type="password" placeholder="Login as admin first or paste token"></div></div><p class="error" id="errorBox"></p><div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Admin Dashboard</button><a class="btn ghost" href="/client/login?returnTo=/admin">Admin Login</a></div></section>
         <section class="metrics" id="metrics"></section>
         <section id="mainPanel"></section>
       </section>
@@ -426,6 +432,37 @@ function renderMetrics() {
 }
 function recordList(items, empty, formatter) { if (!items || !items.length) return '<div class="empty">' + empty + '</div>'; return '<div class="records">' + items.map(formatter).join('') + '</div>'; }
 function record(title, status, meta) { return '<article class="record"><div class="record-head"><div class="record-title">' + esc(title) + '</div><span class="status-pill ' + statusClass(status) + '">' + esc(status || 'Open') + '</span></div><div class="record-meta">' + meta + '</div></article>'; }
+function option(value, label) { return '<option value="' + esc(value) + '">' + esc(label || value) + '</option>'; }
+function clientOptions() { return '<option value="">Select client</option>' + (dashboard.clients || []).map(function(item) { return option(item.email, (item.fullName || item.email) + (item.companyName ? ' - ' + item.companyName : '')); }).join(''); }
+function requestOptions() { return '<option value="">Select request</option>' + (dashboard.requests || []).map(function(item) { var req = item.requirements || {}; return option(item.requestId, item.requestId + ' - ' + ((item.contact && item.contact.fullName) || item.contact?.email || 'Client') + ' - ' + (req.projectType || req.websiteType || 'Project')); }).join(''); }
+function projectOptions() { return '<option value="">Select project</option>' + (dashboard.projects || []).map(function(item) { return option(item.projectId, item.projectId + ' - ' + (item.title || 'Project')); }).join(''); }
+function formToObject(form) { return Object.fromEntries(new FormData(form)); }
+function formShell(id, title, fields, button) { return '<section class="panel"><div class="panel-head"><h2>' + esc(title) + '</h2></div><form id="' + id + '" class="form-panel"><div class="grid">' + fields + '</div><button class="btn" type="submit">' + esc(button) + '</button></form></section>'; }
+function field(label, name, value, type) { return '<div class="field"><label>' + esc(label) + '</label><input name="' + esc(name) + '" type="' + esc(type || 'text') + '" value="' + esc(value || '') + '"></div>'; }
+function area(label, name, placeholder) { return '<div class="field full"><label>' + esc(label) + '</label><textarea name="' + esc(name) + '" placeholder="' + esc(placeholder || '') + '"></textarea></div>'; }
+function selectField(label, name, optionsHtml) { return '<div class="field"><label>' + esc(label) + '</label><select name="' + esc(name) + '">' + optionsHtml + '</select></div>'; }
+async function postJson(path, data) {
+  var response = await fetch(path, { method:'POST', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify(data) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) throw new Error(payload.message || 'Request failed.');
+  await loadAdmin();
+  return payload;
+}
+async function postMultipart(path, form) {
+  var response = await fetch(path, { method:'POST', headers:headers(), body:new FormData(form) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) throw new Error(payload.message || 'Upload failed.');
+  await loadAdmin();
+  return payload;
+}
+function bindForm(id, handler) {
+  var form = document.getElementById(id);
+  if (!form) return;
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    try { await handler(form); alert('Saved successfully.'); } catch (error) { alert(error.message); }
+  });
+}
 function renderOverview() {
   var analytics = dashboard.analytics || {};
   var monthly = analytics.monthly || [];
@@ -436,15 +473,15 @@ function renderPanel(name) {
   if (!dashboard) return;
   if (name === 'dashboard') return renderOverview();
   if (name === 'clients') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Clients</h2></div>' + recordList(dashboard.clients, 'No clients yet.', function(item) { return record(item.fullName || item.email, item.userType || 'Client', esc(item.companyName || '') + '<br>' + esc(item.email || '') + ' - ' + esc(item.phoneNumber || '')); }) + '</section>';
-  if (name === 'requests') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Requests</h2><a class="btn ghost" href="/admin/project-requests">Detailed Request Admin</a></div>' + recordList(dashboard.requests, 'No project requests yet.', function(item) { var req = item.requirements || {}; return record(item.requestId || 'Request', item.status, esc((item.contact && item.contact.fullName) || '') + '<br>' + esc(req.projectType || req.websiteType || 'Project')); }) + '</section>';
-  if (name === 'projects') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Projects</h2></div>' + recordList(dashboard.projects, 'No projects yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Deadline: ' + fmtDate(item.deadline)); }) + '</section>';
+  if (name === 'requests') mainPanel.innerHTML = formShell('approveRequestForm', 'Approve Request Into Project', selectField('Request', 'requestId', requestOptions()) + selectField('Client', 'clientEmail', clientOptions()) + field('Project Title', 'title') + field('Project Manager', 'projectManager') + field('Assigned Developers, comma-separated', 'assignedDevelopers') + field('Deadline', 'deadline', '', 'date') + field('Amount', 'amount', '', 'number') + area('Description', 'description', 'Project scope and approval notes'), 'Approve & Create Project') + '<section class="panel"><div class="panel-head"><h2>Project Requests</h2><a class="btn ghost" href="/admin/project-requests">Detailed Request Admin</a></div>' + recordList(dashboard.requests, 'No project requests yet.', function(item) { var req = item.requirements || {}; return record(item.requestId || 'Request', item.status, esc((item.contact && item.contact.fullName) || '') + '<br>' + esc((item.contact && item.contact.email) || '') + '<br>' + esc(req.projectType || req.websiteType || 'Project')); }) + '</section>';
+  if (name === 'projects') mainPanel.innerHTML = formShell('createProjectForm', 'Create Project', selectField('Client', 'clientEmail', clientOptions()) + field('Client Name', 'clientName') + selectField('From Request', 'requestId', requestOptions()) + field('Project Title', 'title') + field('Project Manager', 'projectManager') + field('Assigned Developers, comma-separated', 'assignedDevelopers') + field('Deadline', 'deadline', '', 'date') + field('Estimated Amount', 'amount', '', 'number') + field('Progress %', 'progress', '0', 'number') + selectField('Status', 'status', ['Pending','Planning','Development','Testing','Deployment','Completed'].map(function(s){return option(s,s);}).join('')) + area('Description', 'description', 'Project details'), 'Create Project') + '<section class="panel"><div class="panel-head"><h2>Projects</h2></div>' + recordList(dashboard.projects, 'No projects yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Deadline: ' + fmtDate(item.deadline) + '<br>Team: ' + esc((item.assignedDevelopers || []).join(', ') || 'Not assigned')); }) + '</section>';
   if (name === 'team') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Team Assignments</h2></div>' + recordList(dashboard.projects, 'No team assignments yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Team: ' + esc((item.assignedDevelopers || []).join(', ') || 'Not assigned')); }) + '</section>';
-  if (name === 'payments') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Payments</h2></div>' + recordList(dashboard.payments, 'No payments recorded yet.', function(item) { return record(item.paymentId || 'Payment', item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '') + '<br>' + esc(item.milestoneTitle || item.invoiceNumber || 'Payment')); }) + '</section>';
+  if (name === 'payments') mainPanel.innerHTML = formShell('paymentForm', 'Record Payment', selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Invoice Number', 'invoiceNumber') + field('Milestone Title', 'milestoneTitle') + field('Amount', 'amount', '', 'number') + field('Method', 'method') + field('Receipt URL', 'receiptUrl') + selectField('Status', 'status', ['Received','Pending','Failed','Refunded'].map(function(s){return option(s,s);}).join('')), 'Record Payment') + '<section class="panel"><div class="panel-head"><h2>Payments</h2></div>' + recordList(dashboard.payments, 'No payments recorded yet.', function(item) { return record(item.paymentId || 'Payment', item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '') + '<br>' + esc(item.milestoneTitle || item.invoiceNumber || 'Payment')); }) + '</section>';
   if (name === 'pricing') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Pricing Catalog</h2><button class="btn" id="savePricingBtn">Save Prices</button></div><p class="row-meta" style="margin-bottom:14px;">Edit unit prices and triggers. These prices calculate automatic project estimates and generate client invoice PDFs after request submission.</p><div id="pricingEditor" class="records"><div class="empty">Loading pricing catalog...</div></div></section>';
-  if (name === 'quotations') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Quotations</h2></div>' + recordList(dashboard.quotations, 'No quotations yet.', function(item) { return record(item.quotationId || item.title, item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '')); }) + '</section>';
-  if (name === 'invoices') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
-  if (name === 'documents') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Files & Assets</h2></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', esc(item.clientEmail || '') + '<br><a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a>'); }) + '</section>';
-  if (name === 'messages') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Messages</h2></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.clientEmail || '') + '<br>' + esc(item.body || '')); }) + '</section>';
+  if (name === 'quotations') mainPanel.innerHTML = formShell('quotationForm', 'Create Quotation', selectField('Client', 'clientEmail', clientOptions()) + selectField('Request', 'requestId', requestOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Title', 'title', 'Project Quotation') + field('Amount', 'amount', '', 'number') + area('Notes', 'notes', 'Quotation notes'), 'Send Quotation') + '<section class="panel"><div class="panel-head"><h2>Quotations</h2></div>' + recordList(dashboard.quotations, 'No quotations yet.', function(item) { return record(item.quotationId || item.title, item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '')); }) + '</section>';
+  if (name === 'invoices') mainPanel.innerHTML = formShell('invoiceForm', 'Create Invoice', selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Amount', 'amount', '', 'number') + field('Due Date', 'dueDate', '', 'date') + selectField('Status', 'status', ['Unpaid','Paid','Overdue','Cancelled'].map(function(s){return option(s,s);}).join('')) + area('Notes', 'notes', 'Invoice notes'), 'Create Invoice') + '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
+  if (name === 'documents') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Upload File or Deliverable</h2></div><form id="adminDocForm" enctype="multipart/form-data" class="form-panel"><div class="grid">' + selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + selectField('Request', 'requestId', requestOptions()) + '<div class="field full"><label>Document</label><input type="file" name="document" required></div></div><button class="btn" type="submit">Upload Document</button></form></section><section class="panel"><div class="panel-head"><h2>Files & Assets</h2></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', esc(item.clientEmail || '') + '<br><a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a>'); }) + '</section>';
+  if (name === 'messages') mainPanel.innerHTML = formShell('adminMessageForm', 'Send Client Message', selectField('Client', 'clientEmail', clientOptions()) + field('Subject', 'subject') + area('Message', 'body', 'Write a project update or request follow-up'), 'Send Message') + '<section class="panel"><div class="panel-head"><h2>Messages</h2></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.clientEmail || '') + '<br>' + esc(item.body || '')); }) + '</section>';
   if (name === 'timeline') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Timeline</h2></div>' + recordList(dashboard.projects, 'No timeline data yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Progress: ' + esc(item.progress || 0) + '%<br>Deadline: ' + fmtDate(item.deadline)); }) + '</section>';
   if (name === 'risks') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Risk Tracking</h2></div>' + recordList(dashboard.projects, 'No project risks recorded yet.', function(item) { return record(item.projectId || item.title, item.riskLevel || 'Low', esc(item.title || '') + '<br>Status: ' + esc(item.status || 'Pending') + '<br>Progress: ' + esc(item.progress || 0) + '%'); }) + '</section>';
   if (name === 'deliverables') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Deliverables</h2></div>' + recordList(dashboard.projects, 'No deliverables recorded yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>' + esc((item.deliverables || []).join(', ') || 'No deliverables listed yet.')); }) + '</section>';
@@ -453,6 +490,13 @@ function renderPanel(name) {
   if (name === 'settings') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Settings</h2></div><div class="info-table"><div class="info-row"><span>Admin Emails</span><span>SOFTOTECH_ADMIN_EMAILS or ADMIN_EMAILS</span></div><div class="info-row"><span>Storage</span><span>Google Firestore under the current GCloud project</span></div><div class="info-row"><span>Media</span><span>Google Cloud Storage through mediaStorage</span></div></div></section>';
   if (name === 'assistant') document.getElementById('assistantForm').addEventListener('submit', askAssistant);
   if (name === 'pricing') loadPricing();
+  bindForm('approveRequestForm', function(form) { var data = formToObject(form); data.assignedDevelopers = String(data.assignedDevelopers || '').split(',').map(function(item){ return item.trim(); }).filter(Boolean); return postJson('/api/project-portal/admin/projects/approve-request', data); });
+  bindForm('createProjectForm', function(form) { var data = formToObject(form); data.assignedDevelopers = String(data.assignedDevelopers || '').split(',').map(function(item){ return item.trim(); }).filter(Boolean); return postJson('/api/project-portal/admin/projects', data); });
+  bindForm('quotationForm', function(form) { return postJson('/api/project-portal/admin/quotations', formToObject(form)); });
+  bindForm('invoiceForm', function(form) { return postJson('/api/project-portal/admin/invoices', formToObject(form)); });
+  bindForm('paymentForm', function(form) { return postJson('/api/project-portal/admin/payments', formToObject(form)); });
+  bindForm('adminMessageForm', function(form) { return postJson('/api/project-portal/admin/messages', formToObject(form)); });
+  bindForm('adminDocForm', function(form) { return postMultipart('/api/project-portal/admin/documents', form); });
 }
 async function askAssistant(event) {
   event.preventDefault();

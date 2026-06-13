@@ -204,6 +204,12 @@ function buildProjectRequestPayload(body, requestId, files, req) {
     error.statusCode = 400;
     throw error;
   }
+  const portalEmail = String(req.portalClient?.email || '').trim().toLowerCase();
+  if (portalEmail && portalEmail !== email) {
+    const error = new Error('Project request email must match the logged-in client account.');
+    error.statusCode = 403;
+    throw error;
+  }
 
   const requestCategory = String(body.requestCategory || 'Website').trim();
   if (!PROJECT_CATEGORIES.has(requestCategory)) {
@@ -230,7 +236,7 @@ function buildProjectRequestPayload(body, requestId, files, req) {
     status: 'New',
     contact: {
       fullName: requiredString(body, 'fullName', 'Full name'),
-      companyName: String(body.companyName || '').trim(),
+      companyName: String(body.companyName || req.portalClient?.companyName || '').trim(),
       phoneNumber: requiredString(body, 'phoneNumber', 'Phone number'),
       whatsappNumber: String(body.whatsappNumber || '').trim(),
       email,

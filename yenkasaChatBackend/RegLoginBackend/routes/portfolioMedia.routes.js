@@ -1,11 +1,13 @@
 const express = require('express');
 const multer = require('multer');
+const jwt = require('jsonwebtoken');
 
-const auth = require('../middleware/auth');
+const User = require('../models/user.model');
 const { getPermissions } = require('../middleware/permissions');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
 const mediaStorage = require('../services/mediaStorage.service');
 const portfolioContent = require('../services/portfolioContent.service');
+const portal = require('../services/softOTechPortal.service');
 
 const router = express.Router();
 
@@ -40,7 +42,55 @@ function cleanSegment(value, fallback) {
   return cleaned || fallback;
 }
 
+function bearerToken(req) {
+  const header = req.get('authorization') || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1] : '';
+}
+
+async function portfolioAccess(req, res, next) {
+  const token = bearerToken(req);
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Admin login token is required.' });
+  }
+
+  try {
+    const decoded = portal.verifyPortalToken(token);
+    const portalUser = await portal.getClientById(decoded.portalUserId);
+    if (portalUser?.is_admin || portalUser?.role === 'senior_developer') {
+      req.portfolioUser = {
+        id: portalUser.id,
+        email: portalUser.email,
+        username: portalUser.fullName,
+        rank: 'SENIOR_DEVELOPER',
+        source: 'softotech_portal',
+      };
+      return next();
+    }
+  } catch (error) {
+    // Fall through to legacy app-token verification.
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    if (!decoded?.userId) {
+      return res.status(401).json({ success: false, error: 'Invalid admin token.' });
+    }
+    const user = await User.findById(decoded.userId)
+      .select('-password -refreshToken -emailVerificationCode -verificationCode -phoneVerificationCode -passwordResetToken -passwordResetExpires')
+      .populate('role', 'role name accessRole roleName');
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Admin user not found.' });
+    }
+    req.user = user;
+    return portfolioAdminOnly(req, res, next);
+  } catch (error) {
+    return res.status(401).json({ success: false, error: 'Invalid or expired admin token.' });
+  }
+}
+
 function portfolioAdminOnly(req, res, next) {
+  if (req.portfolioUser) return next();
   const permissions = getPermissions(req.user);
   const allowed = ['ADMIN', 'SENIOR_DEVELOPER'].includes(permissions.rank);
   if (!allowed) {
@@ -82,7 +132,13 @@ function resolveUploadTarget(req, file) {
   };
 }
 
-router.get('/admin/verify', auth, portfolioAdminOnly, async (req, res) => {
+router.get('/admin/verify', portfolioAccess, async (req, res) => {
+  if (req.portfolioUser) {
+    return res.json({
+      success: true,
+      user: req.portfolioUser,
+    });
+  }
   res.json({
     success: true,
     user: {
@@ -108,11 +164,11 @@ router.get('/content', async (req, res) => {
   }
 });
 
-router.put('/content', auth, portfolioAdminOnly, async (req, res) => {
+router.put('/content', portfolioAccess, async (req, res) => {
   try {
     const content = await portfolioContent.saveContent(req.body?.content || req.body || {}, {
-      id: req.user?._id?.toString?.() || req.user?.id,
-      email: req.user?.email,
+      id: req.portfolioUser?.id || req.user?._id?.toString?.() || req.user?.id,
+      email: req.portfolioUser?.email || req.user?.email,
     });
     res.json({
       success: true,
@@ -125,7 +181,7 @@ router.put('/content', auth, portfolioAdminOnly, async (req, res) => {
   }
 });
 
-router.post('/media', auth, portfolioAdminOnly, upload.single('file'), async (req, res) => {
+router.post('/media', portfolioAccess, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No portfolio media file uploaded.' });
   }
@@ -145,7 +201,7 @@ router.post('/media', auth, portfolioAdminOnly, upload.single('file'), async (re
       product: target.product,
       type: target.type,
       title: req.body.title || req.file.originalname,
-      url: result.secure_url,
+      url: result.secure_url || result.url,
       publicId: result.public_id,
       folder: target.folder,
       originalName: req.file.originalname,

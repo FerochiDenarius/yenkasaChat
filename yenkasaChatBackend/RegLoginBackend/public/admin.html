@@ -216,11 +216,12 @@
 
       <section class="card">
         <h2>Add Media</h2>
-        <label for="authToken">Admin bearer token</label>
-        <input id="authToken" type="password" placeholder="Paste an active Yenkasa access token" />
-        <p class="hint">Login as an app admin/senior developer, paste the bearer token, verify it, then upload media. Saved content is stored in Firestore.</p>
+        <label for="authToken">Soft-O-Tech admin token</label>
+        <input id="authToken" type="password" placeholder="Login with an authorized admin email, or paste your token" />
+        <p class="hint">Authorized emails are treated as senior developers: ofosumenyabrightkofi@gmail.com, kofiinspirion@gmail.com, ferochidenarius@gmail.com, ki.longrich@gmail.com.</p>
         <div class="actions">
           <button class="primary" id="verifyAdmin">Verify Admin Login</button>
+          <a class="button secondary" href="/client/login?returnTo=/portfolio-admin">Login as Admin</a>
         </div>
         <div class="auth-success" id="authSuccess">
           <img src="/images/logoYenkasaSoftOTechEmblem.png" alt="Admin verified" />
@@ -322,6 +323,11 @@
       render();
     }
 
+    function adminHeaders(extra = {}) {
+      const token = document.getElementById("authToken").value.trim();
+      return Object.assign({Authorization: `Bearer ${token}`}, extra);
+    }
+
     function setUploadAccess(isAllowed, message = "") {
       const success = document.getElementById("authSuccess");
       const uploadButton = document.getElementById("uploadCloudinary");
@@ -329,6 +335,12 @@
       uploadButton.style.opacity = isAllowed ? "1" : ".55";
       success.style.display = isAllowed ? "grid" : "none";
       if (message) document.getElementById("uploadStatus").textContent = message;
+    }
+
+    function loadStoredAdminToken() {
+      const stored = localStorage.getItem("softOTechPortalToken") || localStorage.getItem("portfolioAdminToken") || "";
+      const input = document.getElementById("authToken");
+      if (stored && !input.value) input.value = stored;
     }
 
     function selectedProduct(selectId) {
@@ -391,7 +403,12 @@
     }
 
     document.getElementById("productSelect").addEventListener("change", renderProductForm);
-    document.getElementById("authToken").addEventListener("input", () => setUploadAccess(false));
+    document.getElementById("authToken").addEventListener("input", () => {
+      localStorage.setItem("portfolioAdminToken", document.getElementById("authToken").value.trim());
+      setUploadAccess(false);
+    });
+    document.getElementById("loadLiveContent").addEventListener("click", loadLiveContent);
+    document.getElementById("saveLiveContent").addEventListener("click", saveLiveContent);
     document.getElementById("verifyAdmin").addEventListener("click", async () => {
       const status = document.getElementById("uploadStatus");
       const token = document.getElementById("authToken").value.trim();
@@ -408,6 +425,7 @@
         if (!response.ok || !result.success) {
           throw new Error(result.error || result.message || "Admin verification failed.");
         }
+        localStorage.setItem("portfolioAdminToken", token);
         setUploadAccess(true, `Verified as ${result.user?.username || result.user?.email || result.user?.rank || "admin"}.`);
       } catch (error) {
         setUploadAccess(false, error.message);
@@ -467,6 +485,11 @@
         }
         document.getElementById("mediaPath").value = result.url;
         document.getElementById("mediaTitle").value = result.title || title;
+        if (product && result.url) {
+          product[type] = product[type] || [];
+          product[type].push({title: result.title || title || result.originalName, src: result.url});
+          saveDraft();
+        }
         status.textContent = `Uploaded to ${result.folder}`;
       } catch (error) {
         status.textContent = error.message;
@@ -516,6 +539,49 @@
       saveDraft();
     });
 
+    async function loadLiveContent() {
+      const status = document.getElementById("uploadStatus");
+      status.textContent = "Loading live portfolio content...";
+      try {
+        const response = await fetch("/api/portfolio/content");
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Could not load live portfolio content.");
+        }
+        content = result.content || structuredClone(defaultContent);
+        saveDraft();
+        status.textContent = `Loaded live portfolio content from ${result.collection || "Firestore"}.`;
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    }
+
+    async function saveLiveContent() {
+      const status = document.getElementById("uploadStatus");
+      const token = document.getElementById("authToken").value.trim();
+      if (!token) {
+        status.textContent = "Verify admin access before saving live content.";
+        return;
+      }
+      status.textContent = "Saving live portfolio content...";
+      try {
+        const response = await fetch("/api/portfolio/content", {
+          method: "PUT",
+          headers: adminHeaders({"Content-Type": "application/json"}),
+          body: JSON.stringify({content})
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Could not save live portfolio content.");
+        }
+        content = result.content;
+        saveDraft();
+        status.textContent = `Saved live portfolio content to ${result.collection || "Firestore"}.`;
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    }
+
     function removeMedia(productId, type, index) {
       const product = content.products.find((item) => item.id === productId);
       product[type].splice(index, 1);
@@ -527,8 +593,10 @@
       saveDraft();
     }
 
+    loadStoredAdminToken();
     setUploadAccess(false);
     render();
+    loadLiveContent();
   </script>
 </body>
 </html>

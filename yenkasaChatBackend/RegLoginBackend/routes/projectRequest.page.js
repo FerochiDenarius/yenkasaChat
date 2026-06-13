@@ -238,6 +238,7 @@ router.get('/website-request', (req, res) => {
     </div></section>
 
     <section class="section foot">
+      <div class="summary" id="estimateBox" style="margin-bottom:18px;align-items:flex-start;"><strong>Estimated Price</strong><span id="estimateText">Select project type, platforms, pages and features to see an automatic estimate.</span></div>
       <p class="error" id="errorBox"></p>
       <p class="success-note" id="successBox">Submitting request...</p>
       <button class="btn" id="submitBtn" type="submit">Register Client & Submit Request</button>
@@ -249,6 +250,45 @@ const form = document.getElementById('requestForm');
 const button = document.getElementById('submitBtn');
 const errorBox = document.getElementById('errorBox');
 const successBox = document.getElementById('successBox');
+const estimateText = document.getElementById('estimateText');
+function formJson() {
+  const data = new FormData(form);
+  const payload = {};
+  for (const [key, value] of data.entries()) {
+    if (['pagesRequired','featuresRequired','platformsRequired'].includes(key)) {
+      payload[key] = payload[key] || [];
+      payload[key].push(value);
+    } else if (typeof value === 'string') {
+      payload[key] = value;
+    }
+  }
+  return payload;
+}
+function money(value, currency) {
+  return (currency || 'GHS') + ' ' + Number(value || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+let estimateTimer = null;
+async function updateEstimate() {
+  clearTimeout(estimateTimer);
+  estimateTimer = setTimeout(async () => {
+    try {
+      const response = await fetch('/api/project-requests/estimate', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(formJson())
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Estimate unavailable.');
+      const estimate = payload.estimate || {};
+      const items = (estimate.lineItems || []).slice(0, 6).map(item => item.description + ': ' + money(item.total, estimate.currency)).join('<br>');
+      estimateText.innerHTML = '<b>' + money(estimate.grandTotal, estimate.currency) + '</b><br>' + (items || 'No priced items selected yet.');
+    } catch (error) {
+      estimateText.textContent = error.message;
+    }
+  }, 250);
+}
+form.addEventListener('change', updateEstimate);
+form.addEventListener('input', updateEstimate);
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   errorBox.style.display = 'none';
@@ -258,7 +298,9 @@ form.addEventListener('submit', async (event) => {
     const response = await fetch('/api/project-requests', { method: 'POST', body: new FormData(form) });
     const payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.message || 'Request failed.');
-    window.location.href = '/website-request/success?requestId=' + encodeURIComponent(payload.requestId);
+    const params = new URLSearchParams({ requestId: payload.requestId });
+    if (payload.invoice && payload.invoice.url) params.set('invoiceUrl', payload.invoice.url);
+    window.location.href = '/website-request/success?' + params.toString();
   } catch (error) {
     errorBox.textContent = error.message;
     errorBox.style.display = 'block';
@@ -266,19 +308,21 @@ form.addEventListener('submit', async (event) => {
     button.disabled = false;
   }
 });
+updateEstimate();
 </script>`,
   }));
 });
 
 router.get('/website-request/success', (req, res) => {
   const requestId = String(req.query.requestId || '').replace(/[^A-Z0-9-]/gi, '');
+  const invoiceUrl = String(req.query.invoiceUrl || '').replace(/"/g, '&quot;');
   res.send(pageShell({
     title: 'Request Submitted | Yenkasa Soft-O-Tech',
     body: `<main class="wrap"><section class="section" style="max-width:760px;margin:40px auto;">
       <h1 style="font-size:clamp(2rem,5vw,3.4rem);">Request submitted</h1>
       <p class="lead">Your project request and client contact profile have been received. Keep this Request ID for follow-up.</p>
-      <div class="summary" style="margin:22px 0;"><strong>${requestId || 'Request received'}</strong><span>Yenkasa Soft-O-Tech will review the details and contact you.</span></div>
-      <a class="btn" href="/">Back to Portfolio</a>
+      <div class="summary" style="margin:22px 0;"><strong>${requestId || 'Request received'}</strong><span>Yenkasa Soft-O-Tech will review the details and contact you. Your invoice PDF has been generated from the selected project details.</span></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">${invoiceUrl ? `<a class="btn" target="_blank" rel="noopener" href="${invoiceUrl}">Download Invoice PDF</a>` : ''}<a class="btn secondary" href="/">Back to Portfolio</a></div>
     </section></main>`,
   }));
 });
@@ -330,6 +374,8 @@ async function loadRequests() {
   if (!payload.items.length) { panels.requestsPanel.innerHTML = '<p class="lead">No requests match the filters.</p>'; return; }
   panels.requestsPanel.innerHTML = payload.items.map(item => {
     const files = (item.files || []).map(file => '<a class="btn ghost" target="_blank" rel="noopener" href="' + escapeHtml(file.url) + '">' + escapeHtml(file.originalName) + '</a>').join(' ');
+    const invoice = item.invoice || {};
+    const estimate = item.pricingEstimate || {};
     const contact = item.contact || {};
     const req = item.requirements || {};
     return '<article>' +
@@ -338,6 +384,7 @@ async function loadRequests() {
       '<p class="meta">Phone: ' + escapeHtml(contact.phoneNumber) + ' | WhatsApp: ' + escapeHtml(contact.whatsappNumber) + ' | Preferred: ' + escapeHtml(contact.preferredContactMethod) + ' | Best time: ' + escapeHtml(contact.bestTimeToContact) + '</p>' +
       '<p class="meta">' + escapeHtml(item.requestCategory) + ' | ' + escapeHtml(req.projectType || req.websiteType) + ' | Platforms: ' + escapeHtml((req.platformsRequired || []).join(", ")) + '</p>' +
       '<p class="meta">Pages/Screens: ' + escapeHtml((req.pagesRequired || []).join(", ")) + ' | Features: ' + escapeHtml((req.featuresRequired || []).join(", ")) + '</p>' +
+      '<p class="meta">Estimated Invoice: ' + escapeHtml((estimate.currency || 'GHS') + ' ' + Number(estimate.grandTotal || invoice.amount || 0).toLocaleString()) + (invoice.url ? ' | <a target="_blank" rel="noopener" href="' + escapeHtml(invoice.url) + '">Download invoice PDF</a>' : '') + '</p>' +
       '<p>' + escapeHtml(item.business?.description) + '</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + files + '</div>' +
     '</article>';

@@ -159,6 +159,7 @@ function sidebar(active = 'dashboard', mode = 'client') {
     ['projects', 'PJ', 'Projects'],
     ['team', 'TM', 'Team Assignments'],
     ['payments', 'PY', 'Payments'],
+    ['pricing', 'PC', 'Pricing Catalog'],
     ['quotations', 'QT', 'Quotations'],
     ['invoices', 'IN', 'Invoices'],
     ['documents', 'FL', 'Files & Assets'],
@@ -439,6 +440,7 @@ function renderPanel(name) {
   if (name === 'projects') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Projects</h2></div>' + recordList(dashboard.projects, 'No projects yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Deadline: ' + fmtDate(item.deadline)); }) + '</section>';
   if (name === 'team') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Team Assignments</h2></div>' + recordList(dashboard.projects, 'No team assignments yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Team: ' + esc((item.assignedDevelopers || []).join(', ') || 'Not assigned')); }) + '</section>';
   if (name === 'payments') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Payments</h2></div>' + recordList(dashboard.payments, 'No payments recorded yet.', function(item) { return record(item.paymentId || 'Payment', item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '') + '<br>' + esc(item.milestoneTitle || item.invoiceNumber || 'Payment')); }) + '</section>';
+  if (name === 'pricing') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Pricing Catalog</h2><button class="btn" id="savePricingBtn">Save Prices</button></div><p class="row-meta" style="margin-bottom:14px;">Edit unit prices and triggers. These prices calculate automatic project estimates and generate client invoice PDFs after request submission.</p><div id="pricingEditor" class="records"><div class="empty">Loading pricing catalog...</div></div></section>';
   if (name === 'quotations') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Quotations</h2></div>' + recordList(dashboard.quotations, 'No quotations yet.', function(item) { return record(item.quotationId || item.title, item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '')); }) + '</section>';
   if (name === 'invoices') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
   if (name === 'documents') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Files & Assets</h2></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', esc(item.clientEmail || '') + '<br><a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a>'); }) + '</section>';
@@ -450,6 +452,7 @@ function renderPanel(name) {
   if (name === 'analytics') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Analytics</h2></div><div class="dashboard-grid"><div>' + recordList((dashboard.analytics && dashboard.analytics.byType) || [], 'No type analytics yet.', function(item) { return record(item.type, item.count + ' requests', 'Project category performance'); }) + '</div><div>' + recordList((dashboard.analytics && dashboard.analytics.byStatus) || [], 'No status analytics yet.', function(item) { return record(item.status, item.count + ' requests', 'Pipeline status'); }) + '</div></div></section>';
   if (name === 'settings') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Settings</h2></div><div class="info-table"><div class="info-row"><span>Admin Emails</span><span>SOFTOTECH_ADMIN_EMAILS or ADMIN_EMAILS</span></div><div class="info-row"><span>Storage</span><span>Google Firestore under the current GCloud project</span></div><div class="info-row"><span>Media</span><span>Google Cloud Storage through mediaStorage</span></div></div></section>';
   if (name === 'assistant') document.getElementById('assistantForm').addEventListener('submit', askAssistant);
+  if (name === 'pricing') loadPricing();
 }
 async function askAssistant(event) {
   event.preventDefault();
@@ -458,6 +461,34 @@ async function askAssistant(event) {
   var response = await fetch('/api/project-portal/assistant', { method:'POST', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify(Object.fromEntries(new FormData(event.target))) });
   var payload = await response.json();
   responseBox.textContent = (payload.result && payload.result.answer) || payload.message || 'No answer returned.';
+}
+async function loadPricing() {
+  var host = document.getElementById('pricingEditor');
+  var response = await fetch('/api/project-portal/admin/pricing', { headers:headers() });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) { host.innerHTML = '<div class="empty">' + esc(payload.message || 'Pricing unavailable.') + '</div>'; return; }
+  host.innerHTML = (payload.items || []).map(function(item) {
+    return '<article class="record pricing-row" data-key="' + esc(item.key) + '"><div class="grid"><div class="field"><label>Item</label><input data-field="label" value="' + esc(item.label) + '"></div><div class="field"><label>Billing Type</label><input data-field="billingType" value="' + esc(item.billingType) + '"></div><div class="field"><label>Unit Price</label><input data-field="unitPrice" type="number" min="0" step="0.01" value="' + esc(item.unitPrice) + '"></div><div class="field"><label>Category</label><input data-field="category" value="' + esc(item.category) + '"></div><div class="field full"><label>Triggers, comma-separated</label><input data-field="triggers" value="' + esc((item.triggers || []).join(', ')) + '"></div><label style="display:flex;gap:8px;align-items:center;"><input data-field="active" type="checkbox" ' + (item.active === false ? '' : 'checked') + '> Active</label></div></article>';
+  }).join('');
+  document.getElementById('savePricingBtn').addEventListener('click', savePricing);
+}
+async function savePricing() {
+  var rows = Array.from(document.querySelectorAll('.pricing-row')).map(function(row) {
+    var value = function(field) { return row.querySelector('[data-field="' + field + '"]'); };
+    return {
+      key: row.dataset.key,
+      label: value('label').value,
+      billingType: value('billingType').value,
+      unitPrice: Number(value('unitPrice').value || 0),
+      category: value('category').value,
+      triggers: value('triggers').value.split(',').map(function(item) { return item.trim(); }).filter(Boolean),
+      active: value('active').checked
+    };
+  });
+  var response = await fetch('/api/project-portal/admin/pricing', { method:'PUT', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify({ items: rows }) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) alert(payload.message || 'Could not save pricing.');
+  else alert('Pricing saved. New project requests will use the updated prices.');
 }
 async function loadAdmin() {
   errorBox.style.display = 'none';

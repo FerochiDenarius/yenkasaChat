@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { getPermissions } = require('../middleware/permissions');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
 const mediaStorage = require('../services/mediaStorage.service');
+const portfolioContent = require('../services/portfolioContent.service');
 
 const router = express.Router();
 
@@ -91,6 +92,37 @@ router.get('/admin/verify', auth, portfolioAdminOnly, async (req, res) => {
       rank: getPermissions(req.user).rank,
     },
   });
+});
+
+router.get('/content', async (req, res) => {
+  try {
+    const content = await portfolioContent.getContent();
+    res.json({
+      success: true,
+      content,
+      collection: portfolioContent.collectionName(),
+    });
+  } catch (err) {
+    console.error('[PortfolioMedia] content load failed:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load portfolio content.' });
+  }
+});
+
+router.put('/content', auth, portfolioAdminOnly, async (req, res) => {
+  try {
+    const content = await portfolioContent.saveContent(req.body?.content || req.body || {}, {
+      id: req.user?._id?.toString?.() || req.user?.id,
+      email: req.user?.email,
+    });
+    res.json({
+      success: true,
+      content,
+      collection: portfolioContent.collectionName(),
+    });
+  } catch (err) {
+    console.error('[PortfolioMedia] content save failed:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to save portfolio content.' });
+  }
 });
 
 router.post('/media', auth, portfolioAdminOnly, upload.single('file'), async (req, res) => {

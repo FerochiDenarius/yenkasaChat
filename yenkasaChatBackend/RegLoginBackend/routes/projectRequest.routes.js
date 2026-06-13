@@ -6,6 +6,9 @@ const projectRequestStore = require('../services/projectRequestStore.service');
 const auth = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { sendProjectRequestEmails } = require('../services/projectRequestEmail.service');
+const pricingService = require('../services/softOTechPricing.service');
+const invoiceService = require('../services/projectInvoice.service');
+const portal = require('../services/softOTechPortal.service');
 
 const router = express.Router();
 
@@ -131,6 +134,27 @@ function emailIsValid(value) {
   return /.+@.+\..+/.test(String(value || '').trim());
 }
 
+function bearerToken(req) {
+  const header = req.get('authorization') || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1] : '';
+}
+
+async function clientPortalRequired(req, res, next) {
+  try {
+    const token = bearerToken(req);
+    if (!token) return res.status(401).json({ success: false, message: 'Client login is required before submitting project details.' });
+    const decoded = portal.verifyPortalToken(token);
+    const client = await portal.getClientById(decoded.portalUserId);
+    if (!client) return res.status(401).json({ success: false, message: 'Client portal account not found.' });
+    if (client.is_admin) return res.status(403).json({ success: false, message: 'Please submit project requests from a client account.' });
+    req.portalClient = client;
+    return next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired client login. Please login again.' });
+  }
+}
+
 async function nextRequestId() {
   const softOTechId = await projectRequestStore.nextTrackingId();
   if (softOTechId) return softOTechId;
@@ -246,8 +270,29 @@ function buildProjectRequestPayload(body, requestId, files, req) {
   };
 }
 
+function estimateInputFromBody(body = {}) {
+  return {
+    requestCategory: String(body.requestCategory || '').trim(),
+    projectType: String(body.projectType || body.websiteType || '').trim(),
+    websiteType: String(body.websiteType || body.projectType || '').trim(),
+    pagesRequired: sanitizeList(body.pagesRequired, PAGES),
+    featuresRequired: sanitizeList(body.featuresRequired, FEATURES),
+    platformsRequired: sanitizeList(body.platformsRequired, PLATFORMS),
+  };
+}
+
+router.post('/estimate', async (req, res) => {
+  try {
+    const estimate = await pricingService.estimate(estimateInputFromBody(req.body || {}));
+    res.json({ success: true, estimate });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to calculate estimate.' });
+  }
+});
+
 router.post(
   '/',
+  clientPortalRequired,
   upload.fields([
     { name: 'companyLogo', maxCount: 1 },
     { name: 'additionalFiles', maxCount: 7 },
@@ -258,6 +303,12 @@ router.post(
       const files = await uploadRequestFiles(req.files || {}, requestId);
       const payload = buildProjectRequestPayload(req.body || {}, requestId, files, req);
       const request = await projectRequestStore.create(payload);
+      const pricingEstimate = await pricingService.estimate({
+        ...estimateInputFromBody(req.body || {}),
+        currency: 'GHS',
+      });
+      const invoice = await invoiceService.generateAndUploadInvoice(request, pricingEstimate);
+      await projectRequestStore.updatePricingAndInvoice(request.requestId, pricingEstimate, invoice);
       const emailResult = await sendProjectRequestEmails(request, {
         onUpdate: (emailNotifications) => projectRequestStore.updateEmailNotifications(request.requestId, emailNotifications),
       });
@@ -266,6 +317,8 @@ router.post(
         success: true,
         requestId: request.requestId,
         status: request.status,
+        pricingEstimate,
+        invoice,
         email: emailResult,
       });
     } catch (error) {

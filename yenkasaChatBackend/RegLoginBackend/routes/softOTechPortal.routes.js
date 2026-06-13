@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const portal = require('../services/softOTechPortal.service');
+const pricing = require('../services/softOTechPricing.service');
 
 const router = express.Router();
 
@@ -163,6 +164,27 @@ router.post('/admin/projects', portalAuth, adminOnly, async (req, res) => {
       actorEmail: req.portalUser.email,
     });
     res.status(201).json({ success: true, project });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const items = await pricing.listPricingItems({ includeInactive: true });
+    res.json({ success: true, items });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.put('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
+  try {
+    const items = await pricing.savePricingItems(req.body?.items || [], {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, items });
   } catch (error) {
     sendError(res, error);
   }

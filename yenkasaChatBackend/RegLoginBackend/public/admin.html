@@ -179,9 +179,11 @@
   <header>
     <div class="container">
       <h1>Yenkasa Portfolio Admin</h1>
-      <p>Edit portfolio metadata, add screenshot/video references, milestones, achievements and statistics, then export the JSON file for <code>uploads/portfolio-content.json</code>.</p>
+      <p>Edit portfolio metadata, upload screenshots/videos, and save live content for the Yenkasa App, Store, YenkasaAI, ecosystem and client project pages.</p>
       <div class="actions">
-        <a class="button secondary" href="index.html">View Site</a>
+        <a class="button secondary" href="/">View Site</a>
+        <button class="primary" id="saveLiveContent">Save Live Content</button>
+        <button class="secondary" id="loadLiveContent">Reload Live Content</button>
         <button class="primary" id="downloadJson">Download JSON</button>
         <button class="danger" id="resetContent">Reset Draft</button>
       </div>
@@ -216,7 +218,7 @@
         <h2>Add Media</h2>
         <label for="authToken">Admin bearer token</label>
         <input id="authToken" type="password" placeholder="Paste an active Yenkasa access token" />
-        <p class="hint">Media uploads use POST /api/portfolio/media and require an admin/senior developer bearer token.</p>
+        <p class="hint">Login as an app admin/senior developer, paste the bearer token, verify it, then upload media. Saved content is stored in Firestore.</p>
         <div class="actions">
           <button class="primary" id="verifyAdmin">Verify Admin Login</button>
         </div>

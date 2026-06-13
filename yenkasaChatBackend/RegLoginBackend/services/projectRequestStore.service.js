@@ -344,6 +344,18 @@ async function updateEmailNotifications(requestId, emailNotifications) {
   }, { merge: true });
 }
 
+async function updatePricingAndInvoice(requestId, pricingEstimate, invoice) {
+  const update = {
+    pricingEstimate: normalizeValue(pricingEstimate),
+    invoice: normalizeValue(invoice),
+    updatedAt: new Date(),
+  };
+  if (useMongo()) {
+    return ProjectRequest.updateOne({ requestId }, { $set: update });
+  }
+  return requestCollection().doc(requestId).set(update, { merge: true });
+}
+
 async function updateStatus(requestId, status, changedBy = null) {
   if (useMongo()) {
     const request = await ProjectRequest.findOne({ requestId });
@@ -379,5 +391,6 @@ module.exports = {
   nextTrackingId,
   storageProvider,
   updateEmailNotifications,
+  updatePricingAndInvoice,
   updateStatus,
 };

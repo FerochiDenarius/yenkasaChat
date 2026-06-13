@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
 const mediaStorage = require('./mediaStorage.service');
 const pricing = require('./softOTechPricing.service');
 const projectRequestStore = require('./projectRequestStore.service');
@@ -46,6 +47,13 @@ function projectId() {
   return process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || DEFAULT_PROJECT_ID;
 }
 
+function firestoreDatabaseId() {
+  return process.env.SOFTOTECH_FIRESTORE_DATABASE_ID ||
+    process.env.PROJECT_REQUEST_FIRESTORE_DATABASE_ID ||
+    process.env.FIRESTORE_DATABASE_ID ||
+    '(default)';
+}
+
 function credential() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
@@ -57,7 +65,7 @@ function db() {
   if (!admin.apps.length) {
     admin.initializeApp({ credential: credential(), projectId: projectId() });
   }
-  return admin.firestore();
+  return getFirestore(admin.app(), firestoreDatabaseId());
 }
 
 function jwtSecret() {
@@ -94,7 +102,8 @@ function normalizeValue(value) {
 
 function docToObject(doc) {
   if (!doc.exists) return null;
-  return normalizeValue({ id: doc.id, ...doc.data() });
+  const data = doc.data() || {};
+  return normalizeValue({ id: doc.id, ...data, hasLogin: Boolean(data.passwordHash) });
 }
 
 function roleForEmail(email) {
@@ -309,26 +318,38 @@ async function createClient(payload = {}, actor = {}) {
   }
   const ref = db().collection(CLIENTS).doc(clientIdFromEmail(email));
   const existing = await ref.get();
+  const existingData = existing.exists ? existing.data() : {};
+  const password = String(payload.password || '').trim();
+  if (password && password.length < 8) {
+    const error = new Error('Password must be at least 8 characters.');
+    error.statusCode = 400;
+    throw error;
+  }
   const access = roleForEmail(email);
   const client = {
-    ...(existing.exists ? existing.data() : {}),
+    ...existingData,
     clientId: ref.id,
-    fullName: cleanText(payload.fullName),
-    companyName: cleanText(payload.companyName),
+    fullName: cleanText(payload.fullName || existingData.fullName),
+    companyName: cleanText(payload.companyName || existingData.companyName),
     email,
-    phoneNumber: cleanText(payload.phone || payload.phoneNumber),
-    country: cleanText(payload.country),
-    address: cleanText(payload.address),
-    registrationDate: existing.exists ? existing.data().registrationDate : now(),
+    phoneNumber: cleanText(payload.phone || payload.phoneNumber || existingData.phoneNumber),
+    country: cleanText(payload.country || existingData.country),
+    address: cleanText(payload.address || existingData.address),
+    registrationDate: existingData.registrationDate || now(),
+    registeredAt: existingData.registeredAt || existingData.registrationDate || now(),
     status: validOrDefault(payload.status, CLIENT_STATUSES, 'Active'),
-    assignedProjectManager: cleanText(payload.assignedProjectManager),
-    notes: cleanText(payload.notes),
+    assignedProjectManager: cleanText(payload.assignedProjectManager || existingData.assignedProjectManager),
+    notes: cleanText(payload.notes || existingData.notes),
     is_admin: access.is_admin,
     role: access.role,
     userType: access.userType,
     teamRole: access.teamRole,
     updatedAt: now(),
   };
+  if (password) {
+    client.passwordHash = await bcrypt.hash(password, 10);
+    client.emailVerified = existingData.emailVerified || false;
+  }
   await ref.set(client, { merge: true });
   await writeAudit(existing.exists ? 'client_updated' : 'client_created', actor, { clientId: ref.id, email });
   return normalizeValue({ id: ref.id, ...client });
@@ -480,7 +501,7 @@ async function clientDashboard(client) {
 }
 
 async function adminDashboard() {
-  const [clients, leads, requests, requestAnalytics, projects, requirements, quotations, invoices, messages, documents, proposals, payments, portfolio, auditLogs] = await Promise.all([
+  const [clients, leads, requests, requestAnalytics, projects, requirements, quotations, invoices, messages, documents, proposals, payments, portfolio, auditLogs, pricingCategories, pricingItems] = await Promise.all([
     listClients({ limit: 1000, page: 1 }),
     listLeads({ limit: 1000, page: 1 }),
     projectRequestStore.list({ limit: 1000, page: 1 }),
@@ -495,6 +516,8 @@ async function adminDashboard() {
     db().collection(PAYMENTS).limit(1000).get(),
     db().collection(PORTFOLIO_PROJECTS).limit(1000).get(),
     db().collection(AUDIT_LOGS).orderBy('createdAt', 'desc').limit(100).get(),
+    pricing.listCategories({ includeInactive: true }),
+    pricing.listPricingItems({ includeInactive: true }),
   ]);
   const projectItems = projects.docs.map(docToObject);
   const invoiceItems = invoices.docs.map(docToObject);
@@ -527,6 +550,8 @@ async function adminDashboard() {
     payments: paymentItems,
     portfolioProjects: portfolio.docs.map(docToObject),
     auditLogs: auditLogs.docs.map(docToObject),
+    pricingCategories,
+    pricingItems,
     pricingReport,
     roles: TEAM_ROLES,
     statuses: {

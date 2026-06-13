@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
 
 const DEFAULT_PROJECT_ID = 'project-10405180-0afd-4ecc-9f8';
 const DEFAULT_COLLECTION = 'softotech_portfolio_content';
@@ -9,6 +10,13 @@ function firestoreProjectId() {
     process.env.GCLOUD_PROJECT ||
     process.env.GCP_PROJECT ||
     DEFAULT_PROJECT_ID;
+}
+
+function firestoreDatabaseId() {
+  return process.env.SOFTOTECH_FIRESTORE_DATABASE_ID ||
+    process.env.PROJECT_REQUEST_FIRESTORE_DATABASE_ID ||
+    process.env.FIRESTORE_DATABASE_ID ||
+    '(default)';
 }
 
 function getFirebaseCredential() {
@@ -25,7 +33,7 @@ function firestoreDb() {
       projectId: firestoreProjectId(),
     });
   }
-  return admin.firestore();
+  return getFirestore(admin.app(), firestoreDatabaseId());
 }
 
 function collectionName() {

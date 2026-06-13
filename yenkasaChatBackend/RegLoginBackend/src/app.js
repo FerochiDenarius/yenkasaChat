@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -48,6 +49,11 @@ app.use(cloudinaryMediaResponseOptimizer);
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 validateYmeRuntime();
 console.log('[YME] normalizeText loaded successfully');
 
@@ -60,7 +66,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: [
           "'self'",

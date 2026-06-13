@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
 const ProjectRequest = require('../models/projectRequest.model');
 
 const DEFAULT_PROJECT_ID = 'project-10405180-0afd-4ecc-9f8';
@@ -27,6 +28,13 @@ function firestoreProjectId() {
     DEFAULT_PROJECT_ID;
 }
 
+function firestoreDatabaseId() {
+  return process.env.SOFTOTECH_FIRESTORE_DATABASE_ID ||
+    process.env.PROJECT_REQUEST_FIRESTORE_DATABASE_ID ||
+    process.env.FIRESTORE_DATABASE_ID ||
+    '(default)';
+}
+
 function getFirebaseCredential() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
@@ -41,7 +49,7 @@ function firestoreDb() {
       projectId: firestoreProjectId(),
     });
   }
-  return admin.firestore();
+  return getFirestore(admin.app(), firestoreDatabaseId());
 }
 
 function requestCollection() {

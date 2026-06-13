@@ -2,7 +2,13 @@ const express = require('express');
 
 const router = express.Router();
 
-function shell({ title, body }) {
+function shell({ title, body, nonce = '' }) {
+  const scriptNonce = nonce ? ` nonce="${String(nonce).replace(/"/g, '&quot;')}"` : '';
+  const safeBody = String(body || '').replace(
+    /<script(?![^>]*\bsrc=)([^>]*)>/g,
+    `<script${scriptNonce}$1>`,
+  );
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -121,7 +127,7 @@ function shell({ title, body }) {
     @media (max-width:860px) { .public-shell { grid-template-columns:1fr; background:#f8fbff; } .public-brand { min-height:auto; padding:26px; background:linear-gradient(135deg,#06182f,#0c2444); } .app-shell { grid-template-columns:1fr; } .sidebar { position:relative; min-height:auto; } .side-nav { grid-template-columns:repeat(2,minmax(0,1fr)); } .topbar { height:auto; padding:18px; align-items:flex-start; } .content { padding:18px; } .metrics, .quick-actions, .grid { grid-template-columns:1fr; } .timeline { grid-template-columns:1fr; gap:16px; } .step:before { display:none; } }
   </style>
 </head>
-<body>${body}</body>
+<body>${safeBody}</body>
 </html>`;
 }
 
@@ -155,8 +161,10 @@ function sidebar(active = 'dashboard', mode = 'client') {
   const adminItems = [
     ['dashboard', 'DB', 'Dashboard'],
     ['clients', 'CL', 'Clients'],
+    ['leads', 'LD', 'Leads'],
     ['requests', 'PR', 'Project Requests'],
     ['projects', 'PJ', 'Projects'],
+    ['requirements', 'RQ', 'Requirements'],
     ['team', 'TM', 'Team Assignments'],
     ['payments', 'PY', 'Payments'],
     ['pricing', 'PC', 'Pricing Catalog'],
@@ -181,6 +189,7 @@ function sidebar(active = 'dashboard', mode = 'client') {
 
 router.get('/software-solutions', (req, res) => {
   res.send(shell({
+    nonce: res.locals.cspNonce,
     title: 'Software Solutions Portal | Yenkasa Soft-O-Tech',
     body: `<main class="public-shell">${publicBrand()}<section class="auth-card">
       <h2>Software Solutions Portal</h2>
@@ -198,6 +207,7 @@ router.get('/software-solutions', (req, res) => {
 
 router.get('/client/register', (req, res) => {
   res.send(shell({
+    nonce: res.locals.cspNonce,
     title: 'Client Register | Yenkasa Soft-O-Tech',
     body: `<main class="public-shell">${publicBrand()}<section class="auth-card">
       <h2>Create client account</h2>
@@ -237,6 +247,7 @@ if (registerReturnTo) document.getElementById('loginInstead').href = '/client/lo
 
 router.get('/client/login', (req, res) => {
   res.send(shell({
+    nonce: res.locals.cspNonce,
     title: 'Client Login | Yenkasa Soft-O-Tech',
     body: `<main class="public-shell">${publicBrand()}<section class="auth-card">
       <h2>Client portal login</h2>
@@ -268,7 +279,7 @@ if (loginReturnTo) document.getElementById('registerInstead').href = '/client/re
   }));
 });
 
-function portfolioAdminAuthPage(mode = 'login') {
+function portfolioAdminAuthPage(mode = 'login', nonce = '') {
   const isRegister = mode === 'register';
   const title = isRegister ? 'Portfolio Admin Register | Yenkasa Soft-O-Tech' : 'Portfolio Admin Login | Yenkasa Soft-O-Tech';
   const endpoint = isRegister ? '/api/portfolio/auth/register' : '/api/portfolio/auth/login';
@@ -283,6 +294,7 @@ function portfolioAdminAuthPage(mode = 'login') {
         <div class="field full"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>`;
 
   return shell({
+    nonce,
     title,
     body: `<main class="public-shell">${publicBrand()}<section class="auth-card">
       <h2>${isRegister ? 'Create portfolio admin account' : 'Portfolio admin login'}</h2>
@@ -318,15 +330,16 @@ document.getElementById('portfolioAuthForm').addEventListener('submit', async fu
 }
 
 router.get('/portfolio-admin/login', (req, res) => {
-  res.send(portfolioAdminAuthPage('login'));
+  res.send(portfolioAdminAuthPage('login', res.locals.cspNonce));
 });
 
 router.get('/portfolio-admin/register', (req, res) => {
-  res.send(portfolioAdminAuthPage('register'));
+  res.send(portfolioAdminAuthPage('register', res.locals.cspNonce));
 });
 
 router.get('/client/dashboard', (req, res) => {
   res.send(shell({
+    nonce: res.locals.cspNonce,
     title: 'Client Dashboard | Yenkasa Soft-O-Tech',
     body: `<main class="app-shell">${sidebar('dashboard', 'client')}<section class="workspace">
       <header class="topbar"><div><h1 id="welcomeTitle">Welcome back</h1><p id="welcomeSub">Here is what is happening with your project.</p></div><div class="top-actions"><a class="btn ghost" href="/request-project">New Request</a><div class="avatar" id="avatar">YS</div></div></header>
@@ -424,10 +437,10 @@ function renderPanel(name) {
   if (name === 'dashboard') return renderOverview();
   if (name === 'requests') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Requests</h2><a class="btn" href="/request-project">New Request</a></div>' + recordList(dashboard.requests, 'No project requests yet.', function(item) { var req = item.requirements || {}; return record(item.requestId, item.status, esc(req.projectType || req.websiteType || 'Project request') + '<br>Submitted ' + fmtDate(item.submittedAt)); }) + '</section>';
   if (name === 'projects') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Details</h2></div>' + renderProjectInfo() + renderTimeline() + '</section>';
-  if (name === 'costs') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Cost</h2></div>' + renderCostSummary() + '</section>';
+  if (name === 'costs') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Cost</h2></div>' + renderCostSummary() + '<div style="height:16px"></div>' + recordList(dashboard.quotations, 'No quotations yet.', function(item) { return record(item.quotationId || item.title || 'Quotation', item.status, money(item.amount) + '<br>' + esc(item.title || item.projectTitle || 'Project quotation')); }) + '<div style="height:16px"></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount || item.totalAmount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
   if (name === 'duration') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Duration</h2></div>' + renderTimeline() + '<div class="info-table"><div class="info-row"><span>Expected Delivery</span><span>' + fmtDate(expectedDelivery()) + '</span></div><div class="info-row"><span>Current Progress</span><span>' + projectProgress(projectStatus()) + '%</span></div></div></section>';
   if (name === 'requirements') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Requirements</h2><a class="btn" href="/request-project">Submit New Requirement</a></div>' + recordList(dashboard.requests, 'No requirements have been submitted yet.', function(item) { var req = item.requirements || {}; return record(item.requestId || 'Requirement', item.status, esc(req.projectName || req.projectType || req.websiteType || 'Project') + '<br>' + esc(req.requirements || req.additionalNotes || req.businessDescription || 'No detailed requirement text saved.')); }) + '</section>';
-  if (name === 'updates') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Updates</h2></div>' + renderUpdates() + '</section>';
+  if (name === 'updates') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Updates</h2></div>' + renderUpdates() + '<div style="height:16px"></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.body || '') + '<br>' + fmtDate(item.createdAt)); }) + '<div style="height:16px"></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', '<a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a><br>' + fmtDate(item.createdAt)); }) + '</section>';
   if (name === 'messages' || name === 'support') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>' + (name === 'support' ? 'Support' : 'Messages') + '</h2></div><form id="messageForm" class="form-panel"><div class="grid"><div class="field"><label>Subject</label><input name="subject"></div><div class="field full"><label>Message</label><textarea name="body"></textarea></div></div><button class="btn" type="submit">Send Message</button></form><div style="height:16px"></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.body || '') + '<br>' + fmtDate(item.createdAt)); }) + '</section>';
   if (name === 'documents') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Files & Documents</h2></div><form id="docForm" enctype="multipart/form-data" class="form-panel"><div class="grid"><div class="field"><label>Document</label><input type="file" name="document" required></div><div class="field"><label>Request ID</label><input name="requestId"></div></div><button class="btn" type="submit">Upload Document</button></form><div style="height:16px"></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', '<a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a><br>' + fmtDate(item.createdAt)); }) + '</section>';
   if (name === 'invoices') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
@@ -461,6 +474,7 @@ load().then(function() { renderPanel('dashboard'); }).catch(function(error) { er
 
 router.get('/admin', (req, res) => {
   res.send(shell({
+    nonce: res.locals.cspNonce,
     title: 'Admin Dashboard | Yenkasa Soft-O-Tech',
     body: `<main class="app-shell">${sidebar('dashboard', 'admin')}<section class="workspace">
       <header class="topbar"><div><h1>Soft-O-Tech Operations</h1><p>Clients, requests, projects, quotations, invoices, messages, and analytics.</p></div><div class="top-actions"><a class="btn ghost" href="/admin/project-requests">Request Admin</a><div class="avatar">AD</div></div></header>
@@ -475,6 +489,7 @@ var tokenInput = document.getElementById('token');
 tokenInput.value = localStorage.getItem('softOTechPortalToken') || '';
 tokenInput.addEventListener('input', function() { localStorage.setItem('softOTechPortalToken', tokenInput.value.trim()); });
 var dashboard = null;
+var pricingState = { categories: [], items: [] };
 var mainPanel = document.getElementById('mainPanel');
 var errorBox = document.getElementById('errorBox');
 function headers(extra) { return Object.assign({ Authorization:'Bearer ' + tokenInput.value.trim() }, extra || {}); }
@@ -493,7 +508,33 @@ function option(value, label) { return '<option value="' + esc(value) + '">' + e
 function clientOptions() { return '<option value="">Select client</option>' + (dashboard.clients || []).map(function(item) { return option(item.email, (item.fullName || item.email) + (item.companyName ? ' - ' + item.companyName : '')); }).join(''); }
 function requestOptions() { return '<option value="">Select request</option>' + (dashboard.requests || []).map(function(item) { var req = item.requirements || {}; return option(item.requestId, item.requestId + ' - ' + ((item.contact && item.contact.fullName) || item.contact?.email || 'Client') + ' - ' + (req.projectType || req.websiteType || 'Project')); }).join(''); }
 function projectOptions() { return '<option value="">Select project</option>' + (dashboard.projects || []).map(function(item) { return option(item.projectId, item.projectId + ' - ' + (item.title || 'Project')); }).join(''); }
-function formToObject(form) { return Object.fromEntries(new FormData(form)); }
+function activePricingItems() { return ((pricingState.items && pricingState.items.length ? pricingState.items : dashboard.pricingItems) || []).filter(function(item) { return item.isActive !== false && item.active !== false; }); }
+function pricingSelectionFields() {
+  var optionsHtml = activePricingItems().map(function(item) {
+    return option(item.itemId || item.key || item.id, (item.serviceName || item.label || item.itemId) + ' - ' + money(item.unitPrice || item.sellingPrice || 0));
+  }).join('');
+  return '<div class="field full"><label>Services From Pricing Catalog</label><select name="serviceIds" multiple size="8">' + optionsHtml + '</select></div>' + field('Service Quantity', 'serviceQuantity', '1', 'number') + field('Manual Discount', 'discount', '0', 'number') + field('Manual Tax', 'tax', '0', 'number');
+}
+function withServiceSelections(data) {
+  var ids = Array.isArray(data.serviceIds) ? data.serviceIds : (data.serviceIds ? [data.serviceIds] : []);
+  var quantity = Math.max(1, Number(data.serviceQuantity || 1));
+  delete data.serviceIds;
+  delete data.serviceQuantity;
+  if (ids.length) data.serviceSelections = ids.map(function(itemId) { return { itemId:itemId, quantity:quantity }; });
+  return data;
+}
+function formToObject(form) {
+  var data = {};
+  new FormData(form).forEach(function(value, key) {
+    if (data[key] !== undefined) {
+      if (!Array.isArray(data[key])) data[key] = [data[key]];
+      data[key].push(value);
+    } else {
+      data[key] = value;
+    }
+  });
+  return data;
+}
 function formShell(id, title, fields, button) { return '<section class="panel"><div class="panel-head"><h2>' + esc(title) + '</h2></div><form id="' + id + '" class="form-panel"><div class="grid">' + fields + '</div><button class="btn" type="submit">' + esc(button) + '</button></form></section>'; }
 function field(label, name, value, type) { return '<div class="field"><label>' + esc(label) + '</label><input name="' + esc(name) + '" type="' + esc(type || 'text') + '" value="' + esc(value || '') + '"></div>'; }
 function area(label, name, placeholder) { return '<div class="field full"><label>' + esc(label) + '</label><textarea name="' + esc(name) + '" placeholder="' + esc(placeholder || '') + '"></textarea></div>'; }
@@ -515,6 +556,8 @@ async function postMultipart(path, form) {
 function bindForm(id, handler) {
   var form = document.getElementById(id);
   if (!form) return;
+  if (form.dataset.bound === 'true') return;
+  form.dataset.bound = 'true';
   form.addEventListener('submit', async function(event) {
     event.preventDefault();
     try { await handler(form); alert('Saved successfully.'); } catch (error) { alert(error.message); }
@@ -529,14 +572,16 @@ function renderPanel(name) {
   document.querySelectorAll('.nav-item[data-panel]').forEach(function(btn) { btn.classList.toggle('active', btn.dataset.panel === name); });
   if (!dashboard) return;
   if (name === 'dashboard') return renderOverview();
-  if (name === 'clients') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Clients</h2></div>' + recordList(dashboard.clients, 'No clients yet.', function(item) { return record(item.fullName || item.email, item.userType || 'Client', esc(item.companyName || '') + '<br>' + esc(item.email || '') + ' - ' + esc(item.phoneNumber || '')); }) + '</section>';
+  if (name === 'clients') mainPanel.innerHTML = formShell('clientForm', 'Create or Update Client Login', field('Full Name', 'fullName') + field('Company', 'companyName') + field('Email', 'email', '', 'email') + field('Temporary Password', 'password', '', 'password') + field('Phone', 'phoneNumber') + field('Assigned Project Manager', 'assignedProjectManager') + selectField('Status', 'status', ['Active','Suspended','Closed'].map(function(s){return option(s,s);}).join('')) + area('Notes', 'notes', 'Client notes'), 'Save Client') + '<section class="panel"><div class="panel-head"><h2>Clients</h2><button class="btn ghost" data-open="clients">Refresh</button></div>' + recordList(dashboard.clients, 'No clients yet.', function(item) { return record(item.fullName || item.email, item.userType || 'Client', esc(item.companyName || '') + '<br>' + esc(item.email || '') + ' - ' + esc(item.phoneNumber || '') + '<br>Login: ' + (item.hasLogin ? 'Enabled' : 'No password set')); }) + '</section>';
+  if (name === 'leads') mainPanel.innerHTML = formShell('leadForm', 'Create Lead', field('Full Name', 'fullName') + field('Company', 'companyName') + field('Email', 'email', '', 'email') + field('Phone', 'phone') + field('Requested Service', 'requestedService') + field('Estimated Budget', 'estimatedBudget') + field('Expected Timeline', 'expectedTimeline') + field('Lead Source', 'leadSource', 'Website') + selectField('Status', 'status', ['New','Contacted','Negotiation','Quotation Sent','Won','Lost'].map(function(s){return option(s,s);}).join('')) + area('Notes', 'notes', 'Lead notes'), 'Create Lead') + '<section class="panel"><div class="panel-head"><h2>Leads</h2><button class="btn ghost" data-open="leads">Refresh</button></div>' + recordList(dashboard.leads, 'No leads yet.', function(item) { return record(item.leadId || item.email || 'Lead', item.status, esc(item.fullName || '') + '<br>' + esc(item.companyName || '') + '<br>' + esc(item.email || '') + ' - ' + esc(item.requestedService || ''), '<div style="margin-top:12px;"><button class="btn ghost" type="button" data-lead-convert="' + esc(item.leadId || item.id || '') + '">Convert To Client</button></div>'); }) + '</section>';
   if (name === 'requests') mainPanel.innerHTML = formShell('approveRequestForm', 'Approve Request Into Project', selectField('Request', 'requestId', requestOptions()) + selectField('Client', 'clientEmail', clientOptions()) + field('Project Title', 'title') + field('Project Manager', 'projectManager') + field('Assigned Developers, comma-separated', 'assignedDevelopers') + field('Deadline', 'deadline', '', 'date') + field('Amount', 'amount', '', 'number') + area('Description', 'description', 'Project scope and approval notes'), 'Approve & Create Project') + '<section class="panel"><div class="panel-head"><h2>Project Requests</h2><a class="btn ghost" href="/admin/project-requests">Detailed Request Admin</a></div>' + recordList(dashboard.requests, 'No project requests yet.', function(item) { var req = item.requirements || {}; return record(item.requestId || 'Request', item.status, esc((item.contact && item.contact.fullName) || '') + '<br>' + esc((item.contact && item.contact.email) || '') + '<br>' + esc(req.projectType || req.websiteType || 'Project')); }) + '</section>';
-  if (name === 'projects') mainPanel.innerHTML = formShell('createProjectForm', 'Create Project', selectField('Client', 'clientEmail', clientOptions()) + field('Client Name', 'clientName') + selectField('From Request', 'requestId', requestOptions()) + field('Project Title', 'title') + field('Project Manager', 'projectManager') + field('Assigned Developers, comma-separated', 'assignedDevelopers') + field('Deadline', 'deadline', '', 'date') + field('Estimated Amount', 'amount', '', 'number') + field('Progress %', 'progress', '0', 'number') + selectField('Status', 'status', ['Pending','Planning','Development','Testing','Deployment','Completed'].map(function(s){return option(s,s);}).join('')) + area('Description', 'description', 'Project details'), 'Create Project') + '<section class="panel"><div class="panel-head"><h2>Projects</h2></div>' + recordList(dashboard.projects, 'No projects yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Deadline: ' + fmtDate(item.deadline) + '<br>Team: ' + esc((item.assignedDevelopers || []).join(', ') || 'Not assigned')); }) + '</section>';
+  if (name === 'projects') mainPanel.innerHTML = formShell('createProjectForm', 'Create Project', selectField('Client', 'clientEmail', clientOptions()) + field('Client Name', 'clientName') + selectField('From Request', 'requestId', requestOptions()) + field('Project Title', 'title') + field('Project Manager', 'projectManager') + field('Assigned Developers, comma-separated', 'assignedDevelopers') + field('Deadline', 'deadline', '', 'date') + field('Estimated Amount', 'amount', '', 'number') + field('Progress %', 'progress', '0', 'number') + selectField('Status', 'status', ['Planning','In Progress','Client Review','Testing','Deployment','Completed','Suspended'].map(function(s){return option(s,s);}).join('')) + area('Description', 'description', 'Project details'), 'Create Project') + '<section class="panel"><div class="panel-head"><h2>Projects</h2></div>' + recordList(dashboard.projects, 'No projects yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Deadline: ' + fmtDate(item.deadline) + '<br>Team: ' + esc((item.assignedDevelopers || []).join(', ') || 'Not assigned')); }) + '</section>';
+  if (name === 'requirements') mainPanel.innerHTML = formShell('requirementForm', 'Add Requirement', selectField('Project', 'projectId', projectOptions()) + field('Requirement Title', 'requirementTitle') + selectField('Category', 'category', ['Functional','UI/UX','API','Hosting','Security'].map(function(s){return option(s,s);}).join('')) + selectField('Priority', 'priority', ['Low','Medium','High','Critical'].map(function(s){return option(s,s);}).join('')) + area('Requirement Description', 'requirementDescription', 'Requirement details'), 'Add Requirement') + '<section class="panel"><div class="panel-head"><h2>Requirements</h2></div>' + recordList(dashboard.requirements, 'No requirements yet.', function(item) { return record(item.requirementId || item.requirementTitle || 'Requirement', item.status || item.priority, esc(item.requirementTitle || '') + '<br>Project: ' + esc(item.projectId || '') + '<br>' + esc(item.requirementDescription || ''), '<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn ghost" type="button" data-requirement-approve="' + esc(item.requirementId || item.id || '') + '">Approve</button><button class="btn secondary" type="button" data-requirement-complete="' + esc(item.requirementId || item.id || '') + '">Mark Complete</button></div>'); }) + '</section>';
   if (name === 'team') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Team Assignments</h2></div>' + recordList(dashboard.projects, 'No team assignments yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Manager: ' + esc(item.projectManager || 'Not assigned') + '<br>Team: ' + esc((item.assignedDevelopers || []).join(', ') || 'Not assigned')); }) + '</section>';
-  if (name === 'payments') mainPanel.innerHTML = formShell('paymentForm', 'Record Payment', selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Invoice Number', 'invoiceNumber') + field('Milestone Title', 'milestoneTitle') + field('Amount', 'amount', '', 'number') + field('Method', 'method') + field('Receipt URL', 'receiptUrl') + selectField('Status', 'status', ['Received','Pending','Failed','Refunded'].map(function(s){return option(s,s);}).join('')), 'Record Payment') + '<section class="panel"><div class="panel-head"><h2>Payments</h2></div>' + recordList(dashboard.payments, 'No payments recorded yet.', function(item) { return record(item.paymentId || 'Payment', item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '') + '<br>' + esc(item.milestoneTitle || item.invoiceNumber || 'Payment')); }) + '</section>';
-  if (name === 'pricing') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Pricing Catalog</h2><button class="btn" id="savePricingBtn">Save Prices</button></div><p class="row-meta" style="margin-bottom:14px;">Edit unit prices and triggers. These prices calculate automatic project estimates and generate client invoice PDFs after request submission.</p><div id="pricingEditor" class="records"><div class="empty">Loading pricing catalog...</div></div></section>';
-  if (name === 'quotations') mainPanel.innerHTML = formShell('quotationForm', 'Create Quotation', selectField('Client', 'clientEmail', clientOptions()) + selectField('Request', 'requestId', requestOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Title', 'title', 'Project Quotation') + field('Amount', 'amount', '', 'number') + area('Notes', 'notes', 'Quotation notes'), 'Send Quotation') + '<section class="panel"><div class="panel-head"><h2>Quotations</h2></div>' + recordList(dashboard.quotations, 'No quotations yet.', function(item) { return record(item.quotationId || item.title, item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '')); }) + '</section>';
-  if (name === 'invoices') mainPanel.innerHTML = formShell('invoiceForm', 'Create Invoice', selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Amount', 'amount', '', 'number') + field('Due Date', 'dueDate', '', 'date') + selectField('Status', 'status', ['Unpaid','Paid','Overdue','Cancelled'].map(function(s){return option(s,s);}).join('')) + area('Notes', 'notes', 'Invoice notes'), 'Create Invoice') + '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate)); }) + '</section>';
+  if (name === 'payments') mainPanel.innerHTML = formShell('paymentForm', 'Record Payment', selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Invoice Number', 'invoiceNumber') + field('Milestone Title', 'milestoneTitle') + field('Amount', 'amount', '', 'number') + selectField('Method', 'method', ['Paystack','MTN MoMo','Telecel Cash','AirtelTigo Money','Bank Transfer'].map(function(s){return option(s,s);}).join('')) + field('Transaction Reference', 'transactionReference') + field('Receipt URL', 'receiptUrl') + selectField('Status', 'status', ['Pending','Successful','Failed','Refunded'].map(function(s){return option(s,s);}).join('')), 'Record Payment') + '<section class="panel"><div class="panel-head"><h2>Payments</h2></div>' + recordList(dashboard.payments, 'No payments recorded yet.', function(item) { return record(item.paymentId || 'Payment', item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '') + '<br>' + esc(item.milestoneTitle || item.invoiceNumber || 'Payment')); }) + '</section>';
+  if (name === 'pricing') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Pricing Catalog</h2><div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn ghost" id="pricingExportBtn" type="button">Export CSV</button><button class="btn ghost" id="pricingReportsBtn" type="button">Reports</button><button class="btn" id="savePricingBtn" type="button">Save Prices</button></div></div><p class="row-meta" style="margin-bottom:14px;">Edit service prices, billing, triggers, and category mapping used by project estimates and invoice generation.</p><p class="error" id="pricingError"></p><div class="form-panel" style="margin-bottom:18px;"><div class="grid">' + field('Search Services', 'pricingSearch') + '<div class="field"><label>Filter Category</label><select id="pricingCategoryFilter"><option value="">All categories</option></select></div></div><button class="btn ghost" id="pricingFilterBtn" type="button">Apply Filter</button></div><form id="newPricingCategoryForm" class="form-panel" style="margin-bottom:18px;"><div class="grid">' + field('Category Name', 'categoryName') + area('Description', 'description', 'Category description') + '</div><button class="btn secondary" type="submit">Create Category</button></form><form id="newPricingForm" class="form-panel" style="margin-bottom:18px;"><div class="grid">' + field('Service Name', 'serviceName') + field('Unit Price', 'unitPrice', '', 'number') + selectField('Billing Type', 'billingType', billingOptions('One-Time')) + '<div class="field"><label>Category</label><select name="categoryId" id="newPricingCategory"><option value="">Loading categories</option></select></div>' + area('Description', 'description', 'What this price covers') + '<div class="field full"><label>Triggers, comma-separated</label><input name="triggers" placeholder="Website Development, Business Website"></div></div><button class="btn secondary" type="submit">Add Pricing Item</button></form><form id="pricingImportForm" class="form-panel" enctype="multipart/form-data" style="margin-bottom:18px;"><div class="grid"><div class="field full"><label>Import CSV</label><input type="file" name="csv" accept=".csv,text/csv"></div></div><button class="btn ghost" type="submit">Import Pricing CSV</button></form><div id="pricingReport" class="records" style="margin-bottom:18px;"></div><div id="pricingEditor" class="records"><div class="empty">Loading pricing catalog...</div></div></section>';
+  if (name === 'quotations') mainPanel.innerHTML = formShell('quotationForm', 'Create Quotation', selectField('Client', 'clientEmail', clientOptions()) + selectField('Request', 'requestId', requestOptions()) + selectField('Project', 'projectId', projectOptions()) + field('Title', 'title', 'Project Quotation') + pricingSelectionFields() + field('Fallback Amount', 'amount', '', 'number') + area('Notes', 'notes', 'Quotation notes'), 'Send Quotation') + '<section class="panel"><div class="panel-head"><h2>Quotations</h2></div>' + recordList(dashboard.quotations, 'No quotations yet.', function(item) { return record(item.quotationId || item.title, item.status, money(item.amount) + '<br>' + esc(item.clientEmail || '') + '<br>' + esc((item.lineItems || []).map(function(line) { return line.serviceName; }).filter(Boolean).join(', '))); }) + '</section>';
+  if (name === 'invoices') mainPanel.innerHTML = formShell('invoiceForm', 'Create Invoice', selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + pricingSelectionFields() + field('Fallback Amount', 'amount', '', 'number') + field('Due Date', 'dueDate', '', 'date') + selectField('Status', 'status', ['Unpaid','Paid','Overdue','Partially Paid'].map(function(s){return option(s,s);}).join('')) + area('Notes', 'notes', 'Invoice notes'), 'Create Invoice') + '<section class="panel"><div class="panel-head"><h2>Invoices</h2></div>' + recordList(dashboard.invoices, 'No invoices yet.', function(item) { return record(item.invoiceNumber || 'Invoice', item.status, money(item.amount) + '<br>Due ' + fmtDate(item.dueDate) + '<br>' + esc((item.lineItems || []).map(function(line) { return line.serviceName; }).filter(Boolean).join(', '))); }) + '</section>';
   if (name === 'documents') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Upload File or Deliverable</h2></div><form id="adminDocForm" enctype="multipart/form-data" class="form-panel"><div class="grid">' + selectField('Client', 'clientEmail', clientOptions()) + selectField('Project', 'projectId', projectOptions()) + selectField('Request', 'requestId', requestOptions()) + '<div class="field full"><label>Document</label><input type="file" name="document" required></div></div><button class="btn" type="submit">Upload Document</button></form></section><section class="panel"><div class="panel-head"><h2>Files & Assets</h2></div>' + recordList(dashboard.documents, 'No documents yet.', function(item) { return record(item.originalName || 'Document', item.uploadedBy || 'File', esc(item.clientEmail || '') + '<br><a style="color:var(--blue);font-weight:850;" target="_blank" rel="noopener" href="' + esc(item.url) + '">Download file</a>'); }) + '</section>';
   if (name === 'messages') mainPanel.innerHTML = formShell('adminMessageForm', 'Send Client Message', selectField('Client', 'clientEmail', clientOptions()) + field('Subject', 'subject') + area('Message', 'body', 'Write a project update or request follow-up'), 'Send Message') + '<section class="panel"><div class="panel-head"><h2>Messages</h2></div>' + recordList(dashboard.messages, 'No messages yet.', function(item) { return record(item.subject || 'Message', item.senderRole || 'Message', esc(item.clientEmail || '') + '<br>' + esc(item.body || '')); }) + '</section>';
   if (name === 'timeline') mainPanel.innerHTML = '<section class="panel"><div class="panel-head"><h2>Project Timeline</h2></div>' + recordList(dashboard.projects, 'No timeline data yet.', function(item) { return record(item.projectId || item.title, item.status, esc(item.title || '') + '<br>Progress: ' + esc(item.progress || 0) + '%<br>Deadline: ' + fmtDate(item.deadline)); }) + '</section>';
@@ -549,11 +594,14 @@ function renderPanel(name) {
   if (name === 'pricing') loadPricing();
   bindForm('approveRequestForm', function(form) { var data = formToObject(form); data.assignedDevelopers = String(data.assignedDevelopers || '').split(',').map(function(item){ return item.trim(); }).filter(Boolean); return postJson('/api/project-portal/admin/projects/approve-request', data); });
   bindForm('createProjectForm', function(form) { var data = formToObject(form); data.assignedDevelopers = String(data.assignedDevelopers || '').split(',').map(function(item){ return item.trim(); }).filter(Boolean); return postJson('/api/project-portal/admin/projects', data); });
-  bindForm('quotationForm', function(form) { return postJson('/api/project-portal/admin/quotations', formToObject(form)); });
-  bindForm('invoiceForm', function(form) { return postJson('/api/project-portal/admin/invoices', formToObject(form)); });
+  bindForm('quotationForm', function(form) { return postJson('/api/project-portal/admin/quotations', withServiceSelections(formToObject(form))); });
+  bindForm('invoiceForm', function(form) { return postJson('/api/project-portal/admin/invoices', withServiceSelections(formToObject(form))); });
   bindForm('paymentForm', function(form) { return postJson('/api/project-portal/admin/payments', formToObject(form)); });
   bindForm('adminMessageForm', function(form) { return postJson('/api/project-portal/admin/messages', formToObject(form)); });
   bindForm('adminDocForm', function(form) { return postMultipart('/api/project-portal/admin/documents', form); });
+  bindForm('clientForm', function(form) { return postJson('/api/project-portal/admin/clients', formToObject(form)); });
+  bindForm('leadForm', function(form) { return postJson('/api/project-portal/admin/leads', formToObject(form)); });
+  bindForm('requirementForm', function(form) { return postJson('/api/project-portal/admin/requirements', formToObject(form)); });
 }
 async function askAssistant(event) {
   event.preventDefault();
@@ -565,31 +613,159 @@ async function askAssistant(event) {
 }
 async function loadPricing() {
   var host = document.getElementById('pricingEditor');
-  var response = await fetch('/api/project-portal/admin/pricing', { headers:headers() });
+  var error = document.getElementById('pricingError');
+  if (error) error.style.display = 'none';
+  var params = new URLSearchParams();
+  var searchInput = document.querySelector('[name="pricingSearch"]');
+  var categoryFilter = document.getElementById('pricingCategoryFilter');
+  if (searchInput && searchInput.value.trim()) params.set('search', searchInput.value.trim());
+  if (categoryFilter && categoryFilter.value) params.set('categoryId', categoryFilter.value);
+  var url = '/api/project-portal/admin/pricing' + (params.toString() ? '?' + params.toString() : '');
+  var response = await fetch(url, { headers:headers() });
   var payload = await response.json();
   if (!response.ok || !payload.success) { host.innerHTML = '<div class="empty">' + esc(payload.message || 'Pricing unavailable.') + '</div>'; return; }
-  host.innerHTML = (payload.items || []).map(function(item) {
-    return '<article class="record pricing-row" data-key="' + esc(item.key) + '"><div class="grid"><div class="field"><label>Item</label><input data-field="label" value="' + esc(item.label) + '"></div><div class="field"><label>Billing Type</label><input data-field="billingType" value="' + esc(item.billingType) + '"></div><div class="field"><label>Unit Price</label><input data-field="unitPrice" type="number" min="0" step="0.01" value="' + esc(item.unitPrice) + '"></div><div class="field"><label>Category</label><input data-field="category" value="' + esc(item.category) + '"></div><div class="field full"><label>Triggers, comma-separated</label><input data-field="triggers" value="' + esc((item.triggers || []).join(', ')) + '"></div><label style="display:flex;gap:8px;align-items:center;"><input data-field="active" type="checkbox" ' + (item.active === false ? '' : 'checked') + '> Active</label></div></article>';
+  pricingState.categories = payload.categories || [];
+  pricingState.items = payload.items || [];
+  var newCategory = document.getElementById('newPricingCategory');
+  if (newCategory) newCategory.innerHTML = categoryOptions('');
+  if (categoryFilter) {
+    var selectedCategory = categoryFilter.value || '';
+    categoryFilter.innerHTML = '<option value="">All categories</option>' + categoryOptions(selectedCategory).replace('<option value="">Select category</option>', '');
+    categoryFilter.value = selectedCategory;
+  }
+  host.innerHTML = pricingState.items.length ? pricingState.items.map(pricingRow).join('') : '<div class="empty">No pricing items yet.</div>';
+  var saveBtn = document.getElementById('savePricingBtn');
+  var filterBtn = document.getElementById('pricingFilterBtn');
+  var exportBtn = document.getElementById('pricingExportBtn');
+  var reportsBtn = document.getElementById('pricingReportsBtn');
+  if (saveBtn) saveBtn.onclick = savePricing;
+  if (filterBtn) filterBtn.onclick = loadPricing;
+  if (exportBtn) exportBtn.onclick = exportPricingCsv;
+  if (reportsBtn) reportsBtn.onclick = loadPricingReports;
+  bindForm('newPricingCategoryForm', createPricingCategory);
+  bindForm('newPricingForm', createPricingItem);
+  bindForm('pricingImportForm', importPricingCsv);
+}
+function showPricingError(message) {
+  var error = document.getElementById('pricingError');
+  if (!error) return alert(message);
+  error.textContent = message;
+  error.style.display = 'block';
+}
+function billingOptions(selected) {
+  return ['Fixed Price','Hourly','Daily','Weekly','Monthly','One-Time'].map(function(type) {
+    return '<option value="' + esc(type) + '" ' + (type === selected ? 'selected' : '') + '>' + esc(type) + '</option>';
   }).join('');
-  document.getElementById('savePricingBtn').addEventListener('click', savePricing);
+}
+function categoryOptions(selected) {
+  return '<option value="">Select category</option>' + (pricingState.categories || []).map(function(category) {
+    var id = category.categoryId || category.id || '';
+    var label = category.categoryName || id;
+    return '<option value="' + esc(id) + '" ' + (id === selected ? 'selected' : '') + '>' + esc(label) + '</option>';
+  }).join('');
+}
+function pricingRow(item) {
+  var id = item.itemId || item.key || item.id || '';
+  return '<article class="record pricing-row" data-key="' + esc(id) + '"><div class="record-head"><div class="record-title">' + esc(item.serviceName || item.label || id) + '</div><span class="status-pill ' + (item.isActive === false ? 'orange' : 'green') + '">' + (item.isActive === false ? 'Archived' : 'Active') + '</span></div><div class="grid"><div class="field"><label>Service Name</label><input data-field="serviceName" value="' + esc(item.serviceName || item.label || '') + '"></div><div class="field"><label>Label</label><input data-field="label" value="' + esc(item.label || item.serviceName || '') + '"></div><div class="field"><label>Billing Type</label><select data-field="billingType">' + billingOptions(item.billingType || 'One-Time') + '</select></div><div class="field"><label>Unit Price</label><input data-field="unitPrice" type="number" min="0" step="0.01" value="' + esc(item.unitPrice || item.sellingPrice || 0) + '"></div><div class="field"><label>Internal Cost</label><input data-field="internalCost" type="number" min="0" step="0.01" value="' + esc(item.internalCost || 0) + '"></div><div class="field"><label>Category</label><select data-field="categoryId">' + categoryOptions(item.categoryId || item.category || '') + '</select></div><div class="field full"><label>Description</label><input data-field="description" value="' + esc(item.description || '') + '"></div><div class="field full"><label>Triggers, comma-separated</label><input data-field="triggers" value="' + esc((item.triggers || []).join(', ')) + '"></div><label style="display:flex;gap:8px;align-items:center;"><input data-field="active" type="checkbox" ' + (item.isActive === false || item.active === false ? '' : 'checked') + '> Active</label><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><button class="btn ghost" type="button" data-pricing-duplicate="' + esc(id) + '">Duplicate</button><button class="btn danger" type="button" data-pricing-archive="' + esc(id) + '">Archive</button></div></div></article>';
 }
 async function savePricing() {
   var rows = Array.from(document.querySelectorAll('.pricing-row')).map(function(row) {
     var value = function(field) { return row.querySelector('[data-field="' + field + '"]'); };
     return {
+      itemId: row.dataset.key,
       key: row.dataset.key,
+      serviceName: value('serviceName').value,
       label: value('label').value,
       billingType: value('billingType').value,
       unitPrice: Number(value('unitPrice').value || 0),
-      category: value('category').value,
+      internalCost: Number(value('internalCost').value || 0),
+      categoryId: value('categoryId').value,
+      description: value('description').value,
       triggers: value('triggers').value.split(',').map(function(item) { return item.trim(); }).filter(Boolean),
+      isActive: value('active').checked,
       active: value('active').checked
     };
   });
   var response = await fetch('/api/project-portal/admin/pricing', { method:'PUT', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify({ items: rows }) });
   var payload = await response.json();
-  if (!response.ok || !payload.success) alert(payload.message || 'Could not save pricing.');
-  else alert('Pricing saved. New project requests will use the updated prices.');
+  if (!response.ok || !payload.success) return showPricingError(payload.message || 'Could not save pricing.');
+  await loadPricing();
+  alert('Pricing saved. New project requests will use the updated prices.');
+}
+async function createPricingItem(form) {
+  var data = formToObject(form);
+  data.triggers = String(data.triggers || '').split(',').map(function(item) { return item.trim(); }).filter(Boolean);
+  var response = await fetch('/api/project-portal/admin/pricing/items', { method:'POST', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify(data) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return showPricingError(payload.message || 'Could not create pricing item.');
+  form.reset();
+  await loadPricing();
+}
+async function createPricingCategory(form) {
+  var data = formToObject(form);
+  var response = await fetch('/api/project-portal/admin/pricing/categories', { method:'POST', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify(data) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return showPricingError(payload.message || 'Could not create pricing category.');
+  form.reset();
+  await loadPricing();
+}
+async function importPricingCsv(form) {
+  var response = await fetch('/api/project-portal/admin/pricing/import-csv', { method:'POST', headers:headers(), body:new FormData(form) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return showPricingError(payload.message || 'Could not import pricing CSV.');
+  form.reset();
+  await loadPricing();
+}
+async function exportPricingCsv() {
+  var response = await fetch('/api/project-portal/admin/pricing/export-csv', { headers:headers() });
+  if (!response.ok) return showPricingError('Could not export pricing CSV.');
+  var blob = await response.blob();
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement('a');
+  link.href = url;
+  link.download = 'softotech-pricing.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+async function loadPricingReports() {
+  var host = document.getElementById('pricingReport');
+  if (!host) return;
+  host.innerHTML = '<div class="empty">Loading reports...</div>';
+  var response = await fetch('/api/project-portal/admin/pricing/reports', { headers:headers() });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) { host.innerHTML = '<div class="empty">' + esc(payload.message || 'Could not load pricing reports.') + '</div>'; return; }
+  var report = payload.report || {};
+  host.innerHTML = '<section class="panel" style="box-shadow:none;"><div class="panel-head"><h2>Pricing Reports</h2></div><div class="dashboard-grid"><div>' + recordList(report.mostRequestedServices || [], 'No requested-service data yet.', function(item) { return record(item.serviceName || item.itemId, item.requests + ' requests', money(item.revenue || 0) + '<br>' + esc(item.categoryName || '')); }) + '</div><div>' + recordList(report.highestRevenueServices || [], 'No revenue data yet.', function(item) { return record(item.serviceName || item.itemId, money(item.revenue || 0), 'Profit: ' + money(item.profit || 0) + '<br>' + esc(item.categoryName || '')); }) + '</div></div></section>';
+}
+async function archivePricingItem(itemId) {
+  var response = await fetch('/api/project-portal/admin/pricing/items/' + encodeURIComponent(itemId), { method:'DELETE', headers:headers() });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return showPricingError(payload.message || 'Could not archive pricing item.');
+  await loadPricing();
+}
+async function duplicatePricingItem(itemId) {
+  var response = await fetch('/api/project-portal/admin/pricing/items/' + encodeURIComponent(itemId) + '/duplicate', { method:'POST', headers:headers({'Content-Type':'application/json'}), body:'{}' });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return showPricingError(payload.message || 'Could not duplicate pricing item.');
+  await loadPricing();
+}
+async function convertLead(leadId) {
+  if (!leadId) return;
+  var response = await fetch('/api/project-portal/admin/leads/' + encodeURIComponent(leadId) + '/convert', { method:'POST', headers:headers({'Content-Type':'application/json'}), body:'{}' });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return alert(payload.message || 'Could not convert lead.');
+  await loadAdmin();
+  renderPanel('leads');
+}
+async function patchRequirement(requirementId, patch) {
+  if (!requirementId) return;
+  var response = await fetch('/api/project-portal/admin/requirements/' + encodeURIComponent(requirementId), { method:'PATCH', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify(patch || {}) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) return alert(payload.message || 'Could not update requirement.');
+  await loadAdmin();
+  renderPanel('requirements');
 }
 async function loadAdmin() {
   errorBox.style.display = 'none';
@@ -603,7 +779,20 @@ async function loadAdmin() {
 }
 document.getElementById('loadBtn').addEventListener('click', function() { loadAdmin().catch(function(error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; }); });
 document.querySelectorAll('.nav-item[data-panel]').forEach(function(btn) { btn.addEventListener('click', function() { renderPanel(btn.dataset.panel); }); });
-document.body.addEventListener('click', function(event) { var target = event.target.closest('[data-open]'); if (target) { event.preventDefault(); renderPanel(target.dataset.open); } });
+document.body.addEventListener('click', function(event) {
+  var target = event.target.closest('[data-open]');
+  if (target) { event.preventDefault(); renderPanel(target.dataset.open); return; }
+  var convert = event.target.closest('[data-lead-convert]');
+  if (convert) { event.preventDefault(); convertLead(convert.dataset.leadConvert); return; }
+  var approve = event.target.closest('[data-requirement-approve]');
+  if (approve) { event.preventDefault(); patchRequirement(approve.dataset.requirementApprove, { approved:true, status:'Approved' }); return; }
+  var complete = event.target.closest('[data-requirement-complete]');
+  if (complete) { event.preventDefault(); patchRequirement(complete.dataset.requirementComplete, { completed:true, status:'Completed' }); return; }
+  var duplicatePricing = event.target.closest('[data-pricing-duplicate]');
+  if (duplicatePricing) { event.preventDefault(); duplicatePricingItem(duplicatePricing.dataset.pricingDuplicate); return; }
+  var archivePricing = event.target.closest('[data-pricing-archive]');
+  if (archivePricing) { event.preventDefault(); archivePricingItem(archivePricing.dataset.pricingArchive); }
+});
 document.getElementById('logoutBtn').addEventListener('click', function() { localStorage.removeItem('softOTechPortalToken'); window.location.href = '/client/login'; });
 if (tokenInput.value.trim()) loadAdmin().catch(function() {});
 </script>`,

@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
 
 const DEFAULT_PROJECT_ID = 'project-10405180-0afd-4ecc-9f8';
 const CATEGORY_COLLECTION = process.env.SOFTOTECH_PRICING_CATEGORY_COLLECTION || 'softotech_service_categories';
@@ -132,6 +133,13 @@ function projectId() {
   return process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || DEFAULT_PROJECT_ID;
 }
 
+function firestoreDatabaseId() {
+  return process.env.SOFTOTECH_FIRESTORE_DATABASE_ID ||
+    process.env.PROJECT_REQUEST_FIRESTORE_DATABASE_ID ||
+    process.env.FIRESTORE_DATABASE_ID ||
+    '(default)';
+}
+
 function credential() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
@@ -143,7 +151,7 @@ function db() {
   if (!admin.apps.length) {
     admin.initializeApp({ credential: credential(), projectId: projectId() });
   }
-  return admin.firestore();
+  return getFirestore(admin.app(), firestoreDatabaseId());
 }
 
 function now() {

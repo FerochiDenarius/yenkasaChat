@@ -231,7 +231,7 @@ Primary APIs:
   - `/portfolio-admin` loads and saves live portfolio content through `/api/portfolio/content`.
   - Content is stored in Firestore collection `softotech_portfolio_content`.
   - Admin can verify access with `/api/portfolio/admin/verify`.
-  - Portfolio admin auth is enforced by `middleware/portfolioAdminAuth.middleware.js`.
+  - Portfolio admin auth is enforced by `potfolioBackend/middleware/portfolioAdminAuth.middleware.js`.
   - Portfolio admin has dedicated auth APIs:
     - `POST /api/portfolio/auth/register`
     - `POST /api/portfolio/auth/login`
@@ -316,7 +316,7 @@ node --check routes/projectRequest.routes.js
 node --check services/projectRequestStore.service.js
 node --check services/softOTechPricing.service.js
 node --check services/projectInvoice.service.js
-node --check services/portfolioContent.service.js
+node --check potfolioBackend/services/portfolioContent.service.js
 node --check services/adminBootstrap.service.js
 node --check src/config/apiRoutes.js
 npm test

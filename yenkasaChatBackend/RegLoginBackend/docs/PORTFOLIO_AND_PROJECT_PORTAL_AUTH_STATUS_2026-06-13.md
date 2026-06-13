@@ -9,7 +9,7 @@ This note documents the current status of the Yenkasa Soft-O-Tech portfolio admi
 ### Portfolio admin auth
 
 - Added a dedicated portfolio admin middleware file:
-  - `middleware/portfolioAdminAuth.middleware.js`
+  - `potfolioBackend/middleware/portfolioAdminAuth.middleware.js`
 - Added dedicated portfolio admin auth endpoints:
   - `POST /api/portfolio/auth/register`
   - `POST /api/portfolio/auth/login`
@@ -48,8 +48,8 @@ These emails are not shown publicly on the portfolio admin UI.
 ### Automated checks
 
 - `node --check middleware/softOTechPortalAuth.middleware.js`
-- `node --check middleware/portfolioAdminAuth.middleware.js`
-- `node --check routes/portfolioMedia.routes.js`
+- `node --check potfolioBackend/middleware/portfolioAdminAuth.middleware.js`
+- `node --check potfolioBackend/routes/portfolioMedia.routes.js`
 - `node --check routes/softOTechPortal.routes.js`
 - `node --check routes/softOTechPortal.page.js`
 - `npm test`
@@ -97,12 +97,11 @@ The auth separation and middleware wiring are in place. The remaining work is li
 
 ## Files changed
 
-- `middleware/portfolioAdminAuth.middleware.js`
+- `potfolioBackend/middleware/portfolioAdminAuth.middleware.js`
 - `middleware/softOTechPortalAuth.middleware.js`
-- `routes/portfolioMedia.routes.js`
+- `potfolioBackend/routes/portfolioMedia.routes.js`
 - `routes/softOTechPortal.routes.js`
 - `routes/softOTechPortal.page.js`
 - `public/admin.html`
 - `docs/YENKASA_WEBSITE_PROJECT_REQUEST_SYSTEM_2026-06-12.md`
 - `docs/PORTFOLIO_AND_PROJECT_PORTAL_AUTH_STATUS_2026-06-13.md`
-

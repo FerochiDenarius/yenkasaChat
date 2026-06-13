@@ -17,6 +17,7 @@ const upload = multer({
       'image/png',
       'image/webp',
       'image/svg+xml',
+      'text/csv',
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -133,6 +134,94 @@ router.get('/admin/dashboard', portalAuth, portalAdminOnly, async (req, res) => 
   }
 });
 
+router.get('/admin/clients', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const result = await portal.listClients({
+      search: req.query.search,
+      status: req.query.status,
+      limit: Math.min(Number(req.query.limit || 100), 500),
+      page: Math.max(Number(req.query.page || 1), 1),
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/clients', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const client = await portal.createClient(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, client });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch('/admin/clients/:clientId/status', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const client = await portal.updateClientStatus(req.params.clientId, req.body.status, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, client });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/leads', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const result = await portal.listLeads({
+      search: req.query.search,
+      status: req.query.status,
+      limit: Math.min(Number(req.query.limit || 100), 500),
+      page: Math.max(Number(req.query.page || 1), 1),
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/leads', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const lead = await portal.createLead(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, lead });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch('/admin/leads/:leadId', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const lead = await portal.updateLead(req.params.leadId, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, lead });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/leads/:leadId/convert', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const result = await portal.convertLeadToClient(req.params.leadId, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 router.post('/admin/projects', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const project = await portal.createProject({
@@ -147,8 +236,23 @@ router.post('/admin/projects', portalAuth, portalAdminOnly, async (req, res) => 
 
 router.get('/admin/pricing', portalAuth, portalAdminOnly, async (req, res) => {
   try {
-    const items = await pricing.listPricingItems({ includeInactive: true });
-    res.json({ success: true, items });
+    const [categories, items] = await Promise.all([
+      pricing.listCategories({ includeInactive: true }),
+      pricing.listPricingItems({ includeInactive: true, categoryId: req.query.categoryId, search: req.query.search }),
+    ]);
+    res.json({ success: true, categories, items });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/pricing/categories', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const categories = await pricing.saveCategories([req.body || {}], {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, categories });
   } catch (error) {
     sendError(res, error);
   }
@@ -161,6 +265,86 @@ router.put('/admin/pricing', portalAuth, portalAdminOnly, async (req, res) => {
       role: req.portalUser.role || req.portalUser.userType,
     });
     res.json({ success: true, items });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/pricing/items', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const item = await pricing.createPricingItem(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, item });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/pricing/items/:itemId/duplicate', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const item = await pricing.duplicatePricingItem(req.params.itemId, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, item });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.delete('/admin/pricing/items/:itemId', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const item = await pricing.archivePricingItem(req.params.itemId, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, item });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/pricing/import-csv', portalAuth, portalAdminOnly, upload.single('csv'), async (req, res) => {
+  try {
+    const csv = req.file ? req.file.buffer.toString('utf8') : String(req.body.csv || '');
+    const items = await pricing.importPricingCsv(csv, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, items });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/pricing/export-csv', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const csv = await pricing.exportPricingCsv();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="softotech-pricing.csv"');
+    res.send(csv);
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/pricing/estimate', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const estimate = Array.isArray(req.body?.serviceSelections)
+      ? await pricing.calculateFromServiceSelections(req.body.serviceSelections, req.body || {})
+      : await pricing.estimate(req.body || {});
+    res.json({ success: true, estimate });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/pricing/reports', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const dashboard = await portal.adminDashboard();
+    res.json({ success: true, report: dashboard.pricingReport });
   } catch (error) {
     sendError(res, error);
   }
@@ -266,6 +450,44 @@ router.patch('/admin/projects/:projectId/milestones', portalAuth, portalAdminOnl
       role: req.portalUser.role || req.portalUser.userType,
     });
     res.json({ success: true, project });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/requirements', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const result = await portal.listRequirements({
+      projectId: req.query.projectId,
+      search: req.query.search,
+      limit: Math.min(Number(req.query.limit || 100), 500),
+      page: Math.max(Number(req.query.page || 1), 1),
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/requirements', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const requirement = await portal.createRequirement(req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, requirement });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch('/admin/requirements/:requirementId', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const requirement = await portal.updateRequirement(req.params.requirementId, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, requirement });
   } catch (error) {
     sendError(res, error);
   }

@@ -224,7 +224,7 @@
           <a class="button secondary" href="/portfolio-admin/login">Login as Portfolio Admin</a>
         </div>
         <div class="auth-success" id="authSuccess">
-          <img src="/images/logoYenkasaSoftOTech.jpeg" alt="Admin verified" />
+          <img src="/images/logoYenkasaSoftOTechEmblem-512.jpeg" alt="Admin verified" />
           <div><strong>Admin verified successfully.</strong><span>You can upload media to all portfolio product pages.</span></div>
         </div>
 
@@ -338,7 +338,7 @@
     }
 
     function loadStoredAdminToken() {
-      const stored = localStorage.getItem("softOTechPortalToken") || localStorage.getItem("portfolioAdminToken") || "";
+      const stored = localStorage.getItem("portfolioAdminToken") || localStorage.getItem("softOTechPortalToken") || "";
       const input = document.getElementById("authToken");
       if (stored && !input.value) input.value = stored;
     }

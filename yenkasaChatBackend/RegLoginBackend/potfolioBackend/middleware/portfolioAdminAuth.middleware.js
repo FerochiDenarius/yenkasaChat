@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 
-const User = require('../models/user.model');
-const { getPermissions } = require('./permissions');
-const portal = require('../services/softOTechPortal.service');
+const User = require('../../models/user.model');
+const { getPermissions } = require('../../middleware/permissions');
+const portal = require('../../services/softOTechPortal.service');
 
 function bearerToken(req) {
   const header = req.get('authorization') || '';

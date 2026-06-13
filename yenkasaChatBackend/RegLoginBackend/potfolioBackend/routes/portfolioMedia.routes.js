@@ -2,11 +2,11 @@ const express = require('express');
 const multer = require('multer');
 
 const { portfolioAdminAuth } = require('../middleware/portfolioAdminAuth.middleware');
-const { logUploadAudit } = require('../utils/cloudinaryMedia');
-const mediaStorage = require('../services/mediaStorage.service');
+const { logUploadAudit } = require('../../utils/cloudinaryMedia');
+const mediaStorage = require('../../services/mediaStorage.service');
 const portfolioContent = require('../services/portfolioContent.service');
-const portal = require('../services/softOTechPortal.service');
-const { isPrivilegedAdminEmail } = require('../services/adminBootstrap.service');
+const portal = require('../../services/softOTechPortal.service');
+const { isPrivilegedAdminEmail } = require('../../services/adminBootstrap.service');
 
 const router = express.Router();
 

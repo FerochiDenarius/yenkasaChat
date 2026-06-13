@@ -46,7 +46,7 @@ The bucket was created with uniform bucket-level access. Public object reads are
 - `routes/post.routes.js`
 - `routes/user.routes.js`
 - `routes/messages.routes.js`
-- `routes/portfolioMedia.routes.js`
+- `potfolioBackend/routes/portfolioMedia.routes.js`
 - `routes/group.routes.js`
 - `controllers/announcement.controller.js`
 - `Controller/Ads.controller.js`
@@ -187,7 +187,7 @@ Passed syntax checks:
 - `routes/post.routes.js`
 - `routes/user.routes.js`
 - `routes/messages.routes.js`
-- `routes/portfolioMedia.routes.js`
+- `potfolioBackend/routes/portfolioMedia.routes.js`
 - `routes/group.routes.js`
 - `controllers/announcement.controller.js`
 - `Controller/Ads.controller.js`
@@ -213,4 +213,3 @@ The backend was not deployed. Deployment was intentionally left for manual deplo
 4. Rotate/remove the sensitive legacy file `routes/cloudinary code.txt`.
 5. Keep `GCS_MAKE_PUBLIC=false` because the bucket uses uniform bucket-level access.
 6. Monitor GCS object counts and billing after production deployment.
-

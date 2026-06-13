@@ -260,6 +260,26 @@ section:nth-of-type(even) {
   margin-top: 8px;
 }
 
+.product-media {
+  margin-top: 14px;
+}
+
+.media-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.media-strip img,
+.media-strip video {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--nav);
+}
+
 .card.dark p {
   color: #cfe0ff;
 }

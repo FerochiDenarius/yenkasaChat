@@ -42,6 +42,7 @@ const API_ROUTE_MOUNTS = [
   ['/api/updates', 'routes/updates.routes'],
   ['/api/announcements', 'routes/announcement.routes'],
   ['/api/portfolio', 'potfolioBackend/routes/portfolioMedia.routes'],
+  ['/api/media-proxy', 'routes/mediaProxy.routes'],
   ['/api/user-privacy', 'routes/userPrivacy.routes'],
   ['/api/metrics', 'routes/metrics.routes'],
   ['/api/project-requests', 'routes/projectRequest.routes'],

@@ -63,3 +63,53 @@ Passed:
 Remaining validation:
 - Run authenticated browser/API smoke tests against deployed Cloud Run after Firestore migration and deployment.
 - Confirm client registration/login, admin client creation/login, pricing CRUD, quotation creation, invoice creation, lead conversion, and requirement actions against `yenkasa-project-mgmt`.
+
+## Backup Server Auto-Deploy Setup
+
+Added repository build config:
+- `cloudbuild.yenkasa-chat-backup.yaml`
+
+Target:
+- GitHub repo: `FerochiDenarius/yenkasaChat`
+- Watched path: `yenkasaChatBackend/RegLoginBackend/**`
+- Cloud Run service: `yenkasa-chat-backend-backup`
+- Region: `europe-west1`
+- Image repo: `europe-west1-docker.pkg.dev/project-10405180-0afd-4ecc-9f8/cloud-run-source-deploy/yenkasa-chat-backend-backup`
+
+Cloud Build IAM prepared:
+- `496173204476@cloudbuild.gserviceaccount.com` can push Artifact Registry images.
+- `496173204476@cloudbuild.gserviceaccount.com` can deploy Cloud Run.
+- `496173204476@cloudbuild.gserviceaccount.com` can act as the runtime service account during deployment.
+
+Blocked:
+- Cloud Build trigger creation failed because the GitHub repository is not connected to Cloud Build yet.
+- Required action: connect `FerochiDenarius/yenkasaChat` in Google Cloud Console at Cloud Build > Triggers > Connect Repository.
+- After connection, rerun the trigger creation command for `yenkasa-chat-backup-autodeploy`.
+
+## GCloud Hosting Domain Mapping
+
+Created Cloud Run custom domain mappings for the backup server:
+- `www.yenkasa.xyz` -> `yenkasa-chat-backend-backup`
+- `yenkasa.xyz` -> `yenkasa-chat-backend-backup`
+- `gcloud.yenkasa.xyz` -> `yenkasa-chat-backend-backup`
+
+Cloud Run service:
+- `yenkasa-chat-backend-backup`
+- Region: `europe-west1`
+
+Required DNS records:
+- `gcloud` CNAME `ghs.googlehosted.com`
+- `www` CNAME `ghs.googlehosted.com`
+- apex/root `@` A `216.239.32.21`
+- apex/root `@` A `216.239.34.21`
+- apex/root `@` A `216.239.36.21`
+- apex/root `@` A `216.239.38.21`
+- apex/root `@` AAAA `2001:4860:4802:32::15`
+- apex/root `@` AAAA `2001:4860:4802:34::15`
+- apex/root `@` AAAA `2001:4860:4802:36::15`
+- apex/root `@` AAAA `2001:4860:4802:38::15`
+
+Certificate status:
+- Pending until DNS is changed away from DigitalOcean and points to the Cloud Run records above.
+- If using Cloudflare, keep these records DNS-only during Google certificate provisioning.
+- `gcloud.yenkasa.xyz` can be used as the permanent GCloud-hosted backup endpoint without changing the existing DigitalOcean `www` or apex records.

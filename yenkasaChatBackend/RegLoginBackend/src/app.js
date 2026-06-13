@@ -10,6 +10,7 @@ const listEndpoints = require('express-list-endpoints');
 const StoreProfile = require('../models/storeProfile.model');
 const { cloudinaryMediaResponseOptimizer } = require('../utils/cloudinaryMedia');
 const redirectMiddleware = require('./middleware/redirectMiddleware');
+const softotechPortalProxy = require('./middleware/softotechPortalProxy');
 const mp4Headers = require('./middleware/mp4Headers');
 const multerError = require('./middleware/multerError');
 const errorHandler = require('./middleware/errorHandler');
@@ -24,6 +25,7 @@ const rootDir = path.resolve(__dirname, '..');
 
 app.set('trust proxy', true);
 app.use(redirectMiddleware);
+app.use(softotechPortalProxy);
 
 const corsOptions = {
   origin(origin, callback) {

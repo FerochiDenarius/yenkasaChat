@@ -1,0 +1,42 @@
+substitutions:
+  _REGION: europe-west1
+  _SERVICE: yenkasa-chat-backend-backup
+  _ARTIFACT_REPO: cloud-run-source-deploy
+  _BACKEND_DIR: yenkasaChatBackend/RegLoginBackend
+  _IMAGE: europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/yenkasa-chat-backend-backup
+
+steps:
+  - id: build-backend-image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE}:$SHORT_SHA
+      - -f
+      - ${_BACKEND_DIR}/Dockerfile
+      - ${_BACKEND_DIR}
+
+  - id: push-backend-image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_IMAGE}:$SHORT_SHA
+
+  - id: deploy-backup-cloud-run
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    args:
+      - gcloud
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --update-env-vars=SOFTOTECH_FIRESTORE_DATABASE_ID=yenkasa-project-mgmt,PROJECT_REQUEST_FIRESTORE_DATABASE_ID=yenkasa-project-mgmt,MEDIA_STORAGE_PROVIDER=gcs,GCS_MEDIA_BUCKET=yenkasa-media,GCS_MAKE_PUBLIC=false,MEDIA_STORAGE_CLOUDINARY_FALLBACK=false
+      - --quiet
+
+images:
+  - ${_IMAGE}:$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -393,7 +393,7 @@ router.get('/admin/project-requests', (req, res) => {
     <div class="field"><label for="status">Status</label><select id="status"><option value="">All statuses</option>${options(STATUSES)}</select></div>
     <div class="field"><label for="from">From</label><input id="from" type="date"></div>
     <div class="field"><label for="to">To</label><input id="to" type="date"></div>
-  </div><div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Requests</button><button class="btn secondary" id="clientsBtn">Load Clients</button><button class="btn secondary" id="analyticsBtn">Load Analytics</button><a class="btn ghost" href="/client/login?returnTo=/admin/project-requests">Admin Login</a></div><p class="error" id="adminError"></p></section>
+  </div><div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Requests</button><button class="btn secondary" id="clientsBtn">Load Clients</button><button class="btn secondary" id="analyticsBtn">Load Analytics</button><a class="btn ghost" href="/admin/login?returnTo=/admin/project-requests">Admin Login</a></div><p class="error" id="adminError"></p></section>
   <div class="tabs"><button class="tab active" data-panel="requestsPanel">Requests</button><button class="tab" data-panel="clientsPanel">Clients</button><button class="tab" data-panel="analyticsPanel">Analytics</button></div>
   <section class="section table-list" id="requestsPanel"><p class="lead">Enter an admin token and load requests.</p></section>
   <section class="section table-list" id="clientsPanel" style="display:none;"><p class="lead">Load clients to view registered lead profiles.</p></section>

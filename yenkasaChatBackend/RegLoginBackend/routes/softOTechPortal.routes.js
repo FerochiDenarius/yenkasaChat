@@ -51,6 +51,18 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+router.post('/auth/admin/login', async (req, res) => {
+  try {
+    const result = await portal.loginClient(req.body || {});
+    if (!result.client?.is_admin && result.client?.role !== 'senior_developer') {
+      return res.status(403).json({ success: false, message: 'Admin access is not enabled for this account.' });
+    }
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendError(res, error);
+  }
+});
+
 router.get('/me', portalAuth, async (req, res) => {
   res.json({ success: true, client: req.portalUser });
 });

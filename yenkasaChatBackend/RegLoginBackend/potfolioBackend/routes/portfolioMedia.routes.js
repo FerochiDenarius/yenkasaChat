@@ -10,15 +10,24 @@ const { isPrivilegedAdminEmail } = require('../../services/adminBootstrap.servic
 
 const router = express.Router();
 
+const PRODUCT_ID_ALIASES = {
+  'yenkasa-app': 'app',
+  'yenkasa-store': 'store',
+  'yenkasa-ai': 'ai',
+  'yenkasa-web': 'web',
+  'softotech-services': 'services',
+  'future-products': 'future',
+};
+
 const ALLOWED_PRODUCTS = new Set([
-  'yenkasa-app',
-  'yenkasa-store',
-  'yenkasa-ai',
-  'yenkasa-web',
+  'app',
+  'store',
+  'ai',
+  'web',
   'ecosystem',
-  'softotech-services',
+  'services',
   'client-projects',
-  'future-products',
+  'future',
 ]);
 const ALLOWED_TYPES = new Set(['screenshots', 'videos']);
 
@@ -41,8 +50,13 @@ function cleanSegment(value, fallback) {
   return cleaned || fallback;
 }
 
+function normalizeProductId(value) {
+  const cleaned = cleanSegment(value, 'app');
+  return PRODUCT_ID_ALIASES[cleaned] || cleaned;
+}
+
 function resolveUploadTarget(req, file) {
-  const product = cleanSegment(req.body.product, 'yenkasa-app');
+  const product = normalizeProductId(req.body.product);
   const requestedType = cleanSegment(req.body.type, 'screenshots');
   const inferredType = file.mimetype.startsWith('video/') ? 'videos' : 'screenshots';
   const type = ALLOWED_TYPES.has(requestedType) ? requestedType : inferredType;

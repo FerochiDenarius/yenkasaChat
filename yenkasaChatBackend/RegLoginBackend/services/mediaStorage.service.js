@@ -1,9 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
+const axios = require('axios');
+const FormData = require('form-data');
 const { cloudinary } = require('../config/cloudinary');
 
 const DEFAULT_BUCKET = 'yenkasa-media';
+const DEFAULT_GCS_PROXY_UPLOAD_URL = 'https://yenkasa-chat-backend-backup-496173204476.europe-west1.run.app/api/media-proxy/upload';
 const PROVIDERS = {
   GCS: 'gcs',
   CLOUDINARY: 'cloudinary',
@@ -36,6 +39,26 @@ function publicBaseUrl() {
 
 function hasGcsConfig() {
   return Boolean(gcsBucketName());
+}
+
+function runningOnGoogleRuntime() {
+  return Boolean(process.env.K_SERVICE || process.env.FUNCTION_TARGET || process.env.GAE_SERVICE);
+}
+
+function gcsProxyUploadUrl() {
+  const configured = process.env.MEDIA_STORAGE_GCS_PROXY_URL || process.env.GCS_MEDIA_PROXY_URL;
+  if (configured) return String(configured).trim();
+  return runningOnGoogleRuntime() ? '' : DEFAULT_GCS_PROXY_UPLOAD_URL;
+}
+
+function mediaProxySecret() {
+  return process.env.MEDIA_STORAGE_PROXY_SECRET || process.env.GCS_MEDIA_PROXY_SECRET || process.env.ACCESS_TOKEN_SECRET || '';
+}
+
+function gcsCredentials() {
+  const raw = process.env.GCS_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_CLOUD_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return undefined;
+  return JSON.parse(raw);
 }
 
 function hasCloudinaryConfig() {
@@ -138,8 +161,10 @@ async function uploadToGcs(file, options = {}) {
     throw new Error('@google-cloud/storage is required for GCS media uploads.');
   }
 
+  const credentials = gcsCredentials();
   const storage = new Storage({
     projectId: process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCS_PROJECT_ID,
+    ...(credentials ? { credentials } : {}),
     keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCS_KEY_FILE,
   });
   const bucket = storage.bucket(gcsBucketName());
@@ -183,6 +208,46 @@ async function uploadToGcs(file, options = {}) {
     resource_type: inferResourceType(file, options.type),
     original_filename: file.originalname || '',
   };
+}
+
+async function uploadToGcsProxy(file, options = {}) {
+  const url = gcsProxyUploadUrl();
+  if (!url) {
+    throw new Error('GCS media proxy is not configured.');
+  }
+  const secret = mediaProxySecret();
+  if (!secret) {
+    throw new Error('GCS media proxy secret is not configured.');
+  }
+
+  const buffer = await fileToBuffer(file);
+  const form = new FormData();
+  form.append('file', buffer, {
+    filename: file.originalname || 'upload',
+    contentType: file.mimetype || options.contentType || 'application/octet-stream',
+    knownLength: buffer.length,
+  });
+
+  ['folder', 'type', 'resourceType', 'prefix', 'area', 'contentType', 'objectName'].forEach((key) => {
+    if (options[key] !== undefined && options[key] !== null) {
+      form.append(key, String(options[key]));
+    }
+  });
+
+  const response = await axios.post(url, form, {
+    headers: {
+      ...form.getHeaders(),
+      'x-media-proxy-secret': secret,
+    },
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+    timeout: Number(process.env.MEDIA_STORAGE_PROXY_TIMEOUT_MS || 120000),
+  });
+
+  if (!response.data?.success || !response.data?.result) {
+    throw new Error(response.data?.message || 'GCS media proxy upload failed.');
+  }
+  return response.data.result;
 }
 
 function uploadToCloudinary(file, options = {}) {
@@ -231,9 +296,18 @@ async function upload(file, options = {}) {
     return uploadToCloudinary(file, options);
   }
 
+  const proxyUrl = gcsProxyUploadUrl();
+  if (proxyUrl && !runningOnGoogleRuntime()) {
+    return uploadToGcsProxy(file, options);
+  }
+
   try {
     return await uploadToGcs(file, options);
   } catch (error) {
+    if (proxyUrl) {
+      console.warn('[MediaStorage] GCS upload failed; using GCS media proxy:', error.message);
+      return uploadToGcsProxy(file, options);
+    }
     if (String(process.env.MEDIA_STORAGE_CLOUDINARY_FALLBACK || 'true').toLowerCase() === 'false') {
       throw error;
     }
@@ -257,4 +331,5 @@ module.exports = {
   upload,
   uploadToCloudinary,
   uploadToGcs,
+  uploadToGcsProxy,
 };

@@ -198,7 +198,7 @@ router.get('/software-solutions', (req, res) => {
         <a class="record" href="/request-project"><div class="record-head"><div class="record-title">Request a Project</div><span class="status-pill blue">Lead Intake</span></div><div class="record-meta">Submit requirements, budget, timeline, files, and contact details.</div></a>
         <a class="record" href="/client/register"><div class="record-head"><div class="record-title">Client Registration</div><span class="status-pill green">New Client</span></div><div class="record-meta">Create a client account before or after submitting a request.</div></a>
         <a class="record" href="/client/login"><div class="record-head"><div class="record-title">Client Login</div><span class="status-pill">Portal</span></div><div class="record-meta">Track projects, messages, documents, invoices, payments, and quotations.</div></a>
-        <a class="record" href="/admin"><div class="record-head"><div class="record-title">Admin Login</div><span class="status-pill orange">Team</span></div><div class="record-meta">Manage clients, requests, projects, proposals, milestones, and payments.</div></a>
+        <a class="record" href="/admin/login"><div class="record-head"><div class="record-title">Admin Login</div><span class="status-pill orange">Team</span></div><div class="record-meta">Manage clients, requests, projects, proposals, milestones, and payments.</div></a>
         <a class="record full" href="/services"><div class="record-head"><div class="record-title">View Services</div><span class="status-pill blue">Soft-O-Tech</span></div><div class="record-meta">Website Development, Mobile Apps, AI Solutions, API Development, Cloud Deployment, UI/UX Design, and Technical Consulting.</div></a>
       </div>
     </section></main>`,
@@ -279,6 +279,43 @@ if (loginReturnTo) document.getElementById('registerInstead').href = '/client/re
   }));
 });
 
+router.get('/admin/login', (req, res) => {
+  res.send(shell({
+    nonce: res.locals.cspNonce,
+    title: 'Admin Login | Yenkasa Soft-O-Tech',
+    body: `<main class="public-shell">${publicBrand()}<section class="auth-card">
+      <h2>Admin operations login</h2>
+      <p class="lead" style="margin-bottom:22px;">Access client management, project requests, quotations, invoices, pricing, and portfolio operations with an approved admin account.</p>
+      <form id="adminLoginForm" class="grid">
+        <div class="field full"><label>Admin Email</label><input name="email" type="email" autocomplete="email" required></div>
+        <div class="field full"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>
+        <p class="error full" id="errorBox"></p>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" type="submit">Login to Admin</button>
+          <a class="btn ghost" href="/client/login">Client Login</a>
+          <a class="btn ghost" href="/portfolio-admin/login">Portfolio Admin</a>
+        </div>
+      </form>
+    </section></main>
+<script>
+document.getElementById('adminLoginForm').addEventListener('submit', async function(event) {
+  event.preventDefault();
+  var errorBox = document.getElementById('errorBox');
+  errorBox.style.display = 'none';
+  try {
+    var response = await fetch('/api/project-portal/auth/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.fromEntries(new FormData(event.target))) });
+    var payload = await response.json();
+    if (!response.ok || !payload.success) throw new Error(payload.message || 'Admin login failed.');
+    localStorage.setItem('softOTechPortalToken', payload.token);
+    localStorage.setItem('portfolioAdminToken', payload.token);
+    var returnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+    window.location.href = returnTo || '/admin';
+  } catch (error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; }
+});
+</script>`,
+  }));
+});
+
 function portfolioAdminAuthPage(mode = 'login', nonce = '') {
   const isRegister = mode === 'register';
   const title = isRegister ? 'Portfolio Admin Register | Yenkasa Soft-O-Tech' : 'Portfolio Admin Login | Yenkasa Soft-O-Tech';
@@ -335,6 +372,154 @@ router.get('/portfolio-admin/login', (req, res) => {
 
 router.get('/portfolio-admin/register', (req, res) => {
   res.send(portfolioAdminAuthPage('register', res.locals.cspNonce));
+});
+
+router.get('/portfolio-admin', (req, res) => {
+  res.send(shell({
+    nonce: res.locals.cspNonce,
+    title: 'Portfolio Admin | Yenkasa Soft-O-Tech',
+    body: `<main class="app-shell"><aside class="sidebar">
+      <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTechEmblem-512.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>PORTFOLIO</span></a>
+      <nav class="side-nav">
+        <button class="nav-item active" type="button"><span class="nav-icon">PR</span>Products</button>
+        <a class="nav-item" href="/admin"><span class="nav-icon">AD</span>Project Admin</a>
+        <a class="nav-item" href="/"><span class="nav-icon">WB</span>Website</a>
+      </nav>
+      <div style="margin-top:28px;"><button class="nav-item" id="logoutBtn" type="button"><span class="nav-icon">EX</span>Logout</button></div>
+    </aside><section class="workspace">
+      <header class="topbar"><div><h1>Portfolio Product Gallery</h1><p>Update product pages, screenshots, videos, stack, status, and achievements.</p></div><div class="top-actions"><button class="btn ghost" id="reloadBtn" type="button">Reload</button><button class="btn" id="saveBtn" type="button">Save Content</button><div class="avatar">PA</div></div></header>
+      <section class="content">
+        <section class="panel" id="statusPanel"><div class="panel-head"><h2>Portfolio Content</h2><span class="status-pill blue" id="collectionLabel">Loading</span></div><p class="row-meta" id="statusText">Checking portfolio admin access...</p><p class="error" id="errorBox"></p></section>
+        <section class="records" id="productsEditor"></section>
+      </section>
+    </section></main>
+<script>
+var token = localStorage.getItem('portfolioAdminToken') || localStorage.getItem('softOTechPortalToken') || '';
+if (!token) window.location.href = '/portfolio-admin/login';
+var content = null;
+var products = [];
+var editor = document.getElementById('productsEditor');
+var errorBox = document.getElementById('errorBox');
+var statusText = document.getElementById('statusText');
+var collectionLabel = document.getElementById('collectionLabel');
+function headers(extra) { return Object.assign({ Authorization:'Bearer ' + token }, extra || {}); }
+function esc(value) { return String(value || '').replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function listText(value) { return Array.isArray(value) ? value.join('\\n') : ''; }
+function splitList(value) { return String(value || '').split(/[\\n,]+/).map(function(item) { return item.trim(); }).filter(Boolean); }
+function productById(id) { return products.find(function(product) { return product.id === id; }); }
+function mediaList(product, type) {
+  var items = product[type] || [];
+  if (!items.length) return '<div class="empty">No ' + esc(type) + ' uploaded yet.</div>';
+  return '<div class="records">' + items.map(function(item, index) {
+    var src = item.src || item.url || '';
+    var preview = type === 'videos'
+      ? '<video controls muted src="' + esc(src) + '" style="width:100%;max-height:220px;border-radius:8px;background:#020b18;"></video>'
+      : '<img src="' + esc(src) + '" alt="' + esc(item.title || product.name) + '" style="width:100%;max-height:220px;object-fit:cover;border-radius:8px;border:1px solid var(--line);">';
+    return '<article class="record">' + preview + '<div class="record-head"><div class="record-title">' + esc(item.title || src) + '</div><button class="btn danger" type="button" data-remove-media="' + esc(product.id) + '" data-type="' + esc(type) + '" data-index="' + index + '">Remove</button></div><div class="record-meta">' + esc(src) + '</div></article>';
+  }).join('') + '</div>';
+}
+function productCard(product) {
+  return '<article class="panel product-card" data-product-id="' + esc(product.id) + '"><div class="panel-head"><div><h2>' + esc(product.name || product.id) + '</h2><p class="row-meta">' + esc(product.id) + '</p></div><span class="status-pill green">' + esc(product.status || 'Product') + '</span></div><div class="grid"><div class="field"><label>Name</label><input data-field="name" value="' + esc(product.name) + '"></div><div class="field"><label>Status</label><input data-field="status" value="' + esc(product.status) + '"></div><div class="field full"><label>Description</label><textarea data-field="description">' + esc(product.description) + '</textarea></div><div class="field"><label>Stack, one per line</label><textarea data-field="stack">' + esc(listText(product.stack)) + '</textarea></div><div class="field"><label>Achievements, one per line</label><textarea data-field="achievements">' + esc(listText(product.achievements)) + '</textarea></div></div><div style="height:16px"></div><form class="form-panel upload-form" data-upload-product="' + esc(product.id) + '" enctype="multipart/form-data"><div class="grid"><div class="field"><label>Media Type</label><select name="type"><option value="screenshots">Screenshot/Image</option><option value="videos">Video</option></select></div><div class="field"><label>Title</label><input name="title" placeholder="Homepage screenshot"></div><div class="field full"><label>File</label><input name="file" type="file" accept="image/*,video/*" required></div></div><button class="btn secondary" type="submit">Upload Media</button></form><div style="height:18px"></div><div class="dashboard-grid"><section><div class="panel-head"><h2>Screenshots</h2></div>' + mediaList(product, 'screenshots') + '</section><section><div class="panel-head"><h2>Videos</h2></div>' + mediaList(product, 'videos') + '</section></div></article>';
+}
+function render() {
+  editor.innerHTML = products.map(productCard).join('');
+  bindUploads();
+}
+function collectProducts() {
+  document.querySelectorAll('.product-card').forEach(function(card) {
+    var product = productById(card.dataset.productId);
+    if (!product) return;
+    product.name = card.querySelector('[data-field="name"]').value.trim();
+    product.status = card.querySelector('[data-field="status"]').value.trim();
+    product.description = card.querySelector('[data-field="description"]').value.trim();
+    product.stack = splitList(card.querySelector('[data-field="stack"]').value);
+    product.achievements = splitList(card.querySelector('[data-field="achievements"]').value);
+  });
+  return products;
+}
+async function verifyAdmin() {
+  var response = await fetch('/api/portfolio/admin/verify', { headers:headers() });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) throw new Error(payload.error || payload.message || 'Portfolio admin login is required.');
+}
+async function loadContent() {
+  errorBox.style.display = 'none';
+  statusText.textContent = 'Loading portfolio products...';
+  await verifyAdmin();
+  var response = await fetch('/api/portfolio/content');
+  var payload = await response.json();
+  if (!response.ok || !payload.success) throw new Error(payload.error || payload.message || 'Could not load portfolio content.');
+  content = payload.content || {};
+  products = (content.products || []).map(function(product) {
+    return Object.assign({ screenshots: [], videos: [] }, product);
+  });
+  collectionLabel.textContent = payload.collection || 'Firestore';
+  statusText.textContent = 'Loaded ' + products.length + ' products from portfolio content.';
+  render();
+}
+async function saveContent() {
+  errorBox.style.display = 'none';
+  statusText.textContent = 'Saving portfolio content...';
+  var updated = Object.assign({}, content || {}, { products: collectProducts() });
+  var response = await fetch('/api/portfolio/content', { method:'PUT', headers:headers({'Content-Type':'application/json'}), body:JSON.stringify({ content: updated }) });
+  var payload = await response.json();
+  if (!response.ok || !payload.success) throw new Error(payload.error || payload.message || 'Could not save portfolio content.');
+  content = payload.content || updated;
+  products = (content.products || products).map(function(product) { return Object.assign({ screenshots: [], videos: [] }, product); });
+  statusText.textContent = 'Portfolio content saved.';
+  render();
+}
+function bindUploads() {
+  document.querySelectorAll('.upload-form').forEach(function(form) {
+    if (form.dataset.bound === 'true') return;
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      errorBox.style.display = 'none';
+      try {
+        collectProducts();
+        var product = productById(form.dataset.uploadProduct);
+        var data = new FormData(form);
+        data.set('product', product.id);
+        statusText.textContent = 'Uploading media for ' + product.name + '...';
+        var response = await fetch('/api/portfolio/media', { method:'POST', headers:headers(), body:data });
+        var payload = await response.json();
+        if (!response.ok || !payload.success) throw new Error(payload.error || payload.message || 'Upload failed.');
+        var type = payload.type === 'videos' ? 'videos' : 'screenshots';
+        product[type] = product[type] || [];
+        product[type].push({ title: payload.title || data.get('title') || payload.originalName, src: payload.url });
+        form.reset();
+        await saveContent();
+      } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+        statusText.textContent = 'Upload failed.';
+      }
+    });
+  });
+}
+document.body.addEventListener('click', function(event) {
+  var remove = event.target.closest('[data-remove-media]');
+  if (!remove) return;
+  event.preventDefault();
+  var product = productById(remove.dataset.removeMedia);
+  var type = remove.dataset.type;
+  var index = Number(remove.dataset.index);
+  if (!product || !Array.isArray(product[type])) return;
+  product[type].splice(index, 1);
+  render();
+});
+document.getElementById('saveBtn').addEventListener('click', function() { saveContent().catch(function(error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; statusText.textContent = 'Save failed.'; }); });
+document.getElementById('reloadBtn').addEventListener('click', function() { loadContent().catch(function(error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; statusText.textContent = 'Load failed.'; }); });
+document.getElementById('logoutBtn').addEventListener('click', function() { localStorage.removeItem('portfolioAdminToken'); localStorage.removeItem('softOTechPortalToken'); window.location.href = '/portfolio-admin/login'; });
+loadContent().catch(function(error) {
+  errorBox.textContent = error.message;
+  errorBox.style.display = 'block';
+  statusText.textContent = 'Portfolio admin access failed.';
+  if (/login|token|expired|invalid/i.test(error.message)) setTimeout(function() { window.location.href = '/portfolio-admin/login'; }, 1200);
+});
+</script>`,
+  }));
 });
 
 router.get('/client/dashboard', (req, res) => {
@@ -479,7 +664,7 @@ router.get('/admin', (req, res) => {
     body: `<main class="app-shell">${sidebar('dashboard', 'admin')}<section class="workspace">
       <header class="topbar"><div><h1>Soft-O-Tech Operations</h1><p>Clients, requests, projects, quotations, invoices, messages, and analytics.</p></div><div class="top-actions"><a class="btn ghost" href="/admin/project-requests">Request Admin</a><div class="avatar">AD</div></div></header>
       <section class="content">
-        <section class="panel" id="tokenPanel"><div class="grid"><div class="field full"><label>Portal Token</label><input id="token" type="password" placeholder="Login as admin first or paste token"></div></div><p class="error" id="errorBox"></p><div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Admin Dashboard</button><a class="btn ghost" href="/client/login?returnTo=/admin">Admin Login</a></div></section>
+        <section class="panel" id="tokenPanel"><div class="grid"><div class="field full"><label>Portal Token</label><input id="token" type="password" placeholder="Login as admin first or paste token"></div></div><p class="error" id="errorBox"></p><div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn" id="loadBtn">Load Admin Dashboard</button><a class="btn ghost" href="/admin/login?returnTo=/admin">Admin Login</a></div></section>
         <section class="metrics" id="metrics"></section>
         <section id="mainPanel"></section>
       </section>
@@ -793,7 +978,7 @@ document.body.addEventListener('click', function(event) {
   var archivePricing = event.target.closest('[data-pricing-archive]');
   if (archivePricing) { event.preventDefault(); archivePricingItem(archivePricing.dataset.pricingArchive); }
 });
-document.getElementById('logoutBtn').addEventListener('click', function() { localStorage.removeItem('softOTechPortalToken'); window.location.href = '/client/login'; });
+document.getElementById('logoutBtn').addEventListener('click', function() { localStorage.removeItem('softOTechPortalToken'); localStorage.removeItem('portfolioAdminToken'); window.location.href = '/admin/login'; });
 if (tokenInput.value.trim()) loadAdmin().catch(function() {});
 </script>`,
   }));

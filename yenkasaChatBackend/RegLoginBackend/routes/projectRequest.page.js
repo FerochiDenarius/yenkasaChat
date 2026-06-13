@@ -173,7 +173,7 @@ function pageShell({ title, body, extraHead = '' }) {
 <body>
   <header class="topbar">
     <nav class="nav">
-      <a class="brand" href="/"><img class="mark" src="/images/logoYenkasaSoftOTechEmblem.png" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
+      <a class="brand" href="/"><img class="mark" src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>Yenkasa Soft-O-Tech</span></a>
       <div class="nav-actions">
         <a class="btn ghost" href="/">Portfolio</a>
         <a class="btn ghost" href="/software-solutions">Software Solutions</a>

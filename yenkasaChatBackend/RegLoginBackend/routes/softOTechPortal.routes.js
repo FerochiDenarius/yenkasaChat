@@ -4,6 +4,7 @@ const portal = require('../services/softOTechPortal.service');
 const pricing = require('../services/softOTechPricing.service');
 const projectRequestStore = require('../services/projectRequestStore.service');
 const ProjectRequest = require('../models/projectRequest.model');
+const { portalAdminOnly, portalAuth } = require('../middleware/softOTechPortalAuth.middleware');
 
 const router = express.Router();
 
@@ -23,33 +24,6 @@ const upload = multer({
     cb(allowed.includes(file.mimetype) ? null : new Error('Unsupported file type.'), allowed.includes(file.mimetype));
   },
 });
-
-function bearerToken(req) {
-  const header = req.get('authorization') || '';
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1] : '';
-}
-
-async function portalAuth(req, res, next) {
-  try {
-    const token = bearerToken(req);
-    if (!token) return res.status(401).json({ success: false, message: 'Missing portal token.' });
-    const decoded = portal.verifyPortalToken(token);
-    const client = await portal.getClientById(decoded.portalUserId);
-    if (!client) return res.status(401).json({ success: false, message: 'Portal account not found.' });
-    req.portalUser = client;
-    return next();
-  } catch (error) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired portal token.' });
-  }
-}
-
-function adminOnly(req, res, next) {
-  if (!req.portalUser?.is_admin && req.portalUser?.role !== 'senior_developer') {
-    return res.status(403).json({ success: false, message: 'Admin access required.' });
-  }
-  return next();
-}
 
 function sendError(res, error) {
   return res.status(error.statusCode || 500).json({
@@ -150,7 +124,7 @@ router.patch('/client/quotations/:quotationId/respond', portalAuth, async (req, 
   }
 });
 
-router.get('/admin/dashboard', portalAuth, adminOnly, async (req, res) => {
+router.get('/admin/dashboard', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const dashboard = await portal.adminDashboard();
     res.json({ success: true, dashboard });
@@ -159,7 +133,7 @@ router.get('/admin/dashboard', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.post('/admin/projects', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/projects', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const project = await portal.createProject({
       ...(req.body || {}),
@@ -171,7 +145,7 @@ router.post('/admin/projects', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.get('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
+router.get('/admin/pricing', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const items = await pricing.listPricingItems({ includeInactive: true });
     res.json({ success: true, items });
@@ -180,7 +154,7 @@ router.get('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.put('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
+router.put('/admin/pricing', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const items = await pricing.savePricingItems(req.body?.items || [], {
       email: req.portalUser.email,
@@ -192,7 +166,7 @@ router.put('/admin/pricing', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.get('/admin/project-requests', portalAuth, adminOnly, async (req, res) => {
+router.get('/admin/project-requests', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit || 50), 100);
     const page = Math.max(Number(req.query.page || 1), 1);
@@ -217,7 +191,7 @@ router.get('/admin/project-requests', portalAuth, adminOnly, async (req, res) =>
   }
 });
 
-router.get('/admin/project-request-clients', portalAuth, adminOnly, async (req, res) => {
+router.get('/admin/project-request-clients', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit || 50), 100);
     const page = Math.max(Number(req.query.page || 1), 1);
@@ -238,7 +212,7 @@ router.get('/admin/project-request-clients', portalAuth, adminOnly, async (req, 
   }
 });
 
-router.get('/admin/project-request-analytics', portalAuth, adminOnly, async (req, res) => {
+router.get('/admin/project-request-analytics', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const analytics = await projectRequestStore.analytics();
     res.json({
@@ -257,7 +231,7 @@ router.get('/admin/project-request-analytics', portalAuth, adminOnly, async (req
   }
 });
 
-router.patch('/admin/project-requests/:requestId/status', portalAuth, adminOnly, async (req, res) => {
+router.patch('/admin/project-requests/:requestId/status', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const status = String(req.body.status || '').trim();
     if (!ProjectRequest.PROJECT_REQUEST_STATUSES.includes(status)) {
@@ -273,7 +247,7 @@ router.patch('/admin/project-requests/:requestId/status', portalAuth, adminOnly,
   }
 });
 
-router.post('/admin/projects/approve-request', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/projects/approve-request', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const project = await portal.approveProjectRequest(req.body || {}, {
       email: req.portalUser.email,
@@ -285,7 +259,7 @@ router.post('/admin/projects/approve-request', portalAuth, adminOnly, async (req
   }
 });
 
-router.patch('/admin/projects/:projectId/milestones', portalAuth, adminOnly, async (req, res) => {
+router.patch('/admin/projects/:projectId/milestones', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const project = await portal.updateProjectMilestones(req.params.projectId, req.body?.milestones || [], {
       email: req.portalUser.email,
@@ -297,7 +271,7 @@ router.patch('/admin/projects/:projectId/milestones', portalAuth, adminOnly, asy
   }
 });
 
-router.post('/admin/proposals/generate', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/proposals/generate', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const proposal = await portal.generateProposal(req.body || {}, {
       email: req.portalUser.email,
@@ -309,7 +283,7 @@ router.post('/admin/proposals/generate', portalAuth, adminOnly, async (req, res)
   }
 });
 
-router.post('/admin/quotations', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/quotations', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const quotation = await portal.createQuotation({
       ...(req.body || {}),
@@ -321,7 +295,7 @@ router.post('/admin/quotations', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.post('/admin/invoices', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/invoices', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const invoice = await portal.createInvoice({
       ...(req.body || {}),
@@ -333,7 +307,7 @@ router.post('/admin/invoices', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.post('/admin/payments', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/payments', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const payment = await portal.recordPayment(req.body || {}, {
       email: req.portalUser.email,
@@ -345,7 +319,7 @@ router.post('/admin/payments', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.post('/admin/messages', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/messages', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const message = await portal.createMessage({
       ...req.body,
@@ -358,7 +332,7 @@ router.post('/admin/messages', portalAuth, adminOnly, async (req, res) => {
   }
 });
 
-router.post('/admin/documents', portalAuth, adminOnly, upload.single('document'), async (req, res) => {
+router.post('/admin/documents', portalAuth, portalAdminOnly, upload.single('document'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'Document file is required.' });
     const document = await portal.uploadDocument(req.file, {
@@ -371,7 +345,7 @@ router.post('/admin/documents', portalAuth, adminOnly, upload.single('document')
   }
 });
 
-router.post('/admin/portfolio-projects', portalAuth, adminOnly, async (req, res) => {
+router.post('/admin/portfolio-projects', portalAuth, portalAdminOnly, async (req, res) => {
   try {
     const project = await portal.upsertPortfolioProject(req.body || {}, {
       email: req.portalUser.email,

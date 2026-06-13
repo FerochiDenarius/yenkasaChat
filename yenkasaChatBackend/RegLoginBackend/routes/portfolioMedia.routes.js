@@ -1,13 +1,12 @@
 const express = require('express');
 const multer = require('multer');
-const jwt = require('jsonwebtoken');
 
-const User = require('../models/user.model');
-const { getPermissions } = require('../middleware/permissions');
+const { portfolioAdminAuth } = require('../middleware/portfolioAdminAuth.middleware');
 const { logUploadAudit } = require('../utils/cloudinaryMedia');
 const mediaStorage = require('../services/mediaStorage.service');
 const portfolioContent = require('../services/portfolioContent.service');
 const portal = require('../services/softOTechPortal.service');
+const { isPrivilegedAdminEmail } = require('../services/adminBootstrap.service');
 
 const router = express.Router();
 
@@ -40,63 +39,6 @@ function cleanSegment(value, fallback) {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return cleaned || fallback;
-}
-
-function bearerToken(req) {
-  const header = req.get('authorization') || '';
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1] : '';
-}
-
-async function portfolioAccess(req, res, next) {
-  const token = bearerToken(req);
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'Admin login token is required.' });
-  }
-
-  try {
-    const decoded = portal.verifyPortalToken(token);
-    const portalUser = await portal.getClientById(decoded.portalUserId);
-    if (portalUser?.is_admin || portalUser?.role === 'senior_developer') {
-      req.portfolioUser = {
-        id: portalUser.id,
-        email: portalUser.email,
-        username: portalUser.fullName,
-        rank: 'SENIOR_DEVELOPER',
-        source: 'softotech_portal',
-      };
-      return next();
-    }
-  } catch (error) {
-    // Fall through to legacy app-token verification.
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    if (!decoded?.userId) {
-      return res.status(401).json({ success: false, error: 'Invalid admin token.' });
-    }
-    const user = await User.findById(decoded.userId)
-      .select('-password -refreshToken -emailVerificationCode -verificationCode -phoneVerificationCode -passwordResetToken -passwordResetExpires')
-      .populate('role', 'role name accessRole roleName');
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Admin user not found.' });
-    }
-    req.user = user;
-    return portfolioAdminOnly(req, res, next);
-  } catch (error) {
-    return res.status(401).json({ success: false, error: 'Invalid or expired admin token.' });
-  }
-}
-
-function portfolioAdminOnly(req, res, next) {
-  if (req.portfolioUser) return next();
-  const permissions = getPermissions(req.user);
-  const allowed = ['ADMIN', 'SENIOR_DEVELOPER'].includes(permissions.rank);
-  if (!allowed) {
-    return res.status(403).json({ success: false, error: 'Portfolio admin access requires admin or senior developer role.' });
-  }
-  return next();
 }
 
 function resolveUploadTarget(req, file) {
@@ -132,22 +74,38 @@ function resolveUploadTarget(req, file) {
   };
 }
 
-router.get('/admin/verify', portfolioAccess, async (req, res) => {
-  if (req.portfolioUser) {
-    return res.json({
-      success: true,
-      user: req.portfolioUser,
-    });
-  }
+router.get('/admin/verify', portfolioAdminAuth, async (req, res) => {
   res.json({
     success: true,
-    user: {
-      id: req.user?._id?.toString?.() || req.user?.id,
-      username: req.user?.username,
-      email: req.user?.email,
-      rank: getPermissions(req.user).rank,
-    },
+    user: req.portfolioUser,
   });
+});
+
+router.post('/auth/register', async (req, res) => {
+  try {
+    if (!isPrivilegedAdminEmail(req.body?.email)) {
+      return res.status(403).json({ success: false, message: 'Portfolio admin access is not enabled for this account.' });
+    }
+    const result = await portal.registerClient(req.body || {});
+    if (!result.client?.is_admin && result.client?.role !== 'senior_developer') {
+      return res.status(403).json({ success: false, message: 'Portfolio admin access is not enabled for this account.' });
+    }
+    return res.status(201).json({ success: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Registration failed.' });
+  }
+});
+
+router.post('/auth/login', async (req, res) => {
+  try {
+    const result = await portal.loginClient(req.body || {});
+    if (!result.client?.is_admin && result.client?.role !== 'senior_developer') {
+      return res.status(403).json({ success: false, message: 'Portfolio admin access is not enabled for this account.' });
+    }
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Login failed.' });
+  }
 });
 
 router.get('/content', async (req, res) => {
@@ -164,7 +122,7 @@ router.get('/content', async (req, res) => {
   }
 });
 
-router.put('/content', portfolioAccess, async (req, res) => {
+router.put('/content', portfolioAdminAuth, async (req, res) => {
   try {
     const content = await portfolioContent.saveContent(req.body?.content || req.body || {}, {
       id: req.portfolioUser?.id || req.user?._id?.toString?.() || req.user?.id,
@@ -181,7 +139,7 @@ router.put('/content', portfolioAccess, async (req, res) => {
   }
 });
 
-router.post('/media', portfolioAccess, upload.single('file'), async (req, res) => {
+router.post('/media', portfolioAdminAuth, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No portfolio media file uploaded.' });
   }

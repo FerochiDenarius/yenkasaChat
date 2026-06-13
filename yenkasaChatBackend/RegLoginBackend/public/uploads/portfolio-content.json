@@ -38,7 +38,7 @@
       "stack": ["FastAPI", "Python", "PostgreSQL", "Chroma", "Google Cloud", "Gemini"],
       "achievements": ["Cloud Run deployment", "Memory Engine", "Repository Analysis", "OCR Integration", "Event Ingestion", "Operational Intelligence Layer", "Analytics Engine", "Chroma Vector Search", "AI Insights", "User Activity Monitoring", "Central Intelligence System"],
       "screenshots": [
-        {"src": "images/logoYenkasaSoftOTechEmblem.png", "title": "YenkasaAI system identity"},
+        {"src": "images/logoYenkasaSoftOTech.jpeg", "title": "YenkasaAI system identity"},
         {"src": "images/yc.png", "title": "Yenkasa intelligence asset"},
         {"src": "images/ykc.png", "title": "YKC ecosystem asset"}
       ],
@@ -66,7 +66,7 @@
       "stack": ["AI", "Cloud", "Mobile", "Web", "Data"],
       "achievements": ["Ecosystem foundation", "Reusable cloud architecture", "Multi-product vision"],
       "screenshots": [
-        {"src": "images/logoYenkasaSoftOTechEmblem.png", "title": "Yenkasa Soft-O-Tech"},
+        {"src": "images/logoYenkasaSoftOTech.jpeg", "title": "Yenkasa Soft-O-Tech"},
         {"src": "images/background.jpeg", "title": "Future ecosystem direction"}
       ],
       "videos": []

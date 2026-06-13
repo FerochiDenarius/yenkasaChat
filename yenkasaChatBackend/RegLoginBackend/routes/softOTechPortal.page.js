@@ -127,7 +127,7 @@ function shell({ title, body }) {
 
 function publicBrand() {
   return `<aside class="public-brand">
-    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTechEmblem.png" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
+    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
     <div class="public-copy">
       <h1>Build, manage, and track your project.</h1>
       <p>Client intake, requests, quotations, invoices, documents, and project communication in one professional workspace.</p>
@@ -173,7 +173,7 @@ function sidebar(active = 'dashboard', mode = 'client') {
   ];
   const items = mode === 'admin' ? adminItems : clientItems;
   return `<aside class="sidebar">
-    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTechEmblem.png" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
+    <a class="brand-row" href="/"><img src="/images/logoYenkasaSoftOTech.jpeg" alt="Yenkasa Soft-O-Tech"><span>YENKASA<br>SOFT-O-TECH</span></a>
     <nav class="side-nav">${items.map(([key, icon, label]) => `<button class="nav-item ${key === active ? 'active' : ''}" data-panel="${key}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}</nav>
     <div style="margin-top:28px;"><button class="nav-item" id="logoutBtn"><span class="nav-icon">EX</span>Logout</button></div>
   </aside>`;
@@ -266,6 +266,63 @@ var loginReturnTo = new URLSearchParams(window.location.search).get('returnTo') 
 if (loginReturnTo) document.getElementById('registerInstead').href = '/client/register?returnTo=' + encodeURIComponent(loginReturnTo);
 </script>`,
   }));
+});
+
+function portfolioAdminAuthPage(mode = 'login') {
+  const isRegister = mode === 'register';
+  const title = isRegister ? 'Portfolio Admin Register | Yenkasa Soft-O-Tech' : 'Portfolio Admin Login | Yenkasa Soft-O-Tech';
+  const endpoint = isRegister ? '/api/portfolio/auth/register' : '/api/portfolio/auth/login';
+  const formFields = isRegister
+    ? `<div class="field"><label>Full Name</label><input name="fullName" autocomplete="name" required></div>
+        <div class="field"><label>Company</label><input name="companyName" value="Yenkasa Soft-O-Tech" autocomplete="organization"></div>
+        <div class="field"><label>Admin Email</label><input name="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label>Password</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div>
+        <div class="field"><label>Phone</label><input name="phoneNumber" autocomplete="tel"></div>
+        <div class="field"><label>Role Purpose</label><input value="Portfolio media and product content admin" readonly></div>`
+    : `<div class="field full"><label>Admin Email</label><input name="email" type="email" autocomplete="email" required></div>
+        <div class="field full"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>`;
+
+  return shell({
+    title,
+    body: `<main class="public-shell">${publicBrand()}<section class="auth-card">
+      <h2>${isRegister ? 'Create portfolio admin account' : 'Portfolio admin login'}</h2>
+      <p class="lead" style="margin-bottom:16px;">Login with an internally approved Yenkasa Soft-O-Tech admin account to manage product media, screenshots, videos, and portfolio content.</p>
+      <form id="portfolioAuthForm" class="grid">
+        ${formFields}
+        <p class="error full" id="errorBox"></p>
+        <div class="full" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" type="submit">${isRegister ? 'Create Admin Account' : 'Login to Portfolio Admin'}</button>
+          <a class="btn ghost" href="${isRegister ? '/portfolio-admin/login' : '/portfolio-admin/register'}">${isRegister ? 'Login Instead' : 'Register Admin Email'}</a>
+          <a class="btn ghost" href="/">Back to Portfolio</a>
+        </div>
+      </form>
+    </section></main>
+<script>
+document.getElementById('portfolioAuthForm').addEventListener('submit', async function(event) {
+  event.preventDefault();
+  var errorBox = document.getElementById('errorBox');
+  errorBox.style.display = 'none';
+  try {
+    var formData = Object.fromEntries(new FormData(event.target));
+    var response = await fetch('${endpoint}', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formData) });
+    var payload = await response.json();
+    if (!response.ok || !payload.success) throw new Error(payload.message || '${isRegister ? 'Registration' : 'Login'} failed.');
+    if (!payload.client || (!payload.client.is_admin && payload.client.role !== 'senior_developer')) throw new Error('This account is not configured as a portfolio admin.');
+    localStorage.setItem('softOTechPortalToken', payload.token);
+    localStorage.setItem('portfolioAdminToken', payload.token);
+    window.location.href = '/portfolio-admin';
+  } catch (error) { errorBox.textContent = error.message; errorBox.style.display = 'block'; }
+});
+</script>`,
+  });
+}
+
+router.get('/portfolio-admin/login', (req, res) => {
+  res.send(portfolioAdminAuthPage('login'));
+});
+
+router.get('/portfolio-admin/register', (req, res) => {
+  res.send(portfolioAdminAuthPage('register'));
 });
 
 router.get('/client/dashboard', (req, res) => {

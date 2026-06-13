@@ -191,6 +191,7 @@ Primary APIs:
   - Submissions require `Authorization: Bearer <softOTechPortalToken>`.
   - Backend rejects submissions where the form email does not match the logged-in client email.
 - Added admin login protection for project information:
+  - Project management auth is enforced by `middleware/softOTechPortalAuth.middleware.js`.
   - `/admin/project-requests` now uses `softOTechPortalToken`.
   - Project request list/client/analytics/status actions are exposed through `/api/project-portal/admin/*`.
   - Admin access requires `is_admin=true` or `role=senior_developer`.
@@ -230,13 +231,15 @@ Primary APIs:
   - `/portfolio-admin` loads and saves live portfolio content through `/api/portfolio/content`.
   - Content is stored in Firestore collection `softotech_portfolio_content`.
   - Admin can verify access with `/api/portfolio/admin/verify`.
-  - Portfolio admin now accepts Soft-O-Tech portal tokens and legacy Yenkasa app tokens.
-  - These emails automatically receive senior developer/admin portal access on registration/login:
-    - `ofosumenyabrightkofi@gmail.com`
-    - `kofiinspirion@gmail.com`
-    - `ferochidenarius@gmail.com`
-    - `ki.longrich@gmail.com`
-  - After logging in with one of those emails, `/portfolio-admin` can use the stored `softOTechPortalToken` to upload screenshots/videos.
+  - Portfolio admin auth is enforced by `middleware/portfolioAdminAuth.middleware.js`.
+  - Portfolio admin has dedicated auth APIs:
+    - `POST /api/portfolio/auth/register`
+    - `POST /api/portfolio/auth/login`
+  - Portfolio admin accepts valid portfolio admin portal tokens and legacy Yenkasa app admin tokens.
+  - Approved admin emails are configured internally through `services/adminBootstrap.service.js` and `SOFTOTECH_ADMIN_EMAILS`/`ADMIN_EMAILS`.
+  - Approved accounts automatically receive senior developer/admin access on registration/login.
+  - `/portfolio-admin/login` and `/portfolio-admin/register` do not expose the authorized email list.
+  - After login, `/portfolio-admin` can use the stored portfolio token to upload screenshots/videos.
   - Admin can upload screenshots/videos through `/api/portfolio/media`.
   - Uploaded GCS/Cloudinary URLs are added to the selected product media list.
   - Product pages fetch `/api/portfolio/content` and render saved screenshots/videos.

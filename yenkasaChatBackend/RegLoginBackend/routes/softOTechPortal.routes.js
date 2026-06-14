@@ -21,6 +21,11 @@ const upload = multer({
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'video/mp4',
+      'video/quicktime',
+      'video/webm',
     ];
     cb(allowed.includes(file.mimetype) ? null : new Error('Unsupported file type.'), allowed.includes(file.mimetype));
   },
@@ -85,6 +90,15 @@ router.get('/client/dashboard', portalAuth, async (req, res) => {
   }
 });
 
+router.get('/developer/dashboard', portalAuth, async (req, res) => {
+  try {
+    const dashboard = await portal.developerDashboard(req.portalUser);
+    res.json({ success: true, dashboard });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 router.post('/assistant', portalAuth, async (req, res) => {
   try {
     const result = await portal.projectAiAssistant({
@@ -141,6 +155,36 @@ router.get('/admin/dashboard', portalAuth, portalAdminOnly, async (req, res) => 
   try {
     const dashboard = await portal.adminDashboard();
     res.json({ success: true, dashboard });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/team-members', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const result = await portal.listTeamMembers();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get('/admin/projects/:projectId/assignments', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const assignments = await portal.getProjectAssignments(req.params.projectId);
+    res.json({ success: true, assignments });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/projects/:projectId/assignments', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const result = await portal.saveProjectAssignments(req.params.projectId, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, ...result });
   } catch (error) {
     sendError(res, error);
   }
@@ -241,6 +285,18 @@ router.post('/admin/projects', portalAuth, portalAdminOnly, async (req, res) => 
       actorEmail: req.portalUser.email,
     });
     res.status(201).json({ success: true, project });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.patch('/admin/projects/:projectId', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const project = await portal.updateProject(req.params.projectId, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.json({ success: true, project });
   } catch (error) {
     sendError(res, error);
   }
@@ -436,6 +492,14 @@ router.patch('/admin/project-requests/:requestId/status', portalAuth, portalAdmi
 
     const request = await projectRequestStore.updateStatus(req.params.requestId, status, req.portalUser.email);
     if (!request) return res.status(404).json({ success: false, message: 'Project request not found.' });
+    portal.publishPortalIntelligenceEvent('project_request_status_updated', {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    }, {
+      requestId: req.params.requestId,
+      status,
+      request,
+    });
 
     return res.json({ success: true, item: request });
   } catch (error) {
@@ -500,6 +564,42 @@ router.patch('/admin/requirements/:requirementId', portalAuth, portalAdminOnly, 
       role: req.portalUser.role || req.portalUser.userType,
     });
     res.json({ success: true, requirement });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/requirements/:requirementId/comments', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const requirement = await portal.addRequirementComment(req.params.requirementId, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, requirement });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/requirements/:requirementId/change-requests', portalAuth, portalAdminOnly, async (req, res) => {
+  try {
+    const requirement = await portal.createRequirementChangeRequest(req.params.requirementId, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, requirement });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post('/admin/requirements/:requirementId/attachments', portalAuth, portalAdminOnly, upload.single('attachment'), async (req, res) => {
+  try {
+    const requirement = await portal.uploadRequirementAttachment(req.params.requirementId, req.file, req.body || {}, {
+      email: req.portalUser.email,
+      role: req.portalUser.role || req.portalUser.userType,
+    });
+    res.status(201).json({ success: true, requirement });
   } catch (error) {
     sendError(res, error);
   }

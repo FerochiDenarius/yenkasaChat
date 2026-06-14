@@ -16,7 +16,16 @@ const PROJECT_CATEGORIES = new Set(ProjectRequest.PROJECT_REQUEST_TYPES);
 const PROJECT_TYPES = new Set([
   'Website Development',
   'Mobile App Development',
+  'Desktop Application',
   'AI Solution Development',
+  'E-Commerce Platform',
+  'School Management System',
+  'Hospital Management System',
+  'Inventory System',
+  'ERP System',
+  'Social Media Platform',
+  'Livestream Platform',
+  'Fintech Solution',
   'Business Software',
   'UI/UX Design',
   'Cloud Infrastructure',
@@ -56,39 +65,39 @@ const PAGES = new Set([
   'Other',
 ]);
 const FEATURES = new Set([
-  'Contact Form',
-  'Online Payments',
-  'User Registration/Login',
-  'Booking System',
-  'Live Chat',
-  'E-commerce Store',
-  'Admin Dashboard',
-  'File Uploads',
-  'Newsletter',
-  'Push Notifications',
-  'In-app Chat',
-  'API Integration',
-  'AI Assistant',
-  'Reports/Analytics',
+  'Login', 'Registration', 'Password Recovery', 'Social Login',
+  'Chat', 'Group Chat', 'Voice Calls', 'Video Calls',
+  'Posts', 'Comments', 'Likes', 'Shares', 'Notifications',
+  'Payments', 'Wallet', 'Subscription Plans', 'Invoicing',
+  'Product Listings', 'Shopping Cart', 'Order Tracking',
+  'Image Upload', 'Video Upload', 'Livestreaming',
+  'AI Chatbot', 'OCR', 'Recommendation System', 'AI Agent',
+  'Dashboard', 'Analytics', 'User Management', 'Role Management',
   'Custom Feature',
 ]);
 const PLATFORMS = new Set([
   'Website',
-  'Android App',
-  'iOS App',
+  'Android',
+  'iPhone (iOS)',
+  'Windows',
+  'macOS',
+  'Linux',
   'Web Dashboard',
   'Admin Portal',
   'Backend API',
-  'Desktop App',
   'Not Sure',
 ]);
+const INTEGRATIONS = new Set(['Paystack', 'Stripe', 'Flutterwave', 'MTN MoMo', 'Google Maps', 'Google Analytics', 'Firebase', 'OneSignal', 'Agora', 'Zoom', 'Microsoft 365', 'Google Workspace', 'WhatsApp API', 'SMS Gateway']);
+const HOSTING_OPTIONS = new Set(['Shared Hosting', 'VPS', 'Dedicated Server', 'Google Cloud', 'AWS', 'DigitalOcean']);
+const SUPPORT_OPTIONS = new Set(['Security Monitoring', 'Server Monitoring', 'Content Updates', 'Technical Support']);
+const BUDGET_CURRENCIES = new Set(['GHS', 'USD']);
 const STATUSES = ProjectRequest.PROJECT_REQUEST_STATUSES;
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024,
-    files: 8,
+    fileSize: 120 * 1024 * 1024,
+    files: 28,
   },
   fileFilter(req, file, cb) {
     const allowed = [
@@ -99,6 +108,17 @@ const upload = multer({
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv',
+      'text/plain',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-rar-compressed',
+      'application/octet-stream',
+      'video/mp4',
+      'video/quicktime',
+      'video/webm',
     ];
     if (!allowed.includes(file.mimetype)) {
       return cb(new Error('Unsupported file type.'));
@@ -132,6 +152,14 @@ function requiredString(body, key, label) {
 
 function emailIsValid(value) {
   return /.+@.+\..+/.test(String(value || '').trim());
+}
+
+function normalizeBudgetCurrency(body = {}) {
+  const requested = String(body.budgetCurrency || body.currency || '').trim().toUpperCase();
+  if (BUDGET_CURRENCIES.has(requested)) return requested;
+  const country = String(body.country || '').trim();
+  if (/\b(ghana|gh)\b/i.test(country)) return 'GHS';
+  return 'GHS';
 }
 
 function bearerToken(req) {
@@ -172,6 +200,8 @@ async function nextRequestId() {
 async function uploadRequestFiles(filesByField, requestId) {
   const files = [
     ...(filesByField.companyLogo || []),
+    ...(filesByField.designFiles || []),
+    ...(filesByField.requirementFiles || []),
     ...(filesByField.additionalFiles || []),
   ];
 
@@ -195,6 +225,46 @@ async function uploadRequestFiles(filesByField, requestId) {
     });
   }
   return uploaded;
+}
+
+function buildAdminReview({ projectType = '', features = [], platforms = [], integrations = [], maxBudget = 0, priority = '', currency = 'GHS' } = {}) {
+  let score = 10;
+  score += Math.min(features.length * 3, 45);
+  score += Math.min(platforms.length * 5, 30);
+  score += Math.min(integrations.length * 4, 30);
+  if (/ai|erp|fintech|livestream|social|hospital|school/i.test(projectType)) score += 20;
+  if (/urgent/i.test(priority)) score += 10;
+  score = Math.min(score, 100);
+
+  const complexity = score >= 75 ? 'High' : score >= 45 ? 'Medium' : 'Low';
+  const weeks = score >= 75 ? '10-20 weeks' : score >= 45 ? '6-12 weeks' : '2-6 weeks';
+  const teamSize = score >= 75 ? '4-6 specialists' : score >= 45 ? '2-4 specialists' : '1-2 specialists';
+  const stack = ['Node.js', 'PostgreSQL/Firestore', 'Google Cloud Storage'];
+  if (platforms.includes('Website')) stack.push('React/Next.js');
+  if (platforms.includes('Android') || platforms.includes('iPhone (iOS)')) stack.push('Flutter');
+  if (features.some((item) => /AI|OCR|Recommendation|Agent/i.test(item)) || /AI/i.test(projectType)) stack.push('Gemini/RAG');
+  if (features.some((item) => /Chat|Calls|Livestream/i.test(item))) stack.push('Socket.IO/Agora');
+  if (features.some((item) => /Payments|Wallet|Subscription|Invoicing/i.test(item))) stack.push('Paystack/Payments');
+
+  const lowCost = maxBudget ? Math.max(0, Math.round(maxBudget * 0.75)) : score * 120;
+  const highCost = maxBudget || Math.max(lowCost + 1000, score * 220);
+  return {
+    complexityScore: score,
+    complexity,
+    estimatedDevelopmentDuration: weeks,
+    recommendedTeamSize: teamSize,
+    suggestedTechnologyStack: Array.from(new Set(stack)),
+    suggestedServiceItems: Array.from(new Set([
+      projectType,
+      ...features.filter(Boolean).slice(0, 10),
+      ...integrations.filter(Boolean).slice(0, 6),
+    ])).filter(Boolean),
+    estimatedCostRange: {
+      currency,
+      minimum: lowCost,
+      maximum: highCost,
+    },
+  };
 }
 
 function buildProjectRequestPayload(body, requestId, files, req) {
@@ -229,25 +299,43 @@ function buildProjectRequestPayload(body, requestId, files, req) {
     error.statusCode = 400;
     throw error;
   }
+  const budgetCurrency = normalizeBudgetCurrency(body);
 
   return {
     requestId,
     requestCategory,
-    status: 'New',
+    status: 'Submitted',
     contact: {
       fullName: requiredString(body, 'fullName', 'Full name'),
       companyName: String(body.companyName || req.portalClient?.companyName || '').trim(),
+      businessRegistrationNumber: String(body.businessRegistrationNumber || '').trim(),
       phoneNumber: requiredString(body, 'phoneNumber', 'Phone number'),
       whatsappNumber: String(body.whatsappNumber || '').trim(),
       email,
-      businessLocation: String(body.businessLocation || '').trim(),
+      country: String(body.country || req.portalClient?.country || '').trim(),
+      city: String(body.city || '').trim(),
+      businessAddress: String(body.businessAddress || '').trim(),
+      website: String(body.website || '').trim(),
+      businessLocation: String(body.businessAddress || body.city || body.country || '').trim(),
       preferredContactMethod: String(body.preferredContactMethod || '').trim(),
       bestTimeToContact: String(body.bestTimeToContact || '').trim(),
     },
     business: {
-      description: requiredString(body, 'businessDescription', 'Business description'),
+      description: requiredString(body, 'projectDescription', 'Project description'),
       industryType: String(body.industryType || '').trim(),
       targetAudience: String(body.targetAudience || '').trim(),
+    },
+    overview: {
+      projectName: requiredString(body, 'projectName', 'Project name'),
+      projectCategory: requestCategory,
+      projectDescription: requiredString(body, 'projectDescription', 'Project description'),
+    },
+    objectives: {
+      problemToSolve: requiredString(body, 'problemToSolve', 'Problem to solve'),
+      businessGoals: String(body.businessGoals || '').trim(),
+      targetUsers: String(body.targetUsers || body.targetAudience || '').trim(),
+      expectedUsers: Number(body.expectedUsers || 0),
+      expectedMonthlyTraffic: Number(body.expectedMonthlyTraffic || 0),
     },
     requirements: {
       websiteType: projectType,
@@ -255,16 +343,52 @@ function buildProjectRequestPayload(body, requestId, files, req) {
       pagesRequired: sanitizeList(body.pagesRequired, PAGES),
       featuresRequired: sanitizeList(body.featuresRequired, FEATURES),
       platformsRequired: sanitizeList(body.platformsRequired, PLATFORMS),
+      customFeatures: String(body.customFeatures || '').trim(),
     },
     branding: {
+      hasLogo: String(body.hasLogo || '').trim(),
+      hasBrandColors: String(body.hasBrandColors || '').trim(),
+      hasUiDesigns: String(body.hasUiDesigns || '').trim(),
+      needsUiUx: String(body.needsUiUx || '').trim(),
       preferredColors: String(body.preferredColors || '').trim(),
       referenceWebsites: String(body.referenceWebsites || '').trim(),
     },
+    integrations: sanitizeList(body.integrationsRequired, INTEGRATIONS),
+    infrastructure: {
+      ownsDomain: String(body.ownsDomain || '').trim(),
+      needsDomainRegistration: String(body.needsDomainRegistration || '').trim(),
+      needsHosting: String(body.needsHosting || '').trim(),
+      needsEmailSetup: String(body.needsEmailSetup || '').trim(),
+      needsCloudDeployment: String(body.needsCloudDeployment || '').trim(),
+      hostingOptions: sanitizeList(body.hostingOptions, HOSTING_OPTIONS),
+    },
+    timeline: {
+      desiredStartDate: body.desiredStartDate ? new Date(body.desiredStartDate) : null,
+      desiredCompletionDate: body.desiredCompletionDate ? new Date(body.desiredCompletionDate) : null,
+      timelineFlexible: String(body.timelineFlexible || '').trim(),
+      priority: String(body.priority || '').trim(),
+    },
     project: {
+      budgetCurrency,
       budgetRange: String(body.budgetRange || '').trim(),
+      minimumBudget: Number(body.minimumBudget || 0),
+      maximumBudget: Number(body.maximumBudget || 0),
       desiredCompletionDate: body.desiredCompletionDate ? new Date(body.desiredCompletionDate) : null,
       additionalNotes: String(body.additionalNotes || '').trim(),
     },
+    maintenance: {
+      plan: String(body.maintenancePlan || '').trim(),
+      supportServices: sanitizeList(body.supportServices, SUPPORT_OPTIONS),
+    },
+    review: buildAdminReview({
+      projectType,
+      features: sanitizeList(body.featuresRequired, FEATURES),
+      platforms: sanitizeList(body.platformsRequired, PLATFORMS),
+      integrations: sanitizeList(body.integrationsRequired, INTEGRATIONS),
+      maxBudget: Number(body.maximumBudget || 0),
+      priority: String(body.priority || '').trim(),
+      currency: budgetCurrency,
+    }),
     files,
     statusHistory: [{ status: 'New' }],
     source: {
@@ -284,6 +408,7 @@ function estimateInputFromBody(body = {}) {
     pagesRequired: sanitizeList(body.pagesRequired, PAGES),
     featuresRequired: sanitizeList(body.featuresRequired, FEATURES),
     platformsRequired: sanitizeList(body.platformsRequired, PLATFORMS),
+    currency: normalizeBudgetCurrency(body),
   };
 }
 
@@ -301,7 +426,9 @@ router.post(
   clientPortalRequired,
   upload.fields([
     { name: 'companyLogo', maxCount: 1 },
-    { name: 'additionalFiles', maxCount: 7 },
+    { name: 'designFiles', maxCount: 6 },
+    { name: 'requirementFiles', maxCount: 8 },
+    { name: 'additionalFiles', maxCount: 12 },
   ]),
   async (req, res) => {
     try {
@@ -311,10 +438,20 @@ router.post(
       const request = await projectRequestStore.create(payload);
       const pricingEstimate = await pricingService.estimate({
         ...estimateInputFromBody(req.body || {}),
-        currency: 'GHS',
+        currency: normalizeBudgetCurrency(req.body || {}),
       });
       const invoice = await invoiceService.generateAndUploadInvoice(request, pricingEstimate);
       await projectRequestStore.updatePricingAndInvoice(request.requestId, pricingEstimate, invoice);
+      portal.publishPortalIntelligenceEvent('project_request_submitted', {
+        email: req.portalClient?.email || request.contact?.email,
+        role: 'client',
+      }, {
+        requestId: request.requestId,
+        clientEmail: request.contact?.email,
+        request,
+        pricingEstimate,
+        invoice,
+      });
       const emailResult = await sendProjectRequestEmails(request, {
         onUpdate: (emailNotifications) => projectRequestStore.updateEmailNotifications(request.requestId, emailNotifications),
       });
@@ -398,6 +535,14 @@ router.patch('/admin/:requestId/status', auth, requirePermission('analyticsAcces
 
   const request = await projectRequestStore.updateStatus(req.params.requestId, status, req.user?._id || req.user?.id || null);
   if (!request) return res.status(404).json({ success: false, message: 'Project request not found.' });
+  portal.publishPortalIntelligenceEvent('project_request_status_updated', {
+    email: req.user?.email || req.user?._id || req.user?.id,
+    role: req.user?.role || 'admin',
+  }, {
+    requestId: req.params.requestId,
+    status,
+    request,
+  });
 
   res.json({ success: true, item: request });
 });

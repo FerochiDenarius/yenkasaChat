@@ -56,6 +56,23 @@ function normalizeProductId(value) {
 }
 
 function resolveUploadTarget(req, file) {
+  const teamMemberId = cleanSegment(req.body.teamMemberId, '');
+  if (teamMemberId) {
+    if (!file.mimetype.startsWith('image/')) {
+      const error = new Error('Team member photo uploads must be image files.');
+      error.statusCode = 400;
+      throw error;
+    }
+    return {
+      product: '',
+      teamMemberId,
+      type: 'photo',
+      folder: 'profiles',
+      prefix: `portfolio-team-${teamMemberId}`,
+      resourceType: 'image',
+    };
+  }
+
   const product = normalizeProductId(req.body.product);
   const requestedType = cleanSegment(req.body.type, 'screenshots');
   const inferredType = file.mimetype.startsWith('video/') ? 'videos' : 'screenshots';
@@ -164,16 +181,24 @@ router.post('/media', portfolioAdminAuth, upload.single('file'), async (req, res
       folder: target.folder,
       type: target.resourceType,
       prefix: target.prefix,
-      area: `portfolio_${target.product}_${target.type}`,
+      area: target.teamMemberId ? 'portfolio_team_photo' : `portfolio_${target.product}_${target.type}`,
     });
-    logUploadAudit({ area: `portfolio_${target.product}_${target.type}`, file: req.file, result });
+    logUploadAudit({ area: target.teamMemberId ? 'portfolio_team_photo' : `portfolio_${target.product}_${target.type}`, file: req.file, result });
+    const uploadedUrl = result.secure_url || result.url;
+    if (target.teamMemberId && uploadedUrl) {
+      await portfolioContent.updateTeamMemberPhoto(target.teamMemberId, uploadedUrl, {
+        id: req.portfolioUser?.id || req.user?._id?.toString?.() || req.user?.id,
+        email: req.portfolioUser?.email || req.user?.email,
+      });
+    }
 
     res.json({
       success: true,
       product: target.product,
+      teamMemberId: target.teamMemberId,
       type: target.type,
       title: req.body.title || req.file.originalname,
-      url: result.secure_url || result.url,
+      url: uploadedUrl,
       publicId: result.public_id,
       folder: target.folder,
       originalName: req.file.originalname,

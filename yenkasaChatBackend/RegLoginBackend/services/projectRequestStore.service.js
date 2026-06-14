@@ -96,8 +96,18 @@ function searchableText(item) {
     item.contact?.email,
     item.contact?.phoneNumber,
     item.contact?.whatsappNumber,
+    item.contact?.country,
+    item.contact?.city,
+    item.contact?.businessAddress,
+    item.overview?.projectName,
+    item.overview?.projectDescription,
+    item.objectives?.problemToSolve,
+    item.objectives?.businessGoals,
     item.requirements?.projectType,
     item.requirements?.websiteType,
+    ...(item.requirements?.featuresRequired || []),
+    ...(item.requirements?.platformsRequired || []),
+    ...(item.integrations || []),
     item.business?.industryType,
   ].filter(Boolean).join(' ').toLowerCase();
 }
@@ -120,6 +130,16 @@ async function exists(requestId) {
   }
   const doc = await requestCollection().doc(requestId).get();
   return doc.exists;
+}
+
+async function getByRequestId(requestId) {
+  if (!requestId) return null;
+  if (useMongo()) {
+    const request = await ProjectRequest.findOne({ requestId }).lean();
+    return request ? normalizeValue(request) : null;
+  }
+  const doc = await requestCollection().doc(requestId).get();
+  return doc.exists ? toPlainDocument(doc) : null;
 }
 
 async function nextTrackingId() {
@@ -394,6 +414,7 @@ module.exports = {
   collectionName,
   create,
   exists,
+  getByRequestId,
   list,
   listClients,
   nextTrackingId,

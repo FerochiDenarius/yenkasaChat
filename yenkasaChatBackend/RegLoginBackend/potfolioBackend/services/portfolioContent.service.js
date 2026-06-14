@@ -47,20 +47,21 @@ function documentId() {
 function defaultContent() {
   return {
     products: [
-      { id: 'app', name: 'Yenkasa App', description: 'Social networking, communities, livestreaming, chat, wallet, rewards and YKC economy.', status: 'Live product', stack: ['Kotlin', 'Node.js', 'MongoDB', 'Socket.IO', 'Cloudinary', 'Agora'], achievements: ['Communities', 'Livestreaming', 'Wallet'], screenshots: [], videos: [] },
-      { id: 'store', name: 'Yenkasa Store', description: 'Seller onboarding, product catalog, orders, payments and commission-based commerce.', status: 'Launched commerce pillar', stack: ['Web', 'Node.js', 'Paystack'], achievements: ['Seller onboarding', 'Catalog', 'Payments'], screenshots: [], videos: [] },
-      { id: 'ai', name: 'YenkasaAI', description: 'Operational Intelligence Platform for monitoring, analysis, memory, insights and anomaly detection.', status: 'Cloud Run deployed', stack: ['FastAPI', 'Python', 'PostgreSQL', 'Chroma', 'Google Cloud', 'Gemini'], achievements: ['Cloud Run', 'Memory Engine', 'OCR', 'AI Insights'], screenshots: [], videos: [] },
-      { id: 'ecosystem', name: 'Yenkasa Ecosystem', description: 'Current product system across Yenkasa App, Store, AI, Web and Soft-O-Tech services.', status: 'Current product overview', stack: ['Mobile', 'Web', 'AI', 'Cloud', 'Commerce'], achievements: ['App', 'Store', 'AI', 'Client operations'], screenshots: [], videos: [] },
-      { id: 'web', name: 'Yenkasa Web', description: 'Public web, validation, policy, product pages and web-based ecosystem surfaces.', status: 'Public web presence', stack: ['HTML', 'CSS', 'JavaScript'], achievements: ['Official website', 'Policy pages', 'SEO'], screenshots: [], videos: [] },
-      { id: 'services', name: 'Soft-O-Tech Services', description: 'Client websites, apps, AI solutions, cloud deployments and custom software projects.', status: 'Client acquisition platform', stack: ['Firestore', 'GCS', 'Node.js', 'Project Portal'], achievements: ['Project requests', 'Client portal', 'Admin dashboard'], screenshots: [], videos: [] },
-      { id: 'client-projects', name: 'Client Projects', description: 'Portfolio media and case studies for future client work.', status: 'Ready for uploads', stack: ['Web', 'Mobile', 'AI', 'Cloud'], achievements: ['Reusable case study structure'], screenshots: [], videos: [] },
-      { id: 'future', name: 'Future Products', description: 'Upcoming tools for organizations, intelligence, commerce and creator growth.', status: 'Roadmap direction', stack: ['AI', 'Cloud', 'Mobile', 'Web'], achievements: ['Ecosystem foundation'], screenshots: [], videos: [] },
+      { id: 'app', name: 'Yenkasa App', description: 'Yenkasa App is the social and community hub of the ecosystem. It brings together communities, posts, chat, livestreaming, wallet activity, creator rewards, and moderation into one mobile-first experience.\n\nThe product is built for real Ghanaian community activity: students, creators, organizations, sellers, and local groups can communicate, publish, earn, and manage engagement from a single platform.', status: 'Live product', stack: ['Kotlin', 'Node.js', 'MongoDB', 'Socket.IO', 'Cloudinary', 'Agora'], achievements: ['Communities', 'Livestreaming', 'Wallet'], screenshots: [], videos: [] },
+      { id: 'store', name: 'Yenkasa Store', description: 'Yenkasa Store extends the platform into commerce. It supports seller onboarding, product catalogs, order flows, payments, and commission-based business activity.\n\nThe goal is to help communities and vendors sell inside the same ecosystem where users already discover content, creators, and trusted local businesses.', status: 'Launched commerce pillar', stack: ['Web', 'Node.js', 'Paystack'], achievements: ['Seller onboarding', 'Catalog', 'Payments'], screenshots: [], videos: [] },
+      { id: 'ai', name: 'YenkasaAI', description: 'YenkasaAI is the operational intelligence layer behind the ecosystem. It monitors platform activity, repository knowledge, incidents, memory, analytics, and executive insight generation.\n\nIt is designed to help the team understand what is happening across Yenkasa products, detect failures quickly, and support agents that can reason over code, operations, and business data.', status: 'Cloud Run deployed', stack: ['FastAPI', 'Python', 'PostgreSQL', 'Chroma', 'Google Cloud', 'Gemini'], achievements: ['Cloud Run', 'Memory Engine', 'OCR', 'AI Insights'], screenshots: [], videos: [] },
+      { id: 'ecosystem', name: 'Yenkasa Ecosystem', description: 'The Yenkasa Ecosystem connects social networking, commerce, AI, public web, and client software services into one long-term product strategy.\n\nEach pillar supports the others: the app creates engagement, the store enables transactions, YenkasaAI provides intelligence, and Soft-O-Tech turns the same engineering capability into client solutions.', status: 'Current product overview', stack: ['Mobile', 'Web', 'AI', 'Cloud', 'Commerce'], achievements: ['App', 'Store', 'AI', 'Client operations'], screenshots: [], videos: [] },
+      { id: 'web', name: 'Yenkasa Web', description: 'Yenkasa Web is the public-facing layer for brand trust, product discovery, policies, validation pages, and ecosystem storytelling.\n\nIt gives users, partners, and clients a structured way to understand the products, access support surfaces, and move into the correct app, store, AI, or client project workflow.', status: 'Public web presence', stack: ['HTML', 'CSS', 'JavaScript'], achievements: ['Official website', 'Policy pages', 'SEO'], screenshots: [], videos: [] },
+      { id: 'services', name: 'Soft-O-Tech Services', description: 'Soft-O-Tech Services turns Yenkasa engineering into a client delivery business. It covers websites, mobile apps, AI solutions, cloud deployments, dashboards, integrations, and custom software.\n\nThe project portal, pricing catalog, quotation workflow, admin dashboard, and GCS media storage are designed to support professional delivery from first request to final handoff.', status: 'Client acquisition platform', stack: ['Firestore', 'GCS', 'Node.js', 'Project Portal'], achievements: ['Project requests', 'Client portal', 'Admin dashboard'], screenshots: [], videos: [] },
+      { id: 'client-projects', name: 'Client Projects', description: 'Client Projects will hold case studies, media, screenshots, videos, and delivery summaries for work completed through Yenkasa Soft-O-Tech.\n\nThis area is structured so each future contract can become a professional portfolio entry showing the business problem, implemented solution, technology used, and measurable outcome.', status: 'Ready for uploads', stack: ['Web', 'Mobile', 'AI', 'Cloud'], achievements: ['Reusable case study structure'], screenshots: [], videos: [] },
+      { id: 'future', name: 'Future Products', description: 'Future Products captures the roadmap for upcoming tools across organizations, intelligence, commerce, creators, and business automation.\n\nThe aim is to keep the ecosystem expandable without losing operational discipline: new products should connect to the same identity, data, AI, infrastructure, and client-service foundations.', status: 'Roadmap direction', stack: ['AI', 'Cloud', 'Mobile', 'Web'], achievements: ['Ecosystem foundation'], screenshots: [], videos: [] },
     ],
     teamMembers: [
       { id: 'bright-kofi-ofosu-menya', name: 'Bright Kofi Ofosu Menya', role: 'Founder & CEO', photo: '/images/default.png', background: 'Founder, product builder, and Yenkasa ecosystem lead.', fieldOfStudy: 'To be added.', major: 'Software leadership, product architecture, and AI systems.' },
       { id: 'arhinful-hudson', name: 'Arhinful Hudson', role: 'Frontend Developer', photo: '/images/default.png', background: 'Frontend development team member.', fieldOfStudy: 'To be added.', major: 'Frontend engineering and user interface implementation.' },
       { id: 'elorm-wisdom', name: 'Elorm Wisdom', role: 'Backend Engineer', photo: '/images/default.png', background: 'Backend engineering team member.', fieldOfStudy: 'To be added.', major: 'Backend systems, APIs, databases, and integrations.' },
       { id: 'ruth-awini', name: 'Ruth Awini', role: 'Financial Director & Head of Marketing', photo: '/images/default.png', background: 'Finance and marketing leadership team member.', fieldOfStudy: 'To be added.', major: 'Finance, marketing strategy, and business operations.' },
+      { id: 'joana-amoquandoh-ayeyi', name: 'Joana Amoquandoh Ayeyi', role: 'Project Manager', photo: '/images/default.png', background: 'Project manager supporting Yenkasa Soft-O-Tech client delivery and coordination.', fieldOfStudy: 'Computer Science Student, Accra Technical University (ATU).', major: 'Project coordination, client communication, requirements tracking, and delivery support.' },
     ],
     milestones: [],
   };
@@ -94,7 +95,12 @@ function cleanContent(content) {
   const products = normalizeArray(content?.products).map(cleanProduct).filter((product) => product.id);
   const byId = new Map(fallback.products.map((product) => [product.id, product]));
   for (const product of products) {
-    byId.set(product.id, { ...byId.get(product.id), ...product });
+    const fallbackProduct = byId.get(product.id);
+    const merged = { ...fallbackProduct, ...product };
+    if (fallbackProduct?.description && String(product.description || '').trim().length < 160) {
+      merged.description = fallbackProduct.description;
+    }
+    byId.set(product.id, merged);
   }
   const teamSource = normalizeArray(content?.teamMembers || content?.team);
   const teamMembers = (teamSource.length ? teamSource : fallback.teamMembers).map((item) => ({
@@ -135,9 +141,26 @@ async function saveContent(content, actor = {}) {
   return clean;
 }
 
+async function updateTeamMemberPhoto(teamMemberId, photoUrl, actor = {}) {
+  const id = String(teamMemberId || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const url = String(photoUrl || '').trim();
+  if (!id || !url) return getContent();
+  const content = await getContent();
+  const teamMembers = normalizeArray(content.teamMembers).map((member) => (
+    member.id === id ? { ...member, photo: url } : member
+  ));
+  const exists = teamMembers.some((member) => member.id === id);
+  const nextContent = {
+    ...content,
+    teamMembers: exists ? teamMembers : [...teamMembers, { id, name: id.replace(/-/g, ' '), role: 'Team Member', photo: url, background: '', fieldOfStudy: '', major: '' }],
+  };
+  return saveContent(nextContent, actor);
+}
+
 module.exports = {
   collectionName,
   defaultContent,
   getContent,
   saveContent,
+  updateTeamMemberPhoto,
 };

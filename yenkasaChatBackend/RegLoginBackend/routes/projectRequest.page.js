@@ -2,11 +2,35 @@ const express = require('express');
 
 const router = express.Router();
 
-const PROJECT_CATEGORIES = ['Website', 'Mobile App', 'AI Solution', 'Software Development', 'UI/UX Design'];
+const PROJECT_CATEGORIES = [
+  'Website Development',
+  'Mobile App Development',
+  'Desktop Application',
+  'AI Solution',
+  'E-Commerce Platform',
+  'School Management System',
+  'Hospital Management System',
+  'Inventory System',
+  'ERP System',
+  'Social Media Platform',
+  'Livestream Platform',
+  'Fintech Solution',
+  'Custom Software',
+  'Other',
+];
 const PROJECT_TYPES = [
   'Website Development',
   'Mobile App Development',
+  'Desktop Application',
   'AI Solution Development',
+  'E-Commerce Platform',
+  'School Management System',
+  'Hospital Management System',
+  'Inventory System',
+  'ERP System',
+  'Social Media Platform',
+  'Livestream Platform',
+  'Fintech Solution',
   'Business Software',
   'UI/UX Design',
   'Cloud Infrastructure',
@@ -28,9 +52,74 @@ const PROJECT_TYPES = [
   'UI/UX Design Project',
 ];
 const PAGES = ['Home', 'About Us', 'Services', 'Products', 'Gallery', 'Blog', 'Contact Us', 'FAQ', 'Login/Register', 'User Profile', 'Dashboard', 'Notifications', 'Payments', 'Admin', 'Other'];
-const PLATFORMS = ['Website', 'Android App', 'iOS App', 'Web Dashboard', 'Admin Portal', 'Backend API', 'Desktop App', 'Not Sure'];
-const FEATURES = ['Contact Form', 'Online Payments', 'User Registration/Login', 'Booking System', 'Live Chat', 'E-commerce Store', 'Admin Dashboard', 'File Uploads', 'Newsletter', 'Push Notifications', 'In-app Chat', 'API Integration', 'AI Assistant', 'Reports/Analytics', 'Custom Feature'];
-const STATUSES = ['New', 'In Review', 'Proposal Sent', 'Approved', 'In Progress', 'Rejected', 'Completed'];
+const PLATFORMS = ['Website', 'Android', 'iPhone (iOS)', 'Windows', 'macOS', 'Linux', 'Web Dashboard', 'Admin Portal', 'Backend API', 'Not Sure'];
+const FEATURES = [
+  'Login', 'Registration', 'Password Recovery', 'Social Login',
+  'Chat', 'Group Chat', 'Voice Calls', 'Video Calls',
+  'Posts', 'Comments', 'Likes', 'Shares', 'Notifications',
+  'Payments', 'Wallet', 'Subscription Plans', 'Invoicing',
+  'Product Listings', 'Shopping Cart', 'Order Tracking',
+  'Image Upload', 'Video Upload', 'Livestreaming',
+  'AI Chatbot', 'OCR', 'Recommendation System', 'AI Agent',
+  'Dashboard', 'Analytics', 'User Management', 'Role Management',
+  'Custom Feature',
+];
+const INTEGRATIONS = ['Paystack', 'Stripe', 'Flutterwave', 'MTN MoMo', 'Google Maps', 'Google Analytics', 'Firebase', 'OneSignal', 'Agora', 'Zoom', 'Microsoft 365', 'Google Workspace', 'WhatsApp API', 'SMS Gateway'];
+const HOSTING_OPTIONS = ['Shared Hosting', 'VPS', 'Dedicated Server', 'Google Cloud', 'AWS', 'DigitalOcean'];
+const SUPPORT_OPTIONS = ['Security Monitoring', 'Server Monitoring', 'Content Updates', 'Technical Support'];
+const BUDGET_CURRENCIES = [
+  { value: 'GHS', label: 'GHS - Ghana Cedis' },
+  { value: 'USD', label: 'USD - US Dollars' },
+];
+const BUDGET_RANGES = {
+  GHS: ['Under GHS 5,000', 'GHS 5,000 - GHS 10,000', 'GHS 10,000 - GHS 50,000', 'GHS 50,000 - GHS 100,000', 'GHS 100,000+'],
+  USD: ['Under $500', '$500 - $1,000', '$1,000 - $5,000', '$5,000 - $10,000', '$10,000+'],
+};
+const INDUSTRIES = [
+  'Information Technology (IT)',
+  'Computer Software',
+  'E-Commerce',
+  'Financial Technology (FinTech)',
+  'Education & EdTech',
+  'Healthcare & HealthTech',
+  'Beauty & Personal Care',
+  'Hospitality & Tourism',
+  'Transportation & Logistics',
+  'Real Estate & Property Tech',
+  'Agriculture & AgriTech',
+  'Telecommunications',
+  'Media & Entertainment',
+  'Retail & Consumer Goods',
+  'Manufacturing',
+  'Construction & Engineering',
+  'Professional Services',
+  'Energy & Utilities',
+  'Social Networking & Communities',
+  'Marketplace Platforms',
+];
+const TARGET_USERS = [
+  'General Public',
+  'Students',
+  'Teachers / Lecturers',
+  'Parents / Guardians',
+  'Patients',
+  'Healthcare Professionals',
+  'Customers / Shoppers',
+  'Vendors / Sellers',
+  'Business Owners',
+  'Employees / Internal Staff',
+  'Administrators / Managers',
+  'Developers / Technical Users',
+  'Drivers / Riders',
+  'Property Buyers / Renters',
+  'Farmers / Agribusinesses',
+  'Community Members',
+  'Content Creators',
+  'Event Attendees',
+  'Tourists / Guests',
+  'Other',
+];
+const STATUSES = ['Submitted', 'Under Review', 'Quotation Pending', 'Quotation Sent', 'Approved', 'Rejected', 'Converted To Project', 'In Progress', 'Completed'];
 const SERVICES = [
   {
     title: 'Website Development',
@@ -108,11 +197,20 @@ function options(values) {
   return values.map((value) => `<option>${value}</option>`).join('');
 }
 
+function valueOptions(values) {
+  return values.map((item) => `<option value="${item.value}">${item.label}</option>`).join('');
+}
+
 function choices(name, values) {
   return values.map((value) => `<label class="choice"><input type="checkbox" name="${name}" value="${value}"><span>${value}</span></label>`).join('');
 }
 
-function pageShell({ title, body, extraHead = '' }) {
+function pageShell({ title, body, extraHead = '', nonce = '' }) {
+  const scriptNonce = nonce ? ` nonce="${String(nonce).replace(/"/g, '&quot;')}"` : '';
+  const safeBody = String(body || '').replace(
+    /<script(?![^>]*\bsrc=)([^>]*)>/g,
+    `<script${scriptNonce}$1>`,
+  );
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -178,19 +276,21 @@ function pageShell({ title, body, extraHead = '' }) {
         <a class="btn ghost" href="/">Portfolio</a>
         <a class="btn ghost" href="/software-solutions">Software Solutions</a>
         <a class="btn ghost" href="/services">Services</a>
-        <a class="btn ghost" href="/client/login?returnTo=/request-project">Client Login</a>
+        <a class="btn ghost" href="/client/login?returnTo=/website-request">Client Login</a>
+        <a class="btn ghost" href="/client/dashboard">Client Dashboard</a>
         <a class="btn secondary" href="/admin">Admin</a>
-        <a class="btn" href="/request-project">Request a Project</a>
+        <a class="btn" href="/website-request">Request a Project</a>
       </div>
     </nav>
   </header>
-  ${body}
+  ${safeBody}
 </body>
 </html>`;
 }
 
 router.get('/website-request', (req, res) => {
   res.send(pageShell({
+    nonce: res.locals.cspNonce,
     title: 'Website & App Project Request | Yenkasa Soft-O-Tech',
     body: `<main class="wrap">
   <section class="hero">
@@ -207,49 +307,103 @@ router.get('/website-request', (req, res) => {
       <p class="lead" style="margin:0;">Create or login to your client account before the project details form becomes available. This keeps your request, invoice and files connected to your portal.</p>
     </div>
     <div class="actions">
-      <a class="btn" href="/client/register?returnTo=/request-project">Register</a>
-      <a class="btn ghost" href="/client/login?returnTo=/request-project">Login</a>
+      <a class="btn" id="registerLink" href="/client/register?returnTo=/website-request">Register</a>
+      <a class="btn ghost" id="loginLink" href="/client/login?returnTo=/website-request">Login</a>
+      <a class="btn secondary" href="/client/dashboard">Client Dashboard</a>
     </div>
   </section>
 
   <form id="requestForm" class="form hidden" enctype="multipart/form-data" novalidate>
-    <section class="section"><h2>A. Client Registration</h2><div class="grid">
+    <section class="section"><h2>1. Client Information</h2><div class="grid">
       <div class="field"><label for="fullName">Full Name</label><input id="fullName" name="fullName" autocomplete="name" required></div>
-      <div class="field"><label for="companyName">Company/Organization Name</label><input id="companyName" name="companyName" autocomplete="organization"></div>
+      <div class="field"><label for="companyName">Company Name</label><input id="companyName" name="companyName" autocomplete="organization"></div>
+      <div class="field"><label for="businessRegistrationNumber">Business Registration Number (Optional)</label><input id="businessRegistrationNumber" name="businessRegistrationNumber"></div>
+      <div class="field"><label for="emailAddress">Email Address</label><input id="emailAddress" name="emailAddress" type="email" autocomplete="email" required></div>
       <div class="field"><label for="phoneNumber">Phone Number</label><input id="phoneNumber" name="phoneNumber" autocomplete="tel" required></div>
       <div class="field"><label for="whatsappNumber">WhatsApp Number</label><input id="whatsappNumber" name="whatsappNumber" autocomplete="tel"></div>
-      <div class="field"><label for="emailAddress">Email Address</label><input id="emailAddress" name="emailAddress" type="email" autocomplete="email" required></div>
-      <div class="field"><label for="businessLocation">Business Location</label><input id="businessLocation" name="businessLocation"></div>
+      <div class="field"><label for="country">Country</label><input id="country" name="country"></div>
+      <div class="field"><label for="city">City</label><input id="city" name="city"></div>
+      <div class="field full"><label for="businessAddress">Business Address</label><input id="businessAddress" name="businessAddress"></div>
+      <div class="field"><label for="website">Website (Optional)</label><input id="website" name="website" placeholder="https://example.com"></div>
       <div class="field"><label for="preferredContactMethod">Preferred Contact Method</label><select id="preferredContactMethod" name="preferredContactMethod"><option value="">Select method</option><option>Email</option><option>Phone Call</option><option>WhatsApp</option><option>SMS</option></select></div>
       <div class="field"><label for="bestTimeToContact">Best Time to Contact</label><input id="bestTimeToContact" name="bestTimeToContact" placeholder="Weekdays 9am-5pm"></div>
     </div></section>
 
-    <section class="section"><h2>B. Business Information</h2><div class="grid">
-      <div class="field full"><label for="businessDescription">Business Description</label><textarea id="businessDescription" name="businessDescription" required></textarea></div>
-      <div class="field"><label for="industryType">Industry Type</label><input id="industryType" name="industryType"></div>
-      <div class="field"><label for="targetAudience">Target Audience</label><input id="targetAudience" name="targetAudience"></div>
-    </div></section>
-
-    <section class="section"><h2>C. Project Requirements</h2><div class="grid">
+    <section class="section"><h2>2. Project Overview</h2><div class="grid">
+      <div class="field"><label for="projectName">Project Name</label><input id="projectName" name="projectName" required></div>
       <div class="field"><label for="requestCategory">Project Category</label><select id="requestCategory" name="requestCategory" required><option value="">Select category</option>${options(PROJECT_CATEGORIES)}</select></div>
       <div class="field"><label for="projectType">Project Type</label><select id="projectType" name="projectType" required><option value="">Select type</option>${options(PROJECT_TYPES)}</select></div>
+      <div class="field full"><label for="projectDescription">Project Description</label><textarea id="projectDescription" name="projectDescription" placeholder="Explain the problem you want solved and the kind of system you need." required></textarea></div>
+      <div class="field"><label for="industryType">Industry Type</label><select id="industryType" name="industryType"><option value="">Select industry</option>${options(INDUSTRIES)}</select></div>
+      <div class="field"><label for="targetAudience">Target Audience</label><select id="targetAudience" name="targetAudience"><option value="">Select target audience</option>${options(TARGET_USERS)}</select></div>
+    </div></section>
+
+    <section class="section"><h2>3. Project Objectives</h2><div class="grid">
+      <div class="field full"><label for="problemToSolve">What problem are you trying to solve?</label><textarea id="problemToSolve" name="problemToSolve" required></textarea></div>
+      <div class="field full"><label for="businessGoals">What business goals should this project achieve?</label><textarea id="businessGoals" name="businessGoals"></textarea></div>
+      <div class="field"><label for="targetUsers">Who are the target users?</label><select id="targetUsers" name="targetUsers"><option value="">Select target users</option>${options(TARGET_USERS)}</select></div>
+      <div class="field"><label for="expectedUsers">Expected Number of Users</label><input id="expectedUsers" name="expectedUsers" type="number" min="0"></div>
+      <div class="field"><label for="expectedMonthlyTraffic">Expected Monthly Traffic</label><input id="expectedMonthlyTraffic" name="expectedMonthlyTraffic" type="number" min="0"></div>
+    </div></section>
+
+    <section class="section"><h2>4. Features & Functionality</h2>
+      <div class="choices">${choices('featuresRequired', FEATURES)}</div>
+      <div class="field full" style="margin-top:14px;"><label for="customFeatures">Custom Features</label><textarea id="customFeatures" name="customFeatures" placeholder="Describe any feature not listed above."></textarea></div>
+    </section>
+
+    <section class="section"><h2>5. Platform Requirements</h2><div class="grid">
       <div class="field full"><label>Target Platforms</label><div class="choices">${choices('platformsRequired', PLATFORMS)}</div></div>
       <div class="field full"><label>Pages or Screens Required</label><div class="choices">${choices('pagesRequired', PAGES)}</div></div>
     </div></section>
 
-    <section class="section"><h2>D. Features Required</h2><div class="choices">${choices('featuresRequired', FEATURES)}</div></section>
-
-    <section class="section"><h2>E. Design & Branding</h2><div class="grid">
-      <div class="field"><label for="preferredColors">Preferred Colors</label><input id="preferredColors" name="preferredColors"></div>
+    <section class="section"><h2>6. Design Requirements</h2><div class="grid">
+      <div class="field"><label for="hasLogo">Do you already have a logo?</label><select id="hasLogo" name="hasLogo"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+      <div class="field"><label for="hasBrandColors">Do you already have brand colors?</label><select id="hasBrandColors" name="hasBrandColors"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+      <div class="field"><label for="hasUiDesigns">Do you already have UI designs?</label><select id="hasUiDesigns" name="hasUiDesigns"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+      <div class="field"><label for="needsUiUx">Do you need UI/UX design services?</label><select id="needsUiUx" name="needsUiUx"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div>
+      <div class="field"><label for="preferredColors">Brand Colors</label><input id="preferredColors" name="preferredColors"></div>
       <div class="field"><label for="referenceWebsites">Reference Websites or Apps</label><input id="referenceWebsites" name="referenceWebsites" placeholder="https://example.com, app name, screenshots"></div>
-      <div class="field"><label for="companyLogo">Upload Company Logo</label><input id="companyLogo" name="companyLogo" type="file" accept="image/*,.svg"></div>
-      <div class="field"><label for="additionalFiles">Upload Additional Images/Documents</label><input id="additionalFiles" name="additionalFiles" type="file" multiple accept="image/*,.pdf,.doc,.docx"></div>
+      <div class="field"><label for="companyLogo">Logo</label><input id="companyLogo" name="companyLogo" type="file" accept="image/*,.svg"></div>
+      <div class="field"><label for="designFiles">Wireframes, Mockups, Brand Guidelines</label><input id="designFiles" name="designFiles" type="file" multiple accept="image/*,.pdf,.doc,.docx,.ppt,.pptx"></div>
     </div></section>
 
-    <section class="section"><h2>F. Project Details</h2><div class="grid">
-      <div class="field"><label for="budgetRange">Budget Range</label><select id="budgetRange" name="budgetRange"><option value="">Select range</option><option>Under GHS 2,000</option><option>GHS 2,000 - GHS 5,000</option><option>GHS 5,000 - GHS 10,000</option><option>GHS 10,000 - GHS 25,000</option><option>Above GHS 25,000</option></select></div>
+    <section class="section"><h2>7. Integrations</h2><div class="choices">${choices('integrationsRequired', INTEGRATIONS)}</div></section>
+
+    <section class="section"><h2>8. Hosting & Infrastructure</h2><div class="grid">
+      <div class="field"><label for="ownsDomain">Do you already own a domain?</label><select id="ownsDomain" name="ownsDomain"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+      <div class="field"><label for="needsDomainRegistration">Do you need domain registration?</label><select id="needsDomainRegistration" name="needsDomainRegistration"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div>
+      <div class="field"><label for="needsHosting">Do you need hosting?</label><select id="needsHosting" name="needsHosting"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div>
+      <div class="field"><label for="needsEmailSetup">Do you need email setup?</label><select id="needsEmailSetup" name="needsEmailSetup"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div>
+      <div class="field"><label for="needsCloudDeployment">Do you need cloud deployment?</label><select id="needsCloudDeployment" name="needsCloudDeployment"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div>
+      <div class="field full"><label>Infrastructure Options</label><div class="choices">${choices('hostingOptions', HOSTING_OPTIONS)}</div></div>
+    </div></section>
+
+    <section class="section"><h2>9. Project Timeline</h2><div class="grid">
+      <div class="field"><label for="desiredStartDate">Desired Start Date</label><input id="desiredStartDate" name="desiredStartDate" type="date"></div>
       <div class="field"><label for="desiredCompletionDate">Desired Completion Date</label><input id="desiredCompletionDate" name="desiredCompletionDate" type="date"></div>
-      <div class="field full"><label for="additionalNotes">Additional Notes</label><textarea id="additionalNotes" name="additionalNotes"></textarea></div>
+      <div class="field"><label for="timelineFlexible">Is this timeline flexible?</label><select id="timelineFlexible" name="timelineFlexible"><option value="">Select</option><option>Yes</option><option>No</option><option>Somewhat</option></select></div>
+      <div class="field"><label for="priority">Priority</label><select id="priority" name="priority"><option value="">Select priority</option><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></div>
+    </div></section>
+
+    <section class="section"><h2>10. Project Budget</h2><div class="grid">
+      <div class="field"><label for="budgetCurrency">Budget Currency</label><select id="budgetCurrency" name="budgetCurrency">${valueOptions(BUDGET_CURRENCIES)}</select></div>
+      <div class="field"><label for="minimumBudget" id="minimumBudgetLabel">Minimum Budget (GHS)</label><input id="minimumBudget" name="minimumBudget" type="number" min="0" step="0.01"></div>
+      <div class="field"><label for="maximumBudget" id="maximumBudgetLabel">Maximum Budget (GHS)</label><input id="maximumBudget" name="maximumBudget" type="number" min="0" step="0.01"></div>
+      <div class="field"><label for="budgetRange">Budget Range</label><select id="budgetRange" name="budgetRange"><option value="">Select range</option>${options(BUDGET_RANGES.GHS)}</select></div>
+    </div></section>
+
+    <section class="section"><h2>11. Maintenance & Support</h2><div class="grid">
+      <div class="field"><label for="maintenancePlan">Maintenance Option</label><select id="maintenancePlan" name="maintenancePlan"><option value="">Select</option><option>No Maintenance</option><option>Monthly Maintenance</option><option>Quarterly Maintenance</option><option>Annual Maintenance</option></select></div>
+      <div class="field full"><label>Additional Services</label><div class="choices">${choices('supportServices', SUPPORT_OPTIONS)}</div></div>
+    </div></section>
+
+    <section class="section"><h2>12. File Uploads</h2><div class="grid">
+      <div class="field"><label for="requirementFiles">Requirement Documents, PDFs, Word, Excel</label><input id="requirementFiles" name="requirementFiles" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"></div>
+      <div class="field"><label for="additionalFiles">Images, Videos, Existing Source Code, UI Designs</label><input id="additionalFiles" name="additionalFiles" type="file" multiple accept="image/*,video/*,.zip,.rar,.pdf,.doc,.docx,.xls,.xlsx,.fig,.sketch"></div>
+    </div></section>
+
+    <section class="section"><h2>13. Additional Notes</h2><div class="grid">
+      <div class="field full"><label for="additionalNotes">Anything else we should know?</label><textarea id="additionalNotes" name="additionalNotes"></textarea></div>
     </div></section>
 
     <section class="section foot">
@@ -267,23 +421,84 @@ const button = document.getElementById('submitBtn');
 const errorBox = document.getElementById('errorBox');
 const successBox = document.getElementById('successBox');
 const estimateText = document.getElementById('estimateText');
+const countryField = document.getElementById('country');
+const budgetCurrencyField = document.getElementById('budgetCurrency');
+const budgetRangeField = document.getElementById('budgetRange');
+const budgetRangeOptions = ${JSON.stringify(BUDGET_RANGES)};
 let portalClient = null;
+let budgetCurrencyTouched = false;
 function portalToken() {
   return localStorage.getItem('softOTechPortalToken') || '';
+}
+function requestReturnPath() {
+  return '/website-request' + (window.location.search || '');
+}
+function updateAuthLinks() {
+  const returnTo = encodeURIComponent(requestReturnPath());
+  const loginLink = document.getElementById('loginLink');
+  const registerLink = document.getElementById('registerLink');
+  if (loginLink) loginLink.href = '/client/login?returnTo=' + returnTo;
+  if (registerLink) registerLink.href = '/client/register?returnTo=' + returnTo;
 }
 function setField(id, value) {
   const field = document.getElementById(id);
   if (field && value && !field.value) field.value = value;
 }
+function normalizeCurrency(value) {
+  const currency = String(value || '').trim().toUpperCase();
+  return currency === 'USD' ? 'USD' : 'GHS';
+}
+function countryDefaultsToGhs(value) {
+  return /\\b(ghana|gh)\\b/i.test(String(value || '').trim());
+}
+function escapeOption(value) {
+  return String(value || '').replace(/[&<>"]/g, function(ch) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]);
+  });
+}
+function updateBudgetCurrencyUi() {
+  const currency = normalizeCurrency(budgetCurrencyField && budgetCurrencyField.value);
+  const selectedRange = budgetRangeField ? budgetRangeField.value : '';
+  const minimumLabel = document.getElementById('minimumBudgetLabel');
+  const maximumLabel = document.getElementById('maximumBudgetLabel');
+  if (minimumLabel) minimumLabel.textContent = 'Minimum Budget (' + currency + ')';
+  if (maximumLabel) maximumLabel.textContent = 'Maximum Budget (' + currency + ')';
+  if (budgetRangeField) {
+    const ranges = budgetRangeOptions[currency] || budgetRangeOptions.GHS || [];
+    budgetRangeField.innerHTML = '<option value="">Select range</option>' + ranges.map(function(range) {
+      return '<option>' + escapeOption(range) + '</option>';
+    }).join('');
+    if (ranges.indexOf(selectedRange) !== -1) budgetRangeField.value = selectedRange;
+  }
+}
+function syncBudgetCurrencyFromCountry() {
+  if (!budgetCurrencyField || budgetCurrencyTouched) return;
+  if (countryDefaultsToGhs(countryField && countryField.value)) {
+    budgetCurrencyField.value = 'GHS';
+    updateBudgetCurrencyUi();
+  }
+}
 async function requireClientLogin() {
+  updateAuthLinks();
   const token = portalToken();
-  if (!token) return;
+  if (!token) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from') === 'client-dashboard' || params.get('login') === 'required') {
+      window.location.href = '/client/login?returnTo=' + encodeURIComponent('/website-request');
+    }
+    return;
+  }
   try {
     const response = await fetch('/api/project-portal/me', {
       headers: {Authorization: 'Bearer ' + token}
     });
     const payload = await response.json();
-    if (!response.ok || !payload.success || !payload.client || payload.client.is_admin) return;
+    if (!response.ok || !payload.success || !payload.client) throw new Error('Client login is required.');
+    if (payload.client.is_admin) {
+      errorBox.textContent = 'This is an admin account. Please login or register with a client account to submit project requests.';
+      errorBox.style.display = 'block';
+      return;
+    }
     portalClient = payload.client;
     authGate.classList.add('hidden');
     form.classList.remove('hidden');
@@ -292,19 +507,27 @@ async function requireClientLogin() {
     setField('phoneNumber', portalClient.phoneNumber);
     setField('whatsappNumber', portalClient.whatsappNumber);
     setField('emailAddress', portalClient.email);
-    setField('businessLocation', portalClient.businessLocation);
+    setField('country', portalClient.country);
+    setField('city', portalClient.city);
+    setField('businessAddress', portalClient.address || portalClient.businessLocation);
     setField('preferredContactMethod', portalClient.preferredContactMethod);
     setField('bestTimeToContact', portalClient.bestTimeToContact);
+    syncBudgetCurrencyFromCountry();
+    updateBudgetCurrencyUi();
     updateEstimate();
   } catch (error) {
     localStorage.removeItem('softOTechPortalToken');
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from') === 'client-dashboard' || params.get('login') === 'required') {
+      window.location.href = '/client/login?returnTo=' + encodeURIComponent('/website-request');
+    }
   }
 }
 function formJson() {
   const data = new FormData(form);
   const payload = {};
   for (const [key, value] of data.entries()) {
-    if (['pagesRequired','featuresRequired','platformsRequired'].includes(key)) {
+    if (['pagesRequired','featuresRequired','platformsRequired','integrationsRequired','hostingOptions','supportServices'].includes(key)) {
       payload[key] = payload[key] || [];
       payload[key].push(value);
     } else if (typeof value === 'string') {
@@ -338,6 +561,18 @@ async function updateEstimate() {
 }
 form.addEventListener('change', updateEstimate);
 form.addEventListener('input', updateEstimate);
+if (budgetCurrencyField) {
+  budgetCurrencyField.addEventListener('change', function() {
+    budgetCurrencyTouched = true;
+    updateBudgetCurrencyUi();
+    updateEstimate();
+  });
+}
+if (countryField) {
+  countryField.addEventListener('change', syncBudgetCurrencyFromCountry);
+  countryField.addEventListener('input', syncBudgetCurrencyFromCountry);
+}
+updateBudgetCurrencyUi();
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   errorBox.style.display = 'none';
@@ -372,18 +607,20 @@ router.get('/website-request/success', (req, res) => {
   const requestId = String(req.query.requestId || '').replace(/[^A-Z0-9-]/gi, '');
   const invoiceUrl = String(req.query.invoiceUrl || '').replace(/"/g, '&quot;');
   res.send(pageShell({
+    nonce: res.locals.cspNonce,
     title: 'Request Submitted | Yenkasa Soft-O-Tech',
     body: `<main class="wrap"><section class="section" style="max-width:760px;margin:40px auto;">
       <h1 style="font-size:clamp(2rem,5vw,3.4rem);">Request submitted</h1>
       <p class="lead">Your project request and client contact profile have been received. Keep this Request ID for follow-up.</p>
       <div class="summary" style="margin:22px 0;"><strong>${requestId || 'Request received'}</strong><span>Yenkasa Soft-O-Tech will review the details and contact you. Your invoice PDF has been generated from the selected project details.</span></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">${invoiceUrl ? `<a class="btn" target="_blank" rel="noopener" href="${invoiceUrl}">Download Invoice PDF</a>` : ''}<a class="btn secondary" href="/">Back to Portfolio</a></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">${invoiceUrl ? `<a class="btn" target="_blank" rel="noopener" href="${invoiceUrl}">Download Invoice PDF</a>` : ''}<a class="btn secondary" href="/client/dashboard">Client Dashboard</a><a class="btn ghost" href="/">Back to Portfolio</a></div>
     </section></main>`,
   }));
 });
 
 router.get('/admin/project-requests', (req, res) => {
   res.send(pageShell({
+    nonce: res.locals.cspNonce,
     title: 'Project Requests Admin | Yenkasa Soft-O-Tech',
     body: `<main class="wrap">
   <section class="hero"><div><h1>Project Requests</h1><p class="lead">Manage website, app, software, AI, and UI/UX leads captured from www.yenkasa.xyz.</p></div><aside class="summary"><strong id="totalCount">--</strong><span>Total captured inquiries</span></aside></section>
@@ -433,14 +670,33 @@ async function loadRequests() {
     const estimate = item.pricingEstimate || {};
     const contact = item.contact || {};
     const req = item.requirements || {};
+    const overview = item.overview || {};
+    const objectives = item.objectives || {};
+    const infra = item.infrastructure || {};
+    const timeline = item.timeline || {};
+    const project = item.project || {};
+    const maintenance = item.maintenance || {};
+    const review = item.review || {};
+    const costRange = review.estimatedCostRange || {};
     return '<article>' +
       '<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;"><h2 style="margin:0;">' + escapeHtml(item.requestId) + '</h2><select data-id="' + escapeHtml(item.requestId) + '" class="statusSelect">' + ${JSON.stringify(STATUSES)}.map(status => '<option ' + (status === item.status ? 'selected' : '') + '>' + status + '</option>').join('') + '</select></div>' +
       '<p><strong>' + escapeHtml(contact.fullName) + '</strong> - ' + escapeHtml(contact.companyName) + ' - ' + escapeHtml(contact.email) + '</p>' +
-      '<p class="meta">Phone: ' + escapeHtml(contact.phoneNumber) + ' | WhatsApp: ' + escapeHtml(contact.whatsappNumber) + ' | Preferred: ' + escapeHtml(contact.preferredContactMethod) + ' | Best time: ' + escapeHtml(contact.bestTimeToContact) + '</p>' +
+      '<p class="meta">Phone: ' + escapeHtml(contact.phoneNumber) + ' | WhatsApp: ' + escapeHtml(contact.whatsappNumber) + ' | Location: ' + escapeHtml([contact.city, contact.country].filter(Boolean).join(", ") || contact.businessLocation) + ' | Preferred: ' + escapeHtml(contact.preferredContactMethod) + '</p>' +
+      '<h3>' + escapeHtml(overview.projectName || req.projectType || item.requestCategory) + '</h3>' +
       '<p class="meta">' + escapeHtml(item.requestCategory) + ' | ' + escapeHtml(req.projectType || req.websiteType) + ' | Platforms: ' + escapeHtml((req.platformsRequired || []).join(", ")) + '</p>' +
+      '<p>' + escapeHtml(overview.projectDescription || item.business?.description) + '</p>' +
+      '<p class="meta"><strong>Problem:</strong> ' + escapeHtml(objectives.problemToSolve) + '</p>' +
+      '<p class="meta"><strong>Goals:</strong> ' + escapeHtml(objectives.businessGoals) + '</p>' +
+      '<p class="meta"><strong>Users:</strong> ' + escapeHtml(objectives.targetUsers) + ' | Expected users: ' + escapeHtml(objectives.expectedUsers) + ' | Monthly traffic: ' + escapeHtml(objectives.expectedMonthlyTraffic) + '</p>' +
       '<p class="meta">Pages/Screens: ' + escapeHtml((req.pagesRequired || []).join(", ")) + ' | Features: ' + escapeHtml((req.featuresRequired || []).join(", ")) + '</p>' +
+      '<p class="meta">Custom Features: ' + escapeHtml(req.customFeatures) + '</p>' +
+      '<p class="meta">Integrations: ' + escapeHtml((item.integrations || []).join(", ")) + '</p>' +
+      '<p class="meta">Infrastructure: Domain owned=' + escapeHtml(infra.ownsDomain) + ' | Domain registration=' + escapeHtml(infra.needsDomainRegistration) + ' | Hosting=' + escapeHtml(infra.needsHosting) + ' | Email=' + escapeHtml(infra.needsEmailSetup) + ' | Cloud=' + escapeHtml(infra.needsCloudDeployment) + ' | Options: ' + escapeHtml((infra.hostingOptions || []).join(", ")) + '</p>' +
+      '<p class="meta">Timeline: Start ' + escapeHtml(timeline.desiredStartDate || '') + ' | Complete ' + escapeHtml(timeline.desiredCompletionDate || project.desiredCompletionDate || '') + ' | Flexible: ' + escapeHtml(timeline.timelineFlexible) + ' | Priority: ' + escapeHtml(timeline.priority) + '</p>' +
+      '<p class="meta">Budget: ' + escapeHtml(project.budgetRange) + ' | Currency: ' + escapeHtml(project.budgetCurrency || estimate.currency || 'GHS') + ' | Min: ' + escapeHtml(project.minimumBudget) + ' | Max: ' + escapeHtml(project.maximumBudget) + ' | Maintenance: ' + escapeHtml(maintenance.plan) + ' | Support: ' + escapeHtml((maintenance.supportServices || []).join(", ")) + '</p>' +
+      '<p class="meta"><strong>Admin Review:</strong> Complexity ' + escapeHtml(review.complexity) + ' (' + escapeHtml(review.complexityScore) + '/100) | Duration: ' + escapeHtml(review.estimatedDevelopmentDuration) + ' | Team: ' + escapeHtml(review.recommendedTeamSize) + ' | Stack: ' + escapeHtml((review.suggestedTechnologyStack || []).join(", ")) + ' | Cost: ' + escapeHtml(costRange.currency || 'GHS') + ' ' + Number(costRange.minimum || 0).toLocaleString() + ' - ' + Number(costRange.maximum || 0).toLocaleString() + '</p>' +
       '<p class="meta">Estimated Invoice: ' + escapeHtml((estimate.currency || 'GHS') + ' ' + Number(estimate.grandTotal || invoice.amount || 0).toLocaleString()) + (invoice.url ? ' | <a target="_blank" rel="noopener" href="' + escapeHtml(invoice.url) + '">Download invoice PDF</a>' : '') + '</p>' +
-      '<p>' + escapeHtml(item.business?.description) + '</p>' +
+      '<p><strong>Additional Notes:</strong> ' + escapeHtml(project.additionalNotes) + '</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + files + '</div>' +
     '</article>';
   }).join('');
@@ -498,6 +754,7 @@ router.get('/request-project', (req, res) => {
 
 router.get('/services', (req, res) => {
   res.send(pageShell({
+    nonce: res.locals.cspNonce,
     title: 'Services | Yenkasa Soft-O-Tech',
     extraHead: `<style>
       .services-hero { min-height:420px; display:grid; align-items:end; padding:70px 0 32px; }
@@ -523,7 +780,7 @@ router.get('/services', (req, res) => {
         <div>
           <h1>Software services for serious businesses.</h1>
           <p class="lead">Yenkasa Soft-O-Tech builds websites, mobile apps, AI tools, cloud systems, and custom software with professional delivery workflows and client project tracking.</p>
-          <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;"><a class="btn" href="/request-project">Request a Project</a><a class="btn ghost" href="/software-solutions">Software Solutions Portal</a><a class="btn ghost" href="/client/login">Client Portal</a></div>
+          <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;"><a class="btn" href="/website-request">Request a Project</a><a class="btn ghost" href="/software-solutions">Software Solutions Portal</a><a class="btn ghost" href="/client/login">Client Portal</a></div>
         </div>
       </section>
 

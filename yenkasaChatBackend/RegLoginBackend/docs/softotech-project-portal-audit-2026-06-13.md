@@ -113,3 +113,43 @@ Certificate status:
 - Pending until DNS is changed away from DigitalOcean and points to the Cloud Run records above.
 - If using Cloudflare, keep these records DNS-only during Google certificate provisioning.
 - `gcloud.yenkasa.xyz` can be used as the permanent GCloud-hosted backup endpoint without changing the existing DigitalOcean `www` or apex records.
+
+## Production Media Upload Incident - 2026-06-13
+
+Symptom:
+- Yenkasa app post creation failed after authentication with:
+  `Could not load the default credentials.`
+
+Root cause:
+- The active DigitalOcean runtime had media storage configured for GCS.
+- DigitalOcean does not have Google Application Default Credentials.
+- Cloudinary fallback was disabled, so post media upload failed before post creation completed.
+
+Repair:
+- Added `/api/media-proxy/upload` on the GCloud backup service.
+- Added `mediaStorage.uploadToGcsProxy()` so non-Google runtimes can forward media to Cloud Run.
+- Cloud Run writes to `gs://yenkasa-media` using its service account.
+- Granted `roles/storage.objectAdmin` on `gs://yenkasa-media` to `496173204476-compute@developer.gserviceaccount.com`.
+
+Validation:
+- Cloud Run revision `yenkasa-chat-backend-backup-00006-wq6` is serving the media proxy.
+- Unauthenticated proxy request returns `401`, proving the route is mounted and protected.
+- End-to-end proxy smoke upload succeeded and wrote:
+  `posts/proxy-smoke-1781392646306-67c4z0er-proxy-smoke.txt`
+- User confirmed production post creation is now successful.
+
+## Admin Portal Tab Wiring Update
+
+Repaired after production media incident:
+- Added the missing Proposals tab to the Soft-O-Tech admin dashboard.
+- Wired Proposals to `POST /api/project-portal/admin/proposals/generate`.
+- Fixed admin record action rendering so existing action buttons display inside records.
+- Restored visible actions for:
+  - Lead conversion
+  - Requirement approval
+  - Requirement completion
+  - Client activation/suspension/closure
+- Clients tab now calls `PATCH /api/project-portal/admin/clients/:clientId/status`.
+
+Admin tab count:
+- The admin sidebar now exposes 20 operational tabs, including Proposals.

@@ -27,20 +27,30 @@ function wrap(value, length = 86) {
 }
 
 function pdfEscapeStream(lines) {
-  let y = 780;
-  const chunks = ['BT', '/F1 10 Tf', '50 780 Td'];
+  let y = 660;
+  const chunks = [
+    '0.02 0.16 0.13 rg 0 704 612 88 re f',
+    '0.94 0.98 0.96 rg 50 722 52 52 re f',
+    '0.02 0.16 0.13 rg 55 727 42 42 re f',
+    'BT 1 1 1 rg /F1 13 Tf 1 0 0 1 62 745 Tm (YSO) Tj ET',
+    'BT 1 1 1 rg /F1 20 Tf 1 0 0 1 116 754 Tm (YENKASA SOFT-O-TECH) Tj ET',
+    'BT 0.86 0.94 0.9 rg /F1 10 Tf 1 0 0 1 116 735 Tm (Professional software project invoice and request estimate) Tj ET',
+    '0.88 0.92 0.9 rg 50 690 512 1 re f',
+  ];
   for (const entry of lines) {
     const font = entry.font || 10;
     const leading = entry.leading || 14;
     if (entry.pageBreak) {
       continue;
     }
-    chunks.push(`/F1 ${font} Tf`);
-    chunks.push(`50 ${y} Td (${text(entry.text)}) Tj`);
+    const isHeading = font >= 13;
+    chunks.push(`BT ${isHeading ? '0.02 0.16 0.13' : '0.05 0.07 0.09'} rg /F1 ${font} Tf 1 0 0 1 50 ${y} Tm (${text(entry.text)}) Tj ET`);
+    if (isHeading) chunks.push(`0.88 0.92 0.9 rg 50 ${y - 5} 512 0.8 re f`);
     y -= leading;
     if (y < 50) break;
   }
-  chunks.push('ET');
+  chunks.push('0.88 0.92 0.9 rg 50 42 512 1 re f');
+  chunks.push('BT 0.35 0.4 0.38 rg /F1 8 Tf 1 0 0 1 50 28 Tm (Yenkasa Soft-O-Tech | www.yenkasa.xyz | Thank you for choosing us.) Tj ET');
   return chunks.join('\n');
 }
 

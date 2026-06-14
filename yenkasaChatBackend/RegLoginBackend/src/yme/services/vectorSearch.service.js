@@ -55,11 +55,16 @@ async function upsertMemoryEmbedding({
     Array.isArray(existingDocument.embedding) &&
     existingDocument.embedding.length
   ) {
-    existingDocument.cacheHitCount = Number(existingDocument.cacheHitCount || 0) + 1;
-    existingDocument.lastAccessedAt = new Date();
-    await existingDocument.save();
+    const updatedDocument = await MemoryEmbedding.findOneAndUpdate(
+      { _id: existingDocument._id },
+      {
+        $inc: { cacheHitCount: 1 },
+        $set: { lastAccessedAt: new Date() },
+      },
+      { new: true },
+    );
     incrementCounter('memoryEmbeddingCacheHit');
-    return existingDocument;
+    return updatedDocument || existingDocument;
   }
 
   if (!isEmbeddingEnabled()) {
@@ -156,7 +161,7 @@ async function upsertMemoryEmbedding({
     return document;
   } catch (error) {
     incrementCounter('memoryEmbeddingsFailed');
-    await MemoryEmbedding.findOneAndUpdate(
+    const failedDocument = await MemoryEmbedding.findOneAndUpdate(
       filter,
       {
         $set: {
@@ -179,12 +184,13 @@ async function upsertMemoryEmbedding({
       },
       { upsert: true, new: true },
     );
+    const failSoft = metadata?.failSoft === true || sourceType === 'memory_summary';
     await writeMemoryLog({
       userId,
       stage: 'embedding_upsert',
-      level: 'error',
-      status: 'failed',
-      message: 'YME embedding refresh failed.',
+      level: failSoft ? 'warn' : 'error',
+      status: failSoft ? 'degraded' : 'failed',
+      message: failSoft ? 'YME embedding refresh degraded; continuing without blocking memory consolidation.' : 'YME embedding refresh failed.',
       error,
       metadata: {
         sourceType,
@@ -192,6 +198,7 @@ async function upsertMemoryEmbedding({
         memoryTier,
       },
     });
+    if (failSoft) return failedDocument;
     throw error;
   }
 }

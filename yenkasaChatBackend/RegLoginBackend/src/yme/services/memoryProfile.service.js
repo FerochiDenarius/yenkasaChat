@@ -363,7 +363,21 @@ async function applyEventToMemory({ event, derivedSignals }) {
       profile.lastProcessedEventId = event._id;
 
       pruneMemoryProfile(profile);
-      await profile.save();
+      const savedProfile = await UserMemory.findOneAndUpdate(
+        { _id: profile._id },
+        {
+          $set: {
+            shortTerm: profile.shortTerm,
+            midTerm: profile.midTerm,
+            longTerm: profile.longTerm,
+            memorySummaries: profile.memorySummaries || [],
+            lastEventAt: profile.lastEventAt,
+            lastProcessedEventId: profile.lastProcessedEventId,
+            metadata: profile.metadata || {},
+          },
+        },
+        { new: true, runValidators: true },
+      );
 
       const [engagementPattern, socialGraphEdge, aiProfile] = await Promise.all([
         updateEngagementPatterns(event),
@@ -371,7 +385,7 @@ async function applyEventToMemory({ event, derivedSignals }) {
         updateAiProfile(event.userId, derivedSignals, event),
       ]);
 
-      const latestProfile = await UserMemory.findById(profile._id).lean();
+      const latestProfile = savedProfile?.toObject?.() || await UserMemory.findById(profile._id).lean();
       const updatePayload = {
         'longTerm.aiProfile': {
           preferredTones: aiProfile.preferredTones || [],
@@ -459,10 +473,22 @@ async function refreshMemorySummary(userId, { reason = 'consolidation', behavior
 
     profile.midTerm.lastConsolidatedAt = new Date();
     pruneMemoryProfile(profile);
-    await profile.save();
+    const updatedProfile = await UserMemory.findOneAndUpdate(
+      { _id: profile._id },
+      {
+        $set: {
+          memorySummaries: profile.memorySummaries || [],
+          midTerm: profile.midTerm,
+          shortTerm: profile.shortTerm,
+          longTerm: profile.longTerm,
+          metadata: profile.metadata || {},
+        },
+      },
+      { new: true, runValidators: true },
+    );
     emitMemoryProfileUpdated(userId, {
       userId: userId.toString(),
-      consolidatedAt: profile.midTerm.lastConsolidatedAt,
+      consolidatedAt: updatedProfile?.midTerm?.lastConsolidatedAt || profile.midTerm.lastConsolidatedAt,
       summary,
     });
     return summary;

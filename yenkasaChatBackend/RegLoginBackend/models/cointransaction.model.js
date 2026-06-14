@@ -34,6 +34,8 @@ enum: [
   "REWARD_POST_APPROVED",   // ★ NEW → for approved posts
   "REWARD_POST_REJECTED",   // ★ NEW → for rejected posts
   "REWARD_POST_LIKE",
+  "REWARD_POST_LIKE_RECEIVED",
+  "REWARD_POST_COMMENT_RECEIVED",
 
   // COMMENT SYSTEM
   "REWARD_COMMENT",
@@ -46,12 +48,15 @@ enum: [
 
   // VIEWS
   "REWARD_VIEWS",              // ad views
+  "REWARD_POST_VIEW_1000",
   "REWARD_POST_VIEW",          // user viewing post
   "REWARD_IMAGE_VIEW",
   "REWARD_TEXT_VIEW",
   "REWARD_SHORT_VIDEO_VIEW",
   "REWARD_AUDIO_VIEW",
+  "REWARD_WATCH_TIME_10_MIN",
   "REWARD_LONG_WATCH",
+  "REWARD_POST_SINGLE_VIEW_RECEIVED",
   "REWARD_POST_VIEW_RECEIVED", // owner receives a view
   "REWARD_MILESTONE",          // high engagement reward
 

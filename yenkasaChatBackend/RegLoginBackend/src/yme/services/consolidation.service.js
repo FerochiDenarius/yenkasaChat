@@ -495,6 +495,7 @@ async function runMemoryConsolidation({ userId, reason = 'scheduled' } = {}) {
       importance: 0.95,
       metadata: {
         reason,
+        failSoft: true,
       },
     });
   }

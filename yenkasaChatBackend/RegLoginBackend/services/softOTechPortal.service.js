@@ -1856,6 +1856,34 @@ async function upsertPortfolioProject(payload = {}, actor = {}) {
   return normalizeValue(project);
 }
 
+async function buildProjectAiOperationalContext(context = {}) {
+  const project = context.projectId ? await getProjectById(context.projectId) : null;
+  const requestId = context.requestId || project?.requestId || '';
+  const request = requestId ? await projectRequestStore.getByRequestId(requestId).catch(() => null) : null;
+  const clientEmail = normalizeEmail(context.clientEmail || project?.clientEmail || request?.contact?.email);
+  const [requirements, assignments, messages, documents, quotations, invoices, payments] = await Promise.all([
+    context.projectId ? listRequirements({ projectId: context.projectId, limit: 100 }) : Promise.resolve({ items: [] }),
+    context.projectId ? getProjectAssignments(context.projectId) : Promise.resolve([]),
+    clientEmail ? listCollectionForClient(MESSAGES, clientEmail) : Promise.resolve([]),
+    clientEmail ? listCollectionForClient(DOCUMENTS, clientEmail) : Promise.resolve([]),
+    clientEmail ? listCollectionForClient(QUOTATIONS, clientEmail) : Promise.resolve([]),
+    clientEmail ? listCollectionForClient(INVOICES, clientEmail) : Promise.resolve([]),
+    clientEmail ? listCollectionForClient(PAYMENTS, clientEmail) : Promise.resolve([]),
+  ]);
+
+  return compactPortalMetadata({
+    project,
+    request,
+    requirements: requirements.items || [],
+    assignments,
+    messages: messages.slice(0, 20),
+    documents: documents.slice(0, 20),
+    quotations: quotations.slice(0, 20),
+    invoices: invoices.slice(0, 20),
+    payments: payments.slice(0, 20),
+  });
+}
+
 async function projectAiAssistant(payload = {}, actor = {}) {
   const question = String(payload.question || payload.prompt || '').trim();
   if (!question) {
@@ -1870,32 +1898,45 @@ async function projectAiAssistant(payload = {}, actor = {}) {
     clientEmail: normalizeEmail(payload.clientEmail || actor.email),
     question,
   };
+  const operationalContext = await buildProjectAiOperationalContext(context);
   const aiBaseUrl = process.env.YENKASA_AI_ENGINE_URL || process.env.YENKASA_AI_BACKEND_URL || '';
   if (aiBaseUrl && typeof fetch === 'function') {
-    try {
-      const response = await fetch(`${aiBaseUrl.replace(/\/+$/, '')}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(process.env.YENKASA_AI_EVENT_API_KEY ? { Authorization: `Bearer ${process.env.YENKASA_AI_EVENT_API_KEY}` } : {}),
-        },
-        body: JSON.stringify({
-          message: question,
-          context,
-          source: 'softotech_project_portal',
-        }),
-      });
-      if (response.ok) {
-        const payloadJson = await response.json();
-        await writeAudit('project_ai_assistant_used', actor, context);
-        return { answer: payloadJson.answer || payloadJson.response || payloadJson.message || 'YenkasaAI returned a response.', source: 'yenkasa_ai', raw: payloadJson };
+    const baseUrl = aiBaseUrl.replace(/\/+$/, '');
+    const endpoints = [
+      { path: '/api/ai/chat', body: { question, audience: 'engineering', operational_context: JSON.stringify(operationalContext), history: [] } },
+      { path: '/chat', body: { question, audience: 'engineering', operational_context: JSON.stringify(operationalContext), history: [] } },
+      { path: '/api/chat', body: { message: question, context: operationalContext, source: 'softotech_project_portal' } },
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(`${baseUrl}${endpoint.path}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.YENKASA_AI_EVENT_API_KEY ? { Authorization: `Bearer ${process.env.YENKASA_AI_EVENT_API_KEY}` } : {}),
+          },
+          body: JSON.stringify(endpoint.body),
+        });
+        if (response.ok) {
+          const payloadJson = await response.json();
+          await writeAudit('project_ai_assistant_used', actor, { ...context, endpoint: endpoint.path, operationalContext });
+          return { answer: payloadJson.answer || payloadJson.response || payloadJson.message || 'YenkasaAI returned a response.', source: 'yenkasa_ai', endpoint: endpoint.path, raw: payloadJson };
+        }
+        console.warn('[SoftOTechPortal] YenkasaAI endpoint rejected request:', {
+          endpoint: endpoint.path,
+          status: response.status,
+        });
+      } catch (error) {
+        console.warn('[SoftOTechPortal] YenkasaAI request failed:', {
+          endpoint: endpoint.path,
+          message: error.message,
+        });
       }
-    } catch (error) {
-      console.warn('[SoftOTechPortal] YenkasaAI request failed:', error.message);
     }
   }
 
-  await writeAudit('project_ai_assistant_used', actor, { ...context, fallback: true });
+  await writeAudit('project_ai_assistant_used', actor, { ...context, fallback: true, operationalContext });
   return {
     answer: [
       'Project AI Assistant fallback response:',

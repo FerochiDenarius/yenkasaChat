@@ -5,6 +5,8 @@ const DEFAULT_PRIVILEGED_ADMIN_EMAILS = [
   'kofiinspirion@gmail.com',
   'ofosumenyabrightkofi@gmail.com',
   'ferochidenarius@gmail.com',
+  'joanaamoquandoh21@gmail.com',
+  'kwesihudson12@gmail.com',
 ];
 
 function configuredAdminEmails() {
